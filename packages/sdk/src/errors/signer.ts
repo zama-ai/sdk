@@ -67,3 +67,13 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
     this.name = "WalletAccountNotReadyError";
   }
 }
+
+/**
+ * Narrow a nullable signer-dependent value or throw {@link SignerNotConfiguredError}.
+ */
+export function requireConfigured<T>(value: T, operation: string): NonNullable<T> {
+  if (value === null || value === undefined) {
+    throw new SignerNotConfiguredError(operation);
+  }
+  return value as NonNullable<T>;
+}

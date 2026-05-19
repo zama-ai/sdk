@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 describe("useDelegationStatus", () => {
-  test("disables query when tokenAddress is missing", ({
+  test("disables query when contractAddress is missing", ({
     renderWithProviders,
     recipientAddress,
     userAddress,
@@ -19,7 +19,7 @@ describe("useDelegationStatus", () => {
 
     renderWithProviders(() =>
       useDelegationStatus({
-        tokenAddress: undefined,
+        contractAddress: undefined,
         delegatorAddress: userAddress,
         delegateAddress: recipientAddress,
       }),
@@ -35,12 +35,12 @@ describe("useDelegationStatus", () => {
     userAddress,
   }) => {
     vi.mocked(useQuery).mockReturnValue({
-      data: { isDelegated: true, expiryTimestamp: 0n },
+      data: { isActive: true, expiryTimestamp: 0n },
     } as never);
 
     renderWithProviders(() =>
       useDelegationStatus({
-        tokenAddress: tokenAddress,
+        contractAddress: tokenAddress,
         delegatorAddress: userAddress,
         delegateAddress: recipientAddress,
       }),
@@ -63,7 +63,7 @@ describe("useDelegationStatus", () => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({ tokenAddress: tokenAddress, delegateAddress: recipientAddress }),
+      useDelegationStatus({ contractAddress: tokenAddress, delegateAddress: recipientAddress }),
     );
 
     expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
@@ -77,7 +77,7 @@ describe("useDelegationStatus", () => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
     renderWithProviders(() =>
-      useDelegationStatus({ tokenAddress: tokenAddress, delegatorAddress: userAddress }),
+      useDelegationStatus({ contractAddress: tokenAddress, delegatorAddress: userAddress }),
     );
 
     expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));

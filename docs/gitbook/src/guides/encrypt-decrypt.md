@@ -407,7 +407,7 @@ const { data } = useUserDecrypt({
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
-The cache is cleared on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account/chain change).
+The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
 
 {% hint style="info" %}
 **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh keypair and permits.

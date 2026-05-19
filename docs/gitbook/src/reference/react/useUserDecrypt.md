@@ -96,7 +96,7 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 {% include ".gitbook/includes/query-result.md" %}
 

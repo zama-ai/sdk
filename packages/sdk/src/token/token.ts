@@ -20,14 +20,14 @@ import {
   EncryptionFailedError,
   InsufficientConfidentialBalanceError,
   isFatalBatchError,
-  SignerNotConfiguredError,
+  requireConfigured,
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
@@ -93,12 +93,7 @@ export class Token {
 
   /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
   #requireSigner(operation: string): GenericSigner {
-    try {
-      assertNonNullable(this.sdk.signer, "Token.sdk.signer");
-      return this.sdk.signer;
-    } catch (cause) {
-      throw new SignerNotConfiguredError(operation, { cause });
-    }
+    return requireConfigured(this.sdk.signer, operation);
   }
 
   // METADATA
@@ -668,7 +663,7 @@ export class Token {
     );
   }
 
-  // PROTECTED HELPERS (also used by WrappedToken subclass)
+  // PROTECTED HELPERS
 
   /**
    * Read the on-chain encrypted balance handle for a given owner.
@@ -763,10 +758,5 @@ export class Token {
   }
 }
 
-/**
- * Re-exported alias used by tests and helpers for arbitrary-handle decryption.
- * Use `sdk.decryption.userDecrypt` directly in application code.
- *
- * @internal
- */
+/** @internal */
 export type DecryptedHandlesMap = Map<Handle, ClearValueType>;

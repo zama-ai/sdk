@@ -10,6 +10,7 @@ export {
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,
+  requireConfigured,
 } from "./signer";
 export {
   DelegationSelfNotAllowedError,

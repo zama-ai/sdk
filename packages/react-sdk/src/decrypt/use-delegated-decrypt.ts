@@ -4,7 +4,7 @@ import type { ClearValueType, Handle } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import {
   delegatedDecryptMutationOptions,
-  type DelegatedUserDecryptMutationParams,
+  type DelegatedDecryptMutationParams,
 } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
@@ -12,7 +12,7 @@ import { useZamaSDK } from "../provider";
  * Decrypt FHE ciphertext handles using delegated user credentials.
  * Returns a map of handle → plaintext bigint.
  *
- * @returns A mutation whose `mutate` accepts {@link DelegatedUserDecryptMutationParams}.
+ * @returns A mutation whose `mutate` accepts {@link DelegatedDecryptMutationParams}.
  *
  * @example
  * ```tsx
@@ -23,7 +23,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useDelegatedDecrypt() {
   const sdk = useZamaSDK();
-  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedUserDecryptMutationParams>(
+  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedDecryptMutationParams>(
     delegatedDecryptMutationOptions(sdk),
   );
 }

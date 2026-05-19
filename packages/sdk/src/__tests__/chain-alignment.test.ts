@@ -31,8 +31,14 @@ const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ],
   ["unwrap", (sdk, t) => sdk.createWrappedToken(t).unwrap(100n)],
   [
-    "delegate",
-    (sdk, t) => sdk.delegations.delegate({ contractAddress: t, delegateAddress: OTHER_USER }),
+    "delegateDecryption",
+    (sdk, t) =>
+      sdk.delegations.delegateDecryption({ contractAddress: t, delegateAddress: OTHER_USER }),
+  ],
+  [
+    "revokeDelegation",
+    (sdk, t) =>
+      sdk.delegations.revokeDelegation({ contractAddress: t, delegateAddress: OTHER_USER }),
   ],
 ] as const;
 

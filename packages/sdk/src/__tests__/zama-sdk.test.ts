@@ -1,9 +1,7 @@
 import { describe, test, expect, vi } from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
-import { DecryptionFailedError, SignerNotConfiguredError } from "../errors";
 import type { Address } from "viem";
-import type { DecryptHandle } from "../query/user-decrypt";
 import type { EncryptParams } from "../relayer/relayer-sdk.types";
 
 describe("ZamaSDK", () => {
@@ -67,103 +65,6 @@ describe("ZamaSDK", () => {
     expect(dispose).toHaveBeenCalledOnce();
   });
 
-  describe("publicDecrypt", () => {
-    test("delegates to relayer.publicDecrypt and returns the result", async ({
-      sdk,
-      relayer,
-      handle,
-    }) => {
-      const result = await sdk.decryption.publicDecrypt([handle]);
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
-      expect(result).toEqual({
-        clearValues: { [handle]: 500n },
-        abiEncodedClearValues: "0x1f4",
-        decryptionProof: "0xproof",
-      });
-    });
-
-    test("returns empty result for empty handles without calling relayer", async ({
-      sdk,
-      relayer,
-    }) => {
-      const result = await sdk.decryption.publicDecrypt([]);
-      expect(result).toEqual({
-        clearValues: {},
-        decryptionProof: "0x",
-        abiEncodedClearValues: "0x",
-      });
-      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
-    });
-
-    test("wraps error on failure", async ({ sdk, relayer, handle }) => {
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
-
-      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toThrow(DecryptionFailedError);
-    });
-
-    test("re-throws DecryptionFailedError as-is", async ({ sdk, relayer, handle }) => {
-      const original = new DecryptionFailedError("already typed");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
-
-      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toBe(original);
-    });
-  });
-
-  describe("grantPermit", () => {
-    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-    const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
-
-    test("triggers a wallet signature when no permit is cached", async ({ sdk, signer }) => {
-      await sdk.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
-      expect(signer.signTypedData).toHaveBeenCalled();
-    });
-
-    test("returns immediately for empty array without calling the signer", async ({
-      sdk,
-      signer,
-    }) => {
-      await sdk.permits.grantPermit([]);
-      expect(signer.signTypedData).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("revokePermits clears decrypt cache", () => {
-    const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-
-    test("revokePermits() clears cache — decrypt after revokePermits hits relayer again", async ({
-      sdk,
-      relayer,
-      handle,
-    }) => {
-      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
-
-      await sdk.decryption.userDecrypt(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
-
-      await sdk.permits.revokePermits();
-
-      // Cache was cleared — relayer is called again
-      await sdk.decryption.userDecrypt(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
-    });
-
-    test("revokePermits(addresses) clears cache for the requester", async ({
-      sdk,
-      relayer,
-      handle,
-    }) => {
-      const handles: DecryptHandle[] = [{ handle, contractAddress: CONTRACT_A }];
-
-      await sdk.decryption.userDecrypt(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
-
-      await sdk.permits.revokePermits([CONTRACT_A]);
-
-      await sdk.decryption.userDecrypt(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
-    });
-  });
-
   describe("encrypt", () => {
     const ENCRYPT_PARAMS: EncryptParams = {
       values: [{ value: 100n, type: "euint64" as const }],
@@ -185,30 +86,6 @@ describe("ZamaSDK", () => {
         handles: [new Uint8Array([1, 2, 3])],
         inputProof: new Uint8Array([4, 5, 6]),
       });
-    });
-  });
-
-  describe("delegation signer guards", () => {
-    test("throws SignerNotConfiguredError when no signer is configured", async ({
-      createSDK,
-      tokenAddress,
-      delegateAddress,
-    }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(
-        sdk.delegations.delegate({ contractAddress: tokenAddress, delegateAddress }),
-      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
-    });
-
-    test("throws SignerNotConfiguredError when no signer is configured", async ({
-      createSDK,
-      tokenAddress,
-      delegateAddress,
-    }) => {
-      const sdk = createSDK({ signer: undefined });
-      await expect(
-        sdk.delegations.revoke({ contractAddress: tokenAddress, delegateAddress }),
-      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
   });
 });

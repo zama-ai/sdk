@@ -143,8 +143,7 @@ export class ZamaSDK {
   }
 
   /**
-   * Emit a structured SDK event. Used by {@link Token}/{@link WrappedToken}
-   * to surface lifecycle events through the unified SDK event stream.
+   * Emit a structured SDK event into the unified SDK event stream.
    *
    * Listener exceptions are caught and logged so that a misbehaving subscriber
    * can never corrupt SDK operations.

@@ -6160,7 +6160,6 @@ export class Decryption {
         relayer: RelayerDispatcher;
         decryptionService: DecryptionService | undefined;
     });
-    // @internal
     delegatedBatchDecrypt(input: {
         handles: DecryptHandle[];
         delegatorAddress: Address;
@@ -6362,7 +6361,7 @@ export class Delegations {
         provider: GenericProvider;
         delegationService: DelegationService;
     });
-    delegate(input: {
+    delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
         expirationDate?: Date;
@@ -6377,7 +6376,7 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<boolean>;
-    revoke(input: {
+    revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;
     }): Promise<TransactionResult>;
@@ -20157,10 +20156,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-ONPZaQ4f.d.ts:20462:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-ONPZaQ4f.d.ts:20567:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-ONPZaQ4f.d.ts:20669:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-ONPZaQ4f.d.ts:20670:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BOV220Zz.d.ts:20458:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BOV220Zz.d.ts:20587:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BOV220Zz.d.ts:20689:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BOV220Zz.d.ts:20690:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

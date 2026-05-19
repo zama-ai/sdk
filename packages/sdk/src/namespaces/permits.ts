@@ -1,11 +1,10 @@
 import { getAddress, type Address } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
-import { SignerNotConfiguredError } from "../errors";
+import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertNonNullable } from "../utils/assertions";
 
 /**
  * Public namespace for permit and keypair management.
@@ -40,12 +39,7 @@ export class Permits {
   }
 
   #requireCredentialService(operation: string): CredentialService {
-    try {
-      assertNonNullable(this.#credentialService, "Permits.#credentialService");
-      return this.#credentialService;
-    } catch (cause) {
-      throw new SignerNotConfiguredError(operation, { cause });
-    }
+    return requireConfigured(this.#credentialService, operation);
   }
 
   /**

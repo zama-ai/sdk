@@ -2,8 +2,7 @@ import type { Address } from "viem";
 import type { DelegationService } from "../services/delegation-service";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
-import { SignerNotConfiguredError } from "../errors";
-import { assertNonNullable } from "../utils/assertions";
+import { requireConfigured } from "../errors";
 
 /**
  * Public namespace for on-chain decryption-delegation management.
@@ -33,12 +32,7 @@ export class Delegations {
   }
 
   #requireSigner(operation: string): GenericSigner {
-    try {
-      assertNonNullable(this.#signer, "Delegations.#signer");
-      return this.#signer;
-    } catch (cause) {
-      throw new SignerNotConfiguredError(operation, { cause });
-    }
+    return requireConfigured(this.#signer, operation);
   }
 
   /**
@@ -61,7 +55,7 @@ export class Delegations {
    * @throws if the new expiry equals the current one. {@link DelegationExpiryUnchangedError}
    * @throws if the delegation transaction reverts. {@link TransactionRevertedError}
    */
-  async delegate({
+  async delegateDecryption({
     contractAddress,
     delegateAddress,
     expirationDate,
@@ -70,8 +64,12 @@ export class Delegations {
     delegateAddress: Address;
     expirationDate?: Date;
   }): Promise<TransactionResult> {
-    const signer = this.#requireSigner("delegate");
-    const account = await requireAlignedWalletAccount("delegate", this.#signer, this.#provider);
+    const signer = this.#requireSigner("delegateDecryption");
+    const account = await requireAlignedWalletAccount(
+      "delegateDecryption",
+      this.#signer,
+      this.#provider,
+    );
     return this.#delegationService.delegateDecryption(signer, {
       contractAddress,
       delegateAddress,
@@ -92,15 +90,19 @@ export class Delegations {
    * @throws if no delegation exists for this (delegator, delegate, contract) tuple. {@link DelegationNotFoundError}
    * @throws if the revocation transaction reverts. {@link TransactionRevertedError}
    */
-  async revoke({
+  async revokeDelegation({
     contractAddress,
     delegateAddress,
   }: {
     contractAddress: Address;
     delegateAddress: Address;
   }): Promise<TransactionResult> {
-    const signer = this.#requireSigner("revoke");
-    const account = await requireAlignedWalletAccount("revoke", this.#signer, this.#provider);
+    const signer = this.#requireSigner("revokeDelegation");
+    const account = await requireAlignedWalletAccount(
+      "revokeDelegation",
+      this.#signer,
+      this.#provider,
+    );
     return this.#delegationService.revokeDelegation(signer, {
       contractAddress,
       delegateAddress,

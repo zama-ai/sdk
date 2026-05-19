@@ -201,11 +201,11 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 const pairs = await registry.getTokenPairs();
 ```
 
-### allow
+### permits.grantPermit
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
@@ -214,7 +214,7 @@ const a = await sdk.decryption.userDecrypt([{ handle: h1, contractAddress: cUSDT
 const b = await sdk.decryption.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
 ```
 
-### userDecrypt
+### decryption.userDecrypt
 
 `(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
 
@@ -314,7 +314,7 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
+This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps `sdk.decryption.userDecrypt` with TanStack Query semantics.
 {% endhint %}
 
 ### onWalletAccountChange
@@ -330,7 +330,7 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 });
 ```
 
-### revokePermits
+### permits.revokePermits
 
 `(contracts?: Address[]) => Promise<void>`
 
@@ -341,7 +341,7 @@ await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
 await sdk.permits.revokePermits(); // all permits, all chains
 ```
 
-### clearCredentials
+### permits.clear
 
 `() => Promise<void>`
 

@@ -20,7 +20,7 @@ describe("Decryption", () => {
     });
   });
 
-  describe("delegatedUser (signer-required)", () => {
+  describe("delegatedDecrypt (signer-required)", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(

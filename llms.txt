@@ -39,6 +39,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
 - [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
+- [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
 - [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 
 ### SDK Reference
@@ -62,7 +63,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 - [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
-- [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): Delegation lets one address grant another address the right to decrypt its confidential balance.
+- [Delegations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.
 - [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured chain objects and legacy network configs for supported networks.
 
 ### React Reference

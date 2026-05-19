@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { ChainMismatchError, SignerNotConfiguredError } from "../../errors";
+import { SignerNotConfiguredError } from "../../errors";
 import { MAX_UINT64 } from "../../contracts";
 
 const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
@@ -9,50 +9,18 @@ const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 
 describe("Delegations", () => {
   describe("guards (no signer configured)", () => {
-    test("delegate throws SignerNotConfiguredError", async ({ createSDK }) => {
+    test("delegateDecryption throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.delegations.delegate({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
+        sdk.delegations.delegateDecryption({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
-    test("revoke throws SignerNotConfiguredError", async ({ createSDK }) => {
+    test("revokeDelegation throws SignerNotConfiguredError", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.delegations.revoke({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
+        sdk.delegations.revokeDelegation({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
-    });
-  });
-
-  describe("chain alignment", () => {
-    test("delegate throws ChainMismatchError when signer and provider disagree", async ({
-      sdk,
-      signer,
-      provider,
-    }) => {
-      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
-      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
-      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
-      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-
-      await expect(
-        sdk.delegations.delegate({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
-      ).rejects.toBeInstanceOf(ChainMismatchError);
-    });
-
-    test("revoke throws ChainMismatchError when signer and provider disagree", async ({
-      sdk,
-      signer,
-      provider,
-    }) => {
-      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
-      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
-      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
-      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-
-      await expect(
-        sdk.delegations.revoke({ contractAddress: TOKEN, delegateAddress: DELEGATE }),
-      ).rejects.toBeInstanceOf(ChainMismatchError);
     });
   });
 
@@ -94,7 +62,7 @@ describe("Delegations", () => {
   });
 
   describe("delegator address resolution", () => {
-    test("delegate uses the wallet account address as delegator", async ({
+    test("delegateDecryption uses the wallet account address as delegator", async ({
       sdk,
       signer,
       provider,
@@ -103,7 +71,7 @@ describe("Delegations", () => {
       vi.mocked(provider.readContract).mockResolvedValue(0n);
       vi.mocked(signer.writeContract).mockResolvedValue("0xtx");
 
-      const result = await sdk.delegations.delegate({
+      const result = await sdk.delegations.delegateDecryption({
         contractAddress: TOKEN,
         delegateAddress: DELEGATE,
       });

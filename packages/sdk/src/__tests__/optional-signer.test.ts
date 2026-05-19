@@ -14,8 +14,8 @@ const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
     "decryption.userDecrypt",
     (sdk, t) => sdk.decryption.userDecrypt([{ handle: "0xh", contractAddress: t }]),
   ],
-  ["permits.allow", (sdk, t) => sdk.permits.grantPermit([t])],
-  ["permits.revoke", (sdk) => sdk.permits.revokePermits()],
+  ["permits.grantPermit", (sdk, t) => sdk.permits.grantPermit([t])],
+  ["permits.revokePermits", (sdk) => sdk.permits.revokePermits()],
   ["permits.clear", (sdk) => sdk.permits.clear()],
   [
     "Token.confidentialTransfer",
@@ -45,12 +45,7 @@ describe("ZamaSDK without signer", () => {
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 
-  test("isAllowed returns false (pure store lookup, no signer needed)", async ({ createSDK }) => {
-    const sdk = createSDK({ signer: undefined });
-    await expect(sdk.permits.hasPermit(["0x1" as Address])).resolves.toBe(false);
-  });
-
-  test("sdk.permits.hasPermit returns false when no signer", async ({
+  test("permits.hasPermit returns false (pure store lookup, no signer needed)", async ({
     createSDK,
     tokenAddress,
   }) => {

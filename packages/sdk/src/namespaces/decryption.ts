@@ -1,12 +1,11 @@
 import type { Address } from "viem";
-import { SignerNotConfiguredError, wrapDecryptError } from "../errors";
+import { requireConfigured, wrapDecryptError } from "../errors";
 import type { DecryptHandle } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValueType, Handle, PublicDecryptResult } from "../relayer/relayer-sdk.types";
 import type { BatchDecryptHandlesResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
-import { assertNonNullable } from "../utils/assertions";
 
 /**
  * Public namespace for FHE decryption.
@@ -39,12 +38,7 @@ export class Decryption {
   }
 
   #requireDecryptionService(operation: string): DecryptionService {
-    try {
-      assertNonNullable(this.#decryptionService, "Decryption.#decryptionService");
-      return this.#decryptionService;
-    } catch (cause) {
-      throw new SignerNotConfiguredError(operation, { cause });
-    }
+    return requireConfigured(this.#decryptionService, operation);
   }
 
   /**
@@ -147,10 +141,34 @@ export class Decryption {
   /**
    * Batch-decrypt delegated handles with per-handle error isolation.
    *
-   * Used by Token batch flows where one failing handle should not abort the rest.
-   * Falls back to per-handle decryption on non-fatal batch errors.
+   * Attempts a single batch request first. If the batch fails with a non-fatal
+   * error (e.g. one handle is invalid), falls back to per-handle decryption so
+   * healthy handles still resolve. Each item in the result carries either a
+   * decrypted value or an error — callers decide how to surface partial failures.
    *
-   * @internal
+   * @param handles - FHE handles paired with their contract addresses.
+   * @param delegatorAddress - The address that granted delegation rights.
+   * @param accountAddress - The account on whose behalf decryption is performed. Defaults to `delegatorAddress`.
+   * @param maxConcurrency - Maximum parallel decrypt calls during per-handle fallback.
+   * @returns Per-handle results, each with a value or an error.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   *
+   * @example
+   * ```ts
+   * const result = await sdk.decryption.delegatedBatchDecrypt({
+   *   handles: [
+   *     { handle: handle1, contractAddress: tokenA },
+   *     { handle: handle2, contractAddress: tokenB },
+   *   ],
+   *   delegatorAddress: "0xDelegator",
+   *   maxConcurrency: 5,
+   * });
+   * for (const item of result.items) {
+   *   if (item.error) console.error(item.handle, item.error);
+   *   else console.log(item.handle, item.value);
+   * }
+   * ```
    */
   async delegatedBatchDecrypt({
     handles,

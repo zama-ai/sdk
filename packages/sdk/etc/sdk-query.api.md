@@ -255,7 +255,15 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function delegatedDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedDecrypt"], DelegatedUserDecryptMutationParams, Readonly<Record<Handle, ClearValueType>>>;
+export function delegatedDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedDecrypt"], DelegatedDecryptMutationParams, Readonly<Record<Handle, ClearValueType>>>;
+
+// @public (undocumented)
+export interface DelegatedDecryptMutationParams {
+    // (undocumented)
+    delegatorAddress: Address;
+    // (undocumented)
+    handles: DecryptHandle[];
+}
 
 // @public (undocumented)
 export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
@@ -266,14 +274,6 @@ export interface DelegateDecryptionParams {
     delegateAddress: Address;
     // (undocumented)
     expirationDate?: Date;
-}
-
-// @public (undocumented)
-export interface DelegatedUserDecryptMutationParams {
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    handles: DecryptHandle[];
 }
 
 // @public
@@ -305,19 +305,19 @@ export interface DelegationStatusData {
     // (undocumented)
     expiryTimestamp: bigint;
     // (undocumented)
-    isDelegated: boolean;
+    isActive: boolean;
 }
 
 // @public (undocumented)
 export interface DelegationStatusQueryConfig {
+    // (undocumented)
+    contractAddress: Address | undefined;
     // (undocumented)
     delegateAddress?: Address;
     // (undocumented)
     delegatorAddress?: Address;
     // (undocumented)
     query?: Record<string, unknown>;
-    // (undocumented)
-    tokenAddress: Address | undefined;
 }
 
 // @public (undocumented)
@@ -1185,15 +1185,15 @@ export const zamaQueryKeys: {
     };
     readonly delegationStatus: {
         readonly all: readonly ["zama.delegationStatus"];
-        readonly token: (tokenAddress?: Address) => readonly ["zama.delegationStatus", {
-            tokenAddress: `0x${string}`;
+        readonly contract: (contractAddress?: Address) => readonly ["zama.delegationStatus", {
+            contractAddress: `0x${string}`;
         } | {
-            tokenAddress?: undefined;
+            contractAddress?: undefined;
         }];
-        readonly scope: (tokenAddress?: Address, delegator?: Address, delegate?: Address) => readonly ["zama.delegationStatus", {
+        readonly scope: (contractAddress?: Address, delegator?: Address, delegate?: Address) => readonly ["zama.delegationStatus", {
             readonly delegateAddress?: `0x${string}` | undefined;
             readonly delegatorAddress?: `0x${string}` | undefined;
-            readonly tokenAddress?: `0x${string}` | undefined;
+            readonly contractAddress?: `0x${string}` | undefined;
         }];
     };
     readonly decryption: {
@@ -1335,9 +1335,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-C5dxoEW7.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-C5dxoEW7.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-C5dxoEW7.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C-OHT8i4.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C-OHT8i4.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-C-OHT8i4.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

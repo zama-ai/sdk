@@ -34,10 +34,6 @@ export interface GenericProvider {
   ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  /**
-   * Return the latest block timestamp in seconds.
-   * Used by {@link ZamaSDK.isDelegated} to compare delegation expiry
-   * against the chain clock instead of the local clock.
-   */
+  /** Return the latest block timestamp in seconds. */
   getBlockTimestamp(): Promise<bigint>;
 }
