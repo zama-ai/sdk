@@ -72,6 +72,7 @@
     "curly": "error",
     "no-console": "error",
     "no-eval": "error",
+    "no-underscore-dangle": ["error", { "allow": ["_default"] }],
     "no-implied-eval": "error",
     "import/no-cycle": "error",
     "import/no-duplicates": "error",

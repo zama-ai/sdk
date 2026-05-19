@@ -32,6 +32,7 @@ export function DelegationPanel({
           type="text"
           name="delegate"
           placeholder="Delegate address (0x...)"
+          aria-label="Delegate address"
           defaultValue={defaultDelegate ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
@@ -70,6 +71,7 @@ export function DelegationPanel({
           type="text"
           name="delegator"
           placeholder="Delegator address (0x...)"
+          aria-label="Delegator address"
           defaultValue={defaultDelegator ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"

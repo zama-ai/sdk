@@ -159,14 +159,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/relayer-sdk": "~0.4.2",
+    "@zama-fhe/relayer-sdk": "~0.4.3",
     "viem": ">=2",
     "zod": ">=4"
   },
   "devDependencies": {
-    "@tanstack/query-core": "^5.99.2",
-    "rolldown": "1.0.0",
-    "rolldown-plugin-dts": "^0.25.0"
+    "@tanstack/query-core": "^5.100.10"
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
