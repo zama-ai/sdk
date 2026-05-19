@@ -44,7 +44,7 @@ import type {
 /**
  * Multi-step shield plan returned by {@link WrappedToken.prepareShield}. Each
  * step is a `TransactionPrepareRequest` the caller passes to
- * {@link OfflineClient.prepare} in order. Preparing immediately before signing
+ * {@link Offline.prepare} in order. Preparing immediately before signing
  * keeps nonces fresh.
  *
  * Non-ERC-1363 underlyings need an `approve` (sometimes preceded by a

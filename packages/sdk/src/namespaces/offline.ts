@@ -16,7 +16,7 @@ import type {
 } from "../types";
 
 /**
- * Sub-client for the offline-signing pipeline — `prepare → sign → broadcast`
+ * Namespace for the offline-signing pipeline — `prepare → sign → broadcast`
  * decomposed for institutional custody, HSM ceremonies, and policy-engine
  * workflows where the three steps cannot run synchronously in a single
  * Promise.
@@ -34,7 +34,7 @@ import type {
  * signing material; every method that signs runs against the signer object
  * you passed to `createConfig`, in your process; keys stay where they are.
  */
-export class OfflineClient {
+export class Offline {
   readonly #offlineSigningService: OfflineSigningService;
 
   constructor(offlineSigningService: OfflineSigningService) {
@@ -51,10 +51,10 @@ export class OfflineClient {
    * cross-process custody — the back-end signer service consumes
    * `prepared.unsignedTx` and returns signed bytes).
    *
-   * @throws {@link SignerAddressMismatchError} if a signer IS configured and
-   *   its connected wallet address differs from `request.from`.
-   * @throws {@link ChainMismatchError} if a signer IS configured and its
-   *   chain disagrees with the provider's chain.
+   * @throws if a signer IS configured and its connected wallet address differs
+   *   from `request.from`. {@link SignerAddressMismatchError}
+   * @throws if a signer IS configured and its chain disagrees with the
+   *   provider's chain. {@link ChainMismatchError}
    */
   prepare<K extends TransactionKind>(
     request: Extract<TransactionPrepareRequest, { kind: K }>,
@@ -93,10 +93,10 @@ export class OfflineClient {
    * — this method is the convenience for the third case where the configured
    * signer holds the key and can sign in-process.
    *
-   * @throws {@link SignerNotConfiguredError} no signer configured
-   * @throws {@link SignerCapabilityError} signer lacks `signTransaction`
-   * @throws {@link SigningFailedError} signer rejected (HSM denial, policy
-   *   refusal, timeout, …)
+   * @throws if no signer configured. {@link SignerNotConfiguredError}
+   * @throws if signer lacks `signTransaction`. {@link SignerCapabilityError}
+   * @throws if signer rejected (HSM denial, policy refusal, timeout, …).
+   *   {@link SigningFailedError}
    */
   sign(prepared: PreparedTransaction): Promise<Hex> {
     return this.#offlineSigningService.sign(prepared);

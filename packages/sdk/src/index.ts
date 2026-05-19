@@ -63,8 +63,7 @@ export {
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
-export { OfflineClient } from "./clients/offline-client";
-export { Permits, Delegations, Decryption } from "./namespaces";
+export { Permits, Delegations, Decryption, Offline } from "./namespaces";
 export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptHandleItem,
