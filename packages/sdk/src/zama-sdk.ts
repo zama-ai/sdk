@@ -1,38 +1,34 @@
-import { getAddress, type Address } from "viem";
+import type { Address } from "viem";
+import { Decryption } from "./namespaces/decryption";
+import { Delegations } from "./namespaces/delegations";
+import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import { SignerNotConfiguredError, wrapDecryptError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
-import type { DecryptHandle } from "./query/user-decrypt";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type {
-  ClearValueType,
-  EncryptParams,
-  EncryptResult,
-  Handle,
-  PublicDecryptResult,
-} from "./relayer/relayer-sdk.types";
+import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
+import { CachingService } from "./services/caching-service";
+import { DecryptionService } from "./services/decryption-service";
+import { DelegationService } from "./services/delegation-service";
+import { EncryptionService } from "./services/encryption-service";
+import { LifecycleService } from "./services/lifecycle-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type {
   GenericProvider,
   GenericSigner,
   GenericStorage,
-  TransactionResult,
   WalletAccountListener,
 } from "./types";
-import { swallow } from "./utils";
-import { requireAlignedWalletAccount, requireChainAlignment } from "./utils/alignment";
-import { CachingService } from "./services/caching-service";
-import { DecryptionService, type BatchDecryptHandlesResult } from "./services/decryption-service";
-import { DelegationService } from "./services/delegation-service";
-import { EncryptionService } from "./services/encryption-service";
-import { LifecycleService } from "./services/lifecycle-service";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
- * Provides signer, storage, and high-level confidential contract interface.
+ *
+ * Exposes domain namespaces for permits, delegations, decryption, and tokens,
+ * plus an unchanged registry, a top-level `encrypt`, and lifecycle methods. Internal
+ * `*Service` classes do the work; the namespace classes own SDK-level guards
+ * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
   readonly relayer: RelayerDispatcher;
@@ -44,31 +40,34 @@ export class ZamaSDK {
    * Uses built-in defaults from chain configs, and the SDK's `registryTTL` if configured.
    */
   readonly registry: WrappersRegistry;
+  /** Permit and keypair management. */
+  readonly permits: Permits;
+  /** On-chain decryption-delegation management. */
+  readonly delegations: Delegations;
+  /** FHE decryption (user, delegated user, public). */
+  readonly decryption: Decryption;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #cache: CachingService;
+  readonly #cachingService: CachingService;
+  readonly #lifecycleService: LifecycleService;
+  readonly #encryptionService: EncryptionService;
+  readonly #decryptionService: DecryptionService | undefined;
   readonly #credentialService: CredentialService | undefined;
   readonly #delegationService: DelegationService;
-  readonly #decryptionService: DecryptionService | undefined;
-  readonly #encryptionService: EncryptionService;
-  readonly #lifecycleService: LifecycleService;
 
   constructor(config: ZamaConfig) {
     this.relayer = config.relayer;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.#cache = new CachingService(config.storage);
     this.#onEvent = config.onEvent ?? function () {};
+    this.#cachingService = new CachingService(config.storage);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
-      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
+      emitEvent: this.emitEvent.bind(this),
     });
-    this.#encryptionService = new EncryptionService({
-      relayer: this.relayer,
-      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
-    });
+
     const registryAddresses: Record<number, Address> = {};
     for (const chain of config.chains) {
       if (chain.registryAddress) {
@@ -81,60 +80,52 @@ export class ZamaSDK {
       registryTTL: config.registryTTL,
     });
     this.#registryTTL = config.registryTTL;
+
     if (config.signer) {
-      const signer = config.signer;
       this.#credentialService = new CredentialService({
         relayer: this.relayer,
-        signer,
+        signer: config.signer,
         keypairTTL: config.keypairTTL,
         permitTTL: config.permitTTL,
         storage: this.storage,
         permitStorage: config.permitStorage,
       });
       this.#decryptionService = new DecryptionService({
-        cache: this.#cache,
+        cache: this.#cachingService,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
-        emitEvent: (input) => this.emitEvent(input),
+        emitEvent: this.emitEvent.bind(this),
       });
-    } else {
-      this.#credentialService = undefined;
-      this.#decryptionService = undefined;
     }
-
+    this.#encryptionService = new EncryptionService({
+      relayer: this.relayer,
+      emitEvent: this.emitEvent.bind(this),
+    });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
-      cache: this.#cache,
       relayer: this.relayer,
+      cachingService: this.#cachingService,
       credentialService: this.#credentialService,
     });
-  }
 
-  /**
-   * Return the configured signer or throw {@link SignerNotConfiguredError}.
-   *
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   */
-  requireSigner(operation: string): GenericSigner {
-    if (!this.signer) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return this.signer;
-  }
-
-  #requireCredentialService(operation: string): CredentialService {
-    if (!this.#credentialService) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return this.#credentialService;
-  }
-
-  #requireDecryptionService(operation: string): DecryptionService {
-    if (!this.#decryptionService) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return this.#decryptionService;
+    this.permits = new Permits({
+      signer: this.signer,
+      provider: this.provider,
+      cachingService: this.#cachingService,
+      credentialService: this.#credentialService,
+    });
+    this.delegations = new Delegations({
+      signer: this.signer,
+      provider: this.provider,
+      delegationService: this.#delegationService,
+    });
+    this.decryption = new Decryption({
+      signer: this.signer,
+      provider: this.provider,
+      relayer: this.relayer,
+      decryptionService: this.#decryptionService,
+    });
   }
 
   /**
@@ -152,32 +143,7 @@ export class ZamaSDK {
   }
 
   /**
-   * Create a high-level ERC-20-style interface for an ERC-7984 confidential token.
-   * Supports balance queries, transfers, operator approvals, and decryption.
-   *
-   * For ERC-7984 wrappers (shield/unshield/allowance), use {@link createWrappedToken} instead.
-   *
-   * @param address - The confidential token contract address.
-   * @returns A {@link Token} instance bound to this SDK.
-   */
-  createToken(address: Address): Token {
-    return new Token(this, address);
-  }
-
-  /**
-   * Create a high-level interface for an ERC-7984 wrapper token.
-   * Extends {@link Token} with shield/unshield/allowance/finalize-unwrap operations.
-   *
-   * @param address - The wrapper token contract address.
-   * @returns A {@link WrappedToken} instance bound to this SDK.
-   */
-  createWrappedToken(address: Address): WrappedToken {
-    return new WrappedToken(this, address);
-  }
-
-  /**
-   * Emit a structured SDK event. Used by {@link Token}/{@link WrappedToken}
-   * to surface lifecycle events through the unified SDK event stream.
+   * Emit a structured SDK event into the unified SDK event stream.
    *
    * Listener exceptions are caught and logged so that a misbehaving subscriber
    * can never corrupt SDK operations.
@@ -227,304 +193,6 @@ export class ZamaSDK {
   }
 
   /**
-   * Pre-authorize contract addresses for direct decryption.
-   *
-   * If a permit covering the requested set already exists, no wallet prompt
-   * occurs. Otherwise the SDK chunks the uncovered subset into groups of ≤10
-   * contracts and prompts once per chunk; partial mid-flight rejection is
-   * preserved (already-signed chunks are persisted before the next prompt).
-   *
-   * @param contracts - Contract addresses to authorize.
-   */
-  async allow(contracts: Address[]): Promise<void> {
-    if (contracts.length === 0) {
-      return;
-    }
-    const service = this.#requireCredentialService("allow");
-    await requireChainAlignment("allow", this.signer, this.provider);
-    await service.allow(contracts);
-  }
-
-  /**
-   * Pre-authorize contract addresses for delegated decryption on behalf of `delegator`.
-   *
-   * @param delegator - The address that delegated decryption rights to the connected signer.
-   * @param contracts - Contract addresses to authorize.
-   */
-  async allowAs(delegator: Address, contracts: Address[]): Promise<void> {
-    if (contracts.length === 0) {
-      return;
-    }
-    const service = this.#requireCredentialService("allowAs");
-    await requireChainAlignment("allowAs", this.signer, this.provider);
-    await service.allow(contracts, delegator);
-  }
-
-  /**
-   * Pure store lookup: are stored permits sufficient to cover `contracts`?
-   * No wallet prompt, no keypair generation. Returns `false` when no signer
-   * is configured.
-   */
-  async isAllowed(contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialService) {
-      return false;
-    }
-    return this.#credentialService.isAllowed(contracts);
-  }
-
-  /**
-   * Pure store lookup for a delegated scope. No wallet prompt. See {@link isAllowed}.
-   *
-   * @param delegator - The address that delegated decryption rights to the connected signer.
-   * @param contracts - Contract addresses to check.
-   * @returns `true` if cached delegated permits cover all requested contracts.
-   */
-  async isAllowedAs(delegator: Address, contracts: Address[]): Promise<boolean> {
-    if (!this.#credentialService) {
-      return false;
-    }
-    return this.#credentialService.isAllowed(contracts, delegator);
-  }
-
-  /**
-   * Delegate decryption rights for a confidential contract to another address.
-   * Calls `ACL.delegateForUserDecryption()` on-chain.
-   *
-   * **Important:** After the transaction is mined, allow **1–2 minutes** before
-   * attempting delegated decryption. The delegation is recorded on L1 immediately,
-   * but the gateway must sync the ACL state via cross-chain event propagation.
-   *
-   * @param contractAddress - The confidential contract address to delegate on.
-   * @param delegateAddress - Address to delegate decryption rights to.
-   * @param expirationDate - Optional expiration date (defaults to permanent delegation via `uint64.max`).
-   * @returns The transaction hash and mined receipt.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
-   * @throws if `expirationDate` is less than 1 hour in the future. {@link DelegationExpirationTooSoonError}
-   * @throws if the delegate equals the connected wallet. {@link DelegationSelfNotAllowedError}
-   * @throws if the delegate equals the contract address. {@link DelegationDelegateEqualsContractError}
-   * @throws if the new expiry equals the current one. {@link DelegationExpiryUnchangedError}
-   * @throws if the delegation transaction reverts. {@link TransactionRevertedError}
-   */
-  async delegateDecryption({
-    contractAddress,
-    delegateAddress,
-    expirationDate,
-  }: {
-    contractAddress: Address;
-    delegateAddress: Address;
-    expirationDate?: Date;
-  }): Promise<TransactionResult> {
-    const signer = this.requireSigner("delegateDecryption");
-    const account = await requireAlignedWalletAccount(
-      "delegateDecryption",
-      this.signer,
-      this.provider,
-    );
-    return this.#delegationService.delegateDecryption(signer, {
-      contractAddress,
-      delegateAddress,
-      delegatorAddress: account.address,
-      expirationDate,
-    });
-  }
-
-  /**
-   * Revoke decryption delegation for a confidential contract.
-   * Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
-   *
-   * @param contractAddress - The confidential contract address to revoke delegation on.
-   * @param delegateAddress - Address to revoke delegation from.
-   * @returns The transaction hash and mined receipt.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
-   * @throws if no delegation exists for this (delegator, delegate, contract) tuple. {@link DelegationNotFoundError}
-   * @throws if the revocation transaction reverts. {@link TransactionRevertedError}
-   */
-  async revokeDelegation({
-    contractAddress,
-    delegateAddress,
-  }: {
-    contractAddress: Address;
-    delegateAddress: Address;
-  }): Promise<TransactionResult> {
-    const signer = this.requireSigner("revokeDelegation");
-    const account = await requireAlignedWalletAccount(
-      "revokeDelegation",
-      this.signer,
-      this.provider,
-    );
-    return this.#delegationService.revokeDelegation(signer, {
-      contractAddress,
-      delegateAddress,
-      delegatorAddress: account.address,
-    });
-  }
-
-  /**
-   * Check whether a delegation is active for the given contract address.
-   *
-   * @param contractAddress - The confidential contract address.
-   * @param delegatorAddress - The address that granted the delegation.
-   * @param delegateAddress - The address that received delegation rights.
-   * @returns `true` if the delegation exists and has not expired.
-   */
-  async isDelegated(params: {
-    contractAddress: Address;
-    delegatorAddress: Address;
-    delegateAddress: Address;
-  }): Promise<boolean> {
-    return this.#delegationService.isDelegated(params);
-  }
-
-  /**
-   * Get the expiration timestamp of a delegation for the given contract.
-   *
-   * @param contractAddress - The confidential contract address.
-   * @param delegatorAddress - The address that granted the delegation.
-   * @param delegateAddress - The address that received delegation rights.
-   * @returns Unix timestamp as bigint. `0n` = no delegation. `2^64 - 1` = permanent.
-   */
-  async getDelegationExpiry({
-    contractAddress,
-    delegatorAddress,
-    delegateAddress,
-  }: {
-    contractAddress: Address;
-    delegatorAddress: Address;
-    delegateAddress: Address;
-  }): Promise<bigint> {
-    return this.#delegationService.getDelegationExpiry({
-      contractAddress,
-      delegatorAddress,
-      delegateAddress,
-    });
-  }
-
-  /**
-   * Decrypt one or more FHE handles. Results are cached — repeated calls
-   * for the same handle skip the relayer round-trip.
-   *
-   * Zero handles are mapped to `0n` without hitting the relayer.
-   * Events (`DecryptStart/End/Error`) are emitted uniformly.
-   * Relayer errors are wrapped into typed SDK errors.
-   *
-   * @param handles - Handles to decrypt, each paired with its contract address.
-   * @returns A record mapping each handle to its decrypted clear-text value.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
-   *
-   * @example
-   * ```ts
-   * const values = await sdk.userDecrypt([
-   *   { handle: balanceHandle, contractAddress: cUSDT },
-   * ]);
-   * console.log(values[balanceHandle]); // 1000n
-   * ```
-   */
-  async userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#requireDecryptionService("userDecrypt");
-    const account = await requireAlignedWalletAccount("userDecrypt", this.signer, this.provider);
-    return service.userDecrypt(handles, account.address);
-  }
-
-  /**
-   * Decrypt one or more FHE handles using delegated credentials.
-   *
-   * Mirrors {@link userDecrypt} with delegated credentials — same caching and
-   * zero-handle short-circuit. Before reading from cache or calling the relayer,
-   * every non-zero handle's contract must have an active delegation from the
-   * delegator to the connected signer; missing or expired delegations fail fast.
-   *
-   * @param handles - FHE handles paired with their contract addresses.
-   * @param delegatorAddress - The address that granted delegation rights.
-   * @param accountAddress - Address used as the cache key's "requester"
-   *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
-   *   when decrypting on behalf of someone whose balance is stored under a
-   *   different address (e.g. `decryptBalanceAs` with an explicit `accountAddress`).
-   * @returns Map of handle → clear-text value.
-   *
-   * @example
-   * ```ts
-   * const values = await sdk.delegatedUserDecrypt([
-   *   { handle: balanceHandle, contractAddress: tokenAddr },
-   * ], delegatorAddr);
-   * console.log(values[balanceHandle]); // 1000n
-   * ```
-   */
-  async delegatedUserDecrypt(
-    handles: DecryptHandle[],
-    delegatorAddress: Address,
-    accountAddress: Address = delegatorAddress,
-  ): Promise<Record<Handle, ClearValueType>> {
-    const service = this.#requireDecryptionService("delegatedUserDecrypt");
-    const account = await requireAlignedWalletAccount(
-      "delegatedUserDecrypt",
-      this.signer,
-      this.provider,
-    );
-    return service.delegatedUserDecrypt(handles, delegatorAddress, account.address, accountAddress);
-  }
-
-  /** @internal */
-  async delegatedBatchDecryptHandlesAs({
-    handles,
-    delegatorAddress,
-    accountAddress = delegatorAddress,
-    maxConcurrency,
-  }: {
-    handles: DecryptHandle[];
-    delegatorAddress: Address;
-    accountAddress?: Address;
-    maxConcurrency?: number;
-  }): Promise<BatchDecryptHandlesResult> {
-    const service = this.#requireDecryptionService("delegatedBatchDecryptHandlesAs");
-    const account = await requireAlignedWalletAccount(
-      "delegatedBatchDecryptHandlesAs",
-      this.signer,
-      this.provider,
-    );
-    return service.delegatedBatchDecryptHandlesAs({
-      handles,
-      delegatorAddress,
-      delegateAddress: account.address,
-      accountAddress,
-      maxConcurrency,
-    });
-  }
-
-  /**
-   * Publicly decrypt one or more FHE handles.
-   *
-   * Returns the decryption proof alongside the clear-text values so callers
-   * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
-   *
-   * @param handles - FHE handles to decrypt publicly.
-   * @returns Clear-text values, ABI-encoded values, and the decryption proof.
-   *
-   * @example
-   * ```ts
-   * const { clearValues, decryptionProof, abiEncodedClearValues } =
-   *   await sdk.publicDecrypt([handle]);
-   * ```
-   */
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    if (handles.length === 0) {
-      return {
-        clearValues: {},
-        decryptionProof: "0x",
-        abiEncodedClearValues: "0x",
-      };
-    }
-
-    try {
-      return await this.relayer.publicDecrypt(handles);
-    } catch (error) {
-      throw wrapDecryptError(error, "Public decryption failed");
-    }
-  }
-
-  /**
    * Encrypt one or more plaintext values into FHE ciphertexts.
    *
    * @param params - Typed FHE inputs, the target contract address, and the user address.
@@ -545,48 +213,39 @@ export class ZamaSDK {
   }
 
   /**
-   * Wipe FHE permits for the current signer.
+   * Create a high-level ERC-20-style interface for an ERC-7984 confidential token.
+   * Supports balance queries, transfers, operator approvals, and decryption.
    *
-   * - With no argument: every permit referencing this signer is removed across
-   *   all chains and delegators. The keypair survives — use
-   *   {@link clearCredentials} to also wipe the keypair.
-   * - With a contract list: every signed permit in the direct-decrypt scope
-   *   (current chain) whose immutable payload touches any listed address is
-   *   removed. May also drop coverage for other contracts that shared the same
-   *   permit. Delegated permits are not touched in this mode.
+   * For ERC-7984 wrappers (shield/unshield/allowance), use {@link createWrappedToken} instead.
    *
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @param address - The confidential token contract address.
+   * @returns A {@link Token} instance bound to this SDK.
+   *
+   * @example
+   * ```ts
+   * const token = sdk.createToken(cUSDT);
+   * const balance = await token.balanceOf(userAddress);
+   * ```
    */
-  async revokePermits(contracts?: Address[]): Promise<void> {
-    const service = this.#requireCredentialService("revokePermits");
-    const account = await requireAlignedWalletAccount("revokePermits", this.signer, this.provider);
-    const signerAddress = getAddress(account.address);
-    try {
-      await service.revokePermits(contracts);
-    } finally {
-      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(signerAddress));
-    }
+  createToken(address: Address): Token {
+    return new Token(this, address);
   }
 
   /**
-   * Wipe the keypair for the current signer and cascade-delete every permit
-   * (across chains and delegators) referencing it.
+   * Create a high-level interface for an ERC-7984 wrapper token.
+   * Extends {@link Token} with shield/unshield/allowance/finalize-unwrap operations.
    *
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @param address - The wrapper token contract address.
+   * @returns A {@link WrappedToken} instance bound to this SDK.
+   *
+   * @example
+   * ```ts
+   * const wrapped = sdk.createWrappedToken(wUSDT);
+   * await wrapped.shield(1_000_000n);
+   * ```
    */
-  async clearCredentials(): Promise<void> {
-    const service = this.#requireCredentialService("clearCredentials");
-    const account = await requireAlignedWalletAccount(
-      "clearCredentials",
-      this.signer,
-      this.provider,
-    );
-    const signerAddress = getAddress(account.address);
-    try {
-      await service.clearCredentials();
-    } finally {
-      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(signerAddress));
-    }
+  createWrappedToken(address: Address): WrappedToken {
+    return new WrappedToken(this, address);
   }
 
   /**
@@ -617,7 +276,7 @@ export class ZamaSDK {
    * ```ts
    * {
    *   using sdk = new ZamaSDK({ relayer, provider, signer, storage });
-   *   await sdk.allow([cUSDT]);
+   *   await sdk.permits.grantPermit([cUSDT]);
    *   const balance = await sdk.createToken(cUSDT).balanceOf(userAddress);
    * } // sdk.terminate() called automatically here
    * ```

@@ -12,22 +12,22 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export { useUserDecrypt, type UseUserDecryptResult } from "./relayer/use-user-decrypt";
+export { useUserDecrypt, type UseUserDecryptResult } from "./decrypt/use-user-decrypt";
 
-export { usePublicDecrypt } from "./relayer/use-public-decrypt";
+export { usePublicDecrypt } from "./decrypt/use-public-decrypt";
 export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
 export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delegated-user-decrypt-eip712";
-export { useDelegatedUserDecrypt } from "./relayer/use-delegated-user-decrypt";
+export { useDelegatedDecrypt } from "./decrypt/use-delegated-decrypt";
 export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
 export { usePublicKey } from "./relayer/use-public-key";
 export { usePublicParams } from "./relayer/use-public-params";
 
 // Authorization hooks (generic — any contract with encrypted state)
-export { useAllow } from "./authorization/use-allow";
-export { useIsAllowed, type UseIsAllowedConfig } from "./authorization/use-is-allowed";
-export { useRevokePermits } from "./authorization/use-revoke-permits";
-export { useClearCredentials } from "./authorization/use-clear-credentials";
+export { useGrantPermit } from "./permits/use-grant-permit";
+export { useHasPermit, type UseHasPermitConfig } from "./permits/use-has-permit";
+export { useRevokePermits } from "./permits/use-revoke-permits";
+export { useClearCredentials } from "./permits/use-clear-credentials";
 
 // Token hooks (ERC-20 token operations)
 export { useToken } from "./token/use-token";
@@ -74,14 +74,14 @@ export {
   type UseWrapperDiscoverySuspenseConfig,
 } from "./token/use-wrapper-discovery";
 export { useMetadata, useMetadataSuspense } from "./token/use-metadata";
-export { useDelegateDecryption } from "./delegation/use-delegate-decryption";
-export { useRevokeDelegation } from "./delegation/use-revoke-delegation";
+export { useDelegateDecryption } from "./delegations/use-delegate-decryption";
+export { useRevokeDelegation } from "./delegations/use-revoke-delegation";
 export {
   useDelegationStatus,
   type UseDelegationStatusConfig,
-} from "./delegation/use-delegation-status";
-export { useDecryptBalanceAs } from "./delegation/use-decrypt-balance-as";
-export { useBatchDecryptBalancesAs } from "./delegation/use-batch-decrypt-balances-as";
+} from "./delegations/use-delegation-status";
+export { useDecryptBalanceAs } from "./delegations/use-decrypt-balance-as";
+export { useBatchDecryptBalancesAs } from "./delegations/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./shield/use-approve-underlying";
 export {
   useIsConfidential,

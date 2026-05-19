@@ -7,7 +7,9 @@ const DELEGATE = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 describe("delegateDecryptionMutationOptions", () => {
   test("delegates delegateDecryption", async ({ sdk }) => {
-    const spy = vi.spyOn(sdk, "delegateDecryption").mockResolvedValue({ txHash: "0x" });
+    const spy = vi
+      .spyOn(sdk.delegations, "delegateDecryption")
+      .mockResolvedValue({ txHash: "0x", receipt: { logs: [] } });
     const options = delegateDecryptionMutationOptions(sdk, TOKEN);
 
     expect(options.mutationKey).toEqual(["zama.delegateDecryption", TOKEN]);
@@ -20,7 +22,9 @@ describe("delegateDecryptionMutationOptions", () => {
   });
 
   test("passes options through", async ({ sdk }) => {
-    const spy = vi.spyOn(sdk, "delegateDecryption").mockResolvedValue({ txHash: "0x" });
+    const spy = vi
+      .spyOn(sdk.delegations, "delegateDecryption")
+      .mockResolvedValue({ txHash: "0x", receipt: { logs: [] } });
     const options = delegateDecryptionMutationOptions(sdk, TOKEN);
     const expirationDate = new Date("2030-01-01");
 

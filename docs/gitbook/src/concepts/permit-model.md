@@ -24,7 +24,7 @@ The relayer verifies this signature before re-encrypting any ciphertext. Without
 - **Immutable** — the signed contract addresses are part of the EIP-712 payload and cannot be edited after signing.
 - **Chunked** — each permit covers at most 10 contracts. When more are needed, the SDK chunks the addresses and requests one wallet signature per chunk.
 - **Chain-scoped** — stored under `(signerAddress, chainId, delegatorAddress)`, so permits on Sepolia never collide with permits on Mainnet, and direct permits never collide with delegated ones.
-- **Additive** — calling `allow()` with new contracts signs additional permits for the uncovered subset only. Existing permits remain valid and are not re-signed.
+- **Additive** — calling `permits.grantPermit()` with new contracts signs additional permits for the uncovered subset only. Existing permits remain valid and are not re-signed.
 - **Time-bounded** — each permit records its creation timestamp and duration. Expired permits are pruned on next access.
 
 ## Lifecycle
@@ -32,7 +32,7 @@ The relayer verifies this signature before re-encrypting any ciphertext. Without
 ### First visit
 
 1. User connects wallet.
-2. App calls `allow([contractA, contractB])`.
+2. App calls `permits.grantPermit([contractA, contractB])`.
 3. SDK checks storage — no permits cover these contracts yet.
 4. SDK builds EIP-712 typed data (contract addresses, timestamp, duration) and requests a wallet signature.
 5. Wallet signs → permit is stored (keyed by signer address, chain ID, and delegator).
@@ -67,26 +67,26 @@ Unlike a session model where re-authorizing replaces the previous authorization,
 
 ```ts
 // Signs permits for all three contracts
-await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractB", "0xContractC"]);
 
 // ContractA is already covered — only ContractD triggers a new signature
-await sdk.allow(["0xContractA", "0xContractD"]);
+await sdk.permits.grantPermit(["0xContractA", "0xContractD"]);
 ```
 
 This means users see fewer wallet popups over time. As they interact with more contracts, their permit coverage grows without invalidating earlier permits.
 
 {% hint style="info" %}
-Batch all contract addresses you expect to need into a single `allow()` call to minimize wallet popups. Each uncovered chunk of up to 10 contracts triggers one signature prompt.
+Batch all contract addresses you expect to need into a single `permits.grantPermit()` call to minimize wallet popups. Each uncovered chunk of up to 10 contracts triggers one signature prompt.
 {% endhint %}
 
 ## Revocation
 
 Permits can be removed in two ways:
 
-- **Selective** — `sdk.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
+- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
-For a complete "log out" that also removes the FHE keypair, use `sdk.clearCredentials()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#revokepermits) for the full API.
+For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#permits-revokepermits) for the full API.
 
 ## Wallet account changes
 
@@ -104,4 +104,4 @@ See [ZamaSDK.onWalletAccountChange](/reference/sdk/ZamaSDK#onwalletaccountchange
 
 - [Security Model](/concepts/security-model) — keypair storage, threat model, and trust assumptions
 - [Configuration](/guides/configuration#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
-- [ZamaSDK](/reference/sdk/ZamaSDK) — `allow()`, `revokePermits()`, `clearCredentials()` API
+- [ZamaSDK](/reference/sdk/ZamaSDK) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API

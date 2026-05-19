@@ -20,6 +20,7 @@ import {
   EncryptionFailedError,
   InsufficientConfidentialBalanceError,
   isFatalBatchError,
+  requireConfigured,
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
@@ -32,6 +33,7 @@ import { isZeroHandle } from "../utils/handles";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import type {
+  GenericSigner,
   TransactionResult,
   TransferCallbacks,
   TransferOptions,
@@ -78,7 +80,7 @@ export interface BatchBalancesResult {
  *
  * Decryption, credentials, caching, and event emission are handled by the
  * owning {@link ZamaSDK} — this class only exposes token-scoped helpers
- * that delegate to {@link ZamaSDK.userDecrypt} and {@link ZamaSDK.allow}.
+ * that delegate to `sdk.decryption.userDecrypt` and `sdk.permits.grantPermit`.
  */
 export class Token {
   readonly sdk: ZamaSDK;
@@ -87,6 +89,11 @@ export class Token {
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
     this.address = getAddress(address);
+  }
+
+  /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
+  #requireSigner(operation: string): GenericSigner {
+    return requireConfigured(this.sdk.signer, operation);
   }
 
   // METADATA
@@ -158,7 +165,9 @@ export class Token {
   async balanceOf(owner: Address): Promise<bigint> {
     const ownerAddress = getAddress(owner);
     const handle = await this.readConfidentialBalanceOf(ownerAddress);
-    const result = await this.sdk.userDecrypt([{ handle, contractAddress: this.address }]);
+    const result = await this.sdk.decryption.userDecrypt([
+      { handle, contractAddress: this.address },
+    ]);
     const value = result[handle];
     if (value === undefined) {
       throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
@@ -223,7 +232,7 @@ export class Token {
       return 0n;
     }
 
-    const result = await this.sdk.delegatedUserDecrypt(
+    const result = await this.sdk.decryption.delegatedDecrypt(
       [{ handle, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
@@ -245,7 +254,7 @@ export class Token {
    * Decrypt confidential balances for multiple tokens in parallel, returning
    * successes and per-token errors separately. Pre-authorizes all token
    * addresses in a single wallet signature, then delegates each decrypt to
-   * {@link ZamaSDK.userDecrypt}.
+   * `sdk.decryption.userDecrypt`.
    *
    * Tokens that fail to decrypt land in `errors` rather than aborting the
    * whole batch — caller decides how to surface them.
@@ -271,7 +280,7 @@ export class Token {
     await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
     // Pre-authorize the full token set in one wallet signature so subsequent
     // per-token userDecrypt calls reuse the cached credentials.
-    await sdk.allow(tokens.map((t) => t.address));
+    await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
     const outcomes = await pLimit(
       tokens.map((t) => async () => {
@@ -382,7 +391,7 @@ export class Token {
     }
 
     if (decryptRequests.length > 0) {
-      const decrypted = await sdk.delegatedBatchDecryptHandlesAs({
+      const decrypted = await sdk.decryption.delegatedBatchDecrypt({
         handles: decryptRequests.map(({ token, handle }) => ({
           handle,
           contractAddress: token.address,
@@ -486,7 +495,9 @@ export class Token {
         token.address,
         outcome.reason instanceof ZamaError
           ? outcome.reason
-          : new DecryptionFailedError(toError(outcome.reason).message, { cause: outcome.reason }),
+          : new DecryptionFailedError(toError(outcome.reason).message, {
+              cause: outcome.reason,
+            }),
       );
     }
     return handles;
@@ -522,6 +533,7 @@ export class Token {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
+    this.#requireSigner("confidentialTransfer");
     const account = await requireAlignedWalletAccount(
       "confidentialTransfer",
       this.sdk.signer,
@@ -573,6 +585,7 @@ export class Token {
     amount: bigint,
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
+    this.#requireSigner("confidentialTransferFrom");
     await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
@@ -621,6 +634,7 @@ export class Token {
    * ```
    */
   async setOperator(operator: Address, until?: number): Promise<TransactionResult> {
+    this.#requireSigner("setOperator");
     await requireChainAlignment("setOperator", this.sdk.signer, this.sdk.provider);
     const normalizedOperator = getAddress(operator);
     return this.submitTransaction({
@@ -649,7 +663,7 @@ export class Token {
     );
   }
 
-  // PROTECTED HELPERS (also used by WrappedToken subclass)
+  // PROTECTED HELPERS
 
   /**
    * Read the on-chain encrypted balance handle for a given owner.
@@ -722,7 +736,7 @@ export class Token {
     const { operation, config, onSubmitted } = params;
     return submitSdkTransaction({
       operation,
-      signer: this.sdk.requireSigner(operation),
+      signer: this.#requireSigner(operation),
       provider: this.sdk.provider,
       config,
       emit: (input) => this.emit(input),
@@ -744,10 +758,5 @@ export class Token {
   }
 }
 
-/**
- * Re-exported alias used by tests and helpers for arbitrary-handle decryption.
- * Use {@link ZamaSDK.userDecrypt} directly in application code.
- *
- * @internal
- */
+/** @internal */
 export type DecryptedHandlesMap = Map<Handle, ClearValueType>;

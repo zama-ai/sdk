@@ -188,7 +188,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.clearCredentials()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh keypair.
 
 ### TransactionRevertedError
 
@@ -213,7 +213,7 @@ The relayer rejected the FHE keypair. This happens when the keypair is malformed
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
-    sdk.clearCredentials();
+    sdk.permits.clear();
     showPrompt("Keypair rejected — sign again to continue");
   },
 });

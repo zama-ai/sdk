@@ -4,7 +4,8 @@ import type { Address, GenericSigner } from "@zama-fhe/sdk";
 import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { vi } from "vitest";
 import { describe, expect, test } from "../../test-fixtures";
-import { useIsAllowed } from "../use-is-allowed";
+
+import { useHasPermit } from "../use-has-permit";
 
 const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const SIGNER_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
@@ -33,20 +34,20 @@ function makeSigner(): GenericSigner {
   } as unknown as GenericSigner;
 }
 
-describe("useIsAllowed", () => {
+describe("useHasPermit", () => {
   test("uses a minimal uncached query keyed by contract addresses", async ({
     renderWithProviders,
   }) => {
     vi.mocked(useQuery).mockReturnValue({ data: true } as never);
     const signer = makeSigner();
 
-    renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }), { signer });
+    renderWithProviders(() => useHasPermit({ contractAddresses: [CONTRACT_A] }), { signer });
 
     await waitFor(() => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKeyHashFn: hashFn,
-          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
+          queryKey: zamaQueryKeys.hasPermit.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
           enabled: true,
           staleTime: 0,
           gcTime: 0,
@@ -58,14 +59,14 @@ describe("useIsAllowed", () => {
   test("is disabled when no signer is configured", async ({ renderWithProviders }) => {
     vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
 
-    renderWithProviders(() => useIsAllowed({ contractAddresses: [CONTRACT_A] }), {
+    renderWithProviders(() => useHasPermit({ contractAddresses: [CONTRACT_A] }), {
       signer: undefined,
     });
 
     await waitFor(() => {
       expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: zamaQueryKeys.isAllowed.scope([CONTRACT_A]),
+          queryKey: zamaQueryKeys.hasPermit.scope([CONTRACT_A]),
           enabled: false,
         }),
       );

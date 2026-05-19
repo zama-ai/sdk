@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { ZamaSDK } from "@zama-fhe/sdk";
+import { Permits } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { afterEach, describe, expect, test, vi } from "../../test-fixtures";
 import { useClearCredentials } from "../use-clear-credentials";
@@ -19,23 +19,23 @@ describe("useClearCredentials", () => {
   test("cache: removes isAllowed and decryption queries after clearCredentials", async ({
     renderWithProviders,
   }) => {
-    vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
+    vi.spyOn(Permits.prototype, "clear").mockResolvedValue(undefined);
     const { result, queryClient } = renderWithProviders(() => useClearCredentials());
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
 
-    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.isAllowed.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
     expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 
   test("behavior: forwards onSuccess callback", async ({ renderWithProviders }) => {
-    vi.spyOn(ZamaSDK.prototype, "clearCredentials").mockResolvedValue(undefined);
+    vi.spyOn(Permits.prototype, "clear").mockResolvedValue(undefined);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() => useClearCredentials({ onSuccess }));
-    queryClient.setQueryData(zamaQueryKeys.isAllowed.all, true);
+    queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
     queryClient.setQueryData(zamaQueryKeys.decryption.all, { foo: 1n });
 
     await act(() => result.current.mutateAsync());
@@ -43,7 +43,7 @@ describe("useClearCredentials", () => {
     expect(onSuccess).toHaveBeenCalledOnce();
     expect(onSuccess.mock.calls[0]?.[0]).toBeUndefined();
     expect(onSuccess.mock.calls[0]?.[1]).toBeUndefined();
-    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.isAllowed.all);
+    expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.hasPermit.all);
     expect(queryClient).toHaveCacheRemoved(zamaQueryKeys.decryption.all);
   });
 });

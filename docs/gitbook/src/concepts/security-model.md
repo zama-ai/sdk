@@ -159,9 +159,9 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 ### Revocation
 
-Permits can be revoked programmatically via `sdk.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
+Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revoking permits, the FHE keypair remains in storage. Use `sdk.clearCredentials()` to also wipe the keypair.
+After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
 
 ## CSRF protection
 

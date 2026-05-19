@@ -1,10 +1,10 @@
 "use client";
 
 import type { Address } from "@zama-fhe/sdk";
-import { useAllow } from "@zama-fhe/react-sdk";
+import { useGrantPermit } from "@zama-fhe/react-sdk";
 
 export function AllowAllPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
-  const allow = useAllow();
+  const allow = useGrantPermit();
 
   return (
     <section className="space-y-2">

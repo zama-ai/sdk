@@ -23,7 +23,7 @@ export function useClearCredentials(options?: UseMutationOptions<void>) {
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
       context.client.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
     },
   });

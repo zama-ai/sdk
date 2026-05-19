@@ -4,7 +4,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../test-fixtures";
 import { useZamaSDK } from "../provider";
 import { useConfidentialTransfer } from "../transfer/use-confidential-transfer";
-import { useIsAllowed } from "../authorization/use-is-allowed";
+import { useHasPermit } from "../permits/use-has-permit";
 import { useMetadata } from "../token/use-metadata";
 
 describe("ZamaProvider with signer={undefined}", () => {
@@ -17,14 +17,11 @@ describe("ZamaProvider with signer={undefined}", () => {
     expect(result.current.signer).toBeUndefined();
   });
 
-  test("useIsAllowed idles when no signer is configured", async ({ renderWithProviders }) => {
-    const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-    const { result } = renderWithProviders(
-      () => useIsAllowed({ contractAddresses: [tokenAddress] }),
-      {
-        signer: undefined,
-      },
-    );
+  test("useHasPermit idles when no signer is configured", async ({ renderWithProviders }) => {
+    const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+    const { result } = renderWithProviders(() => useHasPermit({ contractAddresses: [TOKEN] }), {
+      signer: undefined,
+    });
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();

@@ -78,11 +78,11 @@ revokePermits(); // all permits, all chains
 ## Behavior
 
 - Removes signed permits from the permission store.
-- Auto-invalidates all [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+- Auto-invalidates all [`useHasPermit`](/reference/react/useHasPermit) queries on success.
 - The FHE keypair is not affected — only permits are removed.
 
 ## Related
 
 - [`useClearCredentials`](/reference/react/useClearCredentials) — wipe the keypair and all permits
-- [`useAllow`](/reference/react/useAllow) — sign permits for contracts
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether stored permits cover contracts
+- [`useGrantPermit`](/reference/react/useGrantPermit) — sign permits for contracts
+- [`useHasPermit`](/reference/react/useHasPermit) — check whether stored permits cover contracts

@@ -103,7 +103,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
-      "oxlint --fix",
+      "oxlint --fix --no-error-on-unmatched-pattern",
       "ast-grep scan --config sgconfig.yml"
     ],
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt --no-error-on-unmatched-pattern"

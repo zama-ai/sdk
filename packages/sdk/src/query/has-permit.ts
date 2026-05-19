@@ -5,29 +5,29 @@ import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
-export interface IsAllowedQueryConfig {
+export interface HasPermitQueryConfig {
   /** Contract addresses to check credentials against. */
   contractAddresses: [Address, ...Address[]];
   /**
-   * Standard TanStack query options. `isAllowed` intentionally overrides cache
+   * Standard TanStack query options. `hasPermit` intentionally overrides cache
    * timing because permit state is wallet-local, not server state: every fetch
    * should read the SDK credential service directly.
    */
   query?: Record<string, unknown>;
 }
 
-export function isAllowedQueryOptions(
+export function hasPermitQueryOptions(
   sdk: ZamaSDK,
-  config: IsAllowedQueryConfig,
+  config: HasPermitQueryConfig,
   signerContext: SignerQueryContext = {},
-): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isAllowed.scope>> {
+): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.hasPermit.scope>> {
   const callerEnabled = config.query?.enabled !== false;
   return {
     ...filterQueryOptions(config?.query ?? {}),
-    queryKey: zamaQueryKeys.isAllowed.scope(config.contractAddresses, signerContext.walletAccount),
+    queryKey: zamaQueryKeys.hasPermit.scope(config.contractAddresses, signerContext.walletAccount),
     queryFn: (context) => {
       const [, { contractAddresses }] = context.queryKey;
-      return sdk.isAllowed(contractAddresses as Address[]);
+      return sdk.permits.hasPermit(contractAddresses as Address[]);
     },
     staleTime: 0,
     gcTime: 0,

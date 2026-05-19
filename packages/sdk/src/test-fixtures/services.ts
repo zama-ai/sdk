@@ -42,7 +42,7 @@ export type CreateEncryptionServiceFn = (overrides?: {
 
 export type CreateLifecycleServiceFn = (overrides?: {
   signer?: GenericSigner;
-  cache?: CachingService;
+  cachingService?: CachingService;
   relayer?: RelayerDispatcher;
   credentialService?: CredentialService;
 }) => LifecycleService;
@@ -125,7 +125,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     const factory: CreateLifecycleServiceFn = (overrides = {}) =>
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
-        cache: overrides.cache ?? cachingService,
+        cachingService: overrides.cachingService ?? cachingService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
         credentialService: overrides.credentialService,
       });

@@ -2,7 +2,7 @@
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { allowMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { grantPermitMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -18,22 +18,22 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const { mutateAsync: allow, isPending } = useAllow();
+ * const { mutateAsync: grantPermit, isPending } = useGrantPermit();
  *
  * // Authorize decryption for any contracts with encrypted state:
  * // confidential tokens, auction contracts, governance contracts, etc.
- * await allow([tokenAddress, auctionAddress, governanceAddress]);
+ * await grantPermit([tokenAddress, auctionAddress, governanceAddress]);
  * ```
  */
-export function useAllow(options?: UseMutationOptions<void, Error, Address[]>) {
+export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>) {
   const sdk = useZamaSDK();
 
   return useMutation<void, Error, Address[]>({
-    ...allowMutationOptions(sdk),
+    ...grantPermitMutationOptions(sdk),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      context.client.removeQueries({ queryKey: zamaQueryKeys.isAllowed.all });
+      context.client.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
     },
   });
 }

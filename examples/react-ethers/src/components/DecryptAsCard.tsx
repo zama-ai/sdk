@@ -48,7 +48,7 @@ export function DecryptAsCard({
   // delegatorAddress = the owner who granted the delegation.
   // delegateAddress  = the connected wallet (us).
   const delegationStatus = useDelegationStatus({
-    tokenAddress,
+    contractAddress: tokenAddress,
     delegatorAddress: ownerIsValid ? (ownerAddress as Address) : undefined,
     delegateAddress: connectedAddress,
   });
@@ -87,12 +87,12 @@ export function DecryptAsCard({
               Unable to check delegation status: {delegationStatus.error?.message}
             </span>
           )}
-          {delegationStatus.data?.isDelegated && (
+          {delegationStatus.data?.isActive && (
             <span className="delegation-status-active">
               ✓ Delegated · {formatExpiry(delegationStatus.data.expiryTimestamp)}
             </span>
           )}
-          {delegationStatus.data && !delegationStatus.data.isDelegated && (
+          {delegationStatus.data && !delegationStatus.data.isActive && (
             <span className="delegation-status-none">No active delegation for this token</span>
           )}
         </div>

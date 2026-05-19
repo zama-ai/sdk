@@ -70,25 +70,25 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 {% tab title="React" %}
 
 ```tsx
-import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
   const { address } = useAccount();
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
     { address: TOKEN, account: address },
-    { enabled: !!isAllowed },
+    { enabled: !!hasPermit },
   );
 
-  if (!isAllowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([TOKEN])} disabled={isAllowing}>
-        {isAllowing ? "Signing…" : "View balance"}
+      <button onClick={() => grantPermit([TOKEN])} disabled={isGranting}>
+        {isGranting ? "Signing…" : "View balance"}
       </button>
     );
   }
@@ -101,7 +101,7 @@ function Balance() {
 {% endtab %}
 {% endtabs %}
 
-A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
+A common pattern is to call `useGrantPermit` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 

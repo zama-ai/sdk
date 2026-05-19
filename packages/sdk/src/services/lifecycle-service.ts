@@ -6,8 +6,8 @@ import type { CachingService } from "./caching-service";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
-  cache: CachingService;
   relayer: RelayerDispatcher;
+  cachingService: CachingService;
   credentialService?: CredentialService;
 };
 
@@ -21,16 +21,16 @@ export type LifecycleServiceOptions = {
  */
 export class LifecycleService {
   readonly #signer: GenericSigner | undefined;
-  readonly #cache: CachingService;
   readonly #relayer: RelayerDispatcher;
+  readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
 
   constructor(opts: LifecycleServiceOptions) {
     this.#signer = opts.signer;
-    this.#cache = opts.cache;
     this.#relayer = opts.relayer;
+    this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {
@@ -65,7 +65,9 @@ export class LifecycleService {
       );
     }
     if (prev) {
-      await swallow("clear decrypt cache", () => this.#cache.clearForRequester(prev.address));
+      await swallow("clear decrypt cache", () =>
+        this.#cachingService.clearForRequester(prev.address),
+      );
     }
     const nextChainId = next?.chainId;
     if (nextChainId !== undefined) {

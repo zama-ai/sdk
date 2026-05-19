@@ -7,8 +7,8 @@ import { useQuery } from "../utils/query";
 import { useZamaSDK } from "../provider";
 
 export interface UseDelegationStatusConfig {
-  /** Address of the confidential token contract. Pass `undefined` to disable the query. */
-  tokenAddress: Address | undefined;
+  /** Address of the confidential contract. Pass `undefined` to disable the query. */
+  contractAddress: Address | undefined;
   /** The address that granted the delegation. */
   delegatorAddress?: Address;
   /** The address that received delegation rights. */
@@ -20,16 +20,16 @@ export interface UseDelegationStatusConfig {
  *
  * @param config - Token address, delegator, and delegate addresses.
  * @param options - React Query options (forwarded to `useQuery`).
- * @returns `{ isDelegated, expiryTimestamp, isLoading, error }`.
+ * @returns `{ isActive, expiryTimestamp, isLoading, error }`.
  *
  * @example
  * ```tsx
  * const { data } = useDelegationStatus({
- *   tokenAddress: "0xToken",
+ *   contractAddress: "0xToken",
  *   delegatorAddress: "0xDelegator",
  *   delegateAddress: "0xDelegate",
  * });
- * // data?.isDelegated, data?.expiryTimestamp
+ * // data?.isActive, data?.expiryTimestamp
  * ```
  */
 export function useDelegationStatus(
