@@ -16,6 +16,7 @@ export interface TransferOptions extends TransferCallbacks {
  * User-facing approval strategy.
  *
  * - `"exact"` (default): approve exactly `amount`.
+ *   Can be combined with `approvalAmount` to approve a larger bounded amount.
  * - `"max"`: approve unlimited.
  * - `"skip"`: assume a pre-existing approval; skip the approve step.
  */
@@ -37,6 +38,8 @@ export type ShieldPath = "transferAndCall" | "approveAndWrap";
 export interface ShieldOptions extends ShieldCallbacks {
   /** See {@link ApprovalStrategy}. Default: `"exact"`. Ignored when the underlying supports ERC-1363 (single-tx path requires no approval). */
   approvalStrategy?: ApprovalStrategy;
+  /** Optional bounded approval amount for the approval-backed shield path. Ignored for `"max"`, `"skip"`, and ERC-1363 transfer-and-call shields. */
+  approvalAmount?: bigint;
   /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
   to?: Address;
 }

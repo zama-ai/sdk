@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://zama.ai/sdk/clear-signing/erc7730-fixtures.schema.json",
+  "$id": "https://zama.org/sdk/clear-signing/erc7730-fixtures.schema.json",
   "title": "Zama SDK ERC-7730 local fixtures",
   "type": "object",
   "required": ["chainId", "accounts", "contracts", "values", "calldata", "eip712"],

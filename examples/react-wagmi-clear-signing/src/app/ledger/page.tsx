@@ -182,16 +182,21 @@ export default function LedgerClearSigningPage() {
     let sessionId = "";
     try {
       addLog("info", "Loading Ledger DMK / WebHID / DSK modules.");
-      const [{ DeviceManagementKitBuilder }, { webHidIdentifier, webHidTransportFactory }, { SignerEthBuilder }] =
-        await Promise.all([
-          import("@ledgerhq/device-management-kit"),
-          import("@ledgerhq/device-transport-kit-web-hid"),
-          import("@ledgerhq/device-signer-kit-ethereum"),
-        ]);
+      const [
+        { DeviceManagementKitBuilder },
+        { webHidIdentifier, webHidTransportFactory },
+        { SignerEthBuilder },
+      ] = await Promise.all([
+        import("@ledgerhq/device-management-kit"),
+        import("@ledgerhq/device-transport-kit-web-hid"),
+        import("@ledgerhq/device-signer-kit-ethereum"),
+      ]);
 
       dmk = new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build();
       if (!dmk.isEnvironmentSupported()) {
-        throw new Error("WebHID is not available. Use a Chromium-based browser on localhost/HTTPS.");
+        throw new Error(
+          "WebHID is not available. Use a Chromium-based browser on localhost/HTTPS.",
+        );
       }
 
       addLog("info", "Requesting WebHID access. Select your Ledger device in the browser prompt.");
@@ -265,11 +270,20 @@ export default function LedgerClearSigningPage() {
         fallbackGas: 70_000n,
         label: "Approve cZAMAMock wrapper to spend ZAMAMock",
       });
-      await signAndMaybeBroadcast(connection, tx, shouldBroadcast, addLog, setLastSignedTx, setLastTxHash);
+      await signAndMaybeBroadcast(
+        connection,
+        tx,
+        shouldBroadcast,
+        addLog,
+        setLastSignedTx,
+        setLastTxHash,
+      );
       await refreshTokenState(connection.address);
     } catch (error) {
       addLog("error", errorMessage(error));
-      await clearLedgerConnection("Ledger session reset after approval failure. Reconnect before retrying.");
+      await clearLedgerConnection(
+        "Ledger session reset after approval failure. Reconnect before retrying.",
+      );
     } finally {
       setIsSigningApproval(false);
     }
@@ -291,11 +305,20 @@ export default function LedgerClearSigningPage() {
         fallbackGas: 140_000n,
         label: `Shield ${amount} ZAMAMock into cZAMAMock`,
       });
-      await signAndMaybeBroadcast(connection, tx, shouldBroadcast, addLog, setLastSignedTx, setLastTxHash);
+      await signAndMaybeBroadcast(
+        connection,
+        tx,
+        shouldBroadcast,
+        addLog,
+        setLastSignedTx,
+        setLastTxHash,
+      );
       await refreshTokenState(connection.address);
     } catch (error) {
       addLog("error", errorMessage(error));
-      await clearLedgerConnection("Ledger session reset after shield signing failure. Reconnect before retrying.");
+      await clearLedgerConnection(
+        "Ledger session reset after shield signing failure. Reconnect before retrying.",
+      );
     } finally {
       setIsSigningWrap(false);
     }
@@ -309,8 +332,8 @@ export default function LedgerClearSigningPage() {
         </Link>
         <h1>Ledger DSK Shield POC</h1>
         <p className="subtitle">
-          Direct Ledger WebHID signing path for the ZAMAMock → cZAMAMock Sepolia shield flow.
-          This bypasses Rabby and MetaMask so we can observe DSK clear-signing/fallback behavior.
+          Direct Ledger WebHID signing path for the ZAMAMock → cZAMAMock Sepolia shield flow. This
+          bypasses Rabby and MetaMask so we can observe DSK clear-signing/fallback behavior.
         </p>
       </div>
 
@@ -318,8 +341,8 @@ export default function LedgerClearSigningPage() {
         <div className="card-title">Important boundary</div>
         <p>
           This page can exercise the physical Ledger DSK path. It cannot force ERC-7730 clear
-          signing by itself. Open the Ethereum app on the device before connecting or signing.
-          The Ledger services still need a valid <code>originToken</code> and a signed descriptor
+          signing by itself. Open the Ethereum app on the device before connecting or signing. The
+          Ledger services still need a valid <code>originToken</code> and a signed descriptor
           available through registry/CAL for this contract selector.
         </p>
       </div>
@@ -342,7 +365,12 @@ export default function LedgerClearSigningPage() {
           Ledger documents this token as partner-provided and sensitive. For local testing, paste it
           manually instead of committing it to the repo.
         </p>
-        <button type="button" className="btn btn-primary" onClick={connectLedger} disabled={isConnecting}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={connectLedger}
+          disabled={isConnecting}
+        >
           {isConnecting ? "Connecting Ledger…" : "Connect Ledger via WebHID"}
         </button>
         {connection && (
@@ -405,9 +433,7 @@ export default function LedgerClearSigningPage() {
           </p>
         )}
         {parsedAmount !== null && hasEnoughAllowance && (
-          <p className="token-meta">
-            Shield can be signed directly. Approval is already in place.
-          </p>
+          <p className="token-meta">Shield can be signed directly. Approval is already in place.</p>
         )}
         <label className="checkbox-row">
           <input
@@ -433,7 +459,11 @@ export default function LedgerClearSigningPage() {
             onClick={signApproval}
             disabled={!connection || isSigningApproval || isSigningWrap || hasEnoughAllowance}
           >
-            {isSigningApproval ? "Signing approval…" : hasEnoughAllowance ? "Approval already set" : "Sign approval"}
+            {isSigningApproval
+              ? "Signing approval…"
+              : hasEnoughAllowance
+                ? "Approval already set"
+                : "Sign approval"}
           </button>
           <button
             type="button"
@@ -533,13 +563,17 @@ async function signAndMaybeBroadcast(
   addLog: (level: LogLevel, message: string) => void,
   setLastSignedTx: (tx: Hex) => void,
   setLastTxHash: (txHash: Hex | null) => void,
-  ) {
-    addLog("info", `Prepared transaction: ${prepared.label}.`);
-    addLog("info", `Unsigned transaction: ${prepared.unsignedSerialized}.`);
+) {
+  addLog("info", `Prepared transaction: ${prepared.label}.`);
+  addLog("info", `Unsigned transaction: ${prepared.unsignedSerialized}.`);
   const signature = await runDeviceAction(
-    connection.signer.signTransaction(LEDGER_DERIVATION_PATH, hexToBytes(prepared.unsignedSerialized), {
-      skipOpenApp: true,
-    }),
+    connection.signer.signTransaction(
+      LEDGER_DERIVATION_PATH,
+      hexToBytes(prepared.unsignedSerialized),
+      {
+        skipOpenApp: true,
+      },
+    ),
     addLog,
   );
   addLog("success", `Ledger signature received: v=${signature.v}.`);
@@ -557,17 +591,18 @@ async function signAndMaybeBroadcast(
     return;
   }
 
-  const txHash = await publicClient.sendRawTransaction({ serializedTransaction: signedTransaction });
+  const txHash = await publicClient.sendRawTransaction({
+    serializedTransaction: signedTransaction,
+  });
   setLastTxHash(txHash);
   addLog("success", `Broadcast submitted: ${txHash}.`);
 }
 
 function firstObservableValue<T>(
   observable: {
-    subscribe: (observer: {
-      next: (value: T) => void;
-      error: (error: unknown) => void;
-    }) => { unsubscribe: () => void };
+    subscribe: (observer: { next: (value: T) => void; error: (error: unknown) => void }) => {
+      unsubscribe: () => void;
+    };
   },
   timeoutMs: number,
 ): Promise<T> {

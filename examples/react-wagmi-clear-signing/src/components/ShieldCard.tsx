@@ -11,6 +11,7 @@ interface ShieldCardProps {
   tokenAddress: Address;
   decimals: number;
   symbol: string;
+  publicBalance?: bigint;
   disabled: boolean;
   onSuccess?: () => void;
   onIntent?: (
@@ -24,6 +25,7 @@ export function ShieldCard({
   tokenAddress,
   decimals,
   symbol,
+  publicBalance,
   disabled,
   onSuccess,
   onIntent,
@@ -47,9 +49,9 @@ export function ShieldCard({
     setPhase("prepare");
     shield.mutate({
       amount: parsedAmount,
+      approvalAmount: publicBalance,
       // Let the SDK handle ERC-20 balance checks, allowance reads, USDT-style allowance reset,
       // approval transaction(s), shield submission, and cache invalidation.
-      approvalStrategy: "max",
       onClearSigningIntent: (intent) => onIntent?.("runtime", "Shield", intent),
       onApprovalSubmitted: () => setPhase("approve"),
       onShieldSubmitted: () => setPhase("wrap"),
@@ -58,14 +60,15 @@ export function ShieldCard({
 
   function handlePreview() {
     preview.mutate(
-      { amount: parsedAmount, approvalStrategy: "max" },
+      { amount: parsedAmount, approvalAmount: publicBalance },
       {
         onSuccess: (intent) => onIntent?.("preview", "Shield", intent),
       },
     );
   }
 
-  const actionDisabled = disabled || parsedAmount === 0n;
+  const actionDisabled =
+    disabled || publicBalance === undefined || parsedAmount === 0n || parsedAmount > publicBalance;
 
   return (
     <div className="card">
@@ -101,6 +104,9 @@ export function ShieldCard({
       </div>
       {preview.isError && (
         <div className="alert alert-error card-status">{preview.error?.message}</div>
+      )}
+      {publicBalance !== undefined && parsedAmount > publicBalance && (
+        <div className="alert alert-error card-status">Insufficient public {symbol} balance.</div>
       )}
       {shield.isError && (
         <div className="alert alert-error card-status">{shield.error?.message}</div>

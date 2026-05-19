@@ -118,6 +118,24 @@ describe("WrappedToken", () => {
       );
     });
 
+    it("approves a bounded custom approval amount", async ({ signer, wrappedToken, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
+        .mockResolvedValueOnce(1000n)
+        .mockResolvedValueOnce(0n);
+
+      await wrappedToken.shield(100n, { approvalAmount: 750n });
+
+      expect(signer.writeContract).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([750n]),
+        }),
+      );
+    });
+
     it("resets to zero first when existing non-zero allowance (USDT handling)", async ({
       signer,
       wrappedToken,

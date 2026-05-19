@@ -173,6 +173,23 @@ describe("clear signing intent builders", () => {
     );
   });
 
+  test("buildShieldViaWrapIntent omits approval warnings when no approval is shown", () => {
+    const intent = buildShieldViaWrapIntent({
+      underlyingTokenAddress: UNDERLYING,
+      wrapperAddress: WRAPPER,
+      senderAddress: USER,
+      recipientAddress: RECIPIENT,
+      amount: 500n,
+      maxApproval: true,
+      chainId: 1,
+      wrapContractCall: { functionName: "wrap" },
+    });
+
+    expect(intent.warnings).toEqual([
+      "After shielding, the balance is represented confidentially.",
+    ]);
+  });
+
   test("buildUnwrapIntent snapshots first phase unshield", () => {
     const intent = buildUnwrapIntent({
       wrapperAddress: WRAPPER,

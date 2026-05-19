@@ -51,6 +51,12 @@ body {
   text-decoration: none;
   margin-bottom: 10px;
 }
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
 .nav-link:hover {
   text-decoration: underline;
 }
@@ -475,6 +481,101 @@ body {
   color: #e2e8f0;
   font-size: 12px;
   line-height: 1.45;
+}
+.erc7730-wallet-preview {
+  border-top: 1px solid #bfdbfe;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.erc7730-wallet-preview-heading,
+.erc7730-wallet-transaction-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.erc7730-wallet-preview-heading {
+  margin-bottom: 12px;
+}
+.erc7730-wallet-preview-heading h3 {
+  font-size: 16px;
+  line-height: 1.25;
+}
+.erc7730-wallet-preview-heading p {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.erc7730-wallet-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 13px;
+  padding: 12px;
+  background: #f8fafc;
+}
+.erc7730-wallet-transaction {
+  display: grid;
+  gap: 10px;
+}
+.erc7730-wallet-transaction + .erc7730-wallet-transaction {
+  border-top: 1px solid #dbeafe;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.erc7730-wallet-transaction-header strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+.status-ok,
+.status-warn {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+.erc7730-screen {
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.erc7730-screen div {
+  display: grid;
+  grid-template-columns: minmax(110px, 26%) 1fr;
+  gap: 12px;
+  padding: 12px 14px;
+  align-items: center;
+}
+.erc7730-screen div + div {
+  border-top: 1px solid #e0e7ff;
+}
+.erc7730-screen dt {
+  color: #64748b;
+  font-size: 13px;
+}
+.erc7730-screen dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  color: #1e40af;
+  font-size: 15px;
+  font-weight: 750;
+  word-break: break-word;
 }
 .ledger-page code {
   background: #e2e8f0;

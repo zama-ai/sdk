@@ -141,6 +141,9 @@ importers:
 
   examples/react-wagmi-clear-signing:
     dependencies:
+      '@ethereum-sourcify/clear-signing':
+        specifier: 0.1.3
+        version: 0.1.3
       '@ledgerhq/context-module':
         specifier: ^1.17.1
         version: 1.17.1(@ledgerhq/device-management-kit@1.4.1(bufferutil@4.1.0)(rxjs@7.8.2)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -741,6 +744,10 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@ethereum-sourcify/clear-signing@0.1.3':
+    resolution: {integrity: sha512-Rqpnz9XYmpvP9uiYUAoFh0qGFWhvH0NU9tMbaBUnwmSwgAjm2ngvcRIICuDiIzzTDqGBns8BT1Uw04F6QPsSRQ==}
+    engines: {node: '>=22.0.0'}
 
   '@exodus/bytes@1.15.0':
     resolution: {integrity: sha512-UY0nlA+feH81UGSHv92sLEPLCeZFjXOuHhrIo0HQydScuQc8s0A7kL/UdgwgDq8g8ilksmuoF35YVTNphV2aBQ==}
@@ -4880,6 +4887,10 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.4':
     optional: true
+
+  '@ethereum-sourcify/clear-signing@0.1.3':
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   '@exodus/bytes@1.15.0(@noble/hashes@1.8.0)':
     optionalDependencies:

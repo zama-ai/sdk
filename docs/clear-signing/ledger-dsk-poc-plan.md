@@ -12,10 +12,9 @@ screen displays a human-readable intent close to:
 ```text
 Action:  Shield
 Send:    100 ZAMAMock
-Receive: cZAMAMock
+Receive: cZAMAMock confidential balance
 Recipient: <wallet>
 Wrapper: cZAMAMock
-Network: Sepolia
 ```
 
 `Receive: 100 cZAMAMock` is not targeted yet. `ZAMAMock` has 18 decimals,

@@ -7,9 +7,12 @@ const ROOT = findRepoRoot(process.cwd());
 const ERC7730_DIR = resolve(ROOT, "docs/clear-signing/erc7730");
 const REGISTRY_DIR = resolve(ERC7730_DIR, "registry/zama");
 const REGISTRY_TESTS_DIR = resolve(REGISTRY_DIR, "tests");
+const EXPERIMENTAL_DIR = resolve(ERC7730_DIR, "experimental/zama");
+const EXPERIMENTAL_TESTS_DIR = resolve(EXPERIMENTAL_DIR, "tests");
 const LEDGER_DEMO_DIR = resolve(ERC7730_DIR, "ledger-demo/zama-shield");
 const FIXTURE_PATH = resolve(ERC7730_DIR, "fixtures/sepolia-v1.json");
-const SCHEMA = "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json";
+const REGISTRY_SCHEMA = "../../specs/erc7730-v2.schema.json";
+const EXPERIMENTAL_SCHEMA = "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json";
 const REGISTRY_TEST_SCHEMA = "../../../specs/erc7730-tests.schema.json";
 
 interface Descriptor {
@@ -108,22 +111,22 @@ function findRepoRoot(start: string): string {
   throw new Error(`Unable to find repository root from ${start}`);
 }
 
-function descriptorFiles(): readonly string[] {
-  return readdirSync(REGISTRY_DIR)
+function descriptorFiles(dir: string): readonly string[] {
+  return readdirSync(dir)
     .filter((file) => file.endsWith(".json"))
-    .map((file) => resolve(REGISTRY_DIR, file));
+    .map((file) => resolve(dir, file));
 }
 
-function registryTestFiles(): readonly string[] {
-  return readdirSync(REGISTRY_TESTS_DIR)
+function registryTestFiles(dir: string): readonly string[] {
+  return readdirSync(dir)
     .filter((file) => file.endsWith(".tests.json"))
-    .map((file) => resolve(REGISTRY_TESTS_DIR, file));
+    .map((file) => resolve(dir, file));
 }
 
-function descriptorForRegistryTest(path: string): Descriptor {
+function descriptorForRegistryTest(path: string, descriptorDir: string): Descriptor {
   const file = path.split("/").at(-1)!;
   const descriptorFile = file.replace(/\.tests\.json$/, ".json");
-  const descriptorPath = resolve(REGISTRY_DIR, descriptorFile);
+  const descriptorPath = resolve(descriptorDir, descriptorFile);
 
   expect(existsSync(descriptorPath), `missing descriptor for ${file}`).toBe(true);
   return readJson<Descriptor>(descriptorPath);
@@ -184,11 +187,31 @@ function encodeEip712Type(
 }
 
 describe("ERC-7730 descriptor drafts", () => {
-  test("all descriptor files have the expected top-level registry shape", () => {
-    for (const file of descriptorFiles()) {
+  test("registry-ready descriptor files have the expected public registry shape", () => {
+    for (const file of descriptorFiles(REGISTRY_DIR)) {
       const descriptor = readJson<Descriptor>(file);
 
-      expect(descriptor.$schema).toBe(SCHEMA);
+      expect(descriptor.$schema).toBe(REGISTRY_SCHEMA);
+      expect(file).toMatch(/\/registry\/zama\/calldata-[a-z0-9-]+\.json$/);
+      expect(descriptor.context.$id).toBeTruthy();
+      expect(descriptor.metadata.owner).toBe("Zama");
+      expect(Object.keys(descriptor.display.formats).length).toBeGreaterThan(0);
+
+      for (const deployment of [
+        ...(descriptor.context.contract?.deployments ?? []),
+        ...(descriptor.context.eip712?.deployments ?? []),
+      ]) {
+        expect(Number.isInteger(deployment.chainId)).toBe(true);
+        expect(isAddress(deployment.address)).toBe(true);
+      }
+    }
+  });
+
+  test("experimental descriptor files keep the SDK-local schema and shape", () => {
+    for (const file of descriptorFiles(EXPERIMENTAL_DIR)) {
+      const descriptor = readJson<Descriptor>(file);
+
+      expect(descriptor.$schema).toBe(EXPERIMENTAL_SCHEMA);
       expect(descriptor.context.$id).toBeTruthy();
       expect(descriptor.metadata.owner).toBe("Zama");
       expect(Object.keys(descriptor.display.formats).length).toBeGreaterThan(0);
@@ -261,52 +284,69 @@ describe("ERC-7730 descriptor drafts", () => {
   });
 
   test("registry reference tests match their descriptors", () => {
-    for (const file of registryTestFiles()) {
+    for (const file of registryTestFiles(REGISTRY_TESTS_DIR)) {
       const testFile = readJson<RegistryTestFile>(file);
-      const descriptor = descriptorForRegistryTest(file);
+      const descriptor = descriptorForRegistryTest(file, REGISTRY_DIR);
 
-      expect(testFile.$schema).toBe(REGISTRY_TEST_SCHEMA);
-      expect(testFile.tests.length).toBeGreaterThan(0);
-
-      for (const testCase of testFile.tests) {
-        expect(testCase.expectedTexts?.length ?? 0).toBeGreaterThan(0);
-
-        if (testCase.rawTx) {
-          const tx = parseTransaction(testCase.rawTx);
-          const selector = tx.data?.slice(0, 10);
-          const matchingSignature = Object.keys(descriptor.display.formats).find(
-            (signature) => getFunctionSelector(signature) === selector,
-          );
-
-          expect(
-            matchingSignature,
-            `${testCase.description ?? file} selector mismatch`,
-          ).toBeDefined();
-          expect(
-            deploymentMatches(
-              descriptor.context.contract?.deployments,
-              Number(tx.chainId),
-              tx.to ?? "",
-            ),
-            `${testCase.description ?? file} target is not in descriptor deployments`,
-          ).toBe(true);
-        } else if (testCase.data) {
-          const fields = testCase.data.types[testCase.data.primaryType] ?? [];
-          const formatKey = encodeEip712Type(testCase.data.primaryType, fields);
-          const deploymentAddress = String(testCase.data.domain.verifyingContract);
-          const chainId = Number(testCase.data.domain.chainId);
-
-          expect(descriptor.display.formats[formatKey]).toBeDefined();
-          expect(
-            deploymentMatches(descriptor.context.eip712?.deployments, chainId, deploymentAddress),
-            `${testCase.description ?? file} verifying contract is not in descriptor deployments`,
-          ).toBe(true);
-        } else {
-          throw new Error(`${testCase.description ?? file} has neither rawTx nor EIP-712 data`);
-        }
-      }
+      assertRegistryTestFileMatchesDescriptor(file, testFile, descriptor);
     }
   });
+
+  test("experimental reference tests match their descriptors", () => {
+    for (const file of registryTestFiles(EXPERIMENTAL_TESTS_DIR)) {
+      const testFile = readJson<RegistryTestFile>(file);
+      const descriptor = descriptorForRegistryTest(file, EXPERIMENTAL_DIR);
+
+      assertRegistryTestFileMatchesDescriptor(file, testFile, descriptor);
+    }
+  });
+
+  function assertRegistryTestFileMatchesDescriptor(
+    file: string,
+    testFile: RegistryTestFile,
+    descriptor: Descriptor,
+  ): void {
+    expect(testFile.$schema).toBe(REGISTRY_TEST_SCHEMA);
+    expect(testFile.tests.length).toBeGreaterThan(0);
+
+    for (const testCase of testFile.tests) {
+      expect(testCase.expectedTexts?.length ?? 0).toBeGreaterThan(0);
+
+      if (testCase.rawTx) {
+        const tx = parseTransaction(testCase.rawTx);
+        const selector = tx.data?.slice(0, 10);
+        const matchingSignature = Object.keys(descriptor.display.formats).find(
+          (signature) => getFunctionSelector(signature) === selector,
+        );
+
+        expect(
+          matchingSignature,
+          `${testCase.description ?? file} selector mismatch`,
+        ).toBeDefined();
+        expect(
+          deploymentMatches(
+            descriptor.context.contract?.deployments,
+            Number(tx.chainId),
+            tx.to ?? "",
+          ),
+          `${testCase.description ?? file} target is not in descriptor deployments`,
+        ).toBe(true);
+      } else if (testCase.data) {
+        const fields = testCase.data.types[testCase.data.primaryType] ?? [];
+        const formatKey = encodeEip712Type(testCase.data.primaryType, fields);
+        const deploymentAddress = String(testCase.data.domain.verifyingContract);
+        const chainId = Number(testCase.data.domain.chainId);
+
+        expect(descriptor.display.formats[formatKey]).toBeDefined();
+        expect(
+          deploymentMatches(descriptor.context.eip712?.deployments, chainId, deploymentAddress),
+          `${testCase.description ?? file} verifying contract is not in descriptor deployments`,
+        ).toBe(true);
+      } else {
+        throw new Error(`${testCase.description ?? file} has neither rawTx nor EIP-712 data`);
+      }
+    }
+  }
 
   test("Ledger ZAMA shield demo keeps wrap descriptor calldata-converter friendly", () => {
     const descriptor = readJson<Descriptor>(
@@ -324,13 +364,7 @@ describe("ERC-7730 descriptor drafts", () => {
     ).toBe(true);
 
     const fields = flattenFields(format?.fields);
-    expect(fields.map((field) => field.label)).toEqual([
-      "Send",
-      "Receive",
-      "Recipient",
-      "Wrapper",
-      "Network",
-    ]);
+    expect(fields.map((field) => field.label)).toEqual(["Send", "Receive", "Recipient", "Wrapper"]);
 
     const calldataConvertibleFormats = new Set(["raw", "addressName", "tokenAmount"]);
     for (const field of fields) {

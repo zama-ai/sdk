@@ -12,6 +12,7 @@ describe("finalizeUnwrapMutationOptions", () => {
     });
     expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      { onClearSigningIntent: undefined },
     );
   });
 
@@ -24,6 +25,7 @@ describe("finalizeUnwrapMutationOptions", () => {
 
     expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbb",
+      { onClearSigningIntent: undefined },
     );
   });
 

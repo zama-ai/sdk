@@ -733,6 +733,7 @@ export function shieldMutationOptions(token: WrappedToken): MutationFactoryOptio
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
+    approvalAmount?: bigint;
     approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }
@@ -1461,9 +1462,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-BT55gJdq.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BT55gJdq.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BT55gJdq.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-qY93RKK6.d.ts:561:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-qY93RKK6.d.ts:562:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-qY93RKK6.d.ts:563:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

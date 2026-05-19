@@ -685,6 +685,7 @@ export function buildShieldViaWrapIntent(input: BuildShieldViaWrapIntentParams):
 export interface BuildShieldViaWrapIntentParams extends BuildShieldIntentBaseParams {
     approvalAmount?: bigint;
     approvalContractCall?: unknown;
+    approvalResetContractCall?: unknown;
     maxApproval?: boolean;
     wrapContractCall?: unknown;
 }
@@ -14845,6 +14846,7 @@ export interface ShieldCallbacks extends ClearSigningCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
+    approvalAmount?: bigint;
     approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }

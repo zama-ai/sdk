@@ -20,16 +20,16 @@ wallet resolves descriptors from its trusted source.
 
 ## Contents
 
-| File/Directory                | Purpose                                                   |
-| ----------------------------- | --------------------------------------------------------- |
-| `flow-inventory.md`           | V1 flow coverage and excluded flows.                      |
-| `wording-guidelines.md`       | Central wording, visibility rules, and warnings.          |
-| `eip712-inventory.md`         | Direct and delegated decrypt typed-data mappings.         |
-| `erc7730-descriptor-notes.md` | ERC-7730 mapping notes, descriptor status, and caveats.   |
-| `ledger-dsk-poc-plan.md`      | Ledger DSK path, originToken/CAL gates, and POC plan.     |
-| `erc7730/`                    | Experimental descriptor drafts and local SDK fixtures.    |
-| `usage-examples.md`           | Public builder, renderer, and validation examples.        |
-| `examples/intents.ts`         | Type-checkable local examples.                            |
+| File/Directory                | Purpose                                                 |
+| ----------------------------- | ------------------------------------------------------- |
+| `flow-inventory.md`           | V1 flow coverage and excluded flows.                    |
+| `wording-guidelines.md`       | Central wording, visibility rules, and warnings.        |
+| `eip712-inventory.md`         | Direct and delegated decrypt typed-data mappings.       |
+| `erc7730-descriptor-notes.md` | ERC-7730 mapping notes, descriptor status, and caveats. |
+| `ledger-dsk-poc-plan.md`      | Ledger DSK path, originToken/CAL gates, and POC plan.   |
+| `erc7730/`                    | Experimental descriptor drafts and local SDK fixtures.  |
+| `usage-examples.md`           | Public builder, renderer, and validation examples.      |
+| `examples/intents.ts`         | Type-checkable local examples.                          |
 
 ## Implementation
 

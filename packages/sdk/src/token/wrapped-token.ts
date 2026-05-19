@@ -83,6 +83,7 @@ export class WrappedToken extends Token {
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     const chainId = await this.sdk.provider.getChainId();
     if (await this.isPayable()) {
+      const data: Hex = recipient === userAddress ? "0x" : recipient;
       return buildShieldViaTransferAndCallIntent({
         underlyingTokenAddress: underlying,
         wrapperAddress: this.address,
@@ -90,23 +91,36 @@ export class WrappedToken extends Token {
         recipientAddress: recipient,
         amount,
         chainId,
+        contractCall: transferAndCallContract(underlying, this.address, amount, data),
       });
     }
     const approvalStrategy = options?.approvalStrategy ?? "exact";
+    const approvalAmount = shieldApprovalAmount(amount, approvalStrategy, options?.approvalAmount);
+    const allowance =
+      approvalAmount === undefined
+        ? undefined
+        : await this.sdk.provider.readContract(
+            allowanceContract(underlying, userAddress, this.address),
+          );
+    const approvalPlan = shieldApprovalPlan({
+      underlying,
+      wrapper: this.address,
+      amount,
+      approvalAmount,
+      allowance,
+    });
     return buildShieldViaWrapIntent({
       underlyingTokenAddress: underlying,
       wrapperAddress: this.address,
       senderAddress: userAddress,
       recipientAddress: recipient,
       amount,
-      approvalAmount:
-        approvalStrategy === "skip"
-          ? undefined
-          : approvalStrategy === "max"
-            ? 2n ** 256n - 1n
-            : amount,
+      approvalAmount: approvalPlan.displayedApprovalAmount,
       maxApproval: approvalStrategy === "max",
       chainId,
+      approvalResetContractCall: approvalPlan.resetContractCall,
+      approvalContractCall: approvalPlan.approvalContractCall,
+      wrapContractCall: wrapContract(this.address, recipient, amount),
     });
   }
 
@@ -335,8 +349,20 @@ export class WrappedToken extends Token {
     const strategy = options?.approvalStrategy ?? "exact";
     const underlying = await this.#getUnderlying();
     const recipient = options?.to ? getAddress(options.to) : userAddress;
-    const approvalAmount =
-      strategy === "skip" ? undefined : strategy === "max" ? 2n ** 256n - 1n : amount;
+    const approvalAmount = shieldApprovalAmount(amount, strategy, options?.approvalAmount);
+    const allowance =
+      approvalAmount === undefined
+        ? undefined
+        : await this.sdk.provider.readContract(
+            allowanceContract(underlying, userAddress, this.address),
+          );
+    const approvalPlan = shieldApprovalPlan({
+      underlying,
+      wrapper: this.address,
+      amount,
+      approvalAmount,
+      allowance,
+    });
 
     void swallow("shield: onClearSigningIntent", () =>
       options?.onClearSigningIntent?.(
@@ -346,14 +372,17 @@ export class WrappedToken extends Token {
           senderAddress: userAddress,
           recipientAddress: recipient,
           amount,
-          approvalAmount,
+          approvalAmount: approvalPlan.displayedApprovalAmount,
           maxApproval: strategy === "max",
           chainId: this.sdk.signer?.walletAccount.getSnapshot()?.chainId,
+          approvalResetContractCall: approvalPlan.resetContractCall,
+          approvalContractCall: approvalPlan.approvalContractCall,
+          wrapContractCall: wrapContract(this.address, recipient, amount),
         }),
       ),
     );
-    if (strategy !== "skip") {
-      await this.#ensureAllowance(amount, strategy === "max", options);
+    if (approvalAmount !== undefined) {
+      await this.#ensureAllowance(amount, approvalAmount, allowance ?? 0n, options);
     }
 
     try {
@@ -794,20 +823,12 @@ export class WrappedToken extends Token {
 
   async #ensureAllowance(
     amount: bigint,
-    maxApproval: boolean,
+    approvalAmount: bigint,
+    allowance: bigint,
     callbacks?: ShieldCallbacks,
   ): Promise<void> {
     const signer = this.sdk.requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
-    const account = await requireAlignedWalletAccount(
-      "approveUnderlying",
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    const userAddress = getAddress(account.address);
-    const allowance = await this.sdk.provider.readContract(
-      allowanceContract(underlying, userAddress, this.address),
-    );
 
     if (allowance >= amount) {
       return;
@@ -821,8 +842,6 @@ export class WrappedToken extends Token {
         const resetHash = await signer.writeContract(approveContract(underlying, this.address, 0n));
         await this.sdk.provider.waitForTransactionReceipt(resetHash);
       }
-
-      const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
 
       const txHash = await signer.writeContract(
         approveContract(underlying, this.address, approvalAmount),
@@ -839,4 +858,51 @@ export class WrappedToken extends Token {
       });
     }
   }
+}
+
+function shieldApprovalPlan({
+  underlying,
+  wrapper,
+  amount,
+  approvalAmount,
+  allowance,
+}: {
+  underlying: Address;
+  wrapper: Address;
+  amount: bigint;
+  approvalAmount: bigint | undefined;
+  allowance: bigint | undefined;
+}): {
+  displayedApprovalAmount: bigint | undefined;
+  resetContractCall: ReturnType<typeof approveContract> | undefined;
+  approvalContractCall: ReturnType<typeof approveContract> | undefined;
+} {
+  if (approvalAmount === undefined || allowance === undefined || allowance >= amount) {
+    return {
+      displayedApprovalAmount: undefined,
+      resetContractCall: undefined,
+      approvalContractCall: undefined,
+    };
+  }
+  return {
+    displayedApprovalAmount: approvalAmount,
+    resetContractCall: allowance > 0n ? approveContract(underlying, wrapper, 0n) : undefined,
+    approvalContractCall: approveContract(underlying, wrapper, approvalAmount),
+  };
+}
+
+function shieldApprovalAmount(
+  shieldAmount: bigint,
+  strategy: ShieldOptions["approvalStrategy"],
+  requestedApprovalAmount: bigint | undefined,
+): bigint | undefined {
+  if (strategy === "skip") {
+    return undefined;
+  }
+  if (strategy === "max") {
+    return 2n ** 256n - 1n;
+  }
+  return requestedApprovalAmount !== undefined && requestedApprovalAmount > shieldAmount
+    ? requestedApprovalAmount
+    : shieldAmount;
 }

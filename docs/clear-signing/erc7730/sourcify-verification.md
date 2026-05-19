@@ -1,7 +1,25 @@
 # Sourcify Verification Status
 
 Status checked on 2026-05-18 for the deployments referenced by the local
-ERC-7730 descriptor drafts in `docs/clear-signing/erc7730/registry/zama/`.
+ERC-7730 descriptor drafts now kept in
+`docs/clear-signing/erc7730/experimental/zama/`.
+
+The registry-ready subset in `docs/clear-signing/erc7730/registry/zama/` is
+narrowed to Sepolia `ZAMAMock` / `cZAMAMock` shield via `approve` + `wrap`.
+Those contracts and the shared wrapper implementation are Sourcify-ready for
+the current public registry PR.
+
+The registry-ready descriptors are also checked against Sourcify's clear-signing
+renderer through the example app:
+
+```bash
+pnpm --filter react-wagmi-clear-signing-example erc7730:sourcify-check
+```
+
+This renderer check is separate from contract source verification. It confirms
+that `@ethereum-sourcify/clear-signing` can resolve the embedded descriptors,
+format the signed raw transaction fixtures, and surface all expected display
+texts without warnings.
 
 This matters because the ethereum.org clear-signing tutorial calls out
 Sourcify verification as a prerequisite for descriptor registry submission. A
@@ -75,23 +93,25 @@ Solidity `0.8.27`, optimizer `800`, and `evmVersion: cancun`.
 
 ## Impact
 
-The current local descriptors remain useful SDK artefacts, but they still have
-registry-readiness gaps:
+The current experimental descriptors remain useful SDK artefacts, but they
+still have registry-readiness gaps:
 
 1. `eip712-decryption-permits.json` is blocked by missing verifier contract
    verification on both Mainnet and Sepolia.
 2. `calldata-acl-user-decryption.json` is blocked for Mainnet, and Sepolia may
    still be blocked unless the registry accepts proxy verification without the
    implementation ABI.
-3. `calldata-confidential-token-wrapper.json` has Sourcify-verified Sepolia
-   wrapper proxies and implementation.
+3. `experimental/zama/calldata-confidential-token-wrapper.json` has
+   Sourcify-verified Sepolia wrapper proxies and implementation, but still
+   covers flows that need separate wording/fixture review before submission.
 4. `calldata-erc20-shield-entrypoints.json` can only cover the three verified
    underlying tokens today unless the five missing ERC-20s are verified.
 
 ## Recommended Next Step
 
-Verify the missing Sepolia contracts on Sourcify before opening the external
-registry PR:
+For the current ZAMAMock/cZAMAMock registry PR, no further Sourcify action is
+needed. Before promoting the broader experimental descriptors, verify the
+missing Sepolia contracts on Sourcify:
 
 1. ACL implementation:
    `0x85d248b4cb457290c8b8ebae501fbe2b5ae8c890`.

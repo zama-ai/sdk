@@ -7,6 +7,6 @@ describe("unwrapMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.unwrap", mockWrappedToken.address]);
     await options.mutationFn({ amount: 12n });
-    expect(mockWrappedToken.unwrap).toHaveBeenCalledWith(12n);
+    expect(mockWrappedToken.unwrap).toHaveBeenCalledWith(12n, {});
   });
 });

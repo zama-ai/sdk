@@ -41,6 +41,8 @@ export interface BuildShieldViaWrapIntentParams extends BuildShieldIntentBasePar
   maxApproval?: boolean;
   /** Raw ERC-20 approval contract call config. */
   approvalContractCall?: unknown;
+  /** Raw ERC-20 approval reset-to-zero contract call config, when needed. */
+  approvalResetContractCall?: unknown;
   /** Raw wrapper wrap contract call config. */
   wrapContractCall?: unknown;
 }
@@ -85,13 +87,14 @@ export function buildShieldViaWrapIntent({
   maxApproval,
   chainId,
   approvalContractCall,
+  approvalResetContractCall,
   wrapContractCall,
 }: BuildShieldViaWrapIntentParams): ClearSigningIntent {
-  const warnings: string[] = [
-    clearSigningWording.shield.warnings.balanceBecomesConfidential,
-    clearSigningWording.shield.warnings.approvalMayBeRequired,
-  ];
-  if (maxApproval === true) {
+  const warnings: string[] = [clearSigningWording.shield.warnings.balanceBecomesConfidential];
+  if (approvalAmount !== undefined) {
+    warnings.push(clearSigningWording.shield.warnings.approvalMayBeRequired);
+  }
+  if (approvalAmount !== undefined && maxApproval === true) {
     warnings.push(clearSigningWording.shield.warnings.maxApproval);
   }
   const labels = clearSigningWording.labels;
@@ -108,7 +111,9 @@ export function buildShieldViaWrapIntent({
       approvalAmount !== undefined && publicField(labels.approvalAmount, approvalAmount),
     ]),
     rawContext: optionalRawContext({
-      contractCalls: [approvalContractCall, wrapContractCall].filter(Boolean),
+      contractCalls: [approvalResetContractCall, approvalContractCall, wrapContractCall].filter(
+        Boolean,
+      ),
       route: "approveAndWrap",
     }),
     warnings,

@@ -16,20 +16,12 @@
   },
   "calldata": [
     {
-      "operation": "shieldTransferAndCallZama",
-      "descriptor": "./calldata-zamamock-shield.json",
-      "to": "0x75355a85c6FB9df5f0C80FF54e8747EEe9a0BF57",
-      "function": "transferAndCall(address to,uint256 value,bytes data)",
-      "data": "0x4000aea0000000000000000000000000f2d628d2598af4eaf94cb76a437ff86ca78ffbfb0000000000000000000000000000000000000000000000056bc75e2d6310000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000",
-      "expectedTexts": ["Shield", "Send", "Receive", "cZAMAMock", "Wrapper", "Sepolia"]
-    },
-    {
       "operation": "shieldApproveZama",
       "descriptor": "./calldata-zamamock-shield.json",
       "to": "0x75355a85c6FB9df5f0C80FF54e8747EEe9a0BF57",
       "function": "approve(address spender,uint256 amount)",
       "data": "0x095ea7b3000000000000000000000000f2d628d2598af4eaf94cb76a437ff86ca78ffbfb0000000000000000000000000000000000000000000000056bc75e2d63100000",
-      "expectedTexts": ["Approve shield wrapper", "Wrapper", "Approval amount", "Sepolia"]
+      "expectedTexts": ["Approve token spending", "Spender", "Approval amount"]
     },
     {
       "operation": "shieldWrapZama",
@@ -37,7 +29,14 @@
       "to": "0xf2D628d2598aF4eAF94CB76a437Ff86CA78FfbFB",
       "function": "wrap(address to,uint256 amount)",
       "data": "0xbf376c7a00000000000000000000000011111111111111111111111111111111111111110000000000000000000000000000000000000000000000056bc75e2d63100000",
-      "expectedTexts": ["Shield", "Send", "Receive", "cZAMAMock", "Recipient", "Sepolia"]
+      "expectedTexts": [
+        "Shield",
+        "Send",
+        "Receive",
+        "cZAMAMock confidential balance",
+        "Recipient",
+        "Wrapper"
+      ]
     }
   ],
   "eip712": []

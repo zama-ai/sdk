@@ -253,17 +253,21 @@ const preview = useShieldClearSigningIntent({ address: tokenAddress });
 
 function handlePreview() {
   preview.mutate(
-    { amount: parsedAmount, approvalStrategy: "max" },
+    { amount: parsedAmount, approvalAmount: publicBalance },
     { onSuccess: (intent) => onIntent("preview", "Shield", intent) },
   );
 }
 
 shield.mutate({
   amount: parsedAmount,
-  approvalStrategy: "max",
+  approvalAmount: publicBalance,
   onClearSigningIntent: (intent) => onIntent("runtime", "Shield", intent),
 });
 ```
+
+For shield, the demo approves the connected wallet's current public token balance. This
+matches the allowance policy used by the broader example apps without requesting an
+unlimited max-uint approval.
 
 The same two-button pattern is used for:
 

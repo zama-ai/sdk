@@ -11,11 +11,14 @@ This app is copied from `examples/react-wagmi` and adds:
 2. A clear-signing console showing human-readable intent text and raw JSON.
 3. Runtime intent capture through `onClearSigningIntent` while the operation is
    being executed.
+4. Sourcify-backed ERC-7730 wallet previews for SDK intents whose calldata is
+   covered by local descriptors.
 
-This app is still an app-level preview, not wallet-native ERC-7730 rendering.
-The repository now includes experimental ERC-7730 descriptor drafts under
-`docs/clear-signing/erc7730/`, but Rabby/MetaMask/Ledger rendering depends on
-whether the connected wallet resolves those descriptors from a trusted source.
+This app is still not wallet-native ERC-7730 rendering: Rabby/MetaMask/Ledger
+behavior depends on whether the connected wallet resolves descriptors from a
+trusted source. The demo uses the local SDK descriptors with Sourcify's
+clear-signing renderer so descriptor changes can be inspected before registry
+publication.
 
 ## Stack
 
@@ -59,5 +62,6 @@ Sepolia, select a token, then use `Preview intent` before executing an action.
 - For unshield, runtime capture can produce two intents: `unwrap` and
   `finalizeUnwrap`.
 - ERC-7730 descriptor drafts live in `docs/clear-signing/erc7730/`. They are
-  useful for review and eventual registry submission, but they are not loaded by
-  this app at runtime.
+  useful for review and eventual registry submission. Registry-ready local
+  descriptors are loaded by the app's `/api/erc7730/render` endpoint for
+  Sourcify-backed runtime previews.

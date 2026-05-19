@@ -1,26 +1,21 @@
 {
-  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+  "$schema": "../../specs/erc7730-v2.schema.json",
   "context": {
-    "$id": "Zama Ledger demo cZAMAMock",
+    "$id": "cZAMAMock Sepolia",
     "contract": {
       "deployments": [
-        {
-          "chainId": 11155111,
-          "address": "0xf2D628d2598aF4eAF94CB76a437Ff86CA78FfbFB"
-        }
+        { "chainId": 11155111, "address": "0xf2D628d2598aF4eAF94CB76a437Ff86CA78FfbFB" }
       ]
     }
   },
   "metadata": {
     "owner": "Zama",
-    "contractName": "cZAMAMock",
-    "info": {
-      "url": "https://www.zama.org/"
-    }
+    "info": { "url": "https://www.zama.org/" },
+    "contractName": "cZAMAMock"
   },
   "display": {
     "formats": {
-      "wrap(address to,uint256 amount)": {
+      "wrap(address to, uint256 amount)": {
         "intent": "Shield",
         "interpolatedIntent": "Shield {amount} to {to}",
         "fields": [
@@ -44,17 +39,10 @@
             "path": "to",
             "label": "Recipient",
             "format": "addressName",
-            "params": {
-              "types": ["eoa", "wallet"]
-            },
+            "params": { "types": ["eoa", "wallet"] },
             "visible": "always"
           },
-          {
-            "value": "cZAMAMock",
-            "label": "Wrapper",
-            "format": "raw",
-            "visible": "always"
-          }
+          { "value": "cZAMAMock", "label": "Wrapper", "format": "raw", "visible": "always" }
         ]
       }
     }

@@ -23,7 +23,7 @@
   "calldata": [
     {
       "operation": "delegateDecryption",
-      "descriptor": "../registry/zama/calldata-acl-user-decryption.json",
+      "descriptor": "../experimental/zama/calldata-acl-user-decryption.json",
       "to": "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
       "function": "delegateForUserDecryption(address delegate,address contractAddress,uint64 expirationDate)",
       "data": "0x04f61a9500000000000000000000000033333333333333333333333333333333333333330000000000000000000000007c5bf43b851c1dff1a4fee8db225b87f2c223639000000000000000000000000000000000000000000000000000000006a18a500",
@@ -37,7 +37,7 @@
     },
     {
       "operation": "shieldApprove",
-      "descriptor": "../registry/zama/calldata-erc20-shield-entrypoints.json",
+      "descriptor": "../experimental/zama/calldata-erc20-shield-entrypoints.json",
       "to": "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
       "function": "approve(address spender,uint256 amount)",
       "data": "0x095ea7b30000000000000000000000007c5bf43b851c1dff1a4fee8db225b87f2c22363900000000000000000000000000000000000000000000000000000000002625a0",
@@ -45,7 +45,7 @@
     },
     {
       "operation": "shieldTransferAndCall",
-      "descriptor": "../registry/zama/calldata-erc20-shield-entrypoints.json",
+      "descriptor": "../experimental/zama/calldata-erc20-shield-entrypoints.json",
       "to": "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
       "function": "transferAndCall(address to,uint256 value,bytes data)",
       "data": "0x4000aea00000000000000000000000007c5bf43b851c1dff1a4fee8db225b87f2c22363900000000000000000000000000000000000000000000000000000000002625a0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000142222222222222222222222222222222222222222000000000000000000000000",
@@ -53,7 +53,7 @@
     },
     {
       "operation": "shieldWrap",
-      "descriptor": "../registry/zama/calldata-confidential-token-wrapper.json",
+      "descriptor": "../experimental/zama/calldata-confidential-token-wrapper.json",
       "to": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
       "function": "wrap(address to,uint256 amount)",
       "data": "0xbf376c7a000000000000000000000000222222222222222222222222222222222222222200000000000000000000000000000000000000000000000000000000002625a0",
@@ -61,7 +61,7 @@
     },
     {
       "operation": "confidentialTransfer",
-      "descriptor": "../registry/zama/calldata-confidential-token-wrapper.json",
+      "descriptor": "../experimental/zama/calldata-confidential-token-wrapper.json",
       "to": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
       "function": "confidentialTransfer(address to,bytes32 encryptedAmount,bytes inputProof)",
       "data": "0x2fb74e620000000000000000000000002222222222222222222222222222222222222222abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
@@ -69,7 +69,7 @@
     },
     {
       "operation": "unwrap",
-      "descriptor": "../registry/zama/calldata-confidential-token-wrapper.json",
+      "descriptor": "../experimental/zama/calldata-confidential-token-wrapper.json",
       "to": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
       "function": "unwrap(address from,address to,bytes32 encryptedAmount,bytes inputProof)",
       "data": "0x5bf4ef0600000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
@@ -77,7 +77,7 @@
     },
     {
       "operation": "unwrapAll",
-      "descriptor": "../registry/zama/calldata-confidential-token-wrapper.json",
+      "descriptor": "../experimental/zama/calldata-confidential-token-wrapper.json",
       "to": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
       "function": "unwrap(address from,address to,bytes32 amount)",
       "data": "0xe8c15fd400000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222abababababababababababababababababababababababababababababababab",
@@ -85,7 +85,7 @@
     },
     {
       "operation": "finalizeUnwrap",
-      "descriptor": "../registry/zama/calldata-confidential-token-wrapper.json",
+      "descriptor": "../experimental/zama/calldata-confidential-token-wrapper.json",
       "to": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
       "function": "finalizeUnwrap(bytes32 unwrapRequestId,uint64 burntAmountCleartext,bytes decryptionProof)",
       "data": "0x5bb67a05abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000002625a000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
@@ -95,7 +95,7 @@
   "eip712": [
     {
       "operation": "allow",
-      "descriptor": "../registry/zama/eip712-decryption-permits.json",
+      "descriptor": "../experimental/zama/eip712-decryption-permits.json",
       "data": {
         "domain": {
           "name": "Decryption",
@@ -140,7 +140,7 @@
     },
     {
       "operation": "allowAs",
-      "descriptor": "../registry/zama/eip712-decryption-permits.json",
+      "descriptor": "../experimental/zama/eip712-decryption-permits.json",
       "data": {
         "domain": {
           "name": "Decryption",

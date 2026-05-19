@@ -18,10 +18,9 @@ The intended Ledger screen should be as close as possible to:
 ```text
 Action:  Shield
 Send:    100 ZAMAMock
-Receive: cZAMAMock
+Receive: cZAMAMock confidential balance
 Recipient: <wallet>
 Wrapper: cZAMAMock
-Network: Sepolia
 ```
 
 The exact `Receive: 100 cZAMAMock` amount is intentionally not encoded in these
@@ -31,20 +30,24 @@ constants, but it does not define arithmetic such as `amount / rate` for derived
 display fields. Showing `100 cZAMAMock` on a Ledger therefore needs either
 wallet/tool support for this derived value or an app-level preview.
 
-`Receive` is encoded as the static text `cZAMAMock` instead of using a
-token-ticker formatter. The current `erc7730 calldata --v2` conversion path does
-not support a standalone token ticker field, while a static `raw` value keeps
-the descriptor convertible for Ledger Generic Parser smoke tests.
+`Receive` is encoded as the static text `cZAMAMock confidential balance`
+instead of using a token-ticker formatter or derived arithmetic. This mirrors
+the public registry PR wording and avoids promising that the wallet can display
+the confidential received amount.
 
 ## Covered Calls
 
-- `ZAMAMock.transferAndCall(address to,uint256 value,bytes data)`
 - `ZAMAMock.approve(address spender,uint256 amount)`
 - `cZAMAMock.wrap(address to,uint256 amount)`
 
-`transferAndCall` is the preferred single-transaction shield path when the
-underlying token supports ERC-1363. `approve` + `wrap` remains useful as the
-fallback path and for testing individual wallet renderers.
+The current `ZAMAMock` deployment does not support the ERC-1363
+`transferAndCall` shield path, so this demo covers only the verified
+`approve` + `wrap` route.
+
+The `approve` descriptor is generic and displays the actual spender. It does
+not hide or constrain the spender to `cZAMAMock`, because current ERC-7730
+tooling differs on hidden-field constraint semantics. The shield flow still
+uses the wrapper as spender in the fixture.
 
 For the current Ledger Generic Parser smoke test, focus on
 `cZAMAMock.wrap(address to,uint256 amount)`. Rabby or MetaMask will still show a
@@ -70,6 +73,6 @@ uvx erc7730 calldata --v2 \
 
 The output should contain one Sepolia calldata descriptor for selector
 `0xbf376c7a` with these field names, in order: `Send`, `Receive`, `Recipient`,
-`Wrapper`, `Network`.
+`Wrapper`.
 
 `fixtures.json` contains sample calldata for a `100 ZAMAMock` shield.
