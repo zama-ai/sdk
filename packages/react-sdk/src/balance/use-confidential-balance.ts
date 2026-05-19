@@ -23,9 +23,9 @@ export interface UseConfidentialBalanceOptions extends Omit<
 }
 
 /**
- * Hook for fetching a confidential token balance. Reads the on-chain handle and
- * decrypts via the SDK; cached values are returned instantly and the relayer is
- * only hit when the handle changes.
+ * Hook for fetching a confidential token balance. Reads the on-chain encrypted
+ * value and decrypts via the SDK; cached clear values are returned instantly
+ * and the relayer is only hit when the encrypted value changes.
  *
  * @example
  * ```tsx

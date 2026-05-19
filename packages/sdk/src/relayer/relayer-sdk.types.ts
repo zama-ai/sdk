@@ -128,7 +128,7 @@ export type PublicDecryptResult = PublicDecryptResults;
  */
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
-/** TFHE public key */
+/** FHE encryption key */
 export interface PublicKeyData {
   publicKeyId: string;
   publicKey: Uint8Array;

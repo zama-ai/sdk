@@ -11,7 +11,7 @@ Before starting, make sure your project is set up following the [Configuration](
 
 ## Example
 
-Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted handle, and decrypts it:
+Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted value, and decrypts it:
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 

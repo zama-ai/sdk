@@ -111,7 +111,7 @@ const balance = await token.decryptBalanceAs({
 });
 ```
 
-Decrypted values are cached in storage, keyed by `(accountAddress, token, handle)`. Every on-chain balance change produces a new encrypted handle, so stale cache entries are never served.
+Clear values are cached in storage, keyed by `(accountAddress, token, handle)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
 
 ### 4. Batch decryption across tokens (optional)
 

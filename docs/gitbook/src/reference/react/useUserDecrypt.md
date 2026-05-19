@@ -57,7 +57,7 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 `DecryptHandle[]`
 
-Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
+Array of handles to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
 import { type DecryptHandle } from "@zama-fhe/sdk";
@@ -65,7 +65,7 @@ import { type DecryptHandle } from "@zama-fhe/sdk";
 
 | Field             | Type      | Description                                            |
 | ----------------- | --------- | ------------------------------------------------------ |
-| `handle`          | `Handle`  | The encrypted handle (hex string) to decrypt.          |
+| `handle`          | `Handle`  | The encrypted value (hex string) to decrypt.           |
 | `contractAddress` | `Address` | Address of the contract that owns the encrypted value. |
 
 Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:

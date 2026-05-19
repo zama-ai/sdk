@@ -734,7 +734,7 @@ export default function App() {
 
 ## 5. Build the balance display
 
-Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted handle cheaply and only triggers full decryption when the balance changes.
+Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted value cheaply and only triggers full decryption when the balance changes.
 
 
 ### Tab: src/BalanceDisplay.tsx
@@ -2444,13 +2444,13 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 # Check balances
 
-Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
+Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`.
 
 
 ### Tab: SDK
@@ -2507,14 +2507,14 @@ const tokenB = sdk.createToken("0xTokenB");
 Decrypted balances are automatically cached in your storage backend (IndexedDB, async local storage, etc.). This means:
 
 - **No spinner on page reload** -- if a balance was previously decrypted, it is returned instantly from cache instead of re-running the 2-5 second FHE decryption.
-- **Automatic invalidation** -- the cache key includes the on-chain encrypted handle, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
+- **Automatic invalidation** -- the cache key includes the on-chain encrypted value, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
 - **Best-effort** -- cache reads and writes never throw. If storage is unavailable, the SDK falls back to a fresh decryption silently.
 
-The cache is keyed by `token address + owner address + encrypted handle`.
+The cache is keyed by `token address + owner address + encrypted value`.
 
-### 4. Work with raw encrypted handles
+### 4. Work with raw encrypted values
 
-Sometimes you need the encrypted handle itself, for example to check whether a balance exists before attempting decryption.
+Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
 
 
 ### Tab: SDK
@@ -2647,7 +2647,7 @@ const tokenABalance = data?.results.get("0xTokenA");
 ```
 
 
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Pass `refetchInterval` to poll for updates. Clear values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 
@@ -3813,7 +3813,7 @@ const balance = await token.decryptBalanceAs({
 });
 ```
 
-Decrypted values are cached in storage, keyed by `(accountAddress, token, handle)`. Every on-chain balance change produces a new encrypted handle, so stale cache entries are never served.
+Clear values are cached in storage, keyed by `(accountAddress, token, handle)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
 
 ### 4. Batch decryption across tokens (optional)
 
@@ -3929,7 +3929,7 @@ Before starting, make sure your project is set up following the [Configuration](
 
 ## Example
 
-Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted handle, and decrypts it:
+Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted value, and decrypts it:
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
@@ -4814,7 +4814,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<Hex>`
 
-Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
+Returns the raw encrypted value without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
 
 ```ts
 const handle = await token.confidentialBalanceOf("0xOwnerAddress");
@@ -6977,7 +6977,7 @@ import {
 | -------------------------------------------------------------------- | ----------------------------------------- |
 | `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                        |
 | `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                            |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain handle              |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value     |
 | `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
 | `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
 | `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
@@ -8167,7 +8167,7 @@ Configuration object created by [`createConfig`](https://raw.githubusercontent.c
 
 # useConfidentialBalance
 
-Decrypt a single token's confidential balance. Calls `token.balanceOf(owner)` which reads the encrypted handle on-chain and decrypts it via the SDK. Previously decrypted values are served from cache instantly — the expensive relayer round-trip only happens when the on-chain handle changes. Pass `refetchInterval` to poll for updates.
+Decrypt a single token's confidential balance. Calls `token.balanceOf(owner)` which reads the encrypted value on-chain and decrypts it via the SDK. Cached clear values are served instantly — the expensive relayer round-trip only happens when the on-chain encrypted value changes. Pass `refetchInterval` to poll for updates.
 
 ## Import
 
@@ -12993,7 +12993,7 @@ function ShieldButton({ wrapperAddress }: { wrapperAddress: Address }) {
 
 # useEncrypt
 
-Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted handles and an input proof for on-chain submission.
+Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted values and an input proof for on-chain submission.
 
 
 > [!WARNING]
@@ -13075,7 +13075,7 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 `data` resolves to `{ handles: Uint8Array[], inputProof: Uint8Array }`.
 
-- **`handles`** — one encrypted handle per input value.
+- **`handles`** — one encrypted value per input.
 - **`inputProof`** — the ZK input proof to submit alongside the handles in a contract call.
 
 ### `mutate`
@@ -13207,7 +13207,7 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 `DecryptHandle[]`
 
-Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
+Array of handles to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
 import { type DecryptHandle } from "@zama-fhe/sdk";
@@ -13215,7 +13215,7 @@ import { type DecryptHandle } from "@zama-fhe/sdk";
 
 | Field             | Type      | Description                                            |
 | ----------------- | --------- | ------------------------------------------------------ |
-| `handle`          | `Handle`  | The encrypted handle (hex string) to decrypt.          |
+| `handle`          | `Handle`  | The encrypted value (hex string) to decrypt.           |
 | `contractAddress` | `Address` | Address of the contract that owns the encrypted value. |
 
 Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
@@ -14288,7 +14288,7 @@ The address that delegated decryption rights.
 
 `Handle[] | undefined`
 
-Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
+Pre-fetched encrypted values. When omitted, they are fetched from the chain.
 
 ### accountAddress
 
@@ -14483,10 +14483,10 @@ Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubuserc
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key                                 | Scope                                     |
-| ----------------------------------- | ----------------------------------------- |
-| `.handle(handle, contractAddress?)` | Single decrypted value by handle          |
-| `.handles(handles[])`               | Multiple decrypted values by handle array |
+| Key                                 | Scope                                 |
+| ----------------------------------- | ------------------------------------- |
+| `.handle(handle, contractAddress?)` | Single clear value by handle          |
+| `.handles(handles[])`               | Multiple clear values by handle array |
 
 ## Common patterns
 

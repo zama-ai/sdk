@@ -45,7 +45,7 @@ import type { ZamaSDK } from "../zama-sdk";
 export interface BatchDecryptAsOptions {
   /** The address of the account that delegated decryption rights. */
   delegatorAddress: Address;
-  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
+  /** Pre-fetched encrypted values. When omitted, they are fetched from the chain. */
   handles?: Handle[];
   /**
    * The account whose on-chain balance to read. Defaults to the delegator
@@ -196,8 +196,8 @@ export class Token {
    * The connected signer acts as the delegatee who has been granted permission
    * by the delegator to decrypt their balance.
    *
-   * Decrypted values are cached in storage keyed by `(account, token, handle)`.
-   * Because every on-chain balance change produces a new encrypted handle,
+   * Clear values are cached in storage keyed by `(account, token, handle)`.
+   * Because every on-chain balance change produces a new encrypted value,
    * stale cache entries are never served. Cache write failures are silently
    * ignored — they do not affect the returned value.
    *

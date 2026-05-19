@@ -5,13 +5,13 @@ description: Decrypt and read confidential token balances using the SDK and Reac
 
 # Check balances
 
-Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
+Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`.
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -71,14 +71,14 @@ const tokenB = sdk.createToken("0xTokenB");
 Decrypted balances are automatically cached in your storage backend (IndexedDB, async local storage, etc.). This means:
 
 - **No spinner on page reload** -- if a balance was previously decrypted, it is returned instantly from cache instead of re-running the 2-5 second FHE decryption.
-- **Automatic invalidation** -- the cache key includes the on-chain encrypted handle, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
+- **Automatic invalidation** -- the cache key includes the on-chain encrypted value, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
 - **Best-effort** -- cache reads and writes never throw. If storage is unavailable, the SDK falls back to a fresh decryption silently.
 
-The cache is keyed by `token address + owner address + encrypted handle`.
+The cache is keyed by `token address + owner address + encrypted value`.
 
-### 4. Work with raw encrypted handles
+### 4. Work with raw encrypted values
 
-Sometimes you need the encrypted handle itself, for example to check whether a balance exists before attempting decryption.
+Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -220,7 +220,7 @@ const tokenABalance = data?.results.get("0xTokenA");
 {% endtab %}
 {% endtabs %}
 
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Pass `refetchInterval` to poll for updates. Clear values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 

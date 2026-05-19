@@ -99,7 +99,7 @@ The address that delegated decryption rights.
 
 `Handle[] | undefined`
 
-Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
+Pre-fetched encrypted values. When omitted, they are fetched from the chain.
 
 ### accountAddress
 
