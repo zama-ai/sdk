@@ -24,7 +24,7 @@ interface DecryptionStrategy {
   decryptContract: (args: {
     credentials: CredentialBundle;
     contractAddress: Address;
-    contractHandles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
   }) => Promise<Record<EncryptedValue, ClearValue>>;
   errorMessage: string;
   delegated?: boolean;
@@ -77,9 +77,9 @@ export class DecryptionService {
       requesterAddress: normalizedSigner,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
-      decryptContract: async ({ credentials, contractAddress, contractHandles }) => {
+      decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
         return this.#relayer.userDecrypt({
-          encryptedValues: contractHandles,
+          encryptedValues,
           contractAddress,
           ...resolveUserDecryptPermit(credentials, contractAddress),
           signerAddress: normalizedSigner,
@@ -90,14 +90,14 @@ export class DecryptionService {
   }
 
   async delegatedUserDecrypt(
-    handles: EncryptedInput[],
+    encryptedValues: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#decrypt(handles, {
+    return this.#decrypt(encryptedValues, {
       requesterAddress: getAddress(accountAddress),
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
@@ -106,9 +106,14 @@ export class DecryptionService {
           delegatorAddress: normalizedDelegator,
           delegateAddress: normalizedDelegate,
         }),
-      decryptContract: async ({ credentials, contractAddress, contractHandles }) => {
+      decryptContract: async ({
+        credentials,
+        contractAddress,
+        // oxlint-disable-next-line no-shadow
+        encryptedValues,
+      }) => {
         return this.#relayer.delegatedUserDecrypt({
-          encryptedValues: contractHandles,
+          encryptedValues: encryptedValues,
           contractAddress,
           ...resolveDelegatedDecryptPermit(credentials, contractAddress),
           delegateAddress: normalizedDelegate,
@@ -266,11 +271,11 @@ export class DecryptionService {
       });
 
       await pLimit(
-        [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
+        [...byContract.entries()].map(([contractAddress, encryptedValues]) => async () => {
           const decrypted = await strategy.decryptContract({
             credentials,
             contractAddress,
-            contractHandles,
+            encryptedValues,
           });
 
           for (const [encryptedValue, value] of Object.entries(decrypted)) {
