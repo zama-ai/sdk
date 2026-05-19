@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useGenerateKeypair } from "../use-generate-keypair";
 
 describe("useGenerateKeypair", () => {
-  it("delegates to relayer.generateKeypair", async ({ renderWithProviders, relayer }) => {
+  test("delegates to relayer.generateKeypair", async ({ renderWithProviders, relayer }) => {
     const { result } = renderWithProviders(() => useGenerateKeypair());
 
     expect(result.current.mutate).toBeDefined();

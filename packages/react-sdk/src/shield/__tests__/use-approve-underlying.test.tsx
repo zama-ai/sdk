@@ -1,49 +1,58 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { expectCacheInvalidated, expectCacheUntouched } from "../../test-helpers";
 import { useApproveUnderlying } from "../use-approve-underlying";
-import {
-  OTHER_TOKEN,
-  UNDERLYING,
-  WRAPPER,
-  expectDefaultMutationState,
-  mutateAndExpectOnSuccess,
-} from "../../__tests__/mutation-test-helpers";
 
 describe("useApproveUnderlying", () => {
-  test("default", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
+  test("default", ({ renderWithProviders, wrapperAddress }) => {
+    const { result } = renderWithProviders(() => useApproveUnderlying(wrapperAddress));
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
-  test("cache: invalidates allowance after approve", async ({ renderWithProviders, provider }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+  test("cache: invalidates allowance after approve", async ({
+    renderWithProviders,
+    provider,
+    otherTokenAddress,
+    underlyingAddress,
+    wrapperAddress,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(underlyingAddress)
+      .mockResolvedValueOnce(0n);
 
-    const { result, queryClient } = renderWithProviders(() => useApproveUnderlying(WRAPPER));
+    const { result, queryClient } = renderWithProviders(() => useApproveUnderlying(wrapperAddress));
 
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(WRAPPER);
-    const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(wrapperAddress);
+    const otherAllowanceKey = zamaQueryKeys.underlyingAllowance.token(otherTokenAddress);
     queryClient.setQueryData(allowanceKey, 500n);
     queryClient.setQueryData(otherAllowanceKey, 777n);
 
     await act(() => result.current.mutateAsync({ amount: 1000n }));
 
     expect(queryClient.getQueryData(allowanceKey)).toBe(500n);
-    expectCacheInvalidated(queryClient, allowanceKey);
-    expectCacheUntouched(queryClient, otherAllowanceKey, 777n);
+    expect(queryClient).toHaveCacheInvalidated(allowanceKey);
+    expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 777n);
   });
 
-  test("behavior: forwards onSuccess callback", async ({ renderWithProviders, provider }) => {
-    vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
+  test("behavior: forwards onSuccess callback", async ({
+    renderWithProviders,
+    provider,
+    underlyingAddress,
+    wrapperAddress,
+    mutateAndExpectOnSuccess,
+  }) => {
+    vi.mocked(provider.readContract)
+      .mockResolvedValueOnce(underlyingAddress)
+      .mockResolvedValueOnce(0n);
 
-    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(WRAPPER);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(wrapperAddress);
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useApproveUnderlying(WRAPPER, {
+      useApproveUnderlying(wrapperAddress, {
         onSuccess,
       }),
     );
@@ -53,9 +62,9 @@ describe("useApproveUnderlying", () => {
     await mutateAndExpectOnSuccess(
       () => result.current.mutateAsync({ amount: 1000n }),
       onSuccess,
-      (client) => {
+      (client: QueryClient) => {
         expect(client.getQueryData(allowanceKey)).toBe(500n);
-        expectCacheInvalidated(client, allowanceKey);
+        expect(client).toHaveCacheInvalidated(allowanceKey);
       },
     );
   });

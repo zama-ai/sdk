@@ -140,7 +140,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   // ===========================================================================
-  // Message handling (called by subclass event wiring)
+  // Message handling
   // ===========================================================================
 
   protected handleResponse(response: WorkerResponse<unknown>): void {

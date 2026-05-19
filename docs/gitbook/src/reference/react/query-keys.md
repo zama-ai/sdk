@@ -58,13 +58,13 @@ Multi-token batch balances.
 | `.all`                  | All batch balance queries                 |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
 
-### `zamaQueryKeys.isAllowed`
+### `zamaQueryKeys.hasPermit`
 
-Session signature status.
+Permit coverage status.
 
-| Key    | Scope                       |
-| ------ | --------------------------- |
-| `.all` | All session-allowed queries |
+| Key    | Scope                   |
+| ------ | ----------------------- |
+| `.all` | All `hasPermit` queries |
 
 ### `zamaQueryKeys.underlyingAllowance`
 

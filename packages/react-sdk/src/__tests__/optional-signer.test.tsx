@@ -1,23 +1,25 @@
 import { waitFor } from "@testing-library/react";
 import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { describe, expect, it, vi } from "../test-fixtures";
+import { describe, expect, test, vi } from "../test-fixtures";
 import { useZamaSDK } from "../provider";
 import { useConfidentialTransfer } from "../transfer/use-confidential-transfer";
-import { useIsAllowed } from "../authorization/use-is-allowed";
+import { useHasPermit } from "../permits/use-has-permit";
 import { useMetadata } from "../token/use-metadata";
 
 describe("ZamaProvider with signer={undefined}", () => {
-  it("mounts cleanly and exposes signer-free SDK", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useZamaSDK(), { signer: undefined });
+  test("mounts cleanly and exposes signer-free SDK", ({ renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useZamaSDK(), {
+      signer: undefined,
+    });
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeUndefined();
   });
 
-  it("useIsAllowed idles when no signer is configured", async ({ renderWithProviders }) => {
+  test("useHasPermit idles when no signer is configured", async ({ renderWithProviders }) => {
     const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
-    const { result } = renderWithProviders(() => useIsAllowed({ contractAddresses: [TOKEN] }), {
+    const { result } = renderWithProviders(() => useHasPermit({ contractAddresses: [TOKEN] }), {
       signer: undefined,
     });
 
@@ -25,20 +27,22 @@ describe("ZamaProvider with signer={undefined}", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("useMetadata works without signer", async ({ renderWithProviders, provider }) => {
-    const TOKEN = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+  test("useMetadata works without signer", async ({ renderWithProviders, provider }) => {
+    const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useMetadata(TOKEN), { signer: undefined });
+    const { result } = renderWithProviders(() => useMetadata(tokenAddress), {
+      signer: undefined,
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
   });
 
-  it("mutation hooks mount and surface SignerNotConfiguredError on invoke", async ({
+  test("mutation hooks mount and surface SignerNotConfiguredError on invoke", async ({
     renderWithProviders,
     tokenAddress,
   }) => {

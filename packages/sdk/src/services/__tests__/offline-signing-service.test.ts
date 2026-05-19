@@ -457,8 +457,8 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
     const externalSignature = `0x${"ab".repeat(65)}` as Hex;
     const result = await sdk.offline.registerPermit(prepared, externalSignature);
     expect(result.contracts).toEqual([TOKEN]);
-    // After registering, an isAllowed query should report true.
-    const allowed = await sdk.isAllowed([TOKEN]);
+    // After registering, a hasPermit lookup should report true.
+    const allowed = await sdk.permits.hasPermit([TOKEN]);
     expect(allowed).toBe(true);
   });
 
@@ -635,7 +635,7 @@ describe("OfflineSigningService — broadcast error paths", () => {
   }) => {
     const { SigningFailedError } = await import("../../errors");
     const onEvent = vi.fn();
-    vi.mocked(signer.signTransaction).mockRejectedValueOnce(new Error("HSM denied"));
+    vi.mocked(signer.signTransaction!).mockRejectedValueOnce(new Error("HSM denied"));
     const sdk = createSDK({ signer, onEvent });
     const prepared = await sdk.offline.prepare({
       kind: "ConfidentialTransfer",

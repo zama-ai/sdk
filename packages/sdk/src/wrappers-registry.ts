@@ -192,7 +192,7 @@ export class WrappersRegistry {
    * Priority: `registryAddresses[chainId]` \> built-in default.
    *
    * @returns The registry contract address for the connected chain.
-   * @throws {@link ConfigurationError} if no address is configured for the chain.
+   * @throws if no address is configured for the chain. {@link ConfigurationError}
    */
   async getRegistryAddress(): Promise<Address> {
     const chainId = await this.provider.getChainId();

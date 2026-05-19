@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
-import { describe, expect, it } from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { useCreateDelegatedUserDecryptEIP712 } from "../use-create-delegated-user-decrypt-eip712";
 
 describe("useCreateDelegatedUserDecryptEIP712", () => {
-  it("delegates to relayer.createDelegatedUserDecryptEIP712", async ({
+  test("delegates to relayer.createDelegatedUserDecryptEIP712", async ({
     renderWithProviders,
     relayer,
   }) => {
@@ -27,7 +27,7 @@ describe("useCreateDelegatedUserDecryptEIP712", () => {
     );
   });
 
-  it("passes undefined for optional durationDays", async ({ renderWithProviders, relayer }) => {
+  test("passes undefined for optional durationDays", async ({ renderWithProviders, relayer }) => {
     const { result } = renderWithProviders(() => useCreateDelegatedUserDecryptEIP712());
 
     result.current.mutate({

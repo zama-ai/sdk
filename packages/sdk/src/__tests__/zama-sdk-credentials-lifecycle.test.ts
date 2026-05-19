@@ -45,14 +45,14 @@ describe("ZamaSDK credentials lifecycle", () => {
   }) => {
     const sdk = createSDK({ permitTTL: PERMIT_DURATION_DAYS });
 
-    await sdk.allow([CONTRACT_A]);
+    await sdk.permits.grantPermit([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
     expect(relayer.generateKeypair).toHaveBeenCalledOnce();
 
     // Advance just past the permit lifetime — keypair (default 30d) is still alive.
     vi.advanceTimersByTime(PERMIT_DURATION_MS + 1);
 
-    await sdk.allow([CONTRACT_A]);
+    await sdk.permits.grantPermit([CONTRACT_A]);
 
     // Permit expired → fresh signature requested.
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
@@ -63,12 +63,12 @@ describe("ZamaSDK credentials lifecycle", () => {
   test("does not re-sign within permitTTL", async ({ fakeTime: _fakeTime, createSDK, signer }) => {
     const sdk = createSDK({ permitTTL: PERMIT_DURATION_DAYS });
 
-    await sdk.allow([CONTRACT_A]);
+    await sdk.permits.grantPermit([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
     vi.advanceTimersByTime(PERMIT_DURATION_MS / 2);
 
-    await sdk.allow([CONTRACT_A]);
+    await sdk.permits.grantPermit([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 
@@ -102,9 +102,9 @@ describe("ZamaSDK credentials lifecycle", () => {
       const storage = new MemoryStorage();
 
       const sdkA = createSDK({ signer: signerA, provider: providerA, storage });
-      await sdkA.allow([CONTRACT_A]);
+      await sdkA.permits.grantPermit([CONTRACT_A]);
       expect(signerA.signTypedData).toHaveBeenCalledOnce();
-      expect(await sdkA.isAllowed([CONTRACT_A])).toBe(true);
+      expect(await sdkA.permits.hasPermit([CONTRACT_A])).toBe(true);
 
       // Reconstruct on chain B with the same backing storage. Same signer
       // address (default USER), different chain id.
@@ -123,9 +123,9 @@ describe("ZamaSDK credentials lifecycle", () => {
       const sdkB = createSDK({ signer: signerB, provider: providerB, storage });
 
       // Permit signed on chain A must NOT be considered valid on chain B.
-      expect(await sdkB.isAllowed([CONTRACT_A])).toBe(false);
+      expect(await sdkB.permits.hasPermit([CONTRACT_A])).toBe(false);
 
-      await sdkB.allow([CONTRACT_A]);
+      await sdkB.permits.grantPermit([CONTRACT_A]);
       expect(signerB.signTypedData).toHaveBeenCalledOnce();
 
       // Switch back to chain A — the original permit must still be honored.
@@ -142,8 +142,8 @@ describe("ZamaSDK credentials lifecycle", () => {
       const providerA2 = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
       const sdkA2 = createSDK({ signer: signerA2, provider: providerA2, storage });
 
-      expect(await sdkA2.isAllowed([CONTRACT_A])).toBe(true);
-      await sdkA2.allow([CONTRACT_A]);
+      expect(await sdkA2.permits.hasPermit([CONTRACT_A])).toBe(true);
+      await sdkA2.permits.grantPermit([CONTRACT_A]);
       // No fresh signature requested — the chain-A permit is still cached.
       expect(signerA2.signTypedData).not.toHaveBeenCalled();
     });
@@ -168,9 +168,9 @@ describe("ZamaSDK credentials lifecycle", () => {
         storage,
       });
 
-      await sdkA.allow([CONTRACT_A, CONTRACT_B]);
+      await sdkA.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signerA.signTypedData).toHaveBeenCalledOnce();
-      expect(await sdkA.isAllowed([CONTRACT_A, CONTRACT_B])).toBe(true);
+      expect(await sdkA.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
 
       // Tear down SDK A — drop references and stop using it. We do NOT call
       // `terminate()` because that would call `relayer.terminate()` on the
@@ -191,9 +191,9 @@ describe("ZamaSDK credentials lifecycle", () => {
         storage,
       });
 
-      expect(await sdkB.isAllowed([CONTRACT_A, CONTRACT_B])).toBe(true);
+      expect(await sdkB.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
 
-      await sdkB.allow([CONTRACT_A, CONTRACT_B]);
+      await sdkB.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
 
       // SDK B must NOT have prompted for a signature — the persisted permit
       // signed by SDK A is still live.

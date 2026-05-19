@@ -12,7 +12,7 @@ import type {
 import { swallow } from "./swallow";
 
 /**
- * Shared write-transaction pipeline used by every SDK call that submits a tx.
+ * Shared write-transaction pipeline for SDK calls that submit a transaction.
  *
  * On success: writes the tx, emits the per-operation submitted event from
  * {@link transactionOperationMetadata}, fires `onSubmitted`, waits for the

@@ -95,12 +95,13 @@ export {
   type CreateDelegatedUserDecryptEIP712Params,
 } from "./create-delegated-user-decrypt-eip712";
 export {
-  delegatedUserDecryptMutationOptions,
-  type DelegatedUserDecryptMutationParams,
-} from "./delegated-user-decrypt";
+  delegatedDecryptMutationOptions,
+  type DelegatedDecryptMutationParams,
+} from "./delegated-decrypt";
 export { publicDecryptMutationOptions } from "./public-decrypt";
 export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
-export { allowMutationOptions } from "./allow";
+export { grantPermitMutationOptions } from "./grant-permit";
+export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export {
   prepareMutationOptions,
   signMutationOptions,
@@ -118,7 +119,6 @@ export { registerPermitMutationOptions, type RegisterPermitParams } from "./regi
 export { signAndBroadcastMutationOptions, type SignAndBroadcastParams } from "./sign-and-broadcast";
 export { signAndRegisterMutationOptions, type SignAndRegisterParams } from "./sign-and-register";
 export { refreshPreparedMutationOptions, type RefreshPreparedParams } from "./refresh-prepared";
-export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";
 export {

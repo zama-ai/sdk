@@ -8,12 +8,12 @@ import { zamaQueryKeys } from "./query-keys";
 import { assertNonNullable } from "../utils";
 
 export interface DelegationStatusData {
-  isDelegated: boolean;
+  isActive: boolean;
   expiryTimestamp: bigint;
 }
 
 export interface DelegationStatusQueryConfig {
-  tokenAddress: Address | undefined;
+  contractAddress: Address | undefined;
   delegatorAddress?: Address;
   delegateAddress?: Address;
   query?: Record<string, unknown>;
@@ -31,34 +31,34 @@ export function delegationStatusQueryOptions(
   return {
     ...filterQueryOptions(config.query ?? {}),
     queryKey: zamaQueryKeys.delegationStatus.scope(
-      config.tokenAddress,
+      config.contractAddress,
       config.delegatorAddress,
       config.delegateAddress,
     ),
     queryFn: async (context) => {
-      const [, { tokenAddress, delegatorAddress, delegateAddress }] = context.queryKey;
-      assertNonNullable(tokenAddress, "delegationStatusQueryOptions: tokenAddress");
+      const [, { contractAddress, delegatorAddress, delegateAddress }] = context.queryKey;
+      assertNonNullable(contractAddress, "delegationStatusQueryOptions: contractAddress");
       assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
       assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
       const acl = await sdk.relayer.getAclAddress();
       const expiryTimestamp = await sdk.provider.readContract(
-        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, tokenAddress),
+        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, contractAddress),
       );
-      // Derive isDelegated from expiry + chain time to stay consistent
-      // with sdk.isDelegated() (avoids client-clock skew).
-      let isDelegated: boolean;
+      // Derive isActive from expiry + chain time to stay consistent
+      // with sdk.delegations.isActive() (avoids client-clock skew).
+      let isActive: boolean;
       if (expiryTimestamp === 0n) {
-        isDelegated = false;
+        isActive = false;
       } else if (expiryTimestamp === MAX_UINT64) {
-        isDelegated = true;
+        isActive = true;
       } else {
         const now = await sdk.provider.getBlockTimestamp();
-        isDelegated = expiryTimestamp > now;
+        isActive = expiryTimestamp > now;
       }
-      return { isDelegated, expiryTimestamp };
+      return { isActive, expiryTimestamp };
     },
     enabled:
-      Boolean(config.tokenAddress && config.delegatorAddress && config.delegateAddress) &&
+      Boolean(config.contractAddress && config.delegatorAddress && config.delegateAddress) &&
       config.query?.enabled !== false,
   } as const;
 }

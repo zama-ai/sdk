@@ -2,14 +2,15 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { Address } from "viem";
 import { useWrapperDiscovery } from "../use-wrapper-discovery";
-import { TOKEN } from "../../__tests__/mutation-test-helpers";
-
 const ERC20_ADDR = "0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e" as Address;
 
 describe("useWrapperDiscovery", () => {
-  test("behavior: disabled when erc20Address is undefined", ({ renderWithProviders }) => {
+  test("behavior: disabled when erc20Address is undefined", ({
+    renderWithProviders,
+    tokenAddress,
+  }) => {
     const { result } = renderWithProviders(() =>
-      useWrapperDiscovery({ tokenAddress: TOKEN, erc20Address: undefined }),
+      useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address: undefined }),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -17,9 +18,15 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  test("behavior: disabled when user passes enabled=false", ({ renderWithProviders }) => {
+  test("behavior: disabled when user passes enabled=false", ({
+    renderWithProviders,
+    tokenAddress,
+  }) => {
     const { result } = renderWithProviders(() =>
-      useWrapperDiscovery({ tokenAddress: TOKEN, erc20Address: ERC20_ADDR }, { enabled: false }),
+      useWrapperDiscovery(
+        { tokenAddress: tokenAddress, erc20Address: ERC20_ADDR },
+        { enabled: false },
+      ),
     );
 
     expect(result.current.isPending).toBe(true);
@@ -30,6 +37,7 @@ describe("useWrapperDiscovery", () => {
     createWrapper,
     signer,
     provider,
+    tokenAddress,
   }) => {
     const wrapperAddress = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
     // Mock chainId to Mainnet (has default registry)
@@ -40,7 +48,7 @@ describe("useWrapperDiscovery", () => {
 
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
-      ({ erc20Address }) => useWrapperDiscovery({ tokenAddress: TOKEN, erc20Address }),
+      ({ erc20Address }) => useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address }),
       {
         wrapper: ctx.Wrapper,
         initialProps: { erc20Address: undefined as Address | undefined },
@@ -56,7 +64,7 @@ describe("useWrapperDiscovery", () => {
     expect(result.current.data).toBe(wrapperAddress);
   });
 
-  test("default", async ({ renderWithProviders, provider }) => {
+  test("default", async ({ renderWithProviders, provider, tokenAddress }) => {
     const wrapperAddress = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
     vi.mocked(provider.getChainId).mockResolvedValue(1);
     vi.mocked(provider.readContract)
@@ -64,10 +72,7 @@ describe("useWrapperDiscovery", () => {
       .mockResolvedValueOnce(true); // isConfidentialTokenValid
 
     const { result } = renderWithProviders(() =>
-      useWrapperDiscovery({
-        tokenAddress: TOKEN,
-        erc20Address: ERC20_ADDR,
-      }),
+      useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address: ERC20_ADDR }),
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

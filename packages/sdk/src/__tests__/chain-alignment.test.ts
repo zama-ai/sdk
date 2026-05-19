@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "../test-fixtures";
+import { describe, test, expect, vi } from "../test-fixtures";
 import { ChainMismatchError } from "../errors";
 import { Token } from "../token/token";
 import type { ZamaSDK } from "../zama-sdk";
@@ -16,9 +16,9 @@ const RECIPIENT = "0x000000000000000000000000000000000000dEaD" as Address;
 // the SUT and is asserted on the thrown error.
 const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["shield", (sdk, t) => sdk.createWrappedToken(t).shield(1000n)],
-  ["userDecrypt", (sdk, t) => sdk.userDecrypt([{ handle: HANDLE, contractAddress: t }])],
-  ["allow", (sdk, t) => sdk.allow([t])],
-  ["allowAs", (sdk, t) => sdk.allowAs(OTHER_USER, [t])],
+  ["userDecrypt", (sdk, t) => sdk.decryption.userDecrypt([{ handle: HANDLE, contractAddress: t }])],
+  ["grantPermit", (sdk, t) => sdk.permits.grantPermit([t])],
+  ["grantDelegationPermit", (sdk, t) => sdk.permits.grantDelegationPermit(OTHER_USER, [t])],
   [
     "decryptBalanceAs",
     (sdk, t) => sdk.createToken(t).decryptBalanceAs({ delegatorAddress: OTHER_USER }),
@@ -32,14 +32,20 @@ const MISMATCHED_OPS: ReadonlyArray<readonly [string, Op]> = [
   ["unwrap", (sdk, t) => sdk.createWrappedToken(t).unwrap(100n)],
   [
     "delegateDecryption",
-    (sdk, t) => sdk.delegateDecryption({ contractAddress: t, delegateAddress: OTHER_USER }),
+    (sdk, t) =>
+      sdk.delegations.delegateDecryption({ contractAddress: t, delegateAddress: OTHER_USER }),
+  ],
+  [
+    "revokeDelegation",
+    (sdk, t) =>
+      sdk.delegations.revokeDelegation({ contractAddress: t, delegateAddress: OTHER_USER }),
   ],
 ] as const;
 
 describe("chain alignment guards", () => {
-  // `it.for` (not `it.each`) is the API that forwards the fixture context as
-  // the second argument; `it.each` only splats the row.
-  it.for(MISMATCHED_OPS)(
+  // `test.for` (not `test.each`) is the API that forwards the fixture context
+  // as the second argument; `test.each` only splats the row.
+  test.for(MISMATCHED_OPS)(
     "%s throws ChainMismatchError before any side-effect",
     async ([operation, run], { sdk, signer, provider, relayer, tokenAddress }) => {
       const walletAccount = {

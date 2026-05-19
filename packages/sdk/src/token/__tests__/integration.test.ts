@@ -1,6 +1,6 @@
 import { Topics } from "../../events";
 import type { RawLog } from "../../events";
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
 
 const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
@@ -8,7 +8,7 @@ const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
 
 describe("Integration: multi-step workflows", () => {
   describe("shield flow: approve → shield → verify balance", () => {
-    it("performs full shield flow with exact approval", async ({
+    test("performs full shield flow with exact approval", async ({
       relayer,
       signer,
       wrappedToken,
@@ -34,7 +34,10 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
+        expect.objectContaining({
+          functionName: "approve",
+          args: expect.arrayContaining([500n]),
+        }),
       );
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         2,
@@ -46,7 +49,7 @@ describe("Integration: multi-step workflows", () => {
       expect(balanceHandle).toBe(handle);
 
       // Step 4: Decrypt the balance through the SDK-level API
-      const decryptResult = await wrappedToken.sdk.userDecrypt([
+      const decryptResult = await wrappedToken.sdk.decryption.userDecrypt([
         { handle: balanceHandle, contractAddress: wrappedToken.address },
       ]);
       expect(decryptResult[balanceHandle]).toBe(1000n);
@@ -57,7 +60,7 @@ describe("Integration: multi-step workflows", () => {
   });
 
   describe("confidentialTransfer flow: encrypt → transfer → verify", () => {
-    it("performs full transfer flow", async ({
+    test("performs full transfer flow", async ({
       relayer,
       signer,
       tokenAddress,
@@ -102,7 +105,7 @@ describe("Integration: multi-step workflows", () => {
   });
 
   describe("unwrap flow: unwrap → finalize → verify", () => {
-    it("performs full unwrap and finalize flow", async ({
+    test("performs full unwrap and finalize flow", async ({
       relayer,
       signer,
       wrappedToken,
@@ -151,7 +154,7 @@ describe("Integration: multi-step workflows", () => {
       );
     });
 
-    it("performs combined unshield (unwrap + finalize) in one call", async ({
+    test("performs combined unshield (unwrap + finalize) in one call", async ({
       relayer,
       signer,
       wrappedToken,
@@ -178,7 +181,9 @@ describe("Integration: multi-step workflows", () => {
         .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
         .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
 
-      const unshieldResult = await wrappedToken.unshield(500n, { skipBalanceCheck: true });
+      const unshieldResult = await wrappedToken.unshield(500n, {
+        skipBalanceCheck: true,
+      });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap

@@ -110,7 +110,7 @@ describe("Token (atomic surface) — SignerCapabilityError on broadcast-only sig
   }) => {
     const signer = createMockSigner({ writeContract: undefined });
     const sdk = createSDK({ signer: signer });
-    const err = await sdk
+    const err = await sdk.delegations
       .delegateDecryption({ contractAddress: tokenAddress, delegateAddress: RECIPIENT })
       .catch((e: unknown) => e);
     expectCapabilityError(err);

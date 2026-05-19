@@ -1,189 +1,143 @@
-# Delegated decryption
+---
+title: Delegations
+description: On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.
+---
 
-Delegation lets one address grant another address the right to decrypt its confidential balance. Common use cases:
+# Delegations
 
-- **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
-- **Fund managers** — a manager monitors positions for multiple depositors.
-- **Auditors** — a third party verifies holdings without the token owner being online.
+`sdk.delegations` manages on-chain decryption delegation through the ACL contract. The delegate never receives the delegator's private keys — they sign with their own wallet, and the relayer verifies the on-chain delegation.
 
-Delegation is enforced on-chain through the ACL contract. The delegate never receives the delegator's private keys — they use their own FHE keypair and a delegated EIP-712 flow to prove they have permission.
+For a step-by-step walkthrough, see the [Delegated decryption](/guides/delegated-decryption) guide.
 
-## Setup
+## Import
 
-The ACL contract address is automatically resolved from the chain configuration. Chain presets (`sepolia`, `mainnet`, `hardhat` from `@zama-fhe/sdk/chains`) already include the correct ACL address for each chain — no manual configuration needed.
+Accessed as a namespace on the `ZamaSDK` instance:
 
 ```ts
-const sdk = new ZamaSDK(config); // config from createConfig()
+import { ZamaSDK } from "@zama-fhe/sdk";
 
-// Both tokens use the same ACL — resolved automatically from the chain config
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
+const sdk = new ZamaSDK(config); // config from createConfig()
+sdk.delegations.delegateDecryption(/* ... */);
+sdk.delegations.revokeDelegation(/* ... */);
+sdk.delegations.isActive(/* ... */);
+sdk.delegations.getExpiry(/* ... */);
 ```
 
-## Granting delegation
+## Methods
 
-The token owner calls `delegateDecryption` to allow a delegate to decrypt their balance for a specific token.
+### delegateDecryption
+
+`(params: { contractAddress: Address; delegateAddress: Address; expirationDate?: Date }) => Promise<TransactionResult>`
+
+Grants decryption rights for a confidential contract to another address. Calls `ACL.delegateForUserDecryption()` on-chain.
 
 ```ts
-// Permanent delegation (no expiration)
-await token.delegateDecryption({ delegateAddress: "0xDelegate" });
+// Permanent delegation
+await sdk.delegations.delegateDecryption({
+  contractAddress: "0xConfidentialToken",
+  delegateAddress: "0xDelegate",
+});
 
-// Delegation with an expiration date
-await token.delegateDecryption({
+// With expiration
+await sdk.delegations.delegateDecryption({
+  contractAddress: "0xConfidentialToken",
   delegateAddress: "0xDelegate",
   expirationDate: new Date("2027-12-31T00:00:00Z"),
 });
 ```
 
-Both return `{ txHash, receipt }`.
+Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 
 {% hint style="warning" %}
-The expiration date must be **at least 1 hour in the future**. The SDK validates this client-side before sending the transaction — passing a closer date throws a `DelegationExpirationTooSoonError`. This mirrors the on-chain `ExpirationDateBeforeOneHour` revert in the ACL contract.
+`expirationDate` must be at least 1 hour in the future. The SDK validates this before sending the transaction.
 {% endhint %}
 
-> **Gateway propagation delay:** After the delegation transaction is mined, allow **1–2 minutes** before calling `decryptBalanceAs`. The delegation is recorded on L1 immediately, but the gateway (deployed on Arbitrum) must sync the ACL state via cross-chain event propagation. Attempting delegated decryption before propagation completes will throw a `DelegationNotPropagatedError`.
+When no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent). The SDK accepts a standard JavaScript `Date` and converts it to a UTC Unix timestamp internally — timezone normalization is handled automatically.
 
-### How expiration dates work
+**Throws:**
 
-The SDK accepts a standard JavaScript `Date` object and converts it to a **UTC Unix timestamp** (seconds since epoch) before sending it on-chain. Since `Date.getTime()` always returns UTC milliseconds regardless of the local timezone, you don't need to normalize manually — a `Date` constructed from any timezone produces the same on-chain value.
+- `SignerNotConfiguredError` — no signer configured
+- `ChainMismatchError` — signer and provider are on different chains
+- `WalletNotConnectedError` — wallet is not connected
+- `WalletAccountNotReadyError` — wallet account is not ready
+- `DelegationExpirationTooSoonError` — expiration date less than 1 hour in the future
+- `DelegationSelfNotAllowedError` — delegate address equals the connected wallet
+- `DelegationDelegateEqualsContractError` — delegate address equals the contract address
+- `DelegationExpiryUnchangedError` — new expiry matches the current on-chain expiry
+- `DelegationCooldownError` — only one delegate/revoke per `(delegator, delegate, contract)` per block
+- `AclPausedError` — the ACL contract is paused
+- `TransactionRevertedError` — on-chain revert for an unmapped reason
 
-```ts
-// These all produce the same on-chain expiry:
-new Date("2027-12-31T00:00:00Z"); // explicit UTC
-new Date("2027-12-31T00:00:00+05:30"); // IST → converted to UTC internally
-new Date(2027, 11, 31); // local time → .getTime() returns UTC ms
-```
+### revokeDelegation
 
-If no `expirationDate` is provided, the SDK uses `2^64 - 1` (effectively permanent).
+`(params: { contractAddress: Address; delegateAddress: Address }) => Promise<TransactionResult>`
 
-### Batch delegation
-
-Grant delegation across multiple tokens in a single call:
-
-```ts
-import { Token, ZamaError } from "@zama-fhe/sdk";
-
-const tokens = addresses.map((a) => sdk.createToken(a));
-
-const results = await Token.batchDelegateDecryption({
-  tokens,
-  delegateAddress: "0xDelegate",
-  expirationDate: new Date("2027-12-31"),
-});
-
-// results is a Map<Address, TransactionResult | ZamaError>
-// Partial success — each token either succeeds or returns an error
-for (const [address, result] of results) {
-  if (result instanceof ZamaError) {
-    console.error(`Failed for ${address}:`, result.message);
-  }
-}
-```
-
-## Revoking delegation
+Revokes decryption delegation for a confidential contract. Calls `ACL.revokeDelegationForUserDecryption()` on-chain.
 
 ```ts
-await token.revokeDelegation({ delegateAddress: "0xDelegate" });
-```
-
-Batch revocation works the same way:
-
-```ts
-const results = await Token.batchRevokeDelegation({
-  tokens,
+await sdk.delegations.revokeDelegation({
+  contractAddress: "0xConfidentialToken",
   delegateAddress: "0xDelegate",
 });
 ```
 
-## Querying delegation status
+Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 
-These read methods are available on both `Token` and `Token`:
+**Throws:**
+
+- `SignerNotConfiguredError` — no signer configured
+- `ChainMismatchError` — signer and provider are on different chains
+- `WalletNotConnectedError` — wallet is not connected
+- `WalletAccountNotReadyError` — wallet account is not ready
+- `DelegationNotFoundError` — no delegation exists for this `(delegator, delegate, contract)` tuple
+- `DelegationCooldownError` — only one delegate/revoke per tuple per block
+- `AclPausedError` — the ACL contract is paused
+- `TransactionRevertedError` — on-chain revert for an unmapped reason
+
+### isActive
+
+`(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<boolean>`
+
+Checks whether a delegation is active. Returns `true` if the delegation exists and has not expired.
+
+Signer-independent — works without a configured signer.
 
 ```ts
-// Check if a delegation is active
-const delegated = await readonlyToken.isDelegated({
+const active = await sdk.delegations.isActive({
+  contractAddress: "0xConfidentialToken",
   delegatorAddress: "0xDelegator",
   delegateAddress: "0xDelegate",
 });
-// true if delegation exists and hasn't expired
+```
 
-// Get the raw expiry timestamp
-const expiry = await readonlyToken.getDelegationExpiry({
+### getExpiry
+
+`(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<bigint>`
+
+Returns the expiration timestamp of a delegation as a Unix timestamp in seconds.
+
+Signer-independent — works without a configured signer.
+
+```ts
+const expiry = await sdk.delegations.getExpiry({
+  contractAddress: "0xConfidentialToken",
   delegatorAddress: "0xDelegator",
   delegateAddress: "0xDelegate",
 });
-// 0n = no delegation
-// 2^64 - 1 = permanent
-// otherwise = UTC Unix timestamp in seconds
 
-// Convert to a JavaScript Date if needed:
+// Convert to a JavaScript Date:
 const expiryDate = new Date(Number(expiry) * 1000);
 ```
 
-## Decrypting as a delegate
-
-The delegate calls `decryptBalanceAs` to read the delegator's balance. This uses a delegated EIP-712 flow under the hood — the delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
-
-```ts
-// Decrypt the delegator's balance (accountAddress defaults to delegator)
-const balance = await readonlyToken.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
-
-// Decrypt a specific address's balance (when the balance holder differs
-// from the delegator). The relayer validates ACL permissions against
-// `delegatorAddress`, not `accountAddress`.
-const balance = await readonlyToken.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-  accountAddress: "0xBalanceHolder",
-});
-```
-
-Decrypted values are cached in storage, keyed by `(accountAddress, token, handle)`. Because every on-chain balance change produces a new encrypted handle, stale cache entries are never served — no TTL or manual invalidation needed. If the delegator's balance changes in another app, the next `decryptBalanceAs` call will see a different handle and perform a fresh decryption.
-
-### Batch decryption as delegate
-
-Decrypt balances across multiple tokens in a single call:
-
-```ts
-const tokens = addresses.map((a) => sdk.createToken(a));
-
-const balances = await Token.batchDecryptBalancesAs(tokens, {
-  delegatorAddress: "0xDelegator",
-});
-
-// balances is a Map<Address, bigint>
-for (const [address, balance] of balances) {
-  console.log(`${address}: ${balance}`);
-}
-```
-
-#### BatchDecryptAsOptions
-
-| Property           | Type                                                      | Description                                                                      |
-| ------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `delegatorAddress` | `Address`                                                 | The address that granted delegation rights.                                      |
-| `handles`          | `Handle[] \| undefined`                                   | Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. |
-| `accountAddress`   | `Address \| undefined`                                    | The address whose on-chain balance to read. Defaults to the delegator address.   |
-| `maxConcurrency`   | `number \| undefined`                                     | Maximum number of concurrent decrypt calls. Default: `Infinity`.                 |
-| `onError`          | `(error: Error, address: Address) => bigint \| undefined` | Called when decryption fails for a single token. Return a fallback value.        |
-
-```ts
-// With pre-fetched handles and error handling
-const balances = await Token.batchDecryptBalancesAs(tokens, {
-  delegatorAddress: "0xDelegator",
-  handles: preloadedHandles,
-  maxConcurrency: 3,
-  onError: (err, addr) => {
-    console.error(addr, err);
-    return 0n;
-  },
-});
-```
+| Return value | Meaning                              |
+| ------------ | ------------------------------------ |
+| `0n`         | No delegation (never set or revoked) |
+| `2^64 - 1`   | Permanent                            |
+| Other        | UTC Unix timestamp in seconds        |
 
 ## Events
 
-The SDK emits events during delegation operations. Subscribe via the `onEvent` callback in the `ZamaSDK` constructor:
+The SDK emits events during delegation operations. Subscribe via the `onEvent` callback in `createConfig`:
 
 | Event                       | When                        |
 | --------------------------- | --------------------------- |
@@ -194,10 +148,7 @@ The SDK emits events during delegation operations. Subscribe via the `onEvent` c
 import { ZamaSDK, ZamaSDKEvents } from "@zama-fhe/sdk";
 
 const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web() },
+  // ...
   onEvent: (event) => {
     if (event.type === ZamaSDKEvents.DelegationSubmitted) {
       console.log("Delegation tx:", event.txHash);
@@ -207,7 +158,6 @@ const config = createConfig({
     }
   },
 });
-const sdk = new ZamaSDK(config);
 ```
 
 ## Delegation states
@@ -216,88 +166,16 @@ A delegation between `(delegator, delegate, contract)` can be in one of four sta
 
 | State         | On-chain expiry          | How to detect                                                                                                           |
 | ------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| **Never set** | `0n`                     | `getDelegationExpiry()` returns `0n`                                                                                    |
-| **Active**    | Future timestamp         | `isDelegated()` returns `true`                                                                                          |
-| **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value                                  |
+| **Never set** | `0n`                     | `getExpiry()` returns `0n`                                                                                              |
+| **Active**    | Future timestamp         | `isActive()` returns `true`                                                                                             |
+| **Expired**   | Past non-zero timestamp  | `isActive()` returns `false`, `getExpiry()` returns a non-zero past value                                               |
 | **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
 
-Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
+The ACL contract resets the expiry to `0n` on revocation, so `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
 
-## Error handling
+## Low-level contract builders
 
-### Client-side pre-flight errors
-
-These are caught **before** submitting a transaction, saving gas and providing actionable messages:
-
-| Error                                   | When                                                                                                                                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DelegationExpirationTooSoonError`      | Expiration date is less than 1 hour in the future                                                                                                                                  |
-| `DelegationSelfNotAllowedError`         | Delegate address equals the connected wallet (`delegate === msg.sender`)                                                                                                           |
-| `DelegationDelegateEqualsContractError` | Delegate address equals the token contract address                                                                                                                                 |
-| `DelegationExpiryUnchangedError`        | New expiration date matches the current one (no on-chain change needed)                                                                                                            |
-| `DelegationNotFoundError`               | Revoking a delegation that was never established, or reading via `decryptBalanceAs` / `batchDecryptBalancesAs` when the delegation is missing or has been revoked (expiry is zero) |
-
-### On-chain revert errors
-
-These are caught from Solidity reverts and re-thrown as typed errors:
-
-| Error                           | Solidity revert                        | When                                                                        |
-| ------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| `DelegationCooldownError`       | `AlreadyDelegatedOrRevokedInSameBlock` | Only one delegate/revoke per (delegator, delegate, contract) per block      |
-| `DelegationContractIsSelfError` | `SenderCannotBeContractAddress`        | The contract address equals the caller address                              |
-| `AclPausedError`                | `EnforcedPause`                        | The ACL contract is paused — delegation operations are temporarily disabled |
-| `TransactionRevertedError`      | _(any other revert)_                   | Delegation or revocation transaction fails for an unmapped reason           |
-
-### Other errors
-
-| Error                          | When                                                                        |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `DecryptionFailedError`        | Delegated decryption fails or relayer returns no value for a handle         |
-| `SigningRejectedError`         | User rejects the wallet signature prompt (e.g. clicks "Reject" in MetaMask) |
-| `SigningFailedError`           | Signing operation fails for any other reason                                |
-| `NoCiphertextError`            | Relayer returns HTTP 400 — no ciphertext exists for this account            |
-| `RelayerRequestFailedError`    | Relayer returns a non-400 HTTP error                                        |
-| `DelegationExpiredError`       | The delegation has expired                                                  |
-| `DelegationNotPropagatedError` | Delegation exists on L1 but hasn't synced to the gateway yet (wait 1–2 min) |
-
-```ts
-import {
-  TransactionRevertedError,
-  DecryptionFailedError,
-  DelegationNotPropagatedError,
-  SigningRejectedError,
-} from "@zama-fhe/sdk";
-
-try {
-  await token.delegateDecryption({ delegateAddress: "0xDelegate" });
-} catch (error) {
-  if (error instanceof TransactionRevertedError) {
-    // on-chain transaction failed
-  }
-}
-
-try {
-  const balance = await readonlyToken.decryptBalanceAs({
-    delegatorAddress: "0xDelegator",
-  });
-} catch (error) {
-  if (error instanceof SigningRejectedError) {
-    // user cancelled the wallet prompt — do not retry automatically
-  } else if (error instanceof DelegationNotPropagatedError) {
-    // delegation hasn't synced to the gateway yet — retry after 1–2 minutes
-  } else if (error instanceof DecryptionFailedError) {
-    // delegated decryption failed
-  }
-}
-```
-
-> **Note:** `SigningRejectedError` is always propagated — if the user rejects a wallet prompt, the SDK never silently retries or falls through to a fresh permit flow. This ensures users can always cancel.
-
-> **Note:** The SDK automatically maps known ACL Solidity revert reasons (e.g. `AlreadyDelegatedOrRevokedInSameBlock`, `EnforcedPause`) to typed `ZamaError` subclasses. Unmapped reverts fall through to `TransactionRevertedError`.
-
-## Checking per-handle delegation
-
-To check whether a specific ciphertext handle is covered by an active delegation, use the `isHandleDelegatedContract` builder:
+For direct ACL contract calls without the `Delegations` namespace, use the contract builders:
 
 ```ts
 import { isHandleDelegatedContract } from "@zama-fhe/sdk";
@@ -307,11 +185,11 @@ const isDelegated = await publicClient.readContract(
 );
 ```
 
-This calls `ACL.isHandleDelegatedForUserDecryption()` on-chain and returns `true` if the delegation covers that handle.
+See [Contract Builders](/reference/sdk/contract-builders#delegation) for the full list.
 
 ## On-chain delegation events
 
-The ACL contract emits events when delegations are created or revoked. Use the ACL event decoders to parse these from transaction receipts or `getLogs` results:
+Parse delegation events from transaction receipts or `getLogs` results:
 
 ```ts
 import {
@@ -319,10 +197,10 @@ import {
   decodeDelegatedForUserDecryption,
   decodeRevokedDelegationForUserDecryption,
   findDelegatedForUserDecryption,
+  findRevokedDelegationForUserDecryption,
   decodeAclEvents,
 } from "@zama-fhe/sdk";
 
-// Fetch all delegation events from the ACL contract
 const logs = await publicClient.getLogs({
   address: aclAddress,
   topics: [ACL_TOPICS],
@@ -330,10 +208,8 @@ const logs = await publicClient.getLogs({
   toBlock: "latest",
 });
 
-// Decode all delegation events at once
 const events = decodeAclEvents(logs);
 
-// Or find a specific event in a transaction receipt
 const delegated = findDelegatedForUserDecryption(receipt.logs);
 if (delegated) {
   console.log(
@@ -344,11 +220,14 @@ if (delegated) {
 }
 ```
 
-See [Event Decoders](/reference/sdk/event-decoders#acl-delegation-events) for the full list of ACL event decoders and types.
+See [Event Decoders](/reference/sdk/event-decoders#acl-delegation-events) for the full list of ACL event decoders.
 
 ## Related
 
-- [Contract Builders](/reference/sdk/contract-builders#delegation) — low-level ACL delegation builders
+- [Delegated decryption guide](/guides/delegated-decryption) — step-by-step walkthrough
+- [Token.decryptBalanceAs](/reference/sdk/Token#decryptbalanceas) — decrypt a delegator's balance
+- [Token.batchDecryptBalancesAs](/reference/sdk/Token#batchdecryptbalancesas-static) — batch delegated decryption
+- [Contract builders](/reference/sdk/contract-builders#delegation) — low-level ACL delegation builders
 - [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
 - [useRevokeDelegation](/reference/react/useRevokeDelegation) — React hook to revoke delegation
 - [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status

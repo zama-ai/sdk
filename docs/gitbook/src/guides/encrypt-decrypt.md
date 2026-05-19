@@ -254,12 +254,12 @@ Decrypting on-chain data requires the user to sign an EIP-712 message that grant
 
 A good decryption UX follows three steps:
 
-1. **Check permits** — use `useIsAllowed` to see whether the user has already signed.
+1. **Check permits** — use `useHasPermit` to see whether the user has already signed.
 2. **Show a locked state** — display a clear "Decrypt" button so the user understands what they are authorizing.
 3. **Decrypt on demand** — only mount balance or decrypt components after permits exist.
 
 {% hint style="danger" %}
-**Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useIsAllowed`:
+**Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useHasPermit`:
 
 ```tsx
 // BAD — triggers wallet popup as soon as the component mounts
@@ -280,7 +280,7 @@ Split the gate and the balance display into separate components. The gate checks
 {% tab title="DecryptGate.tsx" %}
 
 ```tsx
-import { useAllow, useIsAllowed } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit } from "@zama-fhe/react-sdk";
 import type { Address } from "viem";
 
 function DecryptGate({
@@ -290,13 +290,13 @@ function DecryptGate({
   contractAddresses: Address[];
   children: React.ReactNode;
 }) {
-  const { data: isAllowed } = useIsAllowed({ contractAddresses });
-  const { mutate: allow, isPending } = useAllow();
+  const { data: hasPermit } = useHasPermit({ contractAddresses });
+  const { mutate: grantPermit, isPending } = useGrantPermit();
 
-  if (isAllowed) return <>{children}</>;
+  if (hasPermit) return <>{children}</>;
 
   return (
-    <button onClick={() => allow(contractAddresses)} disabled={isPending}>
+    <button onClick={() => grantPermit(contractAddresses)} disabled={isPending}>
       {isPending ? "Signing..." : "Decrypt Balances"}
     </button>
   );
@@ -359,7 +359,7 @@ function App() {
 {% endtab %}
 {% endtabs %}
 
-`DecryptGate` only renders its children once `useIsAllowed` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
+`DecryptGate` only renders its children once `useHasPermit` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
 The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
@@ -407,10 +407,10 @@ const { data } = useUserDecrypt({
 
 Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
 
-The cache is cleared on `revokePermits()`, `clearCredentials()`, or wallet lifecycle events (disconnect, account/chain change).
+The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
 
 {% hint style="info" %}
-**Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useAllow` again to generate a fresh keypair and permits.
+**Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh keypair and permits.
 {% endhint %}
 
 ### 4. Decrypt with usePublicDecrypt (advanced)

@@ -14,7 +14,7 @@ export function DelegationStatusPanel({
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: status, isLoading: statusLoading } = useDelegationStatus({
-    tokenAddress,
+    contractAddress: tokenAddress,
     delegatorAddress: defaultDelegator,
     delegateAddress: defaultDelegate,
   });
@@ -35,7 +35,7 @@ export function DelegationStatusPanel({
         ) : (
           <>
             <p className="text-sm text-white" data-testid="delegation-is-delegated">
-              Delegated: {status?.isDelegated === undefined ? "N/A" : String(status.isDelegated)}
+              Delegated: {status?.isActive === undefined ? "N/A" : String(status.isActive)}
             </p>
             <p className="text-sm text-white" data-testid="delegation-expiry">
               Expiry: {status?.expiryTimestamp?.toString() ?? "0"}

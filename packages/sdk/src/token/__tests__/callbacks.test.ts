@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { Topics } from "../../events";
 
 import { DecryptionFailedError, TransactionRevertedError } from "../../errors";
@@ -21,7 +21,7 @@ describe("Unshield callbacks (P4)", () => {
     });
   }
 
-  it("fires all callbacks during unshield", async ({
+  test("fires all callbacks during unshield", async ({
     relayer: _relayer,
     userAddress,
     wrappedToken: token,
@@ -45,7 +45,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires all callbacks during unshieldAll", async ({
+  test("fires all callbacks during unshieldAll", async ({
     userAddress,
     handle,
     wrappedToken: token,
@@ -69,7 +69,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks during resumeUnshield", async ({
+  test("fires callbacks during resumeUnshield", async ({
     userAddress,
     wrappedToken: token,
     provider,
@@ -89,7 +89,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(onFinalizeSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("works without callbacks (backward compatible)", async ({
+  test("works without callbacks (backward compatible)", async ({
     userAddress,
     wrappedToken: token,
     provider,
@@ -101,7 +101,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(result.receipt).toBeDefined();
   });
 
-  it("completes unshield even when callbacks throw", async ({
+  test("completes unshield even when callbacks throw", async ({
     signer,
     userAddress,
     wrappedToken: token,
@@ -126,7 +126,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2); // unwrap + finalize
   });
 
-  it("fires onFinalizing before onFinalizeSubmitted", async ({
+  test("fires onFinalizing before onFinalizeSubmitted", async ({
     userAddress,
     wrappedToken: token,
     provider,
@@ -144,7 +144,7 @@ describe("Unshield callbacks (P4)", () => {
     expect(order).toEqual(["unwrapSubmitted", "finalizing", "finalizeSubmitted"]);
   });
 
-  it("throws TransactionRevertedError when receipt fetch fails", async ({
+  test("throws TransactionRevertedError when receipt fetch fails", async ({
     wrappedToken: token,
     provider,
   }) => {
@@ -155,7 +155,7 @@ describe("Unshield callbacks (P4)", () => {
     );
   });
 
-  it("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
+  test("throws TransactionRevertedError when no UnwrapRequested event in receipt", async ({
     wrappedToken: token,
     provider,
   }) => {
@@ -168,7 +168,7 @@ describe("Unshield callbacks (P4)", () => {
     );
   });
 
-  it("throws TransactionRevertedError when finalize writeContract fails", async ({
+  test("throws TransactionRevertedError when finalize writeContract fails", async ({
     signer,
     userAddress,
     wrappedToken: token,
@@ -184,7 +184,7 @@ describe("Unshield callbacks (P4)", () => {
     );
   });
 
-  it("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
+  test("throws DecryptionFailedError when publicDecrypt fails during finalize", async ({
     relayer,
     userAddress,
     wrappedToken: token,
@@ -200,7 +200,7 @@ describe("Unshield callbacks (P4)", () => {
 });
 
 describe("Transfer callbacks (SDK-19)", () => {
-  it("fires onEncryptComplete and onTransferSubmitted callbacks", async ({ token }) => {
+  test("fires onEncryptComplete and onTransferSubmitted callbacks", async ({ token }) => {
     const onEncryptComplete = vi.fn();
     const onTransferSubmitted = vi.fn();
 
@@ -214,7 +214,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(onTransferSubmitted).toHaveBeenCalledWith("0xtxhash");
   });
 
-  it("fires callbacks in correct order", async ({ token }) => {
+  test("fires callbacks in correct order", async ({ token }) => {
     const order: string[] = [];
 
     await token.confidentialTransfer(
@@ -230,7 +230,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(order).toEqual(["encrypted", "submitted"]);
   });
 
-  it("works without callbacks (backward compatible)", async ({ token }) => {
+  test("works without callbacks (backward compatible)", async ({ token }) => {
     const result = await token.confidentialTransfer(
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,
@@ -240,7 +240,7 @@ describe("Transfer callbacks (SDK-19)", () => {
     expect(result.txHash).toBe("0xtxhash");
   });
 
-  it("completes transfer even when callbacks throw", async ({ token }) => {
+  test("completes transfer even when callbacks throw", async ({ token }) => {
     const result = await token.confidentialTransfer(
       "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
       100n,

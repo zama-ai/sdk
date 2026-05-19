@@ -19,18 +19,19 @@ import {
   ERC20ReadFailedError,
   EncryptionFailedError,
   InsufficientERC20BalanceError,
+  SignerNotConfiguredError,
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { assertWriteContract } from "../signer/capabilities";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint } from "../utils/assertions";
+import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { swallow } from "../utils/swallow";
 import { Token } from "./token";
 import type {
   ApproveUnderlyingRequest,
+  GenericSigner,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
@@ -90,6 +91,16 @@ export class WrappedToken extends Token {
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
   #isPayable: boolean | null = null;
+
+  /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
+  #requireSigner(operation: string): GenericSigner {
+    try {
+      assertNonNullable(this.sdk.signer, "WrappedToken.sdk.signer");
+      return this.sdk.signer;
+    } catch (cause) {
+      throw new SignerNotConfiguredError(operation, { cause });
+    }
+  }
 
   // WRAPPER READS
 
@@ -157,9 +168,9 @@ export class WrappedToken extends Token {
    * @param amount - The plaintext amount to shield.
    * @param options - Optional: `approvalStrategy`, `to`, callbacks.
    * @returns The transaction hash and mined receipt.
-   * @throws {@link ChainMismatchError} if signer and provider are on different chains.
-   * @throws {@link InsufficientERC20BalanceError} if the ERC-20 balance is less than `amount`.
-   * @throws {@link TransactionRevertedError} if the ERC-20 approval or shield transaction reverts.
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if the ERC-20 balance is less than `amount`. {@link InsufficientERC20BalanceError}
+   * @throws if the ERC-20 approval or shield transaction reverts. {@link TransactionRevertedError}
    *
    * @example
    * ```ts
@@ -207,8 +218,7 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
-    assertWriteContract(signer, "shield");
+    this.#requireSigner("shield");
     const recipient = options?.to ? getAddress(options.to) : userAddress;
     // ERC7984ERC20Wrapper.onTransferReceived decodes the recipient via
     // `address(bytes20(data))` — i.e. the first 20 bytes of `data`. We pass
@@ -216,31 +226,11 @@ export class WrappedToken extends Token {
     // for self-shield so the wrapper falls back to `from`.
     const data: Hex = recipient === userAddress ? "0x" : recipient;
 
-    try {
-      const txHash = await signer.writeContract(
-        transferAndCallContract(underlying, this.address, amount, data),
-      );
-      this.emit({
-        type: ZamaSDKEvents.ShieldSubmitted,
-        txHash,
-        shieldPath: "transferAndCall",
-      });
-      void swallow("shield: onShieldSubmitted", () => options?.onShieldSubmitted?.(txHash));
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shield:transferAndCall",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("TransferAndCall shield transaction failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "shield:transferAndCall",
+      config: transferAndCallContract(underlying, this.address, amount, data),
+      onSubmitted: options?.onShieldSubmitted,
+    });
   }
 
   async #shieldViaApproveAndWrap(
@@ -248,37 +238,17 @@ export class WrappedToken extends Token {
     userAddress: Address,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("shield");
-    assertWriteContract(signer, "shield");
+    this.#requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
     }
-
-    try {
-      const recipient = options?.to ? getAddress(options.to) : userAddress;
-      const txHash = await signer.writeContract(wrapContract(this.address, recipient, amount));
-      this.emit({
-        type: ZamaSDKEvents.ShieldSubmitted,
-        txHash,
-        shieldPath: "approveAndWrap",
-      });
-      void swallow("shield: onShieldSubmitted", () => options?.onShieldSubmitted?.(txHash));
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "shield:approveAndWrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("ApproveAndWrap shield transaction failed", {
-        cause: error,
-      });
-    }
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    return this.submitTransaction({
+      operation: "shield:approveAndWrap",
+      config: wrapContract(this.address, recipient, amount),
+      onSubmitted: options?.onShieldSubmitted,
+    });
   }
 
   /**
@@ -374,8 +344,7 @@ export class WrappedToken extends Token {
   }
 
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
-    assertWriteContract(signer, "approveUnderlying");
+    this.#requireSigner("approveUnderlying");
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",
       this.sdk.signer,
@@ -386,36 +355,23 @@ export class WrappedToken extends Token {
 
     const approvalAmount = amount ?? 2n ** 256n - 1n;
 
-    try {
-      if (approvalAmount > 0n) {
-        const currentAllowance = await this.sdk.provider.readContract(
-          allowanceContract(underlying, userAddress, this.address),
-        );
-
-        if (currentAllowance > 0n) {
-          await signer.writeContract(approveContract(underlying, this.address, 0n));
-        }
-      }
-
-      const txHash = await signer.writeContract(
-        approveContract(underlying, this.address, approvalAmount),
+    if (approvalAmount > 0n) {
+      const currentAllowance = await this.sdk.provider.readContract(
+        allowanceContract(underlying, userAddress, this.address),
       );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash, step: "approve" });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "approveUnderlying",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
+
+      if (currentAllowance > 0n) {
+        await this.submitTransaction({
+          operation: "approveUnderlying:reset",
+          config: approveContract(underlying, this.address, 0n),
+        });
       }
-      throw new TransactionRevertedError("ERC-20 approval failed", {
-        cause: error,
-      });
     }
+
+    return this.submitTransaction({
+      operation: "approveUnderlying",
+      config: approveContract(underlying, this.address, approvalAmount),
+    });
   }
 
   // UNSHIELD (confidential → ERC-20)
@@ -464,7 +420,7 @@ export class WrappedToken extends Token {
    *
    * @param callbacks - Optional progress callbacks for each phase.
    * @returns The finalize transaction hash and mined receipt.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws if the balance is zero. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -516,8 +472,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrap(amount: bigint): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrap");
-    assertWriteContract(signer, "unwrap");
+    this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
@@ -532,26 +487,10 @@ export class WrappedToken extends Token {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        unwrapContract(this.address, userAddress, userAddress, handle, inputProof),
-      );
-      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "unwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Unwrap transaction failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "unwrap",
+      config: unwrapContract(this.address, userAddress, userAddress, handle, inputProof),
+    });
   }
 
   /**
@@ -560,7 +499,7 @@ export class WrappedToken extends Token {
    * Throws if the balance is zero.
    *
    * @returns The transaction hash and mined receipt.
-   * @throws {@link DecryptionFailedError} if the balance is zero.
+   * @throws if the balance is zero. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -568,8 +507,7 @@ export class WrappedToken extends Token {
    * ```
    */
   async unwrapAll(): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("unwrapAll");
-    assertWriteContract(signer, "unwrapAll");
+    this.#requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
       this.sdk.signer,
@@ -582,26 +520,10 @@ export class WrappedToken extends Token {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
-    try {
-      const txHash = await signer.writeContract(
-        unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
-      );
-      this.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "unwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("UnwrapAll transaction failed", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "unwrapAll",
+      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+    });
   }
 
   /**
@@ -621,37 +543,20 @@ export class WrappedToken extends Token {
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
-    const signer = this.sdk.requireSigner("finalizeUnwrap");
-    assertWriteContract(signer, "finalizeUnwrap");
+    this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.publicDecrypt([unwrapRequestIdOrAmount]);
+    const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
-    try {
-      const txHash = await signer.writeContract(
-        finalizeUnwrapContract(
-          this.address,
-          unwrapRequestIdOrAmount,
-          clearValue,
-          result.decryptionProof,
-        ),
-      );
-      this.emit({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash });
-      const receipt = await this.sdk.provider.waitForTransactionReceipt(txHash);
-      return { txHash, receipt };
-    } catch (error) {
-      this.emit({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "finalizeUnwrap",
-        error: toError(error),
-      });
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to finalize unshield", {
-        cause: error,
-      });
-    }
+    return this.submitTransaction({
+      operation: "finalizeUnwrap",
+      config: finalizeUnwrapContract(
+        this.address,
+        unwrapRequestIdOrAmount,
+        clearValue,
+        result.decryptionProof,
+      ),
+    });
   }
 
   // PRIVATE HELPERS
@@ -722,8 +627,7 @@ export class WrappedToken extends Token {
     maxApproval: boolean,
     callbacks?: ShieldCallbacks,
   ): Promise<void> {
-    const signer = this.sdk.requireSigner("approveUnderlying");
-    assertWriteContract(signer, "approveUnderlying");
+    this.#requireSigner("approveUnderlying");
     const underlying = await this.#getUnderlying();
     const account = await requireAlignedWalletAccount(
       "approveUnderlying",
@@ -739,30 +643,22 @@ export class WrappedToken extends Token {
       return;
     }
 
-    try {
-      // Reset to zero first when there's an existing non-zero allowance.
-      // Required by non-standard tokens like USDT, and also mitigates the
-      // ERC-20 approve race condition for all tokens.
-      if (allowance > 0n) {
-        const resetHash = await signer.writeContract(approveContract(underlying, this.address, 0n));
-        await this.sdk.provider.waitForTransactionReceipt(resetHash);
-      }
-
-      const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
-
-      const txHash = await signer.writeContract(
-        approveContract(underlying, this.address, approvalAmount),
-      );
-      this.emit({ type: ZamaSDKEvents.ApproveUnderlyingSubmitted, txHash, step: "approve" });
-      void swallow("shield: onApprovalSubmitted", () => callbacks?.onApprovalSubmitted?.(txHash));
-      await this.sdk.provider.waitForTransactionReceipt(txHash);
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("ERC-20 approval failed", {
-        cause: error,
+    // Reset to zero first when there's an existing non-zero allowance.
+    // Required by non-standard tokens like USDT, and also mitigates the
+    // ERC-20 approve race condition for all tokens.
+    if (allowance > 0n) {
+      await this.submitTransaction({
+        operation: "approveUnderlying:reset",
+        config: approveContract(underlying, this.address, 0n),
       });
     }
+
+    const approvalAmount = maxApproval ? 2n ** 256n - 1n : amount;
+
+    await this.submitTransaction({
+      operation: "approveUnderlying",
+      config: approveContract(underlying, this.address, approvalAmount),
+      onSubmitted: callbacks?.onApprovalSubmitted,
+    });
   }
 }

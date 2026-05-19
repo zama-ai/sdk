@@ -93,7 +93,7 @@ describe("LifecycleService", () => {
       });
       const service = createLifecycleService({
         signer,
-        cache,
+        cachingService: cache,
         relayer,
         credentialService,
       });
@@ -215,7 +215,7 @@ describe("LifecycleService", () => {
       });
       const service = createLifecycleService({
         signer,
-        cache,
+        cachingService: cache,
         relayer,
         credentialService,
       });

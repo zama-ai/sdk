@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, mockQueryContext } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { tokenMetadataQueryOptions } from "../token-metadata";
 
 describe("tokenMetadataQueryOptions", () => {
@@ -12,7 +12,11 @@ describe("tokenMetadataQueryOptions", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("queryFn reads token address from context.queryKey", async ({ sdk, provider }) => {
+  test("queryFn reads token address from context.queryKey", async ({
+    sdk,
+    provider,
+    mockQueryContext,
+  }) => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce("Name")
       .mockResolvedValueOnce("SYM")

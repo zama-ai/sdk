@@ -23,7 +23,7 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 export interface CredentialServiceConfig {
   relayer: RelayerDispatcher;
   /**
-   * Optional signer. Required for {@link CredentialService.allow},
+   * Optional signer. Required for {@link CredentialService.grantPermit},
    * {@link CredentialService.revokePermits}, and
    * {@link CredentialService.clearCredentials}. The offline-signing entry
    * points ({@link CredentialService.prepareEIP712},
@@ -88,12 +88,12 @@ export class CredentialService {
    * when best-effort persistence fails.
    *
    * @returns The resolved keypair and permits covering the requested contracts.
-   * @throws {@link SigningRejectedError} if the user rejects a wallet signature prompt.
-   * @throws {@link SigningFailedError} if signing fails for any other reason.
+   * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
+   * @throws if signing fails for any other reason. {@link SigningFailedError}
    */
-  async allow(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
-    const signer = this.#requireSigner("allow");
-    const account = signer.requireWalletAccount("allow");
+  async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
+    const signer = this.#requireSigner("grantPermit");
+    const account = signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -129,7 +129,7 @@ export class CredentialService {
    *   true for an empty list); `false` if no keypair exists or coverage is
    *   incomplete.
    */
-  async isAllowed(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
+  async hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
       return true;
     }
@@ -159,7 +159,7 @@ export class CredentialService {
    *   (current chain) whose immutable payload touches any listed address is
    *   removed. Delegated permits are not touched in this mode.
    *
-   * @throws {@link SigningFailedError} if reading the signer address fails.
+   * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
     const signer = this.#requireSigner("revokePermits");
@@ -184,7 +184,7 @@ export class CredentialService {
    * Wipe the keypair for the current signer and cascade-delete every
    * permission referencing it across all chains and delegators.
    *
-   * @throws {@link SigningFailedError} if reading the signer address fails.
+   * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async clearCredentials(): Promise<void> {
     const signer = this.#requireSigner("clearCredentials");

@@ -1,9 +1,11 @@
 import { act } from "@testing-library/react";
-import type { CredentialPermitRequest } from "@zama-fhe/sdk";
+import type { Address, CredentialPermitRequest } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { TOKEN, USER, expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useSignAndRegister } from "../use-sign-and-register";
 import { useZamaSDK } from "../../provider";
+
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 const PERMIT_RESULT = {
   contracts: [TOKEN],
@@ -16,7 +18,7 @@ describe("useSignAndRegister", () => {
     const { result } = renderWithProviders(() => useSignAndRegister());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
 
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("routes a CredentialPermitRequest through sdk.offline.signAndRegister", async ({

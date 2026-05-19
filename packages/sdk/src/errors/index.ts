@@ -12,6 +12,7 @@ export {
   WalletAccountNotReadyError,
   SignerCapabilityError,
   SignerAddressMismatchError,
+  requireConfigured,
 } from "./signer";
 export type { SignerCapability } from "./signer";
 export {

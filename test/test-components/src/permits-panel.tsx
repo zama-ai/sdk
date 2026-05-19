@@ -1,11 +1,11 @@
 "use client";
 
-import { useIsAllowed, useRevokePermits, useAllow } from "@zama-fhe/react-sdk";
+import { useHasPermit, useRevokePermits, useGrantPermit } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 
 export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
-  const { data: isAllowed, isLoading } = useIsAllowed({ contractAddresses: tokenAddresses });
-  const { mutate: allow } = useAllow();
+  const { data: isAllowed, isLoading } = useHasPermit({ contractAddresses: tokenAddresses });
+  const { mutate: allow } = useGrantPermit();
   const revoke = useRevokePermits();
   const revokeAll = useRevokePermits();
 

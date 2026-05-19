@@ -66,7 +66,9 @@ type Env = NonNullable<typeof env>;
 const POLL_INTERVAL_MS = 5_000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
-type GenerateSignatureBody = Parameters<DfnsApiClient["wallets"]["generateSignature"]>[0]["body"];
+type GenerateSignatureBody = NonNullable<
+  Parameters<DfnsApiClient["wallets"]["generateSignature"]>[0]
+>["body"];
 
 interface PolledSignature {
   signedData?: string;
@@ -141,6 +143,7 @@ const dfns = test.extend<DfnsFixtures>({
       const deadline = Date.now() + POLL_TIMEOUT_MS;
       // Structural snapshot — sidesteps the GenerateSignatureResponse vs
       // GetSignatureResponse nominal mismatch (only the former has walletId).
+      // oxlint-disable-next-line @typescript-eslint/no-redundant-type-constituents
       let snap: GenerateSignatureResponse | GetSignatureResponse =
         await dfnsClient.wallets.generateSignature({ walletId, body });
 

@@ -164,7 +164,7 @@ describe("zamaQueryKeys", () => {
           getAddress(SPENDER_LOWER),
         ),
       ],
-      [zamaQueryKeys.isAllowed.scope([TOKEN_LOWER]), zamaQueryKeys.isAllowed.scope([TOKEN_UPPER])],
+      [zamaQueryKeys.hasPermit.scope([TOKEN_LOWER]), zamaQueryKeys.hasPermit.scope([TOKEN_UPPER])],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
         zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
@@ -178,8 +178,8 @@ describe("zamaQueryKeys", () => {
   });
 
   test("isAllowed scope key includes contractAddresses", () => {
-    expect(zamaQueryKeys.isAllowed.scope([TOKEN_LOWER])).toEqual([
-      "zama.isAllowed",
+    expect(zamaQueryKeys.hasPermit.scope([TOKEN_LOWER])).toEqual([
+      "zama.hasPermit",
       {
         contractAddresses: [getAddress(TOKEN_LOWER)],
       },

@@ -1,9 +1,11 @@
 import { act } from "@testing-library/react";
-import type { CredentialPermitResult, PreparedCredentialPermit } from "@zama-fhe/sdk";
+import type { Address, CredentialPermitResult, PreparedCredentialPermit } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { TOKEN, USER, expectDefaultMutationState } from "../../__tests__/mutation-test-helpers";
 import { useRegisterPermit } from "../use-register-permit";
 import { useZamaSDK } from "../../provider";
+
+const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
+const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 const PREPARED: PreparedCredentialPermit = {
   kind: "CredentialPermit",
@@ -31,7 +33,7 @@ describe("useRegisterPermit", () => {
   test("default", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useRegisterPermit());
     const { mutate: _mutate, mutateAsync: _mutateAsync, reset: _reset, ...state } = result.current;
-    expectDefaultMutationState(state);
+    expect(state).toEqualDefaultMutationState();
   });
 
   test("delegates to sdk.offline.registerPermit", async ({ renderWithProviders }) => {

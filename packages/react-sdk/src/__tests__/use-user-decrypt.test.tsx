@@ -3,17 +3,14 @@ import { waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
-import { useIsAllowed } from "../authorization/use-is-allowed";
+import { useHasPermit } from "../permits/use-has-permit";
 import { useZamaSDK } from "../provider";
-import { useUserDecrypt } from "../relayer/use-user-decrypt";
-import { describe, expect, it, vi } from "../test-fixtures";
+import { useUserDecrypt } from "../decrypt/use-user-decrypt";
+import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useUserDecrypt", () => {
-  it("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      "0xhandle1": 100n,
-      "0xhandle2": true,
-    });
+  test("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
 
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
@@ -31,13 +28,10 @@ describe("useUserDecrypt", () => {
       timeout: 5_000,
     });
 
-    expect(result.current.data).toEqual({
-      "0xhandle1": 100n,
-      "0xhandle2": true,
-    });
+    expect(result.current.data).toEqual({ "0xhandle1": 100n, "0xhandle2": true });
   });
 
-  it("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
+  test("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
@@ -65,7 +59,7 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
   });
 
-  it("reports error when keypair generation fails", async ({
+  test("reports error when keypair generation fails", async ({
     relayer,
     tokenAddress,
     renderWithProviders,
@@ -85,7 +79,7 @@ describe("useUserDecrypt", () => {
     expect(result.current.error?.message).toContain("keygen failed");
   });
 
-  it("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
+  test("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
         { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
@@ -97,14 +91,14 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("stays disabled with empty handles", async ({ renderWithProviders }) => {
+  test("stays disabled with empty handles", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useUserDecrypt({ handles: [] }));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
   });
 
-  it("is off by default — no signature prompt when enabled is not provided", async ({
+  test("is off by default — no signature prompt when enabled is not provided", async ({
     signer,
     tokenAddress,
     renderWithProviders,
@@ -118,14 +112,14 @@ describe("useUserDecrypt", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("gated on useIsAllowed=true fires and decrypts silently without a wallet prompt", async ({
+  test("gated on useHasPermit=true fires and decrypts silently without a wallet prompt", async ({
     signer,
     relayer,
     tokenAddress,
     renderWithProviders,
   }) => {
     // SDK-80 row 17: when credentials are already authorized for the contract,
-    // useIsAllowed resolves to true and useUserDecrypt fires automatically —
+    // useHasPermit resolves to true and useUserDecrypt fires automatically —
     // no extra signature prompt should be triggered by the decrypt itself.
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
 
@@ -135,14 +129,14 @@ describe("useUserDecrypt", () => {
       // Prime credentials once on mount so isAllowed flips to true,
       // then invalidate so the cached `false` result is re-fetched.
       useEffect(() => {
-        void sdk.allow([tokenAddress]).then(() =>
+        void sdk.permits.grantPermit([tokenAddress]).then(() =>
           queryClient.invalidateQueries({
-            queryKey: zamaQueryKeys.isAllowed.all,
+            queryKey: zamaQueryKeys.hasPermit.all,
           }),
         );
       }, [sdk, queryClient]);
 
-      const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
+      const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
       const decrypt = useUserDecrypt(
         { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
         { enabled: isAllowed.data === true },
@@ -161,16 +155,16 @@ describe("useUserDecrypt", () => {
     expect(signer.signTypedData).toHaveBeenCalledTimes(1);
   });
 
-  it("gated on useIsAllowed=false does not prompt for a signature", async ({
+  test("gated on useHasPermit=false does not prompt for a signature", async ({
     signer,
     tokenAddress,
     renderWithProviders,
   }) => {
-    // SDK-42 pattern: the consumer gates the decrypt hook on useIsAllowed.
+    // SDK-42 pattern: the consumer gates the decrypt hook on useHasPermit.
     // When no permit covers the contract, isAllowed resolves to false and
     // decrypt must stay idle — no EIP-712 prompt on mount.
     const { result } = renderWithProviders(() => {
-      const isAllowed = useIsAllowed({ contractAddresses: [tokenAddress] });
+      const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
       const decrypt = useUserDecrypt(
         { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
         { enabled: isAllowed.data === true },

@@ -19,7 +19,7 @@ import { WrappedToken } from "@zama-fhe/sdk";
 
 ## Construction
 
-Use [`ZamaSDK.createWrappedToken`](ZamaSDK.md):
+Use [`sdk.createWrappedToken()`](ZamaSDK.md):
 
 ```ts
 const wrappedToken = sdk.createWrappedToken("0xWrapper");

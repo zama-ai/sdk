@@ -129,11 +129,11 @@ export const zamaQueryKeys = {
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
-  isAllowed: {
-    all: ["zama.isAllowed"] as const,
+  hasPermit: {
+    all: ["zama.hasPermit"] as const,
     scope: (contractAddresses: Address[], walletAccount?: WalletAccount) =>
       [
-        "zama.isAllowed",
+        "zama.hasPermit",
         {
           ...walletAccountKey(walletAccount),
           contractAddresses: normalizeAddresses(contractAddresses).toSorted(),
@@ -152,18 +152,18 @@ export const zamaQueryKeys = {
 
   delegationStatus: {
     all: ["zama.delegationStatus"] as const,
-    token: (tokenAddress?: Address) => {
-      const t = normalizeAddress(tokenAddress);
-      return ["zama.delegationStatus", t ? { tokenAddress: t } : {}] as const;
+    contract: (contractAddress?: Address) => {
+      const t = normalizeAddress(contractAddress);
+      return ["zama.delegationStatus", t ? { contractAddress: t } : {}] as const;
     },
-    scope: (tokenAddress?: Address, delegator?: Address, delegate?: Address) => {
-      const t = normalizeAddress(tokenAddress);
+    scope: (contractAddress?: Address, delegator?: Address, delegate?: Address) => {
+      const t = normalizeAddress(contractAddress);
       const dr = normalizeAddress(delegator);
       const de = normalizeAddress(delegate);
       return [
         "zama.delegationStatus",
         {
-          ...(t ? { tokenAddress: t } : {}),
+          ...(t ? { contractAddress: t } : {}),
           ...(dr ? { delegatorAddress: dr } : {}),
           ...(de ? { delegateAddress: de } : {}),
         },

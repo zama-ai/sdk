@@ -1,6 +1,6 @@
 "use client";
 
-import { useAllow, useConfidentialBalances, useMetadata } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useConfidentialBalances, useMetadata } from "@zama-fhe/react-sdk";
 import { balanceOfContract, decimalsContract, symbolContract } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { useState } from "react";
@@ -114,7 +114,7 @@ export function TokenTable({
 }) {
   const [revealed, setRevealed] = useState(false);
   const { address } = useAccount();
-  const { mutate: allow } = useAllow();
+  const { mutate: allow } = useGrantPermit();
   const { data, isFetching, isLoading } = useConfidentialBalances({
     addresses: revealed ? tokenAddresses : [],
     account: address,
