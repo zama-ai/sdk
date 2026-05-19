@@ -8,6 +8,13 @@ allowBuilds:
   keccak: false
   sharp: false
 
+overrides:
+  minimatch: "10.2.4"
+  next: ">=16.2.5"
+  "@walletconnect/ethereum-provider": "^2.23.7"
+  lodash: ">=4.18.0"
+  lodash-es: ">=4.18.0"
+
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
 # https://pnpm.io/settings#minimumreleaseage

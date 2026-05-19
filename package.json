@@ -108,15 +108,6 @@
     ],
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt --no-error-on-unmatched-pattern"
   },
-  "pnpm": {
-    "overrides": {
-      "minimatch": "10.2.4",
-      "next": ">=16.2.5",
-      "@walletconnect/ethereum-provider": "^2.23.7",
-      "lodash": ">=4.18.0",
-      "lodash-es": ">=4.18.0"
-    }
-  },
   "overrides": {
     "minimatch": "10.2.4"
   },
