@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { ShieldPath } from "../types/token";
 
 /**
@@ -73,7 +73,7 @@ export interface DecryptEndEvent extends BaseEvent {
   /** Encrypted values that were decrypted. */
   encryptedValues: EncryptedValue[];
   /** Decrypted values keyed by encrypted value — use this to correlate events to specific entries. */
-  result: Record<EncryptedValue, ClearValueType>;
+  result: Record<EncryptedValue, ClearValue>;
 }
 
 export interface DecryptErrorEvent extends BaseEvent {

@@ -58,7 +58,7 @@ export { BaseWorkerClient } from "../worker/worker.base-client";
 
 // Relayer types used in RelayerNode's public API
 export type {
-  ClearValueType,
+  ClearValue,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,

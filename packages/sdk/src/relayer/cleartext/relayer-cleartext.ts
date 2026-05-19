@@ -27,7 +27,7 @@ import type {
 
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -90,7 +90,7 @@ const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 const EBOOL_ID: FheTypeId = 0;
 const EADDRESS_ID: FheTypeId = 7;
 
-function decodeClearValueType(encryptedValue: EncryptedValue, rawValue: bigint): ClearValueType {
+function decodeClearValue(encryptedValue: EncryptedValue, rawValue: bigint): ClearValue {
   const typeByte = Number((BigInt(encryptedValue) >> 8n) & 0xffn);
   if (typeByte === EBOOL_ID) {
     return rawValue !== 0n;
@@ -262,7 +262,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async userDecrypt(
     params: UserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#assertDecryptAuthorization(
       params.encryptedValues,
       getAddress(params.signerAddress),
@@ -293,7 +293,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const clearValues: PublicDecryptResult["clearValues"] = Object.fromEntries(
       normalizedHandles.map((encryptedValue, index) => [
         encryptedValue,
-        decodeClearValueType(encryptedValue, orderedValues[index]!),
+        decodeClearValue(encryptedValue, orderedValues[index]!),
       ]),
     );
 
@@ -351,7 +351,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#assertDelegation(
       params.encryptedValues,
       getAddress(params.delegatorAddress),
@@ -395,7 +395,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async #decryptHandles(
     normalizedEncryptedValues: EncryptedValue[],
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     const values = await Promise.all(
       normalizedEncryptedValues.map((encryptedValue) => this.#readPlaintext(encryptedValue)),
     );
@@ -403,7 +403,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return Object.fromEntries(
       normalizedEncryptedValues.map((encryptedValue, index) => [
         encryptedValue,
-        decodeClearValueType(encryptedValue, values[index]!),
+        decodeClearValue(encryptedValue, values[index]!),
       ]),
     );
   }

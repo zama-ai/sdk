@@ -12,7 +12,7 @@ import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -142,9 +142,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.encrypt(params);
   }
 
-  userDecrypt(
-    params: UserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     return this.#active.userDecrypt(params);
   }
 
@@ -170,7 +168,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
 
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     return this.#active.delegatedUserDecrypt(params);
   }
 

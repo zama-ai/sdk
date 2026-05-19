@@ -14,7 +14,7 @@ import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -137,7 +137,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
 
   async userDecrypt(
     params: UserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -180,7 +180,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {

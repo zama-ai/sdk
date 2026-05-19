@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
-import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { checksummedAddress } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 
@@ -27,7 +27,7 @@ export class CachingService {
     requester: Address,
     contractAddress: Address,
     encryptedValue: EncryptedValue,
-  ): Promise<ClearValueType | null> {
+  ): Promise<ClearValue | null> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
       const value = await this.#storage.get(key);
@@ -50,11 +50,11 @@ export class CachingService {
     requester: Address,
     contractAddress: Address,
     encryptedValue: EncryptedValue,
-    value: ClearValueType,
+    value: ClearValue,
   ): Promise<void> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
-      await this.#storage.set<ClearValueType>(key, value);
+      await this.#storage.set<ClearValue>(key, value);
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
           console.warn("[zama-sdk] CachingService index write failed:", error); // eslint-disable-line no-console

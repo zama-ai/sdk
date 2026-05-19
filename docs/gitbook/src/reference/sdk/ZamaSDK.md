@@ -216,7 +216,7 @@ const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddres
 
 ### decryption.userDecrypt
 
-`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValueType>>`
+`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
@@ -261,7 +261,7 @@ const sdk = new ZamaSDK(config);
 window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
   const { durationMs, encryptedValues, result } = e.detail;
   console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
-  // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
   for (const v of encryptedValues) {
     console.log(`${v} → ${result[v]}`);
   }
@@ -302,7 +302,7 @@ const sdk = new ZamaSDK(config);
 
 emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
   console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
-  // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
   for (const v of encryptedValues) {
     console.log(`${v} → ${result[v]}`);
   }

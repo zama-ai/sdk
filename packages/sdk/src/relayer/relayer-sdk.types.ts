@@ -84,7 +84,8 @@ export type EncryptedValue = Bytes32Hex;
 /** Secondary alias for {@link EncryptedValue}. Both names refer to the same `bytes32` ciphertext reference. */
 export type Handle = EncryptedValue;
 
-export type { ClearValueType };
+/** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
+export type ClearValue = ClearValueType;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =

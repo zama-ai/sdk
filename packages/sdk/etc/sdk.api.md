@@ -572,7 +572,7 @@ export interface BatchDecryptHandleItem {
     // (undocumented)
     error?: ZamaError;
     // (undocumented)
-    value?: ClearValueType;
+    value?: ClearValue;
 }
 
 // @public (undocumented)
@@ -628,7 +628,8 @@ export interface CleartextRelayerConfig extends RelayerConfig {
     readonly type: "cleartext";
 }
 
-export { ClearValueType }
+// @public
+export type ClearValue = ClearValueType;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -6128,7 +6129,7 @@ export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
-    result: Record<EncryptedValue, ClearValueType>;
+    result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -6166,9 +6167,9 @@ export class Decryption {
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValueType>>;
+    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
     publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValueType>>;
+    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -13158,7 +13159,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -13178,7 +13179,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -20159,10 +20160,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-xMJtdFpc.d.ts:20446:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-xMJtdFpc.d.ts:20575:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-xMJtdFpc.d.ts:20677:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-xMJtdFpc.d.ts:20678:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-B4KfVeFu.d.ts:20446:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-B4KfVeFu.d.ts:20575:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-B4KfVeFu.d.ts:20677:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-B4KfVeFu.d.ts:20678:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

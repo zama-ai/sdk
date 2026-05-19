@@ -126,7 +126,7 @@ export type {
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
 export type {
-  ClearValueType,
+  ClearValue,
   EncryptParams,
   EncryptResult,
   EncryptedValue,

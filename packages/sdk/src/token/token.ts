@@ -24,7 +24,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
@@ -759,4 +759,4 @@ export class Token {
 }
 
 /** @internal */
-export type DecryptedHandlesMap = Map<EncryptedValue, ClearValueType>;
+export type DecryptedHandlesMap = Map<EncryptedValue, ClearValue>;

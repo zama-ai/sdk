@@ -31,7 +31,7 @@ export type {
   EncryptInput,
   EncryptedValue,
   Handle,
-  ClearValueType,
+  ClearValue,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,

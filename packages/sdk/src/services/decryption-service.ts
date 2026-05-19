@@ -10,7 +10,7 @@ import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
@@ -25,7 +25,7 @@ interface DecryptionStrategy {
     credentials: CredentialBundle;
     contractAddress: Address;
     contractHandles: EncryptedValue[];
-  }) => Promise<Record<EncryptedValue, ClearValueType>>;
+  }) => Promise<Record<EncryptedValue, ClearValue>>;
   errorMessage: string;
   delegated?: boolean;
 }
@@ -33,7 +33,7 @@ interface DecryptionStrategy {
 export interface BatchDecryptHandleItem {
   encryptedValue: EncryptedValue;
   contractAddress: Address;
-  value?: ClearValueType;
+  value?: ClearValue;
   error?: ZamaError;
 }
 
@@ -71,7 +71,7 @@ export class DecryptionService {
   async userDecrypt(
     handles: EncryptedInput[],
     signerAddress: Address,
-  ): Promise<Record<EncryptedValue, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
@@ -94,7 +94,7 @@ export class DecryptionService {
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
-  ): Promise<Record<EncryptedValue, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     return this.#decrypt(handles, {
@@ -197,7 +197,7 @@ export class DecryptionService {
   async #decrypt(
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
-  ): Promise<Record<EncryptedValue, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
       return {};
     }
@@ -206,7 +206,7 @@ export class DecryptionService {
       encryptedValue: h.encryptedValue,
       contractAddress: getAddress(h.contractAddress),
     }));
-    const result: Record<EncryptedValue, ClearValueType> = {};
+    const result: Record<EncryptedValue, ClearValue> = {};
     const nonZero: EncryptedInput[] = [];
 
     for (const h of normalized) {
@@ -286,7 +286,7 @@ export class DecryptionService {
         5,
       );
 
-      const uncachedResult: Record<EncryptedValue, ClearValueType> = {};
+      const uncachedResult: Record<EncryptedValue, ClearValue> = {};
       for (const encryptedValue of uncachedEncryptedValues) {
         const value = result[encryptedValue];
         if (value !== undefined) {
@@ -313,7 +313,7 @@ export class DecryptionService {
 
   #setHandleResult(
     item: BatchDecryptHandleItem,
-    decrypted: Record<EncryptedValue, ClearValueType>,
+    decrypted: Record<EncryptedValue, ClearValue>,
   ): void {
     const value = decrypted[item.encryptedValue];
     if (value === undefined) {

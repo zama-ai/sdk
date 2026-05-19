@@ -5,7 +5,7 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
@@ -38,7 +38,7 @@ export interface FheOperations {
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
   /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Decrypt encrypted values using the network public key (no credential needed). */
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
@@ -55,7 +55,7 @@ export interface FheOperations {
   /** Decrypt FHE handles using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

@@ -2,11 +2,7 @@ import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type {
-  ClearValueType,
-  EncryptedValue,
-  PublicDecryptResult,
-} from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
 import type { BatchDecryptHandlesResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
@@ -66,9 +62,7 @@ export class Decryption {
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async userDecrypt(
-    encryptedInput: EncryptedInput[],
-  ): Promise<Record<EncryptedValue, ClearValueType>> {
+  async userDecrypt(encryptedInput: EncryptedInput[]): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("userDecrypt");
     const account = await requireAlignedWalletAccount("userDecrypt", this.#signer, this.#provider);
     return service.userDecrypt(encryptedInput, account.address);
@@ -102,7 +96,7 @@ export class Decryption {
     encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
-  ): Promise<Record<EncryptedValue, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("delegatedDecrypt");
     const account = await requireAlignedWalletAccount(
       "delegatedDecrypt",

@@ -128,7 +128,8 @@ export const chains: Record<number, FheChain>;
 // @public
 export function cleartext(): CleartextRelayerConfig;
 
-export { ClearValueType }
+// @public
+export type ClearValue = ClearValueType;
 
 // @public (undocumented)
 export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
@@ -223,7 +224,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface DelegatedUserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<EncryptedValue, ClearValueType>;
+    clearValues: Record<EncryptedValue, ClearValue>;
 }
 
 // @public
@@ -457,7 +458,7 @@ export interface PublicDecryptResponseData {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<EncryptedValue, ClearValueType>>;
+    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
     // (undocumented)
     decryptionProof: Hex;
 }
@@ -583,7 +584,7 @@ export interface UserDecryptRequest extends BaseRequest {
 // @public (undocumented)
 export interface UserDecryptResponseData {
     // (undocumented)
-    clearValues: Record<EncryptedValue, ClearValueType>;
+    clearValues: Record<EncryptedValue, ClearValue>;
 }
 
 // @public (undocumented)

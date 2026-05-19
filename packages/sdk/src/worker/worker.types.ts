@@ -4,7 +4,7 @@ import type {
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
-import type { ClearValueType, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
 import type { Address, Hex } from "viem";
 
@@ -242,11 +242,11 @@ export interface UpdateCsrfResponseData {
 export type EncryptResponseData = InputProofBytesType;
 
 export interface UserDecryptResponseData {
-  clearValues: Record<EncryptedValue, ClearValueType>;
+  clearValues: Record<EncryptedValue, ClearValue>;
 }
 
 export interface PublicDecryptResponseData {
-  clearValues: Readonly<Record<EncryptedValue, ClearValueType>>;
+  clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
 }
@@ -261,7 +261,7 @@ export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
 export interface DelegatedUserDecryptResponseData {
-  clearValues: Record<EncryptedValue, ClearValueType>;
+  clearValues: Record<EncryptedValue, ClearValue>;
 }
 
 export type RequestZKProofVerificationResponseData = InputProofBytesType;
