@@ -1,14 +1,16 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { getFunctionSelector, isAddress } from "viem";
+import { getFunctionSelector, isAddress, parseTransaction } from "viem";
 import { describe, expect, test } from "../../test-fixtures";
 
 const ROOT = findRepoRoot(process.cwd());
 const ERC7730_DIR = resolve(ROOT, "docs/clear-signing/erc7730");
 const REGISTRY_DIR = resolve(ERC7730_DIR, "registry/zama");
+const REGISTRY_TESTS_DIR = resolve(REGISTRY_DIR, "tests");
 const LEDGER_DEMO_DIR = resolve(ERC7730_DIR, "ledger-demo/zama-shield");
 const FIXTURE_PATH = resolve(ERC7730_DIR, "fixtures/sepolia-v1.json");
 const SCHEMA = "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json";
+const REGISTRY_TEST_SCHEMA = "../../../specs/erc7730-tests.schema.json";
 
 interface Descriptor {
   $schema: string;
@@ -76,6 +78,18 @@ interface Eip712Fixture {
   expectedTexts: readonly string[];
 }
 
+interface RegistryTestFile {
+  $schema: string;
+  tests: readonly RegistryTest[];
+}
+
+interface RegistryTest {
+  description?: string;
+  rawTx?: `0x${string}`;
+  data?: Eip712Fixture["data"];
+  expectedTexts?: readonly string[];
+}
+
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
@@ -98,6 +112,21 @@ function descriptorFiles(): readonly string[] {
   return readdirSync(REGISTRY_DIR)
     .filter((file) => file.endsWith(".json"))
     .map((file) => resolve(REGISTRY_DIR, file));
+}
+
+function registryTestFiles(): readonly string[] {
+  return readdirSync(REGISTRY_TESTS_DIR)
+    .filter((file) => file.endsWith(".tests.json"))
+    .map((file) => resolve(REGISTRY_TESTS_DIR, file));
+}
+
+function descriptorForRegistryTest(path: string): Descriptor {
+  const file = path.split("/").at(-1)!;
+  const descriptorFile = file.replace(/\.tests\.json$/, ".json");
+  const descriptorPath = resolve(REGISTRY_DIR, descriptorFile);
+
+  expect(existsSync(descriptorPath), `missing descriptor for ${file}`).toBe(true);
+  return readJson<Descriptor>(descriptorPath);
 }
 
 function descriptorFromFixture(relativePath: string): Descriptor {
@@ -228,6 +257,54 @@ describe("ERC-7730 descriptor drafts", () => {
         ).toBe(true);
       }
       expect(fixture.expectedTexts.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("registry reference tests match their descriptors", () => {
+    for (const file of registryTestFiles()) {
+      const testFile = readJson<RegistryTestFile>(file);
+      const descriptor = descriptorForRegistryTest(file);
+
+      expect(testFile.$schema).toBe(REGISTRY_TEST_SCHEMA);
+      expect(testFile.tests.length).toBeGreaterThan(0);
+
+      for (const testCase of testFile.tests) {
+        expect(testCase.expectedTexts?.length ?? 0).toBeGreaterThan(0);
+
+        if (testCase.rawTx) {
+          const tx = parseTransaction(testCase.rawTx);
+          const selector = tx.data?.slice(0, 10);
+          const matchingSignature = Object.keys(descriptor.display.formats).find(
+            (signature) => getFunctionSelector(signature) === selector,
+          );
+
+          expect(
+            matchingSignature,
+            `${testCase.description ?? file} selector mismatch`,
+          ).toBeDefined();
+          expect(
+            deploymentMatches(
+              descriptor.context.contract?.deployments,
+              Number(tx.chainId),
+              tx.to ?? "",
+            ),
+            `${testCase.description ?? file} target is not in descriptor deployments`,
+          ).toBe(true);
+        } else if (testCase.data) {
+          const fields = testCase.data.types[testCase.data.primaryType] ?? [];
+          const formatKey = encodeEip712Type(testCase.data.primaryType, fields);
+          const deploymentAddress = String(testCase.data.domain.verifyingContract);
+          const chainId = Number(testCase.data.domain.chainId);
+
+          expect(descriptor.display.formats[formatKey]).toBeDefined();
+          expect(
+            deploymentMatches(descriptor.context.eip712?.deployments, chainId, deploymentAddress),
+            `${testCase.description ?? file} verifying contract is not in descriptor deployments`,
+          ).toBe(true);
+        } else {
+          throw new Error(`${testCase.description ?? file} has neither rawTx nor EIP-712 data`);
+        }
+      }
     }
   });
 

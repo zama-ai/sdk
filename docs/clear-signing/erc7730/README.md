@@ -10,6 +10,8 @@ The target registry shape is:
 registry/zama/
   calldata-*.json
   eip712-*.json
+  tests/
+    *.tests.json
 fixtures/
   sepolia-v1.json
 ledger-demo/
@@ -72,6 +74,11 @@ they are not yet registry-ready as-is. See `sourcify-verification.md` for the
 current Sourcify verification matrix and the contracts that must be verified or
 removed before public registry submission.
 
+`registry/zama/tests/` mirrors the public registry's reference test format. It
+contains signed calldata transactions and EIP-712 typed data samples with
+`expectedTexts` so wallet implementers can check that a renderer surfaces the
+intended labels and values.
+
 ## Validation
 
 The SDK test suite includes a local descriptor/fixture consistency check:
@@ -84,6 +91,15 @@ The official CLI should also be run before review:
 
 ```bash
 uvx erc7730 lint --v2 docs/clear-signing/erc7730/registry/zama/*.json
+```
+
+The Ledger demo directory also contains non-descriptor fixtures, so lint its two
+descriptor files explicitly:
+
+```bash
+uvx erc7730 lint --v2 \
+  docs/clear-signing/erc7730/ledger-demo/zama-shield/calldata-zamamock-shield.json \
+  docs/clear-signing/erc7730/ledger-demo/zama-shield/calldata-czamamock-wrapper.json
 ```
 
 Without an Etherscan API key, the CLI may warn that it cannot fetch ABIs for

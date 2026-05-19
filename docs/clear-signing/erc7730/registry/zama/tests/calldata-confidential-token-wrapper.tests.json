@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../specs/erc7730-tests.schema.json",
+  "tests": [
+    {
+      "description": "shield through wrap on Sepolia",
+      "rawTx": "0x02f8b383aa36a703843b9aca00843b9aca00830249f0947c5bf43b851c1dff1a4fee8db225b87f2c22363980b844bf376c7a000000000000000000000000222222222222222222222222222222222222222200000000000000000000000000000000000000000000000000000000002625a0c001a047612f9528903e1aad55897546b3d20318c62c3297c81c42b0fe93b948a5dfb4a00bef1a1d5aaed2abea87520edce5519efa6fa294fe86f2d94b6ec7b60d3e86dc",
+      "expectedTexts": [
+        "Shield public tokens",
+        "Recipient",
+        "Amount"
+      ]
+    },
+    {
+      "description": "confidential transfer on Sepolia",
+      "rawTx": "0x02f9013383aa36a704843b9aca00843b9aca00830249f0947c5bf43b851c1dff1a4fee8db225b87f2c22363980b8c42fb74e620000000000000000000000002222222222222222222222222222222222222222abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdc080a039fbec6b7d0c06fd1ed41b82dce57a0e71a225e5cadaf7aed33b802e3f0fa803a06a1def0a026fdfcbfaef0db9e0b4a000be1f687b223b2f3022fccc1db238b0f8",
+      "expectedTexts": [
+        "Send confidential tokens",
+        "Recipient",
+        "[Encrypted confidential amount]"
+      ]
+    },
+    {
+      "description": "request unshield on Sepolia",
+      "rawTx": "0x02f9015383aa36a705843b9aca00843b9aca00830249f0947c5bf43b851c1dff1a4fee8db225b87f2c22363980b8e45bf4ef0600000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdc001a07d5d5ce78f17e6a28ffcc07dad7ea5667943b5e39676b25a393160af8780dbb0a0430f5ce73dc01fb41daa27a74ec401befa16d06e82a4dab35ffc3ec35da737e6",
+      "expectedTexts": [
+        "Request unshield",
+        "Public recipient",
+        "[Encrypted unshield amount]"
+      ]
+    },
+    {
+      "description": "request full-balance unshield on Sepolia",
+      "rawTx": "0x02f8d383aa36a706843b9aca00843b9aca00830249f0947c5bf43b851c1dff1a4fee8db225b87f2c22363980b864e8c15fd400000000000000000000000011111111111111111111111111111111111111110000000000000000000000002222222222222222222222222222222222222222ababababababababababababababababababababababababababababababababc001a076982d849377664a3efabb6cf1dc2d02d6fb0adda769b26bf13c29129a17930ea0453715f690bf791ddbac8319e9ea6ddec075b7186ba7a37b2591d6031a5343b2",
+      "expectedTexts": [
+        "Request full-balance unshield",
+        "Public recipient",
+        "Balance handle"
+      ]
+    },
+    {
+      "description": "finalize unshield on Sepolia",
+      "rawTx": "0x02f9013383aa36a707843b9aca00843b9aca00830249f0947c5bf43b851c1dff1a4fee8db225b87f2c22363980b8c45bb67a05abababababababababababababababababababababababababababababababab00000000000000000000000000000000000000000000000000000000002625a000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000040cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdc080a0e537fc8da7890b879d87bc5aa267e8e070042b73a6d50a4a0671395c0224b5dfa0765ae35427345ab090b57e7793c2a88def582f17d87eacef3cd85dfa8f52388a",
+      "expectedTexts": [
+        "Finalize unshield",
+        "Clear amount",
+        "Unshield request"
+      ]
+    }
+  ]
+}

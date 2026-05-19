@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../specs/erc7730-tests.schema.json",
+  "tests": [
+    {
+      "description": "delegateDecryption on Sepolia",
+      "rawTx": "0x02f8d383aa36a780843b9aca00843b9aca00830249f094f0ffdc93b7e186bc2f8cb3daa75d86d1930a433d80b86404f61a9500000000000000000000000033333333333333333333333333333333333333330000000000000000000000007c5bf43b851c1dff1a4fee8db225b87f2c223639000000000000000000000000000000000000000000000000000000006a18a500c001a0aff8783475fb55acf4eb3268a8edfc7cd4f70429bdb4ca9106c1bf6870f009c9a01d72d569bf66969d8413134efca73097a7d6c83849be09e3cc01cf057fda8c41",
+      "expectedTexts": [
+        "Grant decrypt access",
+        "Delegate wallet",
+        "Conf. contract",
+        "Delegation expires",
+        "No spending or transfer permission"
+      ]
+    }
+  ]
+}
