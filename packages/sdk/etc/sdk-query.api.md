@@ -18,7 +18,6 @@ import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712UserArgsType } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
@@ -177,33 +176,6 @@ export interface ConfidentialTransferParams extends TransferOptions {
     // (undocumented)
     to: Address;
 }
-
-// @public (undocumented)
-export function createDelegatedUserDecryptEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createDelegatedUserDecryptEIP712"], CreateDelegatedUserDecryptEIP712Params, KmsDelegatedUserDecryptEIP712Type>;
-
-// @public
-export interface CreateDelegatedUserDecryptEIP712Params {
-    // (undocumented)
-    contractAddresses: Address[];
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays?: number;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public (undocumented)
-export function createEIP712MutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.createEIP712"], CreateEIP712Params, EIP712TypedData>;
-
-// @public
-export type CreateEIP712Params = Pick<KmsUserDecryptEIP712UserArgsType, "startTimestamp"> & {
-    publicKey: Hex;
-    contractAddresses: Address[];
-    durationDays?: number;
-};
 
 // @public (undocumented)
 export function decryptBalanceAsMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.decryptBalanceAs", Address], DecryptBalanceAsParams, bigint>;
@@ -407,9 +379,6 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
 }
 
-// @public (undocumented)
-export function generateKeypairMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.generateKeypair"], void, KeypairType<Hex>>;
-
 // @public
 export interface GenericSigner {
     dispose?(): void;
@@ -547,28 +516,6 @@ export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 export type PublicDecryptResult = PublicDecryptResults;
 
 // @public (undocumented)
-export interface PublicKeyQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function publicKeyQueryOptions(sdk: ZamaSDK, config?: PublicKeyQueryConfig): QueryFactoryOptions<PublicKeyData | null, Error, PublicKeyData | null, typeof zamaQueryKeys.publicKey.all>;
-
-// @public (undocumented)
-export interface PublicParamsQueryConfig {
-    // (undocumented)
-    query?: Record<string, unknown>;
-}
-
-// Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function publicParamsQueryOptions(sdk: ZamaSDK, bits: number, config?: PublicParamsQueryConfig): QueryFactoryOptions<PublicParamsData | null, Error, PublicParamsData | null, ReturnType<typeof zamaQueryKeys.publicParams.bits>>;
-
-// @public (undocumented)
 export interface QueryClientLike {
     // (undocumented)
     invalidateQueries(filters: QueryFilterLike): void | Promise<void>;
@@ -610,9 +557,6 @@ export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
     terminate(): void;
 }
-
-// @public (undocumented)
-export function requestZKProofVerificationMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.requestZKProofVerification"], ZKProofLike, InputProofBytesType>;
 
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
@@ -1172,15 +1116,6 @@ export const zamaQueryKeys: {
             readonly contractAddresses: `0x${string}`[];
             readonly walletAddress?: undefined;
             readonly walletChainId?: undefined;
-        }];
-    };
-    readonly publicKey: {
-        readonly all: readonly ["zama.publicKey"];
-    };
-    readonly publicParams: {
-        readonly all: readonly ["zama.publicParams"];
-        readonly bits: (bits: number) => readonly ["zama.publicParams", {
-            readonly bits: number;
         }];
     };
     readonly delegationStatus: {

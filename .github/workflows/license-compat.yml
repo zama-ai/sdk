@@ -39,10 +39,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Generate license inventory
+        env:
+          SAFE_CHAIN_LOGGING: silent
         run: |
           mkdir -p artifacts/license
           pnpm --filter @zama-fhe/sdk licenses list --json --prod > artifacts/license/licenses-sdk.json

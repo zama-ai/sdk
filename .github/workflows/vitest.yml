@@ -41,6 +41,9 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -51,7 +54,7 @@ jobs:
 
       - name: Coverage report
         if: github.event_name == 'pull_request'
-        uses: davelosert/vitest-coverage-report-action@3c50566c523e04813df28de8f7c48dd97d663f1c # v2.11.2
+        uses: davelosert/vitest-coverage-report-action@02f3c2e641286b7fa308cd3e430783103ce6103b # v2.12.0
         with:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
