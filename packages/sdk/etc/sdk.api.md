@@ -28,6 +28,7 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { Signer } from 'ethers';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
+import { z } from 'zod/mini';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
@@ -11752,11 +11753,10 @@ export interface PendingUnshieldRequest {
     readonly unwrapTxHash: Hex;
 }
 
-// Warning: (ae-forgotten-export) The symbol "output" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "PermissionSchema" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type Permission = output<typeof PermissionSchema>;
+export type Permission = z.infer<typeof PermissionSchema>;
 
 // @public
 export class Permits {
@@ -14714,7 +14714,7 @@ export class SigningRejectedError extends ZamaError {
 // Warning: (ae-forgotten-export) The symbol "StoredKeypairSchema" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type StoredKeypair = output<typeof StoredKeypairSchema>;
+export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -20156,10 +20156,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DE4MHZtQ.d.ts:20449:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20578:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20680:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20681:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BhuoXkFo.d.ts:19764:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BhuoXkFo.d.ts:19893:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BhuoXkFo.d.ts:19995:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BhuoXkFo.d.ts:19996:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

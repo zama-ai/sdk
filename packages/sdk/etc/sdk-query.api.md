@@ -25,6 +25,7 @@ import { QueryObserverOptions } from '@tanstack/query-core';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import { z } from 'zod/mini';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
