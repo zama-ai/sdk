@@ -86,11 +86,6 @@ export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
-export { createEIP712MutationOptions, type CreateEIP712Params } from "./create-eip712";
-export {
-  createDelegatedUserDecryptEIP712MutationOptions,
-  type CreateDelegatedUserDecryptEIP712Params,
-} from "./create-delegated-user-decrypt-eip712";
 export {
   delegatedDecryptMutationOptions,
   type DelegatedDecryptMutationParams,
