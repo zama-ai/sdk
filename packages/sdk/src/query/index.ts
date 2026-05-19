@@ -39,8 +39,6 @@ export {
   confidentialIsOperatorQueryOptions,
   type ConfidentialIsOperatorQueryConfig,
 } from "./confidential-is-operator";
-export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
-export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
 export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
@@ -88,7 +86,6 @@ export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
-export { generateKeypairMutationOptions } from "./generate-keypair";
 export { createEIP712MutationOptions, type CreateEIP712Params } from "./create-eip712";
 export {
   createDelegatedUserDecryptEIP712MutationOptions,
@@ -99,7 +96,6 @@ export {
   type DelegatedDecryptMutationParams,
 } from "./delegated-decrypt";
 export { publicDecryptMutationOptions } from "./public-decrypt";
-export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
 export { grantPermitMutationOptions } from "./grant-permit";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export { revokePermitsMutationOptions } from "./revoke-permits";

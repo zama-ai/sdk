@@ -1,70 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import {
-  useGenerateKeypair,
-  useCreateEIP712,
-  usePublicKey,
-  usePublicParams,
-  useEncrypt,
-} from "@zama-fhe/react-sdk";
+import { useCreateEIP712, useEncrypt } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 import type { Hex } from "viem";
 
-export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
-  const [keypairPublicKey, setKeypairPublicKey] = useState<Hex | null>(null);
+// Fixed test public key (32 bytes) for exercising useCreateEIP712 without depending on a
+// keypair-generation hook. The relayer treats this as opaque bytes.
+const TEST_PUBLIC_KEY: Hex = "0x0101010101010101010101010101010101010101010101010101010101010101";
 
-  const generateKeypair = useGenerateKeypair();
+export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] }) {
   const createEIP712 = useCreateEIP712();
-  const publicKey = usePublicKey();
-  const publicParams = usePublicParams(2048);
   const encrypt = useEncrypt();
 
   return (
     <div className="space-y-8" data-testid="fhe-relayer-panel">
-      {/* useGenerateKeypair */}
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold text-white">useGenerateKeypair</h2>
-        <button
-          onClick={() =>
-            generateKeypair.mutate(undefined, {
-              onSuccess: (data) => setKeypairPublicKey(data.publicKey),
-            })
-          }
-          disabled={generateKeypair.isPending}
-          className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
-          data-testid="generate-keypair-button"
-        >
-          {generateKeypair.isPending ? "Generating..." : "Generate Keypair"}
-        </button>
-        {generateKeypair.isSuccess && (
-          <p className="text-zama-success" data-testid="generate-keypair-result">
-            Public key length: {generateKeypair.data.publicKey.length}
-          </p>
-        )}
-        {generateKeypair.isError && (
-          <p className="text-zama-error" data-testid="generate-keypair-error">
-            Error: {generateKeypair.error.message}
-          </p>
-        )}
-      </section>
-
       {/* useCreateEIP712 */}
       <section className="space-y-2">
         <h2 className="text-xl font-semibold text-white">useCreateEIP712</h2>
         <button
           onClick={() => {
-            if (!keypairPublicKey) {
-              return;
-            }
             createEIP712.mutate({
-              publicKey: keypairPublicKey,
+              publicKey: TEST_PUBLIC_KEY,
               contractAddresses: tokenAddresses,
               startTimestamp: Math.floor(Date.now() / 1000),
               durationDays: 1,
             });
           }}
-          disabled={createEIP712.isPending || !keypairPublicKey}
+          disabled={createEIP712.isPending}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="create-eip712-button"
         >
@@ -78,38 +40,6 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
         {createEIP712.isError && (
           <p className="text-zama-error" data-testid="create-eip712-error">
             Error: {createEIP712.error.message}
-          </p>
-        )}
-      </section>
-
-      {/* usePublicKey */}
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold text-white">usePublicKey</h2>
-        {publicKey.isLoading && <p>Fetching...</p>}
-        {publicKey.isSuccess && publicKey.data && (
-          <p className="text-zama-success" data-testid="public-key-result">
-            Public key ID: {publicKey.data.publicKeyId}
-          </p>
-        )}
-        {publicKey.isError && (
-          <p className="text-zama-error" data-testid="public-key-error">
-            Error: {publicKey.error.message}
-          </p>
-        )}
-      </section>
-
-      {/* usePublicParams */}
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold text-white">usePublicParams</h2>
-        {publicParams.isLoading && <p>Fetching...</p>}
-        {publicParams.isSuccess && publicParams.data && (
-          <p className="text-zama-success" data-testid="public-params-result">
-            Public params ID: {publicParams.data.publicParamsId}
-          </p>
-        )}
-        {publicParams.isError && (
-          <p className="text-zama-error" data-testid="public-params-error">
-            Error: {publicParams.error.message}
           </p>
         )}
       </section>
