@@ -32,7 +32,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -90,7 +90,7 @@ const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 const EBOOL_ID: FheTypeId = 0;
 const EADDRESS_ID: FheTypeId = 7;
 
-function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
+function decodeClearValueType(handle: EncryptedValue, rawValue: bigint): ClearValueType {
   const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
   if (typeByte === EBOOL_ID) {
     return rawValue !== 0n;
@@ -260,7 +260,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     };
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     await this.#assertDecryptAuthorization(
       params.handles,
       getAddress(params.signerAddress),
@@ -272,7 +274,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     return this.#decryptHandles(params.handles);
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
     const normalizedHandles = handles;
 
     const allowedResults = await Promise.all(
@@ -281,7 +283,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
     if (unauthorizedIndex !== -1) {
       throw new DecryptionFailedError(
-        `Handle ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
+        `Encrypted value ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
       );
     }
 
@@ -349,7 +351,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     await this.#assertDelegation(
       params.handles,
       getAddress(params.delegatorAddress),
@@ -392,8 +394,8 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async #decryptHandles(
-    normalizedHandles: Handle[],
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+    normalizedHandles: EncryptedValue[],
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     const values = await Promise.all(
       normalizedHandles.map((handle) => this.#readPlaintext(handle)),
     );
@@ -407,7 +409,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async #assertDecryptAuthorization(
-    normalizedHandles: Handle[],
+    normalizedHandles: EncryptedValue[],
     actorAddress: Address,
     contractAddress: Address,
     actorLabel: "User" | "Delegator",
@@ -443,7 +445,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async #assertDelegation(
-    handles: Handle[],
+    handles: EncryptedValue[],
     delegatorAddress: Address,
     delegateAddress: Address,
     contractAddress: Address,
@@ -462,13 +464,13 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     for (let i = 0; i < handles.length; i++) {
       if (!results[i]) {
         throw new DecryptionFailedError(
-          `Handle ${handles[i]!} is not delegated for user decryption`,
+          `Encrypted value ${handles[i]!} is not delegated for user decryption`,
         );
       }
     }
   }
 
-  async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
+  async #persistAllowed(handle: EncryptedValue, account: Address): Promise<boolean> {
     return this.#client.readContract({
       address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
@@ -477,7 +479,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     });
   }
 
-  async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
+  async #isAllowedForDecryption(handle: EncryptedValue): Promise<boolean> {
     return this.#client.readContract({
       address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
@@ -486,7 +488,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     });
   }
 
-  async #readPlaintext(handle: Handle): Promise<bigint> {
+  async #readPlaintext(handle: EncryptedValue): Promise<bigint> {
     return this.#client.readContract({
       address: this.#config.executorAddress as Address,
       abi: EXECUTOR_ABI,

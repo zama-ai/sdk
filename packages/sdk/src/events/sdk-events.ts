@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { ShieldPath } from "../types/token";
 
 /**
@@ -64,16 +64,16 @@ export interface EncryptErrorEvent extends BaseEvent {
 export interface DecryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptStart;
   /** Handles being decrypted — correlate with matching DecryptEnd/DecryptError. */
-  handles: Handle[];
+  handles: EncryptedValue[];
 }
 
 export interface DecryptEndEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptEnd;
   durationMs: number;
   /** Handles that were decrypted. */
-  handles: Handle[];
+  handles: EncryptedValue[];
   /** Decrypted values keyed by handle — use this to correlate events to specific handles. */
-  result: Record<Handle, ClearValueType>;
+  result: Record<EncryptedValue, ClearValueType>;
 }
 
 export interface DecryptErrorEvent extends BaseEvent {
@@ -82,7 +82,7 @@ export interface DecryptErrorEvent extends BaseEvent {
   error: Error;
   durationMs: number;
   /** Handles that were being decrypted when the error occurred. */
-  handles: Handle[];
+  handles: EncryptedValue[];
 }
 
 export interface TransactionErrorEvent extends BaseEvent {

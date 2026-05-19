@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { checksummedAddress } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 
@@ -26,7 +26,7 @@ export class CachingService {
   async get(
     requester: Address,
     contractAddress: Address,
-    handle: Handle,
+    handle: EncryptedValue,
   ): Promise<ClearValueType | null> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, handle);
@@ -49,7 +49,7 @@ export class CachingService {
   async set(
     requester: Address,
     contractAddress: Address,
-    handle: Handle,
+    handle: EncryptedValue,
     value: ClearValueType,
   ): Promise<void> {
     try {
@@ -66,7 +66,11 @@ export class CachingService {
     }
   }
 
-  async delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void> {
+  async delete(
+    requester: Address,
+    contractAddress: Address,
+    handle: EncryptedValue,
+  ): Promise<void> {
     const key = this.#buildStorageKey(requester, contractAddress, handle);
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doDelete(key).catch((error) => {
@@ -126,7 +130,7 @@ export class CachingService {
     await this.#storage.delete(this.#decryptKeysNamespace);
   }
 
-  #buildStorageKey(requester: Address, contractAddress: Address, handle: Handle): string {
+  #buildStorageKey(requester: Address, contractAddress: Address, handle: EncryptedValue): string {
     return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${handle.toLowerCase()}`;
   }
 

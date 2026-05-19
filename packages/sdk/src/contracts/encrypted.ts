@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
 const legacyTotalSupplyAbi = [
   {
@@ -160,7 +160,7 @@ export function unwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Handle,
+  encryptedBalance: EncryptedValue,
 ) {
   return {
     address: encryptedErc20,

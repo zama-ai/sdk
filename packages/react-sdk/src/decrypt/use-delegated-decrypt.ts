@@ -1,6 +1,6 @@
 "use client";
 
-import type { ClearValueType, Handle } from "@zama-fhe/sdk";
+import type { ClearValueType, EncryptedValue } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import {
   delegatedDecryptMutationOptions,
@@ -23,7 +23,7 @@ import { useZamaSDK } from "../provider";
  */
 export function useDelegatedDecrypt() {
   const sdk = useZamaSDK();
-  return useMutation<Record<Handle, ClearValueType>, Error, DelegatedDecryptMutationParams>(
+  return useMutation<Record<EncryptedValue, ClearValueType>, Error, DelegatedDecryptMutationParams>(
     delegatedDecryptMutationOptions(sdk),
   );
 }

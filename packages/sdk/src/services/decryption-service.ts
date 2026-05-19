@@ -10,7 +10,7 @@ import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { DecryptHandle } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
@@ -24,14 +24,14 @@ interface DecryptionStrategy {
   decryptContract: (args: {
     credentials: CredentialBundle;
     contractAddress: Address;
-    contractHandles: Handle[];
-  }) => Promise<Record<Handle, ClearValueType>>;
+    contractHandles: EncryptedValue[];
+  }) => Promise<Record<EncryptedValue, ClearValueType>>;
   errorMessage: string;
   delegated?: boolean;
 }
 
 export interface BatchDecryptHandleItem {
-  handle: Handle;
+  handle: EncryptedValue;
   contractAddress: Address;
   value?: ClearValueType;
   error?: ZamaError;
@@ -71,7 +71,7 @@ export class DecryptionService {
   async userDecrypt(
     handles: DecryptHandle[],
     signerAddress: Address,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValueType>> {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
@@ -94,7 +94,7 @@ export class DecryptionService {
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValueType>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     return this.#decrypt(handles, {
@@ -189,7 +189,7 @@ export class DecryptionService {
   async #decrypt(
     handles: DecryptHandle[],
     strategy: DecryptionStrategy,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValueType>> {
     if (handles.length === 0) {
       return {};
     }
@@ -198,7 +198,7 @@ export class DecryptionService {
       handle: h.handle,
       contractAddress: getAddress(h.contractAddress),
     }));
-    const result: Record<Handle, ClearValueType> = {};
+    const result: Record<EncryptedValue, ClearValueType> = {};
     const nonZero: DecryptHandle[] = [];
 
     for (const h of normalized) {
@@ -235,7 +235,7 @@ export class DecryptionService {
 
     const credentials = await strategy.resolveCredentials(allContracts);
 
-    const byContract = new Map<Address, Handle[]>();
+    const byContract = new Map<Address, EncryptedValue[]>();
     for (const h of uncached) {
       const existing = byContract.get(h.contractAddress);
       if (existing) {
@@ -262,11 +262,11 @@ export class DecryptionService {
           });
 
           for (const [handle, value] of Object.entries(decrypted)) {
-            result[handle as Handle] = value;
+            result[handle as EncryptedValue] = value;
             await this.#cache.set(
               strategy.requesterAddress,
               contractAddress,
-              handle as Handle,
+              handle as EncryptedValue,
               value,
             );
           }
@@ -274,7 +274,7 @@ export class DecryptionService {
         5,
       );
 
-      const uncachedResult: Record<Handle, ClearValueType> = {};
+      const uncachedResult: Record<EncryptedValue, ClearValueType> = {};
       for (const handle of uncachedHandles) {
         const value = result[handle];
         if (value !== undefined) {
@@ -299,7 +299,10 @@ export class DecryptionService {
     }
   }
 
-  #setHandleResult(item: BatchDecryptHandleItem, decrypted: Record<Handle, ClearValueType>): void {
+  #setHandleResult(
+    item: BatchDecryptHandleItem,
+    decrypted: Record<EncryptedValue, ClearValueType>,
+  ): void {
     const value = decrypted[item.handle];
     if (value === undefined) {
       item.error = new DecryptionFailedError(

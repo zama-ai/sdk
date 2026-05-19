@@ -17,7 +17,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -142,11 +142,13 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.encrypt(params);
   }
 
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     return this.#active.userDecrypt(params);
   }
 
-  publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+  publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
     return this.#active.publicDecrypt(handles);
   }
 
@@ -168,7 +170,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
 
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     return this.#active.delegatedUserDecrypt(params);
   }
 

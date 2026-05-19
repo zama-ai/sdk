@@ -18,7 +18,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -165,7 +165,9 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -179,7 +181,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Public decryption - no authorization needed.
    * Used for publicly visible encrypted values.
    */
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -221,7 +223,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    */
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {

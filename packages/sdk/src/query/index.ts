@@ -139,6 +139,7 @@ export type {
   ClearValueType,
   EncryptParams,
   EncryptResult,
+  EncryptedValue,
   Handle,
 } from "../relayer/relayer-sdk.types";
 export type {

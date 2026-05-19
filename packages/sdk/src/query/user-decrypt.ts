@@ -1,13 +1,13 @@
 import type { UserDecryptResults } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 
 export interface DecryptHandle {
-  handle: Handle;
+  handle: EncryptedValue;
   contractAddress: Address;
 }
 

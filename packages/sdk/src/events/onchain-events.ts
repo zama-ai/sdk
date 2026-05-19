@@ -3,7 +3,7 @@
  * Works with raw log data from any provider.
  */
 
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
@@ -57,7 +57,7 @@ export interface ConfidentialTransferEvent {
   /** Receiver address. */
   readonly to: Address;
   /** FHE ciphertext handle for the transferred amount. */
-  readonly encryptedAmountHandle: Handle;
+  readonly encryptedAmountHandle: EncryptedValue;
 }
 
 // NOTE: New wrapper contracts no longer emit this event — shields now emit
@@ -78,9 +78,9 @@ export interface UnwrapRequestedEvent {
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
   /** FHE ciphertext handle for the requested unshield amount. */
-  readonly encryptedAmount: Handle;
+  readonly encryptedAmount: EncryptedValue;
   /** Request identifier emitted by upgraded wrapper contracts. */
-  readonly unwrapRequestId?: Handle;
+  readonly unwrapRequestId?: EncryptedValue;
 }
 
 /** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
@@ -89,20 +89,20 @@ export interface UnwrapFinalizedEvent {
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
   /** FHE ciphertext handle of the burnt confidential balance. */
-  readonly encryptedAmount: Handle;
+  readonly encryptedAmount: EncryptedValue;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
   /** Request identifier emitted by upgraded wrapper contracts. */
-  readonly unwrapRequestId?: Handle;
+  readonly unwrapRequestId?: EncryptedValue;
 }
 
 /** @deprecated Use `UnwrapFinalizedEvent`. */
 export interface UnwrappedFinalizedEvent {
   readonly eventName: "UnwrappedFinalized";
   readonly receiver: Address;
-  readonly encryptedAmount: Handle;
+  readonly encryptedAmount: EncryptedValue;
   readonly cleartextAmount: bigint;
-  readonly unwrapRequestId?: Handle;
+  readonly unwrapRequestId?: EncryptedValue;
 }
 
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
@@ -119,9 +119,9 @@ export interface UnwrappedStartedEvent {
   /** Refund address (if applicable). */
   readonly refund: Address;
   /** FHE handle of the requested amount. */
-  readonly requestedAmount: Handle;
+  readonly requestedAmount: EncryptedValue;
   /** FHE handle of the burn amount. */
-  readonly burnAmount: Handle;
+  readonly burnAmount: EncryptedValue;
 }
 
 /** Union of all decoded confidential token event types. */
@@ -145,9 +145,9 @@ function topicToBigInt(topic: Hex): bigint {
   return BigInt(topic);
 }
 
-function topicToBytes32(topic: Hex): Handle {
+function topicToBytes32(topic: Hex): EncryptedValue {
   // EVM topics are already 32-byte 0x-prefixed hex — cast directly
-  return topic as Handle;
+  return topic as EncryptedValue;
 }
 
 function wordAt(data: Hex, index: number): string {
@@ -169,9 +169,9 @@ function wordToBool(data: Hex, index: number): boolean {
   return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
-function wordToBytes32(data: Hex, index: number): Handle {
+function wordToBytes32(data: Hex, index: number): EncryptedValue {
   // wordAt returns exactly 64 hex chars — prefix and cast directly
-  return prefixHex(wordAt(data, index)) as Handle;
+  return prefixHex(wordAt(data, index)) as EncryptedValue;
 }
 
 // ---------------------------------------------------------------------------

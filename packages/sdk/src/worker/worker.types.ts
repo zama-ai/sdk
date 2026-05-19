@@ -4,7 +4,7 @@ import type {
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
-import type { ClearValueType, EncryptInput, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
 import type { Address, Hex } from "viem";
 
@@ -93,7 +93,7 @@ export interface UserDecryptRequest extends BaseRequest {
   type: "USER_DECRYPT";
   payload: {
     chainId: number;
-    handles: Handle[];
+    handles: EncryptedValue[];
     contractAddress: Address;
     signedContractAddresses: Address[];
     privateKey: Hex;
@@ -109,7 +109,7 @@ export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
   payload: {
     chainId: number;
-    handles: Handle[];
+    handles: EncryptedValue[];
   };
 }
 
@@ -145,7 +145,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
   type: "DELEGATED_USER_DECRYPT";
   payload: {
     chainId: number;
-    handles: Handle[];
+    handles: EncryptedValue[];
     contractAddress: Address;
     signedContractAddresses: Address[];
     privateKey: Hex;
@@ -242,11 +242,11 @@ export interface UpdateCsrfResponseData {
 export type EncryptResponseData = InputProofBytesType;
 
 export interface UserDecryptResponseData {
-  clearValues: Record<Handle, ClearValueType>;
+  clearValues: Record<EncryptedValue, ClearValueType>;
 }
 
 export interface PublicDecryptResponseData {
-  clearValues: Readonly<Record<Handle, ClearValueType>>;
+  clearValues: Readonly<Record<EncryptedValue, ClearValueType>>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
 }
@@ -261,7 +261,7 @@ export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
 
 export interface DelegatedUserDecryptResponseData {
-  clearValues: Record<Handle, ClearValueType>;
+  clearValues: Record<EncryptedValue, ClearValueType>;
 }
 
 export type RequestZKProofVerificationResponseData = InputProofBytesType;

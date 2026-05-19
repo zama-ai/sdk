@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -426,7 +426,7 @@ export class WrappedToken extends Token {
    * );
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+  async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);

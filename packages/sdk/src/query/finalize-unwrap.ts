@@ -1,4 +1,4 @@
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import { ConfigurationError } from "../errors";
@@ -7,9 +7,9 @@ import type { Address } from "viem";
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export type FinalizeUnwrapParams =
   /** Preferred input from upgraded `UnwrapRequested` events. */
-  | { unwrapRequestId: Handle; burnAmountHandle?: never }
+  | { unwrapRequestId: EncryptedValue; burnAmountHandle?: never }
   /** Legacy input from pre-upgrade `UnwrapRequested` events. */
-  | { unwrapRequestId?: never; burnAmountHandle: Handle };
+  | { unwrapRequestId?: never; burnAmountHandle: EncryptedValue };
 
 export function finalizeUnwrapMutationOptions(
   token: WrappedToken,

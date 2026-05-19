@@ -10,7 +10,7 @@ import type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -38,10 +38,10 @@ export interface FheOperations {
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
   /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
 
   /** Decrypt FHE handles using the network public key (no credential needed). */
-  publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+  publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
@@ -55,7 +55,7 @@ export interface FheOperations {
   /** Decrypt FHE handles using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  ): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

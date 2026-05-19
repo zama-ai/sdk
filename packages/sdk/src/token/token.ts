@@ -24,7 +24,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValueType, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
@@ -46,7 +46,7 @@ export interface BatchDecryptAsOptions {
   /** The address of the account that delegated decryption rights. */
   delegatorAddress: Address;
   /** Pre-fetched encrypted values. When omitted, they are fetched from the chain. */
-  handles?: Handle[];
+  handles?: EncryptedValue[];
   /**
    * The account whose on-chain balance to read. Defaults to the delegator
    * address, which is the common case (the delegator grants permission to
@@ -187,7 +187,7 @@ export class Token {
    * const handle = await token.confidentialBalanceOf("0xOwner");
    * ```
    */
-  async confidentialBalanceOf(owner: Address): Promise<Handle> {
+  async confidentialBalanceOf(owner: Address): Promise<EncryptedValue> {
     return this.readConfidentialBalanceOf(getAddress(owner));
   }
 
@@ -376,7 +376,7 @@ export class Token {
       options.handles ??
       (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
 
-    const decryptRequests: Array<{ token: Token; handle: Handle }> = [];
+    const decryptRequests: Array<{ token: Token; handle: EncryptedValue }> = [];
     for (const [index, token] of tokens.entries()) {
       const handle = resolvedHandles[index];
       if (!handle || errors.has(token.address)) {
@@ -463,7 +463,7 @@ export class Token {
     accountAddress: Address,
     errors: Map<Address, ZamaError>,
     maxConcurrency: number,
-  ): Promise<Array<Handle | undefined>> {
+  ): Promise<Array<EncryptedValue | undefined>> {
     const outcomes = await pLimit(
       tokens.map((token) => async () => {
         try {
@@ -478,7 +478,7 @@ export class Token {
       maxConcurrency,
     );
 
-    const handles: Array<Handle | undefined> = [];
+    const handles: Array<EncryptedValue | undefined> = [];
     for (const [index, token] of tokens.entries()) {
       const outcome = outcomes[index];
       if (!outcome) {
@@ -670,7 +670,7 @@ export class Token {
    *
    * @internal
    */
-  protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
+  protected async readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue> {
     return await this.sdk.provider.readContract(confidentialBalanceOfContract(this.address, owner));
   }
 
@@ -759,4 +759,4 @@ export class Token {
 }
 
 /** @internal */
-export type DecryptedHandlesMap = Map<Handle, ClearValueType>;
+export type DecryptedHandlesMap = Map<EncryptedValue, ClearValueType>;
