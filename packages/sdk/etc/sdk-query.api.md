@@ -435,8 +435,10 @@ export interface GenericStorage {
 // @public (undocumented)
 export function grantPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.grantPermit"], Address[], void>;
 
+// Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type Handle = Bytes32Hex;
+export type Handle = EncryptedValue;
 
 // @public
 export function hashFn(queryKey: readonly unknown[]): string;
@@ -1335,9 +1337,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-C-OHT8i4.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-C-OHT8i4.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-C-OHT8i4.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CgETQJ31.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CgETQJ31.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CgETQJ31.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

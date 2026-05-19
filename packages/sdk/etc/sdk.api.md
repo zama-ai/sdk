@@ -6398,6 +6398,9 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 // @public
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
+// @public
+export type EncryptedValue = Bytes32Hex;
+
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -8769,7 +8772,7 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = Bytes32Hex;
+export type Handle = EncryptedValue;
 
 // @public
 export const hardhat: {
@@ -20156,10 +20159,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BOV220Zz.d.ts:20458:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BOV220Zz.d.ts:20587:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BOV220Zz.d.ts:20689:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BOV220Zz.d.ts:20690:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DjL8blFe.d.ts:20458:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DjL8blFe.d.ts:20587:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DjL8blFe.d.ts:20689:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DjL8blFe.d.ts:20690:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

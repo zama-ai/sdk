@@ -78,8 +78,11 @@ export interface RelayerWebConfig {
 /** Result from encryption operation. Alias for {@link InputProofBytesType}. */
 export type EncryptResult = InputProofBytesType;
 
-/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). Alias for {@link Bytes32Hex}. */
-export type Handle = Bytes32Hex;
+/** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
+export type EncryptedValue = Bytes32Hex;
+
+/** Secondary alias for {@link EncryptedValue}. Both names refer to the same `bytes32` ciphertext reference. */
+export type Handle = EncryptedValue;
 
 export type { ClearValueType };
 
