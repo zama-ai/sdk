@@ -104,7 +104,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappedToken.md): React hook returning a memoised WrappedToken instance.
 - [useEncrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md): Low-level mutation hook that encrypts a plaintext value using the relayer's FHE engine.
 - [useUserDecrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md): Query hook that automatically decrypts FHE handles once credentials are available via useGrantPermit.
-- [useGenerateKeypair](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGenerateKeypair.md): Low-level mutation hook that generates a fresh FHE keypair via the relayer.
 - [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md): Mutation hook that grants FHE decryption rights for a token to another address.
 - [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md): Mutation hook that revokes FHE decryption delegation for a token.
 - [useDelegationStatus](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegationStatus.md): Query hook that checks whether a decryption delegation is active between two addresses.

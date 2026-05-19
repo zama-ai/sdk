@@ -25,8 +25,6 @@ describe("zamaQueryKeys", () => {
     ["underlyingAllowance", zamaQueryKeys.underlyingAllowance.all],
     ["confidentialIsOperator", zamaQueryKeys.confidentialIsOperator.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
-    ["publicKey", zamaQueryKeys.publicKey.all],
-    ["publicParams", zamaQueryKeys.publicParams.all],
     ["decryption", zamaQueryKeys.decryption.all],
   ])("all keys are namespaced with zama.* (%s)", (_, key) => {
     expect(key[0]).toMatch(/^zama\./);
@@ -102,7 +100,6 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
-      zamaQueryKeys.publicParams.bits(2048),
       zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
     ];
 
