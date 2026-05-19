@@ -42,15 +42,15 @@ export class Decryption {
   }
 
   /**
-   * Decrypt one or more FHE handles. Results are cached — repeated calls
-   * for the same handle skip the relayer round-trip.
+   * Decrypt one or more FHE encrypted values. Results are cached — repeated calls
+   * for the same encrypted value skip the relayer round-trip.
    *
-   * Zero handles are mapped to `0n` without hitting the relayer.
+   * Zero encrypted values are mapped to `0n` without hitting the relayer.
    * Events (`DecryptStart/End/Error`) are emitted uniformly.
    * Relayer errors are wrapped into typed SDK errors.
    *
-   * @param encryptedInput - Handles to decrypt, each paired with its contract address.
-   * @returns A record mapping each handle to its decrypted clear-text value.
+   * @param encryptedInput - Encrypted values to decrypt, each paired with its contract address.
+   * @returns A record mapping each encrypted value to its decrypted clear-text value.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
    *
@@ -69,20 +69,20 @@ export class Decryption {
   }
 
   /**
-   * Decrypt one or more FHE handles using delegated credentials.
+   * Decrypt one or more FHE encrypted values using delegated credentials.
    *
    * Mirrors {@link userDecrypt} with delegated credentials — same caching and
-   * zero-handle short-circuit. Before reading from cache or calling the relayer,
-   * every non-zero handle's contract must have an active delegation from the
+   * zero-value short-circuit. Before reading from cache or calling the relayer,
+   * every non-zero encrypted value's contract must have an active delegation from the
    * delegator to the connected signer; missing or expired delegations fail fast.
    *
-   * @param encryptedInputs - FHE handles paired with their contract addresses.
+   * @param encryptedInputs - FHE encrypted values paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
    * @param accountAddress - Address used as the cache key's "requester"
    *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
    *   when decrypting on behalf of someone whose balance is stored under a
    *   different address (e.g. `decryptBalanceAs` with an explicit `accountAddress`).
-   * @returns Map of handle → clear-text value.
+   * @returns Map of encrypted value → clear-text value.
    *
    * @example
    * ```ts
@@ -144,25 +144,25 @@ export class Decryption {
   }
 
   /**
-   * Batch-decrypt delegated handles with per-handle error isolation.
+   * Batch-decrypt delegated encrypted values with per-entry error isolation.
    *
    * Attempts a single batch request first. If the batch fails with a non-fatal
-   * error (e.g. one handle is invalid), falls back to per-handle decryption so
-   * healthy handles still resolve. Each item in the result carries either a
+   * error (e.g. one entry is invalid), falls back to per-entry decryption so
+   * healthy entries still resolve. Each item in the result carries either a
    * decrypted value or an error — callers decide how to surface partial failures.
    *
-   * @param handles - FHE handles paired with their contract addresses.
+   * @param encryptedInputs - FHE encrypted values paired with their contract addresses.
    * @param delegatorAddress - The address that granted delegation rights.
    * @param accountAddress - The account on whose behalf decryption is performed. Defaults to `delegatorAddress`.
-   * @param maxConcurrency - Maximum parallel decrypt calls during per-handle fallback.
-   * @returns Per-handle results, each with a value or an error.
+   * @param maxConcurrency - Maximum parallel decrypt calls during per-entry fallback.
+   * @returns Per-entry results, each with a value or an error.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
    *
    * @example
    * ```ts
    * const result = await sdk.decryption.delegatedBatchDecrypt({
-   *   handles: [
+   *   encryptedInputs: [
    *     { encryptedValue: encryptedValue1, contractAddress: tokenA },
    *     { encryptedValue: encryptedValue2, contractAddress: tokenB },
    *   ],

@@ -19,11 +19,11 @@ By the end of this guide, you will be able to:
 
 While building support for [ERC-7984 confidential tokens](https://eips.ethereum.org/EIPS/eip-7984) you will encounter the following terminology. For a deeper architectural overview, see [Architecture](/concepts/architecture).
 
-- **FHEVM** — Zama's library for computations on encrypted values. Encrypted values are represented on-chain as **ciphertext handles** (`bytes32`).
+- **FHEVM** — Zama's library for computations on encrypted values. Each **encrypted value** is represented on-chain as a `bytes32` reference (also called a "handle" in Solidity / FHE.sol).
 - **Host chain** — the EVM network your users connect to (e.g. Ethereum mainnet, Sepolia).
 - **Gateway chain** — Zama's L3 chain that coordinates encryptions and decryptions.
 - **Relayer** — off-chain service that registers encrypted inputs, coordinates decryptions, and returns results. Wallets and dApps talk to the Relayer via the Zama SDK.
-- **ACL** — access control for ciphertext handles. Contracts grant per-address permissions so a user can read data they should have access to.
+- **ACL** — access control for encrypted values. Contracts grant per-address permissions so a user can read data they should have access to.
 - **Native confidential token** — an ERC-7984 token where balances and transfer amounts are encrypted by default. Not derived from an underlying ERC-20.
 - **Wrapped confidential token** — a standard ERC-20 wrapped into ERC-7984 form via a wrapper contract. The underlying ERC-20 is unchanged.
 - **Confidential Token Wrappers Registry** — on-chain registry mapping ERC-20s to their ERC-7984 wrappers.
@@ -45,7 +45,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 ## Display confidential balances
 
-Balances are stored as ciphertext handles. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
+Balances are stored on-chain as encrypted values. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
 
 {% hint style="warning" %}
 **Don't trigger the first signature automatically.** Gate the initial EIP-712 prompt behind an explicit user action — a "View balance" or "Authorize" button — so users opt into the wallet popup instead of being surprised by it. Once the session is cached, balance reads in other components decrypt silently.

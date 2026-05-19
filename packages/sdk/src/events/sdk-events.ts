@@ -159,7 +159,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 /**
  * Discriminated union of all SDK events.
  *
- * Decrypt events carry handles and decrypted clear-text values so event
+ * Decrypt events carry encrypted values and decrypted clear-text values so event
  * subscribers can correlate and bind them in UI layers. Events never carry
  * private keys, permit signatures, or ZK proofs.
  */

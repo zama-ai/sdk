@@ -40,7 +40,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.
-- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md): How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 
 ### SDK Reference
 
@@ -81,7 +81,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrap.md): Low-level mutation hook that requests an unwrap for a specific amount.
 - [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
 - [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.
-- [useGrantPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
+- [useGrantPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for any contract.
 - [useHasPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md): Query hook that checks whether stored permits cover the requested contract addresses.
 - [useRevokePermits](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md): Revoke FHE permits for specific contract addresses, or all permits at once.
 - [useClearCredentials](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md): Wipe the FHE keypair and all permits for the connected wallet.

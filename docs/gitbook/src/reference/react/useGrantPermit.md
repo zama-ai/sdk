@@ -1,11 +1,11 @@
 ---
 title: useGrantPermit
-description: Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.
+description: Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for any contract.
 ---
 
 # useGrantPermit
 
-Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
+Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
 Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](/reference/react/useHasPermit) queries on success.
 

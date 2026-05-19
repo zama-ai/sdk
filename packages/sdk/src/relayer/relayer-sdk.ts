@@ -37,7 +37,7 @@ export interface FheOperations {
   /** Encrypt plaintext values into FHE ciphertexts. */
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
-  /** Decrypt FHE ciphertext handles using the user's own credentials. */
+  /** Decrypt FHE encrypted values using the user's own credentials. */
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Decrypt encrypted values using the network public key (no credential needed). */
@@ -52,7 +52,7 @@ export interface FheOperations {
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  /** Decrypt FHE handles using delegated user credentials. */
+  /** Decrypt FHE encrypted values using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;

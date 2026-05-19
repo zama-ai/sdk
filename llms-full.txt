@@ -1010,11 +1010,11 @@ By the end of this guide, you will be able to:
 
 While building support for [ERC-7984 confidential tokens](https://eips.ethereum.org/EIPS/eip-7984) you will encounter the following terminology. For a deeper architectural overview, see [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md).
 
-- **FHEVM** — Zama's library for computations on encrypted values. Encrypted values are represented on-chain as **ciphertext handles** (`bytes32`).
+- **FHEVM** — Zama's library for computations on encrypted values. Each **encrypted value** is represented on-chain as a `bytes32` reference (also called a "handle" in Solidity / FHE.sol).
 - **Host chain** — the EVM network your users connect to (e.g. Ethereum mainnet, Sepolia).
 - **Gateway chain** — Zama's L3 chain that coordinates encryptions and decryptions.
 - **Relayer** — off-chain service that registers encrypted inputs, coordinates decryptions, and returns results. Wallets and dApps talk to the Relayer via the Zama SDK.
-- **ACL** — access control for ciphertext handles. Contracts grant per-address permissions so a user can read data they should have access to.
+- **ACL** — access control for encrypted values. Contracts grant per-address permissions so a user can read data they should have access to.
 - **Native confidential token** — an ERC-7984 token where balances and transfer amounts are encrypted by default. Not derived from an underlying ERC-20.
 - **Wrapped confidential token** — a standard ERC-20 wrapped into ERC-7984 form via a wrapper contract. The underlying ERC-20 is unchanged.
 - **Confidential Token Wrappers Registry** — on-chain registry mapping ERC-20s to their ERC-7984 wrappers.
@@ -1036,7 +1036,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 ## Display confidential balances
 
-Balances are stored as ciphertext handles. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
+Balances are stored on-chain as encrypted values. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
 
 
 > [!WARNING]
@@ -2858,7 +2858,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | What you see                              | Why                                         | Fix                                                                                                 |
 | ----------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update. |
-| Balance always `undefined`                | Encrypted handle is zero (never shielded)   | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
 | `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.              |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                      |
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.               |
@@ -6872,7 +6872,7 @@ matchZamaError(error, {
 | Symptom                                   | Cause                                       | Fix                                                                                        |
 | ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted handle is zero (never shielded)   | Catch `NoCiphertextError` and show an empty state.                                         |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                         |
 | `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                |
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
@@ -6974,12 +6974,12 @@ import {
 
 | Builder                                                                 | What it does                       |
 | ----------------------------------------------------------------------- | ---------------------------------- |
-| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance handle      |
+| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance             |
 | `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer                 |
 | `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer        |
 | `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
 | `setOperatorContract(token, operator, until?)`                          | Set operator approval              |
-| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply handle |
+| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply        |
 | `rateContract(token)`                                                   | Read conversion rate               |
 
 ## Wrapping and unwrapping
@@ -10357,7 +10357,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useGrantPermit
 
-Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
+Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
 Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 

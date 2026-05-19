@@ -56,7 +56,7 @@ export interface ConfidentialTransferEvent {
   readonly from: Address;
   /** Receiver address. */
   readonly to: Address;
-  /** FHE ciphertext handle for the transferred amount. */
+  /** FHE encrypted value for the transferred amount. */
   readonly encryptedAmountHandle: EncryptedValue;
 }
 
@@ -77,7 +77,7 @@ export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
-  /** FHE ciphertext handle for the requested unshield amount. */
+  /** FHE encrypted value for the requested unshield amount. */
   readonly encryptedAmount: EncryptedValue;
   /** Request identifier emitted by upgraded wrapper contracts. */
   readonly unwrapRequestId?: EncryptedValue;
@@ -88,7 +88,7 @@ export interface UnwrapFinalizedEvent {
   readonly eventName: "UnwrapFinalized";
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
-  /** FHE ciphertext handle of the burnt confidential balance. */
+  /** FHE encrypted value of the burnt confidential balance. */
   readonly encryptedAmount: EncryptedValue;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
@@ -118,9 +118,9 @@ export interface UnwrappedStartedEvent {
   readonly to: Address;
   /** Refund address (if applicable). */
   readonly refund: Address;
-  /** FHE handle of the requested amount. */
+  /** FHE encrypted value of the requested amount. */
   readonly requestedAmount: EncryptedValue;
-  /** FHE handle of the burn amount. */
+  /** FHE encrypted value of the burn amount. */
   readonly burnAmount: EncryptedValue;
 }
 

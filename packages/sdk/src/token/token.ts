@@ -177,14 +177,14 @@ export class Token {
   }
 
   /**
-   * Return the raw encrypted balance handle without decrypting.
+   * Return the raw encrypted balance without decrypting.
    *
    * @param owner - Balance owner address.
-   * @returns The encrypted balance handle as a hex string.
+   * @returns The encrypted balance as a hex string.
    *
    * @example
    * ```ts
-   * const handle = await token.confidentialBalanceOf("0xOwner");
+   * const encryptedValue = await token.confidentialBalanceOf("0xOwner");
    * ```
    */
   async confidentialBalanceOf(owner: Address): Promise<EncryptedValue> {
@@ -196,7 +196,7 @@ export class Token {
    * The connected signer acts as the delegatee who has been granted permission
    * by the delegator to decrypt their balance.
    *
-   * Clear values are cached in storage keyed by `(account, token, handle)`.
+   * Clear values are cached in storage keyed by `(account, token, encryptedValue)`.
    * Because every on-chain balance change produces a new encrypted value,
    * stale cache entries are never served. Cache write failures are silently
    * ignored — they do not affect the returned value.
@@ -333,7 +333,7 @@ export class Token {
    *
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
-   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * `DecryptionFailedError`. When the relayer returns no value for an encrypted value,
    * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
    * Pass `onError: () => 0n` to opt into the silent zero behavior.
    *
@@ -666,7 +666,7 @@ export class Token {
   // PROTECTED HELPERS
 
   /**
-   * Read the on-chain encrypted balance handle for a given owner.
+   * Read the on-chain encrypted balance for a given owner.
    *
    * @internal
    */

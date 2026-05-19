@@ -1,6 +1,6 @@
 ---
 title: Encrypt & decrypt
-description: How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+description: How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 ---
 
 # Encrypt & decrypt
