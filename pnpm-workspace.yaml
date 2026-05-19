@@ -3,6 +3,11 @@ packages:
   - "tools/*"
   - "test/*"
 
+allowBuilds:
+  "@ast-grep/cli": true
+  keccak: false
+  sharp: false
+
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
 # https://pnpm.io/settings#minimumreleaseage
