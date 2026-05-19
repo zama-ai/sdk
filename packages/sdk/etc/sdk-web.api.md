@@ -33,7 +33,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptParams" needs to be exported by the entry point index.d.ts
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
     // Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
     encrypt(params: EncryptParams): Promise<EncryptResult>;
@@ -45,12 +45,12 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     // (undocumented)
     protected init(): Promise<void>;
     // Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    publicDecrypt(handles: EncryptedValue[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
     // Warning: (ae-forgotten-export) The symbol "UserDecryptParams" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValueType>>>;
 }
 
 // @public

@@ -141,10 +141,10 @@ export function readUnderlyingTokenContract(provider: EthersCallProvider, wrappe
 // @public (undocumented)
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: EncryptedValue, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
@@ -153,7 +153,7 @@ export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenA
 export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): Promise<`0x${string}`>;
+export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
