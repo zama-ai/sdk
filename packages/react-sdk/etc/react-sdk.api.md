@@ -28,7 +28,6 @@ import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
-import { PublicKeyData } from '@zama-fhe/sdk';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
@@ -47,7 +46,6 @@ import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
-import { ZKProofLike } from '@zama-fhe/sdk';
 
 // @public
 export function useApproveUnderlying(address: Address, options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ApproveUnderlyingParams, `0x${string}`>;
@@ -166,9 +164,6 @@ export function useEncrypt(): _$_tanstack_react_query0.UseMutationResult<Readonl
 export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
 
 // @public
-export function useGenerateKeypair(): _$_tanstack_react_query0.UseMutationResult<_$_zama_fhe_sdk0.KeypairType<`0x${string}`>, Error, void, unknown>;
-
-// @public
 export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>): _$_tanstack_react_query0.UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
@@ -215,21 +210,6 @@ export function usePublicDecrypt(): _$_tanstack_react_query0.UseMutationResult<R
     abiEncodedClearValues: `0x${string}`;
     decryptionProof: `0x${string}`;
 }>, Error, `0x${string}`[], unknown>;
-
-// @public
-export function usePublicKey(): _$_tanstack_react_query0.UseQueryResult<PublicKeyData | null, Error>;
-
-// @public
-export function usePublicParams(bits: number): _$_tanstack_react_query0.UseQueryResult<{
-    publicParams: Uint8Array<ArrayBufferLike>;
-    publicParamsId: string;
-} | null, Error>;
-
-// @public
-export function useRequestZKProofVerification(): _$_tanstack_react_query0.UseMutationResult<Readonly<{
-    handles: Uint8Array[];
-    inputProof: Uint8Array;
-}>, Error, ZKProofLike, unknown>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): _$_tanstack_react_query0.UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;

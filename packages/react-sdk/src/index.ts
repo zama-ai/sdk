@@ -15,13 +15,9 @@ export { useEncrypt } from "./relayer/use-encrypt";
 export { useUserDecrypt, type UseUserDecryptResult } from "./decrypt/use-user-decrypt";
 
 export { usePublicDecrypt } from "./decrypt/use-public-decrypt";
-export { useGenerateKeypair } from "./relayer/use-generate-keypair";
 export { useCreateEIP712 } from "./relayer/use-create-eip712";
 export { useCreateDelegatedUserDecryptEIP712 } from "./relayer/use-create-delegated-user-decrypt-eip712";
 export { useDelegatedDecrypt } from "./decrypt/use-delegated-decrypt";
-export { useRequestZKProofVerification } from "./relayer/use-request-zk-proof-verification";
-export { usePublicKey } from "./relayer/use-public-key";
-export { usePublicParams } from "./relayer/use-public-params";
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useGrantPermit } from "./permits/use-grant-permit";
