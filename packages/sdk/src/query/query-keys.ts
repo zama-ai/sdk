@@ -141,15 +141,6 @@ export const zamaQueryKeys = {
       ] as const,
   },
 
-  publicKey: {
-    all: ["zama.publicKey"] as const,
-  },
-
-  publicParams: {
-    all: ["zama.publicParams"] as const,
-    bits: (bits: number) => ["zama.publicParams", { bits }] as const,
-  },
-
   delegationStatus: {
     all: ["zama.delegationStatus"] as const,
     contract: (contractAddress?: Address) => {
