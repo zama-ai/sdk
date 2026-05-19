@@ -73,7 +73,7 @@ export interface UnwrapRequestedEvent {
   readonly receiver: Address;
   /** FHE encrypted value for the requested unshield amount. */
   readonly encryptedAmount: EncryptedValue;
-  /** Request identifier emitted by upgraded wrapper contracts. */
+  /** Request identifier from the `UnwrapRequested` event topic. */
   readonly unwrapRequestId?: EncryptedValue;
 }
 
@@ -86,7 +86,7 @@ export interface UnwrapFinalizedEvent {
   readonly encryptedAmount: EncryptedValue;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
-  /** Request identifier emitted by upgraded wrapper contracts. */
+  /** Request identifier from the `UnwrapFinalized` event topic. */
   readonly unwrapRequestId?: EncryptedValue;
 }
 

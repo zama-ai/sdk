@@ -414,16 +414,15 @@ export class WrappedToken extends Token {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
-   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from upgraded wrappers,
-   *   or the encrypted amount from legacy wrappers.
+   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
+   *   The `burnAmountHandle` form is accepted only to resume unshields persisted by an
+   *   older SDK version.
    * @returns The transaction hash and mined receipt.
    *
    * @example
    * ```ts
    * const event = findUnwrapRequested(receipt.logs);
-   * const txHash = await wrappedToken.finalizeUnwrap(
-   *   event.unwrapRequestId ?? event.encryptedAmount,
-   * );
+   * const txHash = await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
    * ```
    */
   async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {

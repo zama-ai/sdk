@@ -6,9 +6,12 @@ import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export type FinalizeUnwrapParams =
-  /** Identifier from an `UnwrapRequested` event. */
+  /** Identifier from an `UnwrapRequested` event. Preferred. */
   | { unwrapRequestId: EncryptedValue; burnAmountHandle?: never }
-  /** Encrypted burn-amount handle, accepted as an alternative when no `unwrapRequestId` is available. */
+  /**
+   * Encrypted burn-amount handle. Used when resuming a pending unshield
+   * serialized by an older SDK version that did not record `unwrapRequestId`.
+   */
   | { unwrapRequestId?: never; burnAmountHandle: EncryptedValue };
 
 export function finalizeUnwrapMutationOptions(

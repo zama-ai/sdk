@@ -16,9 +16,11 @@ export interface PendingUnshieldRequest {
   readonly unwrapTxHash: Hex;
   /**
    * Request identifier from the `UnwrapRequested` event.
-   * When defined, pass this as `unwrapRequestId` to `finalizeUnwrap`.
-   * May be absent for entries persisted by older SDK versions; in that case
-   * pass the `encryptedAmount` from the `UnwrapRequested` event instead.
+   * Always populated for entries persisted by this SDK version; pass it as
+   * `unwrapRequestId` to `finalizeUnwrap`. Absent only when re-loading a
+   * pending unshield serialized by an older SDK version that did not
+   * record this field — in that case pass the `encryptedAmount` from the
+   * `UnwrapRequested` event to `finalizeUnwrap` instead.
    */
   readonly unwrapRequestId?: EncryptedValue;
 }

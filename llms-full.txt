@@ -10227,12 +10227,8 @@ function TwoStepUnshield() {
     const { receipt } = await unwrap({ amount: 500n });
     const event = findUnwrapRequested(receipt.logs);
 
-    // Step 2: finalize with the unwrap request ID (upgraded) or burn amount handle (legacy)
-    await finalize(
-      event.unwrapRequestId
-        ? { unwrapRequestId: event.unwrapRequestId }
-        : { burnAmountHandle: event.encryptedAmount },
-    );
+    // Step 2: finalize with the unwrap request ID from the event
+    await finalize({ unwrapRequestId: event.unwrapRequestId });
   };
 
   return (

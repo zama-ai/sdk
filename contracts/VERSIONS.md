@@ -5,7 +5,7 @@
 Source: `zama-ai/protocol-apps` @ `3bd308fb7cb1`, imported through
 the Soldeer dependency alias `protocol-apps-wrapper`.
 
-This commit reflects the post-mainnet-upgrade state (upgrade rolled out in May 2026).
+This commit reflects the post-mainnet-upgrade state.
 
 Includes:
 
@@ -36,6 +36,6 @@ Includes:
 
 UUPS + Ownable2Step upgradeable registry. Public API:
 
-- `registerConfidentialToken(token, cToken)`
+- `registerConfidentialToken(tokenAddress, confidentialTokenAddress)`
 - `revokeConfidentialToken(cToken)`
-- `initialize(address owner)` (UUPS proxy initializer)
+- `initialize(address initialOwner)` (UUPS proxy initializer)
