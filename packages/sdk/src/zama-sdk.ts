@@ -1,7 +1,7 @@
 import type { Address } from "viem";
-import { Offline } from "./namespaces/offline";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
+import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
