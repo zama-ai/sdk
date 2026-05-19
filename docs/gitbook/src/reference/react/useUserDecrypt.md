@@ -110,10 +110,9 @@ When all requested inputs are already cached, `data` contains the cached values 
 
 ```tsx
 const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
-const { data } = useUserDecrypt(
-  [{ encryptedValue, contractAddress: "0xContract" }],
-  { enabled: !!hasPermit },
-);
+const { data } = useUserDecrypt([{ encryptedValue, contractAddress: "0xContract" }], {
+  enabled: !!hasPermit,
+});
 ```
 
 This ensures the decrypt query only fires after `useGrantPermit` has been called.

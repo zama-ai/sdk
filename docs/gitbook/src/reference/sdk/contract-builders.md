@@ -148,7 +148,11 @@ Typed read/write helpers are available from the `/viem` subpath:
 import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/viem";
 
 // Read — pass a PublicClient
-const handle = await readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
+const encryptedValue = await readConfidentialBalanceOfContract(
+  publicClient,
+  tokenAddress,
+  userAddress,
+);
 
 // Write — pass a WalletClient
 const txHash = await writeWrapContract(walletClient, wrapperAddress, recipient, amount);
@@ -162,7 +166,7 @@ Equivalent helpers are available from the `/ethers` subpath:
 import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/ethers";
 
 // Read — pass a Provider
-const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
+const encryptedValue = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
 
 // Write — pass a Signer
 const txHash = await writeWrapContract(signer, wrapperAddress, recipient, amount);

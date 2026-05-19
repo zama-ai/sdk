@@ -300,16 +300,13 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-emitter.on(
-  ZamaSDKEvents.DecryptEnd,
-  ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
-    console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
-    // result is Record<EncryptedValue, ClearValueType> — look up a specific value
-    for (const v of encryptedValues) {
-      console.log(`${v} → ${result[v]}`);
-    }
-  },
-);
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
+  }
+});
 
 emitter.on(
   ZamaSDKEvents.DecryptError,

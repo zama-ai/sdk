@@ -4694,16 +4694,13 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-emitter.on(
-  ZamaSDKEvents.DecryptEnd,
-  ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
-    console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
-    // result is Record<EncryptedValue, ClearValueType> — look up a specific value
-    for (const v of encryptedValues) {
-      console.log(`${v} → ${result[v]}`);
-    }
-  },
-);
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValueType> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
+  }
+});
 
 emitter.on(
   ZamaSDKEvents.DecryptError,
@@ -4983,7 +4980,7 @@ In addition to everything inherited from [`Token`](https://raw.githubusercontent
 - `resumeUnshield(unwrapTxHash, options?)` — resume an in-flight unshield
 - `unwrap(amount)` — low-level unwrap (returns request id)
 - `unwrapAll()` — low-level unwrap-all
-- `finalizeUnwrap(requestIdOrHandle)` — finalize a pending unwrap
+- `finalizeUnwrap(unwrapRequestIdOrAmount)` — finalize a pending unwrap
 
 ## WrappersRegistry
 
@@ -5535,18 +5532,18 @@ const relayer = new RelayerCleartext(hardhat);
 
 The cleartext relayer implements the full `RelayerSDK` interface:
 
-| Method                                  | Description                                                |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `generateKeypair()`                     | Returns a random mock keypair.                             |
-| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof. |
-| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.        |
+| Method                                  | Description                                                         |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `generateKeypair()`                     | Returns a random mock keypair.                                      |
+| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
+| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
 | `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
-| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.               |
-| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.          |
-| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.     |
-| `getPublicKey()`                        | Returns a mock public key.                                 |
-| `getPublicParams(bits)`                 | Returns mock public parameters.                            |
-| `terminate()`                           | No-op — no resources to release.                           |
+| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
+| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
+| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
+| `getPublicKey()`                        | Returns a mock public key.                                          |
+| `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
+| `terminate()`                           | No-op — no resources to release.                                    |
 
 
 > [!INFO]
@@ -7045,7 +7042,11 @@ Typed read/write helpers are available from the `/viem` subpath:
 import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/viem";
 
 // Read — pass a PublicClient
-const handle = await readConfidentialBalanceOfContract(publicClient, tokenAddress, userAddress);
+const encryptedValue = await readConfidentialBalanceOfContract(
+  publicClient,
+  tokenAddress,
+  userAddress,
+);
 
 // Write — pass a WalletClient
 const txHash = await writeWrapContract(walletClient, wrapperAddress, recipient, amount);
@@ -7059,7 +7060,7 @@ Equivalent helpers are available from the `/ethers` subpath:
 import { readConfidentialBalanceOfContract, writeWrapContract } from "@zama-fhe/sdk/ethers";
 
 // Read — pass a Provider
-const handle = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
+const encryptedValue = await readConfidentialBalanceOfContract(provider, tokenAddress, userAddress);
 
 // Write — pass a Signer
 const txHash = await writeWrapContract(signer, wrapperAddress, recipient, amount);
@@ -10271,7 +10272,7 @@ The finalize function accepts a discriminated union — pass one of these:
 
 ### unwrapRequestId
 
-`Handle`
+`EncryptedValue`
 
 The unwrap request ID emitted by upgraded contract events. This is the preferred form.
 
@@ -10281,12 +10282,12 @@ await finalize({ unwrapRequestId: requestId });
 
 ### burnAmountHandle
 
-`Handle`
+`EncryptedValue`
 
 The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
 
 ```tsx
-await finalize({ burnAmountHandle: handle });
+await finalize({ burnAmountHandle: encryptedAmount });
 ```
 
 ## Return Type
@@ -13329,10 +13330,9 @@ The current status of the query. Prefer the boolean flags above for conditional 
 >
 > ```tsx
 > const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
-> const { data } = useUserDecrypt(
->   [{ encryptedValue, contractAddress: "0xContract" }],
->   { enabled: !!hasPermit },
-> );
+> const { data } = useUserDecrypt([{ encryptedValue, contractAddress: "0xContract" }], {
+>   enabled: !!hasPermit,
+> });
 > ```
 >
 > This ensures the decrypt query only fires after `useGrantPermit` has been called.
@@ -14371,10 +14371,10 @@ Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubuserc
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key                                                  | Scope                                          |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| `.handle(encryptedValue, contractAddress?)`          | Single clear value by encrypted value          |
-| `.encryptedInputs(inputs[], walletAccount?)`         | Multiple clear values by encrypted-input array |
+| Key                                                   | Scope                                          |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| `.encryptedValue(encryptedValue, contractAddress?)`   | Single clear value by encrypted value          |
+| `.encryptedInputs(encryptedInputs[], walletAccount?)` | Multiple clear values by encrypted-input array |
 
 ## Common patterns
 
