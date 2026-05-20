@@ -35,6 +35,17 @@
       },
       "default": "./dist/esm/cleartext/index.js"
     },
+    "./clear-signing": {
+      "import": {
+        "types": "./dist/esm/clear-signing/index.d.ts",
+        "default": "./dist/esm/clear-signing/index.js"
+      },
+      "require": {
+        "types": "./dist/esm/clear-signing/index.d.ts",
+        "default": "./dist/cjs/clear-signing/index.cjs"
+      },
+      "default": "./dist/esm/clear-signing/index.js"
+    },
     "./query": {
       "import": {
         "types": "./dist/esm/query/index.d.ts",
@@ -103,6 +114,9 @@
   },
   "typesVersions": {
     "*": {
+      "clear-signing": [
+        "./dist/esm/clear-signing/index.d.ts"
+      ],
       "cleartext": [
         "./dist/esm/cleartext/index.d.ts"
       ],

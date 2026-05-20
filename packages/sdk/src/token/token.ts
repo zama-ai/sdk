@@ -1,4 +1,10 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { type Address, getAddress, type Hex, toHex } from "viem";
+import {
+  buildConfidentialTransferFromIntent,
+  buildConfidentialTransferIntent,
+  type ClearSigningEncryptedValue,
+  type ClearSigningIntent,
+} from "../clear-signing";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -89,6 +95,31 @@ export class Token {
   constructor(sdk: ZamaSDK, address: Address) {
     this.sdk = sdk;
     this.address = getAddress(address);
+  }
+
+  /**
+   * Build a clear-signing preview for a confidential transfer without
+   * submitting a transaction.
+   *
+   * The preview includes plaintext SDK inputs and wallet/chain context, but no
+   * encrypted handle because encryption happens during the actual transfer.
+   */
+  async createConfidentialTransferClearSigningIntent(
+    to: Address,
+    amount: bigint,
+  ): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createConfidentialTransferClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    return buildConfidentialTransferIntent({
+      tokenAddress: this.address,
+      senderAddress: getAddress(account.address),
+      recipientAddress: getAddress(to),
+      amount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
   }
 
   /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
@@ -558,9 +589,26 @@ export class Token {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
 
+    const encryptedAmount = handles[0]!;
+    const encryptedAmountValue =
+      typeof encryptedAmount === "string" ? encryptedAmount : toHex(encryptedAmount);
+    await swallow("transfer: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildConfidentialTransferIntent({
+          tokenAddress: this.address,
+          senderAddress: getAddress(account.address),
+          recipientAddress: normalizedTo,
+          amount,
+          encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+          hasInputProof: true,
+          chainId: account.chainId,
+        }),
+      ),
+    );
+
     return this.submitTransaction({
       operation: "transfer",
-      config: confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+      config: confidentialTransferContract(this.address, normalizedTo, encryptedAmount, inputProof),
       onSubmitted: onTransferSubmitted,
     });
   }
@@ -586,7 +634,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     this.#requireSigner("confidentialTransferFrom");
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
       this.sdk.provider,
@@ -605,13 +653,31 @@ export class Token {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
 
+    const encryptedAmount = handles[0]!;
+    const encryptedAmountValue =
+      typeof encryptedAmount === "string" ? encryptedAmount : toHex(encryptedAmount);
+    await swallow("transferFrom: onClearSigningIntent", () =>
+      callbacks?.onClearSigningIntent?.(
+        buildConfidentialTransferFromIntent({
+          tokenAddress: this.address,
+          sourceAddress: normalizedFrom,
+          operatorAddress: getAddress(account.address),
+          recipientAddress: normalizedTo,
+          amount,
+          encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+          hasInputProof: true,
+          chainId: account.chainId,
+        }),
+      ),
+    );
+
     return this.submitTransaction({
       operation: "transferFrom",
       config: confidentialTransferFromContract(
         this.address,
         normalizedFrom,
         normalizedTo,
-        handles[0]!,
+        encryptedAmount,
         inputProof,
       ),
       onSubmitted: callbacks?.onTransferSubmitted,

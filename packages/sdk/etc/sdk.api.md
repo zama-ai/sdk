@@ -361,6 +361,9 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export function assertClearSigningIntentSafe(intent: ClearSigningIntent): void;
+
+// @public
 export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
 // @public
@@ -582,6 +585,144 @@ export interface BatchDecryptHandlesResult {
 }
 
 // @public
+export function buildAllowAsIntent(input: BuildAllowAsIntentParams): ClearSigningIntent;
+
+// @public
+export function buildAllowAsIntentFromEIP712(typedData: KmsDelegatedUserDecryptEIP712Type): ClearSigningIntent;
+
+// @public
+export interface BuildAllowAsIntentParams extends BuildAllowIntentParams {
+    delegatorAddress: Address;
+}
+
+// @public
+export function buildAllowIntent(input: BuildAllowIntentParams): ClearSigningIntent;
+
+// @public
+export function buildAllowIntentFromEIP712(typedData: KmsUserDecryptEIP712Type): ClearSigningIntent;
+
+// @public
+export interface BuildAllowIntentParams {
+    chainId?: number;
+    contractAddresses: readonly Address[];
+    durationDays?: number | bigint;
+    startTimestamp?: number | bigint;
+    typedData?: unknown;
+    verifyingContract?: Address;
+}
+
+// @public
+export function buildConfidentialTransferFromIntent(input: BuildConfidentialTransferFromIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildConfidentialTransferFromIntentParams extends Omit<BuildConfidentialTransferIntentParams, "senderAddress"> {
+    operatorAddress: Address;
+    sourceAddress: Address;
+}
+
+// @public
+export function buildConfidentialTransferIntent(input: BuildConfidentialTransferIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildConfidentialTransferIntentParams {
+    amount?: bigint;
+    chainId?: number;
+    contractCall?: unknown;
+    encryptedAmount?: ClearSigningEncryptedValue;
+    hasInputProof?: boolean;
+    recipientAddress: Address;
+    senderAddress?: Address;
+    tokenAddress: Address;
+}
+
+// @public
+export function buildDelegateDecryptionIntent(input: BuildDelegateDecryptionIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildDelegateDecryptionIntentParams {
+    aclAddress?: Address;
+    chainId?: number;
+    contractAddress: Address;
+    contractCall?: unknown;
+    delegateAddress: Address;
+    delegatorAddress?: Address;
+    expirationTimestamp?: number | bigint;
+    permanent?: boolean;
+}
+
+// @public
+export function buildFinalizeUnwrapIntent(input: BuildFinalizeUnwrapIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildFinalizeUnwrapIntentParams {
+    chainId?: number;
+    clearAmount?: bigint;
+    contractCall?: unknown;
+    hasDecryptionProof?: boolean;
+    legacyEncryptedAmount?: ClearSigningEncryptedValue;
+    unwrapRequestId?: string;
+    wrapperAddress: Address;
+}
+
+// @public
+export interface BuildShieldIntentBaseParams {
+    amount: bigint;
+    chainId?: number;
+    recipientAddress: Address;
+    senderAddress?: Address;
+    underlyingTokenAddress: Address;
+    wrapperAddress: Address;
+}
+
+// @public
+export function buildShieldViaTransferAndCallIntent(input: BuildShieldViaTransferAndCallIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildShieldViaTransferAndCallIntentParams extends BuildShieldIntentBaseParams {
+    contractCall?: unknown;
+}
+
+// @public
+export function buildShieldViaWrapIntent(input: BuildShieldViaWrapIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildShieldViaWrapIntentParams extends BuildShieldIntentBaseParams {
+    approvalAmount?: bigint;
+    approvalContractCall?: unknown;
+    approvalResetContractCall?: unknown;
+    maxApproval?: boolean;
+    wrapContractCall?: unknown;
+}
+
+// @public
+export function buildUnwrapAllIntent(input: BuildUnwrapAllIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildUnwrapAllIntentParams {
+    chainId?: number;
+    contractCall?: unknown;
+    encryptedBalance?: ClearSigningEncryptedValue;
+    fromAddress: Address;
+    recipientAddress: Address;
+    wrapperAddress: Address;
+}
+
+// @public
+export function buildUnwrapIntent(input: BuildUnwrapIntentParams): ClearSigningIntent;
+
+// @public
+export interface BuildUnwrapIntentParams {
+    amount?: bigint;
+    chainId?: number;
+    contractCall?: unknown;
+    encryptedAmount?: ClearSigningEncryptedValue;
+    fromAddress: Address;
+    hasInputProof?: boolean;
+    recipientAddress: Address;
+    wrapperAddress: Address;
+}
+
+// @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
         operation: string;
@@ -614,6 +755,76 @@ export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
+
+// @public
+export interface ClearSigningCallbacks {
+    onClearSigningIntent?: (intent: ClearSigningIntent) => Promise<void> | void;
+}
+
+// @public
+export interface ClearSigningContractContext {
+    chainId?: number;
+    contractAddress?: Address;
+    functionName?: string;
+}
+
+// @public
+export interface ClearSigningEncryptedValue {
+    displayValue?: string;
+    value?: string;
+}
+
+// @public
+export interface ClearSigningField {
+    description?: string;
+    displayValue?: string;
+    label: string;
+    redacted?: boolean;
+    value?: ClearSigningFieldValue;
+    visibility: ClearSigningVisibility;
+}
+
+// @public
+export type ClearSigningFieldValue = string | number | bigint | boolean | null | readonly ClearSigningFieldValue[] | {
+    readonly [key: string]: ClearSigningFieldValue;
+};
+
+// @public
+export interface ClearSigningIntent {
+    contractContext?: ClearSigningContractContext;
+    fields: ClearSigningField[];
+    kind: ClearSigningIntentKind;
+    rawContext?: ClearSigningRawContext;
+    summary: string;
+    title: string;
+}
+
+// @public
+export type ClearSigningIntentKind = "allow" | "allowAs" | "delegateDecryption" | "confidentialTransfer" | "confidentialTransferFrom" | "shield" | "unwrap" | "unwrapAll" | "finalizeUnwrap";
+
+// @public
+export interface ClearSigningRawContext {
+    contractCall?: unknown;
+    contractCalls?: readonly unknown[];
+    sdkInput?: unknown;
+    typedData?: unknown;
+}
+
+// @public
+export interface ClearSigningValidationIssue {
+    code: "missing-title" | "missing-summary" | "missing-fields" | "invalid-kind" | "missing-field-label" | "missing-field-visibility" | "encrypted-field-missing-safe-display" | "internal-field-not-redacted" | "internal-field-has-value";
+    fieldIndex?: number;
+    message: string;
+}
+
+// @public
+export interface ClearSigningValidationResult {
+    issues: ClearSigningValidationIssue[];
+    valid: boolean;
+}
+
+// @public
+export type ClearSigningVisibility = "public" | "encrypted" | "derived" | "internal";
 
 // @public
 export function cleartext(): CleartextRelayerConfig;
@@ -6359,13 +6570,19 @@ export class Delegations {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
+        relayer: RelayerDispatcher;
         delegationService: DelegationService;
     });
+    createDelegateDecryptionClearSigningIntent(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<ClearSigningIntent>;
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
         expirationDate?: Date;
-    }): Promise<TransactionResult>;
+    } & ClearSigningCallbacks): Promise<TransactionResult>;
     getExpiry(params: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -7524,6 +7741,9 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
     readonly functionName: "finalizeUnwrap";
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
 };
+
+// @public
+export type FinalizeUnwrapOptions = ClearSigningCallbacks;
 
 // @public (undocumented)
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
@@ -11768,8 +11988,10 @@ export class Permits {
         credentialService: CredentialService | undefined;
     });
     clear(): Promise<void>;
-    grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
-    grantPermit(contracts: Address[]): Promise<void>;
+    createAllowAsClearSigningIntent(delegator: Address, contracts: Address[]): Promise<ClearSigningIntent>;
+    createAllowClearSigningIntent(contracts: Address[]): Promise<ClearSigningIntent>;
+    grantDelegationPermit(delegator: Address, contracts: Address[], options?: ClearSigningCallbacks): Promise<void>;
+    grantPermit(contracts: Address[], options?: ClearSigningCallbacks): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
@@ -13194,6 +13416,29 @@ export interface RelayerSDK extends FheOperations {
 
 // @public
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
+
+// @public
+export function renderClearSigningIntent(intent: ClearSigningIntent, options?: RenderClearSigningIntentOptions): RenderedClearSigningIntent;
+
+// @public
+export interface RenderClearSigningIntentOptions {
+    includeInternal?: boolean;
+}
+
+// @public
+export interface RenderedClearSigningField {
+    label: string;
+    value: string;
+    visibility: ClearSigningField["visibility"];
+}
+
+// @public
+export interface RenderedClearSigningIntent {
+    fields: RenderedClearSigningField[];
+    kind: ClearSigningIntent["kind"];
+    summary: string;
+    title: string;
+}
 
 // @public (undocumented)
 export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
@@ -14666,7 +14911,7 @@ export interface SetOperatorSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface ShieldCallbacks {
+export interface ShieldCallbacks extends ClearSigningCallbacks {
     onApprovalSubmitted?: (txHash: Hex) => void;
     onShieldSubmitted?: (txHash: Hex) => void;
 }
@@ -14893,6 +15138,7 @@ export class Token {
     confidentialBalanceOf(owner: Address): Promise<Handle>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    createConfidentialTransferClearSigningIntent(to: Address, amount: bigint): Promise<ClearSigningIntent>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -15034,7 +15280,7 @@ export function transferAndCallContract(tokenAddress: Address, to: Address, amou
 };
 
 // @public
-export interface TransferCallbacks {
+export interface TransferCallbacks extends ClearSigningCallbacks {
     onEncryptComplete?: () => void;
     onTransferSubmitted?: (txHash: Hex) => void;
 }
@@ -16088,7 +16334,7 @@ export function underlyingContract(wrapperAddress: Address): {
 };
 
 // @public
-export interface UnshieldCallbacks {
+export interface UnshieldCallbacks extends ClearSigningCallbacks {
     onFinalizeSubmitted?: (txHash: Hex) => void;
     onFinalizing?: () => void;
     onUnwrapSubmitted?: (txHash: Hex) => void;
@@ -16120,6 +16366,9 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
 }
+
+// @public
+export type UnwrapAllOptions = ClearSigningCallbacks;
 
 // @public
 export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): {
@@ -18773,6 +19022,9 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
 };
 
+// @public
+export type UnwrapOptions = ClearSigningCallbacks;
+
 // @public @deprecated (undocumented)
 export interface UnwrappedFinalizedEvent {
     // (undocumented)
@@ -18838,6 +19090,9 @@ export interface UserDecryptParams {
     // (undocumented)
     startTimestamp: number;
 }
+
+// @public
+export function validateClearSigningIntent(intent: ClearSigningIntent): ClearSigningValidationResult;
 
 // @public
 export interface WalletAccount {
@@ -19920,15 +20175,19 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    createFinalizeUnwrapClearSigningIntent(unwrapRequestIdOrAmount: Handle, clearAmount?: bigint): Promise<ClearSigningIntent>;
+    createShieldClearSigningIntent(amount: bigint, options?: ShieldOptions): Promise<ClearSigningIntent>;
+    createUnwrapAllClearSigningIntent(): Promise<ClearSigningIntent>;
+    createUnwrapClearSigningIntent(amount: bigint): Promise<ClearSigningIntent>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: Handle, options?: FinalizeUnwrapOptions): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint, options?: UnwrapOptions): Promise<TransactionResult>;
+    unwrapAll(options?: UnwrapAllOptions): Promise<TransactionResult>;
 }
 
 // @public
@@ -20156,10 +20415,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DE4MHZtQ.d.ts:20449:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20578:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20680:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DE4MHZtQ.d.ts:20681:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-2UXC3lE7.d.ts:20449:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-2UXC3lE7.d.ts:20579:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-2UXC3lE7.d.ts:20692:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-2UXC3lE7.d.ts:20693:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

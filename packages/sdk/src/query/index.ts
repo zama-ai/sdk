@@ -147,9 +147,20 @@ export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
 export type { Keypair } from "../credentials";
 export type {
+  ClearSigningContractContext,
+  ClearSigningField,
+  ClearSigningFieldValue,
+  ClearSigningIntent,
+  ClearSigningIntentKind,
+  ClearSigningRawContext,
+  ClearSigningVisibility,
+} from "../clear-signing";
+export type {
   GenericSigner,
   GenericStorage,
   ApprovalStrategy,
+  ClearSigningCallbacks,
+  FinalizeUnwrapOptions,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
@@ -162,6 +173,8 @@ export type {
   TransferOptions,
   UnshieldCallbacks,
   UnshieldOptions,
+  UnwrapAllOptions,
+  UnwrapOptions,
 } from "../types";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {

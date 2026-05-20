@@ -1,6 +1,11 @@
 import type { Address } from "viem";
-import type { GenericSigner, GenericStorage } from "../types";
+import type { ClearSigningCallbacks, GenericSigner, GenericStorage } from "../types";
+import { buildAllowAsIntentFromEIP712, buildAllowIntentFromEIP712 } from "../clear-signing";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type {
+  KmsDelegatedUserDecryptEIP712Type,
+  KmsUserDecryptEIP712Type,
+} from "../relayer/relayer-sdk.types";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
@@ -73,7 +78,11 @@ export class CredentialService {
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
    * @throws if signing fails for any other reason. {@link SigningFailedError}
    */
-  async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
+  async grantPermit(
+    contracts: readonly Address[],
+    delegator?: Address,
+    callbacks?: ClearSigningCallbacks,
+  ): Promise<CredentialBundle> {
     const account = this.#signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
@@ -91,7 +100,7 @@ export class CredentialService {
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
     for (const chunk of chunkContracts(uncoveredContracts(permits, requested))) {
-      const permission = await this.#signPermit({ chunk, keypair, scope });
+      const permission = await this.#signPermit({ chunk, keypair, scope, callbacks });
       permits.push(permission);
       await swallow("persist permit", () => this.#store.append(scope, [permission]));
     }
@@ -206,8 +215,9 @@ export class CredentialService {
     chunk: ChecksummedAddress[];
     keypair: StoredKeypair;
     scope: PermissionScope;
+    callbacks?: ClearSigningCallbacks;
   }): Promise<Permission> {
-    const { chunk, keypair, scope } = input;
+    const { chunk, keypair, scope, callbacks } = input;
     const startTimestamp = nowSeconds();
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
 
@@ -226,6 +236,18 @@ export class CredentialService {
             startTimestamp,
             this.#permitTTL,
           );
+
+      await swallow(
+        isDelegated
+          ? "grantDelegationPermit: onClearSigningIntent"
+          : "grantPermit: onClearSigningIntent",
+        () =>
+          callbacks?.onClearSigningIntent?.(
+            isDelegated
+              ? buildAllowAsIntentFromEIP712(eip712 as KmsDelegatedUserDecryptEIP712Type)
+              : buildAllowIntentFromEIP712(eip712 as KmsUserDecryptEIP712Type),
+          ),
+      );
 
       const signature = await this.#signer.signTypedData(eip712);
 

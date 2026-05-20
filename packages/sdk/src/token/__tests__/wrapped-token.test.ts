@@ -43,6 +43,40 @@ describe("WrappedToken", () => {
   });
 
   describe("shield", () => {
+    test("createShieldClearSigningIntent describes approve-and-wrap shield", async ({
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false);
+
+      const intent = await wrappedToken.createShieldClearSigningIntent(100n);
+
+      expect(intent).toMatchObject({
+        kind: "shield",
+        title: "Shield public tokens",
+      });
+      expect(intent.fields).toEqual(
+        expect.arrayContaining([expect.objectContaining({ label: "Public amount", value: 100n })]),
+      );
+    });
+
+    test("shield emits a clear-signing intent", async ({ wrappedToken, provider }) => {
+      vi.mocked(provider.readContract)
+        .mockResolvedValueOnce(UNDERLYING)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(1000n)
+        .mockResolvedValueOnce(200n);
+      const onClearSigningIntent = vi.fn();
+
+      await wrappedToken.shield(100n, { onClearSigningIntent });
+
+      expect(onClearSigningIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "shield" }),
+      );
+    });
+
     test("checks allowance and shields", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(UNDERLYING) // #getUnderlying

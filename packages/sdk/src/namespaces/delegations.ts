@@ -1,6 +1,14 @@
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
+import { buildDelegateDecryptionIntent, type ClearSigningIntent } from "../clear-signing";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { DelegationService } from "../services/delegation-service";
-import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
+import type {
+  ClearSigningCallbacks,
+  GenericProvider,
+  GenericSigner,
+  TransactionResult,
+} from "../types";
+import { swallow } from "../utils";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { requireConfigured } from "../errors";
 
@@ -18,21 +26,52 @@ import { requireConfigured } from "../errors";
 export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
+  readonly #relayer: RelayerDispatcher;
   readonly #delegationService: DelegationService;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
+    relayer: RelayerDispatcher;
     delegationService: DelegationService;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
+    this.#relayer = opts.relayer;
     this.#delegationService = opts.delegationService;
   }
 
   #requireSigner(operation: string): GenericSigner {
     return requireConfigured(this.#signer, operation);
+  }
+
+  /** Build a clear-signing preview for granting delegated decryption rights. */
+  async createDelegateDecryptionClearSigningIntent({
+    contractAddress,
+    delegateAddress,
+    expirationDate,
+  }: {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+  }): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createDelegateDecryptionClearSigningIntent",
+      this.#signer,
+      this.#provider,
+    );
+    const aclAddress = await this.#relayer.getAclAddress();
+    return buildDelegateDecryptionIntent({
+      contractAddress: getAddress(contractAddress),
+      delegateAddress: getAddress(delegateAddress),
+      delegatorAddress: getAddress(account.address),
+      aclAddress,
+      expirationTimestamp:
+        expirationDate === undefined ? undefined : Math.floor(expirationDate.getTime() / 1000),
+      permanent: expirationDate === undefined,
+      chainId: await this.#provider.getChainId(),
+    });
   }
 
   /**
@@ -59,16 +98,32 @@ export class Delegations {
     contractAddress,
     delegateAddress,
     expirationDate,
+    onClearSigningIntent,
   }: {
     contractAddress: Address;
     delegateAddress: Address;
     expirationDate?: Date;
-  }): Promise<TransactionResult> {
+  } & ClearSigningCallbacks): Promise<TransactionResult> {
     const signer = this.#requireSigner("delegateDecryption");
     const account = await requireAlignedWalletAccount(
       "delegateDecryption",
       this.#signer,
       this.#provider,
+    );
+    const aclAddress = await this.#relayer.getAclAddress();
+    await swallow("delegateDecryption: onClearSigningIntent", () =>
+      onClearSigningIntent?.(
+        buildDelegateDecryptionIntent({
+          contractAddress: getAddress(contractAddress),
+          delegateAddress: getAddress(delegateAddress),
+          delegatorAddress: getAddress(account.address),
+          aclAddress,
+          expirationTimestamp:
+            expirationDate === undefined ? undefined : Math.floor(expirationDate.getTime() / 1000),
+          permanent: expirationDate === undefined,
+          chainId: account.chainId,
+        }),
+      ),
     );
     return this.#delegationService.delegateDecryption(signer, {
       contractAddress,

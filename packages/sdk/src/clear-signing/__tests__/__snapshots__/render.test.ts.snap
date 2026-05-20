@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderClearSigningIntent > can include internal fields for advanced displays 1`] = `
+{
+  "fields": [
+    {
+      "label": "Recipient",
+      "value": "0x1111111111111111111111111111111111111111",
+      "visibility": "public",
+    },
+    {
+      "label": "Amount",
+      "value": "100",
+      "visibility": "public",
+    },
+    {
+      "label": "Encrypted amount",
+      "value": "Hidden encrypted amount",
+      "visibility": "encrypted",
+    },
+    {
+      "label": "Input proof",
+      "value": "Protocol proof (hidden)",
+      "visibility": "internal",
+    },
+  ],
+  "kind": "confidentialTransfer",
+  "summary": "Transfer an encrypted token amount to a public recipient.",
+  "title": "Send confidential tokens",
+}
+`;
+
+exports[`renderClearSigningIntent > renders a safe user-facing intent by default 1`] = `
+{
+  "fields": [
+    {
+      "label": "Recipient",
+      "value": "0x1111111111111111111111111111111111111111",
+      "visibility": "public",
+    },
+    {
+      "label": "Amount",
+      "value": "100",
+      "visibility": "public",
+    },
+    {
+      "label": "Encrypted amount",
+      "value": "Hidden encrypted amount",
+      "visibility": "encrypted",
+    },
+  ],
+  "kind": "confidentialTransfer",
+  "summary": "Transfer an encrypted token amount to a public recipient.",
+  "title": "Send confidential tokens",
+}
+`;

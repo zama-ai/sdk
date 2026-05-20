@@ -96,6 +96,54 @@ describe("Permits", () => {
   });
 
   describe("happy paths", () => {
+    test("createAllowClearSigningIntent describes direct decrypt authorization", async ({
+      sdk,
+    }) => {
+      const intent = await sdk.permits.createAllowClearSigningIntent([CONTRACT_A]);
+
+      expect(intent.kind).toBe("allow");
+      expect(intent.fields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: "Authorized contracts", visibility: "public" }),
+        ]),
+      );
+    });
+
+    test("grantPermit emits a clear-signing intent", async ({ sdk, signer }) => {
+      const onClearSigningIntent = vi.fn();
+
+      await sdk.permits.grantPermit([CONTRACT_A], { onClearSigningIntent });
+
+      expect(signer.signTypedData).toHaveBeenCalled();
+      expect(onClearSigningIntent).toHaveBeenCalledWith(expect.objectContaining({ kind: "allow" }));
+    });
+
+    test("createAllowAsClearSigningIntent describes delegated decrypt authorization", async ({
+      sdk,
+    }) => {
+      const intent = await sdk.permits.createAllowAsClearSigningIntent(DELEGATOR, [CONTRACT_A]);
+
+      expect(intent.kind).toBe("allowAs");
+      expect(intent.fields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: "Delegator wallet", value: DELEGATOR }),
+        ]),
+      );
+    });
+
+    test("grantDelegationPermit emits a clear-signing intent", async ({ sdk, signer }) => {
+      const onClearSigningIntent = vi.fn();
+
+      await sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A], {
+        onClearSigningIntent,
+      });
+
+      expect(signer.signTypedData).toHaveBeenCalled();
+      expect(onClearSigningIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "allowAs" }),
+      );
+    });
+
     test("grantPermit triggers a wallet signature for uncached contracts", async ({
       sdk,
       signer,

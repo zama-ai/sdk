@@ -81,7 +81,7 @@ export type EncryptResult = InputProofBytesType;
 /** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). Alias for {@link Bytes32Hex}. */
 export type Handle = Bytes32Hex;
 
-export type { ClearValueType };
+export type { ClearValueType, KmsDelegatedUserDecryptEIP712Type, KmsUserDecryptEIP712Type };
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =

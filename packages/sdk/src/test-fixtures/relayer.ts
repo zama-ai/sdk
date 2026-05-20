@@ -3,7 +3,7 @@
 import { vi } from "vitest";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { FixturesOf } from "./types";
-import { ACL, TEST_PRIVATE_KEY, TEST_PUBLIC_KEY, TOKEN, VALID_HANDLE } from "./constants";
+import { ACL, TEST_PRIVATE_KEY, TEST_PUBLIC_KEY, VALID_HANDLE } from "./constants";
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
@@ -14,22 +14,26 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       publicKey: TEST_PUBLIC_KEY,
       privateKey: TEST_PRIVATE_KEY,
     }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: TEST_PUBLIC_KEY,
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
+    createEIP712: vi
+      .fn()
+      .mockImplementation((publicKey, contractAddresses, startTimestamp, durationDays) =>
+        Promise.resolve({
+          domain: {
+            name: "test",
+            version: "1",
+            chainId: 1,
+            verifyingContract: "0xkms",
+          },
+          types: { UserDecryptRequestVerification: [] },
+          message: {
+            publicKey,
+            contractAddresses,
+            startTimestamp,
+            durationDays,
+            extraData: "0x",
+          },
+        }),
+      ),
     encrypt: vi.fn().mockResolvedValue({
       handles: [new Uint8Array([1, 2, 3])],
       inputProof: new Uint8Array([4, 5, 6]),
@@ -48,16 +52,28 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
         decryptionProof: "0xproof",
       });
     }),
-    createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {},
-    }),
+    createDelegatedUserDecryptEIP712: vi
+      .fn()
+      .mockImplementation(
+        (publicKey, contractAddresses, delegatorAddress, startTimestamp, durationDays) =>
+          Promise.resolve({
+            domain: {
+              name: "test",
+              version: "1",
+              chainId: 1,
+              verifyingContract: "0xkms",
+            },
+            types: { DelegatedUserDecryptRequestVerification: [] },
+            message: {
+              publicKey,
+              contractAddresses,
+              delegatorAddress,
+              startTimestamp,
+              durationDays,
+              extraData: "0x",
+            },
+          }),
+      ),
     delegatedUserDecrypt: vi.fn().mockResolvedValue({
       [VALID_HANDLE as string]: 1000n,
     }),

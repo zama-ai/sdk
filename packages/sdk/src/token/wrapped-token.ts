@@ -1,4 +1,13 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { type Address, getAddress, type Hex, toHex } from "viem";
+import {
+  buildFinalizeUnwrapIntent,
+  buildShieldViaTransferAndCallIntent,
+  buildShieldViaWrapIntent,
+  buildUnwrapAllIntent,
+  buildUnwrapIntent,
+  type ClearSigningEncryptedValue,
+  type ClearSigningIntent,
+} from "../clear-signing";
 import {
   allowanceContract,
   approveContract,
@@ -31,9 +40,12 @@ import { swallow } from "../utils/swallow";
 import { Token } from "./token";
 import type {
   GenericSigner,
+  FinalizeUnwrapOptions,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
+  UnwrapAllOptions,
+  UnwrapOptions,
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
@@ -53,6 +65,102 @@ export class WrappedToken extends Token {
   #underlying: Address | undefined;
   #underlyingPromise: Promise<Address> | null = null;
   #isPayable: boolean | null = null;
+
+  /**
+   * Build a clear-signing preview for shielding public ERC-20 tokens into this
+   * confidential wrapper without submitting transactions.
+   */
+  async createShieldClearSigningIntent(
+    amount: bigint,
+    options?: ShieldOptions,
+  ): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createShieldClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    const chainId = await this.sdk.provider.getChainId();
+    if (await this.isPayable()) {
+      return buildShieldViaTransferAndCallIntent({
+        underlyingTokenAddress: underlying,
+        wrapperAddress: this.address,
+        senderAddress: userAddress,
+        recipientAddress: recipient,
+        amount,
+        chainId,
+      });
+    }
+    const approvalStrategy = options?.approvalStrategy ?? "exact";
+    return buildShieldViaWrapIntent({
+      underlyingTokenAddress: underlying,
+      wrapperAddress: this.address,
+      senderAddress: userAddress,
+      recipientAddress: recipient,
+      amount,
+      approvalAmount:
+        approvalStrategy === "skip"
+          ? undefined
+          : approvalStrategy === "max"
+            ? 2n ** 256n - 1n
+            : amount,
+      maxApproval: approvalStrategy === "max",
+      chainId,
+    });
+  }
+
+  /** Build a clear-signing preview for the first phase of a specific-amount unshield. */
+  async createUnwrapClearSigningIntent(amount: bigint): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createUnwrapClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
+    return buildUnwrapIntent({
+      wrapperAddress: this.address,
+      fromAddress: userAddress,
+      recipientAddress: userAddress,
+      amount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for unshielding the entire confidential balance. */
+  async createUnwrapAllClearSigningIntent(): Promise<ClearSigningIntent> {
+    const account = await requireAlignedWalletAccount(
+      "createUnwrapAllClearSigningIntent",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const userAddress = getAddress(account.address);
+    const handle = await this.readConfidentialBalanceOf(userAddress);
+    if (isZeroHandle(handle)) {
+      throw new DecryptionFailedError("Cannot unshield: balance is zero");
+    }
+    return buildUnwrapAllIntent({
+      wrapperAddress: this.address,
+      fromAddress: userAddress,
+      recipientAddress: userAddress,
+      encryptedBalance: { value: handle },
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for finalizing a pending unshield. */
+  async createFinalizeUnwrapClearSigningIntent(
+    unwrapRequestIdOrAmount: Handle,
+    clearAmount?: bigint,
+  ): Promise<ClearSigningIntent> {
+    return buildFinalizeUnwrapIntent({
+      wrapperAddress: this.address,
+      unwrapRequestId: unwrapRequestIdOrAmount,
+      clearAmount,
+      chainId: await this.sdk.provider.getChainId(),
+    });
+  }
 
   /** Resolve `sdk.signer` or throw {@link SignerNotConfiguredError} tagged with `operation`. */
   #requireSigner(operation: string): GenericSigner {
@@ -169,15 +277,22 @@ export class WrappedToken extends Token {
     }
 
     if (isPayableToken) {
-      return this.#shieldViaTransferAndCall(amount, underlying, userAddress, options);
+      return this.#shieldViaTransferAndCall(
+        amount,
+        underlying,
+        userAddress,
+        account.chainId,
+        options,
+      );
     }
-    return this.#shieldViaApproveAndWrap(amount, userAddress, options);
+    return this.#shieldViaApproveAndWrap(amount, userAddress, account.chainId, options);
   }
 
   async #shieldViaTransferAndCall(
     amount: bigint,
     underlying: Address,
     userAddress: Address,
+    chainId: number,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
     this.#requireSigner("shield");
@@ -187,6 +302,19 @@ export class WrappedToken extends Token {
     // the raw 20-byte address (not ABI-encoded), and the empty payload `0x`
     // for self-shield so the wrapper falls back to `from`.
     const data: Hex = recipient === userAddress ? "0x" : recipient;
+
+    await swallow("shield: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildShieldViaTransferAndCallIntent({
+          underlyingTokenAddress: underlying,
+          wrapperAddress: this.address,
+          senderAddress: userAddress,
+          recipientAddress: recipient,
+          amount,
+          chainId,
+        }),
+      ),
+    );
 
     return this.submitTransaction({
       operation: "shield:transferAndCall",
@@ -198,14 +326,31 @@ export class WrappedToken extends Token {
   async #shieldViaApproveAndWrap(
     amount: bigint,
     userAddress: Address,
+    chainId: number,
     options?: ShieldOptions,
   ): Promise<TransactionResult> {
     this.#requireSigner("shield");
     const strategy = options?.approvalStrategy ?? "exact";
+    const underlying = await this.#getUnderlying();
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    await swallow("shield: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildShieldViaWrapIntent({
+          underlyingTokenAddress: underlying,
+          wrapperAddress: this.address,
+          senderAddress: userAddress,
+          recipientAddress: recipient,
+          amount,
+          approvalAmount:
+            strategy === "skip" ? undefined : strategy === "max" ? 2n ** 256n - 1n : amount,
+          maxApproval: strategy === "max",
+          chainId,
+        }),
+      ),
+    );
     if (strategy !== "skip") {
       await this.#ensureAllowance(amount, strategy === "max", options);
     }
-    const recipient = options?.to ? getAddress(options.to) : userAddress;
     return this.submitTransaction({
       operation: "shield:approveAndWrap",
       config: wrapContract(this.address, recipient, amount),
@@ -279,6 +424,7 @@ export class WrappedToken extends Token {
   async unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult> {
     const {
       skipBalanceCheck = false,
+      onClearSigningIntent,
       onUnwrapSubmitted,
       onFinalizing,
       onFinalizeSubmitted,
@@ -289,11 +435,12 @@ export class WrappedToken extends Token {
     }
 
     const callbacks: UnshieldCallbacks = {
+      onClearSigningIntent,
       onFinalizing,
       onFinalizeSubmitted,
     };
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrap(amount);
+    const unwrapResult = await this.unwrap(amount, { onClearSigningIntent });
     void swallow("unshield: onUnwrapSubmitted", () => onUnwrapSubmitted?.(unwrapResult.txHash));
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
@@ -313,7 +460,7 @@ export class WrappedToken extends Token {
    */
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.unwrapAll();
+    const unwrapResult = await this.unwrapAll(callbacks);
     void swallow("unshieldAll: onUnwrapSubmitted", () =>
       callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
     );
@@ -355,7 +502,7 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.unwrap(500n);
    * ```
    */
-  async unwrap(amount: bigint): Promise<TransactionResult> {
+  async unwrap(amount: bigint, options?: UnwrapOptions): Promise<TransactionResult> {
     this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -370,6 +517,21 @@ export class WrappedToken extends Token {
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles");
     }
+    const encryptedAmountValue = typeof handle === "string" ? handle : toHex(handle);
+
+    await swallow("unwrap: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildUnwrapIntent({
+          wrapperAddress: this.address,
+          fromAddress: userAddress,
+          recipientAddress: userAddress,
+          amount,
+          encryptedAmount: { value: encryptedAmountValue } satisfies ClearSigningEncryptedValue,
+          hasInputProof: true,
+          chainId: account.chainId,
+        }),
+      ),
+    );
 
     return this.submitTransaction({
       operation: "unwrap",
@@ -390,7 +552,7 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.unwrapAll();
    * ```
    */
-  async unwrapAll(): Promise<TransactionResult> {
+  async unwrapAll(options?: UnwrapAllOptions): Promise<TransactionResult> {
     this.#requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
@@ -403,6 +565,18 @@ export class WrappedToken extends Token {
     if (isZeroHandle(handle)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
+
+    await swallow("unwrapAll: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildUnwrapAllIntent({
+          wrapperAddress: this.address,
+          fromAddress: userAddress,
+          recipientAddress: userAddress,
+          encryptedBalance: { value: handle } satisfies ClearSigningEncryptedValue,
+          chainId: account.chainId,
+        }),
+      ),
+    );
 
     return this.submitTransaction({
       operation: "unwrapAll",
@@ -426,12 +600,27 @@ export class WrappedToken extends Token {
    * );
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+  async finalizeUnwrap(
+    unwrapRequestIdOrAmount: Handle,
+    options?: FinalizeUnwrapOptions,
+  ): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
+    const chainId = await this.sdk.provider.getChainId();
     const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
+    await swallow("finalizeUnwrap: onClearSigningIntent", () =>
+      options?.onClearSigningIntent?.(
+        buildFinalizeUnwrapIntent({
+          wrapperAddress: this.address,
+          unwrapRequestId: unwrapRequestIdOrAmount,
+          clearAmount: clearValue,
+          hasDecryptionProof: true,
+          chainId,
+        }),
+      ),
+    );
     return this.submitTransaction({
       operation: "finalizeUnwrap",
       config: finalizeUnwrapContract(
@@ -494,6 +683,9 @@ export class WrappedToken extends Token {
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.());
     const finalizeResult = await this.finalizeUnwrap(
       event.unwrapRequestId ?? event.encryptedAmount,
+      {
+        onClearSigningIntent: callbacks?.onClearSigningIntent,
+      },
     );
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,

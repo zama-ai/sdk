@@ -62,6 +62,37 @@ describe("Delegations", () => {
   });
 
   describe("delegator address resolution", () => {
+    test("createDelegateDecryptionClearSigningIntent describes delegation", async ({ sdk }) => {
+      const intent = await sdk.delegations.createDelegateDecryptionClearSigningIntent({
+        contractAddress: TOKEN,
+        delegateAddress: DELEGATE,
+      });
+
+      expect(intent.kind).toBe("delegateDecryption");
+      expect(intent.fields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: "Wallet allowed to view", value: DELEGATE }),
+          expect.objectContaining({ label: "Confidential contract", value: TOKEN }),
+        ]),
+      );
+    });
+
+    test("delegateDecryption emits a clear-signing intent", async ({ sdk, signer, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(0n);
+      vi.mocked(signer.writeContract).mockResolvedValue("0xtx");
+      const onClearSigningIntent = vi.fn();
+
+      await sdk.delegations.delegateDecryption({
+        contractAddress: TOKEN,
+        delegateAddress: DELEGATE,
+        onClearSigningIntent,
+      });
+
+      expect(onClearSigningIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "delegateDecryption" }),
+      );
+    });
+
     test("delegateDecryption uses the wallet account address as delegator", async ({
       sdk,
       signer,

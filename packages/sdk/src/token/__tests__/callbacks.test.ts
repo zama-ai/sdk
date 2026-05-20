@@ -3,7 +3,7 @@ import { Topics } from "../../events";
 
 import { DecryptionFailedError, TransactionRevertedError } from "../../errors";
 import type { GenericProvider } from "../../types";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 describe("Unshield callbacks (P4)", () => {
   function mockReceiptWithUnwrapRequested(provider: GenericProvider, userAddress: Address) {
@@ -212,6 +212,49 @@ describe("Transfer callbacks (SDK-19)", () => {
 
     expect(onEncryptComplete).toHaveBeenCalledOnce();
     expect(onTransferSubmitted).toHaveBeenCalledWith("0xtxhash");
+  });
+
+  test("fires onClearSigningIntent after encryption", async ({ token }) => {
+    const onClearSigningIntent = vi.fn();
+
+    await token.confidentialTransfer(
+      "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address,
+      100n,
+      { skipBalanceCheck: true, onClearSigningIntent },
+    );
+
+    expect(onClearSigningIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "confidentialTransfer",
+        fields: expect.arrayContaining([
+          expect.objectContaining({ label: "Amount", value: 100n }),
+          expect.objectContaining({ label: "Encrypted amount", visibility: "encrypted" }),
+        ]),
+      }),
+    );
+  });
+
+  test("fires operator clear-signing intent for confidentialTransferFrom", async ({ token }) => {
+    const onClearSigningIntent = vi.fn();
+    const source = "0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a" as Address;
+
+    await token.confidentialTransferFrom(
+      source,
+      "0x8b8b8b8B8B8b8b8B8B8B8b8B8B8b8B8B8B8b8B8b" as Address,
+      100n,
+      { onClearSigningIntent },
+    );
+
+    expect(onClearSigningIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "confidentialTransferFrom",
+        contractContext: expect.objectContaining({ functionName: "confidentialTransferFrom" }),
+        fields: expect.arrayContaining([
+          expect.objectContaining({ label: "Granting wallet", value: getAddress(source) }),
+          expect.objectContaining({ label: "Operator wallet" }),
+        ]),
+      }),
+    );
   });
 
   test("fires callbacks in correct order", async ({ token }) => {

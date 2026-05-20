@@ -1,5 +1,10 @@
 import type { Address } from "viem";
-import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
+import type {
+  ClearSigningCallbacks,
+  ShieldCallbacks,
+  TransferCallbacks,
+  UnshieldCallbacks,
+} from "./callbacks";
 
 /** Options for {@link ConfidentialToken.confidentialTransfer}. */
 export interface TransferOptions extends TransferCallbacks {
@@ -41,3 +46,12 @@ export interface UnshieldOptions extends UnshieldCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
   skipBalanceCheck?: boolean;
 }
+
+/** Options for {@link WrappedToken.unwrap}. */
+export type UnwrapOptions = ClearSigningCallbacks;
+
+/** Options for {@link WrappedToken.unwrapAll}. */
+export type UnwrapAllOptions = ClearSigningCallbacks;
+
+/** Options for {@link WrappedToken.finalizeUnwrap}. */
+export type FinalizeUnwrapOptions = ClearSigningCallbacks;

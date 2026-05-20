@@ -111,6 +111,8 @@ export type {
   TransactionReceipt,
   TransactionResult,
   ApprovalStrategy,
+  ClearSigningCallbacks,
+  FinalizeUnwrapOptions,
   UnshieldCallbacks,
   UnshieldOptions,
   ShieldCallbacks,
@@ -118,6 +120,8 @@ export type {
   ShieldPath,
   TransferCallbacks,
   TransferOptions,
+  UnwrapAllOptions,
+  UnwrapOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
@@ -185,6 +189,50 @@ export {
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
+
+export {
+  buildAllowAsIntent,
+  buildAllowAsIntentFromEIP712,
+  buildAllowIntent,
+  buildAllowIntentFromEIP712,
+  buildConfidentialTransferFromIntent,
+  buildConfidentialTransferIntent,
+  buildDelegateDecryptionIntent,
+  buildFinalizeUnwrapIntent,
+  buildShieldViaTransferAndCallIntent,
+  buildShieldViaWrapIntent,
+  buildUnwrapAllIntent,
+  buildUnwrapIntent,
+  renderClearSigningIntent,
+  assertClearSigningIntentSafe,
+  validateClearSigningIntent,
+} from "./clear-signing";
+export type {
+  BuildAllowAsIntentParams,
+  BuildAllowIntentParams,
+  BuildConfidentialTransferFromIntentParams,
+  BuildConfidentialTransferIntentParams,
+  BuildDelegateDecryptionIntentParams,
+  BuildFinalizeUnwrapIntentParams,
+  BuildShieldIntentBaseParams,
+  BuildShieldViaTransferAndCallIntentParams,
+  BuildShieldViaWrapIntentParams,
+  BuildUnwrapAllIntentParams,
+  BuildUnwrapIntentParams,
+  ClearSigningContractContext,
+  ClearSigningEncryptedValue,
+  ClearSigningField,
+  ClearSigningFieldValue,
+  ClearSigningIntent,
+  ClearSigningIntentKind,
+  ClearSigningRawContext,
+  ClearSigningValidationIssue,
+  ClearSigningValidationResult,
+  ClearSigningVisibility,
+  RenderClearSigningIntentOptions,
+  RenderedClearSigningField,
+  RenderedClearSigningIntent,
+} from "./clear-signing";
 
 // Event decoders and types
 export type {

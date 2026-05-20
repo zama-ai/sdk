@@ -1,8 +1,9 @@
 import { getAddress, type Address } from "viem";
+import { buildAllowAsIntent, buildAllowIntent, type ClearSigningIntent } from "../clear-signing";
 import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
-import type { GenericProvider, GenericSigner } from "../types";
+import type { ClearSigningCallbacks, GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 
@@ -42,6 +43,26 @@ export class Permits {
     return requireConfigured(this.#credentialService, operation);
   }
 
+  /** Build a clear-signing preview for direct decrypt authorization. */
+  async createAllowClearSigningIntent(contracts: Address[]): Promise<ClearSigningIntent> {
+    return buildAllowIntent({
+      contractAddresses: contracts.map((contract) => getAddress(contract)),
+      chainId: await this.#provider.getChainId(),
+    });
+  }
+
+  /** Build a clear-signing preview for delegated decrypt credential authorization. */
+  async createAllowAsClearSigningIntent(
+    delegator: Address,
+    contracts: Address[],
+  ): Promise<ClearSigningIntent> {
+    return buildAllowAsIntent({
+      delegatorAddress: getAddress(delegator),
+      contractAddresses: contracts.map((contract) => getAddress(contract)),
+      chainId: await this.#provider.getChainId(),
+    });
+  }
+
   /**
    * Sign and store an EIP-712 permit authorising direct decryption for the
    * given contract addresses.
@@ -54,13 +75,13 @@ export class Permits {
    *
    * @param contracts - Contract addresses to authorize.
    */
-  async grantPermit(contracts: Address[]): Promise<void> {
+  async grantPermit(contracts: Address[], options?: ClearSigningCallbacks): Promise<void> {
     if (contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("grantPermit");
     await requireChainAlignment("grantPermit", this.#signer, this.#provider);
-    await service.grantPermit(contracts);
+    await service.grantPermit(contracts, undefined, options);
   }
 
   /**
@@ -70,13 +91,17 @@ export class Permits {
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to authorize.
    */
-  async grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void> {
+  async grantDelegationPermit(
+    delegator: Address,
+    contracts: Address[],
+    options?: ClearSigningCallbacks,
+  ): Promise<void> {
     if (contracts.length === 0) {
       return;
     }
     const service = this.#requireCredentialService("grantDelegationPermit");
     await requireChainAlignment("grantDelegationPermit", this.#signer, this.#provider);
-    await service.grantPermit(contracts, delegator);
+    await service.grantPermit(contracts, delegator, options);
   }
 
   /**
