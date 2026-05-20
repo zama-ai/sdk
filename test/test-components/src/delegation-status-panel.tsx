@@ -56,6 +56,7 @@ export function DelegationStatusPanel({
           type="text"
           name="delegate"
           placeholder="Delegate address (0x...)"
+          aria-label="Delegate address"
           defaultValue={defaultDelegate ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"

@@ -44,6 +44,7 @@ export function ApproveForm({
         type="text"
         name="operator"
         placeholder="Operator address (0x...)"
+        aria-label="Operator address"
         defaultValue={defaultSpender ?? ""}
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
