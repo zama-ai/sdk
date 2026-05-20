@@ -79,15 +79,15 @@ import {
 
 ## Confidential operations
 
-| Builder                                                                 | What it does                       |
-| ----------------------------------------------------------------------- | ---------------------------------- |
-| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance             |
-| `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer                 |
-| `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer        |
-| `isOperatorContract(token, holder, spender)`                            | Check operator approval            |
-| `setOperatorContract(token, operator, until?)`                          | Set operator approval              |
-| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply        |
-| `rateContract(token)`                                                   | Read conversion rate               |
+| Builder                                                                 | What it does                |
+| ----------------------------------------------------------------------- | --------------------------- |
+| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance      |
+| `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer          |
+| `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer |
+| `isOperatorContract(token, holder, spender)`                            | Check operator approval     |
+| `setOperatorContract(token, operator, until?)`                          | Set operator approval       |
+| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply |
+| `rateContract(token)`                                                   | Read conversion rate        |
 
 ## Wrapping and unwrapping
 
