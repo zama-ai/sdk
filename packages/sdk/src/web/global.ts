@@ -12,4 +12,9 @@ declare global {
   interface WindowEventMap extends ZamaSDKWindowEventMap {}
 }
 
-
+/**
+ * Sentinel export so the bundled module ships a runtime export in both ESM and
+ * CJS. The augmentation itself is type-only; this constant gives bundlers (and
+ * CJS smoke tests) a non-empty module after compilation.
+ */
+export const ZAMA_SDK_WEB_GLOBAL_LOADED = true;

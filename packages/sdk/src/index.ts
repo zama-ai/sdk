@@ -148,6 +148,12 @@ export type {
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
 } from "./events";
+export type {
+  EventService,
+  TypedListener,
+  AnyListener,
+  EventServiceConfig,
+} from "./services/event-service";
 export {
   ZamaError,
   ZamaErrorCode,
