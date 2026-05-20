@@ -44,6 +44,5 @@ export function buildZamaConfig(
       params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS,
     ),
     onEvent: params.onEvent,
-    eventTimeoutMs: params.eventTimeoutMs,
   } as unknown as ZamaConfig;
 }

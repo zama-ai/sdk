@@ -9,34 +9,38 @@ export type TypedListener<K extends ZamaSDKEventType> = (
 /** Catch-all listener that receives the full event union. */
 export type AnyListener = (event: ZamaSDKEvent) => void | Promise<void>;
 
-export interface EventServiceConfig {
-  /** Back-compat: catch-all listener wired through `onAny`. */
-  onEvent?: AnyListener;
-  /** Per-listener timeout for awaited `emit`. Default 5_000ms. */
-  timeoutMs?: number;
+/** Options accepted by `on`, `once`, and `subscribe`. */
+export interface ListenerOptions {
+  /**
+   * Tie the subscription's lifetime to an `AbortSignal`. When the signal
+   * aborts, the listener is unsubscribed. If the signal is already aborted at
+   * call time, the listener is never registered.
+   */
+  signal?: AbortSignal;
 }
 
-const DEFAULT_TIMEOUT_MS = 5_000;
-const TIMEOUT_SENTINEL = Symbol("EventService timeout");
+export interface EventServiceConfig {
+  /** Back-compat: catch-all listener wired through `subscribe`. */
+  onEvent?: AnyListener;
+}
 
 /**
  * Multi-listener, type-narrowed, awaited event bus.
  *
  * `on(type, …)` registers per event type with a narrowed payload.
- * `onAny(…)` registers a catch-all listener (used by the back-compat
+ * `subscribe(…)` registers a catch-all listener (used by the back-compat
  * `createConfig({ onEvent })` path).
  *
  * `emit` is internal: it fans out to typed + catch-all listeners in parallel
- * via `Promise.all`, awaits async returns, swallows throws, and times each
- * listener out at `timeoutMs` (default 5000).
+ * via `Promise.all`, awaits async returns, and swallows throws. Callers that
+ * need a deadline can pass `{ signal }` when subscribing (e.g.
+ * `AbortSignal.timeout(ms)`).
  */
 export class EventService {
   readonly #typed = new Map<ZamaSDKEventType, Set<AnyListener>>();
   readonly #any = new Set<AnyListener>();
-  readonly #timeoutMs: number;
 
   constructor(config: EventServiceConfig = {}) {
-    this.#timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     if (config.onEvent) {
       this.#any.add(config.onEvent);
     }
@@ -47,9 +51,17 @@ export class EventService {
    *
    * @param type - Event type key (use `ZamaSDKEvents.*`).
    * @param listener - Receives the narrowed event payload.
+   * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
    * @returns Unsubscribe function; calling it removes the listener.
    */
-  on<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>): () => void {
+  on<K extends ZamaSDKEventType>(
+    type: K,
+    listener: TypedListener<K>,
+    options?: ListenerOptions,
+  ): () => void {
+    if (options?.signal?.aborted) {
+      return () => {};
+    }
     let set = this.#typed.get(type);
     if (!set) {
       set = new Set();
@@ -57,7 +69,7 @@ export class EventService {
     }
     const cast = listener as AnyListener;
     set.add(cast);
-    return () => {
+    const unsubscribe = () => {
       const current = this.#typed.get(type);
       if (current) {
         current.delete(cast);
@@ -66,34 +78,46 @@ export class EventService {
         }
       }
     };
+    return this.#wireSignal(unsubscribe, options?.signal);
   }
 
   /**
    * One-shot subscribe: auto-unsubscribes before invoking the listener for
    * the first matching event.
    *
+   * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
    * @returns Unsubscribe function. No-op after auto-fire; useful if the caller needs to bail before the event ever arrives.
    */
-  once<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>): () => void {
+  once<K extends ZamaSDKEventType>(
+    type: K,
+    listener: TypedListener<K>,
+    options?: ListenerOptions,
+  ): () => void {
     let unsubscribe: () => void = () => {};
     const wrapper: TypedListener<K> = (event) => {
       unsubscribe();
       return listener(event);
     };
-    unsubscribe = this.on(type, wrapper);
+    unsubscribe = this.on(type, wrapper, options);
     return () => unsubscribe();
   }
 
   /**
-   * Catch-all subscribe: receives every emitted event regardless of type.
+   * Subscribe to every emitted event regardless of type. The listener receives
+   * the full {@link ZamaSDKEvent} union — narrow with `switch (event.type)`.
    *
+   * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
    * @returns Unsubscribe function.
    */
-  onAny(listener: AnyListener): () => void {
+  subscribe(listener: AnyListener, options?: ListenerOptions): () => void {
+    if (options?.signal?.aborted) {
+      return () => {};
+    }
     this.#any.add(listener);
-    return () => {
+    const unsubscribe = () => {
       this.#any.delete(listener);
     };
+    return this.#wireSignal(unsubscribe, options?.signal);
   }
 
   /**
@@ -107,7 +131,7 @@ export class EventService {
       ...input,
       tokenAddress,
       timestamp: Date.now(),
-    } as ZamaSDKEvent;
+    } satisfies ZamaSDKEvent;
 
     const typedSet = this.#typed.get(event.type);
     const typed = typedSet ? [...typedSet] : [];
@@ -127,27 +151,24 @@ export class EventService {
     await Promise.all(tasks);
   }
 
+  #wireSignal(unsubscribe: () => void, signal: AbortSignal | undefined): () => void {
+    if (!signal) {
+      return unsubscribe;
+    }
+    const onAbort = () => unsubscribe();
+    signal.addEventListener("abort", onAbort, { once: true });
+    return () => {
+      signal.removeEventListener("abort", onAbort);
+      unsubscribe();
+    };
+  }
+
   async #run(tag: string, fn: () => void | Promise<void>): Promise<void> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await Promise.race([
-        Promise.try(fn),
-        new Promise<void>((_resolve, reject) => {
-          timer = setTimeout(() => reject(TIMEOUT_SENTINEL), this.#timeoutMs);
-        }),
-      ]);
+      await Promise.resolve().then(fn);
     } catch (error) {
-      if (error === TIMEOUT_SENTINEL) {
-        // oxlint-disable-next-line no-console
-        console.warn(`[zama-sdk] ${tag} listener timed out after ${this.#timeoutMs}ms`);
-      } else {
-        // oxlint-disable-next-line no-console
-        console.warn(`[zama-sdk] ${tag} listener threw:`, error);
-      }
-    } finally {
-      if (timer !== undefined) {
-        clearTimeout(timer);
-      }
+      // oxlint-disable-next-line no-console
+      console.warn(`[zama-sdk] ${tag} listener threw:`, error);
     }
   }
 }

@@ -49,7 +49,7 @@ export class ZamaSDK {
   readonly decryption: Decryption;
   /**
    * Structured SDK event bus. Subscribe with `sdk.events.on(type, listener)`
-   * or `sdk.events.onAny(listener)`. Each subscribe returns an unsubscribe fn.
+   * or `sdk.events.subscribe(listener)`. Each call returns an unsubscribe fn.
    */
   readonly events: EventService;
   readonly #registryTTL: number;
@@ -65,11 +65,8 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.events = new EventService({
-      onEvent: config.onEvent,
-      timeoutMs: config.eventTimeoutMs,
-    });
-    const emit = (input: ZamaSDKEventInput, tokenAddress?: Address): void => {
+    this.events = new EventService({ onEvent: config.onEvent });
+    const emitEvent = (input: ZamaSDKEventInput, tokenAddress?: Address): void => {
       void this.events.emit(input, tokenAddress);
     };
 
@@ -77,7 +74,7 @@ export class ZamaSDK {
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
-      emitEvent: emit,
+      emitEvent,
     });
 
     const registryAddresses: Record<number, Address> = {};
@@ -107,12 +104,12 @@ export class ZamaSDK {
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
-        emitEvent: emit,
+        emitEvent,
       });
     }
     this.#encryptionService = new EncryptionService({
       relayer: this.relayer,
-      emitEvent: emit,
+      emitEvent,
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
@@ -157,7 +154,7 @@ export class ZamaSDK {
   /**
    * Emit a structured SDK event into the unified SDK event stream.
    *
-   * @deprecated Use `sdk.events.on` / `sdk.events.onAny` to subscribe and the
+   * @deprecated Use `sdk.events.on` / `sdk.events.subscribe` to subscribe and the
    *   internal `sdk.events.emit` to publish. This shim will be removed after
    *   one minor release.
    *

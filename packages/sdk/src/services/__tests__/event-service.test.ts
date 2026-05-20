@@ -39,11 +39,11 @@ describe("EventService", () => {
     expect(calls).toEqual(["fast", "slow"]);
   });
 
-  test("onAny fires for every event type", async () => {
+  test("subscribe fires for every event type", async () => {
     const service = new EventService();
     const listener = vi.fn();
 
-    service.onAny(listener);
+    service.subscribe(listener);
     await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
     await service.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash: TX_HASH });
 
@@ -64,11 +64,11 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("onAny unsubscribe stops further emits", async () => {
+  test("subscribe unsubscribe stops further emits", async () => {
     const service = new EventService();
     const listener = vi.fn();
 
-    const unsubscribe = service.onAny(listener);
+    const unsubscribe = service.subscribe(listener);
     await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
     unsubscribe();
     await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
@@ -93,7 +93,7 @@ describe("EventService", () => {
 
     service.on(ZamaSDKEvents.TransferSubmitted, failing);
     service.on(ZamaSDKEvents.TransferSubmitted, sibling);
-    service.onAny(anyListener);
+    service.subscribe(anyListener);
 
     await expect(
       service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH }),
@@ -113,26 +113,6 @@ describe("EventService", () => {
 
     await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
     expect(resolved).toBe(true);
-  });
-
-  test("hung listener is timed out, emit resolves, warning logged", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const service = new EventService({ timeoutMs: 30 });
-    const slow = vi.fn(() => new Promise<void>(() => {})); // never resolves
-    const fast = vi.fn();
-
-    service.on(ZamaSDKEvents.TransferSubmitted, slow);
-    service.on(ZamaSDKEvents.TransferSubmitted, fast);
-
-    const before = performance.now();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
-    const elapsed = performance.now() - before;
-
-    expect(elapsed).toBeGreaterThanOrEqual(25);
-    expect(elapsed).toBeLessThan(200);
-    expect(fast).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
   });
 
   test("once(type, listener) fires exactly once and auto-unsubscribes", async () => {
@@ -170,7 +150,7 @@ describe("EventService", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test("back-compat: EventServiceConfig.onEvent wires through onAny", async () => {
+  test("back-compat: EventServiceConfig.onEvent wires through subscribe", async () => {
     const onEvent = vi.fn();
     const service = new EventService({ onEvent });
 
@@ -180,10 +160,63 @@ describe("EventService", () => {
     expect(onEvent.mock.calls[0]![0].type).toBe(ZamaSDKEvents.TransferSubmitted);
   });
 
+  test("on({ signal }) unsubscribes when the signal aborts", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    service.on(ZamaSDKEvents.TransferSubmitted, listener, { signal: controller.signal });
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    controller.abort();
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test("on({ signal }) with already-aborted signal never registers the listener", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+
+    const unsubscribe = service.on(ZamaSDKEvents.TransferSubmitted, listener, {
+      signal: controller.signal,
+    });
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  test("subscribe({ signal }) unsubscribes when the signal aborts", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    service.subscribe(listener, { signal: controller.signal });
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    controller.abort();
+    await service.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash: TX_HASH });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test("once({ signal }) aborted before first event prevents fire", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+    const controller = new AbortController();
+
+    service.once(ZamaSDKEvents.TransferSubmitted, listener, { signal: controller.signal });
+    controller.abort();
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   test("emit stamps timestamp and optional tokenAddress on the event", async () => {
     const service = new EventService();
     const listener = vi.fn();
-    service.onAny(listener);
+    service.subscribe(listener);
 
     const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as const;
     await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH }, tokenAddress);

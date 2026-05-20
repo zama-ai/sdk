@@ -13,7 +13,7 @@ import type { ZamaSDKEvent, ZamaSDKEventType } from "../events/sdk-events";
  * declare global {
  *   interface WindowEventMap extends ZamaSDKWindowEventMap {}
  * }
- * sdk.events.onAny((event) => {
+ * sdk.events.subscribe((event) => {
  *   window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
  * });
  * window.addEventListener("transfer:submitted", (e) => {
