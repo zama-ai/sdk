@@ -20155,10 +20155,12 @@ export const ZERO_HANDLE: "0x000000000000000000000000000000000000000000000000000
 
 export { ZKProofLike }
 
-// dist/esm/index-CECBwOc8.d.ts:20455:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CECBwOc8.d.ts:20584:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CECBwOc8.d.ts:20686:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CECBwOc8.d.ts:20687:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// Warnings were encountered during analysis:
+//
+// dist/esm/index-BCyTf9iS.d.ts:19754:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BCyTf9iS.d.ts:19883:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BCyTf9iS.d.ts:19985:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BCyTf9iS.d.ts:19986:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
