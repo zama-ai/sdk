@@ -1,6 +1,9 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { checksum } from "../utils";
+import { permissionScopeKey } from "../storage-keys";
+import type { Permission } from "../types";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -12,6 +15,12 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
 });
 const TOKEN_A = ADDRS[0]!;
 const TOKEN_B = ADDRS[1]!;
+
+const DIRECT_SCOPE_KEY = permissionScopeKey({
+  signerAddress: checksum(USER),
+  chainId: 31337,
+  delegatorAddress: checksum(USER),
+});
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({
@@ -206,5 +215,98 @@ describe("CredentialService delegator-scope isolation", () => {
 
     expect(await credentialService.hasPermit([TOKEN_A])).toBe(false);
     expect(await credentialService.hasPermit([TOKEN_A], DELEGATOR_B)).toBe(true);
+  });
+});
+
+describe("CredentialService.grantPermit widening", () => {
+  test("widens an existing permit when the union fits the cap", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!]);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!, ADDRS[2]!]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    expect(raw).not.toBeNull();
+    expect(raw).toHaveLength(1);
+    expect(raw![0]!.signedContractAddresses).toEqual([
+      checksum(ADDRS[0]!),
+      checksum(ADDRS[1]!),
+      checksum(ADDRS[2]!),
+    ]);
+  });
+
+  test("falls back to chunking when the union exceeds the cap", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    const ten = ADDRS.slice(0, 10);
+    await credentialService.grantPermit(ten);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.grantPermit([...ten, ADDRS[10]!]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    expect(raw).not.toBeNull();
+    expect(raw).toHaveLength(2);
+    const sizes = raw!.map((p) => p.signedContractAddresses.length).toSorted((a, b) => a - b);
+    expect(sizes).toEqual([1, 10]);
+  });
+
+  test("wallet rejection during widening leaves the original permit untouched", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!]);
+    vi.mocked(signer.signTypedData).mockClear();
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(
+      Object.assign(new Error("rejected"), { code: 4001 }),
+    );
+
+    await expect(credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!, ADDRS[2]!])).rejects.toThrow(
+      SigningRejectedError,
+    );
+
+    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    expect(raw).not.toBeNull();
+    expect(raw).toHaveLength(1);
+    expect(raw![0]!.signedContractAddresses).toEqual([checksum(ADDRS[0]!), checksum(ADDRS[1]!)]);
+  });
+
+  test("widened permit gets a fresh startTimestamp", async ({
+    credentialService,
+    signer,
+    storage,
+  }) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!]);
+      const firstTs = Math.floor(Date.now() / 1000);
+
+      vi.advanceTimersByTime(60_000);
+      vi.mocked(signer.signTypedData).mockClear();
+      await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!, ADDRS[2]!]);
+      const widenedTs = Math.floor(Date.now() / 1000);
+
+      const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+      expect(raw).not.toBeNull();
+      expect(raw).toHaveLength(1);
+      expect(raw![0]!.startTimestamp).toBe(widenedTs);
+      expect(raw![0]!.startTimestamp).toBeGreaterThan(firstTs);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -5,7 +5,7 @@ import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
-import { chunkContracts, uncoveredContracts } from "./permissions";
+import { chunkContracts, pickWidenCandidate, sortedUnion, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
 import type { CredentialBundle, Permission, StoredKeypair } from "./types";
@@ -90,10 +90,23 @@ export class CredentialService {
     };
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
-    for (const chunk of chunkContracts(uncoveredContracts(permits, requested))) {
-      const permission = await this.#signPermit({ chunk, keypair, scope });
-      permits.push(permission);
-      await swallow("persist permit", () => this.#store.append(scope, [permission]));
+    const uncovered = uncoveredContracts(permits, requested);
+    if (uncovered.length > 0) {
+      const candidate = pickWidenCandidate(permits, uncovered, requested);
+      if (candidate !== null) {
+        const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
+        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
+        await swallow("replace permit", () =>
+          this.#store.replace(scope, candidate.signature, widened),
+        );
+        permits[permits.indexOf(candidate)] = widened;
+      } else {
+        for (const chunk of chunkContracts(uncovered)) {
+          const permission = await this.#signPermit({ chunk, keypair, scope });
+          permits.push(permission);
+          await swallow("persist permit", () => this.#store.append(scope, [permission]));
+        }
+      }
     }
 
     const requestedSet = new Set(requested);
