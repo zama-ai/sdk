@@ -32,13 +32,13 @@ const TIMEOUT_SENTINEL = Symbol("EventService timeout");
  */
 export class EventService {
   readonly #typed = new Map<ZamaSDKEventType, Set<AnyListener>>();
-  readonly #listenersSet = new Set<AnyListener>();
+  readonly #any = new Set<AnyListener>();
   readonly #timeoutMs: number;
 
   constructor(config: EventServiceConfig = {}) {
     this.#timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     if (config.onEvent) {
-      this.#listenersSet.add(config.onEvent);
+      this.#any.add(config.onEvent);
     }
   }
 
@@ -72,8 +72,7 @@ export class EventService {
    * One-shot subscribe: auto-unsubscribes before invoking the listener for
    * the first matching event.
    *
-   * @returns Unsubscribe function. No-op after auto-fire; useful if the caller
-   *   needs to bail before the event ever arrives.
+   * @returns Unsubscribe function. No-op after auto-fire; useful if the caller needs to bail before the event ever arrives.
    */
   once<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>): () => void {
     let unsubscribe: () => void = () => {};
@@ -91,9 +90,9 @@ export class EventService {
    * @returns Unsubscribe function.
    */
   onAny(listener: AnyListener): () => void {
-    this.#listenersSet.add(listener);
+    this.#any.add(listener);
     return () => {
-      this.#listenersSet.delete(listener);
+      this.#any.delete(listener);
     };
   }
 
@@ -112,7 +111,7 @@ export class EventService {
 
     const typedSet = this.#typed.get(event.type);
     const typed = typedSet ? [...typedSet] : [];
-    const any = [...this.#listenersSet];
+    const any = [...this.#any];
     if (typed.length === 0 && any.length === 0) {
       return;
     }
@@ -132,7 +131,7 @@ export class EventService {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        Promise.resolve().then(fn),
+        Promise.try(fn),
         new Promise<void>((_resolve, reject) => {
           timer = setTimeout(() => reject(TIMEOUT_SENTINEL), this.#timeoutMs);
         }),

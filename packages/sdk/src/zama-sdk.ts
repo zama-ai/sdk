@@ -4,7 +4,8 @@ import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
+import type { ZamaSDKEventInput } from "./events/sdk-events";
+import { EventService } from "./services/event-service";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
@@ -46,8 +47,12 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
+  /**
+   * Structured SDK event bus. Subscribe with `sdk.events.on(type, listener)`
+   * or `sdk.events.onAny(listener)`. Each subscribe returns an unsubscribe fn.
+   */
+  readonly events: EventService;
   readonly #registryTTL: number;
-  readonly #onEvent: ZamaSDKEventListener;
   readonly #cachingService: CachingService;
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
@@ -60,12 +65,19 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.#onEvent = config.onEvent ?? function () {};
+    this.events = new EventService({
+      onEvent: config.onEvent,
+      timeoutMs: config.eventTimeoutMs,
+    });
+    const emit = (input: ZamaSDKEventInput, tokenAddress?: Address): void => {
+      void this.events.emit(input, tokenAddress);
+    };
+
     this.#cachingService = new CachingService(config.storage);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
-      emitEvent: this.emitEvent.bind(this),
+      emitEvent: emit,
     });
 
     const registryAddresses: Record<number, Address> = {};
@@ -95,12 +107,12 @@ export class ZamaSDK {
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
-        emitEvent: this.emitEvent.bind(this),
+        emitEvent: emit,
       });
     }
     this.#encryptionService = new EncryptionService({
       relayer: this.relayer,
-      emitEvent: this.emitEvent.bind(this),
+      emitEvent: emit,
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
@@ -145,25 +157,14 @@ export class ZamaSDK {
   /**
    * Emit a structured SDK event into the unified SDK event stream.
    *
-   * Listener exceptions are caught and logged so that a misbehaving subscriber
-   * can never corrupt SDK operations.
-   *
-   * Application code should subscribe via the `onEvent` config option, never
-   * call this directly.
+   * @deprecated Use `sdk.events.on` / `sdk.events.onAny` to subscribe and the
+   *   internal `sdk.events.emit` to publish. This shim will be removed after
+   *   one minor release.
    *
    * @internal
    */
   emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
-    try {
-      this.#onEvent({
-        ...input,
-        tokenAddress,
-        timestamp: Date.now(),
-      } as ZamaSDKEvent);
-    } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.error("[zama-sdk] onEvent listener threw:", error);
-    }
+    void this.events.emit(input, tokenAddress);
   }
 
   /**
