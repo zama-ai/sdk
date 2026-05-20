@@ -34,6 +34,7 @@ function TwoStepUnshield() {
     // Step 1: submit the unwrap and find the event in the receipt
     const { receipt } = await unwrap({ amount: 500n });
     const event = findUnwrapRequested(receipt.logs);
+    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
 
     // Step 2: finalize with the unwrap request ID from the event
     await finalize({ unwrapRequestId: event.unwrapRequestId });

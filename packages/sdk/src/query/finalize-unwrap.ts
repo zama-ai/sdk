@@ -9,8 +9,11 @@ export type FinalizeUnwrapParams =
   /** Identifier from an `UnwrapRequested` event. Preferred. */
   | { unwrapRequestId: EncryptedValue; burnAmountHandle?: never }
   /**
-   * Encrypted burn-amount handle. Used when resuming a pending unshield
-   * serialized by an older SDK version that did not record `unwrapRequestId`.
+   * Encrypted burn-amount handle. Direct-call escape hatch for resuming an
+   * unshield persisted by an older SDK version that did not record
+   * `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
+   * always rediscovers `unwrapRequestId` from the receipt and never reaches
+   * this branch.
    */
   | { unwrapRequestId?: never; burnAmountHandle: EncryptedValue };
 

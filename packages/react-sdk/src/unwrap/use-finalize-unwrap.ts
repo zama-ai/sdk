@@ -26,6 +26,7 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * ```tsx
  * const finalize = useFinalizeUnwrap("0xWrapper");
  * const event = findUnwrapRequested(receipt.logs);
+ * if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
  * finalize.mutate({ unwrapRequestId: event.unwrapRequestId });
  * ```
  */
