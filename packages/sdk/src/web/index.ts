@@ -12,3 +12,4 @@ export { web } from "../config/web";
 export { RelayerWeb } from "../relayer/relayer-web";
 export type { WebRelayerConfig, WebRelayerOptions } from "../config/types";
 export type { RelayerWebConfig, RelayerWebSecurityConfig } from "../relayer/relayer-sdk.types";
+export type { ZamaSDKWindowEventMap } from "./events";
