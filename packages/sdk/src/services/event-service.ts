@@ -17,6 +17,7 @@ export interface EventServiceConfig {
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
+const TIMEOUT_SENTINEL = Symbol("EventService timeout");
 
 /**
  * Multi-listener, type-narrowed, awaited event bus.
@@ -30,14 +31,14 @@ const DEFAULT_TIMEOUT_MS = 5_000;
  * listener out at `timeoutMs` (default 5000).
  */
 export class EventService {
-  readonly #typed = new Map<ZamaSDKEventType, Set<TypedListener<ZamaSDKEventType>>>();
-  readonly #any = new Set<AnyListener>();
+  readonly #typed = new Map<ZamaSDKEventType, Set<AnyListener>>();
+  readonly #listenersSet = new Set<AnyListener>();
   readonly #timeoutMs: number;
 
   constructor(config: EventServiceConfig = {}) {
     this.#timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     if (config.onEvent) {
-      this.#any.add(config.onEvent);
+      this.#listenersSet.add(config.onEvent);
     }
   }
 
@@ -54,7 +55,7 @@ export class EventService {
       set = new Set();
       this.#typed.set(type, set);
     }
-    const cast = listener as unknown as TypedListener<ZamaSDKEventType>;
+    const cast = listener as AnyListener;
     set.add(cast);
     return () => {
       const current = this.#typed.get(type);
@@ -90,9 +91,9 @@ export class EventService {
    * @returns Unsubscribe function.
    */
   onAny(listener: AnyListener): () => void {
-    this.#any.add(listener);
+    this.#listenersSet.add(listener);
     return () => {
-      this.#any.delete(listener);
+      this.#listenersSet.delete(listener);
     };
   }
 
@@ -111,7 +112,7 @@ export class EventService {
 
     const typedSet = this.#typed.get(event.type);
     const typed = typedSet ? [...typedSet] : [];
-    const any = [...this.#any];
+    const any = [...this.#listenersSet];
     if (typed.length === 0 && any.length === 0) {
       return;
     }
@@ -133,15 +134,17 @@ export class EventService {
       await Promise.race([
         Promise.resolve().then(fn),
         new Promise<void>((_resolve, reject) => {
-          timer = setTimeout(
-            () => reject(new Error(`listener exceeded ${this.#timeoutMs}ms`)),
-            this.#timeoutMs,
-          );
+          timer = setTimeout(() => reject(TIMEOUT_SENTINEL), this.#timeoutMs);
         }),
       ]);
     } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn(`[zama-sdk] ${tag} listener failed:`, error);
+      if (error === TIMEOUT_SENTINEL) {
+        // oxlint-disable-next-line no-console
+        console.warn(`[zama-sdk] ${tag} listener timed out after ${this.#timeoutMs}ms`);
+      } else {
+        // oxlint-disable-next-line no-console
+        console.warn(`[zama-sdk] ${tag} listener threw:`, error);
+      }
     } finally {
       if (timer !== undefined) {
         clearTimeout(timer);

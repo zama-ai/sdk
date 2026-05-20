@@ -64,6 +64,25 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
+  test("onAny unsubscribe stops further emits", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+
+    const unsubscribe = service.onAny(listener);
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    unsubscribe();
+    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test("emit with no listeners resolves immediately", async () => {
+    const service = new EventService();
+    await expect(
+      service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH }),
+    ).resolves.toBeUndefined();
+  });
+
   test("listener throw does not propagate and siblings still fire", async () => {
     const service = new EventService();
     const failing = vi.fn(() => {
