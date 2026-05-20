@@ -73,6 +73,12 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Per-listener timeout in milliseconds for `sdk.events.emit`. A listener that
+   * does not settle within this window is logged and the emit resolves.
+   * Default: 5000.
+   */
+  eventTimeoutMs?: number;
 }
 
 /** Generic config — pass any {@link GenericSigner} and {@link GenericProvider} directly. */
@@ -105,4 +111,5 @@ export type ZamaConfig = {
   readonly permitTTL: number;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
+  readonly eventTimeoutMs: number | undefined;
 } & { readonly [zamaConfigBrand]: true };
