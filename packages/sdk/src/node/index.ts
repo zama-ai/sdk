@@ -72,3 +72,5 @@ export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-
 
 // Chain presets
 export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";
+
+export type { ZamaSDKNodeEventMap } from "./events";
