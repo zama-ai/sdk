@@ -201,7 +201,7 @@ describe("invalidation", () => {
   test("invalidateWalletLifecycleQueries removes decryption cache and invalidates zama queries", () => {
     const qc = createQueryClient();
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
-    const decryptionKey = zamaQueryKeys.decryption.handle(
+    const decryptionKey = zamaQueryKeys.decryption.encryptedValue(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;

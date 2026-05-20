@@ -50,11 +50,11 @@ describe("Integration: multi-step workflows", () => {
 
       // Step 4: Decrypt the balance through the SDK-level API
       const decryptResult = await wrappedToken.sdk.decryption.userDecrypt([
-        { handle: balanceHandle, contractAddress: wrappedToken.address },
+        { encryptedValue: balanceHandle, contractAddress: wrappedToken.address },
       ]);
       expect(decryptResult[balanceHandle]).toBe(1000n);
       expect(relayer.userDecrypt).toHaveBeenCalledWith(
-        expect.objectContaining({ handles: [handle] }),
+        expect.objectContaining({ encryptedValues: [handle] }),
       );
     });
   });

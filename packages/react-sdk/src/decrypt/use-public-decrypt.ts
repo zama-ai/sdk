@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import type { Handle, PublicDecryptResult } from "@zama-fhe/sdk";
+import type { EncryptedValue, PublicDecryptResult } from "@zama-fhe/sdk";
 import { publicDecryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
@@ -21,5 +21,7 @@ import { useZamaSDK } from "../provider";
  */
 export function usePublicDecrypt() {
   const sdk = useZamaSDK();
-  return useMutation<PublicDecryptResult, Error, Handle[]>(publicDecryptMutationOptions(sdk));
+  return useMutation<PublicDecryptResult, Error, EncryptedValue[]>(
+    publicDecryptMutationOptions(sdk),
+  );
 }

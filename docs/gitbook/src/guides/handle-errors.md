@@ -179,7 +179,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | What you see                              | Why                                         | Fix                                                                                                 |
 | ----------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update. |
-| Balance always `undefined`                | Encrypted handle is zero (never shielded)   | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
 | `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.              |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                      |
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.               |

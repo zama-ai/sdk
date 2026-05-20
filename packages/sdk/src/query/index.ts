@@ -101,9 +101,8 @@ export {
 } from "./delegate-decryption";
 export {
   userDecryptQueryOptions,
-  type UserDecryptQueryConfig,
   type DecryptResult,
-  type DecryptHandle,
+  type EncryptedInput as DecryptHandle,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
@@ -127,10 +126,10 @@ export type {
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
 export type {
-  ClearValueType,
+  ClearValue,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
 } from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,

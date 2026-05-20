@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useResumeUnshield } from "../use-resume-unshield";
 
 describe("useResumeUnshield", () => {

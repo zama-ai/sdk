@@ -10,7 +10,7 @@ import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { ClearValues } from '@zama-fhe/relayer-sdk/web';
-import { ClearValueType } from '@zama-fhe/sdk';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
@@ -19,6 +19,7 @@ import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { JSX } from 'react/jsx-runtime';
@@ -39,7 +40,6 @@ import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
-import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
@@ -278,7 +278,7 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+export function useUserDecrypt(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

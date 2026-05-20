@@ -115,7 +115,7 @@ export default function App() {
 
 ## 5. Build the balance display
 
-Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted handle cheaply and only triggers full decryption when the balance changes.
+Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted value cheaply and only triggers full decryption when the balance changes.
 
 {% tabs %}
 {% tab title="src/BalanceDisplay.tsx" %}

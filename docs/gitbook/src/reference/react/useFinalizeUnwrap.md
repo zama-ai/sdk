@@ -72,7 +72,7 @@ The finalize function accepts a discriminated union — pass one of these:
 
 ### unwrapRequestId
 
-`Handle`
+`EncryptedValue`
 
 The unwrap request ID emitted by upgraded contract events. This is the preferred form.
 
@@ -82,12 +82,12 @@ await finalize({ unwrapRequestId: requestId });
 
 ### burnAmountHandle
 
-`Handle`
+`EncryptedValue`
 
 The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
 
 ```tsx
-await finalize({ burnAmountHandle: handle });
+await finalize({ burnAmountHandle: encryptedAmount });
 ```
 
 ## Return Type

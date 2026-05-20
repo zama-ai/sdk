@@ -2,37 +2,42 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
-import type { Handle } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
 import type { ZamaSDK } from "../../zama-sdk";
 
 const TOKEN_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
-const HANDLE_A = ("0x" + "a1".repeat(32)) as Handle;
-const HANDLE_B = ("0x" + "b2".repeat(32)) as Handle;
+const HANDLE_A = ("0x" + "a1".repeat(32)) as EncryptedValue;
+const HANDLE_B = ("0x" + "b2".repeat(32)) as EncryptedValue;
 
 /**
  * Swap out the SDK's delegated batch decrypt call so these tests can focus on
  * Token batching without priming the full EIP-712 sign flow.
  */
-function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<Handle, bigint>) {
-  const stub = vi
-    .fn()
-    .mockImplementation(
-      async ({ handles }: { handles: { handle: Handle; contractAddress: Address }[] }) => ({
-        items: handles.map(({ handle, contractAddress }) => {
-          const value = values[handle];
-          return value !== undefined
-            ? { handle, contractAddress, value }
-            : {
-                handle,
-                contractAddress,
-                error: new Error(`No value for ${handle}`),
-              };
-        }),
+function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<EncryptedValue, bigint>) {
+  const stub = vi.fn().mockImplementation(
+    async ({
+      encryptedInputs,
+    }: {
+      encryptedInputs: {
+        encryptedValue: EncryptedValue;
+        contractAddress: Address;
+      }[];
+    }) => ({
+      items: encryptedInputs.map(({ encryptedValue, contractAddress }) => {
+        const value = values[encryptedValue];
+        return value !== undefined
+          ? { encryptedValue, contractAddress, value }
+          : {
+              encryptedValue,
+              contractAddress,
+              error: new Error(`No value for ${encryptedValue}`),
+            };
       }),
-    );
+    }),
+  );
   Object.defineProperty(sdk.decryption, "delegatedBatchDecrypt", {
     value: stub,
     configurable: true,
@@ -96,7 +101,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       signer: delegateSigner,
       provider: delegateProvider,
     });
-    const ZERO = ("0x" + "00".repeat(32)) as Handle;
+    const ZERO = ("0x" + "00".repeat(32)) as EncryptedValue;
 
     vi.mocked(delegateProvider.readContract).mockResolvedValueOnce(ZERO);
 

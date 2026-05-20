@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -379,7 +379,7 @@ export class WrappedToken extends Token {
 
   /**
    * Request an unwrap for the entire confidential balance.
-   * Uses the on-chain balance handle directly (no encryption needed).
+   * Uses the on-chain encrypted balance directly (no encryption needed).
    * Throws if the balance is zero.
    *
    * @returns The transaction hash and mined receipt.
@@ -415,7 +415,7 @@ export class WrappedToken extends Token {
    * Call this after an unshield request has been processed on-chain.
    *
    * @param unwrapRequestIdOrAmount - `unwrapRequestId` from upgraded wrappers,
-   *   or the encrypted amount handle from legacy wrappers.
+   *   or the encrypted amount from legacy wrappers.
    * @returns The transaction hash and mined receipt.
    *
    * @example
@@ -426,7 +426,7 @@ export class WrappedToken extends Token {
    * );
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+  async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);

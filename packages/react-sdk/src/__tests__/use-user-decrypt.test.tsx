@@ -14,12 +14,10 @@ describe("useUserDecrypt", () => {
 
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
-        {
-          handles: [
-            { handle: "0xhandle1", contractAddress: tokenAddress },
-            { handle: "0xhandle2", contractAddress: tokenAddress },
-          ],
-        },
+        [
+          { encryptedValue: "0xhandle1", contractAddress: tokenAddress },
+          { encryptedValue: "0xhandle2", contractAddress: tokenAddress },
+        ],
         { enabled: true },
       ),
     );
@@ -41,12 +39,10 @@ describe("useUserDecrypt", () => {
 
     const { result } = renderWithProviders(() =>
       useUserDecrypt(
-        {
-          handles: [
-            { handle: "0xh1", contractAddress: CONTRACT_A },
-            { handle: "0xh2", contractAddress: CONTRACT_B },
-          ],
-        },
+        [
+          { encryptedValue: "0xh1", contractAddress: CONTRACT_A },
+          { encryptedValue: "0xh2", contractAddress: CONTRACT_B },
+        ],
         { enabled: true },
       ),
     );
@@ -67,10 +63,7 @@ describe("useUserDecrypt", () => {
     vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt(
-        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
-        { enabled: true },
-      ),
+      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], { enabled: true }),
     );
 
     await waitFor(() => expect(result.current.isError).toBe(true), {
@@ -81,10 +74,9 @@ describe("useUserDecrypt", () => {
 
   test("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt(
-        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
-        { enabled: false },
-      ),
+      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+        enabled: false,
+      }),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
@@ -92,7 +84,7 @@ describe("useUserDecrypt", () => {
   });
 
   test("stays disabled with empty handles", async ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUserDecrypt({ handles: [] }));
+    const { result } = renderWithProviders(() => useUserDecrypt([]));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
@@ -104,7 +96,7 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt({ handles: [{ handle: "0xh", contractAddress: tokenAddress }] }),
+      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }]),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
@@ -137,10 +129,9 @@ describe("useUserDecrypt", () => {
       }, [sdk, queryClient]);
 
       const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
-      const decrypt = useUserDecrypt(
-        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
-        { enabled: isAllowed.data === true },
-      );
+      const decrypt = useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+        enabled: isAllowed.data === true,
+      });
       return { isAllowed, decrypt };
     });
 
@@ -165,10 +156,9 @@ describe("useUserDecrypt", () => {
     // decrypt must stay idle — no EIP-712 prompt on mount.
     const { result } = renderWithProviders(() => {
       const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
-      const decrypt = useUserDecrypt(
-        { handles: [{ handle: "0xh", contractAddress: tokenAddress }] },
-        { enabled: isAllowed.data === true },
-      );
+      const decrypt = useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+        enabled: isAllowed.data === true,
+      });
       return { isAllowed, decrypt };
     });
 

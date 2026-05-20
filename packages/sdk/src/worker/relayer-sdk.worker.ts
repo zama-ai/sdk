@@ -417,8 +417,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   try {
     const instance = await getInstance(payload.chainId);
 
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
+    const handleContractPairs = payload.encryptedValues.map((encryptedValue) => ({
+      handle: encryptedValue,
       contractAddress: payload.contractAddress,
     }));
 
@@ -481,7 +481,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   try {
     const instance = await getInstance(payload.chainId);
 
-    const result = await instance.publicDecrypt(payload.handles);
+    const result = await instance.publicDecrypt(payload.encryptedValues);
 
     const response: PublicDecryptResponseData = { ...result };
 
@@ -575,8 +575,8 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   try {
     const instance = await getInstance(payload.chainId);
 
-    const handleContractPairs = payload.handles.map((handle) => ({
-      handle,
+    const handleContractPairs = payload.encryptedValues.map((encryptedValue) => ({
+      handle: encryptedValue,
       contractAddress: payload.contractAddress,
     }));
 

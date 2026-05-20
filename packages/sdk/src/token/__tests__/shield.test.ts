@@ -150,7 +150,7 @@ describe("WrappedToken.shield", () => {
     const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({ handles: [fixtureHandle] }),
+      expect.objectContaining({ encryptedValues: [fixtureHandle] }),
     );
   });
 

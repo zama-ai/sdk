@@ -559,7 +559,7 @@ export interface BatchBalancesResult {
 export interface BatchDecryptAsOptions {
     accountAddress?: Address;
     delegatorAddress: Address;
-    handles?: Handle[];
+    encryptedValues?: EncryptedValue[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
 }
@@ -569,11 +569,11 @@ export interface BatchDecryptHandleItem {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
+    encryptedValue: EncryptedValue;
+    // (undocumented)
     error?: ZamaError;
     // (undocumented)
-    handle: Handle;
-    // (undocumented)
-    value?: ClearValueType;
+    value?: ClearValue;
 }
 
 // @public (undocumented)
@@ -629,7 +629,8 @@ export interface CleartextRelayerConfig extends RelayerConfig {
     readonly type: "cleartext";
 }
 
-export { ClearValueType }
+// @public
+export type ClearValue = ClearValueType;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -4596,7 +4597,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: Handle;
+    readonly encryptedAmountHandle: EncryptedValue;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
@@ -6128,8 +6129,8 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null;
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
-    handles: Handle[];
-    result: Record<Handle, ClearValueType>;
+    encryptedValues: EncryptedValue[];
+    result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -6138,8 +6139,8 @@ export interface DecryptEndEvent extends BaseEvent {
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    encryptedValues: EncryptedValue[];
     error: Error;
-    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6149,7 +6150,7 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: Handle;
+    encryptedValue: EncryptedValue;
 }
 
 // @public
@@ -6162,14 +6163,14 @@ export class Decryption {
         decryptionService: DecryptionService | undefined;
     });
     delegatedBatchDecrypt(input: {
-        handles: DecryptHandle[];
+        encryptedInputs: DecryptHandle[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -6182,7 +6183,7 @@ export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -6213,7 +6214,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -6399,6 +6400,9 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 // @public
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
+// @public
+export type EncryptedValue = Bytes32Hex;
+
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -6500,7 +6504,7 @@ export { FheTypeName }
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: Handle, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
+export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly type: "constructor";
@@ -8768,9 +8772,6 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
     readonly functionName: "getTokenConfidentialTokenPairsSlice";
     readonly args: readonly [bigint, bigint];
 };
-
-// @public
-export type Handle = Bytes32Hex;
 
 // @public
 export const hardhat: {
@@ -11507,7 +11508,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isZeroHandle(handle: string): boolean;
+export function isZeroHandle(encryptedValue: string): boolean;
 
 // @public
 export interface Keypair {
@@ -11749,7 +11750,7 @@ export interface PaginatedResult<T> {
 
 // @public
 export interface PendingUnshieldRequest {
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
     readonly unwrapTxHash: Hex;
 }
 
@@ -13155,7 +13156,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -13167,7 +13168,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
@@ -13175,7 +13176,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -13320,7 +13321,7 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: Handle): Promise<void>;
+export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
 export const sepolia: {
@@ -14890,7 +14891,7 @@ export class Token {
     balanceOf(owner: Address): Promise<bigint>;
     static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner: Address): Promise<Handle>;
+    confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     decimals(): Promise<number>;
@@ -14905,7 +14906,7 @@ export class Token {
     isWrapper(): Promise<boolean>;
     name(): Promise<string>;
     // @internal
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
+    protected readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
@@ -17445,15 +17446,15 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
 // @public
 export interface UnwrapFinalizedEvent {
     readonly cleartextAmount: bigint;
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public
-export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): {
+export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -18778,22 +18779,22 @@ export interface UnwrappedFinalizedEvent {
     // (undocumented)
     readonly cleartextAmount: bigint;
     // (undocumented)
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     // (undocumented)
     readonly receiver: Address;
     // (undocumented)
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public
 export interface UnwrappedStartedEvent {
-    readonly burnAmount: Handle;
+    readonly burnAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
     readonly refund: Address;
-    readonly requestedAmount: Handle;
+    readonly requestedAmount: EncryptedValue;
     readonly requestId: bigint;
     readonly returnVal: boolean;
     readonly to: Address;
@@ -18802,11 +18803,11 @@ export interface UnwrappedStartedEvent {
 
 // @public
 export interface UnwrapRequestedEvent {
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -18824,7 +18825,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -19920,7 +19921,7 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
@@ -20156,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BhuoXkFo.d.ts:19764:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BhuoXkFo.d.ts:19893:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BhuoXkFo.d.ts:19995:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BhuoXkFo.d.ts:19996:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19761:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19890:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19992:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19993:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

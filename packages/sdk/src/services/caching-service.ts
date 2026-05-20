@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { checksummedAddress } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 
@@ -26,17 +26,17 @@ export class CachingService {
   async get(
     requester: Address,
     contractAddress: Address,
-    handle: Handle,
-  ): Promise<ClearValueType | null> {
+    encryptedValue: EncryptedValue,
+  ): Promise<ClearValue | null> {
     try {
-      const key = this.#buildStorageKey(requester, contractAddress, handle);
+      const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
       const value = await this.#storage.get(key);
       if (value === null) {
         return null;
       }
       const parsed = CacheValueSchema.safeParse(value);
       if (!parsed.success) {
-        await this.delete(requester, contractAddress, handle);
+        await this.delete(requester, contractAddress, encryptedValue);
         return null;
       }
       return parsed.data;
@@ -49,12 +49,12 @@ export class CachingService {
   async set(
     requester: Address,
     contractAddress: Address,
-    handle: Handle,
-    value: ClearValueType,
+    encryptedValue: EncryptedValue,
+    value: ClearValue,
   ): Promise<void> {
     try {
-      const key = this.#buildStorageKey(requester, contractAddress, handle);
-      await this.#storage.set<ClearValueType>(key, value);
+      const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
+      await this.#storage.set<ClearValue>(key, value);
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
           console.warn("[zama-sdk] CachingService index write failed:", error); // eslint-disable-line no-console
@@ -66,8 +66,12 @@ export class CachingService {
     }
   }
 
-  async delete(requester: Address, contractAddress: Address, handle: Handle): Promise<void> {
-    const key = this.#buildStorageKey(requester, contractAddress, handle);
+  async delete(
+    requester: Address,
+    contractAddress: Address,
+    encryptedValue: EncryptedValue,
+  ): Promise<void> {
+    const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doDelete(key).catch((error) => {
         console.warn("[zama-sdk] CachingService.delete failed:", error); // eslint-disable-line no-console
@@ -126,8 +130,12 @@ export class CachingService {
     await this.#storage.delete(this.#decryptKeysNamespace);
   }
 
-  #buildStorageKey(requester: Address, contractAddress: Address, handle: Handle): string {
-    return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${handle.toLowerCase()}`;
+  #buildStorageKey(
+    requester: Address,
+    contractAddress: Address,
+    encryptedValue: EncryptedValue,
+  ): string {
+    return `${this.#decryptNamespace}:${getAddress(requester)}:${getAddress(contractAddress)}:${encryptedValue.toLowerCase()}`;
   }
 
   async #readIndex(): Promise<string[]> {
