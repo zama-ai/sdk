@@ -58,22 +58,9 @@ export class CredentialService {
   }
 
   /**
-   * Resolve a keypair and the permissions covering `contracts`.
-   *
-   * Passing an empty contract list warms the keypair without creating signed
-   * permits.
-   *
-   * If existing permissions already cover the requested set, no wallet prompt
-   * occurs. Otherwise the service prefers widening: when an existing in-scope
-   * permit's `signedContractAddresses ∪ uncovered` still fits the 10-contract
-   * cap, that permit is re-signed for the union (one wallet prompt) and
-   * atomically replaced in the store. Candidate selection is deterministic —
-   * largest overlap with `contracts`, ties broken by most-recent
-   * `startTimestamp`. When no candidate fits, the uncovered subset is chunked
-   * into groups of ≤10 and one permit per chunk is signed sequentially. Each
-   * signed permit (widened or chunked) is persisted before the next prompt;
-   * newly signed permits are returned in-memory even when best-effort
-   * persistence fails.
+   * Resolve a keypair and permissions covering `contracts`, minimizing wallet
+   * prompts by reusing or widening existing permits where possible. Empty
+   * `contracts` warms the keypair without prompting.
    *
    * @returns The resolved keypair and permits covering the requested contracts.
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
