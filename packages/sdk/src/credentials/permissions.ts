@@ -49,38 +49,29 @@ export function sortedUnion<T extends string>(a: readonly T[], b: readonly T[]):
 }
 
 /**
- * Pick the in-scope permit best suited to be widened with `uncovered`.
+ * Find the in-scope permit best suited to be widened with `uncovered`.
  *
- * Returns the candidate whose `signedContractAddresses ∪ uncovered` still fits
+ * Returns the permit whose `signedContractAddresses ∪ uncovered` still fits
  * the 10-contract cap and that has the largest overlap with `requested`. Ties
- * broken by most-recent `startTimestamp`. Returns `null` when no candidate fits.
+ * broken by most-recent `startTimestamp`. Returns `null` when none fits.
  */
-export function pickWidenCandidate(
+export function findPermitToWiden(
   permits: readonly Permission[],
   uncovered: readonly ChecksummedAddress[],
   requested: readonly ChecksummedAddress[],
 ): Permission | null {
   const requestedSet = new Set(requested);
-  let best: Permission | null = null;
-  let bestOverlap = -1;
-  let bestTs = -1;
-
-  for (const p of permits) {
-    const unionSize = new Set([...p.signedContractAddresses, ...uncovered]).size;
-    if (unionSize > MAX_CONTRACTS_PER_PERMIT) {
-      continue;
-    }
-    let overlap = 0;
-    for (const a of p.signedContractAddresses) {
-      if (requestedSet.has(a)) {
-        overlap++;
-      }
-    }
-    if (overlap > bestOverlap || (overlap === bestOverlap && p.startTimestamp > bestTs)) {
-      best = p;
-      bestOverlap = overlap;
-      bestTs = p.startTimestamp;
-    }
+  const feasible = permits.filter(
+    (p) => new Set([...p.signedContractAddresses, ...uncovered]).size <= MAX_CONTRACTS_PER_PERMIT,
+  );
+  if (feasible.length === 0) {
+    return null;
   }
-  return best;
+
+  const overlap = (p: Permission) =>
+    p.signedContractAddresses.reduce((n, a) => n + (requestedSet.has(a) ? 1 : 0), 0);
+
+  const maxOverlap = Math.max(...feasible.map(overlap));
+  const topTier = feasible.filter((p) => overlap(p) === maxOverlap);
+  return topTier.reduce((a, b) => (b.startTimestamp > a.startTimestamp ? b : a));
 }

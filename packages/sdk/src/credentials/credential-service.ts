@@ -5,7 +5,7 @@ import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
-import { chunkContracts, pickWidenCandidate, sortedUnion, uncoveredContracts } from "./permissions";
+import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
 import type { CredentialBundle, Permission, StoredKeypair } from "./types";
@@ -98,7 +98,7 @@ export class CredentialService {
 
     const uncovered = uncoveredContracts(permits, requested);
     if (uncovered.length > 0) {
-      const candidate = pickWidenCandidate(permits, uncovered, requested);
+      const candidate = findPermitToWiden(permits, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
         const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });

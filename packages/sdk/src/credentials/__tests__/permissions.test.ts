@@ -1,6 +1,6 @@
 import { describe, test, expect } from "../../test-fixtures";
 import { checksum } from "../utils";
-import { pickWidenCandidate, sortedUnion } from "../permissions";
+import { findPermitToWiden, sortedUnion } from "../permissions";
 import type { Permission } from "../types";
 
 const A = checksum("0x1111111111111111111111111111111111111111");
@@ -63,20 +63,20 @@ function makePermission(
   };
 }
 
-describe("pickWidenCandidate", () => {
+describe("findPermitToWiden", () => {
   test("returns null when permits is empty", () => {
-    expect(pickWidenCandidate([], [T1], [T1])).toBeNull();
+    expect(findPermitToWiden([], [T1], [T1])).toBeNull();
   });
 
   test("returns null when no union fits the 10-contract cap", () => {
     const tenSlots = [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10];
     const permits = [makePermission(tenSlots)];
-    expect(pickWidenCandidate(permits, [T11], [...tenSlots, T11])).toBeNull();
+    expect(findPermitToWiden(permits, [T11], [...tenSlots, T11])).toBeNull();
   });
 
   test("returns the only feasible candidate", () => {
     const permits = [makePermission([T1, T2])];
-    const picked = pickWidenCandidate(permits, [T3], [T1, T2, T3]);
+    const picked = findPermitToWiden(permits, [T3], [T1, T2, T3]);
     expect(picked).toBe(permits[0]);
   });
 
@@ -84,7 +84,7 @@ describe("pickWidenCandidate", () => {
     const p1 = makePermission([T1, T2, T11], { signature: SIG_1 });
     const p2 = makePermission([T1, T12, T10], { signature: SIG_2 });
     // requested = [T1, T2, T3]; overlap(p1) = {T1,T2} = 2; overlap(p2) = {T1} = 1
-    const picked = pickWidenCandidate([p1, p2], [T3], [T1, T2, T3]);
+    const picked = findPermitToWiden([p1, p2], [T3], [T1, T2, T3]);
     expect(picked).toBe(p1);
   });
 
@@ -92,7 +92,7 @@ describe("pickWidenCandidate", () => {
     const older = makePermission([T1, T2], { signature: SIG_1, startTimestamp: 1_700_000_000 });
     const newer = makePermission([T1, T2], { signature: SIG_2, startTimestamp: 1_700_000_500 });
     // Same overlap with requested. Newer wins.
-    const picked = pickWidenCandidate([older, newer], [T3], [T1, T2, T3]);
+    const picked = findPermitToWiden([older, newer], [T3], [T1, T2, T3]);
     expect(picked).toBe(newer);
   });
 });
