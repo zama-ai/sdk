@@ -78,7 +78,6 @@
   - [useWrappedToken](reference/react/useWrappedToken.md)
   - [useEncrypt](reference/react/useEncrypt.md)
   - [useUserDecrypt](reference/react/useUserDecrypt.md)
-  - [useGenerateKeypair](reference/react/useGenerateKeypair.md)
   - [useDelegateDecryption](reference/react/useDelegateDecryption.md)
   - [useRevokeDelegation](reference/react/useRevokeDelegation.md)
   - [useDelegationStatus](reference/react/useDelegationStatus.md)

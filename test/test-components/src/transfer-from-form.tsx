@@ -46,6 +46,7 @@ export function TransferFromForm({
         type="text"
         name="from"
         placeholder="From address (0x...)"
+        aria-label="From address"
         defaultValue={defaultFrom ?? ""}
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
@@ -56,6 +57,7 @@ export function TransferFromForm({
         type="text"
         name="to"
         placeholder="To address (0x...)"
+        aria-label="To address"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="to-input"
@@ -65,6 +67,7 @@ export function TransferFromForm({
         type="text"
         name="amount"
         placeholder="Amount"
+        aria-label="Amount"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
