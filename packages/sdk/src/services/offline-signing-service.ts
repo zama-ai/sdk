@@ -466,10 +466,10 @@ export class OfflineSigningService {
       case "RevokeDelegation":
         return this.#buildRevokeDelegation(request);
       default: {
-        const _exhaustive: never = request;
+        const unhandled: never = request;
         throw new ConfigurationError(
           `OfflineSigningService.prepare: unsupported transaction kind '${
-            (_exhaustive as { kind: string }).kind
+            (unhandled as { kind: string }).kind
           }'.`,
         );
       }
