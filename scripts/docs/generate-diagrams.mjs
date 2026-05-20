@@ -15,8 +15,8 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const dir = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(dir, "..", "..");
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(scriptDir, "..", "..");
 const DIAGRAMS_DIR = join(REPO_ROOT, "docs", "diagrams");
 const GITBOOK_IMAGES = join(REPO_ROOT, "docs", "gitbook", "src", "images");
 

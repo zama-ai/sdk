@@ -12,6 +12,7 @@ const CachedArtifactBase = z.object({
   lastModified: z.optional(z.string()),
   // Optional + default(0) preserves the prior `?? 0` fallback for entries
   // persisted before this field was added; 0 marks them stale via the TTL check.
+  // oxlint-disable-next-line no-underscore-dangle -- z._default is the Zod v4 mini API
   lastValidatedAt: z._default(z.optional(z.number().check(z.nonnegative())), 0),
 });
 

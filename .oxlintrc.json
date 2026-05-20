@@ -150,7 +150,8 @@
       "rules": {
         "@typescript-eslint/no-floating-promises": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
-        "no-console": "off"
+        "no-console": "off",
+        "no-underscore-dangle": "off"
       }
     },
     {
