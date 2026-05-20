@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useZamaSDK, allowanceContract, approveContract } from "@zama-fhe/react-sdk";
+import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { allowanceContract, approveContract } from "@zama-fhe/sdk";
 import type { Address, Hex } from "viem";
 import { BalancesCard } from "./balances-card";
 import { ResumeUnshieldCard, UnshieldCard } from "./unshield-card";
@@ -55,24 +56,24 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
   const preApproveShield = useCallback(
     async (amount: bigint): Promise<void> => {
       if (!selectedPair) return;
+      const signer = sdk.signer;
+      if (!signer) throw new Error("Signer not ready");
       const owner = walletAddress;
       const underlying = selectedPair.tokenAddress;
       const wrapper = selectedPair.confidentialTokenAddress;
 
-      const allowance = (await sdk.signer.readContract(
+      const allowance = (await sdk.provider.readContract(
         allowanceContract(underlying, owner, wrapper),
       )) as bigint;
 
       if (allowance >= amount) return;
 
       if (allowance > 0n) {
-        const resetHash = await sdk.signer.writeContract(approveContract(underlying, wrapper, 0n));
+        const resetHash = await signer.writeContract(approveContract(underlying, wrapper, 0n));
         await waitForTransactionReceipt(resetHash as Hex);
       }
 
-      const approveHash = await sdk.signer.writeContract(
-        approveContract(underlying, wrapper, amount),
-      );
+      const approveHash = await signer.writeContract(approveContract(underlying, wrapper, amount));
       await waitForTransactionReceipt(approveHash as Hex);
     },
     [sdk, selectedPair, waitForTransactionReceipt, walletAddress],
@@ -80,11 +81,16 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
 
   const handleMint = useCallback(async () => {
     if (!selectedPair) return;
+    const signer = sdk.signer;
+    if (!signer) {
+      setMintError("Signer not ready");
+      return;
+    }
     setIsMinting(true);
     setMintError(null);
     try {
       const amount = 10n * 10n ** BigInt(selectedPair.underlying.decimals);
-      const hash = await sdk.signer.writeContract({
+      const hash = await signer.writeContract({
         address: selectedPair.tokenAddress,
         abi: MINT_ABI,
         functionName: "mint",
@@ -128,6 +134,7 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
           <BalancesCard
             publicBalance={publicBalance ?? null}
             tokenAddress={tokenAddress}
+            walletAddress={walletAddress}
             isBalanceRequested={isBalanceRequested}
             onReveal={() => setIsBalanceRequested(true)}
             isTestnet={isTestnet}

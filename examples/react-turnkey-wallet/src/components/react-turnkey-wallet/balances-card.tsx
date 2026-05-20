@@ -1,11 +1,12 @@
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
 import type { Address } from "viem";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/react-sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { BalanceAmount } from "./balance-amount";
 
 export function BalancesCard({
   publicBalance,
   tokenAddress,
+  walletAddress,
   isBalanceRequested,
   onReveal,
   isTestnet,
@@ -16,6 +17,7 @@ export function BalancesCard({
 }: {
   publicBalance: bigint | null;
   tokenAddress: Address;
+  walletAddress: Address;
   isBalanceRequested: boolean;
   onReveal: () => void;
   isTestnet: boolean;
@@ -29,7 +31,10 @@ export function BalancesCard({
     isLoading: isBalanceLoading,
     isError: isBalanceError,
     error: balanceError,
-  } = useConfidentialBalance({ tokenAddress }, { enabled: isBalanceRequested });
+  } = useConfidentialBalance(
+    { address: tokenAddress, account: walletAddress },
+    { enabled: isBalanceRequested },
+  );
 
   return (
     <div className="card">

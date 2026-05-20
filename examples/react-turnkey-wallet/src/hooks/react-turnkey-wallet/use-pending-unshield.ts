@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { clearPendingUnshield, loadPendingUnshield, indexedDBStorage } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/react-sdk";
+import { clearPendingUnshield, loadPendingUnshield, indexedDBStorage } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import type { Hex } from "viem";
 
 export function usePendingUnshield(selectedPair: TokenWrapperPairWithMetadata | null) {
