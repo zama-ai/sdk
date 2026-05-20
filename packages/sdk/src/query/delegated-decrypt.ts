@@ -1,11 +1,11 @@
 import type { Address } from "viem";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
-import type { DecryptHandle } from "./user-decrypt";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedInput } from "./user-decrypt";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 export interface DelegatedDecryptMutationParams {
-  handles: DecryptHandle[];
+  encryptedInputs: EncryptedInput[];
   delegatorAddress: Address;
 }
 
@@ -14,11 +14,11 @@ export function delegatedDecryptMutationOptions(
 ): MutationFactoryOptions<
   readonly ["zama.delegatedDecrypt"],
   DelegatedDecryptMutationParams,
-  Readonly<Record<Handle, ClearValueType>>
+  Readonly<Record<EncryptedValue, ClearValue>>
 > {
   return {
     mutationKey: ["zama.delegatedDecrypt"],
     mutationFn: async (params) =>
-      sdk.decryption.delegatedDecrypt(params.handles, params.delegatorAddress),
+      sdk.decryption.delegatedDecrypt(params.encryptedInputs, params.delegatorAddress),
   };
 }

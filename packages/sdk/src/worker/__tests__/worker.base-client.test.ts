@@ -317,7 +317,7 @@ describe("BaseWorkerClient", () => {
 
     const params = {
       chainId: 1,
-      handles: [HANDLE],
+      encryptedValues: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,
@@ -398,11 +398,11 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, { clearValues: {} });
 
-    await client.publicDecrypt({ chainId: 1, handles: [HANDLE] });
+    await client.publicDecrypt({ chainId: 1, encryptedValues: [HANDLE] });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("PUBLIC_DECRYPT");
-    expect(lastCall.payload).toEqual({ chainId: 1, handles: [HANDLE] });
+    expect(lastCall.payload).toEqual({ chainId: 1, encryptedValues: [HANDLE] });
   });
 
   test("createEIP712 sends correct type and payload", async () => {
@@ -448,7 +448,7 @@ describe("BaseWorkerClient", () => {
 
     const params = {
       chainId: 1,
-      handles: [HANDLE],
+      encryptedValues: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,

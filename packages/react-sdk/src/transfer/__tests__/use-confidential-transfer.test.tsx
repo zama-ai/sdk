@@ -265,9 +265,11 @@ describe("useConfidentialTransfer", () => {
     // transaction write so the post-transfer refetch sees handleB.
     let currentHandle: string = handle;
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-    vi.mocked(relayer.userDecrypt).mockImplementation(async ({ handles }: { handles: Hex[] }) => ({
-      [handles[0]]: handles[0] === handle ? 1000n : 500n,
-    }));
+    vi.mocked(relayer.userDecrypt).mockImplementation(
+      async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
+        [encryptedValues[0]]: encryptedValues[0] === handle ? 1000n : 500n,
+      }),
+    );
     vi.mocked(signer.writeContract).mockImplementation(async () => {
       currentHandle = handleB;
       return "0xtxhash";

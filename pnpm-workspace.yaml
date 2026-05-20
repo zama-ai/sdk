@@ -5,8 +5,11 @@ packages:
 
 allowBuilds:
   "@ast-grep/cli": true
+  bufferutil: false
+  esbuild: true
   keccak: false
   sharp: false
+  utf-8-validate: false
 
 overrides:
   minimatch: "10.2.4"

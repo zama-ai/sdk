@@ -7,7 +7,7 @@ import {
   type Hex,
 } from "viem";
 
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
 import {
   confidentialBalanceOfContract,
@@ -145,7 +145,7 @@ export function writeUnwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Handle,
+  encryptedBalance: EncryptedValue,
 ) {
   return ethersWrite(signer, unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance));
 }
@@ -153,7 +153,7 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   signer: EthersTransactionSigner,
   wrapper: Address,
-  unwrapRequestId: Handle,
+  unwrapRequestId: EncryptedValue,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {

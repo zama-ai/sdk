@@ -78,10 +78,11 @@ export interface RelayerWebConfig {
 /** Result from encryption operation. Alias for {@link InputProofBytesType}. */
 export type EncryptResult = InputProofBytesType;
 
-/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). Alias for {@link Bytes32Hex}. */
-export type Handle = Bytes32Hex;
+/** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
+export type EncryptedValue = Bytes32Hex;
 
-export type { ClearValueType };
+/** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
+export type ClearValue = ClearValueType;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -108,7 +109,7 @@ export interface EncryptParams {
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;
@@ -128,7 +129,7 @@ export type PublicDecryptResult = PublicDecryptResults;
  */
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
-/** TFHE public key */
+/** FHE encryption key */
 export interface PublicKeyData {
   publicKeyId: string;
   publicKey: Uint8Array;
@@ -141,7 +142,7 @@ export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicPara
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;

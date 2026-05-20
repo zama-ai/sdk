@@ -29,8 +29,8 @@ export type {
   EncryptResult,
   EncryptParams,
   EncryptInput,
-  Handle,
-  ClearValueType,
+  EncryptedValue,
+  ClearValue,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,
@@ -64,7 +64,7 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
-export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
+export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptHandleItem,
   BatchDecryptHandlesResult,

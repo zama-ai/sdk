@@ -86,18 +86,18 @@ const relayer = new RelayerCleartext(hardhat);
 
 The cleartext relayer implements the full `RelayerSDK` interface:
 
-| Method                                  | Description                                                |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `generateKeypair()`                     | Returns a random mock keypair.                             |
-| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof. |
-| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.        |
-| `publicDecrypt(handles)`                | Reads plaintext for handles allowed for public decryption. |
-| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.               |
-| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.          |
-| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.     |
-| `getPublicKey()`                        | Returns a mock public key.                                 |
-| `getPublicParams(bits)`                 | Returns mock public parameters.                            |
-| `terminate()`                           | No-op — no resources to release.                           |
+| Method                                  | Description                                                         |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `generateKeypair()`                     | Returns a random mock keypair.                                      |
+| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
+| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
+| `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
+| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
+| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
+| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
+| `getPublicKey()`                        | Returns a mock public key.                                          |
+| `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
+| `terminate()`                           | No-op — no resources to release.                                    |
 
 {% hint style="info" %}
 `requestZKProofVerification` throws a `ConfigurationError` — ZK proofs are not supported in cleartext mode.

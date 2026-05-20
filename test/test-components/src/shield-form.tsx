@@ -39,6 +39,7 @@ export function ShieldForm({
         type="text"
         name="amount"
         placeholder="Amount"
+        aria-label="Amount"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"

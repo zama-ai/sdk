@@ -100,7 +100,7 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
-      zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
+      zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_LOWER),
     ];
 
     for (const key of parameterizedKeys) {
@@ -164,8 +164,8 @@ describe("zamaQueryKeys", () => {
       [zamaQueryKeys.hasPermit.scope([TOKEN_LOWER]), zamaQueryKeys.hasPermit.scope([TOKEN_UPPER])],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER),
+        zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_LOWER),
+        zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_UPPER),
       ],
     ];
 

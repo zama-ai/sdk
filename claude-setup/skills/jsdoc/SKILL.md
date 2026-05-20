@@ -215,7 +215,7 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 // GOOD — protocol struct needs a one-liner (domain-specific fields)
 /** Parameters for a user-decrypt request to the KMS relayer. Produced by the EIP-712 signing flow. */
 export interface UserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   publicKey: Hex;
   privateKey: Hex;
@@ -232,7 +232,7 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // BAD — protocol struct with no context (reader has no idea if they construct this)
 export interface UserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   // ... 8 more opaque fields
 }
 
@@ -272,7 +272,7 @@ Just the tag. No description — internal consumers can read the code.
 ```ts
 // GOOD — pure internal re-export
 /** @internal */
-export type DecryptedHandlesMap = Map<Handle, ClearValueType>;
+export type DecryptedHandlesMap = Map<EncryptedValue, ClearValue>;
 
 // GOOD — internal event emitter on a base class (trivial, name is clear)
 /** @internal */
@@ -285,7 +285,7 @@ protected emit(partial: ZamaSDKEventInput): void {
  *
  * @internal
  */
-export type DecryptedHandlesMap = Map<Handle, ClearValueType>;
+export type DecryptedHandlesMap = Map<EncryptedValue, ClearValue>;
 
 // BAD — protected extension point reduced to bare @internal (loses error contract)
 /** @internal */

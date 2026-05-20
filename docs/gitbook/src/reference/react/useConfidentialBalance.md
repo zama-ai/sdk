@@ -5,7 +5,7 @@ description: Decrypt a single token's confidential balance.
 
 # useConfidentialBalance
 
-Decrypt a single token's confidential balance. Calls `token.balanceOf(owner)` which reads the encrypted handle on-chain and decrypts it via the SDK. Previously decrypted values are served from cache instantly — the expensive relayer round-trip only happens when the on-chain handle changes. Pass `refetchInterval` to poll for updates.
+Decrypt a single token's confidential balance. Calls `token.balanceOf(owner)` which reads the encrypted value on-chain and decrypts it via the SDK. Cached clear values are served instantly — the expensive relayer round-trip only happens when the on-chain encrypted value changes. Pass `refetchInterval` to poll for updates.
 
 ## Import
 

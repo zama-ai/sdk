@@ -1,6 +1,6 @@
 ---
 title: Encrypt & decrypt
-description: How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+description: How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 ---
 
 # Encrypt & decrypt
@@ -11,7 +11,7 @@ Before starting, make sure your project is set up following the [Configuration](
 
 ## Example
 
-Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted handle, and decrypts it:
+Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted value, and decrypts it:
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
@@ -25,10 +25,12 @@ function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
   const { address: userAddress } = useAccount();
-  const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
+  const [inputs, setInputs] = useState<
+    { encryptedValue: string; contractAddress: `0x${string}` }[]
+  >([]);
 
-  // Fires when handles are non-empty.
-  const { data: decrypted } = useUserDecrypt({ handles });
+  // Fires when inputs are non-empty.
+  const { data: decrypted } = useUserDecrypt(inputs);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,15 +52,15 @@ function ConfidentialRoundTrip() {
       args: [bytesToHex(encrypted.handles[0]!), bytesToHex(encrypted.inputProof)],
     });
 
-    // 3. Read the handle back — setting handles triggers decryption
-    const handle = (await sdk.provider.readContract({
+    // 3. Read the encrypted value back — setting inputs triggers decryption
+    const encryptedValue = (await sdk.provider.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
       args: [userAddress],
     })) as string;
 
-    setHandles([{ handle, contractAddress }]);
+    setInputs([{ encryptedValue, contractAddress }]);
   };
 
   return (
@@ -66,8 +68,8 @@ function ConfidentialRoundTrip() {
       <button type="submit" disabled={encrypt.isPending}>
         Encrypt → Store → Decrypt
       </button>
-      {decrypted && handles[0] && (
-        <output>Decrypted: {decrypted[handles[0].handle]?.toString()}</output>
+      {decrypted && inputs[0] && (
+        <output>Decrypted: {decrypted[inputs[0].encryptedValue]?.toString()}</output>
       )}
     </form>
   );
@@ -387,20 +389,18 @@ function App() {
 }
 ```
 
-#### Decrypting handles from multiple contracts
+#### Decrypting encrypted values from multiple contracts
 
-`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
+`useUserDecrypt` automatically groups inputs by contract address and issues one decryption request per contract:
 
 ```tsx
-const { data } = useUserDecrypt({
-  handles: [
-    { handle: "0xhandle1...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle2...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle3...", contractAddress: "0xTokenB" },
-  ],
-});
+const { data } = useUserDecrypt([
+  { encryptedValue: "0xvalue1...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue2...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue3...", contractAddress: "0xTokenB" },
+]);
 
-// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
 
 #### Persistent caching

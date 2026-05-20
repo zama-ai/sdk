@@ -205,34 +205,34 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose handles span the covered set proceed without a wallet prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose encrypted values span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decryption.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.decryption.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+const a = await sdk.decryption.userDecrypt([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
 ### decryption.userDecrypt
 
-`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
+`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
 
-Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written through the SDK's internal CachingService so subsequent calls for the same handles return instantly.
+Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
-Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
+Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
 
-When the relayer is actually called, permits are resolved from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable permit scope regardless of which handles happen to be cached. If every handle is zero or already cached, no permits are needed and no wallet prompt is shown.
+When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
 const values = await sdk.decryption.userDecrypt([
-  { handle: balanceHandle, contractAddress: cUSDT },
-  { handle: flagHandle, contractAddress: myContract },
+  { encryptedValue: balanceHandle, contractAddress: cUSDT },
+  { encryptedValue: flagHandle, contractAddress: myContract },
 ]);
 console.log(values[balanceHandle]); // 1000n
 ```
 
-To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
+To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
 
 The `onEvent` callback is a single function, so for multi-listener observability you can bridge it into a standard event bus. Pick whichever matches your runtime:
 
@@ -259,17 +259,20 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 
 window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
-  const { durationMs, handles, result } = e.detail;
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
+  const { durationMs, encryptedValues, result } = e.detail;
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
   }
 });
 
 window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
-  const { error, durationMs, handles } = e.detail;
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+  const { error, durationMs, encryptedValues } = e.detail;
+  console.error(
+    `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+    error,
+  );
 });
 ```
 
@@ -297,17 +300,23 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
   }
 });
 
-emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
-});
+emitter.on(
+  ZamaSDKEvents.DecryptError,
+  ({ error, durationMs, encryptedValues }: DecryptErrorEvent) => {
+    console.error(
+      `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+      error,
+    );
+  },
+);
 ```
 
 {% endtab %}

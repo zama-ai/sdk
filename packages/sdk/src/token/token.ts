@@ -24,7 +24,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
@@ -45,8 +45,8 @@ import type { ZamaSDK } from "../zama-sdk";
 export interface BatchDecryptAsOptions {
   /** The address of the account that delegated decryption rights. */
   delegatorAddress: Address;
-  /** Pre-fetched encrypted handles. When omitted, handles are fetched from the chain. */
-  handles?: Handle[];
+  /** Pre-fetched encrypted values. When omitted, they are fetched from the chain. */
+  encryptedValues?: EncryptedValue[];
   /**
    * The account whose on-chain balance to read. Defaults to the delegator
    * address, which is the common case (the delegator grants permission to
@@ -164,30 +164,30 @@ export class Token {
    */
   async balanceOf(owner: Address): Promise<bigint> {
     const ownerAddress = getAddress(owner);
-    const handle = await this.readConfidentialBalanceOf(ownerAddress);
+    const encryptedValue = await this.readConfidentialBalanceOf(ownerAddress);
     const result = await this.sdk.decryption.userDecrypt([
-      { handle, contractAddress: this.address },
+      { encryptedValue, contractAddress: this.address },
     ]);
-    const value = result[handle];
+    const value = result[encryptedValue];
     if (value === undefined) {
-      throw new DecryptionFailedError(`Decryption returned no value for handle ${handle}`);
+      throw new DecryptionFailedError(`Decryption returned no value for ${encryptedValue}`);
     }
-    assertBigint(value, "balanceOf: result[handle]");
+    assertBigint(value, "balanceOf: result[encryptedValue]");
     return value;
   }
 
   /**
-   * Return the raw encrypted balance handle without decrypting.
+   * Return the raw encrypted balance without decrypting.
    *
    * @param owner - Balance owner address.
-   * @returns The encrypted balance handle as a hex string.
+   * @returns The encrypted balance as a hex string.
    *
    * @example
    * ```ts
-   * const handle = await token.confidentialBalanceOf("0xOwner");
+   * const encryptedValue = await token.confidentialBalanceOf("0xOwner");
    * ```
    */
-  async confidentialBalanceOf(owner: Address): Promise<Handle> {
+  async confidentialBalanceOf(owner: Address): Promise<EncryptedValue> {
     return this.readConfidentialBalanceOf(getAddress(owner));
   }
 
@@ -196,8 +196,8 @@ export class Token {
    * The connected signer acts as the delegatee who has been granted permission
    * by the delegator to decrypt their balance.
    *
-   * Decrypted values are cached in storage keyed by `(account, token, handle)`.
-   * Because every on-chain balance change produces a new encrypted handle,
+   * Clear values are cached in storage keyed by `(account, token, encryptedValue)`.
+   * Because every on-chain balance change produces a new encrypted value,
    * stale cache entries are never served. Cache write failures are silently
    * ignored — they do not affect the returned value.
    *
@@ -227,24 +227,24 @@ export class Token {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
-    const handle = await this.readConfidentialBalanceOf(normalizedAccount);
-    if (isZeroHandle(handle)) {
+    const encryptedValue = await this.readConfidentialBalanceOf(normalizedAccount);
+    if (isZeroHandle(encryptedValue)) {
       return 0n;
     }
 
     const result = await this.sdk.decryption.delegatedDecrypt(
-      [{ handle, contractAddress: this.address }],
+      [{ encryptedValue, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
     );
 
-    const value = result[handle];
+    const value = result[encryptedValue];
     if (value === undefined) {
       throw new DecryptionFailedError(
-        `Delegated decryption returned no value for handle ${handle}`,
+        `Delegated decryption returned no value for ${encryptedValue}`,
       );
     }
-    assertBigint(value, "decryptBalanceAs: result[handle]");
+    assertBigint(value, "decryptBalanceAs: result[encryptedValue]");
     return value;
   }
 
@@ -333,7 +333,7 @@ export class Token {
    *
    * **Error handling:** If a per-token decryption fails and no `onError` callback
    * is provided, errors are collected and thrown as an aggregated
-   * `DecryptionFailedError`. When the relayer returns no value for a handle,
+   * `DecryptionFailedError`. When the relayer returns no value for an encrypted value,
    * a `DecryptionFailedError` is thrown for that token (never silently returns `0n`).
    * Pass `onError: () => 0n` to opt into the silent zero behavior.
    *
@@ -367,33 +367,33 @@ export class Token {
       ? getAddress(options.accountAddress)
       : getAddress(options.delegatorAddress);
     const maxConcurrency = options.maxConcurrency ?? 10;
-    if (options.handles && tokens.length !== options.handles.length) {
+    if (options.encryptedValues && tokens.length !== options.encryptedValues.length) {
       throw new DecryptionFailedError(
-        `tokens.length (${tokens.length}) must equal handles.length (${options.handles.length})`,
+        `tokens.length (${tokens.length}) must equal encryptedValues.length (${options.encryptedValues.length})`,
       );
     }
-    const resolvedHandles =
-      options.handles ??
+    const resolvedEncryptedValues =
+      options.encryptedValues ??
       (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
 
-    const decryptRequests: Array<{ token: Token; handle: Handle }> = [];
+    const decryptRequests: Array<{ token: Token; encryptedValue: EncryptedValue }> = [];
     for (const [index, token] of tokens.entries()) {
-      const handle = resolvedHandles[index];
-      if (!handle || errors.has(token.address)) {
+      const encryptedValue = resolvedEncryptedValues[index];
+      if (!encryptedValue || errors.has(token.address)) {
         continue;
       }
-      if (isZeroHandle(handle)) {
+      if (isZeroHandle(encryptedValue)) {
         // Zero balance → skip the relayer; no decryption needed.
         results.set(token.address, 0n);
       } else {
-        decryptRequests.push({ token, handle });
+        decryptRequests.push({ token, encryptedValue });
       }
     }
 
     if (decryptRequests.length > 0) {
       const decrypted = await sdk.decryption.delegatedBatchDecrypt({
-        handles: decryptRequests.map(({ token, handle }) => ({
-          handle,
+        encryptedInputs: decryptRequests.map(({ token, encryptedValue }) => ({
+          encryptedValue,
           contractAddress: token.address,
         })),
         delegatorAddress: options.delegatorAddress,
@@ -415,12 +415,12 @@ export class Token {
           errors.set(
             request.token.address,
             new DecryptionFailedError(
-              `Batch delegated decryption returned no value for handle ${item.handle} on token ${request.token.address}`,
+              `Batch delegated decryption returned no value for ${item.encryptedValue} on token ${request.token.address}`,
             ),
           );
           continue;
         }
-        assertBigint(value, "batchDecryptBalancesAs: result[handle]");
+        assertBigint(value, "batchDecryptBalancesAs: result[encryptedValue]");
         results.set(request.token.address, value);
       }
     }
@@ -463,7 +463,7 @@ export class Token {
     accountAddress: Address,
     errors: Map<Address, ZamaError>,
     maxConcurrency: number,
-  ): Promise<Array<Handle | undefined>> {
+  ): Promise<Array<EncryptedValue | undefined>> {
     const outcomes = await pLimit(
       tokens.map((token) => async () => {
         try {
@@ -478,14 +478,14 @@ export class Token {
       maxConcurrency,
     );
 
-    const handles: Array<Handle | undefined> = [];
+    const encryptedValues: Array<EncryptedValue | undefined> = [];
     for (const [index, token] of tokens.entries()) {
       const outcome = outcomes[index];
       if (!outcome) {
         continue;
       }
       if (outcome.status === "fulfilled") {
-        handles[index] = outcome.value;
+        encryptedValues[index] = outcome.value;
         continue;
       }
       if (isFatalBatchError(outcome.reason)) {
@@ -500,7 +500,7 @@ export class Token {
             }),
       );
     }
-    return handles;
+    return encryptedValues;
   }
 
   // WRITE OPERATIONS
@@ -666,11 +666,11 @@ export class Token {
   // PROTECTED HELPERS
 
   /**
-   * Read the on-chain encrypted balance handle for a given owner.
+   * Read the on-chain encrypted balance for a given owner.
    *
    * @internal
    */
-  protected async readConfidentialBalanceOf(owner: Address): Promise<Handle> {
+  protected async readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue> {
     return await this.sdk.provider.readContract(confidentialBalanceOfContract(this.address, owner));
   }
 
@@ -759,4 +759,4 @@ export class Token {
 }
 
 /** @internal */
-export type DecryptedHandlesMap = Map<Handle, ClearValueType>;
+export type DecryptedHandlesMap = Map<EncryptedValue, ClearValue>;

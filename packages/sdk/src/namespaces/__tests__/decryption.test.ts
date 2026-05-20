@@ -10,12 +10,12 @@ describe("Decryption", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.userDecrypt([{ handle, contractAddress: TOKEN }]),
+        sdk.decryption.userDecrypt([{ encryptedValue: handle, contractAddress: TOKEN }]),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
     test("forwards handles to the underlying service", async ({ sdk, relayer, handle }) => {
-      await sdk.decryption.userDecrypt([{ handle, contractAddress: TOKEN }]);
+      await sdk.decryption.userDecrypt([{ encryptedValue: handle, contractAddress: TOKEN }]);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
   });
@@ -24,7 +24,10 @@ describe("Decryption", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.delegatedDecrypt([{ handle, contractAddress: TOKEN }], DELEGATOR),
+        sdk.decryption.delegatedDecrypt(
+          [{ encryptedValue: handle, contractAddress: TOKEN }],
+          DELEGATOR,
+        ),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
   });

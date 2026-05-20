@@ -39,4 +39,4 @@ In addition to everything inherited from [`Token`](Token.md):
 - `resumeUnshield(unwrapTxHash, options?)` — resume an in-flight unshield
 - `unwrap(amount)` — low-level unwrap (returns request id)
 - `unwrapAll()` — low-level unwrap-all
-- `finalizeUnwrap(requestIdOrHandle)` — finalize a pending unwrap
+- `finalizeUnwrap(unwrapRequestIdOrAmount)` — finalize a pending unwrap
