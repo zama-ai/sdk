@@ -123,4 +123,50 @@ describe("PermissionStore", () => {
     expect(surviving).toHaveLength(1);
     expect(surviving[0]!.signedContractAddresses).toEqual([TOKEN_B]);
   });
+
+  test("replace swaps the entry identified by signature", async ({ store }) => {
+    const SIG_OLD = `0x${"aa".repeat(65)}` as const;
+    const SIG_NEW = `0x${"bb".repeat(65)}` as const;
+    const SIG_OTHER = `0x${"cc".repeat(65)}` as const;
+
+    await store.append(directScope, [
+      makePermission({ signedContractAddresses: [TOKEN_A], signature: SIG_OLD }),
+      makePermission({ signedContractAddresses: [TOKEN_B], signature: SIG_OTHER }),
+    ]);
+
+    await store.replace(
+      directScope,
+      SIG_OLD,
+      makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B], signature: SIG_NEW }),
+    );
+
+    const list = await store.list(directScope);
+    const signatures = list.map((p) => p.signature).toSorted();
+    expect(signatures).toEqual([SIG_OTHER, SIG_NEW].toSorted());
+    expect(list.find((p) => p.signature === SIG_NEW)?.signedContractAddresses).toEqual([
+      TOKEN_A,
+      TOKEN_B,
+    ]);
+    expect(list.find((p) => p.signature === SIG_OLD)).toBeUndefined();
+  });
+
+  test("replace with an unknown signature behaves like append", async ({ store }) => {
+    const SIG_EXISTING = `0x${"dd".repeat(65)}` as const;
+    const SIG_NEW = `0x${"ee".repeat(65)}` as const;
+    const SIG_MISSING = `0x${"ff".repeat(65)}` as const;
+
+    await store.append(directScope, [
+      makePermission({ signedContractAddresses: [TOKEN_A], signature: SIG_EXISTING }),
+    ]);
+
+    await store.replace(
+      directScope,
+      SIG_MISSING,
+      makePermission({ signedContractAddresses: [TOKEN_B], signature: SIG_NEW }),
+    );
+
+    const list = await store.list(directScope);
+    expect(list).toHaveLength(2);
+    expect(list.map((p) => p.signature).toSorted()).toEqual([SIG_EXISTING, SIG_NEW].toSorted());
+  });
 });
