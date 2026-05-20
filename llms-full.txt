@@ -6983,14 +6983,14 @@ import {
 
 ## Wrapping and unwrapping
 
-| Builder                                                              | What it does                              |
-| -------------------------------------------------------------------- | ----------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                        |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                            |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value     |
-| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
-| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
-| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
+| Builder                                                              | What it does                          |
+| -------------------------------------------------------------------- | ------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                    |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                        |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                       |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address        |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply  |
 
 Use `totalSupplyQueryOptions` / React `useTotalSupply` for cached reads — they call
 `inferredTotalSupply()` under the hood.
@@ -7418,13 +7418,13 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                                                                    |
-| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                            |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                      |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId`                                   |
-| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId`                                   |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                      |
+| Decoder                           | Event type             | Description                                  |
+| --------------------------------- | ---------------------- | -------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts          |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";

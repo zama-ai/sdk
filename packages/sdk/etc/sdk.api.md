@@ -6113,9 +6113,6 @@ export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDe
 // @public
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
 
-// @public @deprecated (undocumented)
-export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null;
-
 // @public
 export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null;
 
@@ -6468,9 +6465,6 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
-
-// @public
-export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -7260,26 +7254,6 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -7294,21 +7268,6 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -9578,26 +9537,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -9612,21 +9551,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -11734,7 +11658,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -14920,7 +14844,7 @@ export class Token {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -14953,30 +14877,9 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 export const Topics: {
     readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
-    readonly UnwrapRequested: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-    readonly UnwrapRequestedLegacy: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalized: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalizedLegacy: `0x${string}`; /** @deprecated Use `Topics.UnwrapFinalized`. */
-    readonly UnwrappedFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
+    readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+    readonly UnwrapFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: `0x${string}`;
-};
-
-// @public @deprecated
-export function totalSupplyContract(wrapperAddress: Address): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly inputs: readonly [];
-        readonly name: "totalSupply";
-        readonly outputs: readonly [{
-            readonly internalType: "uint256";
-            readonly name: "";
-            readonly type: "uint256";
-        }];
-        readonly stateMutability: "view";
-        readonly type: "function";
-    }];
-    readonly functionName: "totalSupply";
-    readonly args: readonly [];
 };
 
 // @public (undocumented)
@@ -15818,26 +15721,6 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -15852,21 +15735,6 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -18774,20 +18642,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
 };
 
-// @public @deprecated (undocumented)
-export interface UnwrappedFinalizedEvent {
-    // (undocumented)
-    readonly cleartextAmount: bigint;
-    // (undocumented)
-    readonly encryptedAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedFinalized";
-    // (undocumented)
-    readonly receiver: Address;
-    // (undocumented)
-    readonly unwrapRequestId?: EncryptedValue;
-}
-
 // @public
 export interface UnwrappedStartedEvent {
     readonly burnAmount: EncryptedValue;
@@ -19639,26 +19493,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -19673,21 +19507,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -20157,10 +19976,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BCyTf9iS.d.ts:19754:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BCyTf9iS.d.ts:19883:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BCyTf9iS.d.ts:19985:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BCyTf9iS.d.ts:19986:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cl9a52zi.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cl9a52zi.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cl9a52zi.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cl9a52zi.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
