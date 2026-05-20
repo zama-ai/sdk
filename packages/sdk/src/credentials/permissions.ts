@@ -68,8 +68,9 @@ export function findPermitToWiden(
     return null;
   }
 
-  const overlap = (p: Permission) =>
-    p.signedContractAddresses.reduce((n, a) => n + (requestedSet.has(a) ? 1 : 0), 0);
+  function overlap(p: Permission) {
+    return p.signedContractAddresses.reduce((n, a) => n + (requestedSet.has(a) ? 1 : 0), 0);
+  }
 
   const maxOverlap = Math.max(...feasible.map(overlap));
   const topTier = feasible.filter((p) => overlap(p) === maxOverlap);
