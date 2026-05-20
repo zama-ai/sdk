@@ -3,9 +3,8 @@ import type { ZamaSDKEvent, ZamaSDKEventType } from "../events/sdk-events";
 /**
  * Type map for dispatching SDK events on `window` via `CustomEvent`.
  *
- * Compose into your own `WindowEventMap` augmentation, or import the
- * side-effect entry `@zama-fhe/sdk/web/global` to enable typed
- * `window.addEventListener("transfer:submitted", …)` everywhere.
+ * Compose into your own `WindowEventMap` augmentation in app code to enable
+ * typed `window.addEventListener("transfer:submitted", …)`.
  *
  * @example
  * ```ts

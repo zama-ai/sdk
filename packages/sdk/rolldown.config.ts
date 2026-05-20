@@ -23,7 +23,6 @@ const entryPoints = {
   "cleartext/index": "src/relayer/cleartext/index.ts",
   "query/index": "src/query/index.ts",
   "web/index": "src/web/index.ts",
-  "web/global": "src/web/global.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
 };

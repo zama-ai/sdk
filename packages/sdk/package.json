@@ -79,17 +79,6 @@
       },
       "default": "./dist/esm/web/index.js"
     },
-    "./web/global": {
-      "import": {
-        "types": "./dist/esm/web/global.d.ts",
-        "default": "./dist/esm/web/global.js"
-      },
-      "require": {
-        "types": "./dist/esm/web/global.d.ts",
-        "default": "./dist/cjs/web/global.cjs"
-      },
-      "default": "./dist/esm/web/global.js"
-    },
     "./node": {
       "import": {
         "types": "./dist/esm/node/index.d.ts",
@@ -128,9 +117,6 @@
       ],
       "web": [
         "./dist/esm/web/index.d.ts"
-      ],
-      "web/global": [
-        "./dist/esm/web/global.d.ts"
       ],
       "node": [
         "./dist/esm/node/index.d.ts"
