@@ -28,6 +28,7 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { Signer } from 'ethers';
 import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
+import { z } from 'zod/mini';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
@@ -8773,9 +8774,6 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = EncryptedValue;
-
-// @public
 export const hardhat: {
     readonly id: 31337;
     readonly gatewayChainId: 10901;
@@ -11756,11 +11754,10 @@ export interface PendingUnshieldRequest {
     readonly unwrapTxHash: Hex;
 }
 
-// Warning: (ae-forgotten-export) The symbol "output" needs to be exported by the entry point index.d.ts
 // Warning: (ae-forgotten-export) The symbol "PermissionSchema" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type Permission = output<typeof PermissionSchema>;
+export type Permission = z.infer<typeof PermissionSchema>;
 
 // @public
 export class Permits {
@@ -14718,7 +14715,7 @@ export class SigningRejectedError extends ZamaError {
 // Warning: (ae-forgotten-export) The symbol "StoredKeypairSchema" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type StoredKeypair = output<typeof StoredKeypairSchema>;
+export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -20160,10 +20157,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DeODWEh0.d.ts:20446:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DeODWEh0.d.ts:20575:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DeODWEh0.d.ts:20677:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DeODWEh0.d.ts:20678:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19761:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19890:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19992:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DDUkAfKU.d.ts:19993:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
