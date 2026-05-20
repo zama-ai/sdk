@@ -13,7 +13,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, test } from "vitest";
 import { hardhat } from "../../../chains";
-import type { Handle } from "../../relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { RelayerCleartext } from "../relayer-cleartext";
 
@@ -46,7 +46,7 @@ interface MockCall {
   params: unknown[];
 }
 type UserDecryptParams = Parameters<RelayerCleartext["userDecrypt"]>[0];
-const asHandle = (value: string): Handle => value as Handle;
+const asHandle = (value: string): EncryptedValue => value as EncryptedValue;
 
 function createMockProvider(options: MockClientOptions = {}) {
   const calls: MockCall[] = [];
@@ -156,7 +156,7 @@ function createUserDecryptParams(
 ): UserDecryptParams {
   const { encryptedValues, ...rest } = overrides;
   return {
-    encryptedValues: encryptedValues as Handle[],
+    encryptedValues: encryptedValues as EncryptedValue[],
     contractAddress: CONTRACT_ADDRESS,
     signedContractAddresses: [CONTRACT_ADDRESS],
     privateKey: `0x${"01".repeat(32)}`,
@@ -273,13 +273,12 @@ describe("RelayerCleartext", () => {
       chainId: BigInt(hardhatCleartextConfig.id),
       verifyingContract: hardhatCleartextConfig.verifyingContractAddressDecryption,
     });
-    expect(typedData.types.UserDecryptRequestVerification.map((field) => field.name)).toEqual([
-      "publicKey",
-      "contractAddresses",
-      "startTimestamp",
-      "durationDays",
-      "extraData",
-    ]);
+    expect(
+      ("UserDecryptRequestVerification" in typedData.types
+        ? typedData.types.UserDecryptRequestVerification
+        : []
+      ).map((field) => field.name),
+    ).toEqual(["publicKey", "contractAddresses", "startTimestamp", "durationDays", "extraData"]);
     expect(typedData.message).toEqual({
       publicKey: "0x" + "ab".repeat(32),
       contractAddresses: [CONTRACT_ADDRESS],
@@ -559,7 +558,7 @@ describe("RelayerCleartext", () => {
     const keys = Object.keys(result);
     expect(keys).toHaveLength(1);
     expect(keys[0]).toBe(handleUpper);
-    expect(result[keys[0] as Handle]).toBe(55n);
+    expect(result[keys[0] as EncryptedValue]).toBe(55n);
   });
 
   test("userDecrypt decodes ebool handle as boolean", async () => {

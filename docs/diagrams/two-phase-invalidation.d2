@@ -21,13 +21,13 @@ tx-confirm: "Transaction confirmed\non-chain" {
   style.font-size: 14
 }
 
-invalidate: "SDK invalidates\nhandle query cache" {
+invalidate: "SDK invalidates\nencryptedValue query cache" {
   style.fill: "#FCE4EC"
   style.stroke: "#C62828"
   style.font-size: 14
 }
 
-phase1: "Phase 1 fires immediately\n→ detects new handle" {
+phase1: "Phase 1 fires immediately\n→ detects new encryptedValue" {
   style.fill: "#E3F2FD"
   style.stroke: "#1565C0"
   style.font-size: 14
@@ -49,5 +49,5 @@ ui: "UI updates\n(within seconds)" {
 mutation -> tx-confirm
 tx-confirm -> invalidate: "onSuccess callback"
 invalidate -> phase1: "bypasses polling interval"
-phase1 -> phase2: "handle changed"
+phase1 -> phase2: "encryptedValue changed"
 phase2 -> ui

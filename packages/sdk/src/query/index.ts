@@ -130,7 +130,6 @@ export type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
-  Handle,
 } from "../relayer/relayer-sdk.types";
 export type {
   DelegatedUserDecryptParams,

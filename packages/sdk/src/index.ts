@@ -30,7 +30,6 @@ export type {
   EncryptParams,
   EncryptInput,
   EncryptedValue,
-  Handle,
   ClearValue,
   UserDecryptParams,
   PublicDecryptResult,

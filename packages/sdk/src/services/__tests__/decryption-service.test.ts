@@ -1,7 +1,7 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
 import type { EncryptedInput } from "../../query/user-decrypt";
-import type { Handle } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
@@ -9,11 +9,11 @@ import { CachingService } from "../caching-service";
 
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
-const HANDLE_A = `0x${"aa".repeat(32)}` as Handle;
-const HANDLE_B = `0x${"bb".repeat(32)}` as Handle;
-const ZERO_HANDLE = `0x${"00".repeat(32)}` as Handle;
+const HANDLE_A = `0x${"aa".repeat(32)}` as EncryptedValue;
+const HANDLE_B = `0x${"bb".repeat(32)}` as EncryptedValue;
+const ZERO_HANDLE = `0x${"00".repeat(32)}` as EncryptedValue;
 
-function handles(items: Array<[Handle, Address]>): EncryptedInput[] {
+function handles(items: Array<[EncryptedValue, Address]>): EncryptedInput[] {
   return items.map(([encryptedValue, contractAddress]) => ({
     encryptedValue,
     contractAddress,
