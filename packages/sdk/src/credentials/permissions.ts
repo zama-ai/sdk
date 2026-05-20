@@ -47,3 +47,40 @@ export function withoutPermitsTouching(
 export function sortedUnion<T extends string>(a: readonly T[], b: readonly T[]): T[] {
   return [...new Set([...a, ...b])].toSorted();
 }
+
+/**
+ * Pick the in-scope permit best suited to be widened with `uncovered`.
+ *
+ * Returns the candidate whose `signedContractAddresses ∪ uncovered` still fits
+ * the 10-contract cap and that has the largest overlap with `requested`. Ties
+ * broken by most-recent `startTimestamp`. Returns `null` when no candidate fits.
+ */
+export function pickWidenCandidate(
+  permits: readonly Permission[],
+  uncovered: readonly ChecksummedAddress[],
+  requested: readonly ChecksummedAddress[],
+): Permission | null {
+  const requestedSet = new Set(requested);
+  let best: Permission | null = null;
+  let bestOverlap = -1;
+  let bestTs = -1;
+
+  for (const p of permits) {
+    const unionSize = new Set([...p.signedContractAddresses, ...uncovered]).size;
+    if (unionSize > MAX_CONTRACTS_PER_PERMIT) {
+      continue;
+    }
+    let overlap = 0;
+    for (const a of p.signedContractAddresses) {
+      if (requestedSet.has(a)) {
+        overlap++;
+      }
+    }
+    if (overlap > bestOverlap || (overlap === bestOverlap && p.startTimestamp > bestTs)) {
+      best = p;
+      bestOverlap = overlap;
+      bestTs = p.startTimestamp;
+    }
+  }
+  return best;
+}
