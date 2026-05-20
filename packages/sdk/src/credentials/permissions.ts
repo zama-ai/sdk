@@ -42,3 +42,8 @@ export function withoutPermitsTouching(
   const removeSet = new Set(contracts);
   return permissions.filter((p) => !p.signedContractAddresses.some((a) => removeSet.has(a)));
 }
+
+/** Deduplicate and sort the union of two pre-checksummed address lists. */
+export function sortedUnion<T extends string>(a: readonly T[], b: readonly T[]): T[] {
+  return [...new Set([...a, ...b])].toSorted();
+}
