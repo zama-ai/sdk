@@ -32,7 +32,7 @@ describe("useBroadcast", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.broadcast and returns the receipt", async ({
+  test("delegates to sdk.offlineSigning.broadcast and returns the receipt", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -41,7 +41,9 @@ describe("useBroadcast", () => {
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "broadcast").mockResolvedValue(TX_RESULT);
+    const spy = vi
+      .spyOn(result.current.sdk.offlineSigning, "broadcast")
+      .mockResolvedValue(TX_RESULT);
 
     let value: unknown;
     await act(async () => {

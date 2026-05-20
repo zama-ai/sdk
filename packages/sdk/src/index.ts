@@ -98,7 +98,7 @@ export type {
   GenericProvider,
   GenericStorage,
   // Per-kind prepare requests — callers authoring request literals against
-  // `sdk.offline.prepare` / `Token.prepareX` need these names alongside `PreparedFor`.
+  // `sdk.offlineSigning.prepare` / `Token.prepareX` need these names alongside `PreparedFor`.
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,

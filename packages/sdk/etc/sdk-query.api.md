@@ -1328,8 +1328,8 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // Warning: (ae-forgotten-export) The symbol "Offline" needs to be exported by the entry point index.d.ts
-    readonly offline: Offline;
+    // Warning: (ae-forgotten-export) The symbol "OfflineSigning" needs to be exported by the entry point index.d.ts
+    readonly offlineSigning: OfflineSigning;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "Permits" needs to be exported by the entry point index.d.ts
@@ -1380,9 +1380,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-CNpfQV1V.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CNpfQV1V.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CNpfQV1V.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-uZ4yAHRv.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-uZ4yAHRv.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-uZ4yAHRv.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

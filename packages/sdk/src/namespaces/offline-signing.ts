@@ -27,14 +27,14 @@ import type {
  * - **Tier 2 — sign & broadcast (or sign & register) bundled** ({@link signAndBroadcast} / {@link signAndRegister}) — one in-process call, three steps internally.
  * - **Tier 3 — fully decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls.
  *
- * Obtained via `sdk.offline`. "Offline" refers to where the signer's keys
+ * Obtained via `sdk.offlineSigning`. "Offline" refers to where the signer's keys
  * live (out-of-process: HSM, custody control plane, policy engine), not to
  * the methods themselves — {@link broadcast}, {@link signAndBroadcast}, and
  * {@link refresh} are RPC-bound. The SDK never takes custody of
  * signing material; every method that signs runs against the signer object
  * you passed to `createConfig`, in your process; keys stay where they are.
  */
-export class Offline {
+export class OfflineSigning {
   readonly #offlineSigningService: OfflineSigningService;
 
   constructor(offlineSigningService: OfflineSigningService) {
@@ -137,7 +137,7 @@ export class Offline {
 
   /**
    * Persist an externally-signed credential permit. Pair with
-   * `sdk.offline.prepare({ kind: "CredentialPermit", from, contracts })` and an
+   * `sdk.offlineSigning.prepare({ kind: "CredentialPermit", from, contracts })` and an
    * external `signTypedData` call over `prepared.typedData`.
    *
    * Signer-optional: works without a configured signer.

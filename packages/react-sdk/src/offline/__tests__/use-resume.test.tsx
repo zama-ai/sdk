@@ -32,14 +32,14 @@ describe("useResume", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.resume", async ({ renderWithProviders }) => {
+  test("delegates to sdk.offlineSigning.resume", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();
       const mutation = useResume();
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "resume").mockResolvedValue(TX_RESULT);
+    const spy = vi.spyOn(result.current.sdk.offlineSigning, "resume").mockResolvedValue(TX_RESULT);
 
     let value: unknown;
     await act(async () => {

@@ -21,7 +21,7 @@ describe("useSignAndRegister", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("routes a CredentialPermitRequest through sdk.offline.signAndRegister", async ({
+  test("routes a CredentialPermitRequest through sdk.offlineSigning.signAndRegister", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -31,7 +31,7 @@ describe("useSignAndRegister", () => {
     });
 
     const spy = vi
-      .spyOn(result.current.sdk.offline, "signAndRegister")
+      .spyOn(result.current.sdk.offlineSigning, "signAndRegister")
       .mockResolvedValue(PERMIT_RESULT);
 
     const request: CredentialPermitRequest = {

@@ -30,7 +30,7 @@ describe("usePrepare", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.prepare with the request and options", async ({
+  test("delegates to sdk.offlineSigning.prepare with the request and options", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -40,7 +40,7 @@ describe("usePrepare", () => {
     });
 
     const spy = vi
-      .spyOn(result.current.sdk.offline, "prepare")
+      .spyOn(result.current.sdk.offlineSigning, "prepare")
       .mockResolvedValue(PREPARED as never);
 
     const request: TransactionPrepareRequest = {

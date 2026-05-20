@@ -11,7 +11,7 @@ import { useZamaSDK } from "../provider";
 
 /**
  * Tier-2 mutation: bundled in-process prepare + sign + broadcast for a
- * transaction request. Mirrors `sdk.offline.signAndBroadcast(...)` — the
+ * transaction request. Mirrors `sdk.offlineSigning.signAndBroadcast(...)` — the
  * "sign-and-broadcast" entry point of the offline-signing surface.
  *
  * Requires a signer with `signTransaction`. For finer-grained control across

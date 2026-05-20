@@ -13,7 +13,7 @@ type SignAndRegisterResult = CredentialPermitResult | void;
 
 /**
  * Tier-2 mutation: bundled in-process prepare + signTypedData + register for
- * a credential permit. Mirrors `sdk.offline.signAndRegister(...)`. Returns
+ * a credential permit. Mirrors `sdk.offlineSigning.signAndRegister(...)`. Returns
  * the registered permit metadata, or `void` when the permit was already
  * cached and no signature was needed.
  *

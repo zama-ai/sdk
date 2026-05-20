@@ -10,7 +10,7 @@ export interface RefreshPreparedParams {
 }
 
 /**
- * Mutation options for `sdk.offline.refresh` — re-stamps a prepared
+ * Mutation options for `sdk.offlineSigning.refresh` — re-stamps a prepared
  * transaction with the current chain state (nonce, fees, gas limit).
  * The original `prepared` is left untouched (immutable).
  */
@@ -23,6 +23,6 @@ export function refreshPreparedMutationOptions(
 > {
   return {
     mutationKey: ["zama.refreshPrepared"] as const,
-    mutationFn: ({ prepared, options }) => sdk.offline.refresh(prepared, options),
+    mutationFn: ({ prepared, options }) => sdk.offlineSigning.refresh(prepared, options),
   };
 }

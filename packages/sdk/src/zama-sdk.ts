@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
-import { Offline } from "./namespaces/offline";
+import { OfflineSigning } from "./namespaces/offline-signing";
 import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
@@ -50,7 +50,7 @@ export class ZamaSDK {
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
   /** Offline-signing pipeline (`prepare → sign → broadcast`) for HSM, policy-engine, and cross-process custody workflows. */
-  readonly offline: Offline;
+  readonly offlineSigning: OfflineSigning;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #cachingService: CachingService;
@@ -143,7 +143,7 @@ export class ZamaSDK {
       relayer: this.relayer,
       decryptionService: this.#decryptionService,
     });
-    this.offline = new Offline(this.#offlineSigningService);
+    this.offlineSigning = new OfflineSigning(this.#offlineSigningService);
   }
 
   /**

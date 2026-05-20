@@ -30,7 +30,7 @@ describe("useSign", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.sign and returns signed bytes", async ({
+  test("delegates to sdk.offlineSigning.sign and returns signed bytes", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -39,7 +39,7 @@ describe("useSign", () => {
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "sign").mockResolvedValue("0xsigned");
+    const spy = vi.spyOn(result.current.sdk.offlineSigning, "sign").mockResolvedValue("0xsigned");
 
     let value: unknown;
     await act(async () => {

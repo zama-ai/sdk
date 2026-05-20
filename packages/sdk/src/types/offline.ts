@@ -152,7 +152,7 @@ export interface RevokeDelegationRequest {
  * `prepare` with an external `signTypedData`, then call
  * {@link ZamaSDK.registerPermit} to register the signature.
  *
- * @see {@link ExecuteRequest} — the union accepted by `sdk.offline.execute(...)`.
+ * @see {@link ExecuteRequest} — the union accepted by `sdk.offlineSigning.execute(...)`.
  */
 export interface CredentialPermitRequest {
   readonly kind: "CredentialPermit";
@@ -234,7 +234,7 @@ export interface PreparedTransaction {
 
 /**
  * {@link PreparedTransaction} narrowed by `kind` — return type of
- * `sdk.offline.prepare(request)` and the Token-level `prepareX` sugar methods.
+ * `sdk.offlineSigning.prepare(request)` and the Token-level `prepareX` sugar methods.
  * Always a subtype of {@link PreparedTransaction}.
  *
  * Modeled as an intersection (not a standalone interface) so kind-narrowed

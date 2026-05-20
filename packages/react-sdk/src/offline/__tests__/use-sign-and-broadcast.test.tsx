@@ -21,7 +21,7 @@ describe("useSignAndBroadcast", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("routes a TransactionPrepareRequest through sdk.offline.signAndBroadcast", async ({
+  test("routes a TransactionPrepareRequest through sdk.offlineSigning.signAndBroadcast", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -31,7 +31,7 @@ describe("useSignAndBroadcast", () => {
     });
 
     const spy = vi
-      .spyOn(result.current.sdk.offline, "signAndBroadcast")
+      .spyOn(result.current.sdk.offlineSigning, "signAndBroadcast")
       .mockResolvedValue(TX_RESULT);
 
     const request: TransactionPrepareRequest = {
@@ -61,7 +61,7 @@ describe("useSignAndBroadcast", () => {
     });
 
     const boom = new Error("boom");
-    vi.spyOn(result.current.sdk.offline, "signAndBroadcast").mockRejectedValue(boom);
+    vi.spyOn(result.current.sdk.offlineSigning, "signAndBroadcast").mockRejectedValue(boom);
 
     const request: TransactionPrepareRequest = {
       kind: "ConfidentialTransfer",

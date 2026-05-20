@@ -11,7 +11,7 @@ export interface BroadcastParams {
 }
 
 /**
- * Mutation options for `sdk.offline.broadcast` — submits a previously-signed
+ * Mutation options for `sdk.offlineSigning.broadcast` — submits a previously-signed
  * transaction and awaits its receipt. Tx-kind only (compile-time enforced
  * upstream).
  */
@@ -20,7 +20,7 @@ export function broadcastMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult> {
   return {
     mutationKey: ["zama.broadcast"] as const,
-    mutationFn: ({ prepared, signedTx }) => sdk.offline.broadcast(prepared, signedTx),
+    mutationFn: ({ prepared, signedTx }) => sdk.offlineSigning.broadcast(prepared, signedTx),
   };
 }
 
@@ -31,7 +31,7 @@ export interface ResumeParams {
 }
 
 /**
- * Mutation options for `sdk.offline.resume` — resume the SDK lifecycle for a tx
+ * Mutation options for `sdk.offlineSigning.resume` — resume the SDK lifecycle for a tx
  * that was broadcast externally (custody control plane or raw
  * `eth_sendRawTransaction`): await receipt, emit event, sync caches.
  */
@@ -40,6 +40,6 @@ export function resumeMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.resume"], ResumeParams, TransactionResult> {
   return {
     mutationKey: ["zama.resume"] as const,
-    mutationFn: ({ prepared, txHash }) => sdk.offline.resume(prepared, txHash),
+    mutationFn: ({ prepared, txHash }) => sdk.offlineSigning.resume(prepared, txHash),
   };
 }

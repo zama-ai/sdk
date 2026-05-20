@@ -278,9 +278,9 @@ export class WrappedToken extends Token {
    * ```ts
    * const plan = await wrappedToken.prepareShield(1_000n);
    * for (const step of plan.steps) {
-   *   const prepared = await sdk.offline.prepare(step);
+   *   const prepared = await sdk.offlineSigning.prepare(step);
    *   const signed   = await externalSigner.signTransaction(prepared.unsignedTx);
-   *   await sdk.offline.broadcast(prepared, signed);
+   *   await sdk.offlineSigning.broadcast(prepared, signed);
    * }
    * ```
    */

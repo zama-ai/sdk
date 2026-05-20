@@ -11,7 +11,7 @@ export interface SignAndBroadcastParams {
 }
 
 /**
- * Mutation options for `sdk.offline.signAndBroadcast` — bundled in-process
+ * Mutation options for `sdk.offlineSigning.signAndBroadcast` — bundled in-process
  * prepare + sign + broadcast for a transaction request.
  */
 export function signAndBroadcastMutationOptions(
@@ -23,6 +23,6 @@ export function signAndBroadcastMutationOptions(
 > {
   return {
     mutationKey: ["zama.signAndBroadcast"] as const,
-    mutationFn: ({ request, options }) => sdk.offline.signAndBroadcast(request, options),
+    mutationFn: ({ request, options }) => sdk.offlineSigning.signAndBroadcast(request, options),
   };
 }

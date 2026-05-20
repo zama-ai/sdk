@@ -36,14 +36,16 @@ describe("useRegisterPermit", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.registerPermit", async ({ renderWithProviders }) => {
+  test("delegates to sdk.offlineSigning.registerPermit", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();
       const mutation = useRegisterPermit();
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "registerPermit").mockResolvedValue(RESULT);
+    const spy = vi
+      .spyOn(result.current.sdk.offlineSigning, "registerPermit")
+      .mockResolvedValue(RESULT);
 
     let value: unknown;
     await act(async () => {

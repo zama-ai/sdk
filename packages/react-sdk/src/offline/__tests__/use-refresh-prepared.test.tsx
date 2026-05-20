@@ -35,7 +35,7 @@ describe("useRefreshPrepared", () => {
     expect(state).toEqualDefaultMutationState();
   });
 
-  test("delegates to sdk.offline.refresh and returns the fresh prepared", async ({
+  test("delegates to sdk.offlineSigning.refresh and returns the fresh prepared", async ({
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() => {
@@ -44,7 +44,7 @@ describe("useRefreshPrepared", () => {
       return { sdk, mutation };
     });
 
-    const spy = vi.spyOn(result.current.sdk.offline, "refresh").mockResolvedValue(FRESH);
+    const spy = vi.spyOn(result.current.sdk.offlineSigning, "refresh").mockResolvedValue(FRESH);
 
     let value: unknown;
     await act(async () => {
