@@ -232,7 +232,8 @@ describe("CredentialService.grantPermit widening", () => {
 
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    const raw = await storage.get<Permission[] | null>(DIRECT_SCOPE_KEY);
+
     expect(raw).not.toBeNull();
     expect(raw).toHaveLength(1);
     expect(raw![0]!.signedContractAddresses).toEqual([
@@ -256,7 +257,8 @@ describe("CredentialService.grantPermit widening", () => {
 
     expect(signer.signTypedData).toHaveBeenCalledOnce();
 
-    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    const raw = await storage.get<Permission[] | null>(DIRECT_SCOPE_KEY);
+
     expect(raw).not.toBeNull();
     expect(raw).toHaveLength(2);
     const sizes = raw!.map((p) => p.signedContractAddresses.length).toSorted((a, b) => a - b);
@@ -278,7 +280,8 @@ describe("CredentialService.grantPermit widening", () => {
       SigningRejectedError,
     );
 
-    const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+    const raw = await storage.get<Permission[] | null>(DIRECT_SCOPE_KEY);
+
     expect(raw).not.toBeNull();
     expect(raw).toHaveLength(1);
     expect(raw![0]!.signedContractAddresses).toEqual([checksum(ADDRS[0]!), checksum(ADDRS[1]!)]);
@@ -300,7 +303,8 @@ describe("CredentialService.grantPermit widening", () => {
       await credentialService.grantPermit([ADDRS[0]!, ADDRS[1]!, ADDRS[2]!]);
       const widenedTs = Math.floor(Date.now() / 1000);
 
-      const raw = (await storage.get(DIRECT_SCOPE_KEY)) as Permission[] | null;
+      const raw = await storage.get<Permission[] | null>(DIRECT_SCOPE_KEY);
+
       expect(raw).not.toBeNull();
       expect(raw).toHaveLength(1);
       expect(raw![0]!.startTimestamp).toBe(widenedTs);
