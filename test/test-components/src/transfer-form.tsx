@@ -34,6 +34,7 @@ export function TransferForm({ tokenAddress }: { tokenAddress: Address }) {
         type="text"
         name="recipient"
         placeholder="Recipient address (0x...)"
+        aria-label="Recipient address"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="recipient-input"
@@ -43,6 +44,7 @@ export function TransferForm({ tokenAddress }: { tokenAddress: Address }) {
         type="text"
         name="amount"
         placeholder="Amount"
+        aria-label="Amount"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"
