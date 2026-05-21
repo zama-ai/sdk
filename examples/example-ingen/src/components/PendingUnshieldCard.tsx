@@ -65,11 +65,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
         <div className="balance-row">
           <span className="balance-label">
             Unwrap confirmed, finalization pending —{" "}
-            <a
-              href={`${INGEN_EXPLORER_URL}/tx/${pendingTxHash}`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={`${INGEN_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
               {pendingTxHash.slice(0, 10)}…
             </a>
           </span>

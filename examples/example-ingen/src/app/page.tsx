@@ -394,7 +394,8 @@ export default function Home() {
       <div className="app-container connect-screen">
         <h1>InGen Confidential Token Quickstart</h1>
         <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on the T-Rex InGen testnet (cleartext fhEVM).
+          Connect your wallet to interact with ERC-7984 tokens on the T-Rex InGen testnet (cleartext
+          fhEVM).
         </p>
         <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
           {isConnecting ? "Connecting…" : "Connect Wallet"}
