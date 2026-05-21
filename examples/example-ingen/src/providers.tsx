@@ -45,7 +45,6 @@ import { getEthereumProvider } from "@/lib/ethereum";
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 // Inline InGen chain config (SDK-184 deployment).
-// See /tmp/sdk-184/deployment-notes.md for these addresses.
 const zamaIngen = {
   id: 364301,
   gatewayChainId: 10901,

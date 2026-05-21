@@ -200,6 +200,7 @@ function SelectedTokenPanel({
       <ShieldCard
         key={`shield-${address}-${token.confidentialTokenAddress}`}
         tokenAddress={token.confidentialTokenAddress}
+        underlyingAddress={token.tokenAddress}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}

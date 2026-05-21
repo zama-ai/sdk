@@ -54,8 +54,8 @@ with TREX before interacting with the app.
 
 ## Deployed contracts on InGen
 
-See `/tmp/sdk-184/deployment-notes.md` for the full address record. The chain
-config in `src/providers.tsx` already wires them in — no manual setup needed.
+The chain config in `src/providers.tsx` already wires these addresses in — no
+manual setup needed. They are reproduced here for reference.
 
 | Contract               | Address                                      |
 | ---------------------- | -------------------------------------------- |
