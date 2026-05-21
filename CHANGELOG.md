@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.43](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.42...v3.0.0-alpha.43) (2026-05-21)
+
+### Features
+
+- **examples:** example-ingen — T-Rex InGen cleartext demo [SDK-184] ([#375](https://github.com/zama-ai/sdk/issues/375)) ([5aaf973]())
+
 ## [3.0.0-alpha.42](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.41...v3.0.0-alpha.42) (2026-05-21)
 
 ### Features
