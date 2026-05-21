@@ -10,12 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export {
-  createConfig,
-  cleartext,
-  resolveChainRelayers,
-  resolveStorage,
-} from "./config";
+export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -27,10 +22,7 @@ export type {
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-export type {
-  RelayerDispatcher,
-  WorkerLike,
-} from "./relayer/relayer-dispatcher";
+export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerSDKStatus,
@@ -72,22 +64,13 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
-export type {
-  EncryptedInput as DecryptHandle,
-  DecryptResult,
-} from "./query/user-decrypt";
+export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptHandleItem,
   BatchDecryptHandlesResult,
 } from "./services/decryption-service";
-export {
-  WrappersRegistry,
-  DefaultRegistryAddresses,
-} from "./wrappers-registry";
-export type {
-  WrappersRegistryConfig,
-  ListPairsOptions,
-} from "./wrappers-registry";
+export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
+export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
   WrappedToken,
@@ -108,12 +91,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type {
-  CredentialBundle,
-  Keypair,
-  Permission,
-  StoredKeypair,
-} from "./credentials";
+export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
@@ -212,10 +190,7 @@ export {
   matchZamaError,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
-export {
-  createWalletAccountStore,
-  MutableWalletAccountStore,
-} from "./signer/wallet-account-store";
+export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types
 export type {
@@ -292,8 +267,4 @@ export {
   getTokenAddressContract,
   isConfidentialTokenValidContract,
 } from "./contracts";
-export type {
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-  PaginatedResult,
-} from "./contracts";
+export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";
