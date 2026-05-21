@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.42](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.41...v3.0.0-alpha.42) (2026-05-21)
+
+### Features
+
+- **credentials:** widen permits on overlap (SDK-136) ([#372](https://github.com/zama-ai/sdk/issues/372)) ([0ede286]())
+
 ## [3.0.0-alpha.41](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.40...v3.0.0-alpha.41) (2026-05-19)
 
 ## [3.0.0-alpha.40](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.39...v3.0.0-alpha.40) (2026-05-19)
