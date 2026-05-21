@@ -140,7 +140,7 @@ export class EventService {
       return;
     }
 
-    const tag = `EventService:${event.type}`;
+    const tag = event.type;
     const tasks: Promise<void>[] = [];
     for (const listener of typed) {
       tasks.push(this.#run(tag, () => listener(event)));

@@ -12,8 +12,14 @@ describe("EventService", () => {
 
     service.on(ZamaSDKEvents.TransferSubmitted, listener);
 
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
-    await service.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    await service.emit({
+      type: ZamaSDKEvents.UnwrapSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
     const [event] = listener.mock.calls[0]!;
@@ -33,7 +39,10 @@ describe("EventService", () => {
     service.on(ZamaSDKEvents.TransferSubmitted, makeListener("slow", 30));
     service.on(ZamaSDKEvents.TransferSubmitted, makeListener("fast", 5));
 
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     // Faster listener resolves first → both complete because emit awaited Promise.all.
     expect(calls).toEqual(["fast", "slow"]);
@@ -44,8 +53,14 @@ describe("EventService", () => {
     const listener = vi.fn();
 
     service.subscribe(listener);
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
-    await service.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    await service.emit({
+      type: ZamaSDKEvents.UnwrapSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(2);
     expect(listener.mock.calls[0]![0].type).toBe(ZamaSDKEvents.TransferSubmitted);
@@ -57,9 +72,15 @@ describe("EventService", () => {
     const listener = vi.fn();
 
     const unsubscribe = service.on(ZamaSDKEvents.TransferSubmitted, listener);
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     unsubscribe();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -69,9 +90,15 @@ describe("EventService", () => {
     const listener = vi.fn();
 
     const unsubscribe = service.subscribe(listener);
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     unsubscribe();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -111,7 +138,10 @@ describe("EventService", () => {
       resolved = true;
     });
 
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     expect(resolved).toBe(true);
   });
 
@@ -121,8 +151,14 @@ describe("EventService", () => {
 
     service.once(ZamaSDKEvents.TransferSubmitted, listener);
 
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -132,9 +168,15 @@ describe("EventService", () => {
     const listener = vi.fn();
 
     const unsubscribe = service.once(ZamaSDKEvents.TransferSubmitted, listener);
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     unsubscribe(); // no-op
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -145,7 +187,10 @@ describe("EventService", () => {
 
     const unsubscribe = service.once(ZamaSDKEvents.TransferSubmitted, listener);
     unsubscribe();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -154,7 +199,10 @@ describe("EventService", () => {
     const onEvent = vi.fn();
     const service = new EventService({ onEvent });
 
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(onEvent.mock.calls[0]![0].type).toBe(ZamaSDKEvents.TransferSubmitted);
@@ -165,10 +213,18 @@ describe("EventService", () => {
     const listener = vi.fn();
     const controller = new AbortController();
 
-    service.on(ZamaSDKEvents.TransferSubmitted, listener, { signal: controller.signal });
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    service.on(ZamaSDKEvents.TransferSubmitted, listener, {
+      signal: controller.signal,
+    });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     controller.abort();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -182,7 +238,10 @@ describe("EventService", () => {
     const unsubscribe = service.on(ZamaSDKEvents.TransferSubmitted, listener, {
       signal: controller.signal,
     });
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).not.toHaveBeenCalled();
     expect(() => unsubscribe()).not.toThrow();
@@ -194,9 +253,15 @@ describe("EventService", () => {
     const controller = new AbortController();
 
     service.subscribe(listener, { signal: controller.signal });
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
     controller.abort();
-    await service.emit({ type: ZamaSDKEvents.UnwrapSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.UnwrapSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -206,9 +271,14 @@ describe("EventService", () => {
     const listener = vi.fn();
     const controller = new AbortController();
 
-    service.once(ZamaSDKEvents.TransferSubmitted, listener, { signal: controller.signal });
+    service.once(ZamaSDKEvents.TransferSubmitted, listener, {
+      signal: controller.signal,
+    });
     controller.abort();
-    await service.emit({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -224,5 +294,107 @@ describe("EventService", () => {
     const [event] = listener.mock.calls[0]!;
     expect(event.tokenAddress).toBe(tokenAddress);
     expect(event.timestamp).toEqual(expect.any(Number));
+  });
+
+  test("typed and catch-all listeners both fire on the same emit", async () => {
+    const service = new EventService();
+    const typed = vi.fn();
+    const any = vi.fn();
+
+    service.on(ZamaSDKEvents.TransferSubmitted, typed);
+    service.subscribe(any);
+
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+
+    expect(typed).toHaveBeenCalledTimes(1);
+    expect(any).toHaveBeenCalledTimes(1);
+    expect(typed.mock.calls[0]![0]).toEqual(any.mock.calls[0]![0]);
+  });
+
+  test("subscribe({ signal }) with already-aborted signal never registers the listener", async () => {
+    const service = new EventService();
+    const listener = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+
+    const unsubscribe = service.subscribe(listener, {
+      signal: controller.signal,
+    });
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  test("listener throw is logged via console.warn with the EventService tag", async () => {
+    const service = new EventService();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    service.on(ZamaSDKEvents.TransferSubmitted, () => {
+      throw new Error("listener boom");
+    });
+
+    try {
+      await service.emit({
+        type: ZamaSDKEvents.TransferSubmitted,
+        txHash: TX_HASH,
+      });
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      const [message, error] = warn.mock.calls[0]!;
+      expect(message).toEqual(`[zama-sdk] ${ZamaSDKEvents.TransferSubmitted} listener threw:`);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("listener boom");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("listeners added during dispatch do not fire on the current emit", async () => {
+    const service = new EventService();
+    const late = vi.fn();
+    service.subscribe(() => {
+      service.on(ZamaSDKEvents.TransferSubmitted, late);
+    });
+
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    expect(late).not.toHaveBeenCalled();
+
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    expect(late).toHaveBeenCalledTimes(1);
+  });
+
+  test("listeners removed during dispatch still fire for siblings on the current emit", async () => {
+    const service = new EventService();
+    const sibling = vi.fn();
+    let unsubscribeSibling: (() => void) | undefined;
+
+    service.on(ZamaSDKEvents.TransferSubmitted, () => {
+      unsubscribeSibling?.();
+    });
+    unsubscribeSibling = service.on(ZamaSDKEvents.TransferSubmitted, sibling);
+
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    expect(sibling).toHaveBeenCalledTimes(1);
+
+    await service.emit({
+      type: ZamaSDKEvents.TransferSubmitted,
+      txHash: TX_HASH,
+    });
+    expect(sibling).toHaveBeenCalledTimes(1);
   });
 });
