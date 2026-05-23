@@ -128,46 +128,6 @@ describe("RelayerDispatcher", () => {
       expect(relayerB.encrypt).toHaveBeenCalled();
       expect(relayerA.encrypt).not.toHaveBeenCalled();
     });
-
-    test("chain-scoped generateKeypair bypasses the active relayer", async ({
-      createMockChain,
-      createMockRelayer,
-    }) => {
-      const chainA = createMockChain({ id: 1 });
-      const chainB = createMockChain({ id: 2 });
-      const relayerA = createMockRelayer();
-      const relayerB = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
-
-      await dispatcher.generateKeypair({ chainId: 2 });
-
-      expect(relayerB.generateKeypair).toHaveBeenCalled();
-      expect(relayerA.generateKeypair).not.toHaveBeenCalled();
-      expect(dispatcher.chain).toEqual(chainA);
-    });
-
-    test("chain-scoped EIP712 creation bypasses the active relayer", async ({
-      createMockChain,
-      createMockRelayer,
-    }) => {
-      const chainA = createMockChain({ id: 1 });
-      const chainB = createMockChain({ id: 2 });
-      const relayerA = createMockRelayer();
-      const relayerB = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
-
-      await dispatcher.createEIP712("0xpubkey", ["0xcontract"], 1000, 1, { chainId: 2 });
-
-      expect(relayerB.createEIP712).toHaveBeenCalled();
-      expect(relayerA.createEIP712).not.toHaveBeenCalled();
-      expect(dispatcher.chain).toEqual(chainA);
-    });
   });
 
   describe("dispatches all RelayerSDK methods", () => {

@@ -94,7 +94,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders(() => useZamaSDK(), { relayer });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalledWith({ chainId: 31337 });
+      expect(relayer.generateKeypair).toHaveBeenCalled();
     });
   });
 
@@ -121,7 +121,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalledWith({ chainId: 1 });
+      expect(relayer.generateKeypair).toHaveBeenCalled();
     });
   });
 

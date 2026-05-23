@@ -1,8 +1,8 @@
 import { getAddress, type Address } from "viem";
-import type { CredentialService, WarmKeypairInput } from "../credentials/credential-service";
+import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
-import type { GenericProvider, GenericSigner } from "../types";
+import type { GenericProvider, GenericSigner, WalletAccount } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 
@@ -114,14 +114,14 @@ export class Permits {
    * @param account - Wallet account to warm. When omitted, the connected,
    *   provider-aligned wallet account is used.
    */
-  async warmKeypair(account?: WarmKeypairInput): Promise<void> {
+  async warmKeypair(account?: WalletAccount): Promise<void> {
     const service = this.#credentialService;
     if (!service) {
       return;
     }
     const target =
       account ?? (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider));
-    await service.warmKeypair(target);
+    await service.warmKeypair(target.address);
   }
 
   /**

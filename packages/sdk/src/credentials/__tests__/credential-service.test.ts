@@ -146,28 +146,10 @@ describe("CredentialService.handleWalletAccountChange", () => {
 });
 
 describe("CredentialService.warmKeypair", () => {
-  test("warms through the requested wallet chain", async ({ credentialService, relayer }) => {
-    await credentialService.warmKeypair({ address: USER, chainId: 1 });
+  test("populates the vault for the requested address", async ({ credentialService, relayer }) => {
+    await credentialService.warmKeypair(USER);
 
-    expect(relayer.generateKeypair).toHaveBeenCalledWith({ chainId: 1 });
-  });
-});
-
-describe("CredentialService chain-scoped credential generation", () => {
-  test("grantPermit generates keypair and EIP712 data through the wallet chain", async ({
-    credentialService,
-    relayer,
-  }) => {
-    await credentialService.grantPermit([A]);
-
-    expect(relayer.generateKeypair).toHaveBeenCalledWith({ chainId: 31337 });
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      expect.any(String),
-      [A],
-      expect.any(Number),
-      1,
-      { chainId: 31337 },
-    );
+    expect(relayer.generateKeypair).toHaveBeenCalled();
   });
 });
 
