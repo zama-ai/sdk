@@ -30,6 +30,11 @@ export interface CredentialServiceConfig {
   permitStorage?: GenericStorage;
 }
 
+export interface WarmKeypairInput {
+  address: Address;
+  chainId: number;
+}
+
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
@@ -45,7 +50,7 @@ export class CredentialService {
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new KeypairVault({
-      generator: () => config.relayer.generateKeypair(),
+      generator: ({ chainId }) => config.relayer.generateKeypair({ chainId }),
       storage: config.storage,
       ttl: config.keypairTTL,
     });
@@ -69,13 +74,13 @@ export class CredentialService {
   async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
     const account = this.#signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
+    const chainId = account.chainId;
     const requested = normalizeAddresses(contracts);
-    const keypair = await this.#vault.getOrCreate(signerAddress);
+    const keypair = await this.#vault.getOrCreate(signerAddress, { chainId });
     if (requested.length === 0) {
       return { keypair, permits: [] };
     }
 
-    const chainId = account.chainId;
     const scope: PermissionScope = {
       signerAddress,
       chainId,
@@ -180,13 +185,21 @@ export class CredentialService {
   }
 
   /**
+   * Warm the signer keypair cache for a known wallet account.
+   *
+   * This is a best-effort prefetch primitive. Correctness still comes from
+   * `grantPermit`, which lazily creates the keypair when needed.
+   */
+  async warmKeypair(input: WarmKeypairInput): Promise<void> {
+    await this.#vault.getOrCreate(checksum(input.address), { chainId: input.chainId });
+  }
+
+  /**
    * Apply a wallet account transition.
    *
-   * Address change clears persisted credentials for the previous account and
-   * eagerly warms a keypair for the new one so the first decrypt does not stall
-   * on key generation. Chain-only changes keep credentials intact because
-   * permits are chain-scoped already and stale decrypt plaintext is cleared by
-   * `ZamaSDK`.
+   * Address change clears persisted credentials for the previous account.
+   * Chain-only changes keep credentials intact because permits are chain-scoped
+   * already and stale decrypt plaintext is cleared by `ZamaSDK`.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },
@@ -200,11 +213,6 @@ export class CredentialService {
     if (prevAddr) {
       await this.#vault.clear(prevAddr);
       await this.#store.clearAllForSigner(prevAddr);
-    }
-    if (nextAddr) {
-      await swallow("warm keypair", async () => {
-        await this.#vault.getOrCreate(nextAddr);
-      });
     }
   }
 
@@ -225,12 +233,14 @@ export class CredentialService {
             scope.delegatorAddress,
             startTimestamp,
             this.#permitTTL,
+            { chainId: scope.chainId },
           )
         : await this.#relayer.createEIP712(
             keypair.publicKey,
             chunk,
             startTimestamp,
             this.#permitTTL,
+            { chainId: scope.chainId },
           );
 
       const signature = await this.#signer.signTypedData(eip712);

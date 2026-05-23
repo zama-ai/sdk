@@ -7,10 +7,14 @@ import type { ChecksummedAddress } from "../schemas/primitives";
 import { nowSeconds } from "./utils";
 
 interface KeypairVaultConfig {
-  generator: () => Promise<Keypair>;
+  generator: (context: KeypairGenerationContext) => Promise<Keypair>;
   storage: GenericStorage;
   /** Keypair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
+}
+
+interface KeypairGenerationContext {
+  chainId: number;
 }
 
 /**
@@ -20,7 +24,7 @@ interface KeypairVaultConfig {
  * permit revocations. Storage entries are keyed only by the signer address.
  */
 export class KeypairVault {
-  readonly #generator: () => Promise<Keypair>;
+  readonly #generator: (context: KeypairGenerationContext) => Promise<Keypair>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
   readonly #pending = new Map<ChecksummedAddress, Promise<StoredKeypair>>();
@@ -55,7 +59,10 @@ export class KeypairVault {
    *
    * @remarks Deduplicates concurrent calls — simultaneous requests share one generation promise.
    */
-  async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredKeypair> {
+  async getOrCreate(
+    signerAddress: ChecksummedAddress,
+    context: KeypairGenerationContext,
+  ): Promise<StoredKeypair> {
     const existing = this.#pending.get(signerAddress);
     if (existing) {
       return existing;
@@ -66,7 +73,7 @@ export class KeypairVault {
       if (cached !== null) {
         return cached;
       }
-      const fresh = await this.#generator();
+      const fresh = await this.#generator(context);
       const createdAt = nowSeconds();
       const stored: StoredKeypair = {
         publicKey: fresh.publicKey,

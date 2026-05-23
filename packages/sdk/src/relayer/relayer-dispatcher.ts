@@ -29,6 +29,10 @@ export interface WorkerLike {
   terminate(): void;
 }
 
+export interface ChainDispatchOptions {
+  chainId?: number;
+}
+
 /**
  * Owns chain management (chains / activeChain / switchChain) and delegates
  * every {@link RelayerSDK} operation to the relayer for the currently active
@@ -119,14 +123,23 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     this.#chainId = chainId;
   }
 
-  get #active(): RelayerSDK {
-    const relayer = this.#relayers.get(this.#chainId);
+  #relayerFor(chainId: number = this.#chainId): RelayerSDK {
+    if (!this.#chains.has(chainId)) {
+      throw new ConfigurationError(
+        `No relayer configured for chain ${chainId}. Add it to the chains array.`,
+      );
+    }
+    const relayer = this.#relayers.get(chainId);
     assertNonNullable(relayer, "RelayerDispatcher: relayer");
     return relayer;
   }
 
-  generateKeypair(): Promise<KeypairType<Hex>> {
-    return this.#active.generateKeypair();
+  get #active(): RelayerSDK {
+    return this.#relayerFor();
+  }
+
+  generateKeypair(options: ChainDispatchOptions = {}): Promise<KeypairType<Hex>> {
+    return this.#relayerFor(options.chainId).generateKeypair();
   }
 
   createEIP712(
@@ -134,8 +147,14 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     contractAddresses: Address[],
     startTimestamp: number,
     durationDays?: number,
+    options: ChainDispatchOptions = {},
   ): Promise<EIP712TypedData> {
-    return this.#active.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
+    return this.#relayerFor(options.chainId).createEIP712(
+      publicKey,
+      contractAddresses,
+      startTimestamp,
+      durationDays,
+    );
   }
 
   encrypt(params: EncryptParams): Promise<EncryptResult> {
@@ -156,8 +175,9 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
+    options: ChainDispatchOptions = {},
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    return this.#active.createDelegatedUserDecryptEIP712(
+    return this.#relayerFor(options.chainId).createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,

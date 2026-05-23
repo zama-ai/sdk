@@ -59,7 +59,7 @@ describe("LifecycleService", () => {
   });
 
   describe("change dispatch", () => {
-    test("runs credential cleanup, cache clear, and relayer switch before listeners", async ({
+    test("switches relayer before cleanup and listeners", async ({
       createLifecycleService,
       createMockSigner,
       createMockRelayer,
@@ -112,7 +112,7 @@ describe("LifecycleService", () => {
       dispatch!({ previous: prev, next });
 
       await vi.waitFor(() => {
-        expect(calls).toEqual(["credential", "cache", "relayer", "listener"]);
+        expect(calls).toEqual(["relayer", "credential", "cache", "listener"]);
       });
       expect(handleWalletAccountChange).toHaveBeenCalledWith(prev, next);
       expect(clearForRequester).toHaveBeenCalledWith(prev.address);
