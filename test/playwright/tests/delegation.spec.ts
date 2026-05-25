@@ -346,7 +346,7 @@ test("should overwrite delegation with a different expiry", async ({
   expect(storedExpiry).toBe(newExpiry);
 });
 
-test("should reject delegation with expiry less than one hour", async ({
+test("should reject delegation with expiry in the past", async ({
   account,
   viemClient,
   contracts,
@@ -357,16 +357,16 @@ test("should reject delegation with expiry less than one hour", async ({
 
   const { client: account1Client } = createAccount1Client(anvilPort);
 
-  // ACL enforces expirationDate >= block.timestamp + 1 hour
+  // ACL reverts ExpirationDateInThePast when expirationDate <= block.timestamp
   const latestBlock = await viemClient.getBlock();
-  const tooSoonExpiry = latestBlock.timestamp + 1800n; // 30 minutes
+  const pastExpiry = latestBlock.timestamp - 60n;
 
   await expect(
     account1Client.writeContract({
       address: contracts.acl,
       abi: aclDelegateAbi,
       functionName: "delegateForUserDecryption",
-      args: [account.address, contracts.cUSDT, tooSoonExpiry],
+      args: [account.address, contracts.cUSDT, pastExpiry],
     }),
   ).rejects.toThrow();
 });
