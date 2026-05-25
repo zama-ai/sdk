@@ -15,7 +15,7 @@ describe("finalizeUnwrapMutationOptions", () => {
     );
   });
 
-  test("falls back to legacy burnAmountHandle", async ({ mockWrappedToken }) => {
+  test("accepts burnAmountHandle as alternative input", async ({ mockWrappedToken }) => {
     const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
     await options.mutationFn({

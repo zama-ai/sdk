@@ -58,7 +58,6 @@ export {
   ERC1363_INTERFACE_ID,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
 } from "./contracts";
 
 // Token abstraction layer
@@ -193,7 +192,6 @@ export type {
   WrappedEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
-  UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
   DelegatedForUserDecryptionEvent,
@@ -215,7 +213,6 @@ export {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
@@ -247,7 +244,6 @@ export {
   allowanceContract,
   approveContract,
   confidentialTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,

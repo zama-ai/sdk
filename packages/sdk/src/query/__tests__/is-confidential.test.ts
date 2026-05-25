@@ -40,35 +40,19 @@ describe("isConfidentialQueryOptions", () => {
 describe("isWrapperQueryOptions", () => {
   const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 
-  test("returns true when baseline interfaceId (0xd04584ba) matches", async ({
+  test("returns true when interfaceId (0x1f1c62b2) matches", async ({
     sdk,
     provider,
     mockQueryContext,
   }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(true) // baseline ID
-      .mockResolvedValueOnce(false); // upgraded ID
+    vi.mocked(provider.readContract).mockResolvedValueOnce(true);
     const options = isWrapperQueryOptions(sdk, TOKEN);
 
     const value = await options.queryFn(mockQueryContext(options.queryKey));
     expect(value).toBe(true);
   });
 
-  test("returns true when new interfaceId (0x1f1c62b2) matches", async ({
-    sdk,
-    provider,
-    mockQueryContext,
-  }) => {
-    vi.mocked(provider.readContract)
-      .mockResolvedValueOnce(false) // baseline ID
-      .mockResolvedValueOnce(true); // upgraded ID
-    const options = isWrapperQueryOptions(sdk, TOKEN);
-
-    const value = await options.queryFn(mockQueryContext(options.queryKey));
-    expect(value).toBe(true);
-  });
-
-  test("returns false when neither interfaceId matches", async ({
+  test("returns false when interfaceId does not match", async ({
     sdk,
     provider,
     mockQueryContext,

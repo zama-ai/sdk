@@ -1,9 +1,9 @@
-@fhevm/solidity/=lib/forge-fhevm/dependencies/fhevm-0.11.1/library-solidity/
-@openzeppelin/confidential-contracts/=lib/forge-fhevm/dependencies/@openzeppelin-confidential-contracts-6edd293/contracts/
+@fhevm/solidity/=lib/forge-fhevm/dependencies/@fhevm-solidity-0.11.1/
+@openzeppelin/confidential-contracts/=lib/forge-fhevm/dependencies/@openzeppelin-confidential-contracts-7ac7cee/contracts/
 @openzeppelin/contracts-upgradeable/=lib/forge-fhevm/dependencies/@openzeppelin-contracts-upgradeable-5.1.0/
 @openzeppelin/contracts/=lib/forge-fhevm/dependencies/@openzeppelin-contracts-5.1.0/
-encrypted-types/=lib/forge-fhevm/dependencies/encrypted-types-0.0.4/
+encrypted-types/=lib/forge-fhevm/dependencies/@encrypted-types-0.0.4/
 forge-fhevm/=lib/forge-fhevm/src/
 forge-std/=lib/forge-fhevm/dependencies/forge-std-1.14.0/src/
-protocol-apps-registry/=dependencies/protocol-apps-registry-f51845b08cc2/
-protocol-apps-wrapper/=dependencies/protocol-apps-wrapper-da4afe387420/
+protocol-apps-registry/=dependencies/protocol-apps-registry-0647c5fd9e41/
+protocol-apps-wrapper/=dependencies/protocol-apps-wrapper-3bd308fb7cb1/

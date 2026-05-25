@@ -130,8 +130,9 @@ describe("Integration: multi-step workflows", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"aa".repeat(32)}`,
             ],
             data: BURN_HANDLE,
           },
@@ -169,8 +170,9 @@ describe("Integration: multi-step workflows", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"aa".repeat(32)}`,
             ],
             data: BURN_HANDLE,
           },
