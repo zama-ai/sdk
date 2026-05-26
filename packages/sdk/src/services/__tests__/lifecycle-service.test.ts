@@ -64,10 +64,9 @@ describe("LifecycleService", () => {
       createMockSigner,
       createMockRelayer,
     }) => {
-      // Ordering matters: switchChain must complete before credentialService
-      // and listeners run, so anything downstream observes the dispatcher in
-      // the right chain. (Was a `void swallow(...)` previously — the relayer
-      // switch could race with the warmup and listeners.)
+      // Invariant: switchChain must complete before the credential handler
+      // and downstream listeners run, so each step observes the dispatcher
+      // in a consistent chain state.
       const calls: string[] = [];
       const handleWalletAccountChange = vi.fn(async () => {
         await Promise.resolve();
@@ -128,8 +127,8 @@ describe("LifecycleService", () => {
       createMockSigner,
       createMockRelayer,
     }) => {
-      // Regression: a previous version used `void swallow("switch relayer chain", ...)`,
-      // so the credential handler could run while the switch was still pending.
+      // Invariant: if switchChain is async, the credential handler must not
+      // start until switchChain has resolved.
       let resolveSwitch: () => void = () => {};
       const switchChain = vi.fn(
         () =>
@@ -162,8 +161,9 @@ describe("LifecycleService", () => {
         next: { address: "0x1111111111111111111111111111111111111111", chainId: 1 },
       });
 
-      // Allow the microtask queue to drain — if switchChain were not awaited,
-      // handleWalletAccountChange would already have been called.
+      // Drain the microtask queue: when switchChain is awaited, the credential
+      // handler stays pending until resolveSwitch() runs. When it is not awaited,
+      // the handler runs immediately after the dispatch.
       await Promise.resolve();
       await Promise.resolve();
       expect(switchChain).toHaveBeenCalledOnce();

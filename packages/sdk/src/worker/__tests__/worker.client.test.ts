@@ -224,9 +224,9 @@ describe("RelayerWorkerClient", () => {
   });
 
   test("initWorker() throws WorkerUnavailableError when the Worker global is undefined (SSR)", async () => {
-    // Reproduce the Next.js SSR scenario: the `web()` relayer reaches creation
-    // in an environment without `Worker`. The SDK must surface a typed error
-    // so the credential warmup can silence it without spamming the console.
+    // Invariant: in an environment without the `Worker` global (e.g. SSR),
+    // createWorker() surfaces a typed error rather than letting the
+    // ReferenceError propagate, so callers can classify and silence it.
     vi.stubGlobal("Worker", undefined);
     try {
       const client = new RelayerWorkerClient(defaultWebConfig());

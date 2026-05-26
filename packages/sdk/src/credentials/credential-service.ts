@@ -206,9 +206,9 @@ export class CredentialService {
       await this.#vault.clear(prevAddr);
       await this.#store.clearAllForSigner(prevAddr);
     }
-    if (nextAddr) {
+    if (next && nextAddr) {
       try {
-        await this.#vault.getOrCreate(nextAddr, next?.chainId);
+        await this.#vault.getOrCreate(nextAddr, next.chainId);
       } catch (error) {
         if (error instanceof WorkerUnavailableError) {
           return;

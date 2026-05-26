@@ -140,10 +140,11 @@ describe("CredentialService.handleWalletAccountChange", () => {
     createCredentialService,
     relayer,
   }) => {
-    // The dispatcher mock used by the fixture has #chainId === chains[0] === 31337.
-    // We warm up for a wallet connected to chain 1 (mainnet) and assert the
-    // generator was invoked with that chainId — proving the warmup is no longer
-    // tied to dispatcher state. This is the lock-in for the wrong-chain bug.
+    // Invariant: the generator must be invoked with the connected wallet's
+    // chainId, independently of the dispatcher's active chain. The fixture's
+    // mock dispatcher has #chainId === 31337, so requesting a warmup for
+    // chainId 1 proves the routing is driven by the WalletAccount, not by
+    // dispatcher state.
     const credentialService = createCredentialService();
     await credentialService.handleWalletAccountChange(undefined, {
       address: DELEGATOR,
