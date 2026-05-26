@@ -59,11 +59,15 @@ describe("LifecycleService", () => {
   });
 
   describe("change dispatch", () => {
-    test("runs credential cleanup, cache clear, and relayer switch before listeners", async ({
+    test("switches the relayer chain first, then runs credential cleanup, then cache clear, then listeners", async ({
       createLifecycleService,
       createMockSigner,
       createMockRelayer,
     }) => {
+      // Ordering matters: switchChain must complete before credentialService
+      // and listeners run, so anything downstream observes the dispatcher in
+      // the right chain. (Was a `void swallow(...)` previously — the relayer
+      // switch could race with the warmup and listeners.)
       const calls: string[] = [];
       const handleWalletAccountChange = vi.fn(async () => {
         await Promise.resolve();
@@ -112,11 +116,61 @@ describe("LifecycleService", () => {
       dispatch!({ previous: prev, next });
 
       await vi.waitFor(() => {
-        expect(calls).toEqual(["credential", "cache", "relayer", "listener"]);
+        expect(calls).toEqual(["relayer", "credential", "cache", "listener"]);
       });
       expect(handleWalletAccountChange).toHaveBeenCalledWith(prev, next);
       expect(clearForRequester).toHaveBeenCalledWith(prev.address);
       expect(switchChain).toHaveBeenCalledWith(1);
+    });
+
+    test("awaits switchChain before invoking credential handler (no fire-and-forget)", async ({
+      createLifecycleService,
+      createMockSigner,
+      createMockRelayer,
+    }) => {
+      // Regression: a previous version used `void swallow("switch relayer chain", ...)`,
+      // so the credential handler could run while the switch was still pending.
+      let resolveSwitch: () => void = () => {};
+      const switchChain = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveSwitch = resolve;
+          }),
+      );
+      const handleWalletAccountChange = vi.fn();
+      const credentialService = {
+        handleWalletAccountChange,
+      } as unknown as CredentialService;
+      const relayer = createMockRelayer({
+        switchChain: switchChain as unknown as () => void,
+      });
+      let dispatch: ((change: WalletAccountChange) => void) | undefined;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn(),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            dispatch = listener;
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+      createLifecycleService({ signer, relayer, credentialService });
+
+      dispatch!({
+        previous: undefined,
+        next: { address: "0x1111111111111111111111111111111111111111", chainId: 1 },
+      });
+
+      // Allow the microtask queue to drain — if switchChain were not awaited,
+      // handleWalletAccountChange would already have been called.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(switchChain).toHaveBeenCalledOnce();
+      expect(handleWalletAccountChange).not.toHaveBeenCalled();
+
+      resolveSwitch();
+      await vi.waitFor(() => expect(handleWalletAccountChange).toHaveBeenCalledOnce());
     });
 
     test("skips cache clear when previous account is undefined", async ({

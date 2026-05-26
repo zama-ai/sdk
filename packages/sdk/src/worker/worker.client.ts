@@ -1,4 +1,5 @@
 import type { FheChain } from "../chains/types";
+import { WorkerUnavailableError } from "../errors";
 import type {
   GenericLogger,
   UpdateCsrfResponseData,
@@ -36,6 +37,13 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   }
 
   protected createWorker(): Worker {
+    if (typeof Worker === "undefined") {
+      throw new WorkerUnavailableError(
+        "Web Worker is not available in this environment. " +
+          "The web() relayer requires a browser runtime. " +
+          "For server-side or Node.js, use node() or cleartext().",
+      );
+    }
     const runtime = getBrowserExtensionRuntime();
     if (runtime) {
       return new Worker(runtime.getURL(workerFilename));

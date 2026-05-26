@@ -13083,8 +13083,9 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // (undocumented)
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    generateKeypair(options?: {
+        chainId?: number;
+    }): Promise<KeypairType<Hex>>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
     // (undocumented)
@@ -18737,6 +18738,11 @@ export interface WorkerLike {
 }
 
 // @public
+export class WorkerUnavailableError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19882,7 +19888,8 @@ export const ZamaErrorCode: {
     readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
-    readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
+    readonly Configuration: "CONFIGURATION"; /** Web Worker runtime is not available (e.g. server-side rendering). */
+    readonly WorkerUnavailable: "WORKER_UNAVAILABLE"; /** Delegation cannot target self (delegate === msg.sender). */
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
@@ -19976,10 +19983,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-CUTD_pS4.d.ts:19566:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CUTD_pS4.d.ts:19695:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CUTD_pS4.d.ts:19797:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-CUTD_pS4.d.ts:19798:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DCESH9Fz.d.ts:19581:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DCESH9Fz.d.ts:19710:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DCESH9Fz.d.ts:19812:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DCESH9Fz.d.ts:19813:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

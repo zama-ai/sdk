@@ -160,6 +160,7 @@ export {
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  WorkerUnavailableError,
   ChainMismatchError,
   SignerRequiredError,
   SignerNotConfiguredError,

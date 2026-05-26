@@ -3,7 +3,7 @@ export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
-export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
+export { RelayerRequestFailedError, ConfigurationError, WorkerUnavailableError } from "./relayer";
 export { ChainMismatchError } from "./chain";
 export {
   SignerRequiredError,

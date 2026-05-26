@@ -34,6 +34,8 @@ export const ZamaErrorCode = {
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
   /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
   Configuration: "CONFIGURATION",
+  /** Web Worker runtime is not available (e.g. server-side rendering). */
+  WorkerUnavailable: "WORKER_UNAVAILABLE",
   /** Delegation cannot target self (delegate === msg.sender). */
   DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED",
   /** Only one delegate/revoke per (delegator, delegate, contract) per block. */

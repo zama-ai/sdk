@@ -130,6 +130,58 @@ describe("RelayerDispatcher", () => {
     });
   });
 
+  describe("generateKeypair chain routing", () => {
+    test("without options, routes to the active relayer", async ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const relayerA = createMockRelayer();
+      const relayerB = createMockRelayer();
+      const dispatcher = new RelayerDispatcher([chainA, chainB], {
+        [1]: { type: "web", createRelayer: () => relayerA },
+        [2]: { type: "web", createRelayer: () => relayerB },
+      });
+
+      await dispatcher.generateKeypair();
+      expect(relayerA.generateKeypair).toHaveBeenCalledTimes(1);
+      expect(relayerB.generateKeypair).not.toHaveBeenCalled();
+    });
+
+    test("with explicit chainId, routes to that relayer without mutating active chain", async ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const chainB = createMockChain({ id: 2 });
+      const relayerA = createMockRelayer();
+      const relayerB = createMockRelayer();
+      const dispatcher = new RelayerDispatcher([chainA, chainB], {
+        [1]: { type: "web", createRelayer: () => relayerA },
+        [2]: { type: "web", createRelayer: () => relayerB },
+      });
+
+      await dispatcher.generateKeypair({ chainId: 2 });
+      expect(relayerB.generateKeypair).toHaveBeenCalledTimes(1);
+      expect(relayerA.generateKeypair).not.toHaveBeenCalled();
+      // Active chain unchanged — explicit chainId is a peek, not a switch.
+      expect(dispatcher.chain).toEqual(chainA);
+    });
+
+    test("throws ConfigurationError on unknown chainId", ({
+      createMockChain,
+      createMockRelayer,
+    }) => {
+      const chainA = createMockChain({ id: 1 });
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        relayerConfigs([chainA], createMockRelayer),
+      );
+      expect(() => dispatcher.generateKeypair({ chainId: 999 })).toThrow(ConfigurationError);
+    });
+  });
+
   describe("dispatches all RelayerSDK methods", () => {
     test.for([
       ["generateKeypair", []],

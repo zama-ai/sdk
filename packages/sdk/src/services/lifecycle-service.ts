@@ -58,6 +58,15 @@ export class LifecycleService {
   async #handleWalletAccountChange(change: WalletAccountChange): Promise<void> {
     const prev = change.previous;
     const next = change.next;
+
+    // Switch the dispatcher's active chain first so any code reached via the
+    // credential handler or downstream listeners sees a consistent state.
+    // Awaited (was `void`) so listeners cannot run with a stale active chain.
+    const nextChainId = next?.chainId;
+    if (nextChainId !== undefined) {
+      await swallow("switch relayer chain", () => this.#relayer.switchChain(nextChainId));
+    }
+
     const credentialService = this.#credentialService;
     if (credentialService) {
       await swallow("credential wallet account change", () =>
@@ -68,10 +77,6 @@ export class LifecycleService {
       await swallow("clear decrypt cache", () =>
         this.#cachingService.clearForRequester(prev.address),
       );
-    }
-    const nextChainId = next?.chainId;
-    if (nextChainId !== undefined) {
-      void swallow("switch relayer chain", () => this.#relayer.switchChain(nextChainId));
     }
     await Promise.all(
       Array.from(this.#walletAccountListeners, (listener) =>

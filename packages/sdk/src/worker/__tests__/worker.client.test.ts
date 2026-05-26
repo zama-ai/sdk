@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
+import { WorkerUnavailableError } from "../../errors";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
@@ -220,6 +221,19 @@ describe("RelayerWorkerClient", () => {
     expect(lastMockWorker).not.toBeNull();
 
     client.terminate();
+  });
+
+  test("initWorker() throws WorkerUnavailableError when the Worker global is undefined (SSR)", async () => {
+    // Reproduce the Next.js SSR scenario: the `web()` relayer reaches creation
+    // in an environment without `Worker`. The SDK must surface a typed error
+    // so the credential warmup can silence it without spamming the console.
+    vi.stubGlobal("Worker", undefined);
+    try {
+      const client = new RelayerWorkerClient(defaultWebConfig());
+      await expect(client.initWorker()).rejects.toBeInstanceOf(WorkerUnavailableError);
+    } finally {
+      vi.stubGlobal("Worker", MockWorkerClass);
+    }
   });
 
   test("createWorker() revokes the blob URL after constructing the Worker", async () => {

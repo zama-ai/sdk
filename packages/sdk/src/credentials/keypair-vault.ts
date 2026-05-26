@@ -7,7 +7,12 @@ import type { ChecksummedAddress } from "../schemas/primitives";
 import { nowSeconds } from "./utils";
 
 interface KeypairVaultConfig {
-  generator: () => Promise<Keypair>;
+  /**
+   * Produce a fresh keypair. The optional `chainId` lets the vault route
+   * generation to a specific chain's relayer when warmup happens for a wallet
+   * connected to a non-active chain — without mutating dispatcher state.
+   */
+  generator: (chainId?: number) => Promise<Keypair>;
   storage: GenericStorage;
   /** Keypair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
@@ -20,7 +25,7 @@ interface KeypairVaultConfig {
  * permit revocations. Storage entries are keyed only by the signer address.
  */
 export class KeypairVault {
-  readonly #generator: () => Promise<Keypair>;
+  readonly #generator: (chainId?: number) => Promise<Keypair>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
   readonly #pending = new Map<ChecksummedAddress, Promise<StoredKeypair>>();
@@ -53,9 +58,14 @@ export class KeypairVault {
   /**
    * Return the cached keypair, generating and persisting a fresh one if absent or expired.
    *
-   * @remarks Deduplicates concurrent calls — simultaneous requests share one generation promise.
+   * @remarks Deduplicates concurrent calls — simultaneous requests share one
+   * generation promise. The dedup key is the signer address only: if two
+   * warmups race for the same signer with different `chainId`s, the second
+   * reuses the first. That is correct because the keypair is signer-scoped
+   * and chain-independent — the chain only picks which relayer runs the
+   * generation.
    */
-  async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredKeypair> {
+  async getOrCreate(signerAddress: ChecksummedAddress, chainId?: number): Promise<StoredKeypair> {
     const existing = this.#pending.get(signerAddress);
     if (existing) {
       return existing;
@@ -66,7 +76,7 @@ export class KeypairVault {
       if (cached !== null) {
         return cached;
       }
-      const fresh = await this.#generator();
+      const fresh = await this.#generator(chainId);
       const createdAt = nowSeconds();
       const stored: StoredKeypair = {
         publicKey: fresh.publicKey,

@@ -125,8 +125,27 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return relayer;
   }
 
-  generateKeypair(): Promise<KeypairType<Hex>> {
-    return this.#active.generateKeypair();
+  /**
+   * Generate a fresh ML-KEM keypair via the relayer for the requested chain.
+   *
+   * Without `options.chainId`, routes to the active chain — preserving the
+   * `RelayerSDK` interface contract. With `options.chainId`, peeks at a
+   * specific chain's relayer without mutating active chain state, so callers
+   * like credential warmup can target the connected wallet's chain
+   * independently of dispatcher state.
+   */
+  generateKeypair(options?: { chainId?: number }): Promise<KeypairType<Hex>> {
+    if (options?.chainId === undefined) {
+      return this.#active.generateKeypair();
+    }
+    if (!this.#chains.has(options.chainId)) {
+      throw new ConfigurationError(
+        `No relayer configured for chain ${options.chainId}. Add it to the chains array.`,
+      );
+    }
+    const relayer = this.#relayers.get(options.chainId);
+    assertNonNullable(relayer, "RelayerDispatcher: relayer");
+    return relayer.generateKeypair();
   }
 
   createEIP712(

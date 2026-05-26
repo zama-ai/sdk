@@ -1,7 +1,8 @@
 import type { Address } from "viem";
-import type { GenericSigner, GenericStorage } from "../types";
+import type { GenericSigner, GenericStorage, WalletAccount } from "../types";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { ZamaError } from "../errors/base";
+import { WorkerUnavailableError } from "../errors/relayer";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
@@ -45,7 +46,7 @@ export class CredentialService {
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new KeypairVault({
-      generator: () => config.relayer.generateKeypair(),
+      generator: (chainId) => config.relayer.generateKeypair({ chainId }),
       storage: config.storage,
       ttl: config.keypairTTL,
     });
@@ -187,11 +188,15 @@ export class CredentialService {
    * on key generation. Chain-only changes keep credentials intact because
    * permits are chain-scoped already and stale decrypt plaintext is cleared by
    * `ZamaSDK`.
+   *
+   * Warmup routes generation through the connected account's `chainId` rather
+   * than the dispatcher's active chain — required so a wallet connected to
+   * (say) Anvil never hits the mainnet relayer just because mainnet is
+   * `chains[0]`. {@link WorkerUnavailableError} is treated as expected (e.g.
+   * Next.js SSR) and silenced; the SDK is reconstructed client-side and the
+   * first real decrypt will lazily generate the keypair.
    */
-  async handleWalletAccountChange(
-    prev?: { address: Address },
-    next?: { address: Address },
-  ): Promise<void> {
+  async handleWalletAccountChange(prev?: WalletAccount, next?: WalletAccount): Promise<void> {
     const prevAddr = prev ? checksum(prev.address) : undefined;
     const nextAddr = next ? checksum(next.address) : undefined;
     if (prevAddr === nextAddr) {
@@ -202,9 +207,15 @@ export class CredentialService {
       await this.#store.clearAllForSigner(prevAddr);
     }
     if (nextAddr) {
-      await swallow("warm keypair", async () => {
-        await this.#vault.getOrCreate(nextAddr);
-      });
+      try {
+        await this.#vault.getOrCreate(nextAddr, next?.chainId);
+      } catch (error) {
+        if (error instanceof WorkerUnavailableError) {
+          return;
+        }
+        // oxlint-disable-next-line no-console
+        console.warn("[zama-sdk] warm keypair failed:", error);
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import { WorkerUnavailableError } from "../../errors";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -127,9 +128,67 @@ describe("CredentialService.handleWalletAccountChange", () => {
     await credentialService.grantPermit([A]);
     expect(await credentialService.hasPermit([A])).toBe(true);
 
-    await credentialService.handleWalletAccountChange({ address: USER }, { address: DELEGATOR });
+    await credentialService.handleWalletAccountChange(
+      { address: USER, chainId: 31337 },
+      { address: DELEGATOR, chainId: 31337 },
+    );
 
     expect(await credentialService.hasPermit([A])).toBe(false);
+  });
+
+  test("warmup routes keypair generation through next.chainId, not the dispatcher's active chain", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    // The dispatcher mock used by the fixture has #chainId === chains[0] === 31337.
+    // We warm up for a wallet connected to chain 1 (mainnet) and assert the
+    // generator was invoked with that chainId — proving the warmup is no longer
+    // tied to dispatcher state. This is the lock-in for the wrong-chain bug.
+    const credentialService = createCredentialService();
+    await credentialService.handleWalletAccountChange(undefined, {
+      address: DELEGATOR,
+      chainId: 1,
+    });
+    expect(relayer.generateKeypair).toHaveBeenCalledWith({ chainId: 1 });
+  });
+
+  test("WorkerUnavailableError from warmup is swallowed without warning (SSR-safe)", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.generateKeypair).mockRejectedValueOnce(
+      new WorkerUnavailableError("Web Worker is not available in this environment."),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const credentialService = createCredentialService();
+      await credentialService.handleWalletAccountChange(undefined, {
+        address: DELEGATOR,
+        chainId: 1,
+      });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("non-WorkerUnavailableError from warmup is logged as a warning", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    vi.mocked(relayer.generateKeypair).mockRejectedValueOnce(new Error("network down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const credentialService = createCredentialService();
+      await credentialService.handleWalletAccountChange(undefined, {
+        address: DELEGATOR,
+        chainId: 1,
+      });
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain("warm keypair failed");
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
