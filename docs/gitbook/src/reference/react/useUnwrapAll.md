@@ -31,7 +31,8 @@ function UnwrapAllButton() {
   const handleUnwrapAll = async () => {
     const { txHash } = await unwrapAll();
     console.log("Unwrap requested:", txHash);
-    // You must now parse the UnwrapRequested event and finalize with its unwrapRequestId.
+    // Parse the UnwrapRequested event with findUnwrapRequested,
+    // then pass unwrapRequestId to useFinalizeUnwrap.
   };
 
   return (

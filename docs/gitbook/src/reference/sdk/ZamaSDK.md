@@ -223,9 +223,11 @@ Checks whether the current signer already has stored permits covering every requ
 ```ts
 const hasPermit = await sdk.permits.hasPermit([cUSDT, cDAI]);
 if (!hasPermit) {
-  await sdk.permits.grantPermit([cUSDT, cDAI]);
+  showAuthorizeButton();
 }
 ```
+
+Use this for UI state. `sdk.permits.grantPermit()` is already idempotent and skips the wallet prompt when a covering permit exists.
 
 ### permits.grantDelegationPermit
 

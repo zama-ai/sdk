@@ -51,7 +51,7 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 
 ### 4. Use the SDK normally
 
-The token API works exactly the same:
+The wrapper API works the same as in production setups:
 
 ```ts
 const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");

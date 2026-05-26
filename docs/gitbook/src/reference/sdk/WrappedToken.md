@@ -83,9 +83,9 @@ Shields public ERC-20 tokens into confidential tokens. The SDK validates the pub
 
 The execution path is selected automatically:
 
-| Path               | Used when                                     | Wallet prompts |
-| ------------------ | --------------------------------------------- | -------------- |
-| `transferAndCall`  | The underlying ERC-20 supports ERC-1363       | 1              |
+| Path               | Used when                                       | Wallet prompts |
+| ------------------ | ----------------------------------------------- | -------------- |
+| `transferAndCall`  | The underlying ERC-20 supports ERC-1363         | 1              |
 | `approve` + `wrap` | The underlying ERC-20 does not support ERC-1363 | 2              |
 
 ```ts
@@ -94,12 +94,12 @@ const { txHash, receipt } = await wrappedToken.shield(1000n);
 
 Options:
 
-| Option                | Type                            | Default   | Description                                      |
-| --------------------- | ------------------------------- | --------- | ------------------------------------------------ |
-| `approvalStrategy`    | `"exact" \| "max" \| "skip"`    | `"exact"` | Controls approval on the `approve` + `wrap` path |
-| `to`                  | `Address`                       | signer    | Recipient of the confidential balance            |
-| `onApprovalSubmitted` | `(txHash: Hex) => void`         | —         | Called after the approval tx is submitted         |
-| `onShieldSubmitted`   | `(txHash: Hex) => void`         | —         | Called after the shield tx is submitted           |
+| Option                | Type                         | Default   | Description                                      |
+| --------------------- | ---------------------------- | --------- | ------------------------------------------------ |
+| `approvalStrategy`    | `"exact" \| "max" \| "skip"` | `"exact"` | Controls approval on the `approve` + `wrap` path |
+| `to`                  | `Address`                    | signer    | Recipient of the confidential balance            |
+| `onApprovalSubmitted` | `(txHash: Hex) => void`      | —         | Called after the approval tx is submitted        |
+| `onShieldSubmitted`   | `(txHash: Hex) => void`      | —         | Called after the shield tx is submitted          |
 
 `approvalStrategy` is ignored on the ERC-1363 `transferAndCall` path because there is no allowance step.
 
@@ -136,12 +136,12 @@ const { txHash, receipt } = await wrappedToken.unshield(500n);
 
 Options:
 
-| Option                | Type                    | Default | Description                                      |
-| --------------------- | ----------------------- | ------- | ------------------------------------------------ |
-| `skipBalanceCheck`    | `boolean`               | `false` | Skip the confidential-balance pre-flight check    |
-| `onUnwrapSubmitted`   | `(txHash: Hex) => void` | —       | Called after the unwrap tx is submitted           |
-| `onFinalizing`        | `() => void`            | —       | Called before waiting for the finalize proof      |
-| `onFinalizeSubmitted` | `(txHash: Hex) => void` | —       | Called after the finalize tx is submitted         |
+| Option                | Type                    | Default | Description                                    |
+| --------------------- | ----------------------- | ------- | ---------------------------------------------- |
+| `skipBalanceCheck`    | `boolean`               | `false` | Skip the confidential-balance pre-flight check |
+| `onUnwrapSubmitted`   | `(txHash: Hex) => void` | —       | Called after the unwrap tx is submitted        |
+| `onFinalizing`        | `() => void`            | —       | Called before waiting for the finalize proof   |
+| `onFinalizeSubmitted` | `(txHash: Hex) => void` | —       | Called after the finalize tx is submitted      |
 
 ### unshieldAll
 
