@@ -160,7 +160,7 @@ await transfer({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 

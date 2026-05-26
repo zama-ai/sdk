@@ -214,6 +214,39 @@ const a = await sdk.decryption.userDecrypt([{ encryptedValue: h1, contractAddres
 const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
+### permits.hasPermit
+
+`(contractAddresses: Address[]) => Promise<boolean>`
+
+Checks whether the current signer already has stored permits covering every requested contract address. This is a pure storage lookup: it does not prompt the wallet and returns `false` when the SDK has no signer.
+
+```ts
+const hasPermit = await sdk.permits.hasPermit([cUSDT, cDAI]);
+if (!hasPermit) {
+  await sdk.permits.grantPermit([cUSDT, cDAI]);
+}
+```
+
+### permits.grantDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<void>`
+
+Signs and stores a delegated-decryption permit for contracts that the connected signer will decrypt on behalf of `delegator`. The on-chain delegation must already exist and have propagated before delegated decryption succeeds.
+
+```ts
+await sdk.permits.grantDelegationPermit(delegator, [cUSDT]);
+```
+
+### permits.hasDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<boolean>`
+
+Checks whether the current signer has stored delegated-decryption permits for `delegator` and every requested contract.
+
+```ts
+const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
+```
+
 ### decryption.userDecrypt
 
 `(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
@@ -359,6 +392,17 @@ Wipe the keypair **and** cascade-delete every permit for the current signer. Use
 ```ts
 await sdk.permits.clear();
 ```
+
+### delegations
+
+`sdk.delegations` manages on-chain decryption delegation through the ACL contract:
+
+- `delegateDecryption({ contractAddress, delegateAddress, expirationDate? })`
+- `revokeDelegation({ contractAddress, delegateAddress })`
+- `isActive({ contractAddress, delegatorAddress, delegateAddress })`
+- `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
+
+See the [Delegations reference](/reference/sdk/delegation) for the full API and propagation notes.
 
 ### dispose
 

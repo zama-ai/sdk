@@ -29,9 +29,9 @@ function UnwrapAllButton() {
   const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
 
   const handleUnwrapAll = async () => {
-    const txHash = await unwrapAll();
+    const { txHash } = await unwrapAll();
     console.log("Unwrap requested:", txHash);
-    // You must now call useFinalizeUnwrap with this txHash
+    // You must now parse the UnwrapRequested event and finalize with its unwrapRequestId.
   };
 
   return (
@@ -59,7 +59,7 @@ const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 
 ## Return Type
 
-The mutation resolves with a transaction hash (`Hex`).
+The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

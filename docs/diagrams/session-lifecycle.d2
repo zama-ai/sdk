@@ -39,15 +39,15 @@ disconnected -> no-keypair: "wallet connects" {
   style.stroke: "#1565C0"
 }
 
-no-keypair -> active: "allow() / balanceOf()\n→ generate keypair (WASM)\n→ sign EIP-712\n→ encrypt & store keypair\n→ cache signature" {
+no-keypair -> active: "permits.grantPermit() / balanceOf()\n→ generate keypair (WASM)\n→ sign EIP-712\n→ encrypt & store keypair\n→ cache permit" {
   style.stroke: "#388E3C"
 }
 
-no-session -> active: "allow() / balanceOf()\n→ re-sign EIP-712\n→ decrypt keypair\n→ cache signature" {
+no-session -> active: "permits.grantPermit() / balanceOf()\n→ re-sign EIP-712\n→ decrypt keypair\n→ cache permit" {
   style.stroke: "#388E3C"
 }
 
-active -> no-session: "page reload\nrevoke()\nsessionTTL expires" {
+active -> no-session: "page reload\npermits.revokePermits()\npermitTTL expires" {
   style.stroke: "#E65100"
 }
 
@@ -59,7 +59,7 @@ active -> disconnected: "wallet disconnect\naccount switch" {
   style.stroke: "#37474F"
 }
 
-active -> active: "balanceOf() / transfer()\n→ reuse cached signature\n(no wallet popup)" {
+active -> active: "balanceOf() / transfer()\n→ reuse cached permit\n(no wallet popup)" {
   style.stroke: "#388E3C"
   style.stroke-dash: 5
 }

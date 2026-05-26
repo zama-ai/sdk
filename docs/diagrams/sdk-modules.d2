@@ -13,13 +13,13 @@ token: "token/" {
   zama-sdk: "ZamaSDK\n(factory)"
   tok: "Token\n(read + base writes)"
   wrapped: "WrappedToken\n(extends Token —\nshield/unshield)"
-  creds: "CredentialsManager"
+  creds: "Permits\nCredentialService"
   cache: "BalanceCache"
 
   zama-sdk -> tok: createToken
   zama-sdk -> wrapped: createWrappedToken
   wrapped -> tok: extends
-  tok -> creds: loads credentials
+  tok -> creds: requests permits
   tok -> cache: caches balances
 }
 

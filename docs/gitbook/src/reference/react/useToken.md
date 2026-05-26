@@ -5,8 +5,6 @@ description: Hook returning a memoised Token instance for a given address.
 
 # useToken
 
-> ⚠️ This page is a placeholder — full reference docs are coming.
-
 Returns a memoised [`Token`](../sdk/Token.md) instance bound to the SDK in the current `ZamaProvider`. The reference is stable across re-renders, making it safe to use in dependency arrays.
 
 For ERC-7984 wrapper operations (shield, unshield, allowance), use [`useWrappedToken`](useWrappedToken.md) instead.

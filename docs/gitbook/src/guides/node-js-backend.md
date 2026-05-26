@@ -97,16 +97,16 @@ Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent
 The token API is identical to the browser SDK:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 
 // Shield public tokens into their encrypted form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Transfer confidentially
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Decrypt a balance
-const balance = await token.balanceOf(account.address);
+const balance = await wrappedToken.balanceOf(account.address);
 ```
 
 See the [Token Operations](/reference/sdk/Token) reference for the full API.
