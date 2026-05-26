@@ -21,12 +21,16 @@ export interface ZamaProviderProps extends PropsWithChildren {
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
 function warmKeypair(sdk: ZamaSDK, account: WalletAccount | undefined): void {
-  if (!account || typeof window === "undefined") {
+  if (!account) {
     return;
   }
-  void sdk.permits.warmKeypair(account).catch(() => {
-    // Warmup is a latency optimization. The first real permit/decrypt call
+  void sdk.permits.warmKeypair(account).catch((error: unknown) => {
+    // Warmup is a latency optimization — the first real permit/decrypt call
     // will lazily retry keypair generation and surface actionable errors.
+    // We still log so persistent failures (storage corruption, relayer 4xx
+    // during keypair generation) leave a breadcrumb during debugging.
+    // oxlint-disable-next-line no-console
+    console.warn("[zama-sdk] warm keypair failed:", error);
   });
 }
 
@@ -52,9 +56,10 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
 
   const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
-  // SDK internally does credential/cache cleanup and relayer chain alignment.
-  // React owns client-only keypair prefetching because it is a QoL optimization,
-  // not correctness-critical SDK construction work.
+  // Keypair warming must run client-only (it touches `new Worker(...)`), so it
+  // lives in a useEffect rather than inside the SDK constructor. Any non-React
+  // framework adapter needs to mirror this: call `sdk.permits.warmKeypair()` on
+  // mount and on every `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
     warmKeypair(sdk, sdk.signer?.walletAccount.getSnapshot());
     return sdk.onWalletAccountChange(({ previous, next }) => {
