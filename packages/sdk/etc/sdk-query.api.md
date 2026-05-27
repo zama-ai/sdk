@@ -1178,6 +1178,7 @@ export interface UnwrappedFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrappedFinalized";
     readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public
@@ -1199,6 +1200,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
+    readonly unwrapRequestId?: Handle;
 }
 
 // @public (undocumented)
@@ -1550,7 +1552,7 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/activity-DBMyE78S.d.ts:22695:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
+// dist/esm/activity-CUYnGNME.d.ts:21523:3 - (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

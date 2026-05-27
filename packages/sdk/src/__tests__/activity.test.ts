@@ -39,7 +39,7 @@ function wrappedLog(to: string, amountIn: bigint): RawLog {
 
 function unwrapRequestedLog(receiver: string, handle: string): RawLog {
   return {
-    topics: [Topics.UnwrapRequested, topic(receiver.slice(2))],
+    topics: [Topics.UnwrapRequested, topic(receiver.slice(2)), `0x${word(handle.slice(2))}` as Hex],
     data: `0x${word(handle.slice(2))}`,
   };
 }
@@ -61,11 +61,13 @@ function unwrappedFinalizedLog(
   encryptedHandle: string,
   cleartextAmount: bigint,
 ): RawLog {
-  // UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
+  // UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId,
+  //                 bytes32 encryptedAmount, uint64 cleartextAmount)
   return {
     topics: [
       Topics.UnwrappedFinalized,
       topic(receiver.slice(2)), // indexed receiver
+      `0x${word(encryptedHandle.slice(2).padStart(64, "0"))}` as Hex, // indexed unwrapRequestId (= handle)
     ],
     data: `0x${word(encryptedHandle.slice(2).padStart(64, "0"))}${word(cleartextAmount.toString(16))}` as ReturnType<
       typeof bytes32

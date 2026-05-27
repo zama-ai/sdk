@@ -23,8 +23,9 @@ export const HANDLE = `0x${"11".repeat(32)}` as const;
 export const BURN_AMOUNT_HANDLE = `0x${"22".repeat(32)}` as const;
 export const DECRYPTION_PROOF = `0x${"33".repeat(32)}` as const;
 export const UNDERLYING = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+// keccak256("UnwrapRequested(address,bytes32,bytes32)")
 export const UNWRAP_REQUESTED_TOPIC =
-  "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee";
+  "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e";
 export const TRANSFER_FROM = "0xeDEdEDedeDEdeDeDedeDEDeDEdEdededeDeDEdED" as Address;
 export const DEFAULT_IDLE_MUTATION_STATE = {
   context: undefined,
@@ -48,7 +49,7 @@ export function toTopicAddress(address: Address): Address {
 
 export function createUnwrapRequestedLog(handle: Address): RawLog {
   return {
-    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER)],
+    topics: [UNWRAP_REQUESTED_TOPIC, toTopicAddress(USER), handle],
     data: handle,
   };
 }
