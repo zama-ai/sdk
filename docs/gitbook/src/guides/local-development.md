@@ -51,13 +51,13 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 
 ### 4. Use the SDK normally
 
-The token API works exactly the same:
+The wrapper API works the same as in production setups:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
-await token.shield(1000n);
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
+await wrappedToken.shield(1000n);
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address);
+const balance = await wrappedToken.balanceOf(address);
 ```
 
 ### 5. (Optional) Create a custom config for your own chain

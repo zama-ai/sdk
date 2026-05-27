@@ -1,7 +1,7 @@
 direction: down
 
 title: {
-  label: "Allow / Revoke Flow"
+  label: "Permit Grant / Revoke Flow"
   near: top-center
   shape: text
   style.font-size: 24
@@ -9,7 +9,7 @@ title: {
 }
 
 # --- Allow flow ---
-allow: "allow(\"0xTokenA\", \"0xTokenB\")" {
+allow: "permits.grantPermit([TokenA, TokenB])" {
   style.fill: "#E8F5E9"
   style.stroke: "#388E3C"
   style.font-size: 14
@@ -27,7 +27,7 @@ wallet-sign: "Wallet signs\n→ one signature for all contracts" {
   style.font-size: 14
 }
 
-cache-sig: "Cache signature\nin session storage" {
+cache-sig: "Cache permit\nin storage" {
   style.fill: "#E8F5E9"
   style.stroke: "#388E3C"
   style.font-size: 14
@@ -46,13 +46,13 @@ wallet-sign -> cache-sig
 cache-sig -> ready
 
 # --- Revoke flow ---
-revoke: "revokeSession()" {
+revoke: "permits.revokePermits()" {
   style.fill: "#FBE9E7"
   style.stroke: "#BF360C"
   style.font-size: 14
 }
 
-clear-sig: "Clear signature\nfrom session storage" {
+clear-sig: "Clear permit\nfrom storage" {
   style.fill: "#FFCCBC"
   style.stroke: "#BF360C"
   style.font-size: 14
@@ -68,7 +68,7 @@ revoke -> clear-sig
 clear-sig -> next-decrypt
 
 # --- Note about new contracts ---
-new-contract: "allow(\"0xTokenC\")\n(not in original set)" {
+new-contract: "permits.grantPermit([TokenC])\n(not in original set)" {
   style.fill: "#FFFDE7"
   style.stroke: "#F57F17"
   style.font-size: 14
