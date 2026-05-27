@@ -22,6 +22,9 @@ jobs:
         working-directory: examples/example-hoodi
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       # TODO: remove once GitHub runner images ship the CVE-2026-31431 kernel fix
       - name: Workaround CVE-2026-31431 (copy.fail)
         run: |
@@ -31,9 +34,6 @@ jobs:
           elif modinfo algif_aead 2>/dev/null | grep -q builtin; then
             echo "WARNING: algif_aead built-in - modprobe.d blacklist has no effect"
           fi
-
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
