@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1](https://github.com/zama-ai/sdk/compare/v3.0.0...v3.0.1) (2026-05-28)
+
+### Bug Fixes
+
+- **wrapper:** support upgraded wrapper + registry contracts [SDK-69] ([5a7781a]())
+
 ## [3.0.0](https://github.com/zama-ai/sdk/compare/v2.5.0...v3.0.0) (2026-04-22)
 
 ## [2.5.0](https://github.com/zama-ai/sdk/compare/v2.4.0...v2.5.0) (2026-04-17)
