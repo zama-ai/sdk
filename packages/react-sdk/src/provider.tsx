@@ -1,6 +1,7 @@
 "use client";
 
-import { ZamaSDK, type ZamaConfig, type WalletAccount } from "@zama-fhe/sdk";
+import { ZamaSDK, type ZamaConfig } from "@zama-fhe/sdk";
+import type { Address } from "viem";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,11 +21,11 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmKeypair(sdk: ZamaSDK, account: WalletAccount | undefined): void {
-  if (!account) {
+function warmKeypair(sdk: ZamaSDK, address: Address | undefined): void {
+  if (!address) {
     return;
   }
-  void sdk.permits.warmKeypair(account).catch((error: unknown) => {
+  void sdk.permits.warmKeypair(address).catch((error: unknown) => {
     // Warmup is a latency optimization — the first real permit/decrypt call
     // will lazily retry keypair generation and surface actionable errors.
     // We still log so persistent failures (storage corruption, relayer 4xx
@@ -56,17 +57,19 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
 
   const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
-  // Keypair warming must run client-only (it touches `new Worker(...)`), so it
-  // lives in a useEffect rather than inside the SDK constructor. Any non-React
-  // framework adapter needs to mirror this: call `sdk.permits.warmKeypair()` on
-  // mount and on every `onWalletAccountChange` — the SDK no longer warms itself.
+  // Keypair warming may touch `new Worker(...)` (web() relayer), which is
+  // undefined during SSR. Driving warmup from a client-only useEffect rather
+  // than the SDK constructor keeps server-rendered trees free of browser-only
+  // infrastructure. Non-React framework adapters need to mirror this contract:
+  // call `sdk.permits.warmKeypair()` on mount and on every
+  // `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
-    warmKeypair(sdk, sdk.signer?.walletAccount.getSnapshot());
+    warmKeypair(sdk, sdk.signer?.walletAccount.getSnapshot()?.address);
     return sdk.onWalletAccountChange(({ previous, next }) => {
       if (previous) {
         invalidateWalletLifecycleQueries(queryClient);
       }
-      warmKeypair(sdk, next);
+      warmKeypair(sdk, next?.address);
     });
   }, [sdk, queryClient]);
 

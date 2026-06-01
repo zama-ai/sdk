@@ -41,6 +41,12 @@ describe("Permits", () => {
       const sdk = createSDK({ signer: undefined });
       await expect(sdk.permits.hasDelegationPermit(DELEGATOR, [CONTRACT_A])).resolves.toBe(false);
     });
+
+    test("warmKeypair resolves silently (no signer required)", async ({ createSDK, relayer }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(sdk.permits.warmKeypair()).resolves.toBeUndefined();
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    });
   });
 
   describe("empty-array short-circuit", () => {
@@ -102,6 +108,30 @@ describe("Permits", () => {
     }) => {
       await sdk.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signer.signTypedData).toHaveBeenCalled();
+    });
+
+    test("warmKeypair(address) generates the keypair against the active dispatcher chain", async ({
+      sdk,
+      relayer,
+      signer,
+    }) => {
+      vi.mocked(relayer.generateKeypair).mockClear();
+      const address = signer.walletAccount.getSnapshot()!.address;
+
+      await sdk.permits.warmKeypair(address);
+
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    });
+
+    test("warmKeypair() with no argument warms the connected, aligned wallet", async ({
+      sdk,
+      relayer,
+    }) => {
+      vi.mocked(relayer.generateKeypair).mockClear();
+
+      await sdk.permits.warmKeypair();
+
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
     });
 
     test("revokePermits() after grantPermit clears the decrypt cache for the signer", async ({

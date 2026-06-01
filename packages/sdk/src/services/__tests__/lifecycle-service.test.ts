@@ -119,6 +119,48 @@ describe("LifecycleService", () => {
       expect(switchChain).toHaveBeenCalledWith(1);
     });
 
+    test("synchronous re-emit at construct time switches chain before credential cleanup", async ({
+      createLifecycleService,
+      createMockSigner,
+      createMockRelayer,
+    }) => {
+      // SDK-189 regression guard: real signer stores re-emit the current
+      // snapshot synchronously on subscribe, which happens inside the SDK
+      // constructor. The lifecycle must run switchChain first so any downstream
+      // work (credential cleanup, listener-driven keypair warmup in
+      // ZamaProvider) sees the dispatcher on the wallet chain, not chains[0].
+      const calls: string[] = [];
+      const handleWalletAccountChange = vi.fn(async () => {
+        calls.push("credential");
+      });
+      const credentialService = { handleWalletAccountChange } as unknown as CredentialService;
+      const switchChain = vi.fn(() => {
+        calls.push("relayer");
+      });
+      const relayer = createMockRelayer({ switchChain });
+      const initial = {
+        address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        chainId: 7,
+      } as const;
+      const signer = createMockSigner(undefined, {
+        walletAccount: {
+          getSnapshot: vi.fn().mockReturnValue(initial),
+          subscribe: vi.fn((listener: (change: WalletAccountChange) => void) => {
+            listener({ previous: undefined, next: initial });
+            return () => {};
+          }),
+          isReady: vi.fn().mockReturnValue(true),
+        },
+      });
+
+      createLifecycleService({ signer, relayer, credentialService });
+
+      await vi.waitFor(() => {
+        expect(calls).toEqual(["relayer", "credential"]);
+      });
+      expect(switchChain).toHaveBeenCalledWith(7);
+    });
+
     test("skips cache clear when previous account is undefined", async ({
       createLifecycleService,
       createMockSigner,

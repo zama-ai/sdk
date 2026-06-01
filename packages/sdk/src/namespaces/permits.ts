@@ -2,7 +2,7 @@ import { getAddress, type Address } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
-import type { GenericProvider, GenericSigner, WalletAccount } from "../types";
+import type { GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 
@@ -106,22 +106,29 @@ export class Permits {
   }
 
   /**
-   * Best-effort keypair prefetch for a known wallet account.
+   * Best-effort keypair prefetch for a known signer address.
    *
    * This is an optional latency optimization. Decrypt and permit flows remain
    * correct without it because they lazily create the keypair when needed.
    *
-   * @param account - Wallet account to warm. When omitted, the connected,
-   *   provider-aligned wallet account is used.
+   * The keypair is generated through the relayer dispatcher's currently active
+   * chain. Callers that need to warm against a specific chain must rely on the
+   * SDK lifecycle to have switched the dispatcher first — see
+   * {@link LifecycleService}, which calls `switchChain` before fanning the
+   * wallet-account change out to listeners.
+   *
+   * @param address - Signer address to warm. When omitted, the connected,
+   *   provider-aligned wallet account's address is used.
    */
-  async warmKeypair(account?: WalletAccount): Promise<void> {
+  async warmKeypair(address?: Address): Promise<void> {
     const service = this.#credentialService;
     if (!service) {
       return;
     }
     const target =
-      account ?? (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider));
-    await service.warmKeypair(target.address);
+      address ??
+      (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider)).address;
+    await service.warmKeypair(target);
   }
 
   /**

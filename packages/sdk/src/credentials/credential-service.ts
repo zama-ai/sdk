@@ -182,8 +182,10 @@ export class CredentialService {
   /**
    * Warm the signer keypair cache for a known address.
    *
-   * This is a best-effort prefetch primitive. Correctness still comes from
-   * `grantPermit`, which lazily creates the keypair when needed.
+   * Best-effort prefetch primitive: correctness still comes from `grantPermit`,
+   * which lazily creates the keypair when needed. Errors (storage failure,
+   * relayer 4xx, missing Worker in SSR) are **not** swallowed here — the caller
+   * decides whether to log, ignore, or surface them.
    */
   async warmKeypair(address: Address): Promise<void> {
     await this.#vault.getOrCreate(checksum(address));
