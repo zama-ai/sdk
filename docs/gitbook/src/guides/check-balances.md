@@ -5,35 +5,24 @@ description: Decrypt and read confidential token balances using the SDK and Reac
 
 # Check balances
 
-Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
+Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE credentials tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
 
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  storage,
-  relayers: { [sepolia.id]: web() },
-});
-const sdk = new ZamaSDK(config);
+const sdk = new ZamaSDK({ relayer, signer, storage });
 const token = sdk.createToken("0xEncryptedERC20");
 
-const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address);
+const balance = await token.balanceOf();
 console.log(`Confidential balance: ${balance}`);
 ```
 
@@ -42,24 +31,22 @@ console.log(`Confidential balance: ${balance}`);
 
 ### 2. Understand the first-time wallet signature
 
-The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt permits that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
-
-{% hint style="info" %}
-**In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useHasPermit` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
-{% endhint %}
+The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.permits.grantPermit()`:
+You can pre-authorize multiple tokens with a single signature using `ReadonlyToken.allow()`:
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
+import { ReadonlyToken } from "@zama-fhe/sdk";
 
-const tokenA = sdk.createToken("0xTokenA");
-const tokenB = sdk.createToken("0xTokenB");
+const tokenA = sdk.createReadonlyToken("0xTokenA");
+const tokenB = sdk.createReadonlyToken("0xTokenB");
+
+await ReadonlyToken.allow(tokenA, tokenB);
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -71,37 +58,33 @@ const tokenB = sdk.createToken("0xTokenB");
 Decrypted balances are automatically cached in your storage backend (IndexedDB, async local storage, etc.). This means:
 
 - **No spinner on page reload** -- if a balance was previously decrypted, it is returned instantly from cache instead of re-running the 2-5 second FHE decryption.
-- **Automatic invalidation** -- the cache key includes the on-chain encrypted value, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
+- **Automatic invalidation** -- the cache key includes the on-chain encrypted handle, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
 - **Best-effort** -- cache reads and writes never throw. If storage is unavailable, the SDK falls back to a fresh decryption silently.
 
-The cache is keyed by `token address + owner address + encrypted value`.
+The cache is keyed by `token address + owner address + encrypted handle`.
 
-### 4. Work with raw encrypted values
+### 4. Work with raw encrypted handles
 
-Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
+Sometimes you need the encrypted handle itself, for example to check whether a balance exists before attempting decryption.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-import { isZeroHandle } from "@zama-fhe/sdk";
+const handle = await token.confidentialBalanceOf();
 
-const encryptedValue = await token.confidentialBalanceOf(userAddress);
-
-// Check if the encrypted value is zero (account has never shielded)
-if (isZeroHandle(encryptedValue)) {
+// Check if the handle is zero (account has never shielded)
+if (token.isZeroHandle(handle)) {
   console.log("No confidential balance yet");
 }
 
-// Decrypt an encrypted value you already have
-const result = await sdk.decryption.userDecrypt([
-  { encryptedValue, contractAddress: token.address },
-]);
-const value = result[encryptedValue] as bigint;
+// Decrypt a handle you already have
+const result = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
+const value = result[handle] as bigint;
 
-// Decrypt multiple encrypted values at once (must include the contract address per entry)
-const decrypted = await sdk.decryption.userDecrypt(
-  [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
+// Decrypt multiple handles at once (must include the contract address per handle)
+const decrypted = await sdk.userDecrypt(
+  [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
 );
 ```
 
@@ -122,8 +105,7 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const [address] = await walletClient.getAddresses();
-  const balance = await token.balanceOf(address);
+  const balance = await token.balanceOf();
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -143,15 +125,15 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 {% tab title="SDK" %}
 
 ```ts
-import { Token } from "@zama-fhe/sdk";
+import { ReadonlyToken } from "@zama-fhe/sdk";
+
+const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
 
 // One wallet signature covers all tokens
-await sdk.permits.grantPermit(addresses);
-
-const tokens = addresses.map((a) => sdk.createToken(a));
+await ReadonlyToken.allow(...tokens);
 
 // Decrypt all balances in parallel
-const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
+const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, userAddress);
 
 // `results` is Map<Address, bigint> for tokens that decrypted successfully,
 // `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
@@ -187,17 +169,14 @@ The React SDK provides hooks that handle polling, caching, and React Query integ
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
 
-const { address } = useAccount();
 const {
   data: balance,
   isLoading,
   error,
 } = useConfidentialBalance(
   {
-    address: "0xToken",
-    account: address,
+    tokenAddress: "0xToken",
   },
   { refetchInterval: 5_000 },
 );
@@ -208,12 +187,9 @@ const {
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
 
-const { address } = useAccount();
 const { data } = useConfidentialBalances({
-  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
-  account: address,
+  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
 });
 
 const tokenABalance = data?.results.get("0xTokenA");
@@ -222,7 +198,7 @@ const tokenABalance = data?.results.get("0xTokenA");
 {% endtab %}
 {% endtabs %}
 
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Pass `refetchInterval` to poll for updates. Clear values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 
@@ -233,7 +209,7 @@ Mutations automatically invalidate balance caches, but if you need manual contro
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { zamaQueryKeys } from "@zama-fhe/react-sdk";
 
 const queryClient = useQueryClient();
 
@@ -253,7 +229,6 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
-- See [Token Operations](/reference/sdk/Token) for the full `Token` API.
+- See [Token Operations](/reference/sdk/Token) for the full `Token.balanceOf` and `ReadonlyToken` API.
 - See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

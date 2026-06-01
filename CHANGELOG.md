@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1](https://github.com/zama-ai/sdk/compare/v3.0.0...v3.0.1) (2026-05-28)
+
+### Bug Fixes
+
+- **wrapper:** support upgraded wrapper + registry contracts [SDK-69] ([5a7781a]())
+
 ## [3.0.0-alpha.45](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.44...v3.0.0-alpha.45) (2026-05-25)
 
 ## [3.0.0-alpha.44](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.43...v3.0.0-alpha.44) (2026-05-22)
@@ -282,6 +288,15 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ### Features
 
 - **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([5d02da5]())
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([24f2c1d]())
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([c38a578]())
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([111423b]())
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([4abb133]())
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([b004949]())
 
 ## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
 
