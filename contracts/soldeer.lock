@@ -1,11 +1,11 @@
 [[dependencies]]
 name = "protocol-apps-wrapper"
-version = "da4afe387420"
+version = "3bd308fb7cb1"
 git = "https://github.com/zama-ai/protocol-apps"
-rev = "da4afe387420"
+rev = "3bd308fb7cb1"
 
 [[dependencies]]
 name = "protocol-apps-registry"
-version = "f51845b08cc2"
+version = "0647c5fd9e41"
 git = "https://github.com/zama-ai/protocol-apps"
-rev = "f51845b08cc2"
+rev = "0647c5fd9e41"

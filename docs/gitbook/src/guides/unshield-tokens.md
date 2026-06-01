@@ -11,7 +11,7 @@ Unshielding converts encrypted tokens back into standard ERC-20 tokens that are 
 
 ### 1. Unshield a specific amount
 
-Call `token.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
+Call `wrappedToken.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
 
 By default, the SDK validates the confidential balance before submitting. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
@@ -32,9 +32,9 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createWrappedToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 
-const { txHash, receipt } = await token.unshield(500n);
+const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
 {% endtab %}
@@ -50,7 +50,7 @@ Because unshielding involves two transactions with a waiting period in between, 
 {% tab title="SDK" %}
 
 ```ts
-await token.unshield(500n, {
+await wrappedToken.unshield(500n, {
   onUnwrapSubmitted: (txHash) => {
     updateUI("Unwrap submitted...");
   },
@@ -80,7 +80,7 @@ If you want to convert all confidential tokens back to public, use `unshieldAll(
 {% tab title="SDK" %}
 
 ```ts
-await token.unshieldAll();
+await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
@@ -104,7 +104,7 @@ await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
 // On next page load, check for pending unshields
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
-  await token.resumeUnshield(pending);
+  await wrappedToken.resumeUnshield(pending);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```

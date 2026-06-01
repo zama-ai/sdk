@@ -62,7 +62,8 @@ const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
-const balance = await token.balanceOf(); // connected wallet
+const [owner] = await walletClient.getAddresses();
+const balance = await token.balanceOf(owner); // connected wallet
 const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
@@ -154,6 +155,8 @@ In all cases, the user sees a single unified balance for the underlying asset.
 {% tab title="SDK" %}
 
 ```ts
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
 // Exact-amount approval (default)
 await wrappedToken.shield(1000n);
 
@@ -187,6 +190,8 @@ Unwrapping is a **two-step asynchronous process** at the contract level: an unwr
 {% tab title="SDK" %}
 
 ```ts
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 
 // Track each phase for UI updates
@@ -245,7 +250,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](/r
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
+  const cUsdc = sdk.createWrappedToken(result.confidentialTokenAddress);
 }
 ```
 

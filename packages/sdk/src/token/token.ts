@@ -6,7 +6,6 @@ import {
   decimalsContract,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
   isOperatorContract,
   nameContract,
   setOperatorContract,
@@ -129,22 +128,13 @@ export class Token {
   /**
    * ERC-165 check for IERC7984ERC20Wrapper support.
    *
-   * During the transition period, checks both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}
-   * (`0xd04584ba`) and {@link ERC7984_WRAPPER_INTERFACE_ID} (`0x1f1c62b2`) in parallel,
-   * returning `true` if either matches.
-   *
-   * @returns `true` if the contract implements the ERC-7984 wrapper interface.
+   * @returns `true` if the contract implements the ERC-7984 wrapper interface
+   *   ({@link ERC7984_WRAPPER_INTERFACE_ID}, `0x1f1c62b2`).
    */
   async isWrapper(): Promise<boolean> {
-    const [legacyMatch, newMatch] = await Promise.all([
-      this.sdk.provider.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID_LEGACY),
-      ),
-      this.sdk.provider.readContract(
-        supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
-      ),
-    ]);
-    return legacyMatch || newMatch;
+    return this.sdk.provider.readContract(
+      supportsInterfaceContract(this.address, ERC7984_WRAPPER_INTERFACE_ID),
+    );
   }
 
   // BALANCES

@@ -1,9 +1,4 @@
-import {
-  isConfidentialTokenContract,
-  isConfidentialWrapperContract,
-  supportsInterfaceContract,
-  ERC7984_WRAPPER_INTERFACE_ID,
-} from "../contracts";
+import { isConfidentialTokenContract, isConfidentialWrapperContract } from "../contracts";
 import type { ZamaSDK } from "../zama-sdk";
 import { isContractCallError } from "../utils";
 import type { QueryFactoryOptions } from "./factory-types";
@@ -59,15 +54,7 @@ export function isWrapperQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       try {
-        // During the transition period, check both wrapper interface IDs in parallel.
-        // Either returning true is sufficient to identify a confidential wrapper.
-        const [legacyMatch, newMatch] = await Promise.all([
-          sdk.provider.readContract(isConfidentialWrapperContract(keyTokenAddress)),
-          sdk.provider.readContract(
-            supportsInterfaceContract(keyTokenAddress, ERC7984_WRAPPER_INTERFACE_ID),
-          ),
-        ]);
-        return legacyMatch || newMatch;
+        return await sdk.provider.readContract(isConfidentialWrapperContract(keyTokenAddress));
       } catch (err) {
         // Only suppress contract execution reverts (non-ERC-165 contracts).
         // Re-throw network/transport errors so TanStack Query's retry logic applies.

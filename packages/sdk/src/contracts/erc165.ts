@@ -4,20 +4,7 @@ import { erc165Abi } from "../abi/erc165.abi";
 /** ERC-165 interface ID for IERC7984 (confidential fungible token). */
 export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 
-/** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — current deployed baseline. */
-export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY = "0xd04584ba" as const;
-
-/**
- * ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper) — upgraded interface.
- *
- * Verified against the protocol-apps upgraded wrapper line: commit b06eb263 asserts
- * `supportsInterface(0x1f1c62b2)` for `type(IERC7984ERC20Wrapper).interfaceId`,
- * and the implementation exposes `inferredTotalSupply()`.
- * During the transition period, both {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} and this
- * constant must be checked to support old and new wrappers simultaneously.
- *
- * @see {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} for the legacy interface ID.
- */
+/** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper). */
 export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
 
 /** ERC-165 interface ID for ERC-1363 (payable token — `transferAndCall`). */
@@ -27,8 +14,7 @@ export const ERC1363_INTERFACE_ID = "0xb0202a11" as const;
  * Returns the contract config for an ERC-165 `supportsInterface` check.
  *
  * Use with {@link ERC7984_INTERFACE_ID} to detect confidential tokens,
- * or {@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY} / {@link ERC7984_WRAPPER_INTERFACE_ID}
- * to detect wrappers (both must be checked during the transition period).
+ * or {@link ERC7984_WRAPPER_INTERFACE_ID} to detect wrappers.
  *
  * @example
  * ```ts
@@ -61,13 +47,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
 }
 
 /**
- * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper)
- * using the **current deployed baseline** interface ID
- * ({@link ERC7984_WRAPPER_INTERFACE_ID_LEGACY}, `0xd04584ba`).
- *
- * Note: During the transition period, calling this alone is insufficient. Upgraded wrappers
- * respond only to {@link ERC7984_WRAPPER_INTERFACE_ID}. Prefer higher-level APIs
- * (`Token.isWrapper()`, `isWrapperQueryOptions()`) which check both interface IDs.
+ * Returns contract config to check if a token implements IERC7984ERC20Wrapper (confidential wrapper).
  *
  * @example
  * ```ts
@@ -77,7 +57,7 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  * ```
  */
 export function isConfidentialWrapperContract(tokenAddress: Address) {
-  return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID_LEGACY);
+  return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID);
 }
 
 /**
