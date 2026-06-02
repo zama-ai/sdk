@@ -117,17 +117,36 @@ export class Permits {
    * {@link LifecycleService}, which calls `switchChain` before fanning the
    * wallet-account change out to listeners.
    *
+   * When called without an argument, the connected, provider-aligned wallet
+   * account is resolved internally. Missing-signer and alignment failures
+   * (`SignerNotConfiguredError`, `WalletAccountNotReadyError`,
+   * `ChainMismatchError`) are swallowed silently — they are expected transient
+   * states for a latency primitive. Pass an explicit `address` to skip the
+   * alignment check entirely; this is the form the React provider uses.
+   *
    * @param address - Signer address to warm. When omitted, the connected,
-   *   provider-aligned wallet account's address is used.
+   *   provider-aligned wallet account's address is used (silent on
+   *   misalignment).
    */
   async warmKeypair(address?: Address): Promise<void> {
     const service = this.#credentialService;
     if (!service) {
       return;
     }
-    const target =
-      address ??
-      (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider)).address;
+    let target: Address;
+    if (address !== undefined) {
+      target = address;
+    } else {
+      try {
+        target = (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider))
+          .address;
+      } catch {
+        // Best-effort latency primitive: silently skip when wallet is not yet
+        // aligned. grantPermit/userDecrypt will lazily generate the keypair
+        // and surface actionable errors when they happen for real.
+        return;
+      }
+    }
     await service.warmKeypair(target);
   }
 

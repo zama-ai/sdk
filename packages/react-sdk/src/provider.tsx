@@ -1,7 +1,6 @@
 "use client";
 
-import { ZamaSDK, type ZamaConfig } from "@zama-fhe/sdk";
-import type { Address } from "viem";
+import { ZamaSDK, type Address, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -61,8 +60,10 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   // undefined during SSR. Driving warmup from a client-only useEffect rather
   // than the SDK constructor keeps server-rendered trees free of browser-only
   // infrastructure. Non-React framework adapters need to mirror this contract:
-  // call `sdk.permits.warmKeypair()` on mount and on every
-  // `onWalletAccountChange` — the SDK no longer warms itself.
+  // call `sdk.permits.warmKeypair(address)` on mount with the current snapshot's
+  // address and on every `onWalletAccountChange` with `next?.address` — the SDK
+  // no longer warms itself. The explicit-address form is preferred over the
+  // no-arg form because it sidesteps the wallet-alignment race during mount.
   useEffect(() => {
     warmKeypair(sdk, sdk.signer?.walletAccount.getSnapshot()?.address);
     return sdk.onWalletAccountChange(({ previous, next }) => {
