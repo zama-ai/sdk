@@ -131,6 +131,26 @@ describe("CredentialService.handleWalletAccountChange", () => {
 
     expect(await credentialService.hasPermit([A])).toBe(false);
   });
+
+  test("does not warm keypairs during wallet lifecycle cleanup", async ({
+    createCredentialService,
+    relayer,
+  }) => {
+    const credentialService = createCredentialService();
+    vi.mocked(relayer.generateKeypair).mockClear();
+
+    await credentialService.handleWalletAccountChange(undefined, { address: USER });
+
+    expect(relayer.generateKeypair).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService.warmKeypair", () => {
+  test("populates the vault for the requested address", async ({ credentialService, relayer }) => {
+    await credentialService.warmKeypair(USER);
+
+    expect(relayer.generateKeypair).toHaveBeenCalled();
+  });
 });
 
 describe("CredentialService.allow signing-error wrapping", () => {

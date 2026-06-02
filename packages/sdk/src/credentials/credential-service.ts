@@ -180,13 +180,23 @@ export class CredentialService {
   }
 
   /**
+   * Warm the signer keypair cache for a known address.
+   *
+   * Best-effort prefetch primitive: correctness still comes from `grantPermit`,
+   * which lazily creates the keypair when needed. Errors (storage failure,
+   * relayer 4xx, missing Worker in SSR) are **not** swallowed here — the caller
+   * decides whether to log, ignore, or surface them.
+   */
+  async warmKeypair(address: Address): Promise<void> {
+    await this.#vault.getOrCreate(checksum(address));
+  }
+
+  /**
    * Apply a wallet account transition.
    *
-   * Address change clears persisted credentials for the previous account and
-   * eagerly warms a keypair for the new one so the first decrypt does not stall
-   * on key generation. Chain-only changes keep credentials intact because
-   * permits are chain-scoped already and stale decrypt plaintext is cleared by
-   * `ZamaSDK`.
+   * Address change clears persisted credentials for the previous account.
+   * Chain-only changes keep credentials intact because permits are chain-scoped
+   * already and stale decrypt plaintext is cleared by `ZamaSDK`.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },
@@ -200,11 +210,6 @@ export class CredentialService {
     if (prevAddr) {
       await this.#vault.clear(prevAddr);
       await this.#store.clearAllForSigner(prevAddr);
-    }
-    if (nextAddr) {
-      await swallow("warm keypair", async () => {
-        await this.#vault.getOrCreate(nextAddr);
-      });
     }
   }
 
