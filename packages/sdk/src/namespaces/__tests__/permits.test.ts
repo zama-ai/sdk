@@ -83,44 +83,6 @@ describe("Permits", () => {
       );
     });
 
-    test("warmKeypair() no-arg swallows ChainMismatchError silently", async ({
-      sdk,
-      signer,
-      provider,
-      relayer,
-    }) => {
-      // Contrast with grantPermit: warmKeypair is a best-effort latency
-      // primitive, so alignment failures during the wallet-connect transient
-      // window must not surface as unhandled rejections.
-      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
-      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
-      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
-      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-      vi.mocked(relayer.generateKeypair).mockClear();
-
-      await expect(sdk.permits.warmKeypair()).resolves.toBeUndefined();
-      expect(relayer.generateKeypair).not.toHaveBeenCalled();
-    });
-
-    test("warmKeypair(address) with explicit address bypasses the alignment check", async ({
-      sdk,
-      signer,
-      provider,
-      relayer,
-    }) => {
-      // Explicit-address form is the contract the React provider follows so
-      // mount-time alignment races never surface to integrators.
-      const account = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
-      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(account);
-      vi.mocked(signer.requireWalletAccount).mockReturnValue(account);
-      vi.mocked(provider.getChainId).mockResolvedValue(11155111);
-      vi.mocked(relayer.generateKeypair).mockClear();
-
-      await sdk.permits.warmKeypair(account.address);
-
-      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    });
-
     test("grantDelegationPermit throws ChainMismatchError when signer and provider disagree", async ({
       sdk,
       signer,
@@ -148,20 +110,7 @@ describe("Permits", () => {
       expect(signer.signTypedData).toHaveBeenCalled();
     });
 
-    test("warmKeypair(address) generates the keypair against the active dispatcher chain", async ({
-      sdk,
-      relayer,
-      signer,
-    }) => {
-      vi.mocked(relayer.generateKeypair).mockClear();
-      const address = signer.walletAccount.getSnapshot()!.address;
-
-      await sdk.permits.warmKeypair(address);
-
-      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
-    });
-
-    test("warmKeypair() with no argument warms the connected, aligned wallet", async ({
+    test("warmKeypair generates the keypair against the active dispatcher chain", async ({
       sdk,
       relayer,
     }) => {
@@ -170,6 +119,18 @@ describe("Permits", () => {
       await sdk.permits.warmKeypair();
 
       expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    });
+
+    test("warmKeypair resolves silently when the signer has no wallet snapshot", async ({
+      sdk,
+      signer,
+      relayer,
+    }) => {
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
+      vi.mocked(relayer.generateKeypair).mockClear();
+
+      await expect(sdk.permits.warmKeypair()).resolves.toBeUndefined();
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
     });
 
     test("revokePermits() after grantPermit clears the decrypt cache for the signer", async ({

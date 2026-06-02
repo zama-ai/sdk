@@ -106,48 +106,28 @@ export class Permits {
   }
 
   /**
-   * Best-effort keypair prefetch for a known signer address.
+   * Best-effort keypair prefetch for the connected signer.
    *
-   * This is an optional latency optimization. Decrypt and permit flows remain
-   * correct without it because they lazily create the keypair when needed.
+   * Optional latency optimization: decrypt and permit flows remain correct
+   * without it because they lazily create the keypair when needed.
    *
-   * The keypair is generated through the relayer dispatcher's currently active
-   * chain. Callers that need to warm against a specific chain must rely on the
-   * SDK lifecycle to have switched the dispatcher first — see
-   * {@link LifecycleService}, which calls `switchChain` before fanning the
-   * wallet-account change out to listeners.
-   *
-   * When called without an argument, the connected, provider-aligned wallet
-   * account is resolved internally. Missing-signer and alignment failures
-   * (`SignerNotConfiguredError`, `WalletAccountNotReadyError`,
-   * `ChainMismatchError`) are swallowed silently — they are expected transient
-   * states for a latency primitive. Pass an explicit `address` to skip the
-   * alignment check entirely; this is the form the React provider uses.
-   *
-   * @param address - Signer address to warm. When omitted, the connected,
-   *   provider-aligned wallet account's address is used (silent on
-   *   misalignment).
+   * Silent no-op when no signer is configured or no wallet account is
+   * available. The keypair is generated through the relayer dispatcher's
+   * currently active chain — see {@link LifecycleService}, which calls
+   * `switchChain` before fanning the wallet-account change out to listeners,
+   * so any downstream caller (including React adapters) observes the
+   * dispatcher on the wallet chain by the time it invokes warmup.
    */
-  async warmKeypair(address?: Address): Promise<void> {
+  async warmKeypair(): Promise<void> {
     const service = this.#credentialService;
     if (!service) {
       return;
     }
-    let target: Address;
-    if (address !== undefined) {
-      target = address;
-    } else {
-      try {
-        target = (await requireAlignedWalletAccount("warmKeypair", this.#signer, this.#provider))
-          .address;
-      } catch {
-        // Best-effort latency primitive: silently skip when wallet is not yet
-        // aligned. grantPermit/userDecrypt will lazily generate the keypair
-        // and surface actionable errors when they happen for real.
-        return;
-      }
+    const account = this.#signer?.walletAccount.getSnapshot();
+    if (!account) {
+      return;
     }
-    await service.warmKeypair(target);
+    await service.warmKeypair(account.address);
   }
 
   /**

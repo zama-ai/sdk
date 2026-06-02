@@ -1,6 +1,6 @@
 "use client";
 
-import { ZamaSDK, type Address, type ZamaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,11 +20,8 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmKeypair(sdk: ZamaSDK, address: Address | undefined): void {
-  if (!address) {
-    return;
-  }
-  void sdk.permits.warmKeypair(address).catch((error: unknown) => {
+function warmKeypair(sdk: ZamaSDK): void {
+  void sdk.permits.warmKeypair().catch((error: unknown) => {
     // Warmup is a latency optimization — the first real permit/decrypt call
     // will lazily retry keypair generation and surface actionable errors.
     // We still log so persistent failures (storage corruption, relayer 4xx
@@ -60,17 +57,15 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   // undefined during SSR. Driving warmup from a client-only useEffect rather
   // than the SDK constructor keeps server-rendered trees free of browser-only
   // infrastructure. Non-React framework adapters need to mirror this contract:
-  // call `sdk.permits.warmKeypair(address)` on mount with the current snapshot's
-  // address and on every `onWalletAccountChange` with `next?.address` — the SDK
-  // no longer warms itself. The explicit-address form is preferred over the
-  // no-arg form because it sidesteps the wallet-alignment race during mount.
+  // call `sdk.permits.warmKeypair()` on mount and on every
+  // `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
-    warmKeypair(sdk, sdk.signer?.walletAccount.getSnapshot()?.address);
-    return sdk.onWalletAccountChange(({ previous, next }) => {
+    warmKeypair(sdk);
+    return sdk.onWalletAccountChange(({ previous }) => {
       if (previous) {
         invalidateWalletLifecycleQueries(queryClient);
       }
-      warmKeypair(sdk, next?.address);
+      warmKeypair(sdk);
     });
   }, [sdk, queryClient]);
 
