@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0-alpha.46](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.45...v3.0.0-alpha.46) (2026-06-02)
+
+### Bug Fixes
+
+- SSR warmup + wrong-chain keypair warmup ([#378](https://github.com/zama-ai/sdk/issues/378)) ([2f47124]())
+
 ## [3.0.0-alpha.45](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.44...v3.0.0-alpha.45) (2026-05-25)
 
 ## [3.0.0-alpha.44](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.43...v3.0.0-alpha.44) (2026-05-22)
