@@ -18,7 +18,6 @@
 - [Unshield tokens](guides/unshield-tokens.md)
 - [Check balances](guides/check-balances.md)
 - [Handle errors](guides/handle-errors.md)
-- [Activity feeds](guides/activity-feeds.md)
 - [Node.js backend](guides/node-js-backend.md)
 - [Web extensions](guides/web-extensions.md)
 - [Local development](guides/local-development.md)

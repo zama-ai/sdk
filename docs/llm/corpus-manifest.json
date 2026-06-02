@@ -157,18 +157,6 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:guides/activity-feeds",
-      "title": "Activity feeds",
-      "source_path": "docs/gitbook/src/guides/activity-feeds.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/activity-feeds.md",
-      "source_type": "official-doc",
-      "category": "guides",
-      "logical_path": "guides/activity-feeds",
-      "description": "Parse on-chain events into a user-friendly activity feed with decrypted amounts.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
       "id": "doc:guides/node-js-backend",
       "title": "Node.js backend",
       "source_path": "docs/gitbook/src/guides/node-js-backend.md",
