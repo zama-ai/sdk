@@ -21,6 +21,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md): Get from zero to a working confidential transfer in under 5 minutes.
 - [Build your first confidential dApp](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md): End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
 - [Wallet & exchange integration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md): How wallets and exchanges support ERC-7984 confidential tokens with the Zama SDK — display balances, build transfers, manage operators, and wrap/unwrap between ERC-20 and confidential form.
+- [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
 
 ### Guides
 
@@ -35,7 +36,6 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
 - [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent permit storage.
 - [Local development](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/local-development.md): How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.
-- [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
 - [Next.js / SSR](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/nextjs-ssr.md): How to use the SDK with Next.js and server-side rendering frameworks.
 - [Operator approvals](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/operator-approvals.md): How to approve another address to act on your confidential tokens.
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md): Grant another address the right to decrypt confidential balances, then read those balances as a delegate.

@@ -7,6 +7,7 @@
 - [Quick start](tutorials/quick-start.md)
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
+- [Build with an LLM](tutorials/build-with-an-llm.md)
 
 ## Guides
 
@@ -21,7 +22,6 @@
 - [Node.js backend](guides/node-js-backend.md)
 - [Web extensions](guides/web-extensions.md)
 - [Local development](guides/local-development.md)
-- [Build with an LLM](guides/build-with-an-llm.md)
 - [Next.js SSR](guides/nextjs-ssr.md)
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)

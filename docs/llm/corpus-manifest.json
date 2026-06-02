@@ -61,6 +61,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:tutorials/build-with-an-llm",
+      "title": "Build with an LLM",
+      "source_path": "docs/gitbook/src/tutorials/build-with-an-llm.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md",
+      "source_type": "official-doc",
+      "category": "tutorials",
+      "logical_path": "tutorials/build-with-an-llm",
+      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/configuration",
       "title": "Configuration",
       "source_path": "docs/gitbook/src/guides/configuration.md",
@@ -189,18 +201,6 @@
       "category": "guides",
       "logical_path": "guides/local-development",
       "description": "How to use the cleartext relayer for local Hardhat nodes and custom chain deployments without a KMS or gateway.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
-      "id": "doc:guides/build-with-an-llm",
-      "title": "Build with an LLM",
-      "source_path": "docs/gitbook/src/guides/build-with-an-llm.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md",
-      "source_type": "official-doc",
-      "category": "guides",
-      "logical_path": "guides/build-with-an-llm",
-      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
