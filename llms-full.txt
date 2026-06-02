@@ -46,7 +46,7 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
 🟨 Go to [**SDK reference**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md) for the full core SDK API.
 
@@ -145,38 +145,6 @@ await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/tutorials/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md
-- logical_path: tutorials/README
-
-# Overview
-
-**Welcome to Getting started!**
-
-Learn how to set up and build your first confidential dApp with the Zama SDK. These tutorials take you from installation to a working app.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Quick start**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
-
-🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
-
-🟨 Go to [**Wallet & exchange integration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md) if you're integrating ERC-7984 confidential tokens into a wallet, custodial backend, or exchange.
 
 ## Help center
 
@@ -1329,49 +1297,144 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 - [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) — registry construction, caching, and pagination.
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) — how the SDK, relayer, and gateway fit together.
 
-## Overview
+## Build with an LLM
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/guides/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md
-- logical_path: guides/README
+- source_path: docs/gitbook/src/tutorials/build-with-an-llm.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md
+- logical_path: tutorials/build-with-an-llm
 
-# Overview
+# Build with an LLM
 
-**Welcome to Guides!**
+Use the SDK's LLM-ready artifacts to give coding agents a grounded view of the Zama SDK without overloading their context window.
 
-Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.
+Prefer the smallest source that can answer the task, and keep the source order strict: official docs first, approved examples second, API reports only as fallback.
 
-## Where to go next
+The SDK documentation provides:
 
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for lightweight discovery
+- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
+- guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
 
-Otherwise:
+## Choose the right source
 
-🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) to set up the relayer, signer, and storage.
+Use the smallest source that gives the agent enough context:
 
-🟨 Go to [**Authentication**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) to learn about API key management and backend proxies.
+- Use `llms.txt` when the agent needs to discover the relevant docs, examples, or package README.
+- Use `llms-full.txt` only when the agent supports a large context window and needs the complete public learning corpus in one file.
+- Use the `zama-protocol` Claude Code skill when working in Claude Code and the task needs Zama FHEVM, Solidity, ERC-7984, SDK, or React SDK workflow guidance.
 
-🟨 Go to [**Shield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) to convert public ERC-20 tokens into confidential form.
+For Claude Code, install the external skill first, then use `llms.txt` or `llms-full.txt` as supporting SDK-specific context when needed.
 
-🟨 Go to [**Transfer privately**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md) to send encrypted amounts on-chain.
+## Consumption modes
 
-🟨 Go to [**Unshield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md) to withdraw confidential tokens back to public ERC-20.
+You do not need to clone the SDK repository to use the LLM artifacts.
 
-🟨 Go to [**Check balances**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) to decrypt and display confidential balances.
+### Without cloning the SDK repository
 
-🟨 Go to [**Handle errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) to manage SDK errors gracefully in your app.
+Use this mode when integrating the SDK into an external app:
 
-🟨 Go to [**Node.js backend**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) to run the SDK server-side with worker threads.
+1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
+2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
+3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
 
-🟨 Go to [**Encrypt & decrypt**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for low-level FHE encryption and decryption operations.
+### With a cloned SDK repository
 
-## Help center
+Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
 
-Ask technical questions and discuss with the community.
+1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
+2. Use `llms.txt` as a map of the public SDK docs and approved examples.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
+## Source of truth
+
+Agent-facing guidance follows this source order:
+
+1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
+2. Approved official examples listed in the `Official Examples` section of `llms.txt`
+3. API reports as fallback reference material for exported API details
+
+When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
+
+`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
+
+## Use `llms.txt`
+
+Use `llms.txt` when your agent needs a compact map of the SDK:
+
+- available guides
+- concepts
+- SDK reference pages
+- React reference pages
+- approved examples
+
+This is the best entry point when the agent first needs to discover where to look.
+
+## Use `llms-full.txt`
+
+Use `llms-full.txt` when your agent needs the complete official documentation bundle in one file.
+
+Only use it with agents that support large context windows. For normal coding tasks, start with `llms.txt` and fetch only the relevant docs or examples instead of loading the full corpus.
+
+It includes:
+
+- official docs sourced from `docs/gitbook/src`
+- approved official examples
+- root and package README context
+
+It intentionally excludes API reports so the main bundle stays focused on the public learning path.
+
+## Use the Claude Code skill
+
+Claude Code skills are maintained separately in [`zama-ai/skills`](https://github.com/zama-ai/skills), not in the SDK repository.
+
+Install the `zama-protocol` skill with Claude Code:
+
+```text
+/plugin marketplace add zama-ai/skills
+/plugin install zama-protocol@zama-skills
+```
+
+The skill covers Zama FHEVM concepts, Solidity patterns, ERC-7984, TypeScript SDK integration, React SDK patterns, verified addresses, and common setup paths.
+
+If the marketplace install is unavailable, continue with `llms.txt` or `llms-full.txt`.
+
+## Recommended workflow
+
+### For new integrations
+
+1. Start with `llms.txt`
+2. Read the closest approved example from the `Official Examples` section
+3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
+4. Read the matching official guide or reference page when you need more detail
+
+### For deeper grounding
+
+1. Give the agent `llms-full.txt`
+2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
+3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
+
+### For debugging
+
+1. Start with the error guide
+2. Compare against the closest approved example
+3. Use the `zama-protocol` skill if you are working in Claude Code
+4. Inspect API reports only if the exported API surface is still unclear
+
+## Prompt ideas
+
+Use prompts like:
+
+```text
+Use the official Zama SDK docs and the approved react-wagmi example to integrate confidential balances and transfers into this Next.js app.
+```
+
+```text
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
+```
+
+```text
+Debug this Zama SDK integration using the official error guide first, then compare it to the closest approved example.
+```
 
 ## Configuration
 
@@ -1737,6 +1800,11 @@ Chains that pass the _same_ `options` object (by reference) share a single relay
 
 The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
+
+> [!INFO]
+> Don't have an API key yet? See [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+
+
 ## Steps
 
 ### 1. Understand the two options
@@ -1893,6 +1961,79 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
 - [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
 - [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — `node()` transport factory
+
+## Relayer API keys
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/relayer-api-keys.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md
+- logical_path: guides/relayer-api-keys
+
+# Relayer API keys
+
+The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
+
+## Overview
+
+There are two options to access the FHEVM Relayer for mainnet deployment:
+
+**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. See the [Self-host Relayer](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md) documentation for set-up guides and configuration references.
+
+**Zama-hosted Relayer:** Connect to Zama's hosted Relayer using an API key for authentication. Transaction fees will be billed on a monthly basis according to the usage, with possible discounts and grants applied directly in the invoice.
+
+Start by submitting the form below, the Zama team will review your request and contact you with next steps.
+
+→ [Apply for an API key](https://forms.gle/jq84zEek1oiv3kBz9)
+
+
+> [!WARNING]
+> Before publishing your solution on mainnet, ensure that end-to-end integration has been successfully tested on testnet.
+
+
+## Using your API key
+
+Once you receive your API key, wire it into the SDK using one of the two strategies covered in the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md):
+
+- **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
+- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
+
+The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
+
+## Security best practices
+
+Your API key grants access to Zama's hosted Relayer with sponsored operations. Follow these security guidelines to protect your key:
+
+### Keep your key private
+
+- **Never expose your API key in client-side code** (frontend applications, mobile apps, etc.)
+- **Never commit your API key** to version control systems
+- **Never share your API key** with unauthorized parties
+
+### Secure implementation
+
+The recommended approach depends on your application architecture:
+
+- **In-browser applications**: Proxy all Relayer requests through your backend server so the API key remains server-side and never reaches the client.
+- **Server-side applications**: Store the API key in environment variables and load it securely at runtime.
+
+### Backend proxy pattern
+
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+
+## Compromised keys
+
+If you suspect your API key has been compromised:
+
+1. **Immediately notify the Zama team** through [support@zama.org](mailto:support@zama.org).
+2. **Request a new API key** from the Zama team
+3. **Stop using the compromised key** in your applications
+
+If Zama identifies that an API key has been compromised, the key holder will be notified immediately and the key may be suspended to prevent unauthorized usage.
+
+## Next steps
+
+- [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) — wire your API key into the SDK via a backend proxy or direct `auth` field
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
 
 ## Shield tokens
 
@@ -3273,145 +3414,6 @@ const sdk = new ZamaSDK(config);
 - [RelayerCleartext reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — production setup with `web()` or `node()` relayer factories
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — pre-configured chain definitions for Mainnet, Sepolia, and more
-
-## Build with an LLM
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/guides/build-with-an-llm.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md
-- logical_path: guides/build-with-an-llm
-
-# Build with an LLM
-
-Use the SDK's LLM-ready artifacts to give coding agents a grounded view of the Zama SDK without overloading their context window.
-
-Prefer the smallest source that can answer the task, and keep the source order strict: official docs first, approved examples second, API reports only as fallback.
-
-The SDK documentation provides:
-
-- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for lightweight discovery
-- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
-- guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
-
-## Choose the right source
-
-Use the smallest source that gives the agent enough context:
-
-- Use `llms.txt` when the agent needs to discover the relevant docs, examples, or package README.
-- Use `llms-full.txt` only when the agent supports a large context window and needs the complete public learning corpus in one file.
-- Use the `zama-protocol` Claude Code skill when working in Claude Code and the task needs Zama FHEVM, Solidity, ERC-7984, SDK, or React SDK workflow guidance.
-
-For Claude Code, install the external skill first, then use `llms.txt` or `llms-full.txt` as supporting SDK-specific context when needed.
-
-## Consumption modes
-
-You do not need to clone the SDK repository to use the LLM artifacts.
-
-### Without cloning the SDK repository
-
-Use this mode when integrating the SDK into an external app:
-
-1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
-2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
-3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
-
-### With a cloned SDK repository
-
-Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
-
-1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
-2. Use `llms.txt` as a map of the public SDK docs and approved examples.
-
-## Source of truth
-
-Agent-facing guidance follows this source order:
-
-1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
-2. Approved official examples listed in the `Official Examples` section of `llms.txt`
-3. API reports as fallback reference material for exported API details
-
-When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
-
-`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
-
-## Use `llms.txt`
-
-Use `llms.txt` when your agent needs a compact map of the SDK:
-
-- available guides
-- concepts
-- SDK reference pages
-- React reference pages
-- approved examples
-
-This is the best entry point when the agent first needs to discover where to look.
-
-## Use `llms-full.txt`
-
-Use `llms-full.txt` when your agent needs the complete official documentation bundle in one file.
-
-Only use it with agents that support large context windows. For normal coding tasks, start with `llms.txt` and fetch only the relevant docs or examples instead of loading the full corpus.
-
-It includes:
-
-- official docs sourced from `docs/gitbook/src`
-- approved official examples
-- root and package README context
-
-It intentionally excludes API reports so the main bundle stays focused on the public learning path.
-
-## Use the Claude Code skill
-
-Claude Code skills are maintained separately in [`zama-ai/skills`](https://github.com/zama-ai/skills), not in the SDK repository.
-
-Install the `zama-protocol` skill with Claude Code:
-
-```text
-/plugin marketplace add zama-ai/skills
-/plugin install zama-protocol@zama-skills
-```
-
-The skill covers Zama FHEVM concepts, Solidity patterns, ERC-7984, TypeScript SDK integration, React SDK patterns, verified addresses, and common setup paths.
-
-If the marketplace install is unavailable, continue with `llms.txt` or `llms-full.txt`.
-
-## Recommended workflow
-
-### For new integrations
-
-1. Start with `llms.txt`
-2. Read the closest approved example from the `Official Examples` section
-3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
-4. Read the matching official guide or reference page when you need more detail
-
-### For deeper grounding
-
-1. Give the agent `llms-full.txt`
-2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
-3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
-
-### For debugging
-
-1. Start with the error guide
-2. Compare against the closest approved example
-3. Use the `zama-protocol` skill if you are working in Claude Code
-4. Inspect API reports only if the exported API surface is still unclear
-
-## Prompt ideas
-
-Use prompts like:
-
-```text
-Use the official Zama SDK docs and the approved react-wagmi example to integrate confidential balances and transfers into this Next.js app.
-```
-
-```text
-Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
-```
-
-```text
-Debug this Zama SDK integration using the official error guide first, then compare it to the closest approved example.
-```
 
 ## Next.js / SSR
 
@@ -14618,38 +14620,6 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 - [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
 
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/concepts/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md
-- logical_path: concepts/README
-
-# Overview
-
-**Welcome to Concepts!**
-
-Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Architecture**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) to understand the SDK's layered module structure.
-
-🟨 Go to [**Permit model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) to learn how FHE keypairs and signed permits are managed.
-
-🟨 Go to [**Security model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model and trust assumptions.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
 ## Architecture
 
 - source_type: official-doc
@@ -18069,7 +18039,7 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`.
 
-For agentic SDK integrations, start with [`llms.txt`](./llms.txt) as the compact documentation map. Use [`llms-full.txt`](./llms-full.txt) only with agents that support large context windows, and see [Build with an LLM](./docs/gitbook/src/guides/build-with-an-llm.md) for the recommended workflow.
+For agentic SDK integrations, start with [`llms.txt`](./llms.txt) as the compact documentation map. Use [`llms-full.txt`](./llms-full.txt) only with agents that support large context windows, and see [Build with an LLM](./docs/gitbook/src/tutorials/build-with-an-llm.md) for the recommended workflow.
 
 ### Contributing
 
@@ -18183,7 +18153,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) gets from installation to a working confidential transfer.
-- [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, configuration, balances, transfers, and unshielding.
+- [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), and other guides cover focused topics such as balances, transfers, and unshielding.
 - [SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents the full core API, including `ZamaSDK`, `Token`, `WrappedToken`, adapters, and helpers.
 - [React SDK docs](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) cover the provider and hook layer for React apps.
 
@@ -18309,7 +18279,7 @@ export function App() {
 
 This keeps `Balance` from mounting until the contract is authorized, so the first decrypt happens after an explicit user action instead of an unsolicited wallet popup.
 
-If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md).
+If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Configuration guide](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md).
 
 ## Using the provider and hooks
 
@@ -18332,5 +18302,5 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) shows the full React setup from install to first transfer.
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
-- [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, SSR, browser extensions, balances, and transfers.
+- [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), [Next.js SSR](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/nextjs-ssr.md), and other guides cover focused topics such as browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.

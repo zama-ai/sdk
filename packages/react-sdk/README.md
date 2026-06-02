@@ -113,7 +113,7 @@ export function App() {
 
 This keeps `Balance` from mounting until the contract is authorized, so the first decrypt happens after an explicit user action instead of an unsolicited wallet popup.
 
-If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md).
+If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Configuration guide](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md).
 
 ## Using the provider and hooks
 
@@ -136,5 +136,5 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) shows the full React setup from install to first transfer.
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
-- [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, SSR, browser extensions, balances, and transfers.
+- [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), [Next.js SSR](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/nextjs-ssr.md), and other guides cover focused topics such as browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.
