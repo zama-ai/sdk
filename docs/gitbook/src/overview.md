@@ -23,7 +23,7 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Configuration**](guides/configuration.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
 🟨 Go to [**SDK reference**](reference/sdk/README.md) for the full core SDK API.
 
