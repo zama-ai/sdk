@@ -1,5 +1,7 @@
 # Overview
 
+**Welcome to the SDK reference!**
+
 API reference for the core `@zama-fhe/sdk` package. Each page documents a single class or utility with constructor options, methods, properties, and working code examples.
 
 ## Where to go next
@@ -17,3 +19,10 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 🟨 Go to [**Network presets**](network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
 🟨 Go to [**Errors**](errors.md) for the full list of SDK error types and codes.
+
+## Help center
+
+Ask technical questions and discuss with the community.
+
+- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Discord channel](https://discord.com/invite/zama)

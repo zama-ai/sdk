@@ -1,28 +1,35 @@
 # Table of contents
 
 - [Overview](overview.md)
-- [Getting started](tutorials/README.md)
-  - [Quick start](tutorials/quick-start.md)
-  - [First confidential dApp](tutorials/first-confidential-dapp.md)
-  - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
-- [Guides](guides/README.md)
-  - [Configuration](guides/configuration.md)
-  - [Authentication](guides/authentication.md)
-  - [Relayer API keys](guides/relayer-api-keys.md)
-  - [Shield tokens](guides/shield-tokens.md)
-  - [Transfer privately](guides/transfer-privately.md)
-  - [Unshield tokens](guides/unshield-tokens.md)
-  - [Check balances](guides/check-balances.md)
-  - [Handle errors](guides/handle-errors.md)
-  - [Activity feeds](guides/activity-feeds.md)
-  - [Node.js backend](guides/node-js-backend.md)
-  - [Web extensions](guides/web-extensions.md)
-  - [Local development](guides/local-development.md)
-  - [Build with an LLM](guides/build-with-an-llm.md)
-  - [Next.js SSR](guides/nextjs-ssr.md)
-  - [Operator approvals](guides/operator-approvals.md)
-  - [Delegated decryption](guides/delegated-decryption.md)
-  - [Encrypt & decrypt](guides/encrypt-decrypt.md)
+
+## Getting Started
+
+- [Quick start](tutorials/quick-start.md)
+- [First confidential dApp](tutorials/first-confidential-dapp.md)
+- [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
+
+## Guides
+
+- [Configuration](guides/configuration.md)
+- [Authentication](guides/authentication.md)
+- [Relayer API keys](guides/relayer-api-keys.md)
+- [Shield tokens](guides/shield-tokens.md)
+- [Transfer privately](guides/transfer-privately.md)
+- [Unshield tokens](guides/unshield-tokens.md)
+- [Check balances](guides/check-balances.md)
+- [Handle errors](guides/handle-errors.md)
+- [Activity feeds](guides/activity-feeds.md)
+- [Node.js backend](guides/node-js-backend.md)
+- [Web extensions](guides/web-extensions.md)
+- [Local development](guides/local-development.md)
+- [Build with an LLM](guides/build-with-an-llm.md)
+- [Next.js SSR](guides/nextjs-ssr.md)
+- [Operator approvals](guides/operator-approvals.md)
+- [Delegated decryption](guides/delegated-decryption.md)
+- [Encrypt & decrypt](guides/encrypt-decrypt.md)
+
+## API References
+
 - [SDK reference](reference/sdk/README.md)
   - [ZamaSDK](reference/sdk/ZamaSDK.md)
   - [Token](reference/sdk/Token.md)
@@ -86,8 +93,9 @@
   - [useDecryptBalanceAs](reference/react/useDecryptBalanceAs.md)
   - [useBatchDecryptBalancesAs](reference/react/useBatchDecryptBalancesAs.md)
   - [Query keys](reference/react/query-keys.md)
-- [Concepts](concepts/README.md)
-  - [Architecture](concepts/architecture.md)
-  - [Session model](concepts/session-model.md)
-  - [Permit model](concepts/permit-model.md)
-  - [Security model](concepts/security-model.md)
+
+## Concepts
+
+- [Architecture](concepts/architecture.md)
+- [Permit model](concepts/permit-model.md)
+- [Security model](concepts/security-model.md)

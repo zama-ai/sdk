@@ -64,16 +64,16 @@ Encrypt amounts client-side before submitting on-chain. On-chain observers see t
 
 ### React hooks
 
-TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature session management.
+TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature permit management.
 
 ## Two packages, one import
 
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. For wagmi apps, build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={zamaConfig}>`. For non-React apps, use `createConfig` from `@zama-fhe/sdk/viem` or `@zama-fhe/sdk/ethers`.
 
 ## Install
 
@@ -82,7 +82,7 @@ If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (h
 
 ```sh
 # React app
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
@@ -92,7 +92,7 @@ pnpm add @zama-fhe/sdk
 
 ```sh
 # React app
-npm install @zama-fhe/react-sdk @tanstack/react-query
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 npm install @zama-fhe/sdk
@@ -102,7 +102,7 @@ npm install @zama-fhe/sdk
 
 ```sh
 # React app
-yarn add @zama-fhe/react-sdk @tanstack/react-query
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 yarn add @zama-fhe/sdk
@@ -112,68 +112,39 @@ yarn add @zama-fhe/sdk
 ## Your first confidential transfer in 30 seconds
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { sepolia } from "viem/chains";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer: new ViemSigner({ walletClient, publicClient }),
-  storage: indexedDBStorage,
+const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
+
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
+  relayers: { [mySepolia.id]: web() },
 });
 
-const token = sdk.createToken("0xYourEncryptedERC20");
+const sdk = new ZamaSDK(config);
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
-await token.shield(1000n); // deposit public tokens
-const balance = await token.balanceOf(); // decrypt your balance
-await token.confidentialTransfer("0xRecipient", 500n); // private send
-await token.unshield(500n); // withdraw back to public
+await wrappedToken.shield(1000n); // deposit public tokens
+const [address] = await walletClient.getAddresses();
+const balance = await wrappedToken.balanceOf(address); // decrypt your balance
+await wrappedToken.confidentialTransfer("0xRecipient", 500n); // private send
+await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/tutorials/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md
-- logical_path: tutorials/README
-
-# Overview
-
-**Welcome to Getting started!**
-
-Learn how to set up and build your first confidential dApp with the Zama SDK. These tutorials take you from installation to a working app.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Quick start**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
-
-🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
-
-🟨 Go to [**Wallet & exchange integration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md) if you're integrating ERC-7984 confidential tokens into a wallet, custodial backend, or exchange.
 
 ## Help center
 
@@ -1325,52 +1296,6 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 - [`Token` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — full method surface for shield, unshield, transfer, approve, and balance operations.
 - [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) — registry construction, caching, and pagination.
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) — how the SDK, relayer, and gateway fit together.
-
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/guides/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md
-- logical_path: guides/README
-
-# Overview
-
-**Welcome to Guides!**
-
-Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) to set up the relayer, signer, and storage.
-
-🟨 Go to [**Authentication**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) to learn about API key management and backend proxies.
-
-🟨 Go to [**Relayer API keys**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md) to obtain and securely manage your Zama-hosted Relayer API key.
-
-🟨 Go to [**Shield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) to convert public ERC-20 tokens into confidential form.
-
-🟨 Go to [**Transfer privately**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md) to send encrypted amounts on-chain.
-
-🟨 Go to [**Unshield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md) to withdraw confidential tokens back to public ERC-20.
-
-🟨 Go to [**Check balances**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) to decrypt and display confidential balances.
-
-🟨 Go to [**Handle errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) to manage SDK errors gracefully in your app.
-
-🟨 Go to [**Node.js backend**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) to run the SDK server-side with worker threads.
-
-🟨 Go to [**Encrypt & decrypt**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for low-level FHE encryption and decryption operations.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
 
 ## Configuration
 
@@ -2526,46 +2451,60 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 # Check balances
 
-Confidential balances are stored on-chain as encrypted handles. To display a human-readable number, the SDK decrypts them using FHE credentials tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
+Confidential balances are stored on-chain as encrypted values. To display a human-readable number, the SDK decrypts them using FHE permits tied to the user's wallet. This guide walks through reading balances, understanding the caching layer, and working with multiple tokens.
 
 ## Steps
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a `Token` or `ReadonlyToken` instance. The SDK fetches the encrypted handle from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`.
 
 
 ### Tab: SDK
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: { [sepolia.id]: web() },
+});
+const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xEncryptedERC20");
 
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
 
 
 ### 2. Understand the first-time wallet signature
 
-The first `balanceOf()` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt credentials that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+The first `balanceOf(address)` call for a token prompts the user's wallet for an EIP-712 signature. This creates FHE decrypt permits that are cached in your storage backend. Subsequent reads are silent -- no wallet popup.
+
+
+> [!INFO]
+> **In React apps, don't trigger this signature on render.** Gate `useConfidentialBalance` behind `useHasPermit` and let the user click an explicit "Decrypt" button. See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) for the full pattern.
+
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `ReadonlyToken.allow()`:
+You can pre-authorize multiple tokens with a single signature using `sdk.permits.grantPermit()`:
 
 
 ### Tab: SDK
 
 ```ts
-import { ReadonlyToken } from "@zama-fhe/sdk";
+await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
 
-const tokenA = sdk.createReadonlyToken("0xTokenA");
-const tokenB = sdk.createReadonlyToken("0xTokenB");
-
-await ReadonlyToken.allow(tokenA, tokenB);
+const tokenA = sdk.createToken("0xTokenA");
+const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
@@ -2575,33 +2514,37 @@ await ReadonlyToken.allow(tokenA, tokenB);
 Decrypted balances are automatically cached in your storage backend (IndexedDB, async local storage, etc.). This means:
 
 - **No spinner on page reload** -- if a balance was previously decrypted, it is returned instantly from cache instead of re-running the 2-5 second FHE decryption.
-- **Automatic invalidation** -- the cache key includes the on-chain encrypted handle, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
+- **Automatic invalidation** -- the cache key includes the on-chain encrypted value, so when a transfer, shield, or unshield changes the balance, the old cache entry is naturally bypassed.
 - **Best-effort** -- cache reads and writes never throw. If storage is unavailable, the SDK falls back to a fresh decryption silently.
 
-The cache is keyed by `token address + owner address + encrypted handle`.
+The cache is keyed by `token address + owner address + encrypted value`.
 
-### 4. Work with raw encrypted handles
+### 4. Work with raw encrypted values
 
-Sometimes you need the encrypted handle itself, for example to check whether a balance exists before attempting decryption.
+Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
 
 
 ### Tab: SDK
 
 ```ts
-const handle = await token.confidentialBalanceOf();
+import { isZeroHandle } from "@zama-fhe/sdk";
 
-// Check if the handle is zero (account has never shielded)
-if (token.isZeroHandle(handle)) {
+const encryptedValue = await token.confidentialBalanceOf(userAddress);
+
+// Check if the encrypted value is zero (account has never shielded)
+if (isZeroHandle(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 
-// Decrypt a handle you already have
-const result = await sdk.userDecrypt([{ handle, contractAddress: token.address }]);
-const value = result[handle] as bigint;
+// Decrypt an encrypted value you already have
+const result = await sdk.decryption.userDecrypt([
+  { encryptedValue, contractAddress: token.address },
+]);
+const value = result[encryptedValue] as bigint;
 
-// Decrypt multiple handles at once (must include the contract address per handle)
-const decrypted = await sdk.userDecrypt(
-  [handle1, handle2, handle3].map((h) => ({ handle: h, contractAddress: token.address })),
+// Decrypt multiple encrypted values at once (must include the contract address per entry)
+const decrypted = await sdk.decryption.userDecrypt(
+  [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
 );
 ```
 
@@ -2620,7 +2563,8 @@ These are different situations that your UI should handle separately:
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
-  const balance = await token.balanceOf();
+  const [address] = await walletClient.getAddresses();
+  const balance = await token.balanceOf(address);
   showBalance(balance); // could be 0n
 } catch (error) {
   if (error instanceof NoCiphertextError) {
@@ -2638,15 +2582,15 @@ When your app manages a portfolio of confidential tokens, use batch operations t
 ### Tab: SDK
 
 ```ts
-import { ReadonlyToken } from "@zama-fhe/sdk";
-
-const tokens = addresses.map((a) => sdk.createReadonlyToken(a));
+import { Token } from "@zama-fhe/sdk";
 
 // One wallet signature covers all tokens
-await ReadonlyToken.allow(...tokens);
+await sdk.permits.grantPermit(addresses);
+
+const tokens = addresses.map((a) => sdk.createToken(a));
 
 // Decrypt all balances in parallel
-const { results, errors } = await ReadonlyToken.batchBalancesOf(tokens, userAddress);
+const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
 
 // `results` is Map<Address, bigint> for tokens that decrypted successfully,
 // `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
@@ -2680,14 +2624,17 @@ The React SDK provides hooks that handle polling, caching, and React Query integ
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const {
   data: balance,
   isLoading,
   error,
 } = useConfidentialBalance(
   {
-    tokenAddress: "0xToken",
+    address: "0xToken",
+    account: address,
   },
   { refetchInterval: 5_000 },
 );
@@ -2697,16 +2644,19 @@ const {
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
+const { address } = useAccount();
 const { data } = useConfidentialBalances({
-  tokenAddresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
+  account: address,
 });
 
 const tokenABalance = data?.results.get("0xTokenA");
 ```
 
 
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts via the SDK. Previously decrypted values are served from cache instantly — the relayer is only hit when the handle changes. Pass `refetchInterval` to poll for updates. Decrypted values are persisted in storage, so page reloads show the balance instantly.
+`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Pass `refetchInterval` to poll for updates. Clear values are persisted in storage, so page reloads show the balance instantly.
 
 ### 9. Force a manual refresh
 
@@ -2717,7 +2667,7 @@ Mutations automatically invalidate balance caches, but if you need manual contro
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -2735,7 +2685,8 @@ queryClient.invalidateQueries({
 
 ## Next steps
 
-- See [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for the full `Token.balanceOf` and `ReadonlyToken` API.
+- See [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
+- See [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) for the full `Token` API.
 - See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
@@ -4610,6 +4561,8 @@ function PublicDecryptExample() {
 
 # Overview
 
+**Welcome to the SDK reference!**
+
 API reference for the core `@zama-fhe/sdk` package. Each page documents a single class or utility with constructor options, methods, properties, and working code examples.
 
 ## Where to go next
@@ -4627,6 +4580,13 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 🟨 Go to [**Network presets**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
 🟨 Go to [**Errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md) for the full list of SDK error types and codes.
+
+## Help center
+
+Ask technical questions and discuss with the community.
+
+- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Discord channel](https://discord.com/invite/zama)
 
 ## ZamaSDK
 
@@ -14847,38 +14807,6 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 - [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
 
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/concepts/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md
-- logical_path: concepts/README
-
-# Overview
-
-**Welcome to Concepts!**
-
-Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the session model, security guarantees, and caching strategy.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Architecture**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) to understand the SDK's layered module structure.
-
-🟨 Go to [**Session model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md) to learn how FHE keypairs and wallet signatures are managed.
-
-🟨 Go to [**Security model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model and trust assumptions.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
 ## Architecture
 
 - source_type: official-doc
@@ -14936,207 +14864,6 @@ Each package exposes multiple entry points for tree-shaking:
 | --------------------------- | ---------------------------------------------------------- |
 | `@zama-fhe/react-sdk`       | Provider-based hooks (`ZamaProvider` + `use*` hooks)       |
 | `@zama-fhe/react-sdk/wagmi` | `createConfig` — builds a `ZamaConfig` from a wagmi config |
-
-## Session model
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/concepts/session-model.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md
-- logical_path: concepts/session-model
-
-# Session model
-
-The SDK uses a two-layer authorization model to protect FHE credentials. An FHE keypair is generated once and persisted in encrypted form. A wallet signature — the session — unlocks that keypair for the current browsing session. This separation means the expensive keypair generation happens rarely, while the lightweight signing step repeats once per session.
-
-![Two-Layer Authorization Model](../images/session-two-layers.svg)
-
-## The two layers
-
-### Layer 1: FHE keypair (persistent)
-
-The FHE keypair consists of a public key and a private key. The public key is sent to the relayer so it can re-encrypt on-chain ciphertexts. The private key decrypts the re-encrypted values locally. Together, they give a user the ability to read their own confidential balances.
-
-The keypair is generated once and encrypted before storage. It persists across page reloads, browser restarts, and session changes. Regeneration happens only when the keypair expires (controlled by `keypairTTL`).
-
-### Layer 2: Session signature (ephemeral)
-
-The session signature is an EIP-712 typed data signature from the user's wallet. It serves two purposes:
-
-1. **Authorization** — proves the user consents to decrypt balances for specific contract addresses.
-2. **Key derivation** — the signature's raw bytes are used as input to PBKDF2, producing the AES-GCM key that encrypts and decrypts the FHE private key.
-
-By default, the session signature lives in memory only. It is lost on page reload, tab close, or explicit revocation.
-
-## Lifecycle flow
-
-![Session Lifecycle](../images/session-lifecycle.svg)
-
-### First visit
-
-1. User connects wallet.
-2. SDK generates an FHE keypair via WASM.
-3. SDK builds EIP-712 typed data (includes contract addresses, timestamp, duration).
-4. Wallet signs EIP-712 → signature.
-5. Derive AES-256-GCM key via PBKDF2 (signature + address as salt) → encrypt FHE private key → store to IndexedDB.
-6. Cache signature in memory (session map).
-7. Ready — decrypts reuse cached signature, no further popups.
-
-### Subsequent page load
-
-1. Page loads → SDK loads encrypted keypair from IndexedDB.
-2. SDK checks session map → empty (memory was cleared).
-3. SDK prompts wallet to re-sign EIP-712 → signature.
-4. Derive AES key → decrypt FHE private key. Cache signature in session map.
-5. Ready — same session, no further popups.
-
-### Same session (already authorized)
-
-1. Balance request arrives.
-2. SDK checks session map → signature found.
-3. Decrypt FHE private key from storage using cached signature.
-4. Decrypt balance via relayer — no wallet popup.
-
-## What lives where
-
-| Data                        | Storage location                       | Lifetime                                           | Survives reload?                         |
-| --------------------------- | -------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
-| FHE public key              | Persistent storage (IndexedDB)         | Until `keypairTTL` expires                         | Yes                                      |
-| FHE private key (encrypted) | Persistent storage (IndexedDB)         | Until `keypairTTL` expires                         | Yes                                      |
-| FHE private key (plaintext) | JavaScript memory only                 | Current decrypt operation                          | No                                       |
-| AES-GCM derived key         | JavaScript memory only                 | Current encrypt/decrypt operation                  | No                                       |
-| EIP-712 signature           | Session storage (in-memory by default) | Until revoked, tab closed, or `sessionTTL` expires | No (unless using `chromeSessionStorage`) |
-| Wallet address hash         | Storage key                            | Matches keypair lifetime                           | Yes                                      |
-
-
-> [!INFO]
-> The plaintext FHE private key and the derived AES key exist in memory only for the duration of a single operation. They are not cached or stored anywhere.
-
-
-## TTL: two independent clocks
-
-The SDK has two separate time-to-live settings that control different aspects of the session.
-
-### `keypairTTL` — keypair regeneration
-
-Controls how long the FHE keypair remains valid. Default: 2,592,000 seconds (30 days).
-
-When the keypair expires:
-
-- A new FHE keypair is generated.
-- The wallet is prompted to sign new EIP-712 data.
-- The new keypair is encrypted and stored, replacing the old one.
-
-This is the more disruptive expiry — it requires WASM-based key generation.
-
-### `sessionTTL` — re-sign frequency
-
-Controls how long the cached wallet signature remains valid. Default: 2,592,000 seconds (30 days).
-
-When the session expires:
-
-- The cached signature is cleared from session storage.
-- A `session:expired` event is emitted.
-- The next decrypt prompts a single wallet re-sign.
-- The existing FHE keypair is not affected — no regeneration.
-
-
-> [!INFO]
-> For high-security contexts, set `sessionTTL: 0` to require a wallet signature on every operation. This provides maximum security at the cost of frequent wallet popups.
-
-
-
-> [!INFO]
-> **`sessionTTL` is clamped to `keypairTTL`.** If you set `sessionTTL` greater than `keypairTTL`, the SDK automatically reduces it to match `keypairTTL` and emits a console warning. This prevents a state where `isAllowed()` returns `true` (session still valid) but the FHE keypair has expired, which would cause unexpected wallet prompts.
-
-
-Each session entry records its TTL at creation time. If you change the `sessionTTL` configuration between sessions, existing sessions use their original TTL, not the new value.
-
-## The allow / revoke flow
-
-![Allow / Revoke Flow](../images/session-allow-revoke.svg)
-
-### Allow (pre-authorize)
-
-Call `allow()` early — ideally right after wallet connect — to prompt the signature upfront rather than during a balance read.
-
-A single signature covers all contract addresses passed to `allow()`. The signed EIP-712 message includes the exact set of contracts. If you later call `allow()` with a contract not in the original set, the SDK generates a fresh keypair and requests a new wallet signature.
-
-
-> [!WARNING]
-> Batch all contract addresses into a single `allow()` call. Each call with a new contract set triggers a new keypair and wallet popup. Plan your allow calls to minimize signing prompts.
-
-
-### Revoke (clear session)
-
-Revocation clears the cached signature. The encrypted keypair in persistent storage is not affected.
-
-Three methods exist for different use cases:
-
-- `token.revoke()` — revoke from a specific token instance.
-- `sdk.credentials.revoke("0xTokenA", "0xTokenB")` — revoke with specific addresses (included in the `credentials:revoked` event).
-- `sdk.revokeSession()` — revoke without specifying addresses.
-
-## Wallet lifecycle events
-
-The SDK automatically revokes sessions when wallet state changes. The behavior depends on the event type.
-
-### Disconnect or lock
-
-The user explicitly disconnects or locks their wallet. The session signature is cleared. The next connection requires a fresh sign.
-
-### Account switch
-
-The user switches from address A to address B. The previous account's session is revoked. This happens because the EIP-712 signature is address-scoped — leaving A's session active while B is connected creates confusing UX.
-
-### Chain switch
-
-The user switches networks (e.g., Sepolia to Mainnet) while keeping the same address. Session signatures are **not** revoked. Credentials are keyed by `address + chainId`, so each chain maintains independent sessions. Switching back to the original chain finds the session still active.
-
-### Automatic vs manual wiring
-
-| Signer         | Auto-revoke                                        | Setup required                                                                             |
-| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `WagmiSigner`  | Built in — subscribes to wagmi's `watchConnection` | None                                                                                       |
-| `ViemSigner`   | Manual                                             | Wire `wallet.on("disconnect")` and `wallet.on("accountsChanged")` to `sdk.revokeSession()` |
-| `EthersSigner` | Manual                                             | Wire disconnect and account change events to `sdk.revokeSession()`                         |
-
-Without wiring, cached signatures remain valid until TTL expiry. This is not a security vulnerability (signatures are time-bounded and address-scoped), but it creates confusing UX when switching accounts.
-
-## Multi-contract batching
-
-A single `allow()` call can cover multiple contracts:
-
-```ts
-await sdk.allow(["0xContractA", "0xContractB", "0xContractC"]);
-```
-
-This produces one EIP-712 signature covering all three contracts. The signed message includes the full list of contract addresses, the start timestamp, and the duration. Any `balanceOf` call on ContractA, ContractB, or ContractC reuses the cached signature without additional popups.
-
-The tradeoff: if you later need to add ContractD, the SDK must generate a new keypair and request a fresh signature covering `[A, B, C, D]`. Plan your contract set upfront when possible.
-
-## Web extensions
-
-MV3 Chrome extensions run background logic in service workers that Chrome can terminate at any time. The default in-memory session storage is lost on termination.
-
-To solve this, pass `chromeSessionStorage` as the `sessionStorage` option. This uses `chrome.storage.session`, which:
-
-- Survives service worker restarts.
-- Is shared across popup, background, and content script contexts.
-- Is automatically cleared when the browser closes.
-
-See the [Web Extensions guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/web-extensions.md) for the full setup.
-
-## Security properties
-
-| Property                | Guarantee                                                                 |
-| ----------------------- | ------------------------------------------------------------------------- |
-| FHE private key at rest | Encrypted with AES-256-GCM; key derived via PBKDF2 (600,000 iterations)   |
-| Signature scope         | Address-scoped and time-bounded via EIP-712                               |
-| Signature storage       | In-memory by default; never written to disk                               |
-| Storage key privacy     | Wallet addresses are SHA-256 hashed before use as storage keys            |
-| Plaintext exposure      | FHE private key exists in plaintext only during active decrypt operations |
-
-For the full threat model and trust assumptions, see the [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md).
 
 ## Permit model
 

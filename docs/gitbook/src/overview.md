@@ -41,16 +41,16 @@ Encrypt amounts client-side before submitting on-chain. On-chain observers see t
 
 ### React hooks
 
-TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature session management.
+TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature permit management.
 
 ## Two packages, one import
 
 | Package                                                | Use when...                                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (includes everything from the core SDK)          |
+| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
 
-If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
+If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. For wagmi apps, build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={zamaConfig}>`. For non-React apps, use `createConfig` from `@zama-fhe/sdk/viem` or `@zama-fhe/sdk/ethers`.
 
 ## Install
 
@@ -59,7 +59,7 @@ If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (h
 
 ```sh
 # React app
-pnpm add @zama-fhe/react-sdk @tanstack/react-query
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 pnpm add @zama-fhe/sdk
@@ -70,7 +70,7 @@ pnpm add @zama-fhe/sdk
 
 ```sh
 # React app
-npm install @zama-fhe/react-sdk @tanstack/react-query
+npm install @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 npm install @zama-fhe/sdk
@@ -81,7 +81,7 @@ npm install @zama-fhe/sdk
 
 ```sh
 # React app
-yarn add @zama-fhe/react-sdk @tanstack/react-query
+yarn add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query
 
 # Vanilla TypeScript / Node.js
 yarn add @zama-fhe/sdk
@@ -93,33 +93,36 @@ yarn add @zama-fhe/sdk
 ## Your first confidential transfer in 30 seconds
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createPublicClient, createWalletClient, custom, http } from "viem";
+import { sepolia } from "viem/chains";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer: new ViemSigner({ walletClient, publicClient }),
-  storage: indexedDBStorage,
+const publicClient = createPublicClient({ chain: sepolia, transport: http() });
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
+
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
+  relayers: { [mySepolia.id]: web() },
 });
 
-const token = sdk.createToken("0xYourEncryptedERC20");
+const sdk = new ZamaSDK(config);
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
-await token.shield(1000n); // deposit public tokens
-const balance = await token.balanceOf(); // decrypt your balance
-await token.confidentialTransfer("0xRecipient", 500n); // private send
-await token.unshield(500n); // withdraw back to public
+await wrappedToken.shield(1000n); // deposit public tokens
+const [address] = await walletClient.getAddresses();
+const balance = await wrappedToken.balanceOf(address); // decrypt your balance
+await wrappedToken.confidentialTransfer("0xRecipient", 500n); // private send
+await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](/tutorials/quick-start) for a full working example with your stack.
