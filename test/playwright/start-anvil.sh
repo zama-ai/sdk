@@ -108,6 +108,8 @@ acquire_lock() {
 # Returns non-zero (without exiting the script) on any failure so the caller can
 # restart anvil and retry.
 deploy_contracts() {
+  local attempt_num="$1"
+
   # Deploy fhevm host stack — independent per port, no lock needed.
   # In CI, artifacts are pre-built and cached; skip the internal forge build
   # to avoid failures when soldeer dependencies are absent (cache-hit path).
@@ -130,10 +132,19 @@ deploy_contracts() {
   # --gas-estimate-multiplier 200 doubles forge's simulated gas limit, absorbing
   #   the simulation-vs-live gas delta on the FHE-heavy wrap() txs (which touch
   #   the cheat-materialized host contracts) that otherwise reverts out-of-gas.
+  local forge_args=(--broadcast --slow --gas-estimate-multiplier 200)
+  if [ "$attempt_num" -ge "$MAX_ATTEMPTS" ]; then
+    # Last attempt: drop --silent so a persistent (non-transient) failure shows
+    # the forge revert reason / trace instead of failing blind after N retries.
+    echo "Final deploy attempt — running forge verbosely to surface the failure" >&2
+  else
+    forge_args+=(--silent)
+  fi
+
   local rc=0
   (cd "$CONTRACTS_DIR" && forge script script/Deploy.s.sol \
     --rpc-url "http://127.0.0.1:$PORT" \
-    --broadcast --slow --gas-estimate-multiplier 200 --silent \
+    "${forge_args[@]}" \
     --sender "$DEPLOYER_ADDR" \
     --private-key "$DEPLOYER_PK") || rc=$?
 
@@ -143,7 +154,7 @@ deploy_contracts() {
 
 attempt=1
 while :; do
-  if start_anvil && deploy_contracts; then
+  if start_anvil && deploy_contracts "$attempt"; then
     break
   fi
 
