@@ -7,6 +7,10 @@ description: How to authenticate with the relayer using a backend proxy or a dir
 
 The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
+{% hint style="info" %}
+Don't have an API key yet? See [Relayer API keys](relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+{% endhint %}
+
 ## Steps
 
 ### 1. Understand the two options
