@@ -368,10 +368,18 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = /** Preferred input from upgraded `UnwrapRequested` events. */{
+export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` event. Preferred. */{
     unwrapRequestId: EncryptedValue;
     burnAmountHandle?: never;
-} /** Legacy input from pre-upgrade `UnwrapRequested` events. */ | {
+}
+/**
+* Encrypted burn-amount handle. Direct-call escape hatch for resuming an
+* unshield persisted by an older SDK version that did not record
+* `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
+* always rediscovers `unwrapRequestId` from the receipt and never reaches
+* this branch.
+*/
+| {
     unwrapRequestId?: never;
     burnAmountHandle: EncryptedValue;
 };
@@ -509,7 +517,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
 
 // @public (undocumented)
 export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], EncryptedValue[], PublicDecryptResult>;
@@ -865,20 +873,6 @@ export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptio
 export interface UnwrapParams {
     // (undocumented)
     amount: bigint;
-}
-
-// @public @deprecated (undocumented)
-export interface UnwrappedFinalizedEvent {
-    // (undocumented)
-    readonly cleartextAmount: bigint;
-    // (undocumented)
-    readonly encryptedAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedFinalized";
-    // (undocumented)
-    readonly receiver: Address;
-    // (undocumented)
-    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public
@@ -1266,9 +1260,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-CS5tPsuA.d.ts:652:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CS5tPsuA.d.ts:653:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CS5tPsuA.d.ts:654:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CC0Mp18i.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CC0Mp18i.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-CC0Mp18i.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

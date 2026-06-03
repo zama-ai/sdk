@@ -17,7 +17,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
@@ -55,14 +54,9 @@ for (const event of events) {
       console.log(event.account, event.amount);
       break;
     case "UnwrapRequested":
-      console.log(event.receiver, event.unwrapRequestId ?? event.encryptedAmount);
+      console.log(event.receiver, event.unwrapRequestId);
       break;
     case "UnwrapFinalized":
-      // Emitted by upgraded wrappers (unwrapRequestId present)
-      console.log(event.receiver, event.cleartextAmount);
-      break;
-    case "UnwrappedFinalized":
-      // Emitted by legacy wrappers (no unwrapRequestId) — handle during protocol transition
       console.log(event.receiver, event.cleartextAmount);
       break;
   }
@@ -73,13 +67,13 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, `"UnwrappedFinalized"` (legacy), or `"UnwrappedStarted"`. During the protocol transition, finalize events from pre-upgrade wrappers have `eventName: "UnwrappedFinalized"`; those from upgraded wrappers have `eventName: "UnwrapFinalized"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
 
 ## TOKEN_TOPICS
 
 `Hex[]`
 
-Array of topic hashes for all supported token events, including both legacy and upgraded unwrap event signatures during the protocol transition. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
+Array of topic hashes for all supported token events. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -94,14 +88,13 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                                                                    |
-| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                            |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                      |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers  |
-| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers  |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated compatibility decoder; not a transparent alias for switch consumers |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                      |
+| Decoder                           | Event type             | Description                                  |
+| --------------------------------- | ---------------------- | -------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts          |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";

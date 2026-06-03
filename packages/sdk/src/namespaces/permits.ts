@@ -106,6 +106,31 @@ export class Permits {
   }
 
   /**
+   * Best-effort keypair prefetch for the connected signer.
+   *
+   * Optional latency optimization: decrypt and permit flows remain correct
+   * without it because they lazily create the keypair when needed.
+   *
+   * Silent no-op when no signer is configured or no wallet account is
+   * available. The keypair is generated through the relayer dispatcher's
+   * currently active chain — see {@link LifecycleService}, which calls
+   * `switchChain` before fanning the wallet-account change out to listeners,
+   * so any downstream caller (including React adapters) observes the
+   * dispatcher on the wallet chain by the time it invokes warmup.
+   */
+  async warmKeypair(): Promise<void> {
+    const service = this.#credentialService;
+    if (!service) {
+      return;
+    }
+    const account = this.#signer?.walletAccount.getSnapshot();
+    if (!account) {
+      return;
+    }
+    await service.warmKeypair(account.address);
+  }
+
+  /**
    * Wipe FHE permits for the current signer.
    *
    * - With no argument: every permit referencing this signer is removed across

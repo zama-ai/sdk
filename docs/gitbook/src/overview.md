@@ -23,7 +23,7 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Configuration**](guides/configuration.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
 🟨 Go to [**SDK reference**](reference/sdk/README.md) for the full core SDK API.
 
@@ -116,13 +116,13 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
-await token.shield(1000n); // deposit public tokens
+await wrappedToken.shield(1000n); // deposit public tokens
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address); // decrypt your balance
-await token.confidentialTransfer("0xRecipient", 500n); // private send
-await token.unshield(500n); // withdraw back to public
+const balance = await wrappedToken.balanceOf(address); // decrypt your balance
+await wrappedToken.confidentialTransfer("0xRecipient", 500n); // private send
+await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](/tutorials/quick-start) for a full working example with your stack.

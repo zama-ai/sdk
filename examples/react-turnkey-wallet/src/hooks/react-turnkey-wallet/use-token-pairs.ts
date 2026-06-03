@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useListPairs } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/react-sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import type { Address } from "viem";
 
 export function useTokenPairs(selectedTokenAddressState: Address | null) {

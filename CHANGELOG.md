@@ -1,5 +1,228 @@
 # Changelog
 
+## [3.1.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.0.1...v3.1.0-alpha.1) (2026-06-02)
+
+### ⚠ BREAKING CHANGES
+
+- **sdk:** buildRelayer removed from public API.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore(sdk): update API reports after wagmi-inspired config improvements
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): update CompositeRelayer tests for lazy init API
+
+Tests now construct CompositeRelayer with config map instead of promise
+map, using temporary transport handlers to provide mock relayers.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): self-register node transport handler in node() factory
+
+Move the transport handler registration from a top-level side-effect
+into the node() factory itself (lazy, runs once on first call).
+No separate `import "@zama-fhe/sdk/node"` needed — just calling
+node() in the transports map handles everything.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): use static import for RelayerNode in node transport
+
+Replace dynamic import("../relayer/relayer-node") with a direct static
+import. The /node entry point is Node-only so there's no risk of pulling
+node:worker_threads into browser bundles.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): self-register web and cleartext transport handlers in factories
+
+Move handler registrations from relayers.ts into the web() and cleartext()
+factories with static imports. Each factory self-registers on first call.
+relayers.ts now only provides the registry infrastructure.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): replace relayer registry with createRelayer on transport configs
+
+Each transport factory (web, node, cleartext) now attaches a createRelayer
+function directly to the config object. CompositeRelayer calls it on first
+use — no registry, no handler lookup, no async.
+
+- Delete config/relayers.ts (registry infrastructure)
+- Remove relayersMap/registerRelayer from all files
+- Simplify CompositeRelayer — sync createRelayer, no pending map
+- Move node() exclusively to @zama-fhe/sdk/node
+- Update all tests
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): address PR review findings
+
+* Wrap createRelayer in try-catch with chain context in CompositeRelayer
+* Document sync invariant on createRelayer (prevents duplicate relayers)
+* Remove dead types from config/types.ts (old union types, CustomSigner)
+* Deduplicate AtLeastOneChain — single definition in chains/types.ts
+* Add never guards to ZamaConfigEthers for mutual exclusion enforcement
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): rename createZamaConfig to createConfig
+
+The package path already namespaces it — no need for the Zama prefix.
+
+- Rename in all entry points: /viem, /ethers, react-sdk/wagmi
+- Update test apps to alias as createZamaConfig where wagmi clash exists
+- Update test assertions and describe blocks
+- Fix JSDoc reference in ZamaConfig type
+- Minor formatting from linter (transports.ts union, assertCondition)
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): update tests for relayer→options field rename on transport configs
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- refactor(sdk): rename relayer param to options on transport factories
+
+Rename the relayer-pool options parameter from `relayer` to `options`
+on web(), node(), and their transport config interfaces.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): update stale JSDoc refs and regenerate API reports
+
+* Fix JSDoc references to old `relayer` field name in transports.ts
+* Fix JSDoc and error message referencing createZamaConfig in provider.tsx
+* Regenerate all API report files (etc/\*.api.md)
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- docs(sdk): update gitbook docs for createConfig API and entry-point imports
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore: remove superseded design specs and implementation plans
+
+These docs were written during brainstorming and are now fully
+implemented — the code is the source of truth.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): propagate transport registryAddress to chains and check delegation before cache
+
+* Merge registryAddress from transport chain overrides into FheChain definitions
+  in buildZamaConfig so the WrappersRegistry resolves correctly for local chains
+* Simplify resolveChainTransports by deriving chainIds from chains directly
+* Move delegation check before cache lookup in decryptBalanceAs so revoked
+  delegations are caught even when a stale cached value exists
+* Update example-hoodi to use the new createConfig API
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- chore(sdk): update API report for resolveChainTransports signature change
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- revert(example-hoodi): restore prerelease version to fix e2e CI
+
+The example uses published SDK versions (2.2.0-alpha.4) which don't have
+the new createConfig/chains APIs yet, causing e2e failures. Also add
+Turbopack resolveAlias to test-nextjs to avoid rolldown ?iife imports.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): update resolve tests for 2-arg resolveChainTransports signature
+
+The chainIds parameter was removed from resolveChainTransports but the
+tests still passed a third argument. Update all call sites and error
+message expectations to match the current implementation.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+
+- fix(sdk): address PR review findings across config, relayer, and examples
+
+* Sweep createZamaConfig→createConfig in all examples, READMEs, and docs
+* Fix examples to use flat config props (no more viem:{}/ethers:{} wrappers)
+* Fix react-sdk test-fixtures.tsx broken import from non-existent "./config"
+* Make anvil a strict alias for hardhat + runtime duplicate chain id detection
+* The following exports are removed:
+* @zama-fhe/sdk: parseActivityFeed, applyDecryptedValues, activity types
+  (ActivityItem, ActivityDirection, ActivityAmount, ActivityType),
+  activityFeedQueryOptions, queryKeys.activityFeed
+* @zama-fhe/react-sdk: useActivityFeed
+
+- fmt
+
+### Features
+
+- **credentials:** widen permits on overlap (SDK-136) ([#372](https://github.com/zama-ai/sdk/issues/372)) ([0ede286]())
+- **docs:** add LLM-ready SDK docs corpus ([#248](https://github.com/zama-ai/sdk/issues/248)) ([964bd5d]())
+- **examples:** example-ingen — T-Rex InGen cleartext demo [SDK-184] ([#375](https://github.com/zama-ai/sdk/issues/375)) ([5aaf973]())
+- introduce concrete signer / provider split ([#268](https://github.com/zama-ai/sdk/issues/268)) ([ae45dfd]())
+- optional signer [SDK-109] ([#283](https://github.com/zama-ai/sdk/issues/283)) ([0b900e8]())
+- remove auto-signer resolving in hooks ([#281](https://github.com/zama-ai/sdk/issues/281)) ([6c74d9c]())
+- **sdk-61:** replace WrappersRegistry with protocol ConfidentialTokenWrappersRegistry contracts ([#229](https://github.com/zama-ai/sdk/issues/229)) ([dd4364d]())
+- **SDK-69:** support both old and new wrapper interfaceIds during transition ([#235](https://github.com/zama-ai/sdk/issues/235)) ([93c7d8a]())
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([85dd3dc]())
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([f63355f]())
+- **sdk:** add SDK-level delegation primitives [SDK-95] ([#307](https://github.com/zama-ai/sdk/issues/307)) ([08ac396]())
+- **sdk:** add sdk.delegatedUserDecrypt() top-level entrypoint [SDK-125] ([#301](https://github.com/zama-ai/sdk/issues/301)) ([359ec05]())
+- **sdk:** add sdk.encrypt() top-level entrypoint [SDK-124] ([#287](https://github.com/zama-ai/sdk/issues/287)) ([72301f1]())
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([fca0c80]())
+- **sdk:** detect ERC-1363 support and route Token.shield() accordingly [SDK-145] ([#320](https://github.com/zama-ai/sdk/issues/320)) ([36f6923]()), closes [#shieldViaTransferAndCall]() [#shieldViaApproveAndWrap]() [#resolveShieldingPath]() [#erc1363Supported]() [#resolveShieldingPath]() [#shieldViaTransferAndCall]()
+- **sdk:** require explicit owner on token reads ([#282](https://github.com/zama-ai/sdk/issues/282)) ([82e6487]())
+- **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+- **sdk:** update code to sdk latest version ([#291](https://github.com/zama-ai/sdk/issues/291)) ([2b5908a]())
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([4f50086]())
+- align ManifestShape with actual /keyurl endpoint response ([2cde790]())
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([ffd5e3d]())
+- **docs:** favour prerelease content; adopt Yuxi uncollapsed SUMMARY format ([71e9bd0]())
+- **examples:** add Turnkey × Zama confidential tokens example [SDK-76] ([#302](https://github.com/zama-ai/sdk/issues/302)) ([c5a074d]())
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([7c36283]())
+- **sdk:** choose total supply method via ERC-165 ([#270](https://github.com/zama-ai/sdk/issues/270)) ([7fb55c4]())
+- **sdk:** correct legacy wrapper interface ID ([#271](https://github.com/zama-ai/sdk/issues/271)) ([f347198]())
+- **sdk:** run delegation check before cache lookup in decryptBalanceAs ([#278](https://github.com/zama-ai/sdk/issues/278)) ([ce6b85e]())
+- SSR warmup + wrong-chain keypair warmup ([#378](https://github.com/zama-ai/sdk/issues/378)) ([2f47124]())
+- **token:** await approval receipt before wrap in [#ensure](https://github.com/zama-ai/sdk/issues/ensure)Allowance ([#286](https://github.com/zama-ai/sdk/issues/286)) ([4b744c1]()), closes [#ensureAllowance]() [#ensureAllowance]() [#ensureAllowance]()
+
+### Code Refactoring
+
+- remove activity feed from SDK and react-sdk ([#258](https://github.com/zama-ai/sdk/issues/258)) ([5784dba]())
+- **sdk:** multichain relayer architecture with shared worker runtime ([#285](https://github.com/zama-ai/sdk/issues/285)) ([532f46c]()), closes [#createRelayer]() [ensureWorker/#ensurePool]()
+
+## [3.0.0-alpha.46](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.45...v3.0.0-alpha.46) (2026-06-02)
+
+### Bug Fixes
+
+- SSR warmup + wrong-chain keypair warmup ([#378](https://github.com/zama-ai/sdk/issues/378)) ([2f47124]())
+
+## [3.0.1](https://github.com/zama-ai/sdk/compare/v3.0.0...v3.0.1) (2026-05-28)
+
+### Bug Fixes
+
+- **wrapper:** support upgraded wrapper + registry contracts [SDK-69] ([5a7781a]())
+
+## [3.0.0-alpha.45](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.44...v3.0.0-alpha.45) (2026-05-25)
+
+## [3.0.0-alpha.44](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.43...v3.0.0-alpha.44) (2026-05-22)
+
+## [3.0.0-alpha.43](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.42...v3.0.0-alpha.43) (2026-05-21)
+
+### Features
+
+- **examples:** example-ingen — T-Rex InGen cleartext demo [SDK-184] ([#375](https://github.com/zama-ai/sdk/issues/375)) ([5aaf973]())
+
+## [3.0.0-alpha.42](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.41...v3.0.0-alpha.42) (2026-05-21)
+
+### Features
+
+- **credentials:** widen permits on overlap (SDK-136) ([#372](https://github.com/zama-ai/sdk/issues/372)) ([0ede286]())
+
 ## [3.0.0-alpha.41](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.40...v3.0.0-alpha.41) (2026-05-19)
 
 ## [3.0.0-alpha.40](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.39...v3.0.0-alpha.40) (2026-05-19)
@@ -266,6 +489,15 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ### Features
 
 - **sdk:** support upgraded unwrap events ([#239](https://github.com/zama-ai/sdk/issues/239)) ([4f4116a]()), closes [#249]()
+- **sdk:** add handles and result fields to decrypt events [SDK-85] ([5d02da5]())
+- **sdk:** add inferred total supply contract builder ([#243](https://github.com/zama-ai/sdk/issues/243)) ([24f2c1d]())
+- **sdk:** add sdk.publicDecrypt() as the primitive for public decryptions ([#250](https://github.com/zama-ai/sdk/issues/250)) ([c38a578]())
+
+### Bug Fixes
+
+- align example apps with scoped isAllowed checks ([#233](https://github.com/zama-ai/sdk/issues/233)) ([111423b]())
+- centralize ZERO_HANDLE, use isZeroHandle checks ([#251](https://github.com/zama-ai/sdk/issues/251)) ([4abb133]())
+- **sdk:** address PR review comments on userDecrypt [SDK-85] ([b004949]())
 
 ## [3.0.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.0.0-alpha.10...v3.0.0-alpha.11) (2026-04-21)
 

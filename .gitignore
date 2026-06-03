@@ -1,6 +1,9 @@
 # dependencies
 node_modules
 
+# soldeer (contracts/) — installed via `pnpm contracts:install`
+contracts/dependencies/
+
 # testing
 coverage
 

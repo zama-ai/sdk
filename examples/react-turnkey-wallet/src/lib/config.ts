@@ -1,10 +1,10 @@
-import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
+import { sepolia as sepoliaConfig, mainnet as mainnetConfig } from "@zama-fhe/sdk";
 import { sepolia, mainnet } from "viem/chains";
 import type { Chain } from "viem";
 
 const isMainnet = process.env.NEXT_PUBLIC_CHAIN === "mainnet";
 
-export const zamaConfig = isMainnet ? MainnetConfig : SepoliaConfig;
+export const zamaConfig = isMainnet ? mainnetConfig : sepoliaConfig;
 export const viemChain: Chain = isMainnet ? mainnet : sepolia;
 export const explorerUrl = isMainnet ? "https://etherscan.io" : "https://sepolia.etherscan.io";
 

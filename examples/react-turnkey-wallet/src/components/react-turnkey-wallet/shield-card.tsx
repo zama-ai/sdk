@@ -17,7 +17,7 @@ export function ShieldCard({
   onSuccess: () => void;
   preApprove: (amount: bigint) => Promise<void>;
 }) {
-  const shield = useShield({ tokenAddress });
+  const shield = useShield({ address: tokenAddress });
   const [amount, setAmount] = useState("");
   const [isApproving, setIsApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);

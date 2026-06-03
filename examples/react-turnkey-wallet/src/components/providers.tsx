@@ -10,8 +10,16 @@ import {
   type ReactNode,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, IndexedDBStorage, indexedDBStorage, RelayerWeb } from "@zama-fhe/react-sdk";
-import type { RelayerSDK } from "@zama-fhe/react-sdk";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import {
+  IndexedDBStorage,
+  indexedDBStorage,
+  createConfig,
+  type FheChain,
+  type ZamaConfig,
+} from "@zama-fhe/sdk";
+import { ViemSigner, ViemProvider } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
 import { AuthState, ClientState, TurnkeyProvider, useTurnkey } from "@turnkey/react-wallet-kit";
 import { WalletSource, type WalletAccount } from "@turnkey/core";
 import type { v1TransactionType } from "@turnkey/sdk-types";
@@ -29,12 +37,11 @@ import {
   type PublicClient,
 } from "viem";
 import { toAccount } from "viem/accounts";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
 import { serializeSignature } from "@turnkey/viem";
-import { zamaConfig, viemChain, RPC_URL } from "@/lib/config";
+import { zamaConfig as zamaChainPreset, viemChain, RPC_URL } from "@/lib/config";
 
-// Separate IndexedDB instance for session signatures — sharing one instance with
-// indexedDBStorage causes the session entry to overwrite the encrypted keypair,
+// Separate IndexedDB instance for session/permit signatures — sharing one instance
+// with indexedDBStorage causes the permit entry to overwrite the encrypted keypair,
 // forcing a re-signing prompt on every balance decrypt.
 const sessionDBStorage = new IndexedDBStorage("SessionStore");
 
@@ -181,7 +188,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
     signMessage,
     signTransaction,
   } = useTurnkey();
-  const [signer, setSigner] = useState<ViemSigner | null>(null);
+  const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
   const [publicClient, setPublicClient] = useState<PublicClient | null>(null);
   const [walletAddress, setWalletAddress] = useState<Address | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
@@ -189,27 +196,13 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
-  const relayer = useMemo<RelayerSDK | null>(() => {
-    if (typeof window === "undefined") return null;
-    return new RelayerWeb({
-      getChainId: async () => zamaConfig.chainId,
-      transports: {
-        [zamaConfig.chainId]: {
-          ...zamaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
-          network: RPC_URL,
-        },
-      },
-    });
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
 
     async function syncSigner() {
       function reset(opts: { needsWallet?: boolean; error?: string } = {}) {
         if (cancelled) return;
-        setSigner(null);
+        setWalletClient(null);
         setPublicClient(null);
         setWalletAddress(null);
         setInitError(opts.error ?? null);
@@ -258,21 +251,21 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
           signTransaction,
         });
 
-        const walletClient = createWalletClient({
+        const nextWalletClient = createWalletClient({
           account,
           chain: viemChain,
           transport: http(RPC_URL),
         }) as WalletClient;
 
-        const client = createPublicClient({
+        const nextPublicClient = createPublicClient({
           chain: viemChain,
           transport: http(RPC_URL),
         });
 
         if (!cancelled) {
           setWalletAddress(ethAccount.address as Address);
-          setSigner(new ViemSigner({ walletClient, publicClient: client }));
-          setPublicClient(client);
+          setWalletClient(nextWalletClient);
+          setPublicClient(nextPublicClient);
           setInitError(null);
           setNeedsWalletCreation(false);
         }
@@ -295,6 +288,35 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
     signMessage,
     signTransaction,
   ]);
+
+  const sdkConfig = useMemo<ZamaConfig | null>(() => {
+    if (typeof window === "undefined") return null;
+    if (!walletClient || !publicClient) return null;
+
+    // `zamaChainPreset` is `sepolia | mainnet` (runtime-selected). Erase the union to
+    // a generic `FheChain` so `createConfig`'s `relayers` doesn't require entries for
+    // both possible chain ids.
+    const chain: FheChain = {
+      ...zamaChainPreset,
+      relayerUrl: `${window.location.origin}/api/relayer`,
+      network: RPC_URL,
+    };
+
+    return createConfig({
+      chains: [chain],
+      provider: new ViemProvider({ publicClient }),
+      signer: new ViemSigner({ walletClient }),
+      storage: indexedDBStorage,
+      permitStorage: sessionDBStorage,
+      relayers: { [chain.id]: web() },
+      onEvent: (event) => {
+        // Re-dispatch SDK events on window so per-component listeners (e.g.
+        // unshield-card's UnshieldPhase1Submitted handler) can react without
+        // having to thread an onEvent callback through props.
+        window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
+      },
+    });
+  }, [walletClient, publicClient]);
 
   const login = useCallback(async () => {
     try {
@@ -327,7 +349,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       authState,
       walletAddress,
       publicClient,
-      isSignerReady: !!signer && !!relayer,
+      isSignerReady: !!sdkConfig,
       initError,
       walletCreationError,
       needsWalletCreation,
@@ -346,8 +368,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       authState,
       walletAddress,
       publicClient,
-      signer,
-      relayer,
+      sdkConfig,
       initError,
       walletCreationError,
       needsWalletCreation,
@@ -357,22 +378,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
     ],
   );
 
-  const content =
-    signer && relayer ? (
-      <ZamaProvider
-        relayer={relayer}
-        signer={signer}
-        storage={indexedDBStorage}
-        sessionStorage={sessionDBStorage}
-        onEvent={(event) => {
-          window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
-        }}
-      >
-        {children}
-      </ZamaProvider>
-    ) : (
-      children
-    );
+  const content = sdkConfig ? <ZamaProvider config={sdkConfig}>{children}</ZamaProvider> : children;
 
   return <TurnkeyZamaContext.Provider value={contextValue}>{content}</TurnkeyZamaContext.Provider>;
 }

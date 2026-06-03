@@ -46,7 +46,7 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
 🟨 Go to [**SDK reference**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/README.md) for the full core SDK API.
 
@@ -135,48 +135,16 @@ const config = createConfig({
 });
 
 const sdk = new ZamaSDK(config);
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
-await token.shield(1000n); // deposit public tokens
+await wrappedToken.shield(1000n); // deposit public tokens
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address); // decrypt your balance
-await token.confidentialTransfer("0xRecipient", 500n); // private send
-await token.unshield(500n); // withdraw back to public
+const balance = await wrappedToken.balanceOf(address); // decrypt your balance
+await wrappedToken.confidentialTransfer("0xRecipient", 500n); // private send
+await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
 Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for a full working example with your stack.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/tutorials/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md
-- logical_path: tutorials/README
-
-# Overview
-
-**Welcome to Getting started!**
-
-Learn how to set up and build your first confidential dApp with the Zama SDK. These tutorials take you from installation to a working app.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Quick start**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) to get from zero to a working confidential transfer in under 5 minutes.
-
-🟨 Go to [**Build your first confidential dApp**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md) for an end-to-end React tutorial with wagmi.
-
-🟨 Go to [**Wallet & exchange integration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md) if you're integrating ERC-7984 confidential tokens into a wallet, custodial backend, or exchange.
 
 ## Help center
 
@@ -452,21 +420,21 @@ import {
 } from "@zama-fhe/react-sdk";
 
 function MyTokenPage() {
-  const TOKEN = "0xYourEncryptedERC20";
+  const WRAPPER = "0xYourWrappedToken";
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const { data: meta } = useMetadata(TOKEN);
+  const { data: meta } = useMetadata(WRAPPER);
   const { data: balance, isLoading } = useConfidentialBalance({
-    address: TOKEN,
+    address: WRAPPER,
     account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
-    address: TOKEN,
+    address: WRAPPER,
   });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
-    address: TOKEN,
+    address: WRAPPER,
   });
 
   if (!isConnected) {
@@ -525,61 +493,61 @@ function MyTokenPage() {
 ### Tab: viem
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
 // Shield 1,000 public tokens into confidential form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address);
+const balance = await wrappedToken.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Withdraw back to public ERC-20
-await token.unshield(500n);
+await wrappedToken.unshield(500n);
 ```
 
 ### Tab: ethers
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
 // Shield 1,000 public tokens into confidential form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
 const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
-const balance = await token.balanceOf(address as `0x${string}`);
+const balance = await wrappedToken.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Withdraw back to public ERC-20
-await token.unshield(500n);
+await wrappedToken.unshield(500n);
 ```
 
 ### Tab: Node.js (viem)
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const wrappedToken = sdk.createWrappedToken(process.env.WRAPPER_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf(account.address);
+  const balance = await wrappedToken.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
-  await token.confidentialTransfer("0xRecipient", 500n);
+  await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
   // Withdraw back to public ERC-20
-  await token.unshield(500n);
+  await wrappedToken.unshield(500n);
 } finally {
   sdk.terminate(); // clean up worker threads
 }
@@ -588,21 +556,21 @@ try {
 ### Tab: Node.js (ethers)
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const wrappedToken = sdk.createWrappedToken(process.env.WRAPPER_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf(wallet.address as `0x${string}`);
+  const balance = await wrappedToken.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
-  await token.confidentialTransfer("0xRecipient", 500n);
+  await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
   // Withdraw back to public ERC-20
-  await token.unshield(500n);
+  await wrappedToken.unshield(500n);
 } finally {
   sdk.terminate(); // clean up worker threads
 }
@@ -1054,7 +1022,8 @@ const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
-const balance = await token.balanceOf(); // connected wallet
+const [owner] = await walletClient.getAddresses();
+const balance = await token.balanceOf(owner); // connected wallet
 const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
@@ -1140,6 +1109,8 @@ In all cases, the user sees a single unified balance for the underlying asset.
 ### Tab: SDK
 
 ```ts
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
 // Exact-amount approval (default)
 await wrappedToken.shield(1000n);
 
@@ -1170,6 +1141,8 @@ Unwrapping is a **two-step asynchronous process** at the contract level: an unwr
 ### Tab: SDK
 
 ```ts
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 
 // Track each phase for UI updates
@@ -1226,7 +1199,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](ht
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
+  const cUsdc = sdk.createWrappedToken(result.confidentialTokenAddress);
 }
 ```
 
@@ -1324,49 +1297,144 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 - [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappersRegistry.md) — registry construction, caching, and pagination.
 - [Architecture](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) — how the SDK, relayer, and gateway fit together.
 
-## Overview
+## Build with an LLM
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/guides/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md
-- logical_path: guides/README
+- source_path: docs/gitbook/src/tutorials/build-with-an-llm.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md
+- logical_path: tutorials/build-with-an-llm
 
-# Overview
+# Build with an LLM
 
-**Welcome to Guides!**
+Use the SDK's LLM-ready artifacts to give coding agents a grounded view of the Zama SDK without overloading their context window.
 
-Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.
+Prefer the smallest source that can answer the task, and keep the source order strict: official docs first, approved examples second, API reports only as fallback.
 
-## Where to go next
+The SDK documentation provides:
 
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for lightweight discovery
+- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
+- guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
 
-Otherwise:
+## Choose the right source
 
-🟨 Go to [**Configuration**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) to set up the relayer, signer, and storage.
+Use the smallest source that gives the agent enough context:
 
-🟨 Go to [**Authentication**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) to learn about API key management and backend proxies.
+- Use `llms.txt` when the agent needs to discover the relevant docs, examples, or package README.
+- Use `llms-full.txt` only when the agent supports a large context window and needs the complete public learning corpus in one file.
+- Use the `zama-protocol` Claude Code skill when working in Claude Code and the task needs Zama FHEVM, Solidity, ERC-7984, SDK, or React SDK workflow guidance.
 
-🟨 Go to [**Shield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) to convert public ERC-20 tokens into confidential form.
+For Claude Code, install the external skill first, then use `llms.txt` or `llms-full.txt` as supporting SDK-specific context when needed.
 
-🟨 Go to [**Transfer privately**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/transfer-privately.md) to send encrypted amounts on-chain.
+## Consumption modes
 
-🟨 Go to [**Unshield tokens**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md) to withdraw confidential tokens back to public ERC-20.
+You do not need to clone the SDK repository to use the LLM artifacts.
 
-🟨 Go to [**Check balances**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/check-balances.md) to decrypt and display confidential balances.
+### Without cloning the SDK repository
 
-🟨 Go to [**Handle errors**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md) to manage SDK errors gracefully in your app.
+Use this mode when integrating the SDK into an external app:
 
-🟨 Go to [**Node.js backend**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/node-js-backend.md) to run the SDK server-side with worker threads.
+1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
+2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
+3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
 
-🟨 Go to [**Encrypt & decrypt**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) for low-level FHE encryption and decryption operations.
+### With a cloned SDK repository
 
-## Help center
+Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
 
-Ask technical questions and discuss with the community.
+1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
+2. Use `llms.txt` as a map of the public SDK docs and approved examples.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
+## Source of truth
+
+Agent-facing guidance follows this source order:
+
+1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
+2. Approved official examples listed in the `Official Examples` section of `llms.txt`
+3. API reports as fallback reference material for exported API details
+
+When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
+
+`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
+
+## Use `llms.txt`
+
+Use `llms.txt` when your agent needs a compact map of the SDK:
+
+- available guides
+- concepts
+- SDK reference pages
+- React reference pages
+- approved examples
+
+This is the best entry point when the agent first needs to discover where to look.
+
+## Use `llms-full.txt`
+
+Use `llms-full.txt` when your agent needs the complete official documentation bundle in one file.
+
+Only use it with agents that support large context windows. For normal coding tasks, start with `llms.txt` and fetch only the relevant docs or examples instead of loading the full corpus.
+
+It includes:
+
+- official docs sourced from `docs/gitbook/src`
+- approved official examples
+- root and package README context
+
+It intentionally excludes API reports so the main bundle stays focused on the public learning path.
+
+## Use the Claude Code skill
+
+Claude Code skills are maintained separately in [`zama-ai/skills`](https://github.com/zama-ai/skills), not in the SDK repository.
+
+Install the `zama-protocol` skill with Claude Code:
+
+```text
+/plugin marketplace add zama-ai/skills
+/plugin install zama-protocol@zama-skills
+```
+
+The skill covers Zama FHEVM concepts, Solidity patterns, ERC-7984, TypeScript SDK integration, React SDK patterns, verified addresses, and common setup paths.
+
+If the marketplace install is unavailable, continue with `llms.txt` or `llms-full.txt`.
+
+## Recommended workflow
+
+### For new integrations
+
+1. Start with `llms.txt`
+2. Read the closest approved example from the `Official Examples` section
+3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
+4. Read the matching official guide or reference page when you need more detail
+
+### For deeper grounding
+
+1. Give the agent `llms-full.txt`
+2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
+3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
+
+### For debugging
+
+1. Start with the error guide
+2. Compare against the closest approved example
+3. Use the `zama-protocol` skill if you are working in Claude Code
+4. Inspect API reports only if the exported API surface is still unclear
+
+## Prompt ideas
+
+Use prompts like:
+
+```text
+Use the official Zama SDK docs and the approved react-wagmi example to integrate confidential balances and transfers into this Next.js app.
+```
+
+```text
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
+```
+
+```text
+Debug this Zama SDK integration using the official error guide first, then compare it to the closest approved example.
+```
 
 ## Configuration
 
@@ -1732,6 +1800,11 @@ Chains that pass the _same_ `options` object (by reference) share a single relay
 
 The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
+
+> [!INFO]
+> Don't have an API key yet? See [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+
+
 ## Steps
 
 ### 1. Understand the two options
@@ -1889,6 +1962,79 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 - [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
 - [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerNode.md) — `node()` transport factory
 
+## Relayer API keys
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/relayer-api-keys.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md
+- logical_path: guides/relayer-api-keys
+
+# Relayer API keys
+
+The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
+
+## Overview
+
+There are two options to access the FHEVM Relayer for mainnet deployment:
+
+**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. See the [Self-host Relayer](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md) documentation for set-up guides and configuration references.
+
+**Zama-hosted Relayer:** Connect to Zama's hosted Relayer using an API key for authentication. Transaction fees will be billed on a monthly basis according to the usage, with possible discounts and grants applied directly in the invoice.
+
+Start by submitting the form below, the Zama team will review your request and contact you with next steps.
+
+→ [Apply for an API key](https://forms.gle/jq84zEek1oiv3kBz9)
+
+
+> [!WARNING]
+> Before publishing your solution on mainnet, ensure that end-to-end integration has been successfully tested on testnet.
+
+
+## Using your API key
+
+Once you receive your API key, wire it into the SDK using one of the two strategies covered in the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md):
+
+- **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
+- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
+
+The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
+
+## Security best practices
+
+Your API key grants access to Zama's hosted Relayer with sponsored operations. Follow these security guidelines to protect your key:
+
+### Keep your key private
+
+- **Never expose your API key in client-side code** (frontend applications, mobile apps, etc.)
+- **Never commit your API key** to version control systems
+- **Never share your API key** with unauthorized parties
+
+### Secure implementation
+
+The recommended approach depends on your application architecture:
+
+- **In-browser applications**: Proxy all Relayer requests through your backend server so the API key remains server-side and never reaches the client.
+- **Server-side applications**: Store the API key in environment variables and load it securely at runtime.
+
+### Backend proxy pattern
+
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. See the [Authentication guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+
+## Compromised keys
+
+If you suspect your API key has been compromised:
+
+1. **Immediately notify the Zama team** through [support@zama.org](mailto:support@zama.org).
+2. **Request a new API key** from the Zama team
+3. **Stop using the compromised key** in your applications
+
+If Zama identifies that an API key has been compromised, the key holder will be notified immediately and the key may be suspended to prevent unauthorized usage.
+
+## Next steps
+
+- [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md) — wire your API key into the SDK via a backend proxy or direct `auth` field
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
+
 ## Shield tokens
 
 - source_type: official-doc
@@ -1898,7 +2044,7 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 
 # Shield tokens
 
-Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` hook.
+Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `wrappedToken.shield()`. In React, use the `useShield` hook.
 
 ## Shielding paths
 
@@ -1909,7 +2055,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 | `transferAndCall`  | Underlying ERC-20 implements ERC-1363         | 1              | The wrapper's `onTransferReceived` mints the confidential balance in one transaction. |
 | `approve` + `wrap` | Underlying ERC-20 does not implement ERC-1363 | 2              | An ERC-20 `approve` followed by a `wrap` call on the wrapper.                         |
 
-The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `token.shield(amount)` routes correctly for any token. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
+The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `wrappedToken.shield(amount)` routes correctly for any wrapper. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
 
 ### Which path will my token take?
 
@@ -1938,7 +2084,7 @@ If you only have the underlying ERC-20 address, the built-in registry resolves t
 ### Tab: Core SDK
 
 ```ts
-const token = sdk.createWrappedToken("0xWrapperAddress");
+const wrappedToken = sdk.createWrappedToken("0xWrapperAddress");
 ```
 
 ### Tab: Resolve wrapper via registry
@@ -1949,7 +2095,7 @@ const token = sdk.createWrappedToken("0xWrapperAddress");
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createWrappedToken(result.confidentialTokenAddress);
+const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 ### Tab: React
@@ -1957,7 +2103,7 @@ const token = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```tsx
 import { useWrappedToken } from "@zama-fhe/react-sdk";
 
-const token = useWrappedToken("0xWrapperAddress");
+const wrappedToken = useWrappedToken("0xWrapperAddress");
 ```
 
 
@@ -1971,7 +2117,7 @@ By default, `shield` approves the exact amount before wrapping. This is the safe
 ### Tab: Core SDK
 
 ```ts
-const { txHash } = await token.shield(1000n);
+const { txHash } = await wrappedToken.shield(1000n);
 console.log("Shield tx:", txHash);
 ```
 
@@ -1999,10 +2145,10 @@ On the `approve` + `wrap` path, the SDK sends two transactions: an ERC-20 `appro
 
 ```ts
 // First call: approve(MAX_UINT256) + shield — two wallet prompts
-await token.shield(1000n, { approvalStrategy: "max" });
+await wrappedToken.shield(1000n, { approvalStrategy: "max" });
 
 // Second call: only the shield tx — one wallet prompt
-await token.shield(500n, { approvalStrategy: "max" });
+await wrappedToken.shield(500n, { approvalStrategy: "max" });
 ```
 
 ### Tab: React
@@ -2020,7 +2166,7 @@ If the user has already approved the wrapper contract (for example, through a se
 ### Tab: Core SDK
 
 ```ts
-await token.shield(1000n, { approvalStrategy: "skip" });
+await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 ### Tab: React
@@ -2040,7 +2186,7 @@ Both the core SDK and React hooks return the transaction hash. You can use it to
 ### Tab: Core SDK
 
 ```ts
-const { txHash } = await token.shield(1000n);
+const { txHash } = await wrappedToken.shield(1000n);
 
 // Wait for confirmation using your provider
 const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
@@ -2279,7 +2425,7 @@ Unshielding converts encrypted tokens back into standard ERC-20 tokens that are 
 
 ### 1. Unshield a specific amount
 
-Call `token.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
+Call `wrappedToken.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
 
 By default, the SDK validates the confidential balance before submitting. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
@@ -2300,9 +2446,9 @@ const config = createConfig({
   relayers: { [sepolia.id]: web() },
 });
 const sdk = new ZamaSDK(config);
-const token = sdk.createWrappedToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 
-const { txHash, receipt } = await token.unshield(500n);
+const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
 
@@ -2316,7 +2462,7 @@ Because unshielding involves two transactions with a waiting period in between, 
 ### Tab: SDK
 
 ```ts
-await token.unshield(500n, {
+await wrappedToken.unshield(500n, {
   onUnwrapSubmitted: (txHash) => {
     updateUI("Unwrap submitted...");
   },
@@ -2344,7 +2490,7 @@ If you want to convert all confidential tokens back to public, use `unshieldAll(
 ### Tab: SDK
 
 ```ts
-await token.unshieldAll();
+await wrappedToken.unshieldAll();
 ```
 
 
@@ -2366,7 +2512,7 @@ await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
 // On next page load, check for pending unshields
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
-  await token.resumeUnshield(pending);
+  await wrappedToken.resumeUnshield(pending);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -2779,27 +2925,27 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                         |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                      |
-| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                           |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                  |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                            |
-| `InvalidKeypairError`                  | The FHE keypair is stale. Clear credentials and prompt for a fresh signature.                                |
-| `KeypairExpiredError`                  | Same as above -- the keypair TTL has elapsed.                                                                |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                         |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`.   |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.   |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                 |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                            |
-| `BalanceCheckUnavailableError`         | Call `token.allow()` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                     |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                    |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                               |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                   |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                         |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                         |
+| Error                                  | Recommended action                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                    |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                 |
+| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                                      |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                                             |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                       |
+| `InvalidKeypairError`                  | The FHE keypair is stale. Clear credentials and prompt for a fresh signature.                                                           |
+| `KeypairExpiredError`                  | Same as above -- the keypair TTL has elapsed.                                                                                           |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                    |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`.                              |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                              |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                            |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                       |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                               |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                          |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                              |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                    |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                    |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -2972,16 +3118,16 @@ Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent
 The token API is identical to the browser SDK:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 
 // Shield public tokens into their encrypted form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Transfer confidentially
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Decrypt a balance
-const balance = await token.balanceOf(account.address);
+const balance = await wrappedToken.balanceOf(account.address);
 ```
 
 See the [Token Operations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) reference for the full API.
@@ -3204,13 +3350,13 @@ The `executorAddress` is the deployed `CleartextFHEVMExecutor` contract address 
 
 ### 4. Use the SDK normally
 
-The token API works exactly the same:
+The wrapper API works the same as in production setups:
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
-await token.shield(1000n);
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
+await wrappedToken.shield(1000n);
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address);
+const balance = await wrappedToken.balanceOf(address);
 ```
 
 ### 5. (Optional) Create a custom config for your own chain
@@ -3268,145 +3414,6 @@ const sdk = new ZamaSDK(config);
 - [RelayerCleartext reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — production setup with `web()` or `node()` relayer factories
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — pre-configured chain definitions for Mainnet, Sepolia, and more
-
-## Build with an LLM
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/guides/build-with-an-llm.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md
-- logical_path: guides/build-with-an-llm
-
-# Build with an LLM
-
-Use the SDK's LLM-ready artifacts to give coding agents a grounded view of the Zama SDK without overloading their context window.
-
-Prefer the smallest source that can answer the task, and keep the source order strict: official docs first, approved examples second, API reports only as fallback.
-
-The SDK documentation provides:
-
-- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for lightweight discovery
-- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
-- guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
-
-## Choose the right source
-
-Use the smallest source that gives the agent enough context:
-
-- Use `llms.txt` when the agent needs to discover the relevant docs, examples, or package README.
-- Use `llms-full.txt` only when the agent supports a large context window and needs the complete public learning corpus in one file.
-- Use the `zama-protocol` Claude Code skill when working in Claude Code and the task needs Zama FHEVM, Solidity, ERC-7984, SDK, or React SDK workflow guidance.
-
-For Claude Code, install the external skill first, then use `llms.txt` or `llms-full.txt` as supporting SDK-specific context when needed.
-
-## Consumption modes
-
-You do not need to clone the SDK repository to use the LLM artifacts.
-
-### Without cloning the SDK repository
-
-Use this mode when integrating the SDK into an external app:
-
-1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
-2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
-3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
-
-### With a cloned SDK repository
-
-Use this mode when contributing to the SDK, debugging SDK internals, or inspecting examples locally:
-
-1. Read `docs/gitbook/src/...`, `examples/...`, and package READMEs directly from the local checkout.
-2. Use `llms.txt` as a map of the public SDK docs and approved examples.
-
-## Source of truth
-
-Agent-facing guidance follows this source order:
-
-1. Official documentation, published through GitBook and sourced from `docs/gitbook/src` in the SDK repository
-2. Approved official examples listed in the `Official Examples` section of `llms.txt`
-3. API reports as fallback reference material for exported API details
-
-When the docs already answer the question, prefer the docs over examples. When examples are needed, prefer the approved examples in this repo over ad hoc implementations.
-
-`docs/gitbook/src/...` and `examples/...` are repository-relative source paths. If you have not cloned the SDK repository, use the raw GitHub URLs from `llms.txt` or the embedded content in `llms-full.txt`.
-
-## Use `llms.txt`
-
-Use `llms.txt` when your agent needs a compact map of the SDK:
-
-- available guides
-- concepts
-- SDK reference pages
-- React reference pages
-- approved examples
-
-This is the best entry point when the agent first needs to discover where to look.
-
-## Use `llms-full.txt`
-
-Use `llms-full.txt` when your agent needs the complete official documentation bundle in one file.
-
-Only use it with agents that support large context windows. For normal coding tasks, start with `llms.txt` and fetch only the relevant docs or examples instead of loading the full corpus.
-
-It includes:
-
-- official docs sourced from `docs/gitbook/src`
-- approved official examples
-- root and package README context
-
-It intentionally excludes API reports so the main bundle stays focused on the public learning path.
-
-## Use the Claude Code skill
-
-Claude Code skills are maintained separately in [`zama-ai/skills`](https://github.com/zama-ai/skills), not in the SDK repository.
-
-Install the `zama-protocol` skill with Claude Code:
-
-```text
-/plugin marketplace add zama-ai/skills
-/plugin install zama-protocol@zama-skills
-```
-
-The skill covers Zama FHEVM concepts, Solidity patterns, ERC-7984, TypeScript SDK integration, React SDK patterns, verified addresses, and common setup paths.
-
-If the marketplace install is unavailable, continue with `llms.txt` or `llms-full.txt`.
-
-## Recommended workflow
-
-### For new integrations
-
-1. Start with `llms.txt`
-2. Read the closest approved example from the `Official Examples` section
-3. Use the `zama-protocol` Claude Code skill if you are working in Claude Code
-4. Read the matching official guide or reference page when you need more detail
-
-### For deeper grounding
-
-1. Give the agent `llms-full.txt`
-2. Read the matching official guide or example docs through their raw GitHub links if more detail is needed
-3. Fall back to API reports only when the docs and examples do not answer an exported-surface question
-
-### For debugging
-
-1. Start with the error guide
-2. Compare against the closest approved example
-3. Use the `zama-protocol` skill if you are working in Claude Code
-4. Inspect API reports only if the exported API surface is still unclear
-
-## Prompt ideas
-
-Use prompts like:
-
-```text
-Use the official Zama SDK docs and the approved react-wagmi example to integrate confidential balances and transfers into this Next.js app.
-```
-
-```text
-Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend flow with the node() transport factory and per-request isolation.
-```
-
-```text
-Debug this Zama SDK integration using the official error guide first, then compare it to the closest approved example.
-```
 
 ## Next.js / SSR
 
@@ -4610,6 +4617,41 @@ const a = await sdk.decryption.userDecrypt([{ encryptedValue: h1, contractAddres
 const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
+### permits.hasPermit
+
+`(contractAddresses: Address[]) => Promise<boolean>`
+
+Checks whether the current signer already has stored permits covering every requested contract address. This is a pure storage lookup: it does not prompt the wallet and returns `false` when the SDK has no signer.
+
+```ts
+const hasPermit = await sdk.permits.hasPermit([cUSDT, cDAI]);
+if (!hasPermit) {
+  showAuthorizeButton();
+}
+```
+
+Use this for UI state. `sdk.permits.grantPermit()` is already idempotent and skips the wallet prompt when a covering permit exists.
+
+### permits.grantDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<void>`
+
+Signs and stores a delegated-decryption permit for contracts that the connected signer will decrypt on behalf of `delegator`. The on-chain delegation must already exist and have propagated before delegated decryption succeeds.
+
+```ts
+await sdk.permits.grantDelegationPermit(delegator, [cUSDT]);
+```
+
+### permits.hasDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<boolean>`
+
+Checks whether the current signer has stored delegated-decryption permits for `delegator` and every requested contract.
+
+```ts
+const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
+```
+
 ### decryption.userDecrypt
 
 `(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
@@ -4753,6 +4795,17 @@ Wipe the keypair **and** cascade-delete every permit for the current signer. Use
 await sdk.permits.clear();
 ```
 
+### delegations
+
+`sdk.delegations` manages on-chain decryption delegation through the ACL contract:
+
+- `delegateDecryption({ contractAddress, delegateAddress, expirationDate? })`
+- `revokeDelegation({ contractAddress, delegateAddress })`
+- `isActive({ contractAddress, delegatorAddress, delegateAddress })`
+- `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
+
+See the [Delegations reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md) for the full API and propagation notes.
+
 ### dispose
 
 `() => void`
@@ -4865,7 +4918,7 @@ await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true }
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `sdk.permits.grantPermit([token.address])` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
 
@@ -4946,11 +4999,9 @@ Batch delegated decryption.
 
 # WrappedToken
 
-> ⚠️ This page is a placeholder — full reference docs are coming.
+`WrappedToken` is the high-level interface for an ERC-7984 ERC-20 wrapper. It extends [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md), so it supports the base confidential-token operations (`balanceOf`, `confidentialTransfer`, `setOperator`, etc.) and adds wrapper-specific methods for converting between the public ERC-20 and its confidential form.
 
-`WrappedToken` extends [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) with operations specific to ERC-7984 ERC-20 wrappers: shield (deposit underlying ERC-20 to mint confidential balance), unshield (burn confidential balance to redeem underlying), allowance management, and unwrap orchestration.
-
-The wrapper IS the confidential token — there is no separate token/wrapper address pair. Pass the wrapper contract address directly.
+The wrapper **is** the confidential token. Pass the wrapper contract address directly; there is no separate token / wrapper pair in the SDK object.
 
 ## Import
 
@@ -4964,23 +5015,198 @@ Use [`sdk.createWrappedToken()`](https://raw.githubusercontent.com/zama-ai/sdk/m
 
 ```ts
 const wrappedToken = sdk.createWrappedToken("0xWrapper");
+
+await wrappedToken.shield(1000n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.unshield(250n);
 ```
 
-## Methods
+## Inherited Token API
 
-In addition to everything inherited from [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md):
+`WrappedToken` extends [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md). Use the inherited methods for ERC-7984 confidential-token reads and writes:
 
-- `underlying()` — read the underlying ERC-20 address
-- `allowance(owner)` — read ERC-20 allowance the owner granted to the wrapper
-- `isPayable()` — ERC-1363 detection on the underlying (cached); used by `shield()` to pick the execution path
-- `approveUnderlying(amount?)` — approve the wrapper to spend the underlying
-- `shield(amount, options?)` — deposit ERC-20 → mint confidential balance (auto-routes via ERC-1363 `transferAndCall` when supported, otherwise `approve` + `wrap`)
-- `unshield(amount, options?)` — burn confidential balance → redeem ERC-20
-- `unshieldAll(options?)` — unshield the entire confidential balance
-- `resumeUnshield(unwrapTxHash, options?)` — resume an in-flight unshield
-- `unwrap(amount)` — low-level unwrap (returns request id)
-- `unwrapAll()` — low-level unwrap-all
-- `finalizeUnwrap(unwrapRequestIdOrAmount)` — finalize a pending unwrap
+- `balanceOf(owner)`
+- `confidentialBalanceOf(owner)`
+- `decryptBalanceAs(params)`
+- `confidentialTransfer(to, amount, options?)`
+- `confidentialTransferFrom(from, to, amount, callbacks?)`
+- `setOperator(operator, until?)`
+- `isOperator(holder, spender)`
+- `name()`, `symbol()`, `decimals()`
+- `isConfidential()`, `isWrapper()`
+
+## Wrapper Reads
+
+### underlying
+
+`() => Promise<Address>`
+
+Reads the underlying public ERC-20 token address from the wrapper contract. The result is cached per `WrappedToken` instance.
+
+```ts
+const underlying = await wrappedToken.underlying();
+```
+
+### allowance
+
+`(owner: Address) => Promise<bigint>`
+
+Reads the ERC-20 allowance that `owner` granted to this wrapper contract.
+
+```ts
+const allowance = await wrappedToken.allowance(owner);
+```
+
+### isPayable
+
+`() => Promise<boolean>`
+
+Checks whether the underlying ERC-20 supports ERC-1363. `shield()` uses this internally to route between `transferAndCall` and `approve` + `wrap`. The result is cached per `WrappedToken` instance.
+
+```ts
+const singleTxShield = await wrappedToken.isPayable();
+```
+
+## Shield
+
+### shield
+
+`(amount: bigint, options?: ShieldOptions) => Promise<TransactionResult>`
+
+Shields public ERC-20 tokens into confidential tokens. The SDK validates the public ERC-20 balance before submitting.
+
+The execution path is selected automatically:
+
+| Path               | Used when                                       | Wallet prompts |
+| ------------------ | ----------------------------------------------- | -------------- |
+| `transferAndCall`  | The underlying ERC-20 supports ERC-1363         | 1              |
+| `approve` + `wrap` | The underlying ERC-20 does not support ERC-1363 | 2              |
+
+```ts
+const { txHash, receipt } = await wrappedToken.shield(1000n);
+```
+
+Options:
+
+| Option                | Type                         | Default   | Description                                      |
+| --------------------- | ---------------------------- | --------- | ------------------------------------------------ |
+| `approvalStrategy`    | `"exact" \| "max" \| "skip"` | `"exact"` | Controls approval on the `approve` + `wrap` path |
+| `to`                  | `Address`                    | signer    | Recipient of the confidential balance            |
+| `onApprovalSubmitted` | `(txHash: Hex) => void`      | —         | Called after the approval tx is submitted        |
+| `onShieldSubmitted`   | `(txHash: Hex) => void`      | —         | Called after the shield tx is submitted          |
+
+`approvalStrategy` is ignored on the ERC-1363 `transferAndCall` path because there is no allowance step.
+
+### approveUnderlying
+
+`(amount?: bigint) => Promise<TransactionResult>`
+
+Approves this wrapper contract to spend the underlying ERC-20. Defaults to `uint256.max`. If an existing non-zero allowance is present, the SDK resets it to zero first for compatibility with tokens such as USDT.
+
+Most apps should use `shield()` directly and let it manage approvals.
+
+```ts
+await wrappedToken.approveUnderlying();
+await wrappedToken.approveUnderlying(1000n);
+```
+
+## Unshield
+
+### unshield
+
+`(amount: bigint, options?: UnshieldOptions) => Promise<TransactionResult>`
+
+Unshields a specific confidential amount back to public ERC-20. This orchestrates the two-step protocol:
+
+1. Submit `unwrap`.
+2. Wait for the unwrap receipt and public decryption proof.
+3. Submit `finalizeUnwrap`.
+
+The returned `txHash` and `receipt` are for the finalization transaction.
+
+```ts
+const { txHash, receipt } = await wrappedToken.unshield(500n);
+```
+
+Options:
+
+| Option                | Type                    | Default | Description                                    |
+| --------------------- | ----------------------- | ------- | ---------------------------------------------- |
+| `skipBalanceCheck`    | `boolean`               | `false` | Skip the confidential-balance pre-flight check |
+| `onUnwrapSubmitted`   | `(txHash: Hex) => void` | —       | Called after the unwrap tx is submitted        |
+| `onFinalizing`        | `() => void`            | —       | Called before waiting for the finalize proof   |
+| `onFinalizeSubmitted` | `(txHash: Hex) => void` | —       | Called after the finalize tx is submitted      |
+
+### unshieldAll
+
+`(callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
+
+Unshields the entire confidential balance by using the on-chain encrypted balance handle directly.
+
+```ts
+await wrappedToken.unshieldAll({
+  onUnwrapSubmitted: (txHash) => console.log("unwrap:", txHash),
+  onFinalizeSubmitted: (txHash) => console.log("finalize:", txHash),
+});
+```
+
+### resumeUnshield
+
+`(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
+
+Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`.
+
+```ts
+const pending = await loadPendingUnshield(storage, wrappedToken.address);
+if (pending) {
+  await wrappedToken.resumeUnshield(pending);
+}
+```
+
+## Low-Level Unwrap Primitives
+
+Most apps should use `unshield()` or `unshieldAll()`. The low-level methods are escape hatches for custom two-phase flows.
+
+### unwrap
+
+`(amount: bigint) => Promise<TransactionResult>`
+
+Encrypts `amount` and submits the unwrap request. Finalization is not automatic.
+
+```ts
+const { txHash, receipt } = await wrappedToken.unwrap(500n);
+```
+
+### unwrapAll
+
+`() => Promise<TransactionResult>`
+
+Submits an unwrap request for the full confidential balance using the current encrypted balance handle.
+
+```ts
+const { txHash } = await wrappedToken.unwrapAll();
+```
+
+### finalizeUnwrap
+
+`(unwrapRequestIdOrAmount: EncryptedValue) => Promise<TransactionResult>`
+
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Prefer passing the `unwrapRequestId` from the `UnwrapRequested` event. The older burn-amount-handle form is accepted only for compatibility with previously persisted unshield state.
+
+```ts
+const event = findUnwrapRequested(receipt.logs);
+if (!event) throw new Error("No unwrap request found");
+
+await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
+```
+
+## Related
+
+- [Token](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) — base ERC-7984 confidential-token API
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — creates `WrappedToken` via `createWrappedToken()`
+- [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/shield-tokens.md) — full shield flow
+- [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/unshield-tokens.md) — full unshield flow
+- [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappedToken.md) — React hook returning a `WrappedToken`
 
 ## WrappersRegistry
 
@@ -6449,7 +6675,7 @@ Thrown when a write, sign, or decrypt operation is called on an SDK instance con
 import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 
 try {
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 } catch (error) {
   if (error instanceof SignerNotConfiguredError) {
     showConfigurationError("Configure a signer to perform this action");
@@ -6682,7 +6908,7 @@ The public ERC-20 balance is less than the requested shield amount. Thrown by `s
 import { InsufficientERC20BalanceError } from "@zama-fhe/sdk";
 
 try {
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 } catch (error) {
   if (error instanceof InsufficientERC20BalanceError) {
     showError(`Not enough tokens: you have ${error.available}, need ${error.requested}`);
@@ -6705,7 +6931,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Either call `token.allow()` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+**How to handle:** Either call `sdk.permits.grantPermit([token.address])` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
 
 ### ERC20ReadFailedError
 
@@ -6880,7 +7106,7 @@ matchZamaError(error, {
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
 | `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related
@@ -6935,7 +7161,6 @@ import {
   setOperatorContract,
   confidentialTotalSupplyContract,
   inferredTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
   wrapContract,
   unwrapContract,
@@ -6984,19 +7209,17 @@ import {
 
 ## Wrapping and unwrapping
 
-| Builder                                                              | What it does                              |
-| -------------------------------------------------------------------- | ----------------------------------------- |
-| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                        |
-| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                            |
-| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value     |
-| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                           |
-| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address            |
-| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply      |
-| `totalSupplyContract(wrapper)`                                       | Deprecated legacy `totalSupply()` builder |
+| Builder                                                              | What it does                          |
+| -------------------------------------------------------------------- | ------------------------------------- |
+| `wrapContract(wrapper, to, amount)`                                  | Wrap ERC-20 tokens                    |
+| `unwrapContract(token, from, to, encryptedAmount, inputProof)`       | Request unwrap                        |
+| `unwrapFromBalanceContract(token, from, to, encryptedBalance)`       | Unwrap using on-chain encrypted value |
+| `finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof)` | Finalize unwrap                       |
+| `underlyingContract(wrapper)`                                        | Read underlying ERC-20 address        |
+| `inferredTotalSupplyContract(wrapper)`                               | Read inferred plaintext total supply  |
 
-Use `totalSupplyQueryOptions` / React `useTotalSupply` for transition-safe reads. They
-detect the wrapper ERC-165 interface ID and call `inferredTotalSupply()` on upgraded
-wrappers or legacy `totalSupply()` on pre-upgrade wrappers.
+Use `totalSupplyQueryOptions` / React `useTotalSupply` for cached reads — they call
+`inferredTotalSupply()` under the hood.
 
 ## Discovery and detection
 
@@ -7350,7 +7573,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
@@ -7388,14 +7610,9 @@ for (const event of events) {
       console.log(event.account, event.amount);
       break;
     case "UnwrapRequested":
-      console.log(event.receiver, event.unwrapRequestId ?? event.encryptedAmount);
+      console.log(event.receiver, event.unwrapRequestId);
       break;
     case "UnwrapFinalized":
-      // Emitted by upgraded wrappers (unwrapRequestId present)
-      console.log(event.receiver, event.cleartextAmount);
-      break;
-    case "UnwrappedFinalized":
-      // Emitted by legacy wrappers (no unwrapRequestId) — handle during protocol transition
       console.log(event.receiver, event.cleartextAmount);
       break;
   }
@@ -7406,13 +7623,13 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, `"UnwrappedFinalized"` (legacy), or `"UnwrappedStarted"`. During the protocol transition, finalize events from pre-upgrade wrappers have `eventName: "UnwrappedFinalized"`; those from upgraded wrappers have `eventName: "UnwrapFinalized"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
 
 ## TOKEN_TOPICS
 
 `Hex[]`
 
-Array of topic hashes for all supported token events, including both legacy and upgraded unwrap event signatures during the protocol transition. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
+Array of topic hashes for all supported token events. Pass this to `eth_getLogs` to fetch relevant logs in a single RPC call.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -7427,14 +7644,13 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                                                                    |
-| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts                                            |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                                                      |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; returns `unwrapRequestId` when emitted by upgraded wrappers  |
-| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; returns `unwrapRequestId` when emitted by upgraded wrappers  |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Deprecated compatibility decoder; not a transparent alias for switch consumers |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                                                      |
+| Decoder                           | Event type             | Description                                  |
+| --------------------------------- | ---------------------- | -------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts          |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";
@@ -8779,7 +8995,7 @@ await transfer({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -9470,7 +9686,7 @@ await unshield({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -9981,9 +10197,10 @@ function UnwrapButton() {
   const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
-    const txHash = await unwrap({ amount: 500n });
+    const { txHash } = await unwrap({ amount: 500n });
     console.log("Unwrap requested:", txHash);
-    // You must now call useFinalizeUnwrap with this txHash
+    // Parse the UnwrapRequested event with findUnwrapRequested,
+    // then pass unwrapRequestId to useFinalizeUnwrap.
   };
 
   return (
@@ -10021,7 +10238,7 @@ await unwrap({ amount: 1000n });
 
 ## Return Type
 
-The mutation resolves with a transaction hash (`Hex`).
+The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 ### `mutate`
 
@@ -10112,9 +10329,10 @@ function UnwrapAllButton() {
   const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
 
   const handleUnwrapAll = async () => {
-    const txHash = await unwrapAll();
+    const { txHash } = await unwrapAll();
     console.log("Unwrap requested:", txHash);
-    // You must now call useFinalizeUnwrap with this txHash
+    // Parse the UnwrapRequested event with findUnwrapRequested,
+    // then pass unwrapRequestId to useFinalizeUnwrap.
   };
 
   return (
@@ -10140,7 +10358,7 @@ const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 
 ## Return Type
 
-The mutation resolves with a transaction hash (`Hex`).
+The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 ### `mutate`
 
@@ -10236,13 +10454,10 @@ function TwoStepUnshield() {
     // Step 1: submit the unwrap and find the event in the receipt
     const { receipt } = await unwrap({ amount: 500n });
     const event = findUnwrapRequested(receipt.logs);
+    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
 
-    // Step 2: finalize with the unwrap request ID (upgraded) or burn amount handle (legacy)
-    await finalize(
-      event.unwrapRequestId
-        ? { unwrapRequestId: event.unwrapRequestId }
-        : { burnAmountHandle: event.encryptedAmount },
-    );
+    // Step 2: finalize with the unwrap request ID from the event
+    await finalize({ unwrapRequestId: event.unwrapRequestId });
   };
 
   return (
@@ -10274,7 +10489,7 @@ The finalize function accepts a discriminated union — pass one of these:
 
 `EncryptedValue`
 
-The unwrap request ID emitted by upgraded contract events. This is the preferred form.
+The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
@@ -10284,7 +10499,7 @@ await finalize({ unwrapRequestId: requestId });
 
 `EncryptedValue`
 
-The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
+Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
 
 ```tsx
 await finalize({ burnAmountHandle: encryptedAmount });
@@ -12919,8 +13134,6 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 # useToken
 
-> ⚠️ This page is a placeholder — full reference docs are coming.
-
 Returns a memoised [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) instance bound to the SDK in the current `ZamaProvider`. The reference is stable across re-renders, making it safe to use in dependency arrays.
 
 For ERC-7984 wrapper operations (shield, unshield, allowance), use [`useWrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useWrappedToken.md) instead.
@@ -12969,9 +13182,9 @@ function TokenActions({ tokenAddress }: { tokenAddress: Address }) {
 
 # useWrappedToken
 
-> ⚠️ This page is a placeholder — full reference docs are coming.
-
 Returns a memoised [`WrappedToken`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/WrappedToken.md) bound to the SDK in the current `ZamaProvider`. Use it for ERC-7984 wrapper operations (shield, unshield, allowance).
+
+`WrappedToken` extends the base [`Token`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md) API, so the returned instance can also read balances and submit confidential transfers.
 
 ## Import
 
@@ -14406,38 +14619,6 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 - [ZamaProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) — provider setup and hook overview
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — the hook whose cache these keys control
-
-## Overview
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/concepts/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md
-- logical_path: concepts/README
-
-# Overview
-
-**Welcome to Concepts!**
-
-Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.
-
-## Where to go next
-
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
-
-Otherwise:
-
-🟨 Go to [**Architecture**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/architecture.md) to understand the SDK's layered module structure.
-
-🟨 Go to [**Permit model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) to learn how FHE keypairs and signed permits are managed.
-
-🟨 Go to [**Security model**](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) for the full threat model and trust assumptions.
-
-## Help center
-
-Ask technical questions and discuss with the community.
-
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
 
 ## Architecture
 
@@ -17858,7 +18039,7 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`.
 
-For agentic SDK integrations, start with [`llms.txt`](./llms.txt) as the compact documentation map. Use [`llms-full.txt`](./llms-full.txt) only with agents that support large context windows, and see [Build with an LLM](./docs/gitbook/src/guides/build-with-an-llm.md) for the recommended workflow.
+For agentic SDK integrations, start with [`llms.txt`](./llms.txt) as the compact documentation map. Use [`llms-full.txt`](./llms-full.txt) only with agents that support large context windows, and see [Build with an LLM](./docs/gitbook/src/tutorials/build-with-an-llm.md) for the recommended workflow.
 
 ### Contributing
 
@@ -17972,7 +18153,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) gets from installation to a working confidential transfer.
-- [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, configuration, balances, transfers, and unshielding.
+- [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), and other guides cover focused topics such as balances, transfers, and unshielding.
 - [SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents the full core API, including `ZamaSDK`, `Token`, `WrappedToken`, adapters, and helpers.
 - [React SDK docs](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) cover the provider and hook layer for React apps.
 
@@ -18098,7 +18279,7 @@ export function App() {
 
 This keeps `Balance` from mounting until the contract is authorized, so the first decrypt happens after an explicit user action instead of an unsolicited wallet popup.
 
-If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md).
+If you need a wagmi-based setup or another integration pattern, start from the [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) and the [Configuration guide](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md).
 
 ## Using the provider and hooks
 
@@ -18121,5 +18302,5 @@ If you need a wagmi-based setup or another integration pattern, start from the [
 - [Official documentation](https://docs.zama.org/protocol) is the best starting point for the hosted SDK docs.
 - [Quick start](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/tutorials/quick-start.md) shows the full React setup from install to first transfer.
 - [React reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/react/README.md) documents all hooks, provider components, and query helpers.
-- [Guides](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/README.md) cover focused topics such as authentication, SSR, browser extensions, balances, and transfers.
+- [Configuration](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/configuration.md), [Authentication](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/authentication.md), [Next.js SSR](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/guides/nextjs-ssr.md), and other guides cover focused topics such as browser extensions, balances, and transfers.
 - [Core SDK reference](https://github.com/zama-ai/sdk/blob/main/docs/gitbook/src/reference/sdk/README.md) documents lower-level SDK classes, adapters, and utilities.
