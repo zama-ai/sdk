@@ -925,13 +925,13 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:reference/react/useUserDecrypt",
-      "title": "useUserDecrypt",
-      "source_path": "docs/gitbook/src/reference/react/useUserDecrypt.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md",
+      "id": "doc:reference/react/useDecryptValues",
+      "title": "useDecryptValues",
+      "source_path": "docs/gitbook/src/reference/react/useDecryptValues.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md",
       "source_type": "official-doc",
       "category": "reference-react",
-      "logical_path": "reference/react/useUserDecrypt",
+      "logical_path": "reference/react/useDecryptValues",
       "description": "Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
@@ -1232,7 +1232,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle'; import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle'; import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },

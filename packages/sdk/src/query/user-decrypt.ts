@@ -31,7 +31,7 @@ export function userDecryptQueryOptions(
     ),
     queryFn: (context) => {
       const [, { encryptedInputs: keyedInputs }] = context.queryKey;
-      return sdk.decryption.userDecrypt(keyedInputs);
+      return sdk.decryption.decryptValuesFromPairs(keyedInputs);
     },
     staleTime: Infinity,
     enabled: encryptedInputs.length > 0 && signerContext.walletAccount !== undefined,

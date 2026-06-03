@@ -126,7 +126,20 @@ export function useConfidentialTransferFrom(address: Address, options?: UseMutat
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDelegatedDecrypt(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptMutationParams, unknown>;
+export function useDecryptPublicValues(): UseMutationResult<Readonly<{
+clearValues: ClearValues;
+abiEncodedClearValues: `0x${string}`;
+decryptionProof: `0x${string}`;
+}>, Error, `0x${string}`[], unknown>;
+
+// @public
+export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+
+// @public
+export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
+
+// @public
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
@@ -190,13 +203,6 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 
 // @public
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
-
-// @public
-export function usePublicDecrypt(): UseMutationResult<Readonly<{
-clearValues: ClearValues;
-abiEncodedClearValues: `0x${string}`;
-decryptionProof: `0x${string}`;
-}>, Error, `0x${string}`[], unknown>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
@@ -276,12 +282,6 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 
 // @public
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
-
-// @public
-export function useUserDecrypt(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
-
-// @public
-export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
 
 // @public
 export function useWrappedToken(address: Address): WrappedToken;

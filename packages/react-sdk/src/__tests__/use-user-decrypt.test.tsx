@@ -5,15 +5,15 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useHasPermit } from "../permits/use-has-permit";
 import { useZamaSDK } from "../provider";
-import { useUserDecrypt } from "../decrypt/use-user-decrypt";
+import { useDecryptValues } from "../decrypt/use-user-decrypt";
 import { describe, expect, test, vi } from "../test-fixtures";
 
-describe("useUserDecrypt", () => {
+describe("useDecryptValues", () => {
   test("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt(
+      useDecryptValues(
         [
           { encryptedValue: "0xhandle1", contractAddress: tokenAddress },
           { encryptedValue: "0xhandle2", contractAddress: tokenAddress },
@@ -38,7 +38,7 @@ describe("useUserDecrypt", () => {
       .mockResolvedValueOnce({ "0xh2": 20n });
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt(
+      useDecryptValues(
         [
           { encryptedValue: "0xh1", contractAddress: CONTRACT_A },
           { encryptedValue: "0xh2", contractAddress: CONTRACT_B },
@@ -63,7 +63,9 @@ describe("useUserDecrypt", () => {
     vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
 
     const { result } = renderWithProviders(() =>
-      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], { enabled: true }),
+      useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+        enabled: true,
+      }),
     );
 
     await waitFor(() => expect(result.current.isError).toBe(true), {
@@ -74,7 +76,7 @@ describe("useUserDecrypt", () => {
 
   test("respects enabled = false", async ({ tokenAddress, renderWithProviders }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+      useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
         enabled: false,
       }),
     );
@@ -84,7 +86,7 @@ describe("useUserDecrypt", () => {
   });
 
   test("stays disabled with empty handles", async ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUserDecrypt([]));
+    const { result } = renderWithProviders(() => useDecryptValues([]));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
     expect(result.current.data).toBeUndefined();
@@ -96,7 +98,7 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     const { result } = renderWithProviders(() =>
-      useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }]),
+      useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }]),
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
@@ -111,7 +113,7 @@ describe("useUserDecrypt", () => {
     renderWithProviders,
   }) => {
     // SDK-80 row 17: when credentials are already authorized for the contract,
-    // useHasPermit resolves to true and useUserDecrypt fires automatically —
+    // useHasPermit resolves to true and useDecryptValues fires automatically —
     // no extra signature prompt should be triggered by the decrypt itself.
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
 
@@ -129,7 +131,7 @@ describe("useUserDecrypt", () => {
       }, [sdk, queryClient]);
 
       const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
-      const decrypt = useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+      const decrypt = useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
         enabled: isAllowed.data === true,
       });
       return { isAllowed, decrypt };
@@ -156,7 +158,7 @@ describe("useUserDecrypt", () => {
     // decrypt must stay idle — no EIP-712 prompt on mount.
     const { result } = renderWithProviders(() => {
       const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
-      const decrypt = useUserDecrypt([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
+      const decrypt = useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {
         enabled: isAllowed.data === true,
       });
       return { isAllowed, decrypt };

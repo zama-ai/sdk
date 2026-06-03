@@ -18,7 +18,7 @@ import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PrivateKeyAccount } from 'viem/accounts';
 import { Provider } from 'ethers';
@@ -6159,21 +6159,24 @@ export class Decryption {
         relayer: RelayerDispatcher;
         decryptionService: DecryptionService | undefined;
     });
-    delegatedBatchDecrypt(input: {
+    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    decryptValuesFromPairs(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
+    delegatedBatchDecryptValuesFromPairs(input: {
         encryptedInputs: DecryptHandle[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
+    delegatedDecryptValuesFromPairs(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export type DecryptPublicValuesResult = PublicDecryptResults;
 
 // @public
 export type DecryptResult = UserDecryptResults;
@@ -6186,22 +6189,32 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public
-export const DefaultRegistryAddresses: Record<number, Address>;
-
-// @public
-export interface DelegatedForUserDecryptionEvent {
-    readonly contractAddress: Address;
-    readonly delegate: Address;
-    readonly delegationCounter: bigint;
-    readonly delegator: Address;
+export interface DecryptValuesParams {
     // (undocumented)
-    readonly eventName: "DelegatedForUserDecryption";
-    readonly newExpirationDate: bigint;
-    readonly oldExpirationDate: bigint;
+    contractAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    encryptedValues: EncryptedValue[];
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    signature: Hex;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    signerAddress: Address;
+    // (undocumented)
+    startTimestamp: number;
 }
 
 // @public
-export interface DelegatedUserDecryptParams {
+export const DefaultRegistryAddresses: Record<number, Address>;
+
+// @public
+export interface DelegatedDecryptValuesParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -6222,6 +6235,18 @@ export interface DelegatedUserDecryptParams {
     signedContractAddresses: Address[];
     // (undocumented)
     startTimestamp: number;
+}
+
+// @public
+export interface DelegatedForUserDecryptionEvent {
+    readonly contractAddress: Address;
+    readonly delegate: Address;
+    readonly delegationCounter: bigint;
+    readonly delegator: Address;
+    // (undocumented)
+    readonly eventName: "DelegatedForUserDecryption";
+    readonly newExpirationDate: bigint;
+    readonly oldExpirationDate: bigint;
 }
 
 // @public
@@ -6395,7 +6420,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedDecryptEIP712Type;
 
 // @public
 export type EncryptedValue = Bytes32Hex;
@@ -11449,7 +11474,7 @@ export class KeypairExpiredError extends ZamaError {
 
 export { KeypairType }
 
-export { KmsDelegatedUserDecryptEIP712Type }
+export { KmsDelegatedDecryptEIP712Type }
 
 // @public
 export interface ListPairsOptions {
@@ -11700,9 +11725,6 @@ export class Permits {
     revokePermits(contracts?: Address[]): Promise<void>;
     warmKeypair(): Promise<void>;
 }
-
-// @public
-export type PublicDecryptResult = PublicDecryptResults;
 
 // @public
 export interface PublicKeyData {
@@ -13077,11 +13099,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     get chains(): readonly FheChain[];
     // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedDecryptEIP712Type>;
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -13093,7 +13115,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
@@ -13101,7 +13123,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -18674,28 +18696,6 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface UserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public
 export interface WalletAccount {
     // (undocumented)
     address: Address;
@@ -19977,10 +19977,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BFGqQkab.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BmlqzHt9.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BmlqzHt9.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BmlqzHt9.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BmlqzHt9.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

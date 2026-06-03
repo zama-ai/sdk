@@ -16,12 +16,12 @@ import { useZamaSDK } from "../provider";
  *
  * @example
  * ```tsx
- * const decrypt = useDelegatedDecrypt();
+ * const decrypt = useDelegatedDecryptValues();
  * decrypt.mutate({ encryptedInputs: [{ encryptedValue: "0xHandle1", contractAddress: "0x..." }], delegatorAddress: "0x..." });
  * // decrypt.data => { "0xHandle1": 1000n }
  * ```
  */
-export function useDelegatedDecrypt() {
+export function useDelegatedDecryptValues() {
   const sdk = useZamaSDK();
   return useMutation<Record<EncryptedValue, ClearValue>, Error, DelegatedDecryptMutationParams>(
     delegatedDecryptMutationOptions(sdk),

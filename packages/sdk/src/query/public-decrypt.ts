@@ -8,7 +8,7 @@ export function publicDecryptMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.publicDecrypt"], EncryptedValue[], PublicDecryptResult> {
   return {
     mutationKey: ["zama.publicDecrypt"],
-    mutationFn: async (handles) => sdk.decryption.publicDecrypt(handles),
+    mutationFn: async (handles) => sdk.decryption.decryptPublicValues(handles),
     onSuccess: (data, _variables, _onMutateResult, context) => {
       for (const [handle, value] of Object.entries(data.clearValues) as [
         EncryptedValue,

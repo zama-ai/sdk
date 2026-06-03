@@ -10,21 +10,23 @@ describe("Decryption", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.userDecrypt([{ encryptedValue: handle, contractAddress: TOKEN }]),
+        sdk.decryption.decryptValuesFromPairs([{ encryptedValue: handle, contractAddress: TOKEN }]),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
     test("forwards handles to the underlying service", async ({ sdk, relayer, handle }) => {
-      await sdk.decryption.userDecrypt([{ encryptedValue: handle, contractAddress: TOKEN }]);
+      await sdk.decryption.decryptValuesFromPairs([
+        { encryptedValue: handle, contractAddress: TOKEN },
+      ]);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
   });
 
-  describe("delegatedDecrypt (signer-required)", () => {
+  describe("delegatedDecryptValuesFromPairs (signer-required)", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.delegatedDecrypt(
+        sdk.decryption.delegatedDecryptValuesFromPairs(
           [{ encryptedValue: handle, contractAddress: TOKEN }],
           DELEGATOR,
         ),
@@ -35,7 +37,7 @@ describe("Decryption", () => {
   describe("public (signer-independent)", () => {
     test("works without a signer", async ({ createSDK, handle, relayer }) => {
       const sdk = createSDK({ signer: undefined });
-      const result = await sdk.decryption.publicDecrypt([handle]);
+      const result = await sdk.decryption.decryptPublicValues([handle]);
 
       expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
       expect(result.clearValues[handle]).toBe(500n);
@@ -45,7 +47,7 @@ describe("Decryption", () => {
       sdk,
       relayer,
     }) => {
-      const result = await sdk.decryption.publicDecrypt([]);
+      const result = await sdk.decryption.decryptPublicValues([]);
       expect(result).toEqual({
         clearValues: {},
         decryptionProof: "0x",
@@ -56,7 +58,7 @@ describe("Decryption", () => {
 
     test("wraps relayer errors through wrapDecryptError", async ({ sdk, relayer, handle }) => {
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
-      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toBeInstanceOf(
+      await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBeInstanceOf(
         DecryptionFailedError,
       );
     });
@@ -64,7 +66,7 @@ describe("Decryption", () => {
     test("re-throws typed SDK errors as-is (no double-wrap)", async ({ sdk, relayer, handle }) => {
       const original = new DecryptionFailedError("already typed");
       vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
-      await expect(sdk.decryption.publicDecrypt([handle])).rejects.toBe(original);
+      await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBe(original);
     });
   });
 });

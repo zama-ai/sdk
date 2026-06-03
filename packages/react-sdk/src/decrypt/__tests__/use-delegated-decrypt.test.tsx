@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { useDelegatedDecrypt } from "../use-delegated-decrypt";
+import { useDelegatedDecryptValues } from "../use-delegated-decrypt";
 
-describe("useDelegatedDecrypt", () => {
-  test("delegates to sdk.decryption.delegatedDecrypt", async ({
+describe("useDelegatedDecryptValues", () => {
+  test("delegates to sdk.decryption.delegatedDecryptValuesFromPairs", async ({
     renderWithProviders,
     relayer,
     handle,
@@ -13,7 +13,7 @@ describe("useDelegatedDecrypt", () => {
     const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as `0x${string}`;
     const delegatorAddress = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as `0x${string}`;
 
-    const { result } = renderWithProviders(() => useDelegatedDecrypt());
+    const { result } = renderWithProviders(() => useDelegatedDecryptValues());
 
     result.current.mutate({
       encryptedInputs: [{ encryptedValue: handle, contractAddress: tokenAddress }],

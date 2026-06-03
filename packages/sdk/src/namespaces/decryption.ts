@@ -11,12 +11,14 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
  * Public namespace for FHE decryption.
  *
  * Exposed as `sdk.decryption`. Owns the SDK-level guards (signer requirement on
- * `userDecrypt` and `delegatedDecrypt`, empty-array short-circuit on `publicDecrypt`,
- * relayer error wrapping) and delegates the actual work to the internal
- * {@link DecryptionService} or the relayer directly for `publicDecrypt`.
+ * `decryptValuesFromPairs` and `delegatedDecryptValuesFromPairs`, empty-array
+ * short-circuit on `decryptPublicValues`, relayer error wrapping) and delegates the
+ * actual work to the internal {@link DecryptionService} or the relayer directly for
+ * `decryptPublicValues`.
  *
- * **Mixed signer requirement:** `userDecrypt` and `delegatedDecrypt` need a configured
- * signer; `publicDecrypt` does not. Each method documents its requirement in its JSDoc.
+ * **Mixed signer requirement:** `decryptValuesFromPairs` and
+ * `delegatedDecryptValuesFromPairs` need a configured signer; `decryptPublicValues`
+ * does not. Each method documents its requirement in its JSDoc.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
@@ -56,22 +58,28 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const values = await sdk.decryption.userDecrypt([
+   * const values = await sdk.decryption.decryptValuesFromPairs([
    *   { encryptedValue: balanceHandle, contractAddress: cUSDT },
    * ]);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async userDecrypt(encryptedInput: EncryptedInput[]): Promise<Record<EncryptedValue, ClearValue>> {
-    const service = this.#requireDecryptionService("userDecrypt");
-    const account = await requireAlignedWalletAccount("userDecrypt", this.#signer, this.#provider);
+  async decryptValuesFromPairs(
+    encryptedInput: EncryptedInput[],
+  ): Promise<Record<EncryptedValue, ClearValue>> {
+    const service = this.#requireDecryptionService("decryptValuesFromPairs");
+    const account = await requireAlignedWalletAccount(
+      "decryptValuesFromPairs",
+      this.#signer,
+      this.#provider,
+    );
     return service.userDecrypt(encryptedInput, account.address);
   }
 
   /**
    * Decrypt one or more FHE encrypted values using delegated credentials.
    *
-   * Mirrors {@link userDecrypt} with delegated credentials — same caching and
+   * Mirrors {@link decryptValuesFromPairs} with delegated credentials — same caching and
    * zero-value short-circuit. Before reading from cache or calling the relayer,
    * every non-zero encrypted value's contract must have an active delegation from the
    * delegator to the connected signer; missing or expired delegations fail fast.
@@ -86,20 +94,20 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const values = await sdk.decryption.delegatedDecrypt([
+   * const values = await sdk.decryption.delegatedDecryptValuesFromPairs([
    *   { encryptedValue: balanceHandle, contractAddress: tokenAddr },
    * ], delegatorAddr);
    * console.log(values[balanceHandle]); // 1000n
    * ```
    */
-  async delegatedDecrypt(
+  async delegatedDecryptValuesFromPairs(
     encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<EncryptedValue, ClearValue>> {
-    const service = this.#requireDecryptionService("delegatedDecrypt");
+    const service = this.#requireDecryptionService("delegatedDecryptValuesFromPairs");
     const account = await requireAlignedWalletAccount(
-      "delegatedDecrypt",
+      "delegatedDecryptValuesFromPairs",
       this.#signer,
       this.#provider,
     );
@@ -124,10 +132,10 @@ export class Decryption {
    * @example
    * ```ts
    * const { clearValues, decryptionProof, abiEncodedClearValues } =
-   *   await sdk.decryption.publicDecrypt([encryptedValue]);
+   *   await sdk.decryption.decryptPublicValues([encryptedValue]);
    * ```
    */
-  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     if (encryptedValues.length === 0) {
       return {
         clearValues: {},
@@ -161,7 +169,7 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const result = await sdk.decryption.delegatedBatchDecrypt({
+   * const result = await sdk.decryption.delegatedBatchDecryptValuesFromPairs({
    *   encryptedInputs: [
    *     { encryptedValue: encryptedValue1, contractAddress: tokenA },
    *     { encryptedValue: encryptedValue2, contractAddress: tokenB },
@@ -175,7 +183,7 @@ export class Decryption {
    * }
    * ```
    */
-  async delegatedBatchDecrypt({
+  async delegatedBatchDecryptValuesFromPairs({
     encryptedInputs,
     delegatorAddress,
     accountAddress = delegatorAddress,
@@ -186,9 +194,9 @@ export class Decryption {
     accountAddress?: Address;
     maxConcurrency?: number;
   }): Promise<BatchDecryptHandlesResult> {
-    const service = this.#requireDecryptionService("delegatedBatchDecrypt");
+    const service = this.#requireDecryptionService("delegatedBatchDecryptValuesFromPairs");
     const account = await requireAlignedWalletAccount(
-      "delegatedBatchDecrypt",
+      "delegatedBatchDecryptValuesFromPairs",
       this.#signer,
       this.#provider,
     );

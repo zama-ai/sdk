@@ -5,7 +5,7 @@ description: How to encrypt values and decrypt FHE encrypted values for custom c
 
 # Encrypt & decrypt
 
-The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecrypt` to interact with your contract's encrypted parameters and return values.
+The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useDecryptValues` to interact with your contract's encrypted parameters and return values.
 
 Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
 
@@ -16,7 +16,7 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useEncrypt, useDecryptValues, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
@@ -30,7 +30,7 @@ function ConfidentialRoundTrip() {
   >([]);
 
   // Fires when inputs are non-empty.
-  const { data: decrypted } = useUserDecrypt(inputs);
+  const { data: decrypted } = useDecryptValues(inputs);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -135,7 +135,7 @@ FHE operations use Web Workers and browser APIs. In Next.js or other SSR framewo
 ```tsx
 "use client"; // Required at the top of the file
 
-import { useEncrypt, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useEncrypt, useDecryptValues } from "@zama-fhe/react-sdk";
 ```
 
 {% endhint %}
@@ -252,7 +252,7 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
-Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:
 
@@ -261,7 +261,7 @@ A good decryption UX follows three steps:
 3. **Decrypt on demand** — only mount balance or decrypt components after permits exist.
 
 {% hint style="danger" %}
-**Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useHasPermit`:
+**Never** call `useConfidentialBalance` or `useDecryptValues` without gating on `useHasPermit`:
 
 ```tsx
 // BAD — triggers wallet popup as soon as the component mounts
@@ -363,7 +363,7 @@ function App() {
 
 `DecryptGate` only renders its children once `useHasPermit` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
-The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
+The same pattern works with `useDecryptValues` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
 When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate` automatically detects new addresses and prompts the user once to extend their authorization:
 
@@ -391,10 +391,10 @@ function App() {
 
 #### Decrypting encrypted values from multiple contracts
 
-`useUserDecrypt` automatically groups inputs by contract address and issues one decryption request per contract:
+`useDecryptValues` automatically groups inputs by contract address and issues one decryption request per contract:
 
 ```tsx
-const { data } = useUserDecrypt([
+const { data } = useDecryptValues([
   { encryptedValue: "0xvalue1...", contractAddress: "0xTokenA" },
   { encryptedValue: "0xvalue2...", contractAddress: "0xTokenA" },
   { encryptedValue: "0xvalue3...", contractAddress: "0xTokenB" },
@@ -405,7 +405,7 @@ const { data } = useUserDecrypt([
 
 #### Persistent caching
 
-Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
+Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useDecryptValues` returns them instantly without hitting the relayer.
 
 The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
 
@@ -413,17 +413,17 @@ The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet 
 **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh keypair and permits.
 {% endhint %}
 
-### 4. Decrypt with usePublicDecrypt (advanced)
+### 4. Decrypt with useDecryptPublicValues (advanced)
 
 For values marked as publicly decryptable on-chain, no keypair or signature is needed:
 
 {% code title="PublicDecryptExample.tsx" %}
 
 ```tsx
-import { usePublicDecrypt } from "@zama-fhe/react-sdk";
+import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
 
 function PublicDecryptExample() {
-  const publicDecrypt = usePublicDecrypt();
+  const publicDecrypt = useDecryptPublicValues();
 
   const handleDecrypt = async () => {
     const result = await publicDecrypt.mutateAsync(["0xhandle..."]);

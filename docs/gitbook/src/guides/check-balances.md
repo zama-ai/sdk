@@ -94,13 +94,13 @@ if (isZeroHandle(encryptedValue)) {
 }
 
 // Decrypt an encrypted value you already have
-const result = await sdk.decryption.userDecrypt([
+const result = await sdk.decryption.decryptValuesFromPairs([
   { encryptedValue, contractAddress: token.address },
 ]);
 const value = result[encryptedValue] as bigint;
 
 // Decrypt multiple encrypted values at once (must include the contract address per entry)
-const decrypted = await sdk.decryption.userDecrypt(
+const decrypted = await sdk.decryption.decryptValuesFromPairs(
   [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
 );
 ```

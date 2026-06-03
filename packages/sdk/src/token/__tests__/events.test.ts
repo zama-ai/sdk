@@ -169,7 +169,7 @@ describe("Token.balanceOf event emissions", () => {
 });
 
 describe("Token.decryptBalanceAs event emissions", () => {
-  // decryptBalanceAs delegates to sdk.decryption.delegatedDecrypt(), which emits events
+  // decryptBalanceAs delegates to sdk.decryption.delegatedDecryptValuesFromPairs(), which emits events
   // at the SDK level (without tokenAddress). Events still carry timestamp.
 
   test("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({

@@ -12,7 +12,7 @@ import { useWalletAccount } from "../utils/wallet-account";
  * React hook for FHE user decryption. Thin wrapper around
  * `userDecryptQueryOptions` with `useQuery` semantics.
  */
-export function useUserDecrypt(
+export function useDecryptValues(
   encryptedInputs: EncryptedInput[],
   options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
 ) {
@@ -28,5 +28,5 @@ export function useUserDecrypt(
   });
 }
 
-/** Return type of {@link useUserDecrypt}. */
-export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
+/** Return type of {@link useDecryptValues}. */
+export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
