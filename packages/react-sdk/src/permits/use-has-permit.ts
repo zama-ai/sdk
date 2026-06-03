@@ -29,8 +29,9 @@ export interface UseHasPermitConfig {
  *   every entry in `contractAddresses`. The query auto-disables when no signer is
  *   configured, when `contractAddresses` is empty, or when `options.enabled` is
  *   `false` (`data` stays `undefined`, `status` stays `"pending"`).
- * @throws if the query runs without a signer configured (the `enabled` guard normally
- *   prevents this; only reachable if the caller forces `enabled: true`). {@link SignerNotConfiguredError}
+ * @remarks The internal signer/empty-list guard is combined with `options.enabled`
+ *   via `&&`, so it always wins: passing `enabled: true` cannot re-enable the query
+ *   while no signer is configured or `contractAddresses` is empty.
  *
  * @example
  * ```tsx

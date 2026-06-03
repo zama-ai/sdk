@@ -422,7 +422,7 @@ export function hashFn(queryKey: readonly unknown[]): string;
 
 // @public (undocumented)
 export interface HasPermitQueryConfig {
-    contractAddresses: [Address, ...Address[]];
+    contractAddresses: Address[];
     query?: Record<string, unknown>;
 }
 
