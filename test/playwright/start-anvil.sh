@@ -52,19 +52,21 @@ stop_anvil() {
     wait "$ANVIL_PID" 2>/dev/null || true
     ANVIL_PID=
   fi
-  free_port
 }
 
-# Start anvil in the background and wait until it accepts connections.
+# Start anvil in the background and wait until it is serving RPC requests.
 start_anvil() {
   free_port
 
   anvil --port "$PORT" --chain-id 31337 --silent &
   ANVIL_PID=$!
 
+  # Poll a real RPC call rather than a bare TCP accept: anvil can have the
+  # port open before it is ready to serve, and deploying against a not-yet-
+  # ready node is exactly the race the retry loop would otherwise paper over.
   local n=0
   while [ $n -lt 150 ]; do
-    nc -z 127.0.0.1 "$PORT" 2>/dev/null && return 0
+    cast chain-id --rpc-url "http://127.0.0.1:$PORT" >/dev/null 2>&1 && return 0
     sleep 0.2
     n=$((n + 1))
   done
@@ -145,7 +147,8 @@ while :; do
     break
   fi
 
-  release_lock
+  # deploy_contracts always releases the lock before returning; the EXIT trap
+  # is the remaining safety net. Just tear anvil down before the next attempt.
   stop_anvil
 
   if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
