@@ -58,7 +58,7 @@
     "size:json": "size-limit --json"
   },
   "devDependencies": {
-    "@ast-grep/cli": "^0.42.2",
+    "@ast-grep/cli": "^0.43.0",
     "@faker-js/faker": "^10.4.0",
     "@fhevm/mock-utils": "0.4.2",
     "@microsoft/api-extractor": "^7.58.7",
