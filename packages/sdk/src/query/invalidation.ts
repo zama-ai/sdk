@@ -28,7 +28,6 @@ export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateBalanceQueries(
@@ -45,19 +44,16 @@ export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 export function invalidateAfterApproveUnderlying(
@@ -67,11 +63,13 @@ export function invalidateAfterApproveUnderlying(
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
 }
 
-export function invalidateAfterApprove(queryClient: QueryClientLike, tokenAddress: Address): void {
+export function invalidateAfterSetOperator(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
   void queryClient.invalidateQueries({
-    queryKey: zamaQueryKeys.confidentialIsApproved.token(tokenAddress),
+    queryKey: zamaQueryKeys.confidentialIsOperator.token(tokenAddress),
   });
-  void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.activityFeed.token(tokenAddress) });
 }
 
 function isZamaQuery(query: QueryLike): boolean {
@@ -97,8 +95,10 @@ export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): voi
 }
 
 export function invalidateWalletLifecycleQueries(queryClient: QueryClientLike): void {
-  queryClient.removeQueries({ queryKey: zamaQueryKeys.signerAddress.all });
+  // Remove (not just invalidate) wallet-local caches so a stale allowed/true
+  // cannot surface between wallet disconnect and the next refetch.
   queryClient.removeQueries({ queryKey: zamaQueryKeys.decryption.all });
+  queryClient.removeQueries({ queryKey: zamaQueryKeys.hasPermit.all });
   void queryClient.invalidateQueries({ predicate: isZamaQuery });
   invalidateWagmiBalanceQueries(queryClient);
 }

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "rawGithubBaseUrl": "https://raw.githubusercontent.com/zama-ai/sdk/main",
+  "docs": {
+    "root": "docs/gitbook/src",
+    "summary": "docs/gitbook/src/SUMMARY.md"
+  },
+  "examples": {
+    "approved": [
+      "example-hoodi",
+      "node-ethers",
+      "node-viem",
+      "react-ethers",
+      "react-viem",
+      "react-wagmi"
+    ],
+    "excluded": ["react-ledger"],
+    "docFiles": ["README.md", "WALKTHROUGH.md"]
+  },
+  "readmes": [
+    {
+      "path": "README.md",
+      "title": "Repository README",
+      "description": "Monorepo overview, package layout, development workflow, and repository setup for the Zama SDK."
+    },
+    {
+      "path": "packages/sdk/README.md",
+      "title": "@zama-fhe/sdk",
+      "description": "Core TypeScript SDK for confidential token operations, relayers, signer adapters, and low-level contract APIs."
+    },
+    {
+      "path": "packages/react-sdk/README.md",
+      "title": "@zama-fhe/react-sdk",
+      "description": "React SDK with ZamaProvider, confidential token hooks, and TanStack Query integration on top of the core SDK."
+    }
+  ],
+  "apiReports": [
+    "packages/sdk/etc/sdk.api.md",
+    "packages/sdk/etc/sdk-ethers.api.md",
+    "packages/sdk/etc/sdk-node.api.md",
+    "packages/sdk/etc/sdk-query.api.md",
+    "packages/sdk/etc/sdk-viem.api.md",
+    "packages/react-sdk/etc/react-sdk.api.md",
+    "packages/react-sdk/etc/react-sdk-wagmi.api.md"
+  ],
+  "forbiddenPaths": [
+    "examples/react-ledger",
+    "docs/gitbook/build",
+    "docs/gitbook/book",
+    "dist",
+    "node_modules",
+    ".next"
+  ]
+}

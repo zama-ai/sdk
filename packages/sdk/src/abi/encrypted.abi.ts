@@ -162,8 +162,8 @@ export const encryptedAbi = [
   {
     inputs: [
       {
-        internalType: "euint64",
-        name: "amount",
+        internalType: "bytes32",
+        name: "unwrapRequestId",
         type: "bytes32",
       },
     ],
@@ -571,6 +571,12 @@ export const encryptedAbi = [
         type: "address",
       },
       {
+        indexed: true,
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
+      },
+      {
         indexed: false,
         internalType: "euint64",
         name: "encryptedAmount",
@@ -594,6 +600,12 @@ export const encryptedAbi = [
         internalType: "address",
         name: "receiver",
         type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
       },
       {
         indexed: false,
@@ -1055,8 +1067,8 @@ export const encryptedAbi = [
   {
     inputs: [
       {
-        internalType: "euint64",
-        name: "burntAmount",
+        internalType: "bytes32",
+        name: "unwrapRequestId",
         type: "bytes32",
       },
       {
@@ -1442,7 +1454,13 @@ export const encryptedAbi = [
       },
     ],
     name: "unwrap",
-    outputs: [],
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
     stateMutability: "nonpayable",
     type: "function",
   },
@@ -1465,8 +1483,52 @@ export const encryptedAbi = [
       },
     ],
     name: "unwrap",
-    outputs: [],
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
+      },
+    ],
+    name: "unwrapAmount",
+    outputs: [
+      {
+        internalType: "euint64",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "unwrapRequestId",
+        type: "bytes32",
+      },
+    ],
+    name: "unwrapRequester",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {

@@ -16,7 +16,6 @@ const HANDLE_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaa
 
 describe("zamaQueryKeys", () => {
   test.each([
-    ["signerAddress", zamaQueryKeys.signerAddress.all],
     ["confidentialBalance", zamaQueryKeys.confidentialBalance.all],
     ["confidentialBalances", zamaQueryKeys.confidentialBalances.all],
     ["tokenMetadata", zamaQueryKeys.tokenMetadata.all],
@@ -24,11 +23,8 @@ describe("zamaQueryKeys", () => {
     ["isWrapper", zamaQueryKeys.isWrapper.all],
     ["wrapperDiscovery", zamaQueryKeys.wrapperDiscovery.all],
     ["underlyingAllowance", zamaQueryKeys.underlyingAllowance.all],
-    ["confidentialIsApproved", zamaQueryKeys.confidentialIsApproved.all],
+    ["confidentialIsOperator", zamaQueryKeys.confidentialIsOperator.all],
     ["totalSupply", zamaQueryKeys.totalSupply.all],
-    ["activityFeed", zamaQueryKeys.activityFeed.all],
-    ["publicKey", zamaQueryKeys.publicKey.all],
-    ["publicParams", zamaQueryKeys.publicParams.all],
     ["decryption", zamaQueryKeys.decryption.all],
   ])("all keys are namespaced with zama.* (%s)", (_, key) => {
     expect(key[0]).toMatch(/^zama\./);
@@ -81,20 +77,6 @@ describe("zamaQueryKeys", () => {
     expect(withoutOwner[1]).not.toHaveProperty("owner");
   });
 
-  test("activityFeed.scope contains full cache identity", () => {
-    expect(
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "0xtx1:0,0xtx2:1", true),
-    ).toEqual([
-      "zama.activityFeed",
-      {
-        tokenAddress: getAddress(TOKEN_LOWER),
-        userAddress: getAddress(OWNER_LOWER),
-        logsKey: "0xtx1:0,0xtx2:1",
-        decrypt: true,
-      },
-    ]);
-  });
-
   test("key labels are consistent and params support prefix matching", () => {
     const all = zamaQueryKeys.confidentialBalance.all;
     const token = zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER);
@@ -107,7 +89,6 @@ describe("zamaQueryKeys", () => {
 
   test("all parameterized keys are 2-element tuples", () => {
     const parameterizedKeys = [
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalance.owner(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER, TOKEN_B_LOWER], OWNER_LOWER),
       zamaQueryKeys.tokenMetadata.token(TOKEN_LOWER),
@@ -116,13 +97,10 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, ERC20_LOWER),
       zamaQueryKeys.underlyingAllowance.token(TOKEN_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
-      zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
+      zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
+      zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.token(TOKEN_LOWER),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "log-key", false),
-      zamaQueryKeys.publicParams.bits(2048),
-      zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
+      zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_LOWER),
     ];
 
     for (const key of parameterizedKeys) {
@@ -138,18 +116,12 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
-      zamaQueryKeys.signerAddress.token(TOKEN_LOWER),
-      zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_LOWER, OWNER_LOWER, "logs-key", false),
     ];
 
     const upperVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_UPPER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_UPPER], OWNER_UPPER),
       zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
-      zamaQueryKeys.signerAddress.token(TOKEN_UPPER),
-      zamaQueryKeys.signerAddress.scope(1),
-      zamaQueryKeys.activityFeed.scope(TOKEN_UPPER, OWNER_UPPER, "logs-key", false),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
@@ -178,25 +150,22 @@ describe("zamaQueryKeys", () => {
         zamaQueryKeys.underlyingAllowance.token(TOKEN_UPPER),
       ],
       [
-        zamaQueryKeys.confidentialIsApproved.token(TOKEN_LOWER),
-        zamaQueryKeys.confidentialIsApproved.token(TOKEN_UPPER),
+        zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
+        zamaQueryKeys.confidentialIsOperator.token(TOKEN_UPPER),
       ],
       [
-        zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
-        zamaQueryKeys.confidentialIsApproved.scope(
+        zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
+        zamaQueryKeys.confidentialIsOperator.scope(
           TOKEN_UPPER,
           OWNER_UPPER,
           getAddress(SPENDER_LOWER),
         ),
       ],
-      [
-        zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER]),
-        zamaQueryKeys.isAllowed.scope(OWNER_UPPER, [TOKEN_UPPER]),
-      ],
+      [zamaQueryKeys.hasPermit.scope([TOKEN_LOWER]), zamaQueryKeys.hasPermit.scope([TOKEN_UPPER])],
       [zamaQueryKeys.totalSupply.token(TOKEN_LOWER), zamaQueryKeys.totalSupply.token(TOKEN_UPPER)],
       [
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_LOWER),
-        zamaQueryKeys.decryption.handle(HANDLE_A, WRAPPER_UPPER),
+        zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_LOWER),
+        zamaQueryKeys.decryption.encryptedValue(HANDLE_A, WRAPPER_UPPER),
       ],
     ];
 
@@ -205,11 +174,10 @@ describe("zamaQueryKeys", () => {
     }
   });
 
-  test("isAllowed scope key includes account and contractAddresses", () => {
-    expect(zamaQueryKeys.isAllowed.scope(OWNER_LOWER, [TOKEN_LOWER])).toEqual([
-      "zama.isAllowed",
+  test("isAllowed scope key includes contractAddresses", () => {
+    expect(zamaQueryKeys.hasPermit.scope([TOKEN_LOWER])).toEqual([
+      "zama.hasPermit",
       {
-        account: getAddress(OWNER_LOWER),
         contractAddresses: [getAddress(TOKEN_LOWER)],
       },
     ]);
@@ -220,8 +188,8 @@ describe("zamaQueryKeys", () => {
       "zama.underlyingAllowance",
       { tokenAddress: getAddress(TOKEN_LOWER) },
     ]);
-    expect(zamaQueryKeys.confidentialIsApproved.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
-      "zama.confidentialIsApproved",
+    expect(zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER)).toEqual([
+      "zama.confidentialIsOperator",
       {
         tokenAddress: getAddress(TOKEN_LOWER),
         holder: getAddress(OWNER_LOWER),

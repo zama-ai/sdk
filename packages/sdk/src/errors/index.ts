@@ -1,9 +1,17 @@
 export { ZamaError, ZamaErrorCode, matchZamaError } from "./base";
 export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
-export { ApprovalFailedError, TransactionRevertedError } from "./transaction";
+export { TransactionRevertedError } from "./transaction";
 export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
+export { ChainMismatchError } from "./chain";
+export {
+  SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
+  requireConfigured,
+} from "./signer";
 export {
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -23,6 +31,5 @@ export {
   ERC20ReadFailedError,
   type BalanceErrorDetails,
 } from "./balance";
-export { matchAclRevert } from "./acl-revert";
 export { wrapDecryptError } from "./decrypt";
-export { isSessionError } from "./session";
+export { isFatalBatchError } from "./fatal-batch";

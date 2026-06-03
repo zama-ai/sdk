@@ -16,7 +16,7 @@ export function useTokenPair({ index }: { index: bigint | undefined }) {
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<TokenWrapperPair>(
-    tokenPairQueryOptions(sdk.signer, {
+    tokenPairQueryOptions(sdk, {
       registryAddress,
       index,
     }),

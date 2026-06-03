@@ -57,8 +57,9 @@ useTokenAddress({ confidentialTokenAddress: "0xcUSDC" });
 
 The `data` field resolves to `readonly [boolean, Address]`:
 
-- `[true, address]` -- the underlying ERC-20 was found at `address`
-- `[false, address]` -- no registered pair (the address value is meaningless)
+- `[true, address]` -- registered and valid; `address` is the underlying ERC-20
+- `[false, nonZeroAddress]` -- registered but revoked; `address` is the former underlying token
+- `[false, zeroAddress]` -- no registered pair
 
 {% include "../../.gitbook/includes/query-result.md" %}
 

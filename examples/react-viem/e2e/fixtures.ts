@@ -32,7 +32,7 @@ export interface WalletConfig {
 export interface RpcOptions {
   /**
    * When true, the registry mock returns 0 pairs (length = 0).
-   * The UI will show "No tokens available." and all action buttons will be disabled.
+   * The UI will show "No tokens available." and token-scoped operation cards will stay hidden.
    */
   emptyRegistry?: boolean;
 }
@@ -85,10 +85,9 @@ const TOKEN_META: Record<string, { name: string; symbol: string; decimals: numbe
 /**
  * Route a single `eth_call` request to the correct ABI-encoded response.
  *
- * For react-viem, ALL contract reads (useListPairs, sdk.signer.readContract, etc.) go
- * through the publicClient HTTP transport — not through window.ethereum. This is the
- * opposite of react-ethers (EthersSigner routes reads through BrowserProvider →
- * window.ethereum). Routing happens here in interceptRpc, not in injectMockWallet.
+ * For react-viem, SDK contract reads (useListPairs, sdk.provider.readContract, etc.) go
+ * through the publicClient HTTP transport — not through window.ethereum. Routing happens
+ * here in interceptRpc, not in injectMockWallet.
  */
 function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): string {
   const [tx = {}] = (params ?? []) as Array<{ to?: string; data?: string }>;
@@ -151,8 +150,8 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
  *   providers.tsx listens for to remount ZamaProvider with the new account.
  * - `eth_sign`/`personal_sign`/`eth_signTypedData_v4` return a 65-byte hex string
  *   (32 bytes r + 32 bytes s + 1 byte v = ECDSA signature).
- * - NOTE: eth_call is NOT routed here. For react-viem, all contract reads
- *   (useListPairs, sdk.signer.readContract, etc.) go through the publicClient
+ * - NOTE: eth_call is NOT routed here. For react-viem, SDK contract reads
+ *   (useListPairs, sdk.provider.readContract, etc.) go through the publicClient
  *   HTTP transport, not window.ethereum. Registry and metadata mocking happens
  *   in interceptRpc.
  */
@@ -214,7 +213,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
 
     // Simulate the user switching accounts in their wallet.
     // Fires the accountsChanged event that providers.tsx listens for to remount ZamaProvider
-    // with a fresh ViemSigner bound to the new account.
+    // with a fresh config and ViemSigner bound to the new account.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__emitAccountsChanged = (accounts: string[]) => {
       for (const listener of listeners["accountsChanged"] ?? []) {
@@ -233,8 +232,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
  * requests (e.g. balanceOf) return "0x", causing the corresponding queries
  * to fail gracefully and display "—" in the UI.
  *
- * For react-viem, ALL contract reads go through the publicClient HTTP transport
- * — unlike react-ethers where EthersSigner routes reads through BrowserProvider(window.ethereum).
+ * For react-viem, SDK contract reads go through the publicClient HTTP transport.
  */
 async function interceptRpc(page: Page, options: RpcOptions = {}) {
   await page.route("**/ethereum-sepolia-rpc.publicnode.com**", async (route) => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
 
@@ -14,7 +14,7 @@ describe("FheArtifactCache", () => {
   // ── getPublicKey ──────────────────────────────────────────────
 
   describe("getPublicKey", () => {
-    it("returns cached public key without calling fetcher on cache hit", async () => {
+    test("returns cached public key without calling fetcher on cache hit", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -34,7 +34,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce(); // Still once
     });
 
-    it("persists public key to storage and restores from a fresh cache instance", async () => {
+    test("persists public key to storage and restores from a fresh cache instance", async () => {
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([10, 20]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
@@ -60,7 +60,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher2).not.toHaveBeenCalled();
     });
 
-    it("uses different cache keys per chain ID", async () => {
+    test("uses different cache keys per chain ID", async () => {
       const pk1 = { publicKeyId: "sepolia", publicKey: new Uint8Array([1]) };
       const pk2 = { publicKeyId: "mainnet", publicKey: new Uint8Array([2]) };
 
@@ -84,7 +84,7 @@ describe("FheArtifactCache", () => {
       expect(result).toEqual(pk2);
     });
 
-    it("returns null and does not cache when fetcher returns null", async () => {
+    test("returns null and does not cache when fetcher returns null", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -101,7 +101,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher2).toHaveBeenCalledOnce();
     });
 
-    it("falls back to fetcher when storage read fails", async () => {
+    test("falls back to fetcher when storage read fails", async () => {
       const badStorage = {
         get: vi.fn().mockRejectedValue(new Error("read failed")),
         set: vi.fn().mockResolvedValue(undefined),
@@ -121,7 +121,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce();
     });
 
-    it("still returns data when storage write fails", async () => {
+    test("still returns data when storage write fails", async () => {
       const badStorage = {
         get: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockRejectedValue(new Error("write failed")),
@@ -140,7 +140,7 @@ describe("FheArtifactCache", () => {
       expect(result).toEqual(pk);
     });
 
-    it("logs warning when storage read fails", async () => {
+    test("logs warning when storage read fails", async () => {
       const badStorage = {
         get: vi.fn().mockRejectedValue(new Error("read failed")),
         set: vi.fn().mockResolvedValue(undefined),
@@ -168,7 +168,7 @@ describe("FheArtifactCache", () => {
       );
     });
 
-    it("propagates fetcher errors to caller", async () => {
+    test("propagates fetcher errors to caller", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -179,7 +179,7 @@ describe("FheArtifactCache", () => {
       await expect(cache.getPublicKey(fetcher)).rejects.toThrow("network down");
     });
 
-    it("deletes corrupt cache entry and falls back to fetcher", async () => {
+    test("deletes corrupt cache entry and falls back to fetcher", async () => {
       // Seed storage with an entry missing `publicKeyId` (corrupt shape)
       await storage.set("fhe:pubkey:11155111", { publicKey: "not-an-id" });
 
@@ -203,7 +203,7 @@ describe("FheArtifactCache", () => {
   // ── getPublicParams ───────────────────────────────────────────
 
   describe("getPublicParams", () => {
-    it("returns cached public params without calling fetcher on cache hit", async () => {
+    test("returns cached public params without calling fetcher on cache hit", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -224,7 +224,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce();
     });
 
-    it("persists public params to storage and restores from a fresh cache instance", async () => {
+    test("persists public params to storage and restores from a fresh cache instance", async () => {
       const pp = {
         publicParamsId: "pp1",
         publicParams: new Uint8Array([7, 8]),
@@ -250,7 +250,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher2).not.toHaveBeenCalled();
     });
 
-    it("uses different cache keys per bit size", async () => {
+    test("uses different cache keys per bit size", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -273,7 +273,7 @@ describe("FheArtifactCache", () => {
       expect(result).toEqual(pp4096);
     });
 
-    it("returns null and does not cache when fetcher returns null", async () => {
+    test("returns null and does not cache when fetcher returns null", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -289,7 +289,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher2).toHaveBeenCalledOnce();
     });
 
-    it("updates params index for cold-start CRS detection", async () => {
+    test("updates params index for cold-start CRS detection", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -369,14 +369,21 @@ describe("FheArtifactCache", () => {
     }
 
     const MANIFEST = {
-      fhePublicKey: {
-        dataId: "pk-id-1",
-        urls: [PK_ARTIFACT_URL],
-      },
-      crs: {
-        2048: {
-          dataId: "pp-id-1",
-          urls: [CRS_ARTIFACT_URL],
+      status: "succeeded",
+      response: {
+        fheKeyInfo: [
+          {
+            fhePublicKey: {
+              dataId: "pk-id-1",
+              urls: [PK_ARTIFACT_URL],
+            },
+          },
+        ],
+        crs: {
+          2048: {
+            dataId: "pp-id-1",
+            urls: [CRS_ARTIFACT_URL],
+          },
         },
       },
     };
@@ -463,7 +470,7 @@ describe("FheArtifactCache", () => {
       return cache;
     }
 
-    it("skips revalidation when TTL has not elapsed", async () => {
+    test("skips revalidation when TTL has not elapsed", async () => {
       const cache = await seedAndPrime(storage);
 
       const fetchSpy = vi.fn();
@@ -474,7 +481,7 @@ describe("FheArtifactCache", () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it("revalidates and returns false when artifacts return 304 (unchanged)", async () => {
+    test("revalidates and returns false when artifacts return 304 (unchanged)", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -495,7 +502,7 @@ describe("FheArtifactCache", () => {
       expect(pp!.lastValidatedAt).toBeGreaterThan(expired);
     });
 
-    it("returns true when PK artifact returns 200 (ETag changed)", async () => {
+    test("returns true when PK artifact returns 200 (ETag changed)", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -517,7 +524,7 @@ describe("FheArtifactCache", () => {
       expect(await storage.get(PARAMS_STORAGE_KEY)).toBeNull();
     });
 
-    it("returns true when CRS artifact returns 200 (ETag changed, PK unchanged)", async () => {
+    test("returns true when CRS artifact returns 200 (ETag changed, PK unchanged)", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -539,7 +546,7 @@ describe("FheArtifactCache", () => {
       expect(await storage.get(PARAMS_STORAGE_KEY)).toBeNull();
     });
 
-    it("returns true when artifact URL changes in manifest", async () => {
+    test("returns true when artifact URL changes in manifest", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -551,9 +558,16 @@ describe("FheArtifactCache", () => {
       mockFetch({
         manifest: {
           ...MANIFEST,
-          fhePublicKey: {
-            dataId: "pk-id-1",
-            urls: ["https://new-cdn.example.com/pk-v2.bin"],
+          response: {
+            ...MANIFEST.response,
+            fheKeyInfo: [
+              {
+                fhePublicKey: {
+                  dataId: "pk-id-1",
+                  urls: ["https://new-cdn.example.com/pk-v2.bin"],
+                },
+              },
+            ],
           },
         },
       });
@@ -562,7 +576,7 @@ describe("FheArtifactCache", () => {
       expect(result).toBe(true);
     });
 
-    it("updates stored ETag and lastModified after successful 304", async () => {
+    test("updates stored ETag and lastModified after successful 304", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -584,7 +598,7 @@ describe("FheArtifactCache", () => {
       expect(pk!.etag).toBe('"refreshed-etag"');
     });
 
-    it("returns false (fail-open) on network error with short retry", async () => {
+    test("returns false (fail-open) on network error with short retry", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -606,7 +620,7 @@ describe("FheArtifactCache", () => {
       expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
-    it("returns false (fail-open) on non-OK manifest response with short retry", async () => {
+    test("returns false (fail-open) on non-OK manifest response with short retry", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -627,7 +641,7 @@ describe("FheArtifactCache", () => {
       expect(pk!.lastValidatedAt).toBeLessThan(expectedRetry + 2000);
     });
 
-    it("ttl: 0 always triggers revalidation", async () => {
+    test("ttl: 0 always triggers revalidation", async () => {
       await storage.set(PK_STORAGE_KEY, makeCachedPk());
       await storage.set(PARAMS_INDEX_KEY, [2048]);
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams());
@@ -650,7 +664,7 @@ describe("FheArtifactCache", () => {
       expect(globalThis.fetch).toHaveBeenCalled();
     });
 
-    it("logs warning on network error when logger is provided", async () => {
+    test("logs warning on network error when logger is provided", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const logger = {
         info: vi.fn(),
@@ -682,7 +696,7 @@ describe("FheArtifactCache", () => {
       );
     });
 
-    it("does not affect other chain's cache", async () => {
+    test("does not affect other chain's cache", async () => {
       const OTHER_CHAIN = 1;
       const otherPkKey = `fhe:pubkey:${OTHER_CHAIN}`;
       const otherParamsKey = `fhe:params:${OTHER_CHAIN}:2048`;
@@ -723,7 +737,7 @@ describe("FheArtifactCache", () => {
       expect(otherParamsRaw!.publicParamsId).toBe("other-pp");
     });
 
-    it("still returns true (stale) when storage delete fails during clearAll", async () => {
+    test("still returns true (stale) when storage delete fails during clearAll", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
 
       // Use a storage that fails on delete
@@ -757,7 +771,7 @@ describe("FheArtifactCache", () => {
       expect(result).toBe(true);
     });
 
-    it("discovers CRS from params index on cold start (no in-memory keys)", async () => {
+    test("discovers CRS from params index on cold start (no in-memory keys)", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
 
       // Seed storage directly (simulates cold start — no in-memory map)
@@ -787,7 +801,7 @@ describe("FheArtifactCache", () => {
       expect(result).toBe(true);
     });
 
-    it("deletes corrupt cache entry during revalidation and returns false", async () => {
+    test("deletes corrupt cache entry during revalidation and returns false", async () => {
       // Seed PK with corrupt data (missing publicKey field)
       await storage.set(PK_STORAGE_KEY, { publicKeyId: 42, notAKey: true });
 
@@ -806,7 +820,7 @@ describe("FheArtifactCache", () => {
       expect(await storage.get(PK_STORAGE_KEY)).toBeNull();
     });
 
-    it("first revalidation captures validators via HEAD and treats cache as fresh", async () => {
+    test("first revalidation captures validators via HEAD and treats cache as fresh", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       // Seed WITHOUT artifact metadata (simulates first revalidation after initial fetch)
       const cache = await seedAndPrime(
@@ -858,7 +872,7 @@ describe("FheArtifactCache", () => {
       expect(pk!.artifactUrl).toBe(PK_ARTIFACT_URL);
     });
 
-    it("falls back to GET when HEAD returns 405 (Method Not Allowed)", async () => {
+    test("falls back to GET when HEAD returns 405 (Method Not Allowed)", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
       const cache = await seedAndPrime(
         storage,
@@ -914,7 +928,7 @@ describe("FheArtifactCache", () => {
   // ── Concurrent access ─────────────────────────────────────────
 
   describe("concurrent access", () => {
-    it("deduplicates concurrent getPublicKey calls", async () => {
+    test("deduplicates concurrent getPublicKey calls", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -940,7 +954,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce();
     });
 
-    it("deduplicates concurrent getPublicParams calls", async () => {
+    test("deduplicates concurrent getPublicParams calls", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -965,7 +979,7 @@ describe("FheArtifactCache", () => {
       expect(fetcher).toHaveBeenCalledOnce();
     });
 
-    it("deduplicates concurrent revalidateIfDue calls", async () => {
+    test("deduplicates concurrent revalidateIfDue calls", async () => {
       const CHAIN_ID = 11155111;
       const expired = Date.now() - 120_000;
 
@@ -1014,8 +1028,17 @@ describe("FheArtifactCache", () => {
         status: 200,
         json: () =>
           Promise.resolve({
-            fhePublicKey: { urls: ["https://cdn.example.com/pk.bin"] },
-            crs: {},
+            status: "succeeded",
+            response: {
+              fheKeyInfo: [
+                {
+                  fhePublicKey: {
+                    urls: ["https://cdn.example.com/pk.bin"],
+                  },
+                },
+              ],
+              crs: {},
+            },
           }),
       });
 

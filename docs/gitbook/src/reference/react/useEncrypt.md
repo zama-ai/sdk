@@ -5,7 +5,7 @@ description: Low-level mutation hook that encrypts a plaintext value using the r
 
 # useEncrypt
 
-Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted handles and an input proof for on-chain submission.
+Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted values and an input proof for on-chain submission.
 
 {% hint style="warning" %}
 For **confidential ERC-20 tokens**, use [`useShield`](/reference/react/useShield) or [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) — they handle encryption automatically.
@@ -88,7 +88,7 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 `data` resolves to `{ handles: Uint8Array[], inputProof: Uint8Array }`.
 
-- **`handles`** — one encrypted handle per input value.
+- **`handles`** — one encrypted value per input.
 - **`inputProof`** — the ZK input proof to submit alongside the handles in a contract call.
 
 {% include ".gitbook/includes/mutation-result.md" %}

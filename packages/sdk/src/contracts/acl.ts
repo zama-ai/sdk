@@ -53,7 +53,7 @@ export function revokeDelegationContract(
  *
  * @example
  * ```ts
- * const expiry = await signer.readContract(
+ * const expiry = await provider.readContract(
  *   getDelegationExpiryContract(aclAddress, delegatorAddress, delegateAddress, contractAddress),
  * );
  * ```
@@ -77,7 +77,7 @@ export function getDelegationExpiryContract(
  *
  * @example
  * ```ts
- * const isDelegated = await signer.readContract(
+ * const isDelegated = await provider.readContract(
  *   isHandleDelegatedContract(aclAddress, delegatorAddress, delegateAddress, contractAddress, handle),
  * );
  * ```

@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  useDelegateDecryption,
-  useDecryptBalanceAs,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useDelegateDecryption, useDecryptBalanceAs, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function DelegationPanel({
   tokenAddress,
@@ -17,7 +13,7 @@ export function DelegationPanel({
   defaultDelegator?: Address;
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
-  const delegate = useDelegateDecryption({ tokenAddress });
+  const delegate = useDelegateDecryption(tokenAddress);
   const decryptAs = useDecryptBalanceAs(tokenAddress);
 
   return (
@@ -36,6 +32,7 @@ export function DelegationPanel({
           type="text"
           name="delegate"
           placeholder="Delegate address (0x...)"
+          aria-label="Delegate address"
           defaultValue={defaultDelegate ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
@@ -74,6 +71,7 @@ export function DelegationPanel({
           type="text"
           name="delegator"
           placeholder="Delegator address (0x...)"
+          aria-label="Delegator address"
           defaultValue={defaultDelegator ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"

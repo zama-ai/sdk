@@ -26,7 +26,7 @@ const token = sdk.createToken("0xEncryptedERC20Address");
 ```tsx
 import { useToken } from "@zama-fhe/react-sdk";
 
-const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
+const token = useToken("0xEncryptedERC20Address");
 ```
 
 {% endtab %}
@@ -36,7 +36,7 @@ const token = useToken({ tokenAddress: "0xEncryptedERC20Address" });
 
 Pass the recipient address and the plaintext amount. The SDK encrypts the amount using FHE before submitting the transaction.
 
-By default, the SDK validates the confidential balance before submitting. If cached credentials exist, it decrypts silently. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
+By default, the SDK validates the confidential balance before submitting. If stored permits exist, it decrypts silently. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -53,7 +53,7 @@ console.log("Transfer tx:", txHash);
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-  tokenAddress: "0xEncryptedERC20Address",
+  address: "0xEncryptedERC20Address",
 });
 
 const txHash = await transfer({
@@ -69,7 +69,7 @@ The user sees a single wallet prompt. The encrypted amount is included in the tr
 
 ### 3. Send as an operator (transferFrom)
 
-If an owner has approved you as an operator (via `token.approve()`), you can transfer on their behalf using `confidentialTransferFrom`:
+If an owner has approved you as an operator (via `token.setOperator()`), you can transfer on their behalf using `confidentialTransferFrom`:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -88,9 +88,7 @@ const { txHash } = await token.confidentialTransferFrom(
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
-  tokenAddress: "0xEncryptedERC20Address",
-});
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xEncryptedERC20Address");
 
 await transferFrom({
   from: "0xOwnerAddress",
@@ -102,7 +100,7 @@ await transferFrom({
 {% endtab %}
 {% endtabs %}
 
-The operator must have been approved beforehand. Check approval status with `token.isApproved("0xOperator")` or the `useConfidentialIsApproved` hook.
+The operator must have been approved beforehand. Check approval status with `token.isOperator("0xHolder", "0xOperator")` or the `useConfidentialIsOperator` hook.
 
 ### 4. Handle the transaction result
 
@@ -115,11 +113,12 @@ Both the core SDK and React hooks return the transaction hash. Use it to confirm
 const { txHash } = await token.confidentialTransfer("0xRecipient", 500n);
 
 // Wait for on-chain confirmation
-const receipt = await signer.waitForTransactionReceipt(txHash);
+const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 
 // Optionally check updated balance
-const balance = await token.balanceOf();
+const [address] = await walletClient.getAddresses();
+const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```
 
@@ -133,7 +132,7 @@ const {
   isSuccess, // true after the mutation completes
   error, // populated if the transfer fails
 } = useConfidentialTransfer({
-  tokenAddress: "0xEncryptedERC20Address",
+  address: "0xEncryptedERC20Address",
 });
 
 // Balance caches are invalidated automatically on success.
@@ -149,22 +148,21 @@ const {
 Here is a complete component that wires up the transfer with loading and error states:
 
 ```tsx
-import {
-  useConfidentialBalance,
-  useConfidentialTransfer,
-  matchZamaError,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useConfidentialTransfer } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 const TOKEN = "0xEncryptedERC20Address";
 
 function TransferForm() {
-  const { data: balance } = useConfidentialBalance({ tokenAddress: TOKEN });
+  const { address } = useAccount();
+  const { data: balance } = useConfidentialBalance({ address: TOKEN, account: address });
   const {
     mutateAsync: transfer,
     isPending,
     error,
   } = useConfidentialTransfer({
-    tokenAddress: TOKEN,
+    address: TOKEN,
   });
 
   const handleTransfer = async () => {

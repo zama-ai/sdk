@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  useDelegationStatus,
-  useRevokeDelegation,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useDelegationStatus, useRevokeDelegation, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 export function DelegationStatusPanel({
   tokenAddress,
@@ -18,11 +14,11 @@ export function DelegationStatusPanel({
 }) {
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: status, isLoading: statusLoading } = useDelegationStatus({
-    tokenAddress,
+    contractAddress: tokenAddress,
     delegatorAddress: defaultDelegator,
     delegateAddress: defaultDelegate,
   });
-  const revoke = useRevokeDelegation({ tokenAddress });
+  const revoke = useRevokeDelegation(tokenAddress);
 
   return (
     <div className="space-y-6" data-testid="delegation-status-panel">
@@ -39,7 +35,7 @@ export function DelegationStatusPanel({
         ) : (
           <>
             <p className="text-sm text-white" data-testid="delegation-is-delegated">
-              Delegated: {status?.isDelegated === undefined ? "N/A" : String(status.isDelegated)}
+              Delegated: {status?.isActive === undefined ? "N/A" : String(status.isActive)}
             </p>
             <p className="text-sm text-white" data-testid="delegation-expiry">
               Expiry: {status?.expiryTimestamp?.toString() ?? "0"}
@@ -60,6 +56,7 @@ export function DelegationStatusPanel({
           type="text"
           name="delegate"
           placeholder="Delegate address (0x...)"
+          aria-label="Delegate address"
           defaultValue={defaultDelegate ?? ""}
           required
           className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"

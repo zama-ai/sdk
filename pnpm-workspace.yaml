@@ -3,9 +3,40 @@ packages:
   - "tools/*"
   - "test/*"
 
+allowBuilds:
+  "@ast-grep/cli": true
+  bufferutil: false
+  esbuild: true
+  keccak: false
+  sharp: false
+  utf-8-validate: false
+
+overrides:
+  minimatch: ">=10.2.4"
+  next: ">=16.2.5"
+  "@walletconnect/ethereum-provider": "^2.23.7"
+  lodash: ">=4.18.0"
+  lodash-es: ">=4.18.0"
+  # undici-types@6.19.3+ dropped provenance attestation (likely a switch away
+  # from CI publish), triggering trustPolicy:no-downgrade on every install.
+  # 6.19.2 is the last version with a sigstore attestation. Pin here until
+  # undici-types restores provenance on a newer release, then remove this override
+  # and bump @types/node freely.
+  undici-types: "6.19.2"
+
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
 # https://pnpm.io/settings#minimumreleaseage
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@zama-fhe/relayer-sdk"
+
+# Refuse installs that downgrade a package's trust level (e.g. a previously
+# trusted package now published by a new owner).
+# https://pnpm.io/settings#trustpolicy
+trustPolicy: no-downgrade
+
+# Fail instead of silently re-installing when the lockfile and node_modules
+# disagree before running scripts.
+# https://pnpm.io/settings#verifydepsbeforerun
+verifyDepsBeforeRun: error

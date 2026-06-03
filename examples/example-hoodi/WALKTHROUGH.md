@@ -32,15 +32,15 @@ Specifically:
 
 ## Supported operations
 
-| Operation                    | SDK API                                                | Source file                                            | Transactions          |
-| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
-| Decrypt confidential balance | `useIsAllowed` + `useAllow` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                           | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
-| Confidential transfer        | `useConfidentialTransfer`                              | `src/components/TransferCard.tsx`                      | 1                     |
-| Unshield (cToken → ERC-20)   | `useUnshield`                                          | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
-| Grant decryption access      | `useDelegateDecryption`                                | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
-| Revoke decryption access     | `useRevokeDelegation`                                  | `src/components/RevokeDelegationCard.tsx`              | 1                     |
-| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`          | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
+| Operation                    | SDK API                                                      | Source file                                            | Transactions          |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
+| Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
+| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                                 | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
+| Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
+| Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
+| Revoke decryption access     | `useRevokeDelegation`                                        | `src/components/RevokeDelegationCard.tsx`              | 1                     |
+| Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus`                | `src/components/DecryptAsCard.tsx`                     | 0 (read)              |
 
 ---
 
@@ -353,8 +353,8 @@ import { parseUnits, isError } from "ethers";
 import {
   useZamaSDK,
   useListPairs,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
@@ -376,28 +376,28 @@ const cTokenDecimals = pair?.confidential.decimals ?? 0;
 const erc20Decimals = pair?.underlying.decimals ?? 0;
 
 // Explicit decrypt pattern: check credentials before enabling the balance display.
-// useIsAllowed returns true only when cached credentials cover the selected token.
-const { data: isAllowed } = useIsAllowed({
+// useHasPermit returns true only when cached credentials cover the selected token.
+const { data: hasPermit } = useHasPermit({
   contractAddresses: cTokenAddress ? [cTokenAddress] : [],
   query: { enabled: Boolean(cTokenAddress) },
 });
 
-// useAllow triggers the EIP-712 wallet signature that authorizes decryption.
+// useGrantPermit triggers the EIP-712 wallet signature that authorizes decryption.
 // Pass all confidential token addresses at once — a single signature covers all tokens.
-const allowTokens = useAllow();
+const grantPermits = useGrantPermit();
 function handleDecrypt() {
   const addresses = pairsData?.items?.map((p) => p.confidentialTokenAddress) ?? [];
-  if (addresses.length > 0) allowTokens.mutate(addresses);
+  if (addresses.length > 0) grantPermits.mutate(addresses);
 }
 
 const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
 const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
 
-// Pass enabled: false until the user has authorized decrypt (isAllowed).
+// Pass enabled: false until the user has authorized decrypt (hasPermit).
 // This prevents the hook from firing an EIP-712 prompt on mount.
 const balance = useConfidentialBalance(
   { tokenAddress: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
-  { enabled: !!isAllowed && !!cTokenAddress },
+  { enabled: !!hasPermit && !!cTokenAddress },
 );
 
 // Shield: manual approval + wrap.
@@ -508,7 +508,7 @@ const { data: status } = useDelegationStatus({
   delegatorAddress: "0xOwner", // the wallet that granted the delegation
   delegateAddress: "0xDelegate", // the wallet that received it (usually the connected wallet)
 });
-// status?.isDelegated       → boolean
+// status?.isActive          → boolean
 // status?.expiryTimestamp   → bigint (MAX_UINT64 for permanent delegations)
 
 // Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
@@ -605,11 +605,11 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 ## Tech stack
 
-| Package                 | Version            | Role                                                                                                                                                                                                                       |
-| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                           |
-| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useIsAllowed`, `useAllow`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                       |
-| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                     |
-| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                               |
-| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                             |
+| Package                 | Version            | Role                                                                                                                                                                                                                             |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                                 |
+| `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
+| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                             |
+| `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
+| `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
+| **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |

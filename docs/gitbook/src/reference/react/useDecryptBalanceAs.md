@@ -50,11 +50,11 @@ function DelegatedBalance({
 
 ## Parameters
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token contract. Passed as the first argument to `useDecryptBalanceAs`.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
 const { mutateAsync: decryptAs } = useDecryptBalanceAs("0xToken");
@@ -78,16 +78,16 @@ import { type DecryptBalanceAsParams } from "@zama-fhe/sdk/query";
 
 The address that delegated decryption rights.
 
-### owner
+### accountAddress
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`. Use this when the owner differs from the delegator.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
 await decryptAs({
   delegatorAddress: "0xDelegator",
-  owner: "0xOwner",
+  accountAddress: "0xBalanceHolder",
 });
 ```
 

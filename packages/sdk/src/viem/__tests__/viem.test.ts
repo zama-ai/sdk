@@ -15,10 +15,12 @@ import {
   writeWrapContract,
 } from "../contracts";
 import { ViemSigner } from "../viem-signer";
+import { ViemProvider } from "../viem-provider";
 
 // ── Constants ────────────────────────────────────────────
 
 const ACCOUNT_ADDRESS = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const SECOND_ACCOUNT_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const TX_HASH = "0xtxhash" as Hex;
 const MOCK_CHAIN = { id: 1, name: "mainnet" } as WalletClient["chain"];
@@ -51,6 +53,7 @@ const viemTest = base.extend<ViemFixtures>({
         ({
           account: withAccount ? { address: ACCOUNT_ADDRESS, type: "json-rpc" } : undefined,
           chain: MOCK_CHAIN,
+          getChainId: vi.fn().mockResolvedValue(1),
           signTypedData: vi.fn().mockResolvedValue("0xsignature"),
           writeContract: vi.fn().mockResolvedValue(TX_HASH),
         }) as unknown as WalletClient,
@@ -62,54 +65,115 @@ const viemTest = base.extend<ViemFixtures>({
   walletClient: async ({ createMockWalletClient }, use) => {
     await use(createMockWalletClient());
   },
-  viemSigner: async ({ walletClient, publicClient }, use) => {
-    await use(new ViemSigner({ walletClient, publicClient }));
+  viemSigner: async ({ walletClient }, use) => {
+    await use(new ViemSigner({ walletClient }));
   },
 });
 
 // Re-alias it for viem-specific tests
 const vit = viemTest;
 
+function createFakeEthereum() {
+  const listeners = new Map<string, Set<(...args: never[]) => void>>();
+  const removeListener = vi.fn((event: string, fn: (...args: never[]) => void) => {
+    listeners.get(event)?.delete(fn);
+  });
+  return {
+    request: vi.fn(),
+    on(event: string, fn: (...args: never[]) => void) {
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
+      listeners.get(event)!.add(fn);
+    },
+    removeListener,
+    emit(event: string, ...args: unknown[]) {
+      for (const fn of listeners.get(event) ?? []) {
+        (fn as (...a: unknown[]) => void)(...args);
+      }
+    },
+  };
+}
+
 // ── ViemSigner ───────────────────────────────────────────
 
 describe("ViemSigner", () => {
-  describe("getChainId", () => {
-    vit("delegates to publicClient.getChainId", async ({ viemSigner, publicClient }) => {
-      const chainId = await viemSigner.getChainId();
-      expect(chainId).toBe(1);
-      expect(publicClient.getChainId).toHaveBeenCalledOnce();
+  describe("subscribe", () => {
+    vit(
+      "uses walletClient account and chain as initial wallet account",
+      async ({ walletClient }) => {
+        const ethereum = createFakeEthereum();
+        const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
+        const onWalletAccountChange = vi.fn();
+
+        viemSigner.walletAccount.subscribe(onWalletAccountChange);
+        await Promise.resolve();
+        await Promise.resolve();
+        ethereum.emit("accountsChanged", [SECOND_ACCOUNT_ADDRESS]);
+
+        expect(onWalletAccountChange).toHaveBeenCalledTimes(2);
+        expect(onWalletAccountChange).toHaveBeenLastCalledWith({
+          previous: { address: ACCOUNT_ADDRESS, chainId: 1 },
+          next: { address: SECOND_ACCOUNT_ADDRESS, chainId: 1 },
+        });
+        expect(ethereum.request).not.toHaveBeenCalled();
+      },
+    );
+
+    vit("dispose removes EIP-1193 listeners once", async ({ walletClient }) => {
+      const ethereum = createFakeEthereum();
+      const viemSigner = new ViemSigner({ walletClient, ethereum: ethereum as never });
+
+      viemSigner.dispose();
+      viemSigner.dispose();
+
+      expect(ethereum.removeListener).toHaveBeenCalledTimes(3);
+      expect(ethereum.removeListener).toHaveBeenCalledWith("accountsChanged", expect.any(Function));
+      expect(ethereum.removeListener).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(ethereum.removeListener).toHaveBeenCalledWith("chainChanged", expect.any(Function));
     });
   });
 
-  describe("getAddress", () => {
+  describe("walletAccount", () => {
     vit("returns the wallet account address", async ({ viemSigner }) => {
-      const address = await viemSigner.getAddress();
-      expect(address).toBe(ACCOUNT_ADDRESS);
+      expect(viemSigner.walletAccount.getSnapshot()).toEqual({
+        address: ACCOUNT_ADDRESS,
+        chainId: 1,
+      });
     });
 
-    vit(
-      "throws when wallet client has no account",
-      async ({ createMockWalletClient, publicClient }) => {
-        const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient, publicClient });
-        await expect(noAccountSigner.getAddress()).rejects.toThrow("WalletClient has no account");
-      },
-    );
+    vit("throws when wallet client has no account", async ({ createMockWalletClient }) => {
+      const noAccountClient = createMockWalletClient(false);
+      const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
+      expect(noAccountSigner.walletAccount.getSnapshot()).toBeUndefined();
+      expect(() => noAccountSigner.requireWalletAccount("test")).toThrow(
+        "Cannot test without a connected wallet account.",
+      );
+    });
   });
 
   describe("signTypedData", () => {
     function createTypedData(tokenAddress: Address): EIP712TypedData {
       return {
-        domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
-        types: { Transfer: [{ name: "to", type: "address" }] },
+        domain: { name: "Decryption", version: "1", chainId: 1n, verifyingContract: tokenAddress },
+        types: {
+          EIP712Domain: [
+            { name: "name", type: "string" },
+            { name: "version", type: "string" },
+            { name: "chainId", type: "uint256" },
+            { name: "verifyingContract", type: "address" },
+          ],
+          UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+        },
+        primaryType: "UserDecryptRequestVerification",
         message: {
           publicKey: "0xkey",
           contractAddresses: ["0x1" as Address],
-          startTimestamp: 1000n,
-          durationDays: 1n,
+          startTimestamp: "1000",
+          durationDays: "1",
           extraData: "0x",
         },
-      };
+      } as EIP712TypedData;
     }
 
     vit(
@@ -120,20 +184,26 @@ describe("ViemSigner", () => {
         expect(result).toBe("0xsignature");
         expect(walletClient.signTypedData).toHaveBeenCalledWith({
           account: walletClient.account,
-          primaryType: "Transfer",
-          ...typedData,
+          primaryType: "UserDecryptRequestVerification",
+          types: { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
+          domain: typedData.domain,
+          message: {
+            ...typedData.message,
+            startTimestamp: 1000n,
+            durationDays: 1n,
+          },
         });
       },
     );
 
     vit(
       "throws when wallet client has no account",
-      async ({ tokenAddress, createMockWalletClient, publicClient }) => {
+      async ({ tokenAddress, createMockWalletClient }) => {
         const typedData = createTypedData(tokenAddress);
         const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient, publicClient });
+        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.signTypedData(typedData)).rejects.toThrow(
-          "WalletClient has no account",
+          "Cannot signTypedData without a connected wallet account.",
         );
       },
     );
@@ -169,28 +239,42 @@ describe("ViemSigner", () => {
 
     vit(
       "throws when wallet client has no account",
-      async ({ tokenAddress, userAddress, createMockWalletClient, publicClient }) => {
+      async ({ tokenAddress, userAddress, createMockWalletClient }) => {
         const config = createConfig(tokenAddress, userAddress);
         const noAccountClient = createMockWalletClient(false);
-        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient, publicClient });
+        const noAccountSigner = new ViemSigner({ walletClient: noAccountClient });
         await expect(noAccountSigner.writeContract(config)).rejects.toThrow(
-          "WalletClient has no account",
+          "Cannot writeContract without a connected wallet account.",
         );
       },
     );
+  });
+});
+
+// ── ViemProvider ─────────────────────────────────────────
+
+describe("ViemProvider", () => {
+  describe("getChainId", () => {
+    vit("delegates to publicClient.getChainId", async ({ publicClient }) => {
+      const viemProvider = new ViemProvider({ publicClient });
+      const chainId = await viemProvider.getChainId();
+      expect(chainId).toBe(1);
+      expect(publicClient.getChainId).toHaveBeenCalledOnce();
+    });
   });
 
   describe("readContract", () => {
     vit(
       "delegates to publicClient.readContract",
-      async ({ tokenAddress, userAddress, viemSigner, publicClient }) => {
+      async ({ tokenAddress, userAddress, publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
         const config = {
           address: tokenAddress,
           abi: [{ name: "balanceOf" }],
           functionName: "balanceOf",
           args: [userAddress],
         };
-        const result = await viemSigner.readContract(config);
+        const result = await viemProvider.readContract(config);
         expect(result).toBe("0xresult");
         expect(publicClient.readContract).toHaveBeenCalledWith(config);
       },
@@ -198,103 +282,23 @@ describe("ViemSigner", () => {
   });
 
   describe("waitForTransactionReceipt", () => {
-    vit(
-      "delegates to publicClient.waitForTransactionReceipt",
-      async ({ viemSigner, publicClient }) => {
-        const receipt = await viemSigner.waitForTransactionReceipt(TX_HASH);
-        expect(receipt).toEqual({ logs: [] });
-        expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
-          hash: TX_HASH,
-        });
-      },
-    );
+    vit("delegates to publicClient.waitForTransactionReceipt", async ({ publicClient }) => {
+      const viemProvider = new ViemProvider({ publicClient });
+      const receipt = await viemProvider.waitForTransactionReceipt(TX_HASH);
+      expect(receipt).toEqual({ logs: [] });
+      expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
+        hash: TX_HASH,
+      });
+    });
   });
 
   describe("getBlockTimestamp", () => {
-    vit(
-      "returns block timestamp from publicClient.getBlock",
-      async ({ viemSigner, publicClient }) => {
-        const timestamp = await viemSigner.getBlockTimestamp();
-        expect(timestamp).toBe(1700000000n);
-        expect(publicClient.getBlock).toHaveBeenCalled();
-      },
-    );
-  });
-});
-
-describe("ViemSigner read-only mode (no walletClient)", () => {
-  vit(
-    "readContract works without walletClient",
-    async ({ tokenAddress, userAddress, publicClient }) => {
-      const readOnlySigner = new ViemSigner({ publicClient });
-      const config = {
-        address: tokenAddress,
-        abi: [{ name: "balanceOf" }],
-        functionName: "balanceOf",
-        args: [userAddress],
-      };
-      const result = await readOnlySigner.readContract(config);
-      expect(result).toBe("0xresult");
-      expect(publicClient.readContract).toHaveBeenCalledWith(config);
-    },
-  );
-
-  vit("getChainId works without walletClient", async ({ publicClient }) => {
-    const readOnlySigner = new ViemSigner({ publicClient });
-    const chainId = await readOnlySigner.getChainId();
-    expect(chainId).toBe(1);
-  });
-
-  vit("waitForTransactionReceipt works without walletClient", async ({ publicClient }) => {
-    const readOnlySigner = new ViemSigner({ publicClient });
-    const receipt = await readOnlySigner.waitForTransactionReceipt(TX_HASH);
-    expect(receipt).toEqual({ logs: [] });
-  });
-
-  vit("getAddress throws without walletClient", async ({ publicClient }) => {
-    const readOnlySigner = new ViemSigner({ publicClient });
-    await expect(readOnlySigner.getAddress()).rejects.toThrow("No walletClient configured");
-  });
-
-  vit("signTypedData throws without walletClient", async ({ tokenAddress, publicClient }) => {
-    const readOnlySigner = new ViemSigner({ publicClient });
-    const typedData: EIP712TypedData = {
-      domain: { name: "Test", version: "1", chainId: 1, verifyingContract: tokenAddress },
-      types: { Transfer: [{ name: "to", type: "address" }] },
-      message: {
-        publicKey: "0xkey",
-        contractAddresses: ["0x1" as Address],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    };
-    await expect(readOnlySigner.signTypedData(typedData)).rejects.toThrow(
-      "No walletClient configured",
-    );
-  });
-
-  vit(
-    "writeContract throws without walletClient",
-    async ({ tokenAddress, userAddress, publicClient }) => {
-      const readOnlySigner = new ViemSigner({ publicClient });
-      const config = {
-        address: tokenAddress,
-        abi: [{ name: "transfer" }],
-        functionName: "transfer",
-        args: [userAddress, 100n],
-      };
-      await expect(readOnlySigner.writeContract(config)).rejects.toThrow(
-        "No walletClient configured",
-      );
-    },
-  );
-
-  vit("subscribe returns no-op without walletClient", ({ publicClient }) => {
-    const readOnlySigner = new ViemSigner({ publicClient });
-    const unsub = readOnlySigner.subscribe({ onDisconnect: vi.fn(), onAccountChange: vi.fn() });
-    expect(typeof unsub).toBe("function");
-    unsub(); // should not throw
+    vit("returns block timestamp from publicClient.getBlock", async ({ publicClient }) => {
+      const viemProvider = new ViemProvider({ publicClient });
+      const timestamp = await viemProvider.getBlockTimestamp();
+      expect(timestamp).toBe(1700000000n);
+      expect(publicClient.getBlock).toHaveBeenCalled();
+    });
   });
 });
 
@@ -427,16 +431,16 @@ describe("Viem write contract helpers", () => {
   vit(
     "writeFinalizeUnwrapContract calls writeContract with correct config",
     ({ wrapperAddress, walletClient }) => {
-      const burntAmount = "0xburnt" as Address;
+      const unwrapRequestId = "0xburnt" as Address;
       const proof = "0xproof" as Address;
-      writeFinalizeUnwrapContract(walletClient, wrapperAddress, burntAmount, 500n, proof);
+      writeFinalizeUnwrapContract(walletClient, wrapperAddress, unwrapRequestId, 500n, proof);
       expect(walletClient.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           chain: MOCK_CHAIN,
           account: walletClient.account,
           address: wrapperAddress,
           functionName: "finalizeUnwrap",
-          args: [burntAmount, 500n, proof],
+          args: [unwrapRequestId, 500n, proof],
         }),
       );
     },

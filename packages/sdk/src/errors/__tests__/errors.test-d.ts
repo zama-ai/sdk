@@ -4,7 +4,6 @@ import type {
   SigningFailedError,
   EncryptionFailedError,
   DecryptionFailedError,
-  ApprovalFailedError,
   TransactionRevertedError,
   KeypairExpiredError,
   InvalidKeypairError,
@@ -41,7 +40,6 @@ describe("error subclasses extend ZamaError", () => {
   });
 
   test("transaction errors", () => {
-    expectTypeOf<ApprovalFailedError>().toExtend<ZamaError>();
     expectTypeOf<TransactionRevertedError>().toExtend<ZamaError>();
   });
 

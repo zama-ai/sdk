@@ -24,19 +24,20 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
-  const { mutateAsync: unwrap } = useUnwrap({ tokenAddress: "0xToken" });
-  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap
-    const unwrapTxHash = await unwrap({ amount: 500n });
+    // Step 1: submit the unwrap and find the event in the receipt
+    const { receipt } = await unwrap({ amount: 500n });
+    const event = findUnwrapRequested(receipt.logs);
+    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
 
-    // Step 2: finalize with the decryption proof
-    await finalize({ unwrapTxHash });
+    // Step 2: finalize with the unwrap request ID from the event
+    await finalize({ unwrapRequestId: event.unwrapRequestId });
   };
 
   return (
@@ -52,39 +53,41 @@ function TwoStepUnshield() {
 
 ## Parameters
 
-```ts
-import { type UseFinalizeUnwrapParameters } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: finalize } = useFinalizeUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 ```
 
 ## Mutation variables
 
-### unwrapTxHash
+The finalize function accepts a discriminated union — pass one of these:
 
-`Hex`
+### unwrapRequestId
 
-The transaction hash returned by [`useUnwrap`](/reference/react/useUnwrap) or [`useUnwrapAll`](/reference/react/useUnwrapAll). The SDK uses this to locate and verify the decryption proof on-chain.
+`EncryptedValue`
+
+The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
 
 ```tsx
-await finalize({ unwrapTxHash: "0xabc..." });
+await finalize({ unwrapRequestId: requestId });
+```
+
+### burnAmountHandle
+
+`EncryptedValue`
+
+Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
+
+```tsx
+await finalize({ burnAmountHandle: encryptedAmount });
 ```
 
 ## Return Type
-
-```ts
-import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
-```
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

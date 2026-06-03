@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "../../test-fixtures";
+import { describe, test, expect, vi, beforeEach } from "../../test-fixtures";
 import { withRetry } from "../relayer-utils";
 
 beforeEach(() => {
@@ -6,14 +6,14 @@ beforeEach(() => {
 });
 
 describe("withRetry", () => {
-  it("returns immediately on first success", async () => {
+  test("returns immediately on first success", async () => {
     const fn = vi.fn().mockResolvedValue("ok");
     const result = await withRetry(fn);
     expect(result).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("retries on transient error and succeeds", async () => {
+  test("retries on transient error and succeeds", async () => {
     const fn = vi.fn().mockRejectedValueOnce(new Error("timed out")).mockResolvedValueOnce("ok");
 
     const promise = withRetry(fn);
@@ -23,7 +23,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("retries with exponential backoff", async () => {
+  test("retries with exponential backoff", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("timeout"))
@@ -40,13 +40,13 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  it("throws immediately on non-transient error", async () => {
+  test("throws immediately on non-transient error", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("user denied"));
     await expect(withRetry(fn)).rejects.toThrow("user denied");
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("throws after exhausting retries on transient errors", async () => {
+  test("throws after exhausting retries on transient errors", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("network error"))
@@ -64,7 +64,7 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  it("respects custom retry count", async () => {
+  test("respects custom retry count", async () => {
     const fn = vi.fn().mockRejectedValueOnce(new Error("503")).mockResolvedValueOnce("ok");
 
     const promise = withRetry(fn, 1);
@@ -74,13 +74,13 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it("does not retry non-Error throws", async () => {
+  test("does not retry non-Error throws", async () => {
     const fn = vi.fn().mockRejectedValue("string error");
     await expect(withRetry(fn)).rejects.toBe("string error");
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("retries on econnrefused", async () => {
+  test("retries on econnrefused", async () => {
     const fn = vi.fn().mockRejectedValueOnce(new Error("econnrefused")).mockResolvedValueOnce("ok");
 
     const promise = withRetry(fn);
@@ -89,7 +89,7 @@ describe("withRetry", () => {
     expect(result).toBe("ok");
   });
 
-  it("retries on socket hang up", async () => {
+  test("retries on socket hang up", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("socket hang up"))
@@ -101,7 +101,7 @@ describe("withRetry", () => {
     expect(result).toBe("ok");
   });
 
-  it("retries on 504 gateway timeout", async () => {
+  test("retries on 504 gateway timeout", async () => {
     const fn = vi
       .fn()
       .mockRejectedValueOnce(new Error("504 gateway timeout"))

@@ -6,13 +6,15 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { TransactionResult } from "@zama-fhe/sdk";
+import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import { shieldMutationOptions, type ShieldParams } from "@zama-fhe/sdk/query";
 import { optimisticBalanceCallbacks } from "../balance/optimistic-balance-update";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /** Configuration for {@link useShield}. */
-export interface UseShieldConfig extends UseZamaConfig {
+export interface UseShieldConfig {
+  /** Address of the confidential wrapper contract. */
+  address: Address;
   /**
    * When `true`, optimistically adds the wrap amount to the cached confidential balance
    * before the transaction confirms. Rolls back on error.
@@ -27,16 +29,14 @@ export interface UseShieldConfig extends UseZamaConfig {
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link ApprovalFailedError} — ERC-20 approval transaction failed
- * - {@link TransactionRevertedError} — shield transaction reverted
+ * - {@link TransactionRevertedError} — approval or shield transaction reverted
  *
- * @param config - Token and wrapper addresses.
- *   Set `optimistic: true` to add the amount to the cached balance immediately.
+ * @param config - Wrapper address (and optional `optimistic` flag).
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const shield = useShield({ tokenAddress: "0x...", wrapperAddress: "0x...", optimistic: true });
+ * const shield = useShield({ address: "0xWrapper", optimistic: true });
  * shield.mutate({ amount: 1000n });
  * ```
  */
@@ -44,7 +44,7 @@ export function useShield<TContext = unknown>(
   config: UseShieldConfig,
   options?: UseMutationOptions<TransactionResult, Error, ShieldParams, TContext>,
 ): UseMutationResult<TransactionResult, Error, ShieldParams, TContext> {
-  const token = useToken(config);
+  const token = useWrappedToken(config.address);
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -52,7 +52,7 @@ export function useShield<TContext = unknown>(
     ...options,
     ...optimisticBalanceCallbacks({
       optimistic: config.optimistic,
-      tokenAddress: config.tokenAddress,
+      tokenAddress: token.address,
       queryClient,
       options,
     }),

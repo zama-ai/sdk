@@ -23,7 +23,7 @@ export function useTokenPairsSlice({
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly TokenWrapperPair[]>(
-    tokenPairsSliceQueryOptions(sdk.signer, {
+    tokenPairsSliceQueryOptions(sdk, {
       registryAddress,
       fromIndex,
       toIndex,

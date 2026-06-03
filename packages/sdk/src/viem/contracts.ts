@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -86,7 +86,7 @@ export function writeUnwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Handle,
+  encryptedBalance: EncryptedValue,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -98,27 +98,27 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
-  burntAmount: Handle,
+  unwrapRequestId: EncryptedValue,
   burntAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    ...finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
   });
 }
 
 export function writeSetOperatorContract(
   client: WalletClient,
   tokenAddress: Address,
-  spender: Address,
-  timestamp?: number,
+  operator: Address,
+  until?: number,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...setOperatorContract(tokenAddress, spender, timestamp),
+    ...setOperatorContract(tokenAddress, operator, until),
   });
 }
 

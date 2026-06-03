@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
+import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
@@ -116,14 +116,14 @@ const { NodeWorkerClient } = await import("../worker.node-client");
 function defaultWebConfig() {
   return {
     cdnUrl: "https://cdn.example.com/relayer.js",
-    fhevmConfig: { chainId: 1 } as never,
+    chains: [{ chainId: 1 } as never],
     csrfToken: "csrf-token-123",
   };
 }
 
 function defaultNodeConfig() {
   return {
-    fhevmConfig: { chainId: 1 } as never,
+    chains: [{ chainId: 1 } as never],
   };
 }
 
@@ -210,7 +210,7 @@ describe("RelayerWorkerClient", () => {
     vi.restoreAllMocks();
   });
 
-  it("createWorker() creates a Web Worker via the Worker global", async () => {
+  test("createWorker() creates a Web Worker via the Worker global", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
 
@@ -222,7 +222,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("createWorker() revokes the blob URL after constructing the Worker", async () => {
+  test("createWorker() revokes the blob URL after constructing the Worker", async () => {
     const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
 
     setupAutoResolvingWebWorker();
@@ -235,7 +235,7 @@ describe("RelayerWorkerClient", () => {
     revokeSpy.mockRestore();
   });
 
-  it("wireEvents() sets onmessage, onerror, onmessageerror on the worker", () => {
+  test("wireEvents() sets onmessage, onerror, onmessageerror on the worker", () => {
     const client = new RelayerWorkerClient(defaultWebConfig());
     const initPromise = client.initWorker();
 
@@ -259,7 +259,7 @@ describe("RelayerWorkerClient", () => {
     return initPromise.then(() => client.terminate());
   });
 
-  it("postMessage() delegates to worker.postMessage()", async () => {
+  test("postMessage() delegates to worker.postMessage()", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -271,7 +271,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("terminateWorker() calls worker.terminate()", async () => {
+  test("terminateWorker() calls worker.terminate()", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -281,7 +281,7 @@ describe("RelayerWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it("generateRequestId() uses crypto.randomUUID()", async () => {
+  test("generateRequestId() uses crypto.randomUUID()", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -292,7 +292,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns INIT type with serializable config as payload", async () => {
+  test("getInitPayload() returns INIT type with serializable config as payload", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -300,12 +300,12 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toEqual({ env: "web", ...config });
 
     client.terminate();
   });
 
-  it("getInitPayload() excludes logger from the payload sent to the worker", async () => {
+  test("getInitPayload() excludes logger from the payload sent to the worker", async () => {
     setupAutoResolvingWebWorker();
     const logger = {
       info: vi.fn(),
@@ -325,8 +325,9 @@ describe("RelayerWorkerClient", () => {
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.payload).not.toHaveProperty("logger");
     expect(req.payload).toEqual({
+      env: "web",
       cdnUrl: config.cdnUrl,
-      fhevmConfig: config.fhevmConfig,
+      chains: config.chains,
       csrfToken: config.csrfToken,
       integrity: "sha384-abc",
       thread: 4,
@@ -335,7 +336,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("initWorker() initializes the worker with CDN config", async () => {
+  test("initWorker() initializes the worker with CDN config", async () => {
     setupAutoResolvingWebWorker();
     const config = defaultWebConfig();
     const client = new RelayerWorkerClient(config);
@@ -345,12 +346,12 @@ describe("RelayerWorkerClient", () => {
 
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual(config);
+    expect(req.payload).toEqual({ env: "web", ...config });
 
     client.terminate();
   });
 
-  it("onmessage handler dispatches response to handleResponse", async () => {
+  test("onmessage handler dispatches response to handleResponse", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -359,7 +360,7 @@ describe("RelayerWorkerClient", () => {
     // Reset postMessage for subsequent requests
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -380,7 +381,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("onerror handler rejects pending requests", async () => {
+  test("onerror handler rejects pending requests", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -388,7 +389,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     worker.onerror?.(new ErrorEvent("error", { message: "worker crashed" }));
@@ -396,7 +397,7 @@ describe("RelayerWorkerClient", () => {
     await expect(keypairPromise).rejects.toThrow("Worker error: worker crashed");
   });
 
-  it("onmessageerror handler rejects pending requests", async () => {
+  test("onmessageerror handler rejects pending requests", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -404,7 +405,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     worker.onmessageerror?.();
@@ -412,7 +413,7 @@ describe("RelayerWorkerClient", () => {
     await expect(keypairPromise).rejects.toThrow("Worker message deserialization failed");
   });
 
-  it("updateCsrf() sends UPDATE_CSRF request with the new token", async () => {
+  test("updateCsrf() sends UPDATE_CSRF request with the new token", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -442,7 +443,7 @@ describe("RelayerWorkerClient", () => {
     client.terminate();
   });
 
-  it("handleResponse attaches statusCode from error response", async () => {
+  test("handleResponse attaches statusCode from error response", async () => {
     setupAutoResolvingWebWorker();
     const client = new RelayerWorkerClient(defaultWebConfig());
     await client.initWorker();
@@ -450,7 +451,7 @@ describe("RelayerWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -491,7 +492,7 @@ describe("NodeWorkerClient", () => {
     vi.restoreAllMocks();
   });
 
-  it("createWorker() creates a Node.js Worker from node:worker_threads", async () => {
+  test("createWorker() creates a Node.js Worker from node:worker_threads", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -502,7 +503,7 @@ describe("NodeWorkerClient", () => {
     client.terminate();
   });
 
-  it("wireEvents() uses worker.on() for message, error, messageerror", () => {
+  test("wireEvents() uses worker.on() for message, error, messageerror", () => {
     const client = new NodeWorkerClient(defaultNodeConfig());
     client.initWorker();
 
@@ -523,19 +524,19 @@ describe("NodeWorkerClient", () => {
     return client.initWorker().then(() => client.terminate());
   });
 
-  it("postMessage() delegates to worker.postMessage()", async () => {
+  test("postMessage() delegates to worker.postMessage()", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
 
     expect(lastMockNodeWorker!.postMessage).toHaveBeenCalledOnce();
     const req = getFirstPostedRequest(lastMockNodeWorker!);
-    expect(req.type).toBe("NODE_INIT");
+    expect(req.type).toBe("INIT");
 
     client.terminate();
   });
 
-  it("terminateWorker() calls worker.terminate()", async () => {
+  test("terminateWorker() calls worker.terminate()", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -545,7 +546,7 @@ describe("NodeWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it("generateRequestId() uses randomUUID from node:crypto", async () => {
+  test("generateRequestId() uses randomUUID from node:crypto", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -556,20 +557,20 @@ describe("NodeWorkerClient", () => {
     client.terminate();
   });
 
-  it("getInitPayload() returns NODE_INIT type with fhevmConfig", async () => {
+  test("getInitPayload() returns INIT type with env:'node' and chains", async () => {
     setupAutoResolvingNodeWorker();
     const config = defaultNodeConfig();
     const client = new NodeWorkerClient(config);
     await client.initWorker();
 
     const req = getFirstPostedRequest(lastMockNodeWorker!);
-    expect(req.type).toBe("NODE_INIT");
-    expect(req.payload).toEqual({ fhevmConfig: config.fhevmConfig });
+    expect(req.type).toBe("INIT");
+    expect(req.payload).toEqual({ env: "node", chains: config.chains });
 
     client.terminate();
   });
 
-  it("onWorkerReady() calls worker.unref()", async () => {
+  test("onWorkerReady() calls worker.unref()", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -579,7 +580,7 @@ describe("NodeWorkerClient", () => {
     client.terminate();
   });
 
-  it("message event handler dispatches response to handleResponse", async () => {
+  test("message event handler dispatches response to handleResponse", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -587,7 +588,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const req = getLastPostedRequest(worker);
@@ -605,7 +606,7 @@ describe("NodeWorkerClient", () => {
     client.terminate();
   });
 
-  it("error event handler rejects pending requests", async () => {
+  test("error event handler rejects pending requests", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -613,7 +614,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const errorHandler = worker.listeners["error"]?.[0];
@@ -622,7 +623,7 @@ describe("NodeWorkerClient", () => {
     await expect(keypairPromise).rejects.toThrow("Worker error: thread crashed");
   });
 
-  it("messageerror event handler rejects pending requests", async () => {
+  test("messageerror event handler rejects pending requests", async () => {
     setupAutoResolvingNodeWorker();
     const client = new NodeWorkerClient(defaultNodeConfig());
     await client.initWorker();
@@ -630,7 +631,7 @@ describe("NodeWorkerClient", () => {
 
     worker.postMessage.mockImplementation(() => {});
 
-    const keypairPromise = client.generateKeypair();
+    const keypairPromise = client.generateKeypair({ chainId: 1 });
     await flush();
 
     const messageerrorHandler = worker.listeners["messageerror"]?.[0];

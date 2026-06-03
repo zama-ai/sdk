@@ -28,7 +28,7 @@ export function useIsConfidential(
   const sdk = useZamaSDK();
 
   return useQuery<boolean>({
-    ...isConfidentialQueryOptions(sdk.signer, tokenAddress),
+    ...isConfidentialQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -48,7 +48,7 @@ export function useIsConfidential(
 export function useIsConfidentialSuspense(tokenAddress: Address) {
   const sdk = useZamaSDK();
 
-  return useSuspenseQuery<boolean>(isConfidentialQueryOptions(sdk.signer, tokenAddress));
+  return useSuspenseQuery<boolean>(isConfidentialQueryOptions(sdk, tokenAddress));
 }
 
 /**
@@ -71,7 +71,7 @@ export function useIsWrapper(
   const sdk = useZamaSDK();
 
   return useQuery<boolean>({
-    ...isWrapperQueryOptions(sdk.signer, tokenAddress),
+    ...isWrapperQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -91,5 +91,5 @@ export function useIsWrapper(
 export function useIsWrapperSuspense(tokenAddress: Address) {
   const sdk = useZamaSDK();
 
-  return useSuspenseQuery<boolean>(isWrapperQueryOptions(sdk.signer, tokenAddress));
+  return useSuspenseQuery<boolean>(isWrapperQueryOptions(sdk, tokenAddress));
 }

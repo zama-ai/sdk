@@ -52,44 +52,34 @@ The on-chain FHE coprocessor (FHEVM) executes homomorphic operations. It must co
 
 The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts that the wallet correctly implements `eth_signTypedData_v4` and that the signing key is under the user's control. A compromised wallet compromises the FHE session — the attacker could sign authorization requests and decrypt the user's balances.
 
-## Credential storage security
+## Credential storage
 
-### Encryption at rest
+### Keypair storage
 
-The FHE private key is encrypted with AES-256-GCM before being written to storage (typically IndexedDB in browsers). The encryption key is derived from the wallet's EIP-712 signature using PBKDF2.
+The FHE private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-![Credential Encryption at Rest](../images/security-key-derivation.svg)
+| Parameter  | Value                                                            |
+| ---------- | ---------------------------------------------------------------- |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
+| Key format | Plaintext ML-KEM keypair                                         |
+| Scope      | One keypair per signer address (chain-independent)               |
 
-| Parameter     | Value                          |
-| ------------- | ------------------------------ |
-| KDF           | PBKDF2                         |
-| Hash function | SHA-256                        |
-| Iterations    | 600,000                        |
-| Salt          | Lowercase wallet address       |
-| Key length    | 256 bits                       |
-| Cipher        | AES-256-GCM                    |
-| IV            | 12 random bytes per encryption |
-
-The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](/concepts/session-model) for the full lifecycle.
-
-### Storage key privacy
-
-Wallet addresses are hashed before use as storage keys. The storage backend (IndexedDB, memory, or custom) never sees the raw wallet address.
+The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](/concepts/permit-model) for the full lifecycle.
 
 ### Limitations
 
 <details>
-<summary>What AES-GCM at rest does NOT protect against</summary>
+<summary>What same-origin isolation does NOT protect against</summary>
 
-- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the encrypted keypair. The attacker would still need the wallet signature to decrypt it, but reducing XSS surface is essential.
-- **Physical device access** — someone with access to the device's file system can read the IndexedDB contents. Again, they need the wallet signature to decrypt, but defense in depth applies.
+- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the FHE private key directly. Reducing XSS surface is essential.
+- **Physical device access** — someone with access to the device's file system can read the IndexedDB contents.
 - **Malicious browser extensions** — extensions with broad permissions can access IndexedDB. Users should audit their installed extensions.
 
 </details>
 
 ## WASM bundle integrity
 
-`RelayerWeb` loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
 
 ![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
 
@@ -98,9 +88,13 @@ This protects against CDN compromise or man-in-the-middle injection of modified 
 Integrity checking is enabled by default. Disable it only in test environments:
 
 ```ts
-const relayer = new RelayerWeb({
-  // ...
-  security: { integrityCheck: false },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({ security: { integrityCheck: false } }),
+  },
 });
 ```
 
@@ -148,35 +142,42 @@ The `wasm-unsafe-eval` directive allows WASM compilation and execution without r
 
 </details>
 
-## Session security
+## Permit security
 
 ### Time-bounded signatures
 
-EIP-712 signatures include a start timestamp and duration. The relayer rejects signatures outside their validity window. This limits the damage from a leaked signature — it becomes useless after expiry.
+EIP-712 permit signatures include a start timestamp and duration (in days). The relayer rejects permits outside their validity window. This limits the damage from a leaked permit — it becomes useless after expiry.
 
 Two TTL controls are available:
 
 - `keypairTTL` — how long the FHE keypair remains valid (default: 30 days).
-- `sessionTTL` — how long the cached wallet signature remains valid (default: 30 days).
+- `permitTTL` — how long signed permits remain valid, in days (default: 30).
 
 ### Address-scoped authorization
 
-The EIP-712 typed data includes the wallet address. A signature from address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific contract addresses), each signature is tightly bound to a specific user and set of contracts.
+The EIP-712 typed data includes the wallet address. A permit signed by address A cannot authorize decryption for address B. Combined with contract-scoped authorization (the signed message lists specific contract addresses), each permit is tightly bound to a specific user and set of contracts.
 
 ### Revocation
 
-Sessions can be revoked programmatically via `sdk.revokeSession()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation clears the signature from the session map immediately.
+Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revocation, the encrypted FHE keypair remains in storage. Only the session signature is cleared. The next operation prompts a fresh wallet sign.
+After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
 
 ## CSRF protection
 
-For browser apps, `RelayerWeb` supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
+For browser apps, the `web()` transport supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
 
 ```ts
-const relayer = new RelayerWeb({
-  security: {
-    getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      security: {
+        getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
+      },
+    }),
   },
 });
 ```
@@ -185,17 +186,14 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation             | Algorithm           | Key size           | Source                        |
-| --------------------- | ------------------- | ------------------ | ----------------------------- |
-| Credential encryption | AES-256-GCM         | 256-bit            | Web Crypto API                |
-| Key derivation        | PBKDF2-SHA-256      | 600,000 iterations | Web Crypto API                |
-| Storage key hashing   | SHA-256 (truncated) | 128-bit output     | Web Crypto API                |
-| CDN integrity         | SHA-384             | --                 | Web Crypto API                |
-| FHE encryption        | TFHE                | Network key        | WASM (`@zama-fhe/sdk (WASM)`) |
-| ZK proofs             | WASM prover         | --                 | WASM (`@zama-fhe/sdk (WASM)`) |
-| Wallet signing        | ECDSA secp256k1     | 256-bit            | User wallet                   |
-| Request tracking      | UUID v4             | 128-bit            | `crypto.randomUUID()`         |
+| Operation        | Algorithm       | Key size    | Source                        |
+| ---------------- | --------------- | ----------- | ----------------------------- |
+| CDN integrity    | SHA-384         | --          | Web Crypto API                |
+| FHE encryption   | TFHE            | Network key | WASM (`@zama-fhe/sdk (WASM)`) |
+| ZK proofs        | WASM prover     | --          | WASM (`@zama-fhe/sdk (WASM)`) |
+| Wallet signing   | ECDSA secp256k1 | 256-bit     | User wallet                   |
+| Request tracking | UUID v4         | 128-bit     | `crypto.randomUUID()`         |
 
 ## Reporting vulnerabilities
 
-If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/token-sdk/blob/main/SECURITY.md) for full details.
+If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/sdk/blob/main/SECURITY.md) for full details.

@@ -1,7 +1,17 @@
 import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
+import type {
+  Bytes32Hex,
+  ClearValueType,
+  InputProofBytesType,
+  KmsDelegatedUserDecryptEIP712Type,
+  KmsUserDecryptEIP712Type,
+  PublicDecryptResults,
+} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
+import type { FheChain } from "../chains/types";
+import type { RelayerWorkerClient } from "../worker/worker.client";
 
 // ============================================================================
 // Application Types
@@ -28,9 +38,10 @@ export interface RelayerWebSecurityConfig {
 
 /** Configuration for RelayerWeb (browser backend) initialization. */
 export interface RelayerWebConfig {
-  transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
-  /** Resolve the current chain ID. Called lazily before each operation; the worker is re-initialized when the value changes. */
-  getChainId: () => Promise<number>;
+  /** FHE chain configuration. */
+  chain: FheChain;
+  /** Worker client — handles WASM operations off the main thread. */
+  worker: RelayerWorkerClient;
   /** Security options (CSRF, CDN integrity). */
   security?: RelayerWebSecurityConfig;
   /** Optional logger for observing worker lifecycle and request timing. */
@@ -49,8 +60,6 @@ export interface RelayerWebConfig {
    * When omitted, the relayer SDK uses its default (single-threaded).
    */
   threads?: number;
-  /** Called whenever the SDK status changes (e.g. idle → initializing → ready). */
-  onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
   /**
    * Persistent storage for caching FHE public key and params across sessions.
    *
@@ -66,17 +75,14 @@ export interface RelayerWebConfig {
   fheArtifactCacheTTL?: number;
 }
 
-/** Result from encryption operation */
-export interface EncryptResult {
-  handles: Uint8Array[];
-  inputProof: Uint8Array;
-}
+/** Result from encryption operation. Alias for {@link InputProofBytesType}. */
+export type EncryptResult = InputProofBytesType;
 
-/** Canonical SDK type for encrypted ciphertext handles (`bytes32` values). */
-export type Handle = `0x${string}`;
+/** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
+export type EncryptedValue = Bytes32Hex;
 
-/** Decrypted value type — one of bigint, boolean, or hex-encoded bytes. */
-export type ClearValueType = bigint | boolean | `0x${string}`;
+/** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
+export type ClearValue = ClearValueType;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -103,7 +109,7 @@ export interface EncryptParams {
 
 /** Parameters for user decryption */
 export interface UserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;
@@ -114,39 +120,29 @@ export interface UserDecryptParams {
   durationDays: number;
 }
 
-/** Result from public decryption */
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-  clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+/** Result from public decryption. Alias for {@link PublicDecryptResults}. */
+export type PublicDecryptResult = PublicDecryptResults;
 
-/** EIP712 typed data structure */
-export interface EIP712TypedData {
-  domain: {
-    name: string;
-    version: string;
-    chainId: number;
-    verifyingContract: Address;
-  };
-  types: Record<
-    string,
-    readonly {
-      readonly name: string;
-      readonly type: string;
-    }[]
-  >;
-  primaryType?: string;
-  message: {
-    publicKey: Hex;
-    contractAddresses: readonly Address[];
-    startTimestamp: bigint;
-    durationDays: bigint;
-    extraData: Hex;
-  };
+/**
+ * EIP712 typed data structure for user or delegated user decrypt requests.
+ * Union of the relayer-sdk's two user-decrypt EIP712 shapes.
+ */
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+
+/** FHE encryption key */
+export interface PublicKeyData {
+  publicKeyId: string;
+  publicKey: Uint8Array;
 }
+
+/**
+ * TFHE public parameters
+ */
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {
-  handles: Handle[];
+  encryptedValues: EncryptedValue[];
   contractAddress: Address;
   signedContractAddresses: Address[];
   privateKey: Hex;

@@ -1,15 +1,25 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Address, Hex } from "viem";
-import type { GenericSigner, SignerLifecycleCallbacks } from "../signer";
+import type {
+  GenericSigner,
+  WalletAccountChange,
+  WalletAccountListener,
+  WalletAccount,
+  WalletAccountStore,
+} from "../signer";
 import type { TransactionReceipt } from "../transaction";
+import type { GenericProvider } from "../provider";
 
 describe("GenericSigner", () => {
-  test("getChainId returns Promise<number>", () => {
-    expectTypeOf<GenericSigner["getChainId"]>().returns.toEqualTypeOf<Promise<number>>();
+  test("walletAccount exposes a synchronous observable account store", () => {
+    expectTypeOf<GenericSigner["walletAccount"]>().toEqualTypeOf<WalletAccountStore>();
+    expectTypeOf<ReturnType<GenericSigner["walletAccount"]["getSnapshot"]>>().toEqualTypeOf<
+      WalletAccount | undefined
+    >();
   });
 
-  test("getAddress returns Promise<Address>", () => {
-    expectTypeOf<ReturnType<GenericSigner["getAddress"]>>().toEqualTypeOf<Promise<Address>>();
+  test("requireWalletAccount returns WalletAccount synchronously", () => {
+    expectTypeOf<GenericSigner["requireWalletAccount"]>().returns.toEqualTypeOf<WalletAccount>();
   });
 
   test("signTypedData returns Promise<Hex>", () => {
@@ -17,36 +27,45 @@ describe("GenericSigner", () => {
   });
 
   test("waitForTransactionReceipt returns Promise<TransactionReceipt>", () => {
-    expectTypeOf<GenericSigner["waitForTransactionReceipt"]>().returns.toEqualTypeOf<
+    expectTypeOf<GenericProvider["waitForTransactionReceipt"]>().returns.toEqualTypeOf<
       Promise<TransactionReceipt>
     >();
   });
 
   test("getBlockTimestamp returns Promise<bigint>", () => {
-    expectTypeOf<ReturnType<GenericSigner["getBlockTimestamp"]>>().toEqualTypeOf<Promise<bigint>>();
+    expectTypeOf<ReturnType<GenericProvider["getBlockTimestamp"]>>().toEqualTypeOf<
+      Promise<bigint>
+    >();
   });
 
-  test("subscribe is optional", () => {
-    expectTypeOf<GenericSigner["subscribe"]>().toEqualTypeOf<
-      ((callbacks: SignerLifecycleCallbacks) => () => void) | undefined
+  test("walletAccount.subscribe takes a wallet account listener", () => {
+    expectTypeOf<WalletAccountStore["subscribe"]>().toEqualTypeOf<
+      (onWalletAccountChange: WalletAccountListener) => () => void
     >();
   });
 });
 
-describe("SignerLifecycleCallbacks", () => {
-  test("all callbacks are optional", () => {
-    expectTypeOf<SignerLifecycleCallbacks["onDisconnect"]>().toEqualTypeOf<
-      (() => void) | undefined
-    >();
-    expectTypeOf<SignerLifecycleCallbacks["onAccountChange"]>().toEqualTypeOf<
-      ((newAddress: Address) => void) | undefined
-    >();
-    expectTypeOf<SignerLifecycleCallbacks["onChainChange"]>().toEqualTypeOf<
-      ((newChainId: number) => void) | undefined
-    >();
+describe("WalletAccountListener", () => {
+  test("is a function of WalletAccountChange returning void", () => {
+    expectTypeOf<WalletAccountListener>().toEqualTypeOf<(change: WalletAccountChange) => void>();
+  });
+});
+
+describe("WalletAccountChange", () => {
+  test("previous and next are optional WalletAccount", () => {
+    expectTypeOf<WalletAccountChange["previous"]>().toEqualTypeOf<WalletAccount | undefined>();
+    expectTypeOf<WalletAccountChange["next"]>().toEqualTypeOf<WalletAccount | undefined>();
   });
 
-  test("accepts empty object", () => {
-    expectTypeOf<{}>().toExtend<SignerLifecycleCallbacks>();
+  test("accepts connect shape (next only)", () => {
+    expectTypeOf<{
+      next: { address: Address; chainId: number };
+    }>().toExtend<WalletAccountChange>();
+  });
+
+  test("accepts disconnect shape (previous only)", () => {
+    expectTypeOf<{
+      previous: { address: Address; chainId: number };
+    }>().toExtend<WalletAccountChange>();
   });
 });

@@ -1,11 +1,11 @@
 ---
 title: ViemSigner
-description: Signer adapter that wraps viem wallet and public clients for the SDK.
+description: Signer adapter that wraps a viem WalletClient for wallet operations.
 ---
 
 # ViemSigner
 
-Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](/reference/sdk/GenericSigner).
+Signer adapter that wraps a viem `WalletClient` for wallet operations. Implements [GenericSigner](/reference/sdk/GenericSigner).
 
 ## Import
 
@@ -15,83 +15,48 @@ import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 ## Usage
 
-{% tabs %}
-{% tab title="Full mode" %}
-
 ```ts
-import { createWalletClient, createPublicClient, http } from "viem";
+import { createWalletClient, custom } from "viem";
+import { sepolia } from "viem/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
 const walletClient = createWalletClient({
-  /* ... */
-});
-const publicClient = createPublicClient({
-  /* ... */
+  chain: sepolia,
+  transport: custom(window.ethereum!),
 });
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 ```
 
-{% endtab %}
-{% tab title="Read-only mode" %}
-
-```ts
-import { createPublicClient, http } from "viem";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-
-const publicClient = createPublicClient({
-  /* ... */
-});
-
-const signer = new ViemSigner({ publicClient });
-```
-
-{% endtab %}
-{% endtabs %}
-
-{% hint style="warning" %}
-In read-only mode, calling `getAddress`, `signTypedData`, or `writeContract` throws at runtime. Only use read-only mode for chain reads without a connected wallet.
+{% hint style="info" %}
+You rarely need to instantiate `ViemSigner` directly. The viem `createConfig` builds one from the `walletClient` you pass. Use this class when constructing `ZamaSDK` manually or when using the generic `createConfig`.
 {% endhint %}
 
 ## Constructor
 
-### publicClient
+### walletClient
 
-`PublicClient`
+`WalletClient`
 
-Viem public client for reading chain data.
+Viem wallet client for signing transactions and typed data.
 
 ```ts
 const signer = new ViemSigner({
-  publicClient,
+  walletClient,
 });
 ```
 
 ---
 
-### walletClient
-
-`WalletClient | undefined`
-
-Viem wallet client for signing transactions. Omit for read-only mode.
-
-```ts
-const signer = new ViemSigner({
-  walletClient,
-  publicClient,
-});
-```
-
 ### ethereum
 
 `EIP1193Provider | undefined`
 
-Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, `subscribe()` listens for disconnect and account changes. Omit if you handle lifecycle events manually.
+Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
 
 ```ts
 const signer = new ViemSigner({
   walletClient,
-  publicClient,
   ethereum: window.ethereum,
 });
 ```
@@ -100,23 +65,20 @@ const signer = new ViemSigner({
 
 All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 
-| Method                        | Read-only | Full                        |
-| ----------------------------- | --------- | --------------------------- |
-| `getChainId()`                | Works     | Works                       |
-| `getAddress()`                | Throws    | Works                       |
-| `signTypedData()`             | Throws    | Works                       |
-| `writeContract()`             | Throws    | Works                       |
-| `readContract()`              | Works     | Works                       |
-| `waitForTransactionReceipt()` | Works     | Works                       |
-| `subscribe()`                 | N/A       | Works (requires `ethereum`) |
+| Method                   | Behavior              |
+| ------------------------ | --------------------- |
+| `walletAccount` store    | Sync observable store |
+| `requireWalletAccount()` | From wallet client    |
+| `signTypedData()`        | Via wallet client     |
+| `writeContract()`        | Via wallet client     |
 
 {% hint style="info" %}
-`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration).
+Wallet account transitions are only emitted when you pass the `ethereum` option. Without it, the SDK still works but credentials are not automatically cleared when users switch accounts.
 {% endhint %}
 
 ## Related
 
 - [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
+- [ViemProvider](/reference/sdk/ViemProvider) -- companion provider adapter
 - [EthersSigner](/reference/sdk/EthersSigner) -- ethers alternative
-- [WagmiSigner](/reference/sdk/WagmiSigner) -- React adapter with auto-revoke
 - [Configuration guide](/guides/configuration) -- full setup walkthrough

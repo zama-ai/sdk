@@ -4,7 +4,7 @@ import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import { invalidateAfterUnwrap, unwrapAllMutationOptions } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Request an unwrap for the entire confidential balance.
@@ -15,27 +15,27 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
- * @param config - Token address (and optional wrapper) identifying the token.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const unwrapAll = useUnwrapAll({ tokenAddress: "0x..." });
+ * const unwrapAll = useUnwrapAll("0xWrapper");
  * unwrapAll.mutate();
  * ```
  */
 export function useUnwrapAll(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, void, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, void, Address>({
     ...unwrapAllMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnwrap(context.client, config.tokenAddress);
+      invalidateAfterUnwrap(context.client, token.address);
     },
   });
 }

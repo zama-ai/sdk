@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, afterEach } from "../../test-fixtures";
+import { describe, test, expect, vi, afterEach } from "../../test-fixtures";
 import { BaseWorkerClient, DEFAULT_TIMEOUT_MS } from "../worker.base-client";
 import type {
   GenericLogger,
+  WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
@@ -26,11 +27,12 @@ interface TestConfig {
 let requestIdCounter = 0;
 
 class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
+  protected readonly env: WorkerEnv = "node";
   lastWorker: TestWorker | null = null;
   createWorkerCount = 0;
 
   constructor(config?: Partial<TestConfig>) {
-    const cfg: TestConfig = { initType: "NODE_INIT", ...config };
+    const cfg: TestConfig = { initType: "INIT", ...config };
     super(cfg, cfg.logger);
   }
 
@@ -66,7 +68,9 @@ class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
   } {
     return {
       type: this.config.initType,
-      payload: { fhevmConfig: { chainId: 1 } } as unknown as WorkerRequest["payload"],
+      payload: {
+        fhevmConfig: { chainId: 1 },
+      } as unknown as WorkerRequest["payload"],
     };
   }
 
@@ -156,22 +160,22 @@ describe("BaseWorkerClient", () => {
     vi.restoreAllMocks();
   });
 
-  it("resolves promise on success response", async () => {
+  test("resolves promise on success response", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { publicKey: "pk", privateKey: "sk" });
 
-    const result = await client.generateKeypair();
+    const result = await client.generateKeypair({ chainId: 1 });
     expect(result).toEqual({ publicKey: "pk", privateKey: "sk" });
   });
 
-  it("rejects promise on error response", async () => {
+  test("rejects promise on error response", async () => {
     const client = await initClient();
     autoRejectPostMessage(client, "decrypt failed");
 
-    await expect(client.generateKeypair()).rejects.toThrow("decrypt failed");
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("decrypt failed");
   });
 
-  it("rejects with timeout when no response arrives", async () => {
+  test("rejects with timeout when no response arrives", async () => {
     vi.useFakeTimers();
 
     try {
@@ -182,7 +186,7 @@ describe("BaseWorkerClient", () => {
 
       // Start the request and attach rejection handler before advancing timers
       let rejectedError: Error | undefined;
-      const promise = client.generateKeypair().catch((error: Error) => {
+      const promise = client.generateKeypair({ chainId: 1 }).catch((error: Error) => {
         rejectedError = error;
       });
 
@@ -196,7 +200,7 @@ describe("BaseWorkerClient", () => {
     }
   });
 
-  it("logs warning for unknown response ID without crashing", async () => {
+  test("logs warning for unknown response ID without crashing", async () => {
     const warn = vi.fn();
     const mockLogger: GenericLogger = {
       info: vi.fn(),
@@ -218,12 +222,12 @@ describe("BaseWorkerClient", () => {
     });
   });
 
-  it("worker error rejects all pending and terminates worker", async () => {
+  test("worker error rejects all pending and terminates worker", async () => {
     const client = await initClient();
     const worker = client.lastWorker!;
 
-    const p1 = client.generateKeypair();
-    const p2 = client.getPublicKey();
+    const p1 = client.generateKeypair({ chainId: 1 });
+    const p2 = client.getPublicKey({ chainId: 1 });
 
     // Flush so the requests are registered in pendingRequests
     await flush();
@@ -235,11 +239,11 @@ describe("BaseWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it("message deserialization error rejects all pending and terminates worker", async () => {
+  test("message deserialization error rejects all pending and terminates worker", async () => {
     const client = await initClient();
     const worker = client.lastWorker!;
 
-    const p1 = client.generateKeypair();
+    const p1 = client.generateKeypair({ chainId: 1 });
 
     await flush();
 
@@ -249,10 +253,10 @@ describe("BaseWorkerClient", () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it("terminate rejects all pending with 'Worker terminated'", async () => {
+  test("terminate rejects all pending with 'Worker terminated'", async () => {
     const client = await initClient();
 
-    const p1 = client.generateKeypair();
+    const p1 = client.generateKeypair({ chainId: 1 });
 
     await flush();
 
@@ -261,7 +265,7 @@ describe("BaseWorkerClient", () => {
     await expect(p1).rejects.toThrow("Worker terminated");
   });
 
-  it("concurrent initWorker calls only create worker once", async () => {
+  test("concurrent initWorker calls only create worker once", async () => {
     const client = createAutoResolvingClient();
 
     const [w1, w2] = await Promise.all([client.initWorker(), client.initWorker()]);
@@ -270,7 +274,7 @@ describe("BaseWorkerClient", () => {
     expect(client.createWorkerCount).toBe(1);
   });
 
-  it("init failure resets so subsequent call retries", async () => {
+  test("init failure resets so subsequent call retries", async () => {
     const client = new TestWorkerClient();
     let callCount = 0;
 
@@ -308,11 +312,12 @@ describe("BaseWorkerClient", () => {
     expect(callCount).toBe(2);
   });
 
-  it("userDecrypt sends correct type and payload", async () => {
+  test("userDecrypt sends correct type and payload", async () => {
     const client = await initClient();
 
     const params = {
-      handles: [HANDLE],
+      chainId: 1,
+      encryptedValues: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,
@@ -333,7 +338,7 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  it("error response includes statusCode when present", async () => {
+  test("error response includes statusCode when present", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -349,7 +354,7 @@ describe("BaseWorkerClient", () => {
     });
 
     try {
-      await client.generateKeypair();
+      await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
       expect((error as Error).message).toBe("rate limited");
@@ -357,26 +362,27 @@ describe("BaseWorkerClient", () => {
     }
   });
 
-  it("terminate is a no-op when no worker exists", () => {
+  test("terminate is a no-op when no worker exists", () => {
     const client = new TestWorkerClient();
     client.terminate();
   });
 
-  it("handleWorkerError without existing worker does not throw", () => {
+  test("handleWorkerError without existing worker does not throw", () => {
     const client = new TestWorkerClient();
     client.simulateWorkerError("crash!");
   });
 
-  it("handleWorkerMessageError without existing worker does not throw", () => {
+  test("handleWorkerMessageError without existing worker does not throw", () => {
     const client = new TestWorkerClient();
     client.simulateMessageError();
   });
 
-  it("encrypt sends correct type", async () => {
+  test("encrypt sends correct type", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { handles: [], inputProof: "0x" });
 
     const params = {
+      chainId: 1,
       values: [{ value: 1n, type: "euint8" as const }],
       contractAddress: "0xC" as `0x${string}`,
       userAddress: "0xU" as `0x${string}`,
@@ -388,22 +394,23 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.type).toBe("ENCRYPT");
   });
 
-  it("publicDecrypt sends correct type and payload", async () => {
+  test("publicDecrypt sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { clearValues: {} });
 
-    await client.publicDecrypt([HANDLE]);
+    await client.publicDecrypt({ chainId: 1, encryptedValues: [HANDLE] });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("PUBLIC_DECRYPT");
-    expect(lastCall.payload).toEqual({ handles: [HANDLE] });
+    expect(lastCall.payload).toEqual({ chainId: 1, encryptedValues: [HANDLE] });
   });
 
-  it("createEIP712 sends correct type and payload", async () => {
+  test("createEIP712 sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, {});
 
     const params = {
+      chainId: 1,
       publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       startTimestamp: 1000,
@@ -416,11 +423,12 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  it("createDelegatedUserDecryptEIP712 sends correct type and payload", async () => {
+  test("createDelegatedUserDecryptEIP712 sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, {});
 
     const params = {
+      chainId: 1,
       publicKey: "0xpk" as `0x${string}`,
       contractAddresses: ["0x1" as `0x${string}`],
       delegatorAddress: "0xD" as `0x${string}`,
@@ -434,12 +442,13 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  it("delegatedUserDecrypt sends correct type and payload", async () => {
+  test("delegatedUserDecrypt sends correct type and payload", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { clearValues: {} });
 
     const params = {
-      handles: [HANDLE],
+      chainId: 1,
+      encryptedValues: [HANDLE],
       contractAddress: "0xC" as `0x${string}`,
       signedContractAddresses: ["0xS" as `0x${string}`],
       privateKey: "0xsk" as `0x${string}`,
@@ -457,38 +466,41 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  it("requestZKProofVerification sends correct type", async () => {
+  test("requestZKProofVerification sends correct type", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, "0xproof");
 
-    await client.requestZKProofVerification({ proof: "0x" } as never);
+    await client.requestZKProofVerification({
+      chainId: 1,
+      zkProof: { proof: "0x" } as never,
+    });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("REQUEST_ZK_PROOF_VERIFICATION");
   });
 
-  it("getPublicKey sends correct type", async () => {
+  test("getPublicKey sends correct type", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { result: null });
 
-    await client.getPublicKey();
+    await client.getPublicKey({ chainId: 1 });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_KEY");
   });
 
-  it("getPublicParams sends correct type and bits", async () => {
+  test("getPublicParams sends correct type and bits", async () => {
     const client = await initClient();
     autoResolvePostMessage(client, { result: null });
 
-    await client.getPublicParams(2048);
+    await client.getPublicParams({ chainId: 1, bits: 2048 });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("GET_PUBLIC_PARAMS");
-    expect(lastCall.payload).toEqual({ bits: 2048 });
+    expect(lastCall.payload).toEqual({ chainId: 1, bits: 2048 });
   });
 
-  it("worker error during init terminates the worker", async () => {
+  test("worker error during init terminates the worker", async () => {
     const client = new TestWorkerClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.spyOn(client as any, "createWorker").mockImplementation(() => {
@@ -513,9 +525,9 @@ describe("BaseWorkerClient", () => {
     expect(client.lastWorker!.terminate).toHaveBeenCalledOnce();
   });
 
-  it("sendRequest auto-initializes worker if not yet initialized", async () => {
+  test("sendRequest auto-initializes worker if not yet initialized", async () => {
     const client = createAutoResolvingClient();
-    const result = await client.generateKeypair();
+    const result = await client.generateKeypair({ chainId: 1 });
     expect(result).toEqual({ initialized: true });
   });
 });

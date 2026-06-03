@@ -63,6 +63,23 @@ pnpm build        # Build output
 
 4. Open a pull request
 
+### LLM Documentation Artifacts
+
+The repository publishes generated LLM entry points for coding agents:
+
+- `llms.txt` — compact discovery index with raw GitHub links
+- `llms-full.txt` — full public documentation bundle for large-context agents
+- `docs/llm/corpus-manifest.json` — generated manifest used to build both files
+
+When changing SDK docs, approved example docs, package READMEs, API reports, or the LLM corpus scripts, run:
+
+```bash
+pnpm llm:build
+pnpm llm:check
+```
+
+The pre-commit hook regenerates and stages the LLM artifacts automatically when relevant staged sources change. If a corpus source is partially staged, stage or discard the remaining changes before committing so the generated files match the committed source state.
+
 ### Running Tests
 
 ```bash

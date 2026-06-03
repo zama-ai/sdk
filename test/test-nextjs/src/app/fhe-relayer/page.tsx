@@ -1,5 +1,5 @@
 import { FheRelayerPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { CONTRACTS } from "@/constants";
 
 export default async function FheRelayerPage({

@@ -17,7 +17,7 @@ import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
 ### From ZamaSDK
 
-The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's signer, `registryAddresses`, and `registryTTL`, and maintains a single in-memory cache.
+The SDK exposes a shared registry instance via `sdk.registry`. This is the recommended way to access the registry — it shares the SDK's provider, chain registry addresses, and `registryTTL`, and maintains a single in-memory cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -36,8 +36,8 @@ const pairs = await registry.getTokenPairs();
 ```ts
 import { WrappersRegistry } from "@zama-fhe/sdk";
 
-const registry = new WrappersRegistry({ signer });
-const [found, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
+const registry = new WrappersRegistry({ provider });
+const [isValid, cToken] = await registry.getConfidentialTokenAddress(tokenAddress);
 ```
 
 ### Custom chains
@@ -50,18 +50,18 @@ const registry = sdk.createWrappersRegistry({ [31337]: "0xYourHardhatRegistry" }
 
 // Via constructor
 const registry = new WrappersRegistry({
-  signer,
+  provider,
   registryAddresses: { [31337]: "0xYourHardhatRegistry" },
 });
 ```
 
 ## Constructor
 
-### signer
+### provider
 
-`GenericSigner`
+`GenericProvider`
 
-Wallet signer for read calls. Any signer implementation works (`ViemSigner`, `EthersSigner`, `WagmiSigner`, or custom).
+Provider for read-only contract calls. Any `GenericProvider` implementation works (e.g. the one created by `createConfig` or a custom implementation).
 
 ### registryAddresses
 
@@ -77,7 +77,7 @@ How long cached registry results remain valid, in seconds. Default: `86400` (24 
 
 ```ts
 const registry = new WrappersRegistry({
-  signer,
+  provider,
   registryTTL: 3600, // 1 hour
 });
 ```
@@ -203,11 +203,17 @@ const pair = await registry.getTokenPair(0n);
 
 `(tokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Look up the confidential token for a given plain ERC-20. Returns `[found, confidentialTokenAddress]`.
+Look up the confidential token for a given plain ERC-20. Returns `[isValid, confidentialTokenAddress]`.
+
+The three possible states:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked (address is the former confidential token)
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
-if (found) {
+const [isValid, cToken] = await registry.getConfidentialTokenAddress("0xUSDC");
+if (isValid) {
   const token = sdk.createToken(cToken);
 }
 ```
@@ -216,10 +222,16 @@ if (found) {
 
 `(confidentialTokenAddress: Address) => Promise<readonly [boolean, Address]>`
 
-Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[found, tokenAddress]`.
+Reverse lookup — find the plain ERC-20 for a confidential token. Returns `[isValid, tokenAddress]`.
+
+The three possible states mirror `getConfidentialTokenAddress`:
+
+- `[true, nonZeroAddress]` -- registered and valid
+- `[false, nonZeroAddress]` -- registered but revoked
+- `[false, zeroAddress]` -- not registered
 
 ```ts
-const [found, plainToken] = await registry.getTokenAddress("0xcUSDC");
+const [isValid, plainToken] = await registry.getTokenAddress("0xcUSDC");
 ```
 
 ### isConfidentialTokenValid

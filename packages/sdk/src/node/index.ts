@@ -1,16 +1,20 @@
 /**
- * Node.js backend for `@zama-fhe/sdk` — provides {@link RelayerNode},
- * {@link NodeWorkerClient}, and {@link NodeWorkerPool} for server-side FHE operations.
+ * Node.js backend for `@zama-fhe/sdk` — provides the `node()` transport
+ * factory for server-side FHE operations.
+ *
+ * The `node()` transport factory self-registers its handler on first call,
+ * keeping `node:worker_threads` out of browser bundles.
  *
  * @packageDocumentation
  */
 
-export { RelayerNode } from "../relayer/relayer-node";
+export { node } from "./config";
+export type { NodeRelayerConfig, NodePoolOptions } from "./config";
+export { cleartext } from "../config/cleartext";
+export type { RelayerConfig } from "../config/types";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export { NodeWorkerClient } from "../worker/worker.node-client";
 export type { NodeWorkerClientConfig } from "../worker/worker.node-client";
-export { NodeWorkerPool } from "../worker/worker.node-pool";
 export type { NodeWorkerPoolConfig } from "../worker/worker.node-pool";
 export type {
   GenericLogger,
@@ -18,7 +22,8 @@ export type {
   WorkerRequest,
   WorkerResponse,
   InitRequest,
-  NodeInitRequest,
+  InitPayload,
+  WorkerEnv,
   UpdateCsrfRequest,
   EncryptRequest,
   UserDecryptRequest,
@@ -53,7 +58,7 @@ export { BaseWorkerClient } from "../worker/worker.base-client";
 
 // Relayer types used in RelayerNode's public API
 export type {
-  ClearValueType,
+  ClearValue,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
@@ -65,5 +70,5 @@ export type {
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "../relayer/relayer-utils";
+// Chain presets
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";

@@ -6,20 +6,33 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { EIP1193Provider } from 'viem';
 import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { PrivateKeyAccount } from 'viem/accounts';
+import { Provider } from 'ethers';
+import { PublicClient } from 'viem';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
+import { Signer } from 'ethers';
+import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import { WalletClient } from 'viem';
+import { z } from 'zod/mini';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
-export const ACL_TOPICS: readonly ["0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc", "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4"];
+export const ACL_TOPICS: readonly [`0x${string}`, `0x${string}`];
 
 // @public
 export type AclEvent = DelegatedForUserDecryptionEvent | RevokedDelegationForUserDecryptionEvent;
@@ -31,44 +44,9 @@ export class AclPausedError extends ZamaError {
 
 // @public
 export const AclTopics: {
-    readonly DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc"; /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
-    readonly RevokedDelegationForUserDecryption: "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4";
+    readonly DelegatedForUserDecryption: `0x${string}`; /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
+    readonly RevokedDelegationForUserDecryption: `0x${string}`;
 };
-
-// @public
-export type ActivityAmount = {
-    readonly type: "clear";
-    readonly value: bigint;
-} | {
-    readonly type: "encrypted";
-    readonly handle: Handle; /** Populated after batch decryption via {@link applyDecryptedValues}. */
-    readonly decryptedValue?: bigint;
-};
-
-// @public
-export type ActivityDirection = "incoming" | "outgoing" | "self";
-
-// @public
-export interface ActivityItem {
-    readonly amount: ActivityAmount;
-    readonly direction: ActivityDirection;
-    readonly from?: Address;
-    readonly metadata: ActivityLogMetadata;
-    readonly rawEvent: OnChainEvent;
-    readonly success?: boolean;
-    readonly to?: Address;
-    readonly type: ActivityType;
-}
-
-// @public
-export interface ActivityLogMetadata {
-    readonly blockNumber?: bigint | number;
-    readonly logIndex?: number;
-    readonly transactionHash?: Hex;
-}
-
-// @public
-export type ActivityType = "transfer" | "shield" | "unshield_requested" | "unshield_started" | "unshield_finalized";
 
 export { Address }
 
@@ -215,12 +193,22 @@ export function allowanceContract(tokenAddress: Address, owner: Address, spender
 };
 
 // @public
-export function applyDecryptedValues(items: readonly ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>): ActivityItem[];
+export const anvil: {
+    readonly id: 31337;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "http://127.0.0.1:8545";
+    readonly aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: undefined;
+    readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
+};
 
 // @public
-export class ApprovalFailedError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
+export type ApprovalStrategy = "max" | "exact" | "skip";
 
 // @public
 export function approveContract(tokenAddress: Address, spender: Address, value: bigint): {
@@ -365,20 +353,16 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 };
 
 // @public (undocumented)
-export interface ApproveSubmittedEvent extends BaseEvent {
-    // (undocumented)
-    txHash: Hex;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.ApproveSubmitted;
-}
-
-// @public (undocumented)
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
+    step: "reset" | "approve";
     // (undocumented)
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
+
+// @public
+export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
 // @public
 export class BalanceCheckUnavailableError extends ZamaError {
@@ -547,6 +531,25 @@ export interface BaseEvent {
 }
 
 // @public
+export abstract class BaseSigner implements GenericSigner, Disposable {
+    // (undocumented)
+    [Symbol.dispose](): void;
+    constructor(initial?: WalletAccount);
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
+    protected onDispose(): void;
+    // (undocumented)
+    requireWalletAccount(operation: string): WalletAccount;
+    // (undocumented)
+    abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // (undocumented)
+    readonly walletAccount: MutableWalletAccountStore;
+    // (undocumented)
+    abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+}
+
+// @public
 export interface BatchBalancesResult {
     errors: Map<Address, ZamaError>;
     results: Map<Address, bigint>;
@@ -554,12 +557,48 @@ export interface BatchBalancesResult {
 
 // @public
 export interface BatchDecryptAsOptions {
+    accountAddress?: Address;
     delegatorAddress: Address;
-    handles?: Handle[];
+    encryptedValues?: EncryptedValue[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
-    owner?: Address;
 }
+
+// @public (undocumented)
+export interface BatchDecryptHandleItem {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    encryptedValue: EncryptedValue;
+    // (undocumented)
+    error?: ZamaError;
+    // (undocumented)
+    value?: ClearValue;
+}
+
+// @public (undocumented)
+export interface BatchDecryptHandlesResult {
+    // (undocumented)
+    items: BatchDecryptHandleItem[];
+}
+
+// @public
+export class ChainMismatchError extends ZamaError {
+    constructor(input: {
+        operation: string;
+        signerChainId: number;
+        providerChainId: number;
+    }, options?: ErrorOptions);
+    // (undocumented)
+    readonly operation: string;
+    // (undocumented)
+    readonly providerChainId: number;
+    // (undocumented)
+    readonly signerChainId: number;
+}
+
+// @public
+export const chains: Record<number, FheChain>;
 
 // @public
 export class ChromeSessionStorage implements GenericStorage {
@@ -578,7 +617,20 @@ export const chromeSessionStorage: ChromeSessionStorage;
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
-export type ClearValueType = bigint | boolean | `0x${string}`;
+export function cleartext(): CleartextRelayerConfig;
+
+// @public
+export interface CleartextRelayerConfig extends RelayerConfig {
+    // Warning: (ae-forgotten-export) The symbol "RelayerCleartext" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+    // (undocumented)
+    readonly type: "cleartext";
+}
+
+// @public
+export type ClearValue = ClearValueType;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -705,8 +757,8 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -1024,6 +1076,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -1043,6 +1100,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -1398,8 +1460,8 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -1697,7 +1759,11 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -1715,8 +1781,40 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -1980,8 +2078,8 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -2299,6 +2397,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -2318,6 +2421,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -2673,8 +2781,8 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -2972,7 +3080,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -2990,8 +3102,40 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -3255,8 +3399,8 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -3574,6 +3718,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -3593,6 +3742,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -3948,8 +4102,8 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -4247,7 +4401,11 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -4265,8 +4423,40 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -4407,7 +4597,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: Handle;
+    readonly encryptedAmountHandle: EncryptedValue;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
@@ -4539,8 +4729,8 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -4858,6 +5048,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -4877,6 +5072,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -5232,8 +5432,8 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -5531,7 +5731,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -5549,8 +5753,40 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -5697,103 +5933,18 @@ export class ConfigurationError extends ZamaError {
 // @public
 export type ContractAbi = Abi | readonly unknown[];
 
-// @public (undocumented)
-export interface CredentialsAllowedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsAllowed;
-}
-
-// @public (undocumented)
-export interface CredentialsCachedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCached;
-}
-
-// @public (undocumented)
-export interface CredentialsCorruptedEvent extends BaseEvent {
-    error: Error;
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCorrupted;
-}
-
-// @public (undocumented)
-export interface CredentialsCreatedEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCreated;
-}
-
-// @public (undocumented)
-export interface CredentialsCreatingEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsCreating;
-}
-
-// @public (undocumented)
-export interface CredentialsExpiredEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsExpired;
-}
-
-// @public (undocumented)
-export interface CredentialsLoadingEvent extends BaseEvent {
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsLoading;
-}
-
-// Warning: (ae-forgotten-export) The symbol "BaseCredentialsManager" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials$1" needs to be exported by the entry point index.d.ts
-//
 // @public
-export class CredentialsManager extends BaseCredentialsManager<StoredCredentials, EncryptedCredentials$1> {
-    constructor(config: CredentialsManagerConfig);
-    allow(...contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials$1;
-    clear(): Promise<void>;
-    // (undocumented)
-    protected clearCaches(): void;
-    static computeStoreKey(address: Address, chainId: number): Promise<string>;
-    create(contractAddresses: Address[]): Promise<StoredCredentials>;
-    // (undocumented)
-    protected decryptCredentials(encrypted: EncryptedCredentials$1, signature: Hex): Promise<StoredCredentials>;
-    // (undocumented)
-    protected encryptCredentials(creds: StoredCredentials): Promise<EncryptedCredentials$1>;
-    isAllowed(contractAddresses: [Address, ...Address[]]): Promise<boolean>;
-    isExpired(contractAddress?: Address): Promise<boolean>;
-    revoke(...contractAddresses: Address[]): Promise<void>;
-    revokeByKey(key: string): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "SigningMeta" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    protected signForContracts(meta: SigningMeta, contractAddresses: Address[]): Promise<Hex>;
-}
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigGeneric<TChains>): ZamaConfig;
 
-// Warning: (ae-forgotten-export) The symbol "CredentialsConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
-export interface CredentialsManagerConfig extends CredentialsConfig {
-    relayer: RelayerSDK;
-}
+export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
 
-// @public (undocumented)
-export interface CredentialsPersistFailedEvent extends BaseEvent {
-    error: Error;
+// @public
+export interface CredentialBundle {
     // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsPersistFailed;
-}
-
-// @public (undocumented)
-export interface CredentialsRevokedEvent extends BaseEvent {
+    readonly keypair: StoredKeypair;
     // (undocumented)
-    contractAddresses?: Address[];
-    // (undocumented)
-    type: typeof ZamaSDKEvents.CredentialsRevoked;
+    readonly permits: readonly Permission[];
 }
 
 // @public
@@ -5960,7 +6111,7 @@ export function decodeOnChainEvents(logs: readonly RawLog[]): OnChainEvent[];
 export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDelegationForUserDecryptionEvent | null;
 
 // @public
-export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null;
+export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
 
 // @public
 export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null;
@@ -5971,21 +6122,12 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrapped(log: RawLog): WrappedEvent | null;
 
-// @public
-export class DecryptCache {
-    constructor(storage: GenericStorage);
-    clearAll(): Promise<void>;
-    clearForRequester(requester: Address): Promise<void>;
-    get(requester: Address, contractAddress: Address, handle: Handle): Promise<ClearValueType | null>;
-    set(requester: Address, contractAddress: Address, handle: Handle, value: ClearValueType): Promise<void>;
-}
-
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
-    handles: Handle[];
-    result: Record<Handle, ClearValueType>;
+    encryptedValues: EncryptedValue[];
+    result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -5994,8 +6136,8 @@ export interface DecryptEndEvent extends BaseEvent {
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    encryptedValues: EncryptedValue[];
     error: Error;
-    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6005,7 +6147,27 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: Handle;
+    encryptedValue: EncryptedValue;
+}
+
+// @public
+export class Decryption {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        relayer: RelayerDispatcher;
+        decryptionService: DecryptionService | undefined;
+    });
+    delegatedBatchDecrypt(input: {
+        encryptedInputs: DecryptHandle[];
+        delegatorAddress: Address;
+        accountAddress?: Address;
+        maxConcurrency?: number;
+    }): Promise<BatchDecryptHandlesResult>;
+    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -6013,48 +6175,18 @@ export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public (undocumented)
-export type DecryptResult = Record<Handle, ClearValueType>;
+// @public
+export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
 // @public
 export const DefaultRegistryAddresses: Record<number, Address>;
-
-// Warning: (ae-forgotten-export) The symbol "EncryptedCredentials" needs to be exported by the entry point index.d.ts
-//
-// @public
-export class DelegatedCredentialsManager extends BaseCredentialsManager<DelegatedStoredCredentials, EncryptedCredentials> {
-    constructor(config: DelegatedCredentialsManagerConfig);
-    allow(delegatorAddress: Address, ...contractAddresses: Address[]): Promise<DelegatedStoredCredentials>;
-    // (undocumented)
-    protected assertEncrypted(data: unknown): asserts data is EncryptedCredentials;
-    clear(delegatorAddress: Address): Promise<void>;
-    // (undocumented)
-    protected clearCaches(): void;
-    static computeStoreKey(delegateAddress: Address, delegatorAddress: Address, chainId: number): Promise<string>;
-    // (undocumented)
-    protected decryptCredentials(encrypted: EncryptedCredentials, signature: Hex): Promise<DelegatedStoredCredentials>;
-    // (undocumented)
-    protected encryptCredentials(creds: DelegatedStoredCredentials): Promise<EncryptedCredentials>;
-    isAllowed(delegatorAddress: Address, contractAddresses: [Address, ...Address[]]): Promise<boolean>;
-    isExpired(delegatorAddress: Address, contractAddress?: Address): Promise<boolean>;
-    revoke(delegatorAddress: Address): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedSigningMeta" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    protected signForContracts(meta: DelegatedSigningMeta, contractAddresses: Address[]): Promise<Hex>;
-}
-
-// @public
-export interface DelegatedCredentialsManagerConfig extends CredentialsConfig {
-    relayer: RelayerSDK;
-}
 
 // @public
 export interface DelegatedForUserDecryptionEvent {
@@ -6069,12 +6201,6 @@ export interface DelegatedForUserDecryptionEvent {
 }
 
 // @public
-export interface DelegatedStoredCredentials extends StoredCredentials {
-    delegateAddress: Address;
-    delegatorAddress: Address;
-}
-
-// @public
 export interface DelegatedUserDecryptParams {
     // (undocumented)
     contractAddress: Address;
@@ -6085,7 +6211,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -6227,6 +6353,35 @@ export class DelegationNotPropagatedError extends ZamaError {
 }
 
 // @public
+export class Delegations {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        delegationService: DelegationService;
+    });
+    delegateDecryption(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        expirationDate?: Date;
+    }): Promise<TransactionResult>;
+    getExpiry(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
+    isActive(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
+    revokeDelegation(input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+    }): Promise<TransactionResult>;
+}
+
+// @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -6240,30 +6395,10 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: {
-        name: string;
-        version: string;
-        chainId: number;
-        verifyingContract: Address;
-    };
-    // (undocumented)
-    message: {
-        publicKey: Hex;
-        contractAddresses: readonly Address[];
-        startTimestamp: bigint;
-        durationDays: bigint;
-        extraData: Hex;
-    };
-    // (undocumented)
-    primaryType?: string;
-    // (undocumented)
-    types: Record<string, readonly {
-        readonly name: string;
-        readonly type: string;
-    }[]>;
-}
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+
+// @public
+export type EncryptedValue = Bytes32Hex;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -6309,18 +6444,16 @@ export interface EncryptParams {
 }
 
 // @public
-export interface EncryptResult {
-    // (undocumented)
-    handles: Uint8Array[];
-    // (undocumented)
-    inputProof: Uint8Array;
-}
+export type EncryptResult = InputProofBytesType;
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
+
+// @public
+export const ERC1363_INTERFACE_ID: "0xb0202a11";
 
 // @public
 export class ERC20ReadFailedError extends ZamaError {
@@ -6334,14 +6467,38 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
-export function extractEncryptedHandles(items: readonly ActivityItem[]): Handle[];
+export interface FheChain<TId extends number = number> {
+    // (undocumented)
+    readonly aclContractAddress: Address;
+    readonly auth?: Auth;
+    readonly executorAddress?: Address | undefined;
+    // (undocumented)
+    readonly gatewayChainId: number;
+    // (undocumented)
+    readonly id: TId;
+    readonly inputSignerPrivateKey?: Hex;
+    // (undocumented)
+    readonly inputVerifierContractAddress: Address;
+    // (undocumented)
+    readonly kmsContractAddress: Address;
+    readonly kmsSignerPrivateKey?: Hex;
+    // (undocumented)
+    readonly network: EIP1193Provider | string;
+    readonly registryAddress: Address | undefined;
+    // (undocumented)
+    readonly relayerUrl: string;
+    // (undocumented)
+    readonly verifyingContractAddressDecryption: Address;
+    // (undocumented)
+    readonly verifyingContractAddressInputVerification: Address;
+}
 
 export { FheTypeName }
 
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): {
+export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly type: "constructor";
@@ -7365,14 +7522,20 @@ export interface GenericLogger {
 }
 
 // @public
-export interface GenericSigner {
-    getAddress: () => Promise<Address>;
-    getBlockTimestamp: () => Promise<bigint>;
+export interface GenericProvider {
+    getBlockTimestamp(): Promise<bigint>;
     getChainId(): Promise<number>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+}
+
+// @public
+export interface GenericSigner {
+    dispose?(): void;
+    refreshWalletAccount?(): Promise<WalletAccount | undefined>;
+    requireWalletAccount(operation: string): WalletAccount;
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    readonly walletAccount: WalletAccountStore;
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -8570,11 +8733,8 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = `0x${string}`;
-
-// @public
-export const HardhatConfig: {
-    readonly chainId: 31337;
+export const hardhat: {
+    readonly id: 31337;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
     readonly network: "http://127.0.0.1:8545";
@@ -8584,9 +8744,25 @@ export const HardhatConfig: {
     readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: undefined;
+    readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 };
 
 export { Hex }
+
+// @public
+export const hoodi: {
+    readonly id: 560048;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "https://rpc.hoodi.ethpandaops.io";
+    readonly aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68";
+    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
+    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
+    readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
+};
 
 // @public
 export class IndexedDBStorage implements GenericStorage {
@@ -10059,8 +10235,8 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -10378,6 +10554,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -10397,6 +10578,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -10752,8 +10938,8 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -11051,7 +11237,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -11069,8 +11259,40 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -11210,7 +11432,15 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isZeroHandle(handle: string): boolean;
+export function isZeroHandle(encryptedValue: string): boolean;
+
+// @public
+export interface Keypair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
 
 // @public
 export class KeypairExpiredError extends ZamaError {
@@ -11232,8 +11462,11 @@ export interface ListPairsOptions {
 export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
 // @public
-export const MainnetConfig: {
-    readonly chainId: 1;
+export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
+
+// @public
+export const mainnet: {
+    readonly id: 1;
     readonly gatewayChainId: 261131;
     readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
     readonly network: "https://ethereum-rpc.publicnode.com";
@@ -11244,9 +11477,6 @@ export const MainnetConfig: {
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
 };
-
-// @public
-export function matchAclRevert(error: unknown): ZamaError | null;
 
 // @public
 export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
@@ -11265,6 +11495,17 @@ export class MemoryStorage implements GenericStorage {
 
 // @public
 export const memoryStorage: MemoryStorage;
+
+// @public
+export class MutableWalletAccountStore implements WalletAccountStore {
+    constructor(initial?: WalletAccount);
+    // (undocumented)
+    getSnapshot(): WalletAccount | undefined;
+    isReady(): boolean;
+    setSnapshot(next: WalletAccount | undefined): void;
+    // (undocumented)
+    subscribe(listener: WalletAccountListener): () => void;
+}
 
 // @public
 export function nameContract(tokenAddress: Address): {
@@ -11417,7 +11658,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -11432,12 +11673,47 @@ export interface PaginatedResult<T> {
 }
 
 // @public
-export function parseActivityFeed(logs: readonly (RawLog & Partial<ActivityLogMetadata>)[], userAddress: Address): ActivityItem[];
+export interface PendingUnshieldRequest {
+    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapTxHash: Hex;
+}
+
+// Warning: (ae-forgotten-export) The symbol "PermissionSchema" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type Permission = z.infer<typeof PermissionSchema>;
 
 // @public
-export type PublicDecryptResult = Omit<SDK.PublicDecryptResults, "clearValues"> & {
-    clearValues: Readonly<Record<Handle, ClearValueType>>;
-};
+export class Permits {
+    // @internal
+    constructor(opts: {
+        signer: GenericSigner | undefined;
+        provider: GenericProvider;
+        cachingService: CachingService;
+        credentialService: CredentialService | undefined;
+    });
+    clear(): Promise<void>;
+    grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
+    grantPermit(contracts: Address[]): Promise<void>;
+    hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
+    hasPermit(contracts: Address[]): Promise<boolean>;
+    revokePermits(contracts?: Address[]): Promise<void>;
+    warmKeypair(): Promise<void>;
+}
+
+// @public
+export type PublicDecryptResult = PublicDecryptResults;
+
+// @public
+export interface PublicKeyData {
+    // (undocumented)
+    publicKey: Uint8Array;
+    // (undocumented)
+    publicKeyId: string;
+}
+
+// @public
+export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -11564,8 +11840,8 @@ export function rateContract(tokenAddress: Address): {
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -11883,6 +12159,11 @@ export function rateContract(tokenAddress: Address): {
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -11902,6 +12183,11 @@ export function rateContract(tokenAddress: Address): {
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -12257,8 +12543,8 @@ export function rateContract(tokenAddress: Address): {
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -12556,7 +12842,11 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -12574,8 +12864,40 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -12738,44 +13060,48 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
-export class ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address);
+export interface RelayerConfig {
+    readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
+    readonly createWorker?: (chains: FheChain[]) => any;
     // (undocumented)
-    readonly address: Address;
-    allow(): Promise<void>;
-    static allow(...tokens: ReadonlyToken[]): Promise<void>;
-    allowance(wrapper: Address, owner?: Address): Promise<bigint>;
-    balanceOf(owner?: Address): Promise<bigint>;
-    static batchBalancesOf(tokens: ReadonlyToken[], owner?: Address): Promise<BatchBalancesResult>;
-    static batchDecryptBalancesAs(tokens: ReadonlyToken[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner?: Address): Promise<Handle>;
-    decimals(): Promise<number>;
-    decryptBalanceAs(input: {
-        delegatorAddress: Address;
-        owner?: Address;
-    }): Promise<bigint>;
-    protected emit(input: ZamaSDKEventInput): void;
+    readonly type: string;
+}
+
+// @public
+export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
-    protected getAclAddress(): Promise<Address>;
-    getDelegationExpiry(input: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<bigint>;
-    isAllowed(): Promise<boolean>;
-    isConfidential(): Promise<boolean>;
-    isDelegated(params: {
-        delegatorAddress: Address;
-        delegateAddress: Address;
-    }): Promise<boolean>;
-    isWrapper(): Promise<boolean>;
-    name(): Promise<string>;
+    [Symbol.dispose](): void;
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
     // (undocumented)
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
-    revoke(...contractAddresses: Address[]): Promise<void>;
+    get chain(): FheChain;
     // (undocumented)
-    readonly sdk: ZamaSDK;
-    symbol(): Promise<string>;
-    underlyingToken(): Promise<Address>;
+    get chains(): readonly FheChain[];
+    // (undocumented)
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    // (undocumented)
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    // (undocumented)
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    // (undocumented)
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // (undocumented)
+    generateKeypair(): Promise<KeypairType<Hex>>;
+    // (undocumented)
+    getAclAddress(): Promise<Address>;
+    // (undocumented)
+    getPublicKey(): Promise<PublicKeyData | null>;
+    // (undocumented)
+    getPublicParams(bits: number): Promise<PublicParamsData | null>;
+    // (undocumented)
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    // (undocumented)
+    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
+    // (undocumented)
+    switchChain(chainId: number): void;
+    // (undocumented)
+    terminate(): void;
+    // (undocumented)
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -12784,76 +13110,33 @@ export class RelayerRequestFailedError extends ZamaError {
     readonly statusCode: number | undefined;
 }
 
+// Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
 }
 
 // @public
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
-// @public
-export class RelayerWeb implements RelayerSDK, Disposable {
-    [Symbol.dispose](): void;
-    constructor(config: RelayerWebConfig);
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
+// @public (undocumented)
+export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
+
+// @public (undocumented)
+export interface ResolvedChainRelayer {
     // (undocumented)
-    getAclAddress(): Promise<Address>;
-    getPublicKey(): Promise<{
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null>;
-    getPublicParams(bits: number): Promise<{
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null>;
-    get initError(): Error | undefined;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    get status(): RelayerSDKStatus;
-    terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    chain: FheChain;
+    // (undocumented)
+    relayer: RelayerConfig;
 }
 
-// @public
-export interface RelayerWebConfig {
-    fheArtifactCacheTTL?: number;
-    fheArtifactStorage?: GenericStorage;
-    getChainId: () => Promise<number>;
-    logger?: GenericLogger;
-    onStatusChange?: (status: RelayerSDKStatus, error?: Error) => void;
-    security?: RelayerWebSecurityConfig;
-    threads?: number;
-    // (undocumented)
-    transports: Record<number, Partial<SDK.FhevmInstanceConfig>>;
-}
-
-// @public
-export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string;
-    integrityCheck?: boolean;
-}
+// @public (undocumented)
+export function resolveStorage(storage?: GenericStorage | undefined, permitStorage?: GenericStorage | undefined): {
+    storage: GenericStorage;
+    permitStorage: GenericStorage;
+};
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {
@@ -12963,11 +13246,11 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex): Promise<void>;
+export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
-export const SepoliaConfig: {
-    readonly chainId: 11155111;
+export const sepolia: {
+    readonly id: 11155111;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
     readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
@@ -12979,15 +13262,8 @@ export const SepoliaConfig: {
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
 
-// @public (undocumented)
-export interface SessionExpiredEvent extends BaseEvent {
-    reason: "ttl";
-    // (undocumented)
-    type: typeof ZamaSDKEvents.SessionExpired;
-}
-
 // @public
-export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number): {
+export function setOperatorContract(tokenAddress: Address, operator: Address, until?: number): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -13111,8 +13387,8 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -13430,6 +13706,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -13449,6 +13730,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -13804,8 +14090,8 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -14103,7 +14389,11 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -14121,8 +14411,40 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -14261,6 +14583,14 @@ export function setOperatorContract(tokenAddress: Address, spender: Address, tim
     readonly args: readonly [`0x${string}`, number];
 };
 
+// @public (undocumented)
+export interface SetOperatorSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.SetOperatorSubmitted;
+}
+
 // @public
 export interface ShieldCallbacks {
     onApprovalSubmitted?: (txHash: Hex) => void;
@@ -14269,12 +14599,16 @@ export interface ShieldCallbacks {
 
 // @public
 export interface ShieldOptions extends ShieldCallbacks {
-    approvalStrategy?: "max" | "exact" | "skip";
+    approvalStrategy?: ApprovalStrategy;
     to?: Address;
 }
 
+// @public
+export type ShieldPath = "transferAndCall" | "approveAndWrap";
+
 // @public (undocumented)
 export interface ShieldSubmittedEvent extends BaseEvent {
+    shieldPath: ShieldPath;
     // (undocumented)
     txHash: Hex;
     // (undocumented)
@@ -14282,10 +14616,15 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface SignerLifecycleCallbacks {
-    onAccountChange?: (newAddress: Address) => void;
-    onChainChange?: (newChainId: number) => void;
-    onDisconnect?: () => void;
+export class SignerNotConfiguredError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
+}
+
+// @public
+export class SignerRequiredError extends ZamaError {
+    constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions);
+    // (undocumented)
+    readonly operation: string;
 }
 
 // @public
@@ -14298,18 +14637,10 @@ export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
+// Warning: (ae-forgotten-export) The symbol "StoredKeypairSchema" needs to be exported by the entry point index.d.ts
+//
 // @public
-export function sortByBlockNumber(items: readonly ActivityItem[]): ActivityItem[];
-
-// @public
-export interface StoredCredentials {
-    contractAddresses: Address[];
-    durationDays: number;
-    privateKey: Hex;
-    publicKey: Hex;
-    signature: Hex;
-    startTimestamp: number;
-}
+export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -14476,40 +14807,41 @@ export function symbolContract(tokenAddress: Address): {
 };
 
 // @public
-export class Token extends ReadonlyToken {
-    constructor(sdk: ZamaSDK, address: Address, wrapper?: Address);
-    approve(spender: Address, until?: number): Promise<TransactionResult>;
-    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    static batchDelegateDecryption(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
-    static batchRevokeDelegation(input: {
-        tokens: Token[];
-        delegateAddress: Address;
-    }): Promise<Map<Address, TransactionResult | ZamaError>>;
+export class Token {
+    constructor(sdk: ZamaSDK, address: Address);
+    // (undocumented)
+    readonly address: Address;
+    // @internal
+    protected assertConfidentialBalance(amount: bigint): Promise<void>;
+    balanceOf(owner: Address): Promise<bigint>;
+    static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
+    static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
+    confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
-    delegateDecryption(input: {
-        delegateAddress: Address;
-        expirationDate?: Date;
-    }): Promise<TransactionResult>;
-    finalizeUnwrap(burnAmountHandle: Handle): Promise<TransactionResult>;
-    isApproved(spender: Address, holder?: Address): Promise<boolean>;
-    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    revokeDelegation(input: {
-        delegateAddress: Address;
-    }): Promise<TransactionResult>;
-    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
-    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
-    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    decimals(): Promise<number>;
+    decryptBalanceAs(input: {
+        delegatorAddress: Address;
+        accountAddress?: Address;
+    }): Promise<bigint>;
+    // @internal
+    protected emit(input: ZamaSDKEventInput): void;
+    isConfidential(): Promise<boolean>;
+    isOperator(holder: Address, spender: Address): Promise<boolean>;
+    isWrapper(): Promise<boolean>;
+    name(): Promise<string>;
+    // @internal
+    protected readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     // (undocumented)
-    readonly wrapper: Address;
-    // (undocumented)
-    static readonly ZERO_ADDRESS: Address;
+    readonly sdk: ZamaSDK;
+    setOperator(operator: Address, until?: number): Promise<TransactionResult>;
+    // @internal
+    protected submitTransaction(params: {
+        operation: TransactionOperation;
+        config: WriteContractConfig;
+        onSubmitted?: (txHash: Hex) => void;
+    }): Promise<TransactionResult>;
+    symbol(): Promise<string>;
 }
 
 // @public
@@ -14547,1009 +14879,22 @@ export const Topics: {
     readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
     readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrappedFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
+    readonly UnwrapFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: `0x${string}`;
-};
-
-// @public @deprecated
-export function totalSupplyContract(wrapperAddress: Address): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly type: "constructor";
-        readonly inputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "UPGRADE_INTERFACE_VERSION";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "string";
-            readonly internalType: "string";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "acceptOwnership";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialBalanceOf";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialProtocolId";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTotalSupply";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransfer";
-        readonly inputs: readonly [{
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "externalEuint64";
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransfer";
-        readonly inputs: readonly [{
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferAndCall";
-        readonly inputs: readonly [{
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferAndCall";
-        readonly inputs: readonly [{
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "externalEuint64";
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferFrom";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "externalEuint64";
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferFrom";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferFromAndCall";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "externalEuint64";
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "confidentialTransferFromAndCall";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "transferred";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "contractURI";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "string";
-            readonly internalType: "string";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "decimals";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "uint8";
-            readonly internalType: "uint8";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "discloseEncryptedAmount";
-        readonly inputs: readonly [{
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly internalType: "uint64";
-        }, {
-            readonly name: "decryptionProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "finalizeUnwrap";
-        readonly inputs: readonly [{
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }, {
-            readonly name: "burntAmountCleartext";
-            readonly type: "uint64";
-            readonly internalType: "uint64";
-        }, {
-            readonly name: "decryptionProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "initialize";
-        readonly inputs: readonly [{
-            readonly name: "name_";
-            readonly type: "string";
-            readonly internalType: "string";
-        }, {
-            readonly name: "symbol_";
-            readonly type: "string";
-            readonly internalType: "string";
-        }, {
-            readonly name: "contractURI_";
-            readonly type: "string";
-            readonly internalType: "string";
-        }, {
-            readonly name: "underlying_";
-            readonly type: "address";
-            readonly internalType: "contract IERC20";
-        }, {
-            readonly name: "owner_";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "isOperator";
-        readonly inputs: readonly [{
-            readonly name: "holder";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "spender";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bool";
-            readonly internalType: "bool";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "maxTotalSupply";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "name";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "string";
-            readonly internalType: "string";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "onTransferReceived";
-        readonly inputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes4";
-            readonly internalType: "bytes4";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "owner";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "pendingOwner";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "proxiableUUID";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "rate";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "renounceOwnership";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "requestDiscloseEncryptedAmount";
-        readonly inputs: readonly [{
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "setOperator";
-        readonly inputs: readonly [{
-            readonly name: "operator";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "until";
-            readonly type: "uint48";
-            readonly internalType: "uint48";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "supportsInterface";
-        readonly inputs: readonly [{
-            readonly name: "interfaceId";
-            readonly type: "bytes4";
-            readonly internalType: "bytes4";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bool";
-            readonly internalType: "bool";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "symbol";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "string";
-            readonly internalType: "string";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "inferredTotalSupply";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "transferOwnership";
-        readonly inputs: readonly [{
-            readonly name: "newOwner";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "underlying";
-        readonly inputs: readonly [];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "unwrap";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly internalType: "externalEuint64";
-        }, {
-            readonly name: "inputProof";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "unwrap";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "function";
-        readonly name: "unwrapAmount";
-        readonly inputs: readonly [{
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "unwrapRequester";
-        readonly inputs: readonly [{
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-        readonly outputs: readonly [{
-            readonly name: "";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-        readonly stateMutability: "view";
-    }, {
-        readonly type: "function";
-        readonly name: "upgradeToAndCall";
-        readonly inputs: readonly [{
-            readonly name: "newImplementation";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "data";
-            readonly type: "bytes";
-            readonly internalType: "bytes";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "payable";
-    }, {
-        readonly type: "function";
-        readonly name: "wrap";
-        readonly inputs: readonly [{
-            readonly name: "to";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-        readonly outputs: readonly [];
-        readonly stateMutability: "nonpayable";
-    }, {
-        readonly type: "event";
-        readonly name: "AmountDiscloseRequested";
-        readonly inputs: readonly [{
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: true;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "requester";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "AmountDisclosed";
-        readonly inputs: readonly [{
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: true;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "amount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "ConfidentialTransfer";
-        readonly inputs: readonly [{
-            readonly name: "from";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "to";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: true;
-            readonly internalType: "euint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "Initialized";
-        readonly inputs: readonly [{
-            readonly name: "version";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "OperatorSet";
-        readonly inputs: readonly [{
-            readonly name: "holder";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "operator";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "until";
-            readonly type: "uint48";
-            readonly indexed: false;
-            readonly internalType: "uint48";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "OwnershipTransferStarted";
-        readonly inputs: readonly [{
-            readonly name: "previousOwner";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "newOwner";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "OwnershipTransferred";
-        readonly inputs: readonly [{
-            readonly name: "previousOwner";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "newOwner";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "PublicDecryptionVerified";
-        readonly inputs: readonly [{
-            readonly name: "handlesList";
-            readonly type: "bytes32[]";
-            readonly indexed: false;
-            readonly internalType: "bytes32[]";
-        }, {
-            readonly name: "abiEncodedCleartexts";
-            readonly type: "bytes";
-            readonly indexed: false;
-            readonly internalType: "bytes";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly indexed: true;
-            readonly internalType: "bytes32";
-        }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly indexed: true;
-            readonly internalType: "bytes32";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "Upgraded";
-        readonly inputs: readonly [{
-            readonly name: "implementation";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "error";
-        readonly name: "AddressEmptyCode";
-        readonly inputs: readonly [{
-            readonly name: "target";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC1967InvalidImplementation";
-        readonly inputs: readonly [{
-            readonly name: "implementation";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC1967NonPayable";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984InvalidGatewayRequest";
-        readonly inputs: readonly [{
-            readonly name: "requestId";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984InvalidSender";
-        readonly inputs: readonly [{
-            readonly name: "sender";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984TotalSupplyOverflow";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984UnauthorizedCaller";
-        readonly inputs: readonly [{
-            readonly name: "caller";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984UnauthorizedSpender";
-        readonly inputs: readonly [{
-            readonly name: "holder";
-            readonly type: "address";
-            readonly internalType: "address";
-        }, {
-            readonly name: "spender";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984UnauthorizedUseOfEncryptedAmount";
-        readonly inputs: readonly [{
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "user";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984ZeroBalance";
-        readonly inputs: readonly [{
-            readonly name: "holder";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "FailedCall";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "InvalidInitialization";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "InvalidKMSSignatures";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "InvalidUnwrapRequest";
-        readonly inputs: readonly [{
-            readonly name: "unwrapRequestId";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "NotInitializing";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "OwnableInvalidOwner";
-        readonly inputs: readonly [{
-            readonly name: "owner";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "OwnableUnauthorizedAccount";
-        readonly inputs: readonly [{
-            readonly name: "account";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "SafeCastOverflowedUintDowncast";
-        readonly inputs: readonly [{
-            readonly name: "bits";
-            readonly type: "uint8";
-            readonly internalType: "uint8";
-        }, {
-            readonly name: "value";
-            readonly type: "uint256";
-            readonly internalType: "uint256";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "SafeERC20FailedOperation";
-        readonly inputs: readonly [{
-            readonly name: "token";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "SenderNotAllowedToUseHandle";
-        readonly inputs: readonly [{
-            readonly name: "handle";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }, {
-            readonly name: "sender";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "UUPSUnauthorizedCallContext";
-        readonly inputs: readonly [];
-    }, {
-        readonly type: "error";
-        readonly name: "UUPSUnsupportedProxiableUUID";
-        readonly inputs: readonly [{
-            readonly name: "slot";
-            readonly type: "bytes32";
-            readonly internalType: "bytes32";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ZamaProtocolUnsupported";
-        readonly inputs: readonly [];
-    }];
-    readonly functionName: "inferredTotalSupply";
-    readonly args: readonly [];
 };
 
 // @public (undocumented)
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
-    operation: string;
+    operation: TransactionOperation;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
 // @public
 export interface TransactionReceipt {
@@ -15566,6 +14911,32 @@ export interface TransactionResult {
 export class TransactionRevertedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export function transferAndCallContract(tokenAddress: Address, to: Address, amount: bigint, data?: Hex): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "transferAndCall";
+        readonly stateMutability: "nonpayable";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+        }, {
+            readonly name: "value";
+            readonly type: "uint256";
+        }, {
+            readonly name: "data";
+            readonly type: "bytes";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+        }];
+    }];
+    readonly functionName: "transferAndCall";
+    readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
+};
 
 // @public
 export interface TransferCallbacks {
@@ -16745,8 +16116,8 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -17064,6 +16435,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -17083,6 +16459,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -17438,8 +16819,8 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -17737,7 +17118,11 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -17755,8 +17140,40 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -17896,7 +17313,17 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
 };
 
 // @public
-export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): {
+export interface UnwrapFinalizedEvent {
+    readonly cleartextAmount: bigint;
+    readonly encryptedAmount: EncryptedValue;
+    // (undocumented)
+    readonly eventName: "UnwrapFinalized";
+    readonly receiver: Address;
+    readonly unwrapRequestId?: EncryptedValue;
+}
+
+// @public
+export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -18020,8 +17447,8 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "amount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }];
         readonly name: "InvalidUnwrapRequest";
@@ -18339,6 +17766,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly name: "receiver";
             readonly type: "address";
         }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }, {
             readonly indexed: false;
             readonly internalType: "euint64";
             readonly name: "encryptedAmount";
@@ -18358,6 +17790,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly internalType: "address";
             readonly name: "receiver";
             readonly type: "address";
+        }, {
+            readonly indexed: true;
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
         }, {
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -18713,8 +18150,8 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
@@ -19012,7 +18449,11 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
     }, {
@@ -19030,8 +18471,40 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes32";
         }];
         readonly name: "unwrap";
-        readonly outputs: readonly [];
+        readonly outputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
         readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapAmount";
+        readonly outputs: readonly [{
+            readonly internalType: "euint64";
+            readonly name: "";
+            readonly type: "bytes32";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "bytes32";
+            readonly name: "unwrapRequestId";
+            readonly type: "bytes32";
+        }];
+        readonly name: "unwrapRequester";
+        readonly outputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "";
+            readonly type: "address";
+        }];
+        readonly stateMutability: "view";
         readonly type: "function";
     }, {
         readonly inputs: readonly [{
@@ -19171,22 +18644,12 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
-export interface UnwrappedFinalizedEvent {
-    readonly cleartextAmount: bigint;
-    readonly encryptedAmount: Handle;
-    // (undocumented)
-    readonly eventName: "UnwrappedFinalized";
-    readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
-}
-
-// @public
 export interface UnwrappedStartedEvent {
-    readonly burnAmount: Handle;
+    readonly burnAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
     readonly refund: Address;
-    readonly requestedAmount: Handle;
+    readonly requestedAmount: EncryptedValue;
     readonly requestId: bigint;
     readonly returnVal: boolean;
     readonly to: Address;
@@ -19195,11 +18658,11 @@ export interface UnwrappedStartedEvent {
 
 // @public
 export interface UnwrapRequestedEvent {
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -19217,7 +18680,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -19230,6 +18693,48 @@ export interface UserDecryptParams {
     signerAddress: Address;
     // (undocumented)
     startTimestamp: number;
+}
+
+// @public
+export interface WalletAccount {
+    // (undocumented)
+    address: Address;
+    // (undocumented)
+    chainId: number;
+}
+
+// @public
+export interface WalletAccountChange {
+    // (undocumented)
+    next?: WalletAccount;
+    // (undocumented)
+    previous?: WalletAccount;
+}
+
+// @public
+export type WalletAccountListener = (change: WalletAccountChange) => void;
+
+// @public
+export class WalletAccountNotReadyError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
+}
+
+// @public
+export interface WalletAccountStore {
+    getSnapshot(): WalletAccount | undefined;
+    isReady(): boolean;
+    subscribe(onWalletAccountChange: WalletAccountListener): () => void;
+}
+
+// @public
+export class WalletNotConnectedError extends SignerRequiredError {
+    constructor(operation: string, options?: ErrorOptions);
+}
+
+// @public
+export interface WorkerLike {
+    // (undocumented)
+    terminate(): void;
 }
 
 // @public
@@ -20233,6 +19738,21 @@ export interface WrappedEvent {
 }
 
 // @public
+export class WrappedToken extends Token {
+    allowance(owner: Address): Promise<bigint>;
+    approveUnderlying(amount?: bigint): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
+    isPayable(): Promise<boolean>;
+    resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
+    underlying(): Promise<Address>;
+    unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
+    unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<TransactionResult>;
+    unwrapAll(): Promise<TransactionResult>;
+}
+
+// @public
 export class WrappersRegistry {
     constructor(config: WrappersRegistryConfig);
     getAddress(chainId: number): Address | undefined;
@@ -20257,17 +19777,17 @@ export class WrappersRegistry {
     }): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
     // (undocumented)
     listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
-    refresh(): void;
     // (undocumented)
-    readonly signer: GenericSigner;
+    readonly provider: GenericProvider;
+    refresh(): void;
     get ttlMs(): number;
 }
 
 // @public
 export interface WrappersRegistryConfig {
+    provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
-    signer: GenericSigner;
 }
 
 // @public
@@ -20287,6 +19807,66 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
 // @public
+export type ZamaConfig = {
+    readonly chains: readonly FheChain[];
+    readonly relayer: RelayerDispatcher;
+    readonly provider: GenericProvider;
+    readonly signer: GenericSigner | undefined;
+    readonly storage: GenericStorage;
+    readonly permitStorage: GenericStorage;
+    readonly keypairTTL: number;
+    readonly permitTTL: number;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
+
+// @public
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    chains: TChains;
+    keypairTTL?: number;
+    onEvent?: ZamaSDKEventListener;
+    permitStorage?: GenericStorage;
+    permitTTL?: number;
+    registryTTL?: number;
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+    storage?: GenericStorage;
+}
+
+// @public
+export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
+    ethereum: EIP1193Provider;
+    signer?: never;
+    provider?: never;
+} | {
+    signer: Signer;
+    ethereum?: never;
+    provider?: never;
+} | {
+    ethereum: EIP1193Provider;
+    provider: Provider;
+    signer?: never;
+});
+
+// @public
+export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    provider: GenericProvider;
+    signer?: GenericSigner;
+}
+
+// @public
+export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    ethereum?: EIP1193Provider;
+    // (undocumented)
+    publicClient: PublicClient;
+    // (undocumented)
+    walletClient: WalletClient;
+}
+
+// @public
 export class ZamaError extends Error {
     constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
     readonly code: ZamaErrorCode;
@@ -20297,8 +19877,7 @@ export const ZamaErrorCode: {
     readonly SigningRejected: "SIGNING_REJECTED"; /** Wallet signature failed for a reason other than rejection. */
     readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
     readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
-    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** ERC-20 approval transaction failed. */
-    readonly ApprovalFailed: "APPROVAL_FAILED"; /** On-chain transaction reverted. */
+    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
     readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
     readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
     readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
@@ -20318,7 +19897,11 @@ export const ZamaErrorCode: {
     readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
     readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
-    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
+    readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
+    readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED"; /** Operation requires a connected wallet account. */
+    readonly WalletNotConnected: "WALLET_NOT_CONNECTED"; /** Wallet account discovery is still resolving. */
+    readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
 };
 
 // @public
@@ -20327,50 +19910,33 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaSDKConfig);
-    allow(contractAddresses: Address[]): Promise<void>;
-    readonly cache: DecryptCache;
-    createReadonlyToken(address: Address): ReadonlyToken;
-    createToken(address: Address, wrapper?: Address): Token;
+    constructor(config: ZamaConfig);
+    createToken(address: Address): Token;
+    createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // (undocumented)
-    readonly credentials: CredentialsManager;
-    // (undocumented)
-    readonly delegatedCredentials: DelegatedCredentialsManager;
+    readonly decryption: Decryption;
+    readonly delegations: Delegations;
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // @internal
+    onWalletAccountChange(listener: WalletAccountListener): () => void;
+    readonly permits: Permits;
+    // (undocumented)
+    readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
     // (undocumented)
-    readonly relayer: RelayerSDK;
-    revokeSession(): Promise<void>;
+    readonly relayer: RelayerDispatcher;
     // (undocumented)
-    readonly sessionStorage: GenericStorage;
-    // (undocumented)
-    readonly signer: GenericSigner;
+    readonly signer: GenericSigner | undefined;
     // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
 }
 
 // @public
-export interface ZamaSDKConfig {
-    keypairTTL?: number;
-    onEvent?: ZamaSDKEventListener;
-    registryAddresses?: Record<number, Address>;
-    registryTTL?: number;
-    relayer: RelayerSDK;
-    sessionStorage?: GenericStorage;
-    sessionTTL?: number | "infinite";
-    signer: GenericSigner;
-    signerLifecycleCallbacks?: SignerLifecycleCallbacks;
-    storage: GenericStorage;
-}
-
-// @public
-export type ZamaSDKEvent = CredentialsLoadingEvent | CredentialsCachedEvent | CredentialsExpiredEvent | CredentialsCreatingEvent | CredentialsCreatedEvent | CredentialsRevokedEvent | CredentialsPersistFailedEvent | CredentialsAllowedEvent | CredentialsCorruptedEvent | SessionExpiredEvent | EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | ApproveSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -20380,16 +19946,6 @@ export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
 // @public
 export const ZamaSDKEvents: {
-    readonly CredentialsLoading: "credentials:loading";
-    readonly CredentialsCached: "credentials:cached";
-    readonly CredentialsExpired: "credentials:expired";
-    readonly CredentialsCreating: "credentials:creating";
-    readonly CredentialsCreated: "credentials:created";
-    readonly CredentialsRevoked: "credentials:revoked";
-    readonly CredentialsPersistFailed: "credentials:persist_failed";
-    readonly CredentialsAllowed: "credentials:allowed";
-    readonly CredentialsCorrupted: "credentials:corrupted";
-    readonly SessionExpired: "session:expired";
     readonly EncryptStart: "encrypt:start";
     readonly EncryptEnd: "encrypt:end";
     readonly EncryptError: "encrypt:error";
@@ -20400,7 +19956,7 @@ export const ZamaSDKEvents: {
     readonly ShieldSubmitted: "shield:submitted";
     readonly TransferSubmitted: "transfer:submitted";
     readonly TransferFromSubmitted: "transferFrom:submitted";
-    readonly ApproveSubmitted: "approve:submitted";
+    readonly SetOperatorSubmitted: "setOperator:submitted";
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
@@ -20418,6 +19974,13 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
+
+// Warnings were encountered during analysis:
+//
+// dist/esm/index-BFGqQkab.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BFGqQkab.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BFGqQkab.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BFGqQkab.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -24,15 +24,18 @@ import type {
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "../relayer-sdk.types";
 import {
@@ -49,7 +52,7 @@ import {
   type FheTypeId,
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
-import type { CleartextConfig } from "./types";
+import type { FheChain } from "../../chains/types";
 import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
 
 const ACL_ABI = parseAbi([
@@ -87,8 +90,8 @@ const FORBIDDEN_CHAIN_IDS = new Set<number>([mainnet.id, sepolia.id]);
 const EBOOL_ID: FheTypeId = 0;
 const EADDRESS_ID: FheTypeId = 7;
 
-function decodeClearValueType(handle: Handle, rawValue: bigint): ClearValueType {
-  const typeByte = Number((BigInt(handle) >> 8n) & 0xffn);
+function decodeClearValue(encryptedValue: EncryptedValue, rawValue: bigint): ClearValue {
+  const typeByte = Number((BigInt(encryptedValue) >> 8n) & 0xffn);
   if (typeByte === EBOOL_ID) {
     return rawValue !== 0n;
   }
@@ -141,15 +144,20 @@ function normalizeEncryptValue(entry: EncryptParams["values"][number]): {
 
 export class RelayerCleartext implements RelayerSDK, Disposable {
   readonly #client: PublicClient;
-  readonly #config: CleartextConfig;
+  readonly #config: FheChain;
   readonly kmsSigner: PrivateKeyAccount;
   readonly inputSigner: PrivateKeyAccount;
 
-  constructor(config: CleartextConfig) {
-    if (FORBIDDEN_CHAIN_IDS.has(config.chainId)) {
+  constructor(config: FheChain) {
+    if (FORBIDDEN_CHAIN_IDS.has(config.id)) {
       throw new ConfigurationError(
-        `Cleartext mode is not allowed on chain ${config.chainId}. ` +
+        `Cleartext mode is not allowed on chain ${config.id}. ` +
           `It is intended for local development and testing only.`,
+      );
+    }
+    if (!config.executorAddress) {
+      throw new ConfigurationError(
+        `Cleartext transport requires an executorAddress for chain ${config.id}.`,
       );
     }
     this.#client = createPublicClient({
@@ -179,16 +187,16 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   ): Promise<EIP712TypedData> {
     return {
       domain: USER_DECRYPT_EIP712.domain(
-        this.#config.chainId,
-        this.#config.verifyingContractAddressDecryption,
-      ) as EIP712TypedData["domain"],
+        this.#config.id,
+        this.#config.verifyingContractAddressDecryption as Address,
+      ),
       types: USER_DECRYPT_TYPES,
       primaryType: "UserDecryptRequestVerification",
       message: {
         publicKey,
         contractAddresses,
-        startTimestamp: BigInt(startTimestamp),
-        durationDays: BigInt(durationDays),
+        startTimestamp: String(startTimestamp),
+        durationDays: String(durationDays),
         extraData: "0x00",
       },
     };
@@ -210,8 +218,8 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         ciphertextBlob,
         index,
         fheType,
-        this.#config.aclContractAddress,
-        BigInt(this.#config.chainId),
+        this.#config.aclContractAddress as Address,
+        BigInt(this.#config.id),
       ),
     );
 
@@ -221,7 +229,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const signature = await this.inputSigner.signTypedData({
       domain: INPUT_VERIFICATION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressInputVerification,
+        this.#config.verifyingContractAddressInputVerification as Address,
       ),
       types: {
         CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
@@ -231,7 +239,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         ctHandles: handles,
         userAddress,
         contractAddress,
-        contractChainId: BigInt(this.#config.chainId),
+        contractChainId: BigInt(this.#config.id),
         extraData: cleartextBytes,
       },
     });
@@ -252,38 +260,40 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     };
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#assertDecryptAuthorization(
-      params.handles,
+      params.encryptedValues,
       getAddress(params.signerAddress),
       getAddress(params.contractAddress),
       "User",
       "user decrypt",
     );
 
-    return this.#decryptHandles(params.handles);
+    return this.#decryptHandles(params.encryptedValues);
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
-    const normalizedHandles = handles;
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+    const normalizedHandles = encryptedValues;
 
     const allowedResults = await Promise.all(
-      normalizedHandles.map((handle) => this.#isAllowedForDecryption(handle)),
+      normalizedHandles.map((encryptedValue) => this.#isAllowedForDecryption(encryptedValue)),
     );
     const unauthorizedIndex = allowedResults.findIndex((isAllowed) => !isAllowed);
     if (unauthorizedIndex !== -1) {
       throw new DecryptionFailedError(
-        `Handle ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
+        `Encrypted value ${normalizedHandles[unauthorizedIndex]!} is not allowed for public decryption`,
       );
     }
 
     const orderedValues = await Promise.all(
-      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+      normalizedHandles.map((encryptedValue) => this.#readPlaintext(encryptedValue)),
     );
     const clearValues: PublicDecryptResult["clearValues"] = Object.fromEntries(
-      normalizedHandles.map((handle, index) => [
-        handle,
-        decodeClearValueType(handle, orderedValues[index]!),
+      normalizedHandles.map((encryptedValue, index) => [
+        encryptedValue,
+        decodeClearValue(encryptedValue, orderedValues[index]!),
       ]),
     );
 
@@ -292,8 +302,8 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     const signature = await this.kmsSigner.signTypedData({
       domain: KMS_DECRYPTION_EIP712.domain(
         this.#config.gatewayChainId,
-        this.#config.verifyingContractAddressDecryption,
-      ) as KmsPublicDecryptEIP712Type["domain"],
+        this.#config.verifyingContractAddressDecryption as Address,
+      ),
       types: KMS_DECRYPTION_TYPES,
       primaryType: "PublicDecryptVerification",
       message: {
@@ -320,7 +330,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
     const message: KmsDelegatedUserDecryptEIP712Type["message"] = {
-      publicKey: publicKey as KmsDelegatedUserDecryptEIP712Type["message"]["publicKey"],
+      publicKey,
       contractAddresses,
       delegatorAddress: getAddress(delegatorAddress),
       startTimestamp: String(startTimestamp),
@@ -330,9 +340,9 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     return {
       domain: DELEGATED_USER_DECRYPT_EIP712.domain(
-        BigInt(this.#config.chainId),
-        this.#config.verifyingContractAddressDecryption,
-      ) as KmsDelegatedUserDecryptEIP712Type["domain"],
+        this.#config.id,
+        this.#config.verifyingContractAddressDecryption as Address,
+      ),
       types: DELEGATED_USER_DECRYPT_TYPES,
       primaryType: "DelegatedUserDecryptRequestVerification",
       message,
@@ -341,33 +351,37 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#assertDelegation(
-      params.handles,
+      params.encryptedValues,
       getAddress(params.delegatorAddress),
       getAddress(params.delegateAddress),
       getAddress(params.contractAddress),
     );
 
-    return this.#decryptHandles(params.handles);
+    return this.#decryptHandles(params.encryptedValues);
   }
 
   async requestZKProofVerification(_zkProof: ZKProofLike): Promise<InputProofBytesType> {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
-  async getPublicKey(): Promise<{ publicKeyId: string; publicKey: Uint8Array } | null> {
-    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
+  async getPublicKey(): Promise<PublicKeyData | null> {
+    return {
+      publicKeyId: "mock-public-key-id",
+      publicKey: new Uint8Array([32]),
+    };
   }
 
-  async getPublicParams(
-    _bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null> {
-    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
+  async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
+    return {
+      publicParams: new Uint8Array([32]),
+      publicParamsId: "mock-public-params-id",
+    };
   }
 
   async getAclAddress(): Promise<Address> {
-    return this.#config.aclContractAddress;
+    return this.#config.aclContractAddress as Address;
   }
 
   terminate(): void {
@@ -380,22 +394,22 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async #decryptHandles(
-    normalizedHandles: Handle[],
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+    normalizedEncryptedValues: EncryptedValue[],
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     const values = await Promise.all(
-      normalizedHandles.map((handle) => this.#readPlaintext(handle)),
+      normalizedEncryptedValues.map((encryptedValue) => this.#readPlaintext(encryptedValue)),
     );
 
     return Object.fromEntries(
-      normalizedHandles.map((handle, index) => [
-        handle,
-        decodeClearValueType(handle, values[index]!),
+      normalizedEncryptedValues.map((encryptedValue, index) => [
+        encryptedValue,
+        decodeClearValue(encryptedValue, values[index]!),
       ]),
     );
   }
 
   async #assertDecryptAuthorization(
-    normalizedHandles: Handle[],
+    normalizedEncryptedValues: EncryptedValue[],
     actorAddress: Address,
     contractAddress: Address,
     actorLabel: "User" | "Delegator",
@@ -408,78 +422,78 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     }
 
     const results = await Promise.all(
-      normalizedHandles.flatMap((handle) => [
-        this.#persistAllowed(handle, actorAddress),
-        this.#persistAllowed(handle, contractAddress),
+      normalizedEncryptedValues.flatMap((encryptedValue) => [
+        this.#persistAllowed(encryptedValue, actorAddress),
+        this.#persistAllowed(encryptedValue, contractAddress),
       ]),
     );
 
-    for (let i = 0; i < normalizedHandles.length; i++) {
+    for (let i = 0; i < normalizedEncryptedValues.length; i++) {
       const actorAllowed = results[i * 2];
       const contractAllowed = results[i * 2 + 1];
       if (!actorAllowed) {
         throw new DecryptionFailedError(
-          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of encrypted value ${normalizedEncryptedValues[i]!}`,
         );
       }
       if (!contractAllowed) {
         throw new DecryptionFailedError(
-          `Contract ${contractAddress} is not authorized for ${operationLabel} of handle ${normalizedHandles[i]!}`,
+          `Contract ${contractAddress} is not authorized for ${operationLabel} of encrypted value ${normalizedEncryptedValues[i]!}`,
         );
       }
     }
   }
 
   async #assertDelegation(
-    handles: Handle[],
+    encryptedValues: EncryptedValue[],
     delegatorAddress: Address,
     delegateAddress: Address,
     contractAddress: Address,
   ): Promise<void> {
     const results = await Promise.all(
-      handles.map((handle) =>
+      encryptedValues.map((encryptedValue) =>
         this.#client.readContract({
-          address: this.#config.aclContractAddress,
+          address: this.#config.aclContractAddress as Address,
           abi: ACL_ABI,
           functionName: "isHandleDelegatedForUserDecryption",
-          args: [delegatorAddress, delegateAddress, contractAddress, handle],
+          args: [delegatorAddress, delegateAddress, contractAddress, encryptedValue],
         }),
       ),
     );
 
-    for (let i = 0; i < handles.length; i++) {
+    for (let i = 0; i < encryptedValues.length; i++) {
       if (!results[i]) {
         throw new DecryptionFailedError(
-          `Handle ${handles[i]!} is not delegated for user decryption`,
+          `Encrypted value ${encryptedValues[i]!} is not delegated for user decryption`,
         );
       }
     }
   }
 
-  async #persistAllowed(handle: Handle, account: Address): Promise<boolean> {
+  async #persistAllowed(encryptedValue: EncryptedValue, account: Address): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "persistAllowed",
-      args: [handle, account],
+      args: [encryptedValue, account],
     });
   }
 
-  async #isAllowedForDecryption(handle: Handle): Promise<boolean> {
+  async #isAllowedForDecryption(encryptedValue: EncryptedValue): Promise<boolean> {
     return this.#client.readContract({
-      address: this.#config.aclContractAddress,
+      address: this.#config.aclContractAddress as Address,
       abi: ACL_ABI,
       functionName: "isAllowedForDecryption",
-      args: [handle],
+      args: [encryptedValue],
     });
   }
 
-  async #readPlaintext(handle: Handle): Promise<bigint> {
+  async #readPlaintext(encryptedValue: EncryptedValue): Promise<bigint> {
     return this.#client.readContract({
       address: this.#config.executorAddress as Address,
       abi: EXECUTOR_ABI,
       functionName: "plaintexts",
-      args: [handle],
+      args: [encryptedValue],
     });
   }
 }

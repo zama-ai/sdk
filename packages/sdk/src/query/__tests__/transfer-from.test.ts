@@ -3,7 +3,7 @@ import { confidentialTransferFromMutationOptions } from "../transfer-from";
 
 describe("confidentialTransferFromMutationOptions", () => {
   test("delegates transferFrom", async ({ mockToken }) => {
-    const options = confidentialTransferFromMutationOptions(mockToken);
+    const options = confidentialTransferFromMutationOptions(mockToken, mockToken.address);
 
     expect(options.mutationKey).toEqual(["zama.confidentialTransferFrom", mockToken.address]);
     await options.mutationFn({

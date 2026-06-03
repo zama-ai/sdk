@@ -5,7 +5,7 @@ description: Transfer confidential tokens on behalf of an owner who approved you
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialApprove`](/reference/react/useConfidentialApprove) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](/reference/react/useConfidentialBalance) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](/reference/react/useConfidentialSetOperator) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](/reference/react/useConfidentialBalance) cache on success.
 
 ## Import
 
@@ -22,9 +22,7 @@ import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
 function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom({
-    tokenAddress,
-  });
+  const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom(tokenAddress);
 
   async function handleTransfer() {
     const { txHash, receipt } = await transferFrom({
@@ -47,28 +45,28 @@ function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 {% endtab %}
@@ -76,23 +74,17 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UseConfidentialTransferFromParameters } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Contract address of the confidential ERC-20 token.
+Contract address of the confidential token. Passed positionally as the first argument.
 
 {% tabs %}
 {% tab title="component.tsx" %}
 
 ```tsx
-const { mutateAsync: transferFrom } = useConfidentialTransferFrom({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xToken");
 ```
 
 {% endtab %}
@@ -140,10 +132,6 @@ await transferFrom({
 
 ## Return Type
 
-```ts
-import { type UseConfidentialTransferFromReturnType } from "@zama-fhe/react-sdk";
-```
-
 The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 - **`txHash`** -- Transaction hash submitted to the network.
@@ -154,6 +142,6 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 ## Related
 
 - [useConfidentialTransfer](/reference/react/useConfidentialTransfer) -- direct transfer (no operator)
-- [useConfidentialApprove](/reference/react/useConfidentialApprove) -- grant operator approval
+- [useConfidentialSetOperator](/reference/react/useConfidentialSetOperator) -- grant operator approval
 - [Operator Approvals guide](/guides/operator-approvals)
 - [useConfidentialBalance](/reference/react/useConfidentialBalance) -- auto-invalidated on success

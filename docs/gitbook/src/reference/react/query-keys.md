@@ -12,14 +12,14 @@ Mutations auto-invalidate related caches, so you only need `zamaQueryKeys` for a
 ## Import
 
 ```ts
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
 ## Usage
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
@@ -58,13 +58,13 @@ Multi-token batch balances.
 | `.all`                  | All batch balance queries                 |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
 
-### `zamaQueryKeys.isAllowed`
+### `zamaQueryKeys.hasPermit`
 
-Session signature status.
+Permit coverage status.
 
-| Key    | Scope                       |
-| ------ | --------------------------- |
-| `.all` | All session-allowed queries |
+| Key    | Scope                   |
+| ------ | ----------------------- |
+| `.all` | All `hasPermit` queries |
 
 ### `zamaQueryKeys.underlyingAllowance`
 
@@ -75,16 +75,6 @@ ERC-20 allowance of the underlying token for the wrapper.
 | `.all`                         | All allowance queries       |
 | `.token(addr)`                 | Allowances for one token    |
 | `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
-
-### `zamaQueryKeys.activityFeed`
-
-Classified activity feed.
-
-| Key                                           | Scope                   |
-| --------------------------------------------- | ----------------------- |
-| `.all`                                        | All feed queries        |
-| `.token(addr)`                                | Feed for one token      |
-| `.scope(addr, userAddress, logsKey, decrypt)` | Fully scoped feed query |
 
 ### `zamaQueryKeys.wrappersRegistry`
 
@@ -103,17 +93,18 @@ On-chain wrappers registry queries.
 | `.isConfidentialTokenValid(registryAddr, confidentialAddr)` | Validity check                             |
 | `.listPairs(registryAddr, page, pageSize, metadata)`        | Paginated listing                          |
 
-### `decryptionKeys`
+### `zamaQueryKeys.decryption`
 
 Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
 
 ```ts
-import { decryptionKeys } from "@zama-fhe/react-sdk";
+import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key              | Scope                            |
-| ---------------- | -------------------------------- |
-| `.value(handle)` | Single decrypted value by handle |
+| Key                                                   | Scope                                          |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| `.encryptedValue(encryptedValue, contractAddress?)`   | Single clear value by encrypted value          |
+| `.encryptedInputs(encryptedInputs[], walletAccount?)` | Multiple clear values by encrypted-input array |
 
 ## Common patterns
 

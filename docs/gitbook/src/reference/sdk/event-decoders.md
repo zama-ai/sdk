@@ -1,11 +1,11 @@
 ---
 title: Event decoders
-description: Decode on-chain logs into typed event objects and build activity feeds.
+description: Decode on-chain logs into typed event objects.
 ---
 
 # Event decoders
 
-Utilities for decoding raw `eth_getLogs` entries into typed event objects and assembling user-facing activity feeds.
+Utilities for decoding raw `eth_getLogs` entries into typed event objects.
 
 ## Import
 
@@ -16,7 +16,7 @@ import {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
-  decodeUnwrappedFinalized,
+  decodeUnwrapFinalized,
   decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
@@ -28,11 +28,6 @@ import {
   decodeAclEvents,
   findDelegatedForUserDecryption,
   findRevokedDelegationForUserDecryption,
-  // Activity feed
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
 } from "@zama-fhe/sdk";
 ```
 
@@ -40,7 +35,7 @@ import {
 
 `(logs: Log[]) => DecodedEvent[]`
 
-Decodes an array of raw log entries into typed event objects. Each returned event has a `.type` discriminator.
+Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -51,7 +46,7 @@ const logs = await publicClient.getLogs({
 const events = decodeOnChainEvents(logs);
 
 for (const event of events) {
-  switch (event.type) {
+  switch (event.eventName) {
     case "ConfidentialTransfer":
       console.log(event.from, event.to, event.encryptedAmount);
       break;
@@ -59,7 +54,10 @@ for (const event of events) {
       console.log(event.account, event.amount);
       break;
     case "UnwrapRequested":
-      console.log(event.account, event.amount);
+      console.log(event.receiver, event.unwrapRequestId);
+      break;
+    case "UnwrapFinalized":
+      console.log(event.receiver, event.cleartextAmount);
       break;
   }
 }
@@ -69,7 +67,7 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has a `.type` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrappedFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
 
 ## TOKEN_TOPICS
 
@@ -90,13 +88,13 @@ const logs = await publicClient.getLogs({
 
 Each decoder takes a single log entry and returns a typed event object, or `null` if the log does not match.
 
-| Decoder                           | Event type             | Description                         |
-| --------------------------------- | ---------------------- | ----------------------------------- |
-| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)           |
-| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated                    |
-| `decodeUnwrappedFinalized(log)`   | `UnwrappedFinalized`   | Unwrap completed (finalized)        |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started           |
+| Decoder                           | Event type             | Description                                  |
+| --------------------------------- | ---------------------- | -------------------------------------------- |
+| `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts          |
+| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
+| `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
+| `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
+| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";
@@ -140,7 +138,7 @@ import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 const unwrapEvent = findUnwrapRequested(receipt.logs);
 if (unwrapEvent) {
-  console.log(`Unwrap requested for ${unwrapEvent.amount}`);
+  console.log(`Unwrap requested for ${unwrapEvent.encryptedAmount}`);
 }
 ```
 
@@ -226,101 +224,7 @@ const logs = await publicClient.getLogs({
 ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEvents`. They are emitted by the ACL contract, not by token contracts. Use `ACL_TOPICS` and `decodeAclEvents` separately.
 {% endhint %}
 
-## Activity feed utilities
-
-Build a complete activity feed from raw logs with encrypted amount decryption.
-
-### parseActivityFeed
-
-`(logs: Log[], userAddress: Address) => ActivityItem[]`
-
-Parses raw logs into classified activity items (transfers, shields, unshields) relative to the given user address. Items include direction ("sent", "received", "shielded", "unshielded") and raw encrypted handles.
-
-```ts
-const items = parseActivityFeed(logs, userAddress);
-// [{ type: "transfer", direction: "sent", handle: "0x...", ... }, ...]
-```
-
-| Parameter     | Type      | Description                         |
-| ------------- | --------- | ----------------------------------- |
-| `logs`        | `Log[]`   | Raw log entries                     |
-| `userAddress` | `Address` | User address to determine direction |
-
-### extractEncryptedHandles
-
-`(items: ActivityItem[]) => bigint[]`
-
-Extracts all unique encrypted handles from activity items for batch decryption.
-
-```ts
-const handles = extractEncryptedHandles(items);
-```
-
-### applyDecryptedValues
-
-`(items: ActivityItem[], decrypted: Readonly<Record<Handle, ClearValueType>>) => ActivityItem[]`
-
-Attaches decrypted amounts to activity items. Accepts the record returned directly from `sdk.userDecrypt()`.
-
-```ts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-// Each item now has .amount.decryptedValue: bigint
-```
-
-| Parameter   | Type                                       | Description                                                     |
-| ----------- | ------------------------------------------ | --------------------------------------------------------------- |
-| `items`     | `ActivityItem[]`                           | Items from `parseActivityFeed`                                  |
-| `decrypted` | `Readonly<Record<Handle, ClearValueType>>` | Decrypted values keyed by handle, e.g. from `sdk.userDecrypt()` |
-
-### sortByBlockNumber
-
-`(items: ActivityItem[]) => ActivityItem[]`
-
-Returns a new array sorted by block number, newest first.
-
-```ts
-const sorted = sortByBlockNumber(enrichedItems);
-```
-
-## Full pipeline example
-
-```ts
-import {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-  TOKEN_TOPICS,
-} from "@zama-fhe/sdk";
-
-// 1. Fetch logs
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-  fromBlock: startBlock,
-  toBlock: "latest",
-});
-
-// 2. Parse into classified activity items
-const items = parseActivityFeed(logs, userAddress);
-
-// 3. Extract handles for decryption
-const handles = extractEncryptedHandles(items);
-
-// 4. Decrypt all handles in one batch via sdk.userDecrypt
-const decrypted = await sdk.userDecrypt(
-  handles.map((handle) => ({ handle, contractAddress: tokenAddress })),
-);
-
-// 5. Attach decrypted amounts
-const enrichedItems = applyDecryptedValues(items, decrypted);
-
-// 6. Sort newest first
-const feed = sortByBlockNumber(enrichedItems);
-```
-
 ## Related
 
-- [Activity Feeds guide](/guides/activity-feeds) — activity feed usage in context
 - [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
 - [Token](/reference/sdk/Token) — high-level API for token operations

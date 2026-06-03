@@ -1,11 +1,11 @@
-import { describe, it, expect } from "../test-fixtures";
+import { describe, test, expect } from "../test-fixtures";
 import { getAddress, keccak256, toHex, toBytes, type Address, type Hex } from "viem";
 import {
   Topics,
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
-  decodeUnwrappedFinalized,
+  decodeUnwrapFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
@@ -32,7 +32,7 @@ describe("Topic constants match keccak256", () => {
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
     ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
-    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrappedFinalized],
+    ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
     [
       "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
       Topics.UnwrappedStarted,
@@ -40,7 +40,7 @@ describe("Topic constants match keccak256", () => {
   ];
 
   for (const [sig, expected] of cases) {
-    it(sig, () => {
+    test(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
     });
   }
@@ -56,7 +56,7 @@ describe("decodeConfidentialTransfer", () => {
     data: "0x",
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log", () => {
     const event = decodeConfidentialTransfer(log);
     expect(event).toEqual({
       eventName: "ConfidentialTransfer",
@@ -66,7 +66,7 @@ describe("decodeConfidentialTransfer", () => {
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeConfidentialTransfer({
         ...log,
@@ -75,7 +75,7 @@ describe("decodeConfidentialTransfer", () => {
     ).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     expect(
       decodeConfidentialTransfer({
         ...log,
@@ -94,7 +94,7 @@ describe("decodeWrapped", () => {
     data: `0x${word(amountIn.toString(16))}`,
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log", () => {
     const event = decodeWrapped(log);
     expect(event).toEqual({
       eventName: "Wrapped",
@@ -103,7 +103,7 @@ describe("decodeWrapped", () => {
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeWrapped({
         ...log,
@@ -116,24 +116,24 @@ describe("decodeWrapped", () => {
 describe("decodeUnwrapRequested", () => {
   const receiver = addr("1234");
   const amount = bytes32("ff".repeat(32));
-  const requestId = bytes32("ff".repeat(32));
+  const unwrapRequestId = bytes32("aa".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.UnwrapRequested, topic("1234"), requestId],
+    topics: [Topics.UnwrapRequested, topic("1234"), unwrapRequestId],
     data: `0x${word("ff".repeat(32))}`,
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log with unwrapRequestId", () => {
     const event = decodeUnwrapRequested(log);
     expect(event).toEqual({
       eventName: "UnwrapRequested",
       receiver,
-      unwrapRequestId: requestId,
+      unwrapRequestId,
       encryptedAmount: amount,
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeUnwrapRequested({
         ...log,
@@ -143,33 +143,31 @@ describe("decodeUnwrapRequested", () => {
   });
 });
 
-describe("decodeUnwrappedFinalized", () => {
-  // UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId,
-  //                 bytes32 encryptedAmount, uint64 cleartextAmount)
+describe("decodeUnwrapFinalized", () => {
   const receiver = addr("aabb");
   const encryptedHandle = bytes32("cd".repeat(32));
-  const requestId = bytes32("cd".repeat(32));
+  const unwrapRequestId = bytes32("ab".repeat(32));
   const cleartextAmount = 450n;
 
   const log: RawLog = {
-    topics: [Topics.UnwrappedFinalized, topic(receiver.slice(2)), requestId],
+    topics: [Topics.UnwrapFinalized, topic(receiver.slice(2)), unwrapRequestId],
     data: `0x${word(encryptedHandle.slice(2))}${word(cleartextAmount.toString(16))}`,
   };
 
-  it("decodes valid log", () => {
-    const event = decodeUnwrappedFinalized(log);
+  test("decodes valid log with unwrapRequestId", () => {
+    const event = decodeUnwrapFinalized(log);
     expect(event).toEqual({
-      eventName: "UnwrappedFinalized",
+      eventName: "UnwrapFinalized",
       receiver,
-      unwrapRequestId: requestId,
+      unwrapRequestId,
       encryptedAmount: encryptedHandle,
       cleartextAmount,
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
-      decodeUnwrappedFinalized({
+      decodeUnwrapFinalized({
         ...log,
         topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
@@ -195,7 +193,7 @@ describe("decodeUnwrappedStarted", () => {
     data: `0x${word("1")}${word("beef")}${word("11".repeat(32))}${word("22".repeat(32))}`,
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log", () => {
     const event = decodeUnwrappedStarted(log);
     expect(event).toEqual({
       eventName: "UnwrappedStarted",
@@ -209,7 +207,7 @@ describe("decodeUnwrappedStarted", () => {
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeUnwrappedStarted({
         ...log,
@@ -220,16 +218,26 @@ describe("decodeUnwrappedStarted", () => {
 });
 
 describe("decodeOnChainEvent", () => {
-  it("dispatches to correct decoder", () => {
+  test("dispatches to correct decoder", () => {
     const log: RawLog = {
-      topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ff".repeat(32))],
+      topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
       data: `0x${word("ff".repeat(32))}`,
     };
     const event = decodeOnChainEvent(log);
     expect(event?.eventName).toBe("UnwrapRequested");
   });
 
-  it("returns null for unknown event", () => {
+  test("decodes upgraded UnwrapFinalized logs with the canonical event name", () => {
+    const log: RawLog = {
+      topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
+      data: `0x${word("ff".repeat(32))}${word("1")}`,
+    };
+    const event = decodeOnChainEvent(log);
+    expect(event?.eventName).toBe("UnwrapFinalized");
+    expect("unwrapRequestId" in event! && event.unwrapRequestId).toBe(bytes32("aa".repeat(32)));
+  });
+
+  test("returns null for unknown event", () => {
     const log: RawLog = {
       topics: [topic("00".repeat(32))],
       data: "0x",
@@ -239,10 +247,10 @@ describe("decodeOnChainEvent", () => {
 });
 
 describe("decodeOnChainEvents", () => {
-  it("decodes array of mixed logs, skipping unknown", () => {
+  test("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ff".repeat(32))],
+        topics: [Topics.UnwrapRequested, topic("abcd"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
       { topics: ["0xunknown" as Hex], data: "0x" as Hex },
@@ -255,16 +263,21 @@ describe("decodeOnChainEvents", () => {
         ],
         data: "0x",
       },
+      {
+        topics: [Topics.UnwrapFinalized, topic("abcd"), bytes32("aa".repeat(32))],
+        data: `0x${word("11".repeat(32))}${word("1")}`,
+      },
     ];
     const events = decodeOnChainEvents(logs);
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(3);
     expect(events[0].eventName).toBe("UnwrapRequested");
     expect(events[1].eventName).toBe("ConfidentialTransfer");
+    expect(events[2].eventName).toBe("UnwrapFinalized");
   });
 });
 
 describe("findUnwrapRequested", () => {
-  it("finds first UnwrapRequested in mixed logs", () => {
+  test("finds first UnwrapRequested in mixed logs", () => {
     const logs: RawLog[] = [
       {
         topics: [
@@ -276,22 +289,23 @@ describe("findUnwrapRequested", () => {
         data: "0x",
       },
       {
-        topics: [Topics.UnwrapRequested, topic("1234"), bytes32("ff".repeat(32))],
+        topics: [Topics.UnwrapRequested, topic("1234"), bytes32("ab".repeat(32))],
         data: `0x${word("ff".repeat(32))}`,
       },
     ];
     const event = findUnwrapRequested(logs);
     expect(event?.eventName).toBe("UnwrapRequested");
     expect(event?.receiver).toBe(addr("1234"));
+    expect(event?.unwrapRequestId).toBe(bytes32("ab".repeat(32)));
   });
 
-  it("returns null when none found", () => {
+  test("returns null when none found", () => {
     expect(findUnwrapRequested([])).toBeNull();
   });
 });
 
 describe("findWrapped", () => {
-  it("finds first Wrapped in mixed logs", () => {
+  test("finds first Wrapped in mixed logs", () => {
     const logs: RawLog[] = [
       {
         topics: [Topics.Wrapped, topic("dead")],
@@ -303,7 +317,7 @@ describe("findWrapped", () => {
     expect(event?.amountIn).toBe(2000n);
   });
 
-  it("returns null when none found", () => {
+  test("returns null when none found", () => {
     expect(findWrapped([])).toBeNull();
   });
 });
@@ -325,7 +339,7 @@ describe("AclTopics constants match keccak256", () => {
   ];
 
   for (const [sig, expected] of cases) {
-    it(sig, () => {
+    test(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
     });
   }
@@ -341,7 +355,7 @@ describe("decodeDelegatedForUserDecryption", () => {
     data: `0x${word("ccc3")}${word("5")}${word("0")}${word("3e8")}`,
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log", () => {
     const event = decodeDelegatedForUserDecryption(log);
     expect(event).toEqual({
       eventName: "DelegatedForUserDecryption",
@@ -354,7 +368,7 @@ describe("decodeDelegatedForUserDecryption", () => {
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeDelegatedForUserDecryption({
         ...log,
@@ -363,7 +377,7 @@ describe("decodeDelegatedForUserDecryption", () => {
     ).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     expect(
       decodeDelegatedForUserDecryption({
         ...log,
@@ -383,7 +397,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
     data: `0x${word("ccc3")}${word("3")}${word("3e8")}`,
   };
 
-  it("decodes valid log", () => {
+  test("decodes valid log", () => {
     const event = decodeRevokedDelegationForUserDecryption(log);
     expect(event).toEqual({
       eventName: "RevokedDelegationForUserDecryption",
@@ -395,7 +409,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
     });
   });
 
-  it("returns null for wrong topic", () => {
+  test("returns null for wrong topic", () => {
     expect(
       decodeRevokedDelegationForUserDecryption({
         ...log,
@@ -404,7 +418,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
     ).toBeNull();
   });
 
-  it("returns null for insufficient topics", () => {
+  test("returns null for insufficient topics", () => {
     expect(
       decodeRevokedDelegationForUserDecryption({
         ...log,
@@ -415,7 +429,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
 });
 
 describe("decodeAclEvent", () => {
-  it("dispatches to DelegatedForUserDecryption decoder", () => {
+  test("dispatches to DelegatedForUserDecryption decoder", () => {
     const log: RawLog = {
       topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
       data: `0x${word("ccc3")}${word("1")}${word("0")}${word("3e8")}`,
@@ -424,7 +438,7 @@ describe("decodeAclEvent", () => {
     expect(event?.eventName).toBe("DelegatedForUserDecryption");
   });
 
-  it("dispatches to RevokedDelegationForUserDecryption decoder", () => {
+  test("dispatches to RevokedDelegationForUserDecryption decoder", () => {
     const log: RawLog = {
       topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
       data: `0x${word("ccc3")}${word("1")}${word("3e8")}`,
@@ -433,7 +447,7 @@ describe("decodeAclEvent", () => {
     expect(event?.eventName).toBe("RevokedDelegationForUserDecryption");
   });
 
-  it("returns null for unknown event", () => {
+  test("returns null for unknown event", () => {
     const log: RawLog = {
       topics: [topic("00".repeat(32))],
       data: "0x",
@@ -443,7 +457,7 @@ describe("decodeAclEvent", () => {
 });
 
 describe("decodeAclEvents", () => {
-  it("decodes array of mixed logs, skipping unknown", () => {
+  test("decodes array of mixed logs, skipping unknown", () => {
     const logs: RawLog[] = [
       {
         topics: [AclTopics.DelegatedForUserDecryption, topic("aaa1"), topic("bbb2")],
@@ -463,7 +477,7 @@ describe("decodeAclEvents", () => {
 });
 
 describe("findDelegatedForUserDecryption", () => {
-  it("finds first DelegatedForUserDecryption in mixed logs", () => {
+  test("finds first DelegatedForUserDecryption in mixed logs", () => {
     const logs: RawLog[] = [
       { topics: ["0xunknown" as Hex], data: "0x" as Hex },
       {
@@ -476,13 +490,13 @@ describe("findDelegatedForUserDecryption", () => {
     expect(event?.delegator).toBe(addr("aaa1"));
   });
 
-  it("returns null when none found", () => {
+  test("returns null when none found", () => {
     expect(findDelegatedForUserDecryption([])).toBeNull();
   });
 });
 
 describe("findRevokedDelegationForUserDecryption", () => {
-  it("finds first RevokedDelegationForUserDecryption in mixed logs", () => {
+  test("finds first RevokedDelegationForUserDecryption in mixed logs", () => {
     const logs: RawLog[] = [
       {
         topics: [AclTopics.RevokedDelegationForUserDecryption, topic("aaa1"), topic("bbb2")],
@@ -493,7 +507,7 @@ describe("findRevokedDelegationForUserDecryption", () => {
     expect(event?.eventName).toBe("RevokedDelegationForUserDecryption");
   });
 
-  it("returns null when none found", () => {
+  test("returns null when none found", () => {
     expect(findRevokedDelegationForUserDecryption([])).toBeNull();
   });
 });

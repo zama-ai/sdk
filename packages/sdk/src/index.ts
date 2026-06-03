@@ -1,28 +1,43 @@
 /**
  * TypeScript SDK for Zama's fhEVM — confidential smart contracts powered by Fully Homomorphic Encryption.
  *
- * Main classes: {@link ZamaSDK}, {@link Token}, {@link ReadonlyToken}, {@link CredentialsManager}, {@link RelayerWeb}.
+ * Main classes: {@link ZamaSDK}, {@link Token}, {@link WrappedToken}.
  *
  * @packageDocumentation
  */
 
-// Core SDK
-export { RelayerWeb } from "./relayer/relayer-web";
+// Config factory
+// Note: web() and node() transport factories live in their own entry points
+// (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
+// dependencies out of this barrel.
+export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
+export type {
+  ZamaConfig,
+  ZamaConfigBase,
+  ZamaConfigGeneric,
+  ZamaConfigViem,
+  ZamaConfigEthers,
+  RelayerConfig,
+  CleartextRelayerConfig,
+  AtLeastOneChain,
+  ResolvedChainRelayer,
+} from "./config";
+export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
-  RelayerWebConfig,
-  RelayerWebSecurityConfig,
   RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
   EncryptInput,
-  Handle,
-  ClearValueType,
+  EncryptedValue,
+  ClearValue,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,
   DelegatedUserDecryptParams,
   NetworkType,
+  PublicKeyData,
+  PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
@@ -34,32 +49,39 @@ export type {
 } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
-// Network preset configs
-export { HardhatConfig, MainnetConfig, SepoliaConfig } from "./relayer/relayer-utils";
+// Chain presets and types
+export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "./chains";
+export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
-export { ERC7984_INTERFACE_ID, ERC7984_WRAPPER_INTERFACE_ID } from "./contracts";
-
-// Decrypt cache
-export { DecryptCache } from "./decrypt-cache";
+export {
+  ERC1363_INTERFACE_ID,
+  ERC7984_INTERFACE_ID,
+  ERC7984_WRAPPER_INTERFACE_ID,
+} from "./contracts";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
-export type { ZamaSDKConfig } from "./zama-sdk";
-export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
+export { Permits, Delegations, Decryption } from "./namespaces";
+export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
+export type {
+  BatchDecryptHandleItem,
+  BatchDecryptHandlesResult,
+} from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
   Token,
-  ReadonlyToken,
+  WrappedToken,
   type BatchBalancesResult,
   type BatchDecryptAsOptions,
-  ZERO_HANDLE,
-  isZeroHandle,
   savePendingUnshield,
   loadPendingUnshield,
+  loadPendingUnshieldRequest,
   clearPendingUnshield,
+  type PendingUnshieldRequest,
 } from "./token";
+export { ZERO_HANDLE, isZeroHandle } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,
@@ -68,18 +90,15 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export {
-  CredentialsManager,
-  type CredentialsManagerConfig,
-  DelegatedCredentialsManager,
-  type DelegatedCredentialsManagerConfig,
-} from "./credentials";
+export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
-  SignerLifecycleCallbacks,
-  StoredCredentials,
-  DelegatedStoredCredentials,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
+  WalletAccountStore,
   ContractAbi,
   ReadContractConfig,
   ReadContractArgs,
@@ -90,10 +109,12 @@ export type {
   WriteFunctionName,
   TransactionReceipt,
   TransactionResult,
+  ApprovalStrategy,
   UnshieldCallbacks,
   UnshieldOptions,
   ShieldCallbacks,
   ShieldOptions,
+  ShieldPath,
   TransferCallbacks,
   TransferOptions,
 } from "./types";
@@ -108,7 +129,7 @@ export type {
   ShieldSubmittedEvent,
   TransferSubmittedEvent,
   TransferFromSubmittedEvent,
-  ApproveSubmittedEvent,
+  SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
   UnwrapSubmittedEvent,
   FinalizeUnwrapSubmittedEvent,
@@ -116,24 +137,15 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   TransactionErrorEvent,
+  TransactionOperation,
   EncryptStartEvent,
   EncryptEndEvent,
   EncryptErrorEvent,
   DecryptStartEvent,
   DecryptEndEvent,
   DecryptErrorEvent,
-  CredentialsLoadingEvent,
-  CredentialsCachedEvent,
-  CredentialsExpiredEvent,
-  CredentialsCreatingEvent,
-  CredentialsCreatedEvent,
-  CredentialsRevokedEvent,
-  CredentialsAllowedEvent,
-  SessionExpiredEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
-  CredentialsCorruptedEvent,
 } from "./events";
 export {
   ZamaError,
@@ -142,13 +154,17 @@ export {
   SigningFailedError,
   EncryptionFailedError,
   DecryptionFailedError,
-  ApprovalFailedError,
   TransactionRevertedError,
   KeypairExpiredError,
   InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
+  ChainMismatchError,
+  SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -165,8 +181,9 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   matchZamaError,
-  matchAclRevert,
 } from "./errors";
+export { BaseSigner } from "./signer/base-signer";
+export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types
 export type {
@@ -174,7 +191,7 @@ export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
-  UnwrappedFinalizedEvent,
+  UnwrapFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
   DelegatedForUserDecryptionEvent,
@@ -195,28 +212,13 @@ export {
   decodeConfidentialTransfer,
   decodeWrapped,
   decodeUnwrapRequested,
-  decodeUnwrappedFinalized,
+  decodeUnwrapFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
   findWrapped,
 } from "./events";
-
-// Activity feed helpers and types
-export type {
-  ActivityDirection,
-  ActivityType,
-  ActivityAmount,
-  ActivityLogMetadata,
-  ActivityItem,
-} from "./activity";
-export {
-  parseActivityFeed,
-  extractEncryptedHandles,
-  applyDecryptedValues,
-  sortByBlockNumber,
-} from "./activity";
 
 // Contract call builders
 export {
@@ -234,6 +236,7 @@ export {
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
+  transferAndCallContract,
   nameContract,
   symbolContract,
   decimalsContract,
@@ -241,7 +244,6 @@ export {
   allowanceContract,
   approveContract,
   confidentialTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import type { Address } from "viem";
 
 import {
@@ -17,54 +17,54 @@ const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 describe("Registry contract builders", () => {
-  it("exports wrappersRegistryAbi", () => {
+  test("exports wrappersRegistryAbi", () => {
     expect(wrappersRegistryAbi).toBeDefined();
     expect(wrappersRegistryAbi.length).toBeGreaterThan(0);
   });
 
-  it("getTokenPairsContract", () => {
+  test("getTokenPairsContract", () => {
     const config = getTokenPairsContract(REGISTRY);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getTokenConfidentialTokenPairs");
     expect(config.args).toEqual([]);
   });
 
-  it("getTokenPairsLengthContract", () => {
+  test("getTokenPairsLengthContract", () => {
     const config = getTokenPairsLengthContract(REGISTRY);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getTokenConfidentialTokenPairsLength");
     expect(config.args).toEqual([]);
   });
 
-  it("getTokenPairsSliceContract", () => {
+  test("getTokenPairsSliceContract", () => {
     const config = getTokenPairsSliceContract(REGISTRY, 0n, 10n);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getTokenConfidentialTokenPairsSlice");
     expect(config.args).toEqual([0n, 10n]);
   });
 
-  it("getTokenPairContract", () => {
+  test("getTokenPairContract", () => {
     const config = getTokenPairContract(REGISTRY, 5n);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getTokenConfidentialTokenPair");
     expect(config.args).toEqual([5n]);
   });
 
-  it("getConfidentialTokenAddressContract", () => {
+  test("getConfidentialTokenAddressContract", () => {
     const config = getConfidentialTokenAddressContract(REGISTRY, TOKEN);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getConfidentialTokenAddress");
     expect(config.args).toEqual([TOKEN]);
   });
 
-  it("getTokenAddressContract", () => {
+  test("getTokenAddressContract", () => {
     const config = getTokenAddressContract(REGISTRY, C_TOKEN);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("getTokenAddress");
     expect(config.args).toEqual([C_TOKEN]);
   });
 
-  it("isConfidentialTokenValidContract", () => {
+  test("isConfidentialTokenValidContract", () => {
     const config = isConfidentialTokenValidContract(REGISTRY, C_TOKEN);
     expect(config.address).toBe(REGISTRY);
     expect(config.functionName).toBe("isConfidentialTokenValid");

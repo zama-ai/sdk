@@ -26,14 +26,13 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 import { useUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
-  const { mutateAsync: unwrap, isPending } = useUnwrap({
-    tokenAddress: "0xToken",
-  });
+  const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
-    const txHash = await unwrap({ amount: 500n });
+    const { txHash } = await unwrap({ amount: 500n });
     console.log("Unwrap requested:", txHash);
-    // You must now call useFinalizeUnwrap with this txHash
+    // Parse the UnwrapRequested event with findUnwrapRequested,
+    // then pass unwrapRequestId to useFinalizeUnwrap.
   };
 
   return (
@@ -49,20 +48,14 @@ function UnwrapButton() {
 
 ## Parameters
 
-```ts
-import { type UseUnwrapParameters } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential token wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```tsx
-const { mutateAsync: unwrap } = useUnwrap({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
 ```
 
 ## Mutation variables
@@ -79,11 +72,7 @@ await unwrap({ amount: 1000n });
 
 ## Return Type
 
-```ts
-import { type UseUnwrapReturnType } from "@zama-fhe/react-sdk";
-```
-
-The mutation resolves with a transaction hash (`Hex`).
+The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

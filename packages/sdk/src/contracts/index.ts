@@ -7,7 +7,6 @@ export {
   unwrapContract,
   unwrapFromBalanceContract,
   confidentialTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
 } from "./encrypted";
 
@@ -29,12 +28,16 @@ export {
 } from "./erc20";
 
 export {
+  ERC1363_INTERFACE_ID,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
   supportsInterfaceContract,
   isConfidentialTokenContract,
   isConfidentialWrapperContract,
+  isPayableTokenContract,
 } from "./erc165";
+
+export { transferAndCallContract } from "./erc1363";
 
 export {
   delegateForUserDecryptionContract,

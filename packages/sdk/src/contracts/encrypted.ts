@@ -1,15 +1,14 @@
 import type { Address } from "viem";
 import { toHex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
-import type { Handle } from "../relayer/relayer-sdk.types";
-import { inferredTotalSupplyContract } from "./wrapper";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
 /**
  * Returns the contract config to read an encrypted balance.
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialBalanceOfContract(tokenAddress, userAddress),
  * );
  * ```
@@ -77,7 +76,7 @@ export function confidentialTransferFromContract(
  *
  * @example
  * ```ts
- * const isApproved = await signer.readContract(
+ * const isOperator = await provider.readContract(
  *   isOperatorContract(tokenAddress, holder, spender),
  * );
  * ```
@@ -93,22 +92,22 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 
 /**
  * Returns the contract config for setting an operator.
- * Defaults timestamp to 1 hour from now.
+ * Defaults until to 1 hour from now.
  *
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   setOperatorContract(tokenAddress, spender),
+ *   setOperatorContract(tokenAddress, operator),
  * );
  * ```
  */
-export function setOperatorContract(tokenAddress: Address, spender: Address, timestamp?: number) {
-  const until = timestamp ?? Math.floor(Date.now() / 1000) + 3600;
+export function setOperatorContract(tokenAddress: Address, operator: Address, until?: number) {
+  const effectiveUntil = until ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,
     abi: encryptedAbi,
     functionName: "setOperator",
-    args: [spender, until],
+    args: [operator, effectiveUntil],
   } as const;
 }
 
@@ -151,7 +150,7 @@ export function unwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Handle,
+  encryptedBalance: EncryptedValue,
 ) {
   return {
     address: encryptedErc20,
@@ -166,7 +165,7 @@ export function unwrapFromBalanceContract(
  *
  * @example
  * ```ts
- * const handle = await signer.readContract(
+ * const handle = await provider.readContract(
  *   confidentialTotalSupplyContract(tokenAddress),
  * );
  * ```
@@ -181,28 +180,11 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 }
 
 /**
- * Returns the contract config to read the inferred plaintext total supply.
- *
- * @deprecated Use {@link inferredTotalSupplyContract}. `totalSupply()` was
- * renamed to `inferredTotalSupply()` on wrapper contracts.
- *
- * @example
- * ```ts
- * const supply = await signer.readContract(
- *   totalSupplyContract(wrapperAddress),
- * );
- * ```
- */
-export function totalSupplyContract(wrapperAddress: Address) {
-  return inferredTotalSupplyContract(wrapperAddress);
-}
-
-/**
  * Returns the contract config to read the wrap/unwrap conversion rate.
  *
  * @example
  * ```ts
- * const rate = await signer.readContract(rateContract(tokenAddress));
+ * const rate = await provider.readContract(rateContract(tokenAddress));
  * ```
  */
 export function rateContract(tokenAddress: Address) {

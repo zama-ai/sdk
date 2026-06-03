@@ -1,6 +1,7 @@
 "use client";
 
-import { useIsConfidential, useIsWrapper, useMetadata, type Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
+import { useIsConfidential, useIsWrapper, useMetadata } from "@zama-fhe/react-sdk";
 
 export function TokenMetadataPanel({ tokenAddress }: { tokenAddress: Address }) {
   const { data: metadata, isLoading: metaLoading } = useMetadata(tokenAddress);

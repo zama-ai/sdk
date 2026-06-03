@@ -1,6 +1,8 @@
 "use client";
 
-import { useShield, useUnderlyingAllowance, useMetadata, type Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
+import { useShield, useUnderlyingAllowance, useMetadata } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 export function ShieldForm({
   tokenAddress,
@@ -9,9 +11,13 @@ export function ShieldForm({
   tokenAddress: Address;
   wrapperAddress: Address;
 }) {
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: allowance } = useUnderlyingAllowance({ tokenAddress, wrapperAddress });
-  const shield = useShield({ tokenAddress, wrapperAddress });
+  const { data: allowance } = useUnderlyingAllowance({
+    address: wrapperAddress,
+    owner: address,
+  });
+  const shield = useShield({ address: wrapperAddress });
 
   return (
     <form
@@ -33,6 +39,7 @@ export function ShieldForm({
         type="text"
         name="amount"
         placeholder="Amount"
+        aria-label="Amount"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"

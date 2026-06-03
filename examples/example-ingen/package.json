@@ -1,0 +1,23 @@
+{
+  "name": "example-ingen",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@zama-fhe/react-sdk": "3.0.0-alpha.34",
+    "@zama-fhe/sdk": "3.0.0-alpha.34",
+    "ethers": "^6.13.0",
+    "next": "^16.2.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0"
+  }
+}

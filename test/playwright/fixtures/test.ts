@@ -1,10 +1,10 @@
 // oxlint-disable no-empty-pattern
 /* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, type BrowserContext } from "@playwright/test";
-import { hardhatCleartextConfig } from "@zama-fhe/sdk/cleartext";
+import { hardhat } from "@zama-fhe/sdk/chains";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Address } from "viem";
+import type { Address } from "@zama-fhe/sdk";
 import {
   createTestClient,
   formatUnits,
@@ -30,7 +30,7 @@ const contracts = {
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
   wrappersRegistry: deployments.wrappersRegistry as Address,
-  acl: hardhatCleartextConfig.aclContractAddress as Address,
+  acl: hardhat.aclContractAddress as Address,
 } as const;
 
 const mintAbi = [

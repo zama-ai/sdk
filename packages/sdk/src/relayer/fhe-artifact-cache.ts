@@ -1,45 +1,70 @@
+import { z } from "zod/mini";
 import type { GenericStorage } from "../types";
-import { assertObject, assertStringProp, toError } from "../utils";
+import { assertNonNullable, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
+import type { PublicKeyData, PublicParamsData } from "./relayer-sdk.types";
 
 // ── Cached data shapes ──────────────────────────────────────
 
+const CachedArtifactBase = z.object({
+  artifactUrl: z.optional(z.string()),
+  etag: z.optional(z.string()),
+  lastModified: z.optional(z.string()),
+  // Optional + default(0) preserves the prior `?? 0` fallback for entries
+  // persisted before this field was added; 0 marks them stale via the TTL check.
+  // oxlint-disable-next-line no-underscore-dangle -- z._default is the Zod v4 mini API
+  lastValidatedAt: z._default(z.optional(z.number().check(z.nonnegative())), 0),
+});
+
 /** Cached shape for the FHE network public key. */
-interface CachedPublicKey {
-  publicKeyId: string;
-  /** Base64-encoded Uint8Array. */
-  publicKey: string;
-  /** Artifact URL from the manifest. */
-  artifactUrl?: string;
-  /** HTTP ETag from the artifact response. */
-  etag?: string;
-  /** HTTP Last-Modified from the artifact response. */
-  lastModified?: string;
-  /** Epoch-ms timestamp of the last successful revalidation. */
-  lastValidatedAt: number;
-}
+const CachedPublicKeySchema = z.extend(CachedArtifactBase, {
+  publicKeyId: z.string(),
+  publicKey: z.string(),
+});
+type CachedPublicKey = z.infer<typeof CachedPublicKeySchema>;
 
 /** Cached shape for FHE public params. */
-interface CachedPublicParams {
-  publicParamsId: string;
-  /** Base64-encoded Uint8Array. */
-  publicParams: string;
-  artifactUrl?: string;
-  etag?: string;
-  lastModified?: string;
-  lastValidatedAt: number;
-}
+const CachedPublicParamsSchema = z.extend(CachedArtifactBase, {
+  publicParamsId: z.string(),
+  publicParams: z.string(),
+});
+type CachedPublicParams = z.infer<typeof CachedPublicParamsSchema>;
+
+const ParamsIndexSchema = z.array(z.int().check(z.nonnegative()));
+
+/**
+ * Manifest shape returned by the relayer `/keyurl` endpoint. Only the fields
+ * actually consumed (status + first URL of each artifact) are validated; the
+ * upstream payload contains additional metadata we ignore.
+ */
+const ManifestSchema = z.object({
+  status: z.literal("succeeded"),
+  response: z.object({
+    fheKeyInfo: z
+      .array(
+        z.object({
+          fhePublicKey: z.object({
+            urls: z.array(z.string()).check(z.minLength(1)),
+          }),
+        }),
+      )
+      .check(z.minLength(1)),
+    crs: z.record(
+      z.string(),
+      z.object({
+        urls: z.array(z.string()).check(z.minLength(1)),
+      }),
+    ),
+  }),
+});
 
 // ── Return types ────────────────────────────────────────────
 
 /** Return type of the public key fetcher. */
-type PublicKeyResult = { publicKeyId: string; publicKey: Uint8Array } | null;
+type PublicKeyResult = PublicKeyData | null;
 
 /** Return type of the public params fetcher. */
-type PublicParamsResult = {
-  publicParamsId: string;
-  publicParams: Uint8Array;
-} | null;
+type PublicParamsResult = PublicParamsData | null;
 
 // ── Constants ───────────────────────────────────────────────
 
@@ -88,23 +113,7 @@ function paramsIndexKey(chainId: number): string {
   return `fhe:params-index:${chainId}`;
 }
 
-function assertCachedPk(v: unknown): asserts v is CachedPublicKey {
-  assertObject(v, "CachedPublicKey");
-  assertStringProp(v, "publicKeyId", "CachedPublicKey.publicKeyId");
-  assertStringProp(v, "publicKey", "CachedPublicKey.publicKey");
-}
-
-function assertCachedParams(v: unknown): asserts v is CachedPublicParams {
-  assertObject(v, "CachedPublicParams");
-  assertStringProp(v, "publicParamsId", "CachedPublicParams.publicParamsId");
-  assertStringProp(v, "publicParams", "CachedPublicParams.publicParams");
-}
-
-/** Manifest shape returned by the relayer `/keyurl` endpoint. */
-interface ManifestShape {
-  fhePublicKey: { dataId: string; urls: string[] };
-  crs: Record<string, { dataId: string; urls: string[] }>;
-}
+type LogContext = Record<string, unknown>;
 
 // ── ArtifactCache ──────────────────────────────────────────
 
@@ -168,27 +177,23 @@ export class FheArtifactCache {
   async #loadPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
     const key = pubkeyStorageKey(this.#chainId);
 
-    try {
-      const raw = await this.#storage.get(key);
-      if (raw) {
-        assertCachedPk(raw);
+    const stored = await this.#readCachedEntry(
+      key,
+      CachedPublicKeySchema,
+      "public key",
+      "Failed to read public key from persistent storage, falling back to network fetch",
+    );
+    if (stored) {
+      try {
         const result: PublicKeyResult = {
-          publicKeyId: raw.publicKeyId,
-          publicKey: fromBase64(raw.publicKey),
+          publicKeyId: stored.publicKeyId,
+          publicKey: fromBase64(stored.publicKey),
         };
         this.#publicKeyMem = result;
         return result;
+      } catch (err) {
+        await this.#deleteCorruptEntry(key, "public key", { error: toError(err).message });
       }
-    } catch (err) {
-      // Corrupt or unreadable entry — delete and fall through to fetcher
-      await this.#deleteQuietly(key);
-      this.#logger.warn(
-        "Failed to read public key from persistent storage, falling back to network fetch",
-        {
-          chainId: this.#chainId,
-          error: toError(err).message,
-        },
-      );
     }
 
     const result = await fetcher();
@@ -199,12 +204,12 @@ export class FheArtifactCache {
     this.#publicKeyMem = result;
 
     try {
-      const cached: CachedPublicKey = {
+      const entry: CachedPublicKey = {
         publicKeyId: result.publicKeyId,
         publicKey: toBase64(result.publicKey),
         lastValidatedAt: Date.now(),
       };
-      await this.#storage.set(key, cached);
+      await this.#storage.set(key, entry);
     } catch (err) {
       this.#logger.warn("Failed to persist public key to storage", {
         chainId: this.#chainId,
@@ -247,28 +252,24 @@ export class FheArtifactCache {
   ): Promise<PublicParamsResult> {
     const key = paramsStorageKey(this.#chainId, bits);
 
-    try {
-      const raw = await this.#storage.get(key);
-      if (raw) {
-        assertCachedParams(raw);
+    const stored = await this.#readCachedEntry(
+      key,
+      CachedPublicParamsSchema,
+      "params",
+      "Failed to read public params from persistent storage, falling back to network fetch",
+      { bits },
+    );
+    if (stored) {
+      try {
         const result: PublicParamsResult = {
-          publicParamsId: raw.publicParamsId,
-          publicParams: fromBase64(raw.publicParams),
+          publicParamsId: stored.publicParamsId,
+          publicParams: fromBase64(stored.publicParams),
         };
         this.#publicParamsMem.set(bits, result);
         return result;
+      } catch (err) {
+        await this.#deleteCorruptEntry(key, "params", { bits, error: toError(err).message });
       }
-    } catch (err) {
-      // Corrupt or unreadable entry — delete and fall through to fetcher
-      await this.#deleteQuietly(key);
-      this.#logger.warn(
-        "Failed to read public params from persistent storage, falling back to network fetch",
-        {
-          chainId: this.#chainId,
-          bits,
-          error: toError(err).message,
-        },
-      );
     }
 
     const result = await fetcher();
@@ -279,23 +280,16 @@ export class FheArtifactCache {
     this.#publicParamsMem.set(bits, result);
 
     try {
-      const cached: CachedPublicParams = {
+      const entry: CachedPublicParams = {
         publicParamsId: result.publicParamsId,
         publicParams: toBase64(result.publicParams),
         lastValidatedAt: Date.now(),
       };
-      await this.#storage.set(key, cached);
+      await this.#storage.set(key, entry);
 
       // Update params index for cold-start CRS detection
       const idxKey = paramsIndexKey(this.#chainId);
-      const existing =
-        (await this.#storage.get<number[]>(idxKey).catch((err) => {
-          this.#logger.warn("Failed to read params index from storage", {
-            chainId: this.#chainId,
-            error: toError(err).message,
-          });
-          return null;
-        })) ?? [];
+      const existing = await this.#readParamsIndex("Failed to read params index from storage");
       if (!existing.includes(bits)) {
         await this.#storage.set(idxKey, [...existing, bits]);
       }
@@ -363,17 +357,8 @@ export class FheArtifactCache {
       ]);
 
       // Validate PK shape
-      if (pkRaw) {
-        try {
-          assertCachedPk(pkRaw);
-          storedPk = { ...pkRaw, lastValidatedAt: pkRaw.lastValidatedAt ?? 0 };
-        } catch (err) {
-          this.#logger.warn("Corrupt public key cache entry detected, deleting", {
-            chainId: this.#chainId,
-            error: toError(err).message,
-          });
-          await this.#deleteQuietly(pkKey);
-        }
+      if (pkRaw !== null && pkRaw !== undefined) {
+        storedPk = await this.#parseCachedEntry(pkKey, pkRaw, CachedPublicKeySchema, "public key");
       }
 
       paramEntries = entries;
@@ -414,24 +399,16 @@ export class FheArtifactCache {
         return false;
       }
 
-      const manifest = (await manifestRes.json()) as unknown;
-
       // Validate manifest shape — a malformed response indicates a permanent
       // config error (wrong relayer URL, API version mismatch), not a transient
       // network issue. Log at error level so it's actionable.
-      if (
-        !manifest ||
-        typeof manifest !== "object" ||
-        !("fhePublicKey" in manifest) ||
-        !(manifest as ManifestShape).fhePublicKey?.urls?.length ||
-        !("crs" in manifest) ||
-        typeof (manifest as ManifestShape).crs !== "object"
-      ) {
+      const manifestParsed = ManifestSchema.safeParse(await manifestRes.json());
+      if (!manifestParsed.success) {
         this.#logger.error(
           "Relayer manifest has unexpected shape — check relayer URL and API version",
           {
             relayerUrl: this.#relayerUrl,
-            manifestKeys: manifest && typeof manifest === "object" ? Object.keys(manifest) : [],
+            error: z.prettifyError(manifestParsed.error),
           },
         );
         // Fail-open with short retry — but the error-level log distinguishes this from transient failures
@@ -447,11 +424,12 @@ export class FheArtifactCache {
         this.#lastRevalidatedAt = retryTimestamp;
         return false;
       }
-      const validManifest = manifest as ManifestShape;
+      const validManifest = manifestParsed.data.response;
+      const fheKeyEntry = validManifest.fheKeyInfo[0];
+      assertNonNullable(fheKeyEntry, "manifest.response.fheKeyInfo[0]");
 
       // ── 4. Check PK artifact ──────────────────────────
-      const pkArtifactUrl = validManifest.fhePublicKey.urls[0];
-
+      const pkArtifactUrl = fheKeyEntry.fhePublicKey.urls[0];
       // URL change → stale
       if (storedPk.artifactUrl && pkArtifactUrl && pkArtifactUrl !== storedPk.artifactUrl) {
         await this.#clearAll(pkKey, paramEntries);
@@ -612,15 +590,9 @@ export class FheArtifactCache {
     Array<{ bits: number; key: string; data: CachedPublicParams }>
   > {
     // Merge in-memory keys with persisted index for cold-start CRS detection
-    const idxKey = paramsIndexKey(this.#chainId);
-    const persistedBits =
-      (await this.#storage.get<number[]>(idxKey).catch((err) => {
-        this.#logger.warn("Failed to read params index, CRS revalidation may be incomplete", {
-          chainId: this.#chainId,
-          error: toError(err).message,
-        });
-        return null;
-      })) ?? [];
+    const persistedBits = await this.#readParamsIndex(
+      "Failed to read params index, CRS revalidation may be incomplete",
+    );
     const allBits = new Set([...this.#publicParamsMem.keys(), ...persistedBits]);
 
     const bitsArray = Array.from(allBits);
@@ -639,33 +611,77 @@ export class FheArtifactCache {
           });
           return null;
         }
-        if (!raw) {
+        if (raw === null || raw === undefined) {
           return null;
         }
-        try {
-          assertCachedParams(raw);
-          return {
-            bits,
-            key: pKey,
-            data: {
-              ...raw,
-              lastValidatedAt: raw.lastValidatedAt ?? 0,
-            } as CachedPublicParams,
-          };
-        } catch (err) {
-          this.#logger.warn("Corrupt params cache entry detected, deleting", {
-            chainId: this.#chainId,
-            bits,
-            error: toError(err).message,
-          });
-          await this.#deleteQuietly(pKey);
+        const data = await this.#parseCachedEntry(pKey, raw, CachedPublicParamsSchema, "params", {
+          bits,
+        });
+        if (!data) {
           return null;
         }
+        return { bits, key: pKey, data };
       }),
     );
     return results.filter(
       (e): e is { bits: number; key: string; data: CachedPublicParams } => e !== null,
     );
+  }
+
+  async #readCachedEntry<T>(
+    key: string,
+    schema: z.core.$ZodType<T>,
+    label: string,
+    readError: string,
+    context: LogContext = {},
+  ): Promise<T | null> {
+    let raw: unknown;
+    try {
+      raw = await this.#storage.get(key);
+    } catch (err) {
+      this.#logger.warn(readError, {
+        chainId: this.#chainId,
+        ...context,
+        error: toError(err).message,
+      });
+      return null;
+    }
+    if (raw === null || raw === undefined) {
+      return null;
+    }
+    return this.#parseCachedEntry(key, raw, schema, label, context);
+  }
+
+  async #parseCachedEntry<T>(
+    key: string,
+    raw: unknown,
+    schema: z.core.$ZodType<T>,
+    label: string,
+    context: LogContext = {},
+  ): Promise<T | null> {
+    const parsed = z.safeParse(schema, raw);
+    if (parsed.success) {
+      return parsed.data;
+    }
+    await this.#deleteCorruptEntry(key, label, {
+      ...context,
+      error: z.prettifyError(parsed.error),
+    });
+    return null;
+  }
+
+  async #readParamsIndex(readError: string): Promise<number[]> {
+    const idxKey = paramsIndexKey(this.#chainId);
+    const index = await this.#readCachedEntry(idxKey, ParamsIndexSchema, "params index", readError);
+    return index ?? [];
+  }
+
+  async #deleteCorruptEntry(key: string, label: string, context: LogContext = {}): Promise<void> {
+    await this.#deleteQuietly(key);
+    this.#logger.warn(`Corrupt ${label} cache entry detected, deleting`, {
+      chainId: this.#chainId,
+      ...context,
+    });
   }
 
   async #deleteQuietly(key: string): Promise<void> {

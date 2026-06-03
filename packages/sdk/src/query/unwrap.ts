@@ -1,4 +1,4 @@
-import type { Token } from "../token/token";
+import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
@@ -9,7 +9,7 @@ export interface UnwrapParams {
 }
 
 export function unwrapMutationOptions(
-  token: Token,
+  token: WrappedToken,
 ): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult> {
   return {
     mutationKey: ["zama.unwrap", token.address] as const,

@@ -16,7 +16,7 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
-// Allowlist for request headers forwarded to the relayer. The RelayerWeb worker only sends
+// Allowlist for request headers forwarded to the relayer. The browser relayer worker only sends
 // content-type and accept. Using an allowlist instead of a denylist prevents browser cookies,
 // Authorization, and other session credentials from leaking to the upstream relayer.
 const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
@@ -74,7 +74,7 @@ async function proxy(req: NextRequest, path: string[]) {
     });
   } catch (err) {
     // Network failure (unreachable host, DNS error, timeout) — return a JSON error so
-    // the RelayerWeb worker gets valid JSON instead of an HTML 500 page from Next.js.
+    // the browser relayer worker gets valid JSON instead of an HTML 500 page from Next.js.
     console.error("[relayer-proxy]", url.toString(), err);
     return new Response(JSON.stringify({ error: "Relayer unreachable" }), {
       status: 503,

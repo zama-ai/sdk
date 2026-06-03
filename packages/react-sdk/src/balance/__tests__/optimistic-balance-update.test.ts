@@ -11,9 +11,9 @@ import {
   type OptimisticMutateContext,
 } from "../optimistic-balance-update";
 
-const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
-const USER = "0x2222222222222222222222222222222222222222" as Address;
-const HANDLE = `0x${"11".repeat(32)}`;
+const tokenAddress = "0x1111111111111111111111111111111111111111" as Address;
+const userAddress = "0x2222222222222222222222222222222222222222" as Address;
+const WALLET_ACCOUNT = { address: userAddress, chainId: 31337 };
 
 // ---------------------------------------------------------------------------
 // unwrapOptimisticCallerContext
@@ -64,12 +64,16 @@ describe("unwrapOptimisticCallerContext", () => {
 describe("applyOptimisticBalanceDelta", () => {
   test("adds amount in add mode", async () => {
     const qc = new QueryClient();
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(
+      tokenAddress,
+      userAddress,
+      WALLET_ACCOUNT,
+    );
     qc.setQueryData(balanceKey, 1000n);
 
     const snapshot = await applyOptimisticBalanceDelta({
       queryClient: qc,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       amount: 250n,
       mode: "add",
     });
@@ -80,12 +84,16 @@ describe("applyOptimisticBalanceDelta", () => {
 
   test("subtracts amount in subtract mode", async () => {
     const qc = new QueryClient();
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(
+      tokenAddress,
+      userAddress,
+      WALLET_ACCOUNT,
+    );
     qc.setQueryData(balanceKey, 1000n);
 
     const snapshot = await applyOptimisticBalanceDelta({
       queryClient: qc,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       amount: 250n,
       mode: "subtract",
     });
@@ -99,7 +107,7 @@ describe("applyOptimisticBalanceDelta", () => {
 
     const snapshot = await applyOptimisticBalanceDelta({
       queryClient: qc,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       amount: 250n,
       mode: "add",
     });
@@ -109,19 +117,23 @@ describe("applyOptimisticBalanceDelta", () => {
 
   test("cancels in-flight queries before applying delta", async () => {
     const qc = new QueryClient();
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(
+      tokenAddress,
+      userAddress,
+      WALLET_ACCOUNT,
+    );
     qc.setQueryData(balanceKey, 1000n);
     const cancelSpy = vi.spyOn(qc, "cancelQueries");
 
     await applyOptimisticBalanceDelta({
       queryClient: qc,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       amount: 100n,
       mode: "add",
     });
 
     expect(cancelSpy).toHaveBeenCalledWith({
-      queryKey: zamaQueryKeys.confidentialBalance.token(TOKEN),
+      queryKey: zamaQueryKeys.confidentialBalance.token(tokenAddress),
     });
   });
 });
@@ -133,7 +145,11 @@ describe("applyOptimisticBalanceDelta", () => {
 describe("rollbackOptimisticBalanceDelta", () => {
   test("restores snapshot values", () => {
     const qc = new QueryClient();
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(
+      tokenAddress,
+      userAddress,
+      WALLET_ACCOUNT,
+    );
     qc.setQueryData(balanceKey, 9999n);
 
     const snapshot: OptimisticBalanceSnapshot = [[balanceKey, 1000n]];
@@ -168,13 +184,15 @@ describe("optimisticBalanceCallbacks", () => {
     const callerOnError = vi.fn();
     const callbacks = optimisticBalanceCallbacks<{ amount: bigint }>({
       optimistic: true,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       queryClient: qc,
       options: { onError: callerOnError },
     });
 
     const fakeSnapshot: OptimisticMutateContext = {
-      snapshot: [[zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE), 1000n]],
+      snapshot: [
+        [zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress, WALLET_ACCOUNT), 1000n],
+      ],
       callerContext: { requestId: "test" },
     };
     const fakeError = new Error("tx failed");
@@ -195,13 +213,17 @@ describe("optimisticBalanceCallbacks", () => {
 
   test("onMutate applies optimistic delta and calls caller onMutate", async () => {
     const qc = new QueryClient();
-    const balanceKey = zamaQueryKeys.confidentialBalance.owner(TOKEN, USER, HANDLE);
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(
+      tokenAddress,
+      userAddress,
+      WALLET_ACCOUNT,
+    );
     qc.setQueryData(balanceKey, 1000n);
 
     const callerOnMutate = vi.fn().mockReturnValue({ requestId: "abc" });
     const callbacks = optimisticBalanceCallbacks<{ amount: bigint }>({
       optimistic: true,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       queryClient: qc,
       options: { onMutate: callerOnMutate },
     });
@@ -221,7 +243,7 @@ describe("optimisticBalanceCallbacks", () => {
     const callerOnMutate = vi.fn().mockReturnValue({ requestId: "abc" });
     const callbacks = optimisticBalanceCallbacks<{ amount: bigint }>({
       optimistic: false,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       queryClient: qc,
       options: { onMutate: callerOnMutate },
     });
@@ -236,7 +258,7 @@ describe("optimisticBalanceCallbacks", () => {
 
     const callbacks = optimisticBalanceCallbacks<{ amount: bigint }>({
       optimistic: false,
-      tokenAddress: TOKEN,
+      tokenAddress: tokenAddress,
       queryClient: qc,
       options: { onError: callerOnError },
     });

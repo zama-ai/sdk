@@ -8,10 +8,10 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using viem
 
 ```
 page.tsx                         — wallet connect, token selector, layout
-├── providers.tsx                — ZamaProvider + ViemSigner + RelayerWeb wiring
+├── providers.tsx                — SDK createConfig + ZamaProvider wiring
 │   └── /api/relayer/[...path]   — Next.js proxy (keeps RELAYER_API_KEY server-side)
 ├── BalancesCard.tsx             — ETH / ERC-20 / confidential balance display
-├── ShieldCard.tsx               — ERC-20 → confidential (with manual approval flow)
+├── ShieldCard.tsx               — ERC-20 → confidential via useShield
 ├── TransferCard.tsx             — confidential → confidential
 ├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
 ├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
@@ -24,72 +24,49 @@ page.tsx                         — wallet connect, token selector, layout
 
 ## 1. Wiring the SDK (`providers.tsx`)
 
-Three objects are required: a `signer`, a `relayer`, and a `storage`.
+`ZamaProvider` takes one SDK config object. The app builds it with a read provider,
+an optional signer, a chain preset, storage, permit storage, and a browser relayer
+factory.
 
 ```ts
-// Signer — wraps viem clients for read/write operations.
-// publicClient is always created (needed for reads even without a wallet).
-// walletClient is only created when window.ethereum is available.
-// Recreated on wallet switch (walletKey pattern) so ViemSigner is always bound to the
-// correct account.
-//
-// NOTE: This is a simplified illustration. ViemSigner requires walletClient.account to be
-// set at construction time (viem does not infer it at call time like ethers does).
-// The actual implementation normalizes the address with getAddress() and bumps walletKey
-// after the initial eth_accounts seed. See §"Wallet reactivity" for the full details.
-const signer = useMemo(() => {
-  const ethereum = getEthereumProvider();
-  const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
-  if (!ethereum) {
-    return new ViemSigner({ publicClient }); // read-only when no wallet installed
-  }
-  const walletClient = createWalletClient({ chain: sepolia, transport: custom(ethereum) });
-  return new ViemSigner({ walletClient, publicClient });
-}, [walletKey]);
+const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
+const provider = new ViemProvider({ publicClient });
+const zamaSepolia = {
+  ...fheSepolia,
+  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  network: SEPOLIA_RPC_URL,
+} as const;
 
-// Relayer — browser FHE worker loaded from CDN.
-// Routes through the local /api/relayer Next.js proxy so RELAYER_API_KEY stays server-side.
-// SepoliaConfig provides the chain parameters and contract addresses.
-// relayerUrl is overridden to point at the proxy; network is the RPC endpoint for reads.
-// getChainId reads window.ethereum directly (not via walletClient closure, which would be
-// stale after walletKey remounts).
-const relayer = useMemo(
-  () =>
-    new RelayerWeb({
-      getChainId: async () => {
-        const ethereum = getEthereumProvider();
-        if (!ethereum) return SepoliaConfig.chainId;
-        const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
-        return parseInt(hex, 16);
-      },
-      transports: {
-        [SepoliaConfig.chainId]: {
-          ...SepoliaConfig,
-          relayerUrl: `${window.location.origin}/api/relayer`,
-          network: SEPOLIA_RPC_URL,
-        },
-      },
-    }),
-  [],
-);
+const walletClient = createWalletClient({
+  account,
+  chain: sepolia,
+  transport: custom(ethereum),
+});
+const signer = ethereum ? new ViemSigner({ walletClient, ethereum }) : undefined;
+
+const zamaConfig = createConfig({
+  chains: [zamaSepolia],
+  provider,
+  signer,
+  storage: indexedDBStorage,
+  permitStorage: permitDBStorage,
+  relayers: { [zamaSepolia.id]: web() },
+  onEvent,
+});
 ```
 
-`ZamaProvider` takes two separate IndexedDB instances:
+`ZamaProvider` receives only the config:
 
 ```ts
-<ZamaProvider
-  signer={signer}
-  relayer={relayer}
-  storage={indexedDBStorage}          // "CredentialStore" — encrypted keypair
-  sessionStorage={sessionDBStorage}   // "SessionStore"    — EIP-712 session signatures
->
+<ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
 ```
 
-They must be **separate** databases. Both use the same internal key — if shared, the session entry overwrites the encrypted keypair, forcing the user to re-sign on every decrypt.
+`storage` and `permitStorage` use separate IndexedDB databases. Sharing the same instance
+can overwrite credential data and force the user to re-sign on every decrypt.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-`RelayerWeb` runs in a Web Worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `window.location.origin`:
+The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
 
 ```
 Browser Worker → http://localhost:3000/api/relayer/keyurl
@@ -187,17 +164,16 @@ useEffect(() => {
 }, [validPairs, selectedTokenAddress]);
 ```
 
-With `ViemSigner` (viem-based), named fields (`tokenAddress`, `confidentialTokenAddress`,
-`isValid`) are directly accessible — no `normalizePair` workaround needed (unlike
-`EthersSigner`, where ethers `Result` non-enumerable prototype getters require a numeric
-index fallback).
+With viem contract reads, named fields (`tokenAddress`, `confidentialTokenAddress`, `isValid`)
+are directly accessible — no `normalizePair` workaround needed (unlike `EthersSigner`, where
+ethers `Result` non-enumerable prototype getters require a numeric index fallback).
 
-**`ZERO_ADDRESS` placeholder**: SDK hooks cannot be called conditionally (React rules of
-hooks). While no pair is selected, `ZERO_ADDRESS` is passed with `enabled: false`, so no
-actual RPC call is made.
+The token-dependent hooks live inside `SelectedTokenPanel`, which only renders after a real
+registry pair is selected. This keeps SDK hooks from mounting against placeholder token
+addresses while still following React's rules of hooks.
 
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
-has resolved and a pair has been selected (metadata is implicitly available at that point).
+Inside `SelectedTokenPanel`, `actionsDisabled` is `!isSepolia`; the component is only mounted
+after a real token pair exists.
 
 **`isPending` vs `isLoading`**: In TanStack Query v5, `isLoading = isPending && isFetching`,
 which is `false` when the query is disabled (`enabled: false`). `isPending` stays `true`
@@ -209,26 +185,22 @@ resolved internally (during which the query is still disabled).
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const token = sdk.createToken(tokenAddress); // ERC-7984 wrapper
-return token.shield(amount, { approvalStrategy: "skip" });
+const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+shield.mutate({
+  amount: parsedAmount,
+  approvalStrategy: "max",
+  onApprovalSubmitted: () => setPhase("approve"),
+  onShieldSubmitted: () => setPhase("submit"),
+});
 ```
 
-Approval is handled manually before calling `shield` so the UI can show a 2-step progress indicator.
-The spend cap is set to the full ERC-20 balance (not the exact shield amount) to avoid re-approval on subsequent shields within the cap.
+`useShield` owns the full shield flow. The SDK detects whether the underlying ERC-20 supports
+ERC-1363 and chooses `transferAndCall` or `approve` + `wrap` automatically. The app does not
+read allowances, send approval transactions, or choose a route itself.
 
-**Why the USDT reset path exists**
-
-USDT (and some forks, including the USDT Mock token used here) implement a front-running guard from the original Tether contract: `approve(spender, newAmount)` reverts when the current allowance is already non-zero. The ERC-20 spec allows this, but it is not the OpenZeppelin default.
-
-Detection: `eth_estimateGas` on the overwrite call reverts before the wallet is prompted. The component catches that and falls back to `approve(0)` → `approve(fullBalance)` (two wallet confirmations). User rejections (`UserRejectedRequestError` from `"viem"`) re-throw immediately — no silent fallback to the reset path when the user said no.
-
-Flow:
-
-1. `currentAllowance === 0` → `approve(fullBalance)` — one confirmation, works for all token types.
-2. `currentAllowance > 0 && < amount` → try `approve(fullBalance)` directly:
-   - Succeeds → standard token, one confirmation.
-   - `estimateGas` reverts → USDT-style token → `approve(0)` then `approve(fullBalance)`, two confirmations.
-3. Call `token.shield(amount, { approvalStrategy: "skip" })` — SDK skips its own approval.
+`approvalStrategy: "max"` only affects the `approve` + `wrap` path. It lets the SDK request a
+reusable allowance on the first shield; ERC-1363-routed tokens ignore the option because no
+separate approval is required.
 
 ---
 
@@ -239,7 +211,7 @@ const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
 transfer.mutate({
   to: recipient,
   amount: parsedAmount,
-  callbacks: { onEncryptComplete: () => setStep(2) },
+  onEncryptComplete: () => setStep(2),
 });
 ```
 
@@ -335,41 +307,38 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 Three balances are shown:
 
-| Balance      | Source                            | Hook / method                                                                               |
-| ------------ | --------------------------------- | ------------------------------------------------------------------------------------------- |
-| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                            |
-| ERC-20       | Direct RPC via SDK signer         | `useQuery` → `sdk.signer.readContract(balanceOfContract(token.tokenAddress, ...))`          |
-| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS })` |
+| Balance      | Source                            | Hook / method                                                                                |
+| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------- |
+| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                             |
+| ERC-20       | SDK read provider                 | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, address))`     |
+| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, account: address })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
-authorized FHE decryption via an EIP-712 wallet signature. `useIsAllowed({ contractAddresses })`
+authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
 checks whether cached credentials cover the currently selected token; if not, `BalancesCard`
 shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing
 prompts on mount.
 
 ```ts
-const { data: isAllowed } = useIsAllowed({
-  contractAddresses: token ? [token.confidentialTokenAddress] : [],
-  query: { enabled: Boolean(token) },
+const { data: hasPermit } = useHasPermit({
+  contractAddresses: [token.confidentialTokenAddress],
 });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
-const allowTokens = useAllow();
+const grantPermits = useGrantPermit();
 function handleDecrypt() {
   if (validPairs.length === 0) return;
-  allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
+  grantPermits.mutate(validPairs.map((p) => p.confidentialTokenAddress));
 }
 ```
 
-`useConfidentialBalance` has two loading phases:
+`useConfidentialBalance` returns a standard TanStack Query result. The app uses
+`balance.isLoading || balance.isFetching` to drive the "Decrypting…" display in
+`BalancesCard`.
 
-- `balance.handleQuery.isLoading` — fetching the encrypted handle from chain
-- `balance.isLoading` — decrypting it via the relayer
-
-Both are OR'd to drive the "Decrypting…" display in `BalancesCard`.
-
-**`actionsDisabled`** is `!isSepolia || !token` — `token` is only defined once the registry
-has resolved and a pair has been selected (decimals and symbol are implicitly available).
+Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
+`useHasPermit` always receives a non-empty contract tuple and `useConfidentialBalance`
+always receives a real token address plus an explicit owner account.
 
 ### Mint
 
@@ -442,11 +411,10 @@ Tests use Playwright with a mock EIP-1193 provider injected via `page.addInitScr
 - `page` override — aborts all `/api/relayer/**` requests for every test; no real network
   calls to the Zama relayer in CI
 
-**Why `mockRpc` intercepts `eth_call` (not `mockWallet`)**: `ViemSigner` routes all contract
+**Why `mockRpc` intercepts `eth_call` (not `mockWallet`)**: `ViemProvider` routes SDK contract
 reads (registry, metadata, balances) through its `publicClient` HTTP transport — not through
 `window.ethereum`. Mocking registry data must be done in the HTTP route interceptor
-(`mockRpc`), not in `injectMockWallet`. This is the opposite of `EthersSigner`, where
-`BrowserProvider` routes reads through `window.ethereum`.
+(`mockRpc`), not in `injectMockWallet`.
 
 ```bash
 npm run test:e2e   # starts dev server and runs all specs

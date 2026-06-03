@@ -7,137 +7,58 @@ description: Node.js relayer that runs FHE operations in native worker threads.
 
 Node.js relayer that runs FHE operations in native worker threads. The server-side counterpart to `RelayerWeb`.
 
-## Import
-
-```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-```
-
-{% hint style="info" %}
-`RelayerNode` is exported from the `/node` sub-path, not the main entry point.
+{% hint style="warning" %}
+`RelayerNode`, `NodeWorkerClient`, and `NodeWorkerPool` are internal classes — they are no longer exported from `@zama-fhe/sdk/node`. Use the `node()` transport factory with `createConfig` instead.
 {% endhint %}
 
 ## Usage
 
-{% tabs %}
-{% tab title="server.ts" %}
-
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-    },
+const config = createConfig({
+  chains: [{ ...sepolia, auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY } }],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: node({ poolSize: 4 }),
   },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
-{% endtab %}
-{% tab title="sdk.ts" %}
-
-```ts
-import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
-});
-```
-
-{% endtab %}
-{% endtabs %}
-
-## Constructor
-
-### getChainId
-
-`() => Promise<number>`
-
-Called lazily to determine which transport to use. The relayer initializes (or re-initializes) its thread pool when the chain changes.
-
-```ts
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-});
-```
-
-### transports
-
-`Record<number, TransportConfig>`
-
-Per-chain configuration. Each entry maps a chain ID to its network RPC and authentication. Use built-in presets (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) and add your `network` and `auth`.
-
-```ts
-import { SepoliaConfig, MainnetConfig } from "@zama-fhe/sdk";
-
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY },
-    },
-  },
-});
-```
-
-Each transport entry accepts:
-
-| Field        | Type         | Description                                             |
-| ------------ | ------------ | ------------------------------------------------------- |
-| `network`    | `string`     | RPC URL for the chain.                                  |
-| `auth`       | `AuthConfig` | API key or bearer token for the relayer.                |
-| `relayerUrl` | `string`     | Custom relayer endpoint (overrides preset).             |
-| `...preset`  | —            | Spread a preset to get contract addresses and defaults. |
-
-Auth types:
-
-```ts
-// API key in header
-auth: { __type: "ApiKeyHeader", value: "your-api-key" }
-
-// API key in cookie
-auth: { __type: "ApiKeyCookie", value: "your-api-key" }
-
-// Bearer token
-auth: { __type: "BearerToken", token: "your-bearer-token" }
-```
-
----
+## `node()` options
 
 ### poolSize
 
 `number | undefined`
 
-Number of native worker threads for FHE operations. Default: `Math.min(os.cpus().length, 4)`.
+Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
 
-```ts
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    /* ... */
-  },
-  poolSize: 8,
-});
-```
+### logger
 
-{% hint style="info" %}
-The default of `min(CPU cores, 4)` works well for most server deployments. Increase for high-throughput services; decrease for memory-constrained environments.
-{% endhint %}
+`GenericLogger | undefined`
+
+Optional logger for observing worker lifecycle and request timing.
+
+### fheArtifactStorage
+
+`GenericStorage | undefined`
+
+Persistent storage for caching FHE public key and params.
+
+### fheArtifactCacheTTL
+
+`number | undefined`
+
+How long cached FHE artifacts remain valid, in seconds. Must be a non-negative integer.
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the relayer to the SDK constructor
+- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the config to the SDK constructor
 - [RelayerWeb](/reference/sdk/RelayerWeb) — browser variant using Web Workers and WASM
 - [Configuration guide](/guides/configuration) — authentication and network presets

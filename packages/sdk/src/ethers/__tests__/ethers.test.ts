@@ -1,7 +1,9 @@
 import type { Address, Hex } from "viem";
 import { encodeAbiParameters } from "viem";
+import { Wallet } from "ethers";
 import { vi } from "vitest";
-import { test as base, describe, expect } from "../../test-fixtures";
+import { test, describe, expect } from "../../test-fixtures";
+import { WalletNotConnectedError } from "../../errors";
 import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 
 // ── Mock ethers ──────────────────────────────────────────────
@@ -17,6 +19,9 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
         get(_target, prop) {
           if (prop === "then") {
             return undefined;
+          }
+          if (prop === "getFunction") {
+            return () => mockContractMethod;
           }
           return mockContractMethod;
         },
@@ -42,10 +47,11 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   };
 });
 
-//@ts-expect-error
-vi.mock(import("ethers"), () => {
+vi.mock(import("ethers"), async (importOriginal) => {
+  const actual = await importOriginal();
   return {
-    ethers: { Contract: MockContract },
+    ...actual,
+    ethers: { ...actual.ethers, Contract: MockContract },
     Contract: MockContract,
     BrowserProvider: MockBrowserProvider,
   };
@@ -54,6 +60,7 @@ vi.mock(import("ethers"), () => {
 // ── Imports (after mock) ─────────────────────────────────────
 
 import { EthersSigner } from "../ethers-signer";
+import { EthersProvider } from "../ethers-provider";
 import {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,
@@ -71,429 +78,388 @@ import {
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 const TX_HASH = "0xdeadbeef" as Hex;
 const MOCK_ADDRESS = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
-const MOCK_SIGNATURE = ("0x" + "12".repeat(65)) as Hex;
+const NEXT_ADDRESS = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const PRIVATE_KEY = `0x${"11".repeat(32)}` as const;
+const WALLET_ADDRESS = "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A";
+const CHAIN_ID = 8009;
+const VERIFYING_CONTRACT = "0x0000000000000000000000000000000000000001";
 const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Hex;
 const VALID_PROOF = ("0x" + "cd".repeat(32)) as Hex;
-
-// ── Ethers-specific fixtures ─────────────────────────────────
-
-interface EthersFixtures {
-  createEthersMockSigner: () => {
-    getAddress: ReturnType<typeof vi.fn>;
-    signTypedData: ReturnType<typeof vi.fn>;
-    provider: {
-      getNetwork: ReturnType<typeof vi.fn>;
-      waitForTransaction: ReturnType<typeof vi.fn>;
-    };
-  };
-}
-
-const eit = base.extend<EthersFixtures>({
-  // eslint-disable-next-line no-empty-pattern
-  createEthersMockSigner: async ({}, use) => {
-    vi.clearAllMocks();
-    await use(() => ({
-      getAddress: vi.fn().mockResolvedValue(MOCK_ADDRESS),
-      signTypedData: vi.fn().mockResolvedValue(MOCK_SIGNATURE),
-      provider: {
-        getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
-        waitForTransaction: vi.fn().mockResolvedValue({
-          logs: [{ topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" }],
-        }),
-      },
-    }));
-  },
-});
 
 // ── EthersSigner ─────────────────────────────────────────────
 
 describe("EthersSigner", () => {
   describe("constructor", () => {
-    eit(
-      "accepts an EIP-1193 provider and creates BrowserProvider internally",
-      async ({ createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        mockGetSigner.mockResolvedValue(signer);
-
-        const mockEthereum = {
-          on: vi.fn(),
-          removeListener: vi.fn(),
-          request: vi.fn(),
-        };
-        const ethersSigner = new EthersSigner({
-          ethereum: mockEthereum as never,
-        });
-
-        const address = await ethersSigner.getAddress();
-        expect(signer.getAddress).toHaveBeenCalled();
-        expect(address).toBe(MOCK_ADDRESS);
-      },
-    );
-
-    eit("accepts a Signer directly", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      const address = await ethersSigner.getAddress();
-      expect(signer.getAddress).toHaveBeenCalled();
-      expect(address).toBe(MOCK_ADDRESS);
-    });
-
-    eit("subscribe works with { ethereum } config", ({ createEthersMockSigner }) => {
+    test("accepts an EIP-1193 provider without resolving a signer", async () => {
       const mockEthereum = {
         on: vi.fn(),
         removeListener: vi.fn(),
-        request: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
       };
-      const signer = createEthersMockSigner();
-      mockGetSigner.mockResolvedValue(signer);
+      const ethersSigner = new EthersSigner({
+        ethereum: mockEthereum as never,
+      });
+
+      expect(ethersSigner.walletAccount.getSnapshot()).toBeUndefined();
+      expect(mockGetSigner).not.toHaveBeenCalled();
+    });
+
+    test("subscribe works with { ethereum } config", () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
+      };
 
       const ethersSigner = new EthersSigner({
         ethereum: mockEthereum as never,
       });
 
-      const onDisconnect = vi.fn();
-      const onAccountChange = vi.fn();
-      const unsub = ethersSigner.subscribe({ onDisconnect, onAccountChange });
+      const onWalletAccountChange = vi.fn();
+      const unsub = ethersSigner.walletAccount.subscribe(onWalletAccountChange);
 
       expect(mockEthereum.on).toHaveBeenCalledWith("accountsChanged", expect.any(Function));
       expect(mockEthereum.on).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(mockEthereum.on).toHaveBeenCalledWith("chainChanged", expect.any(Function));
       expect(typeof unsub).toBe("function");
 
       unsub();
+      expect(mockEthereum.removeListener).not.toHaveBeenCalled();
+    });
+
+    test("dispose removes EIP-1193 listeners", () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
+      };
+
+      const ethersSigner = new EthersSigner({
+        ethereum: mockEthereum as never,
+      });
+
+      ethersSigner.dispose();
+      ethersSigner.dispose();
+
+      expect(mockEthereum.removeListener).toHaveBeenCalledTimes(3);
       expect(mockEthereum.removeListener).toHaveBeenCalledWith(
         "accountsChanged",
         expect.any(Function),
       );
       expect(mockEthereum.removeListener).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(mockEthereum.removeListener).toHaveBeenCalledWith(
+        "chainChanged",
+        expect.any(Function),
+      );
     });
 
-    eit("subscribe returns no-op with { signer } config", ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    test("subscribe loads initial wallet account for browser signers", async () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn((request: { method: string }) => {
+          if (request.method === "eth_accounts") {
+            return Promise.resolve([MOCK_ADDRESS]);
+          }
+          if (request.method === "eth_chainId") {
+            return Promise.resolve("0x1f49");
+          }
+          return Promise.reject(new Error("unhandled"));
+        }),
+      };
 
-      const unsub = ethersSigner.subscribe({
-        onDisconnect: vi.fn(),
-        onAccountChange: vi.fn(),
+      const ethersSigner = new EthersSigner({
+        ethereum: mockEthereum as never,
       });
+
+      const onWalletAccountChange = vi.fn();
+      ethersSigner.walletAccount.subscribe(onWalletAccountChange);
+      await vi.waitFor(() => {
+        expect(onWalletAccountChange).toHaveBeenCalledWith({
+          previous: undefined,
+          next: { address: MOCK_ADDRESS, chainId: 8009 },
+        });
+      });
+      const accountsChanged = mockEthereum.on.mock.calls.find(
+        ([event]) => event === "accountsChanged",
+      )?.[1] as (accounts: Address[]) => void;
+
+      accountsChanged([NEXT_ADDRESS]);
+
+      expect(onWalletAccountChange).toHaveBeenLastCalledWith({
+        previous: { address: MOCK_ADDRESS, chainId: 8009 },
+        next: { address: NEXT_ADDRESS, chainId: 8009 },
+      });
+    });
+
+    test("subscribe returns no-op with { signer } config", () => {
+      const ethersSigner = new EthersSigner({ signer: {} as never });
+
+      const unsub = ethersSigner.walletAccount.subscribe(vi.fn());
       expect(typeof unsub).toBe("function");
       // Should not throw
       unsub();
     });
   });
 
-  describe("getChainId", () => {
-    eit(
-      "returns the numeric chain ID from the provider network",
-      async ({ createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
+  describe("real ethers Wallet", () => {
+    test("throws WalletNotConnectedError when a direct signer has no provider", async () => {
+      const signer = new EthersSigner({ signer: new Wallet(PRIVATE_KEY) });
 
-        const chainId = await ethersSigner.getChainId();
-        expect(signer.provider.getNetwork).toHaveBeenCalled();
-        expect(chainId).toBe(8009);
-      },
-    );
-
-    eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
-      const signer = { ...createEthersMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      await expect(ethersSigner.getChainId()).rejects.toThrow("Signer has no provider");
-    });
-  });
-
-  describe("getAddress", () => {
-    eit("returns the hex address from the signer", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      const address = await ethersSigner.getAddress();
-      expect(address).toBe(MOCK_ADDRESS);
+      await expect(signer.refreshWalletAccount()).resolves.toBeUndefined();
+      expect(() => signer.requireWalletAccount("test")).toThrow(WalletNotConnectedError);
     });
 
-    eit("throws when address does not start with 0x", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.getAddress.mockResolvedValue("notHex");
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    test("does not hide provider errors during explicit wallet-account resolution", async () => {
+      const providerError = new Error("network unavailable");
+      const wallet = new Wallet(PRIVATE_KEY, {
+        getNetwork: async () => {
+          throw providerError;
+        },
+      } as never);
+      const signer = new EthersSigner({ signer: wallet });
 
-      await expect(ethersSigner.getAddress()).rejects.toThrow(/invalid/i);
+      await expect(signer.refreshWalletAccount()).rejects.toBe(providerError);
     });
-  });
 
-  describe("signTypedData", () => {
-    eit(
-      "delegates to signer.signTypedData, filtering out EIP712Domain",
-      async ({ createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
+    test("resolves wallet account and signs typed data through ethers", async () => {
+      const wallet = new Wallet(PRIVATE_KEY, {
+        getNetwork: async () => ({ chainId: BigInt(CHAIN_ID) }),
+        resolveName: async (name: string) => name,
+      } as never);
+      const signer = new EthersSigner({ signer: wallet });
 
-        const typedData: EIP712TypedData = {
-          domain: {
-            name: "Test",
-            version: "1",
-            chainId: 1,
-            verifyingContract: MOCK_ADDRESS,
-          },
-          types: {
-            EIP712Domain: [{ name: "name", type: "string" }],
-            Permit: [{ name: "owner", type: "address" }],
-          },
-          message: {
-            publicKey: "0xkey",
-            contractAddresses: [MOCK_ADDRESS],
-            startTimestamp: 1000n,
-            durationDays: 1n,
-            extraData: "0x",
-          },
-        };
-
-        const sig = await ethersSigner.signTypedData(typedData);
-
-        expect(signer.signTypedData).toHaveBeenCalledWith(
-          typedData.domain,
-          { Permit: typedData.types.Permit },
-          typedData.message,
-        );
-        expect(sig).toBe(MOCK_SIGNATURE);
-      },
-    );
-
-    eit("throws when signature does not start with 0x", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.signTypedData.mockResolvedValue("notHex");
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+      await expect(signer.refreshWalletAccount()).resolves.toEqual({
+        address: WALLET_ADDRESS,
+        chainId: CHAIN_ID,
+      });
+      expect(signer.requireWalletAccount("test")).toEqual({
+        address: WALLET_ADDRESS,
+        chainId: CHAIN_ID,
+      });
 
       const typedData: EIP712TypedData = {
         domain: {
-          name: "Test",
+          name: "Decryption",
           version: "1",
-          chainId: 1,
-          verifyingContract: MOCK_ADDRESS,
+          chainId: 1n,
+          verifyingContract: VERIFYING_CONTRACT,
         },
-        types: { EIP712Domain: [], Permit: [] },
+        types: {
+          EIP712Domain: [
+            { name: "name", type: "string" },
+            { name: "version", type: "string" },
+            { name: "chainId", type: "uint256" },
+            { name: "verifyingContract", type: "address" },
+          ],
+          UserDecryptRequestVerification: [
+            { name: "publicKey", type: "bytes" },
+            { name: "contractAddresses", type: "address[]" },
+            { name: "startTimestamp", type: "uint256" },
+            { name: "durationDays", type: "uint256" },
+            { name: "extraData", type: "bytes" },
+          ],
+        },
+        primaryType: "UserDecryptRequestVerification",
         message: {
-          publicKey: "0xkey",
-          contractAddresses: [],
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
+          publicKey: "0x",
+          contractAddresses: [MOCK_ADDRESS, NEXT_ADDRESS],
+          startTimestamp: "1",
+          durationDays: "1",
+          extraData: "0x00",
         },
       };
 
-      await expect(ethersSigner.signTypedData(typedData)).rejects.toThrow("Expected hex string");
+      await expect(signer.signTypedData(typedData)).resolves.toMatch(/^0x[0-9a-fA-F]{130}$/);
     });
   });
 
   describe("writeContract", () => {
-    eit(
-      "creates an ethers Contract, calls the function, and returns the tx hash",
-      async ({ tokenAddress, userAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
+    test("creates an ethers Contract, calls the function, and returns the tx hash", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const ethersSigner = new EthersSigner({ signer: {} as never });
 
-        mockContractMethod.mockResolvedValueOnce({ hash: TX_HASH });
+      mockContractMethod.mockResolvedValueOnce({ hash: TX_HASH });
 
-        const config = {
-          address: tokenAddress,
-          abi: [{ name: "transfer" }],
-          functionName: "transfer",
-          args: [userAddress, 100n] as const,
-        };
+      const config = {
+        address: tokenAddress,
+        abi: [{ name: "transfer" }],
+        functionName: "transfer",
+        args: [userAddress, 100n] as const,
+      };
 
-        const hash = await ethersSigner.writeContract(config);
-        expect(mockContractMethod).toHaveBeenCalledWith(userAddress, 100n, {});
-        expect(hash).toBe(TX_HASH);
-      },
-    );
-
-    eit(
-      "passes value in overrides when provided",
-      async ({ tokenAddress, userAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
-
-        mockContractMethod.mockResolvedValueOnce({ hash: TX_HASH });
-
-        const config = {
-          address: tokenAddress,
-          abi: [{ name: "wrapETH" }],
-          functionName: "wrapETH",
-          args: [userAddress, 500n] as const,
-          value: 500n,
-        };
-
-        await ethersSigner.writeContract(config);
-        expect(mockContractMethod).toHaveBeenCalledWith(userAddress, 500n, {
-          value: 500n,
-        });
-      },
-    );
-
-    eit(
-      "throws when tx hash does not start with 0x",
-      async ({ tokenAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
-
-        mockContractMethod.mockResolvedValueOnce({ hash: "notHex" });
-
-        const config = {
-          address: tokenAddress,
-          abi: [],
-          functionName: "fn",
-          args: [],
-        };
-
-        await expect(ethersSigner.writeContract(config)).rejects.toThrow("Expected hex string");
-      },
-    );
-  });
-
-  describe("readContract", () => {
-    eit(
-      "creates an ethers Contract and calls the function with args",
-      async ({ tokenAddress, userAddress, createEthersMockSigner }) => {
-        const signer = createEthersMockSigner();
-        const ethersSigner = new EthersSigner({ signer: signer as never });
-
-        mockContractMethod.mockResolvedValueOnce(42n);
-
-        const config = {
-          address: tokenAddress,
-          abi: [{ name: "balanceOf" }],
-          functionName: "balanceOf",
-          args: [userAddress] as const,
-        };
-
-        const result = await ethersSigner.readContract(config);
-        expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
-        expect(result).toBe(42n);
-      },
-    );
-  });
-
-  describe("waitForTransactionReceipt", () => {
-    eit("waits for the transaction and maps logs correctly", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
-
-      expect(signer.provider.waitForTransaction).toHaveBeenCalledWith("0xhash");
-      expect(receipt.logs).toEqual([{ topics: ["0xtopic1", "0xtopic3"], data: "0xdata" }]);
+      const hash = await ethersSigner.writeContract(config);
+      expect(mockContractMethod).toHaveBeenCalledWith(userAddress, 100n, {});
+      expect(hash).toBe(TX_HASH);
     });
 
-    eit("filters out null topics from logs", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue({
-        logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
+    test("passes value in overrides when provided", async ({ tokenAddress, userAddress }) => {
+      const ethersSigner = new EthersSigner({ signer: {} as never });
+
+      mockContractMethod.mockResolvedValueOnce({ hash: TX_HASH });
+
+      const config = {
+        address: tokenAddress,
+        abi: [{ name: "wrapETH" }],
+        functionName: "wrapETH",
+        args: [userAddress, 500n] as const,
+        value: 500n,
+      };
+
+      await ethersSigner.writeContract(config);
+      expect(mockContractMethod).toHaveBeenCalledWith(userAddress, 500n, {
+        value: 500n,
       });
-      const ethersSigner = new EthersSigner({ signer: signer as never });
-
-      const receipt = await ethersSigner.waitForTransactionReceipt("0xhash" as Hex);
-      expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
     });
 
-    eit("throws when signer has no provider", async ({ createEthersMockSigner }) => {
-      const signer = { ...createEthersMockSigner(), provider: null };
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+    test("throws when tx hash does not start with 0x", async ({ tokenAddress }) => {
+      const ethersSigner = new EthersSigner({ signer: {} as never });
 
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Signer has no provider",
-      );
-    });
+      mockContractMethod.mockResolvedValueOnce({ hash: "notHex" });
 
-    eit("throws when receipt is null", async ({ createEthersMockSigner }) => {
-      const signer = createEthersMockSigner();
-      signer.provider.waitForTransaction.mockResolvedValue(null);
-      const ethersSigner = new EthersSigner({ signer: signer as never });
+      const config = {
+        address: tokenAddress,
+        abi: [],
+        functionName: "fn",
+        args: [],
+      };
 
-      await expect(ethersSigner.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Transaction receipt not found",
-      );
+      await expect(ethersSigner.writeContract(config)).rejects.toThrow("Expected hex string");
     });
   });
 });
 
-// ── Read-only mode ({ provider } config) ────────────────────
+// ── EthersProvider ────────────────────────────────────────────
 
-describe("EthersSigner read-only mode ({ provider })", () => {
-  eit("readContract works with provider-only config", async ({ tokenAddress, userAddress }) => {
-    mockContractMethod.mockResolvedValue(42n);
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 1n }),
-    };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
+describe("EthersProvider", () => {
+  describe("constructor", () => {
+    test("accepts an EIP-1193 provider and creates BrowserProvider internally", async () => {
+      const mockEthereum = {
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        request: vi.fn().mockRejectedValue(new Error("not connected")),
+      };
+      // Does not throw
+      const provider = new EthersProvider({ ethereum: mockEthereum as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
     });
 
-    const result = await ethersSigner.readContract({
-      address: tokenAddress,
-      abi: [{ name: "balanceOf" }],
-      functionName: "balanceOf",
-      args: [userAddress],
+    test("accepts a pre-built Provider directly", () => {
+      const mockProvider = { getNetwork: vi.fn() };
+      const provider = new EthersProvider({ provider: mockProvider as never });
+      expect(provider).toBeInstanceOf(EthersProvider);
     });
-    expect(result).toBe(42n);
   });
 
-  eit("getChainId works with provider-only config", async () => {
-    const mockProvider = {
-      getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
-    };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+  describe("getChainId", () => {
+    test("returns the numeric chain ID from the provider network", async () => {
+      const mockProvider = {
+        getNetwork: vi.fn().mockResolvedValue({ chainId: 8009n }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-    const chainId = await ethersSigner.getChainId();
-    expect(chainId).toBe(8009);
-  });
-
-  eit("getAddress throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    await expect(ethersSigner.getAddress()).rejects.toThrow("No signer configured");
-  });
-
-  eit("signTypedData throws with provider-only config", async () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
-
-    const typedData = {
-      domain: {},
-      types: { EIP712Domain: [], Transfer: [{ name: "to", type: "address" }] },
-      message: {},
-    };
-    await expect(ethersSigner.signTypedData(typedData as never)).rejects.toThrow(
-      "No signer configured",
-    );
-  });
-
-  eit("writeContract throws with provider-only config", async ({ tokenAddress }) => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({
-      provider: mockProvider as never,
+      const chainId = await ethersProvider.getChainId();
+      expect(mockProvider.getNetwork).toHaveBeenCalled();
+      expect(chainId).toBe(8009);
     });
+  });
 
-    await expect(
-      ethersSigner.writeContract({
+  describe("readContract", () => {
+    test("creates an ethers Contract and calls the function with args", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      mockContractMethod.mockResolvedValueOnce(42n);
+      const mockProvider = { getNetwork: vi.fn() };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      const config = {
         address: tokenAddress,
-        abi: [],
-        functionName: "transfer",
-        args: [],
-      }),
-    ).rejects.toThrow("No signer configured");
+        abi: [{ name: "balanceOf" }],
+        functionName: "balanceOf",
+        args: [userAddress] as const,
+      };
+
+      const result = await ethersProvider.readContract(config);
+      expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
+      expect(result).toBe(42n);
+    });
   });
 
-  eit("subscribe returns no-op with provider-only config", () => {
-    const mockProvider = { getNetwork: vi.fn() };
-    const ethersSigner = new EthersSigner({ provider: mockProvider as never });
+  describe("waitForTransactionReceipt", () => {
+    test("waits for the transaction and maps logs correctly", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: ["0xtopic1", null, "0xtopic3"], data: "0xdata" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
-    const unsub = ethersSigner.subscribe({
-      onDisconnect: vi.fn(),
-      onAccountChange: vi.fn(),
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
+
+      expect(mockProvider.waitForTransaction).toHaveBeenCalledWith("0xhash");
+      expect(receipt.logs).toEqual([{ topics: ["0xtopic1", "0xtopic3"], data: "0xdata" }]);
     });
-    expect(typeof unsub).toBe("function");
-    unsub(); // should not throw
+
+    test("filters out null topics from logs", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue({
+          logs: [{ topics: [null, "0xa", null, "0xb"], data: "0x" }],
+        }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
+      expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
+    });
+
+    test("throws when receipt is null", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+        "Transaction receipt not found",
+      );
+    });
+
+    test("propagates errors from waitForTransaction", async () => {
+      const mockProvider = {
+        waitForTransaction: vi.fn().mockRejectedValue(new Error("transaction could not be found")),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
+        "transaction could not be found",
+      );
+    });
+  });
+
+  describe("getBlockTimestamp", () => {
+    test("returns the latest block timestamp as bigint", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      const timestamp = await ethersProvider.getBlockTimestamp();
+      expect(mockProvider.getBlock).toHaveBeenCalledWith("latest");
+      expect(timestamp).toBe(1700000000n);
+    });
+
+    test("throws when no block is returned", async () => {
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      };
+      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+
+      await expect(ethersProvider.getBlockTimestamp()).rejects.toThrow(
+        "Failed to fetch latest block",
+      );
+    });
   });
 });
 
@@ -502,7 +468,7 @@ describe("EthersSigner read-only mode ({ provider })", () => {
 describe("ethers read contract helpers", () => {
   const mockProvider = { call: vi.fn() };
 
-  eit("readConfidentialBalanceOfContract", async ({ tokenAddress, userAddress }) => {
+  test("readConfidentialBalanceOfContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "bytes32" }], [VALID_HANDLE]),
     );
@@ -510,7 +476,7 @@ describe("ethers read contract helpers", () => {
     expect(result).toBe(VALID_HANDLE);
   });
 
-  eit("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
+  test("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "address" }], [MOCK_ADDRESS]),
     );
@@ -518,7 +484,7 @@ describe("ethers read contract helpers", () => {
     expect(result).toBe(MOCK_ADDRESS);
   });
 
-  eit("readSupportsInterfaceContract", async ({ tokenAddress }) => {
+  test("readSupportsInterfaceContract", async ({ tokenAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
       encodeAbiParameters([{ type: "bool" }], [true]),
     );
@@ -533,7 +499,7 @@ describe("ethers read contract helpers", () => {
 describe("ethers write contract helpers", () => {
   const mockSigner = { call: vi.fn(), sendTransaction: vi.fn() };
 
-  eit("writeConfidentialTransferContract", async ({ tokenAddress, userAddress }) => {
+  test("writeConfidentialTransferContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -549,7 +515,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeUnwrapContract", async ({ tokenAddress, userAddress }) => {
+  test("writeUnwrapContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -566,7 +532,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeUnwrapFromBalanceContract", async ({ tokenAddress, userAddress }) => {
+  test("writeUnwrapFromBalanceContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -581,7 +547,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeFinalizeUnwrapContract", async ({ wrapperAddress }) => {
+  test("writeFinalizeUnwrapContract", async ({ wrapperAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -591,7 +557,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeSetOperatorContract", async ({ tokenAddress }) => {
+  test("writeSetOperatorContract", async ({ tokenAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -599,7 +565,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeSetOperatorContract without explicit timestamp", async ({ tokenAddress }) => {
+  test("writeSetOperatorContract without explicit timestamp", async ({ tokenAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -607,7 +573,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("writeWrapContract", async ({ wrapperAddress, userAddress }) => {
+  test("writeWrapContract", async ({ wrapperAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
@@ -615,7 +581,7 @@ describe("ethers write contract helpers", () => {
     expect(hash).toBe(TX_HASH);
   });
 
-  eit("write helpers reject when tx hash is not hex", async ({ wrapperAddress, userAddress }) => {
+  test("write helpers reject when tx hash is not hex", async ({ wrapperAddress, userAddress }) => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: "notHex",
     });

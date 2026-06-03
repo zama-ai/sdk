@@ -1,21 +1,29 @@
+// oxlint-disable no-empty-pattern
+import { vi } from "vitest";
 import { test as base, describe, expect } from "../test-fixtures";
-import type { Address } from "@zama-fhe/sdk";
+import { WalletNotConnectedError, type Address } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
+const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+const { mockGetConnection, mockUnsubscribe } = vi.hoisted(() => ({
+  mockGetConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
+  mockUnsubscribe: vi.fn(),
+}));
+
 interface Connection {
-  status: string;
+  status: "connected" | "connecting" | "disconnected" | "reconnecting";
   address?: Address;
   chainId?: number;
 }
 type OnChange = (connection: Connection, prevConnection: Connection) => void;
 
 let capturedOnChange: OnChange | undefined;
-const mockUnsubscribe = vi.fn();
 
 vi.mock(import("wagmi/actions"), () => ({
   getChainId: vi.fn().mockReturnValue(31337),
   getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
-  getConnection: vi.fn().mockReturnValue({ address: "0xuser" }),
+  getConnection: mockGetConnection,
   readContract: vi.fn(),
   signTypedData: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
@@ -27,88 +35,255 @@ vi.mock(import("wagmi/actions"), () => ({
 }));
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
+import { WagmiProvider } from "../wagmi/wagmi-provider";
 
 interface WagmiFixtures {
+  wagmiConfig: Config;
   wagmiSigner: WagmiSigner;
+  wagmiProvider: WagmiProvider;
+  onWalletAccountChange: ReturnType<typeof vi.fn>;
 }
 
-const wit = base.extend<WagmiFixtures>({
-  // eslint-disable-next-line no-empty-pattern
-  wagmiSigner: async ({}, use) => {
+const test = base.extend<WagmiFixtures>({
+  wagmiConfig: async ({}, use) => {
+    await use({} as unknown as Config);
+  },
+  wagmiSigner: async ({ wagmiConfig }, use) => {
     capturedOnChange = undefined;
     mockUnsubscribe.mockClear();
-    await use(new WagmiSigner({ config: {} as unknown as Config }));
+    mockGetConnection.mockReturnValue({ address: "0xuser" });
+    await use(new WagmiSigner({ config: wagmiConfig }));
+  },
+  wagmiProvider: async ({ wagmiConfig }, use) => {
+    await use(new WagmiProvider({ config: wagmiConfig }));
+  },
+  onWalletAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+    await use(vi.fn());
   },
 });
 
 describe("WagmiSigner.subscribe", () => {
-  wit("calls watchConnection and returns unsubscribe function", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    const unsubscribe = wagmiSigner.subscribe({ onDisconnect });
+  test("calls watchConnection and returns unsubscribe function", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    const unsubscribe = wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
 
     expect(capturedOnChange).toBeDefined();
-    expect(unsubscribe).toBe(mockUnsubscribe);
+    expect(typeof unsubscribe).toBe("function");
   });
 
-  wit("fires onDisconnect when status becomes disconnected", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    wagmiSigner.subscribe({ onDisconnect });
+  test("dispose stops wagmi connection watching once", ({ wagmiSigner }) => {
+    wagmiSigner.dispose();
+    wagmiSigner.dispose();
+
+    expect(mockUnsubscribe).toHaveBeenCalledOnce();
+  });
+
+  test("seeds the currently connected wallet account", ({ wagmiSigner, onWalletAccountChange }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
+  });
+
+  test("seeds a reconnecting wallet account when wagmi has persisted state", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    capturedOnChange!(
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
+    );
+
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
+  });
+
+  test("throws WalletNotConnectedError when no account is available", ({ wagmiSigner }) => {
+    mockGetConnection.mockReturnValue({ status: "disconnected" });
+
+    expect(wagmiSigner.walletAccount.getSnapshot()).toBeUndefined();
+    expect(() => wagmiSigner.requireWalletAccount("test")).toThrow(WalletNotConnectedError);
+  });
+
+  test("fires connect when transitioning from disconnected to connected", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
+
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: undefined,
+      next: { address: ADDR_A, chainId: 1 },
+    });
+  });
+
+  test("fires disconnect when status becomes disconnected", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
 
     capturedOnChange!(
       { status: "disconnected" },
-      { status: "connected", address: "0xabc" as Address },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
-    expect(onDisconnect).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: undefined,
+    });
   });
 
-  wit("does not fire onDisconnect when already disconnected", ({ wagmiSigner }) => {
-    const onDisconnect = vi.fn();
-    wagmiSigner.subscribe({ onDisconnect });
+  test("does not fire when already disconnected", ({ wagmiSigner, onWalletAccountChange }) => {
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
 
     capturedOnChange!({ status: "disconnected" }, { status: "disconnected" });
-    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
   });
 
-  wit("fires onAccountChange when address changes", ({ wagmiSigner }) => {
-    const onAccountChange = vi.fn();
-    wagmiSigner.subscribe({ onAccountChange });
+  test("does not fire when status flips connected to reconnecting to connected", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
 
     capturedOnChange!(
-      { status: "connected", address: "0xbbb" as Address },
-      { status: "connected", address: "0xaaa" as Address },
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
-    expect(onAccountChange).toHaveBeenCalledOnce();
-    expect(onAccountChange).toHaveBeenCalledWith("0xbbb");
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
+    );
+
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
   });
 
-  wit("does not fire onAccountChange when address is unchanged", ({ wagmiSigner }) => {
-    const onAccountChange = vi.fn();
-    wagmiSigner.subscribe({ onAccountChange });
+  test("fires disconnect when reconnecting fails", ({ wagmiSigner, onWalletAccountChange }) => {
+    capturedOnChange!(
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
 
     capturedOnChange!(
-      { status: "connected", address: "0xaaa" as Address },
-      { status: "connected", address: "0xaaa" as Address },
+      { status: "disconnected" },
+      { status: "reconnecting", address: ADDR_A, chainId: 1 },
     );
-    expect(onAccountChange).not.toHaveBeenCalled();
+
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: undefined,
+    });
   });
 
-  wit("fires onChainChange when chain id changes", ({ wagmiSigner }) => {
-    const onChainChange = vi.fn();
-    wagmiSigner.subscribe({ onChainChange });
+  test("does not fire on disconnected to connecting without address", ({
+    wagmiSigner,
+    onWalletAccountChange,
+  }) => {
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
+
+    capturedOnChange!({ status: "connecting" }, { status: "disconnected" });
+
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
+  });
+
+  test("fires when address changes", ({ wagmiSigner, onWalletAccountChange }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
 
     capturedOnChange!(
-      { status: "connected", address: "0xaaa" as Address, chainId: 2 },
-      { status: "connected", address: "0xaaa" as Address, chainId: 1 },
+      { status: "connected", address: ADDR_B, chainId: 1 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
+    );
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: { address: ADDR_B, chainId: 1 },
+    });
+  });
+
+  test("does not fire when address is unchanged", ({ wagmiSigner, onWalletAccountChange }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
+
+    capturedOnChange!(
+      {
+        status: "connected",
+        address: ADDR_A.toLowerCase() as Address,
+        chainId: 1,
+      },
+      { status: "connected", address: ADDR_A, chainId: 1 },
+    );
+    expect(onWalletAccountChange).not.toHaveBeenCalled();
+  });
+
+  test("fires when chain id changes", ({ wagmiSigner, onWalletAccountChange }) => {
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 1 },
+      { status: "disconnected" },
+    );
+    wagmiSigner.walletAccount.subscribe(onWalletAccountChange);
+    onWalletAccountChange.mockClear();
+
+    capturedOnChange!(
+      { status: "connected", address: ADDR_A, chainId: 2 },
+      { status: "connected", address: ADDR_A, chainId: 1 },
     );
 
-    expect(onChainChange).toHaveBeenCalledOnce();
-    expect(onChainChange).toHaveBeenCalledWith(2);
+    expect(onWalletAccountChange).toHaveBeenCalledOnce();
+    expect(onWalletAccountChange).toHaveBeenCalledWith({
+      previous: { address: ADDR_A, chainId: 1 },
+      next: { address: ADDR_A, chainId: 2 },
+    });
   });
 });
 
-describe("WagmiSigner.getBlockTimestamp", () => {
-  wit("returns block timestamp from getBlock", async ({ wagmiSigner }) => {
-    const timestamp = await wagmiSigner.getBlockTimestamp();
+describe("WagmiProvider.getBlockTimestamp", () => {
+  test("returns block timestamp from getBlock", async ({ wagmiProvider }) => {
+    const timestamp = await wagmiProvider.getBlockTimestamp();
     expect(timestamp).toBe(1700000000n);
   });
 });

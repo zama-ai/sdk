@@ -1,11 +1,11 @@
 ---
 title: useUserDecrypt
-description: Query hook that automatically decrypts FHE handles once credentials are available via useAllow.
+description: Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.
 ---
 
 # useUserDecrypt
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](/reference/react/useAllow)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](/reference/react/useGrantPermit)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 {% hint style="info" %}
 **This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
@@ -23,28 +23,28 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useAllow, useIsAllowed, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 const CONTRACT = "0xYourContract" as const;
 
-function DecryptHandle({ handle }: { handle: string }) {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: allowed } = useIsAllowed({ contractAddresses: [CONTRACT] });
+function DecryptValue({ encryptedValue }: { encryptedValue: string }) {
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [CONTRACT] });
   const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle, contractAddress: CONTRACT }] },
-    { enabled: !!allowed }, // gate: only decrypt once authorized
+    [{ encryptedValue, contractAddress: CONTRACT }],
+    { enabled: !!hasPermit }, // gate: only decrypt once authorized
   );
 
-  if (!allowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([CONTRACT])} disabled={isAllowing}>
-        {isAllowing ? "Signing..." : "Authorize"}
+      <button onClick={() => grantPermit([CONTRACT])} disabled={isGranting}>
+        {isGranting ? "Signing..." : "Authorize"}
       </button>
     );
   }
 
   if (isPending) return <p>Decrypting...</p>;
-  return <output>Value: {data?.[handle]?.toString()}</output>;
+  return <output>Value: {data?.[encryptedValue]?.toString()}</output>;
 }
 ```
 
@@ -53,41 +53,35 @@ function DecryptHandle({ handle }: { handle: string }) {
 
 ## Parameters
 
-```ts
-import { type UseUserDecryptConfig } from "@zama-fhe/react-sdk";
-```
+### inputs (first argument)
 
-### handles
+`EncryptedInput[]`
 
-`DecryptHandle[]`
-
-Array of handles to decrypt. Each entry pairs an encrypted handle with the address of the contract that owns it. Only handles not yet in the SDK's persistent decrypt cache are sent for decryption — cached handles are returned immediately, even after a page reload.
+Array of encrypted values to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
-import { type DecryptHandle } from "@zama-fhe/react-sdk";
+import { type EncryptedInput } from "@zama-fhe/sdk";
 ```
 
-| Field             | Type      | Description                                            |
-| ----------------- | --------- | ------------------------------------------------------ |
-| `handle`          | `Handle`  | The encrypted handle (hex string) to decrypt.          |
-| `contractAddress` | `Address` | Address of the contract that owns the encrypted value. |
+| Field             | Type             | Description                                            |
+| ----------------- | ---------------- | ------------------------------------------------------ |
+| `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
+| `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
 
-Handles from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
+Inputs from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useUserDecrypt({
-  handles: [
-    { handle: "0xhandle1...", contractAddress: "0xContractA" },
-    { handle: "0xhandle2...", contractAddress: "0xContractA" },
-    { handle: "0xhandle3...", contractAddress: "0xContractB" },
-  ],
-});
+const { data } = useUserDecrypt([
+  { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
+  { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
+  { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
+]);
 
-// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
 
 {% hint style="warning" %}
-**All contract addresses must be authorized first.** Call `useAllow` with every contract address present in `handles` before enabling the query. Use `useIsAllowed({ contractAddresses })` to check coverage and pass `{ enabled: !!allowed }` as the second argument to prevent unexpected wallet prompts.
+**All contract addresses must be authorized first.** Call `useGrantPermit` with every contract address present in `inputs` before enabling the query. Use `useHasPermit({ contractAddresses })` to check coverage and pass `{ enabled: !!hasPermit }` as the second argument to prevent unexpected wallet prompts.
 {% endhint %}
 
 ### options (second argument)
@@ -98,9 +92,9 @@ Pass `{ enabled: false }` as the second argument to disable the query.
 
 ## Return Type
 
-Returns a standard `useQuery` result. `data` resolves to `Record<Handle, ClearValueType>` — a map from each handle to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
+Returns a standard `useQuery` result. `data` resolves to `Record<EncryptedValue, ClearValue>` — a map from each encrypted value to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
 
-When all requested handles are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written to the SDK's persistent decrypt cache (`sdk.cache`) — scoped by `(signer, contract, handle)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `revoke()`, `revokeSession()`, or wallet lifecycle events (disconnect, account change, chain change).
+When all requested inputs are already cached, `data` contains the cached values immediately (no relayer call). Freshly decrypted results are written through the SDK's internal CachingService — scoped by `(signer, contract, encryptedValue)` — so that subsequent renders return instantly, even after a page reload. The cache is cleared automatically on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account change, chain change).
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -109,36 +103,35 @@ When all requested handles are already cached, `data` contains the cached values
 `useUserDecrypt` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
+2. **Decrypt** — calls `sdk.decryption.userDecrypt(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
 
 {% hint style="warning" %}
-**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
+**`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](/reference/react/useHasPermit):
 
 ```tsx
-const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
-const { data } = useUserDecrypt(
-  { handles: [{ handle, contractAddress: "0xContract" }] },
-  { enabled: !!allowed },
-);
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
+const { data } = useUserDecrypt([{ encryptedValue, contractAddress: "0xContract" }], {
+  enabled: !!hasPermit,
+});
 ```
 
-This ensures the decrypt query only fires after `useAllow` has been called.
+This ensures the decrypt query only fires after `useGrantPermit` has been called.
 {% endhint %}
 
-## Credential caching
+## Permit caching
 
-`useUserDecrypt` relies on credentials acquired via [`useAllow`](/reference/react/useAllow):
+`useUserDecrypt` relies on permits acquired via [`useGrantPermit`](/reference/react/useGrantPermit):
 
-- **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
-- **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
-- **Expiry** — credentials expire after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Once expired, call `allow()` again to generate fresh credentials.
+- **First `grantPermit()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
+- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
 
-This means users only see a wallet signature prompt once per session (or per TTL window), even if they decrypt multiple times.
+This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
 ## Related
 
-- [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether credentials are cached and cover specific contracts
+- [`useGrantPermit`](/reference/react/useGrantPermit) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useHasPermit`](/reference/react/useHasPermit) — check whether permits are cached and cover specific contracts
 - [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples

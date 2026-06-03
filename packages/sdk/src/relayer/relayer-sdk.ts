@@ -5,22 +5,24 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
+  PublicKeyData,
+  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import type { Address, Hex } from "viem";
 
 /**
- * Interface for FHE relayer operations.
- * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
+ * Core FHE cryptographic operations — the 10 methods that perform
+ * encryption, decryption, key generation, and proof verification.
  */
-export interface RelayerSDK {
+export interface FheOperations {
   /** Generate an FHE keypair (public + private key). */
   generateKeypair(): Promise<KeypairType<Hex>>;
 
@@ -35,11 +37,11 @@ export interface RelayerSDK {
   /** Encrypt plaintext values into FHE ciphertexts. */
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
-  /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  /** Decrypt FHE encrypted values using the user's own credentials. */
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
-  /** Decrypt FHE handles using the network public key (no credential needed). */
-  publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+  /** Decrypt encrypted values using the network public key (no credential needed). */
+  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
@@ -50,25 +52,27 @@ export interface RelayerSDK {
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  /** Decrypt FHE handles using delegated user credentials. */
+  /** Decrypt FHE encrypted values using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
 
   /** Fetch the FHE network public key. Returns `null` if not available. */
-  getPublicKey(): Promise<{
-    publicKeyId: string;
-    publicKey: Uint8Array;
-  } | null>;
+  getPublicKey(): Promise<PublicKeyData | null>;
 
   /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
-  getPublicParams(
-    bits: number,
-  ): Promise<{ publicParams: Uint8Array; publicParamsId: string } | null>;
+  getPublicParams(bits: number): Promise<PublicParamsData | null>;
+}
 
+/**
+ * Interface for FHE relayer operations.
+ * Extends `FheOperations` with lifecycle and chain-specific methods.
+ * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
+ */
+export interface RelayerSDK extends FheOperations {
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Promise<Address>;
 
