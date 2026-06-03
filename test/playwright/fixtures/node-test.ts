@@ -58,7 +58,7 @@ export interface NodeTestFixtures {
 }
 
 export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
-  anvilPort: [NODE_ANVIL_PORT, { scope: "worker" }],
+  anvilPort: [NODE_ANVIL_PORT, { option: true, scope: "worker" }],
   viemClient: [
     async ({ anvilPort }, use) => {
       const client = createViemClient(anvilPort);
