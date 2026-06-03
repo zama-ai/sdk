@@ -127,12 +127,15 @@ deploy_contracts() {
   rm -rf "$CONTRACTS_DIR/broadcast"
 
   # Deploy project contracts.
-  # --slow sends one tx at a time, waiting for each receipt, so the broadcast
-  #   never races itself across anvil's auto-mined blocks.
-  # --gas-estimate-multiplier 200 doubles forge's simulated gas limit, absorbing
-  #   the simulation-vs-live gas delta on the FHE-heavy wrap() txs (which touch
-  #   the cheat-materialized host contracts) that otherwise reverts out-of-gas.
-  local forge_args=(--broadcast --slow --gas-estimate-multiplier 200)
+  # --slow sends one tx at a time, waiting for each receipt. Besides avoiding a
+  #   self-race across anvil's auto-mined blocks, it makes each tx's gas usage
+  #   deterministic (fixed order → stable EIP-2929 cold/warm access costs), which
+  #   was the actual cause of the intermittent out-of-gas reverts under batch
+  #   broadcast. We deliberately do NOT pass --gas-estimate-multiplier: forge's
+  #   default estimation is left intact so a genuine gas regression surfaces
+  #   rather than being masked by an inflated limit. If a deploy ever does fail,
+  #   the final attempt below runs verbosely with the full forge trace.
+  local forge_args=(--broadcast --slow)
   if [ "$attempt_num" -ge "$MAX_ATTEMPTS" ]; then
     # Last attempt: drop --silent so a persistent (non-transient) failure shows
     # the forge revert reason / trace instead of failing blind after N retries.
