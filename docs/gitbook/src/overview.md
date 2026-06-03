@@ -15,7 +15,7 @@ This is the new default SDK for building on the Zama Protocol. The legacy `@zama
 
 ## Where to go next
 
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.org/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.org/protocol) to understand the foundations.
 
 Otherwise:
 

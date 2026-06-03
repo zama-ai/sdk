@@ -38,7 +38,7 @@ API reports are intentionally excluded from this file. They remain available in 
 
 ## Where to go next
 
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.org/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.org/protocol) to understand the foundations.
 
 Otherwise:
 
@@ -14994,7 +14994,7 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Reporting vulnerabilities
 
-If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/token-sdk/blob/main/SECURITY.md) for full details.
+If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/sdk/blob/main/SECURITY.md) for full details.
 
 ## Official Examples
 
