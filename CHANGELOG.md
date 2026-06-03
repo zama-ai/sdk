@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.1...v3.1.0-alpha.2) (2026-06-03)
+
+### Build System
+
+- show refactor/build commits in release notes ([#373](https://github.com/zama-ai/sdk/issues/373)) ([4741260]())
+
 ## [3.1.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.0.1...v3.1.0-alpha.1) (2026-06-02)
 
 ### ⚠ BREAKING CHANGES
