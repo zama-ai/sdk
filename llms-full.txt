@@ -10793,6 +10793,26 @@ const { data: hasPermit } = useHasPermit({
 });
 ```
 
+An empty list is a no-op: the query is disabled and `data` stays `undefined`. This lets you call the hook unconditionally (as the Rules of Hooks require) even when there is nothing to check yet — no dummy probe address needed.
+
+```tsx
+// Safe to call with a list that may be empty.
+const { data: hasPermit } = useHasPermit({ contractAddresses });
+```
+
+## options
+
+`Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">` — **optional**
+
+Standard React Query options, forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state — it performs no work and triggers no signature while disabled.
+
+```tsx
+const { data: hasPermit } = useHasPermit(
+  { contractAddresses: ["0xContractA"] },
+  { enabled: isReady }, // hold the check until the app is ready
+);
+```
+
 
 > [!WARNING]
 > **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.

@@ -6,8 +6,11 @@ import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
 export interface HasPermitQueryConfig {
-  /** Contract addresses to check credentials against. */
-  contractAddresses: [Address, ...Address[]];
+  /**
+   * Contract addresses to check credentials against. An empty list disables the
+   * query (it is a no-op rather than a type or runtime error).
+   */
+  contractAddresses: Address[];
   /**
    * Standard TanStack query options. `hasPermit` intentionally overrides cache
    * timing because permit state is wallet-local, not server state: every fetch
