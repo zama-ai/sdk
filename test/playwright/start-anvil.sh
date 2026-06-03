@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Start an anvil instance, deploy contracts, then keep anvil in the foreground.
+# Start anvil, deploy contracts, then keep anvil in the foreground.
 # Usage: ./start-anvil.sh <port>
 #
-# Multiple instances may run in parallel (Playwright starts all webServer
-# entries at once). The forge script step is serialized via a lockdir to avoid
-# broadcast-cache conflicts (both anvils share chain-id 31337).
-#
-# The contract deploy is the Playwright webServer boot, which Playwright does
-# NOT retry (its `retries` setting only re-runs tests). A transient deploy
-# revert would therefore kill the whole job, so the start+deploy is wrapped in
-# a retry loop that restarts anvil from a clean state on each attempt. Override
-# the attempt count with ANVIL_DEPLOY_ATTEMPTS (default 3).
+# Instances may run in parallel (Playwright boots all webServers at once), so
+# the forge step is lock-serialized to avoid broadcast-cache conflicts (shared
+# chain-id 31337). Playwright does not retry webServer boot, so start+deploy is
+# wrapped in a retry loop (ANVIL_DEPLOY_ATTEMPTS, default 3).
 set -euo pipefail
 
 PORT="${1:?Usage: start-anvil.sh <port>}"
@@ -61,9 +56,8 @@ start_anvil() {
   anvil --port "$PORT" --chain-id 31337 --silent &
   ANVIL_PID=$!
 
-  # Poll a real RPC call rather than a bare TCP accept: anvil can have the
-  # port open before it is ready to serve, and deploying against a not-yet-
-  # ready node is exactly the race the retry loop would otherwise paper over.
+  # Poll a real RPC call, not a bare TCP accept: the port can open before anvil
+  # is ready to serve, and deploying against it then is a needless race.
   local n=0
   while [ $n -lt 150 ]; do
     cast chain-id --rpc-url "http://127.0.0.1:$PORT" >/dev/null 2>&1 && return 0
@@ -75,9 +69,8 @@ start_anvil() {
   return 1
 }
 
-# Acquire an exclusive lock for the forge script only.
-# mkdir is atomic on all POSIX systems. Timeout after 120s.
-# If the lock exists but the holder is dead (e.g. Playwright was killed), clean it up.
+# Exclusive lock for the forge step (mkdir is atomic). Times out after 120s, and
+# reclaims the lock if its holder died (e.g. Playwright was killed).
 acquire_lock() {
   local lock_wait=0
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do
@@ -104,15 +97,13 @@ acquire_lock() {
   LOCK_ACQUIRED=true
 }
 
-# Deploy the fhevm host stack and the project contracts onto the running anvil.
-# Returns non-zero (without exiting the script) on any failure so the caller can
-# restart anvil and retry.
+# Deploy the fhevm host stack + project contracts. Returns non-zero (without
+# exiting) on failure so the caller can restart anvil and retry.
 deploy_contracts() {
   local attempt_num="$1"
 
-  # Deploy fhevm host stack — independent per port, no lock needed.
-  # In CI, artifacts are pre-built and cached; skip the internal forge build
-  # to avoid failures when soldeer dependencies are absent (cache-hit path).
+  # fhevm host stack — independent per port, no lock needed. Skip the internal
+  # forge build in CI, where artifacts are prebuilt and soldeer deps may be absent.
   local deploy_args=(--anvil-port "$PORT")
   [ -n "${CI:-}" ] && deploy_args+=(--skip-build)
   if ! "$FORGE_FHEVM_DIR/deploy-local.sh" "${deploy_args[@]}"; then
@@ -126,19 +117,14 @@ deploy_contracts() {
   # would see stale artifacts from the first and fail with "nonce too low".
   rm -rf "$CONTRACTS_DIR/broadcast"
 
-  # Deploy project contracts.
-  # --slow sends one tx at a time, waiting for each receipt. Besides avoiding a
-  #   self-race across anvil's auto-mined blocks, it makes each tx's gas usage
-  #   deterministic (fixed order → stable EIP-2929 cold/warm access costs), which
-  #   was the actual cause of the intermittent out-of-gas reverts under batch
-  #   broadcast. We deliberately do NOT pass --gas-estimate-multiplier: forge's
-  #   default estimation is left intact so a genuine gas regression surfaces
-  #   rather than being masked by an inflated limit. If a deploy ever does fail,
-  #   the final attempt below runs verbosely with the full forge trace.
-  local forge_args=(--broadcast --slow)
+  # Deploy project contracts. forge's batched simulation estimates gas with warm
+  # storage (EIP-2929), but each broadcast tx runs cold, so the FHE-heavy wrap()
+  # txs exceed the default 1.3x headroom and revert out-of-gas. --skip-simulation
+  # sizes each tx from a live (cold) eth_estimateGas and --slow lets it see the
+  # prior tx — accurate gas, without padding the limit via --gas-estimate-multiplier.
+  local forge_args=(--broadcast --slow --skip-simulation)
   if [ "$attempt_num" -ge "$MAX_ATTEMPTS" ]; then
-    # Last attempt: drop --silent so a persistent (non-transient) failure shows
-    # the forge revert reason / trace instead of failing blind after N retries.
+    # Last attempt: drop --silent so a persistent failure shows the forge trace.
     echo "Final deploy attempt — running forge verbosely to surface the failure" >&2
   else
     forge_args+=(--silent)
@@ -161,8 +147,7 @@ while :; do
     break
   fi
 
-  # deploy_contracts always releases the lock before returning; the EXIT trap
-  # is the remaining safety net. Just tear anvil down before the next attempt.
+  # deploy_contracts already released the lock; just tear anvil down to retry.
   stop_anvil
 
   if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
