@@ -116,6 +116,36 @@ export const wrappersRegistryAbi = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [{ internalType: "address", name: "initialOwner", type: "address" }],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "tokenAddress", type: "address" },
+      { internalType: "address", name: "confidentialTokenAddress", type: "address" },
+    ],
+    name: "registerConfidentialToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "confidentialTokenAddress",
+        type: "address",
+      },
+    ],
+    name: "revokeConfidentialToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;
 
 export interface TokenWrapperPair {

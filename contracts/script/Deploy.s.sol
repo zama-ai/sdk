@@ -4,10 +4,11 @@ pragma solidity 0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
-import {ConfidentialWrapper} from "../src/wrapper/ERC7984ERC20WrapperUpgradeable.sol";
+import {TestERC1363} from "../src/mocks/Erc1363Mintable.sol";
+import {ConfidentialWrapper} from "protocol-apps-wrapper/contracts/confidential-wrapper/contracts/ConfidentialWrapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {WrappersRegistry} from "../src/factory/WrappersRegistry.sol";
+import {ConfidentialTokenWrappersRegistry} from "protocol-apps-registry/contracts/confidential-token-wrappers-registry/contracts/ConfidentialTokenWrappersRegistry.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -35,9 +36,19 @@ contract Deploy is Script {
         );
         console.log("cUSDT:", address(cUSDT));
 
-        // 4. Mint 10,000 USDC + 10,000 USDT to deployer (Anvil account #0)
+        // 3b. Deploy ERC-1363 test token + wrapper (for transferAndCall e2e tests)
+        TestERC1363 erc1363Token = new TestERC1363("ERC1363 Token", "ERC1363", 6);
+        console.log("ERC1363:", address(erc1363Token));
+
+        ConfidentialWrapper cERC1363 = _deployWrapper(
+            address(wrapperImpl), "Confidential ERC1363 Token", "cERC1363", IERC20(address(erc1363Token))
+        );
+        console.log("cERC1363:", address(cERC1363));
+
+        // 4. Mint 10,000 USDC + 10,000 USDT + 10,000 ERC1363 to deployer (Anvil account #0)
         usdc.mint(msg.sender, 10_000 * 1e6);
         usdt.mint(msg.sender, 10_000 * 1e6);
+        erc1363Token.mint(msg.sender, 10_000 * 1e6);
 
         // 5. Wrap 1,000 of each into confidential tokens so E2E tests start funded
         uint256 wrapAmount = 1_000 * 1e6;
@@ -45,11 +56,18 @@ contract Deploy is Script {
         cUSDC.wrap(msg.sender, wrapAmount);
         IERC20(address(usdt)).approve(address(cUSDT), wrapAmount);
         cUSDT.wrap(msg.sender, wrapAmount);
+        IERC20(address(erc1363Token)).approve(address(cERC1363), wrapAmount);
+        cERC1363.wrap(msg.sender, wrapAmount);
 
-        // 6. Deploy WrappersRegistry and register token pairs
-        WrappersRegistry registry = new WrappersRegistry();
-        registry.registerPair(address(usdc), address(cUSDC));
-        registry.registerPair(address(usdt), address(cUSDT));
+        // 6. Deploy ConfidentialTokenWrappersRegistry (upgradeable) and register token pairs
+        ConfidentialTokenWrappersRegistry registryImpl = new ConfidentialTokenWrappersRegistry();
+        bytes memory registryInitData = abi.encodeCall(ConfidentialTokenWrappersRegistry.initialize, (msg.sender));
+        ConfidentialTokenWrappersRegistry registry = ConfidentialTokenWrappersRegistry(
+            payable(address(new ERC1967Proxy(address(registryImpl), registryInitData)))
+        );
+        registry.registerConfidentialToken(address(usdc), address(cUSDC));
+        registry.registerConfidentialToken(address(usdt), address(cUSDT));
+        registry.registerConfidentialToken(address(erc1363Token), address(cERC1363));
         console.log("WrappersRegistry:", address(registry));
 
         vm.stopBroadcast();
@@ -60,6 +78,8 @@ contract Deploy is Script {
         vm.serializeAddress(json, "cToken", address(cUSDC));
         vm.serializeAddress(json, "USDT", address(usdt));
         vm.serializeAddress(json, "cUSDT", address(cUSDT));
+        vm.serializeAddress(json, "ERC1363", address(erc1363Token));
+        vm.serializeAddress(json, "cERC1363", address(cERC1363));
         string memory finalJson = vm.serializeAddress(json, "wrappersRegistry", address(registry));
 
         string memory path = string.concat(vm.projectRoot(), "/deployments.json");

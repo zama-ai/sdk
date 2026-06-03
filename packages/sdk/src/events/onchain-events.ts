@@ -4,10 +4,14 @@
  */
 
 import type { Handle } from "../relayer/relayer-sdk.types";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
 export type { RawLog } from "../types/transaction";
+
+function eventTopic(signature: string): Hex {
+  return keccak256(toBytes(signature));
+}
 
 // ---------------------------------------------------------------------------
 // Event topic0 constants (keccak256 of canonical signature)
@@ -19,15 +23,17 @@ export type { RawLog } from "../types/transaction";
  */
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
-  ConfidentialTransfer: "0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9",
+  ConfidentialTransfer: eventTopic("ConfidentialTransfer(address,address,bytes32)"),
   /** `Wrapped(address indexed to, uint256 amountIn)` */
-  Wrapped: "0x4700c1726b4198077cd40320a32c45265a1910521eb0ef713dd1d8412413d7fc",
-  /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-  UnwrapRequested: "0x77d02d353c5629272875d11f1b34ec4c65d7430b075575b78cd2502034c469ee",
-  /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrappedFinalized: "0x2d4edf3c2943002120f53dab3f8940043f34799f4a92ab90f2f81f7dd004a49e",
+  Wrapped: eventTopic("Wrapped(address,uint256)"),
+  /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+  UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
+  /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
   /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-  UnwrappedStarted: "0x3838891d4843c6d7f9f494570b6fd8843f4e3c3ddb817c1411760bd31b819806",
+  UnwrappedStarted: eventTopic(
+    "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
+  ),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -61,6 +67,8 @@ export interface UnwrapRequestedEvent {
   readonly receiver: Address;
   /** FHE ciphertext handle for the requested unshield amount. */
   readonly encryptedAmount: Handle;
+  /** Request identifier from the `UnwrapRequested` event topic. */
+  readonly unwrapRequestId?: Handle;
 }
 
 /** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
@@ -72,6 +80,8 @@ export interface UnwrappedFinalizedEvent {
   readonly encryptedAmount: Handle;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
+  /** Request identifier from the `UnwrapFinalized` event topic. */
+  readonly unwrapRequestId?: Handle;
 }
 
 /** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
@@ -187,41 +197,44 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 }
 
 /**
- * UnwrapRequested(address indexed receiver, bytes32 amount)
- * Indexed: receiver (topics[1])
+ * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
+ * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
  * Data: amount (bytes32)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
   if (log.topics[0] !== Topics.UnwrapRequested) {
     return null;
   }
-  if (log.topics.length < 2) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
     eventName: "UnwrapRequested",
     receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
     encryptedAmount: wordToBytes32(log.data, 0),
   };
 }
 
 /**
- * UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)
- * Indexed: receiver (topics[1])
+ * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId,
+ *                 bytes32 encryptedAmount, uint64 cleartextAmount)
+ * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
  * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
  */
 export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
   if (log.topics[0] !== Topics.UnwrappedFinalized) {
     return null;
   }
-  if (log.topics.length < 2) {
+  if (log.topics.length < 3) {
     return null;
   }
 
   return {
     eventName: "UnwrappedFinalized",
     receiver: topicToAddress(log.topics[1]!),
+    unwrapRequestId: topicToBytes32(log.topics[2]!),
     encryptedAmount: wordToBytes32(log.data, 0),
     cleartextAmount: wordToBigInt(log.data, 1),
   };
