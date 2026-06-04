@@ -9,29 +9,18 @@ import { useWalletAccount } from "../utils/wallet-account";
 
 /** Configuration for {@link useHasPermit}. */
 export interface UseHasPermitConfig {
-  /**
-   * Contract addresses to check credentials against. An empty list disables the
-   * query (it is a no-op rather than a type or runtime error).
-   */
+  /** Contract addresses to check credentials against. */
   contractAddresses: Address[];
 }
 
 /**
  * Check whether stored permits cover the given contract addresses for the
- * connected signer. Returns `true` if decrypt operations can proceed without
- * a wallet prompt.
+ * connected signer.
  *
- * @param config - Contract addresses to check credentials against.
- * @param options - React Query options (forwarded to `useQuery`). Pass
- *   `{ enabled: false }` to mount the hook in an idle state — it performs no
- *   work and triggers no signature while disabled.
- * @returns Query result with `data: boolean` — `true` if a stored permit covers
- *   every entry in `contractAddresses`. The query auto-disables when no signer is
- *   configured, when `contractAddresses` is empty, or when `options.enabled` is
- *   `false` (`data` stays `undefined`, `status` stays `"pending"`).
- * @remarks The internal signer/empty-list guard is combined with `options.enabled`
- *   via `&&`, so it always wins: passing `enabled: true` cannot re-enable the query
- *   while no signer is configured or `contractAddresses` is empty.
+ * @param config - Contract addresses to check credentials against. The query is
+ *   disabled while the list is empty or no signer is configured.
+ * @param options - React Query options (forwarded to `useQuery`).
+ * @returns Query result with `data: boolean`.
  *
  * @example
  * ```tsx

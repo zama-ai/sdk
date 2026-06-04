@@ -10793,25 +10793,13 @@ const { data: hasPermit } = useHasPermit({
 });
 ```
 
-An empty list is a no-op: the query is disabled and `data` stays `undefined`. This lets you call the hook unconditionally (as the Rules of Hooks require) even when there is nothing to check yet — no dummy probe address needed.
-
-```tsx
-// Safe to call with a list that may be empty.
-const { data: hasPermit } = useHasPermit({ contractAddresses });
-```
+An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.
 
 ## options
 
 `Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">` — **optional**
 
-Standard React Query options, forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state — it performs no work and triggers no signature while disabled.
-
-```tsx
-const { data: hasPermit } = useHasPermit(
-  { contractAddresses: ["0xContractA"] },
-  { enabled: isReady }, // hold the check until the app is ready
-);
-```
+Standard React Query options forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state (no work, no signature while disabled).
 
 
 > [!WARNING]
@@ -17475,7 +17463,6 @@ function handleDecrypt() {
 `BalancesCard`.
 
 Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
-`useHasPermit` always receives the selected token's address (never an empty list) and
 `useConfidentialBalance` always receives a real token address plus an explicit owner account.
 
 ### Mint
