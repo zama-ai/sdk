@@ -94,6 +94,14 @@ describe("hasPermitQueryOptions", () => {
     expect(options.enabled).toBe(false);
   });
 
+  test("is disabled when the contract list is empty", ({ sdk }) => {
+    const options = hasPermitQueryOptions(sdk, {
+      contractAddresses: [],
+    });
+
+    expect(options.enabled).toBe(false);
+  });
+
   test("is disabled when signer is absent", ({ createSDK }) => {
     const sdk = createSDK({ signer: undefined });
     const options = hasPermitQueryOptions(sdk, {
