@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.3...v3.1.0-alpha.4) (2026-06-04)
+
+### Code Refactoring
+
+- **sdk:** return encrypt handles and proof as contract-ready hex [SDK-200] ([#394](https://github.com/zama-ai/sdk/issues/394)) ([bfd3565]())
+
 ## [3.1.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.2...v3.1.0-alpha.3) (2026-06-04)
 
 ### Bug Fixes
