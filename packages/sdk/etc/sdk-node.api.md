@@ -260,7 +260,10 @@ export interface EncryptRequest extends BaseRequest {
 export type EncryptResponseData = InputProofBytesType;
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export type EncryptResult = {
+    handles: EncryptedValue[];
+    inputProof: Hex;
+};
 
 // Warning: (ae-forgotten-export) The symbol "BaseResponse" needs to be exported by the entry point index.d.ts
 //

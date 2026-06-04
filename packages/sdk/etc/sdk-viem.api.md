@@ -120,11 +120,11 @@ export interface ViemSignerConfig {
     walletClient: WalletClient;
 }
 
-// @public (undocumented)
-export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
-
 // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
 //
+// @public (undocumented)
+export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
+
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: EncryptedValue, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
@@ -132,7 +132,7 @@ export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Addre
 export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
+export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): Promise<`0x${string}`>;
