@@ -254,7 +254,7 @@ describe("RelayerWeb", () => {
         userAddress: "0xU" as `0x${string}`,
       });
 
-      expect(result).toEqual({ handles, inputProof });
+      expect(result).toEqual({ handles: ["0x0102"], inputProof: "0x0304" });
     });
 
     test("userDecrypt delegates to worker and returns clearValues", async () => {
@@ -559,7 +559,7 @@ describe("RelayerNode", () => {
         userAddress: "0xU" as `0x${string}`,
       });
 
-      expect(result).toEqual({ handles, inputProof });
+      expect(result).toEqual({ handles: ["0x0102"], inputProof: "0x0304" });
     });
 
     test("userDecrypt delegates to pool and returns clearValues", async () => {

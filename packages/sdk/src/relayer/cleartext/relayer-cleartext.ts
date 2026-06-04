@@ -9,7 +9,6 @@ import {
   keccak256,
   pad,
   parseAbi,
-  toBytes,
   toHex,
   type Address,
   type Hex,
@@ -244,20 +243,15 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       },
     });
 
-    const inputProof = toBytes(
-      concat([
-        toHex(new Uint8Array([handles.length])),
-        toHex(new Uint8Array([1])),
-        ...handles,
-        signature,
-        cleartextBytes,
-      ]),
-    );
+    const inputProof = concat([
+      toHex(new Uint8Array([handles.length])),
+      toHex(new Uint8Array([1])),
+      ...handles,
+      signature,
+      cleartextBytes,
+    ]);
 
-    return {
-      handles: handles.map((handle) => toBytes(handle)),
-      inputProof,
-    };
+    return { handles, inputProof };
   }
 
   async userDecrypt(

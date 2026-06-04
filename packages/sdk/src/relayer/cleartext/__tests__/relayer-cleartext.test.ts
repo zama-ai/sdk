@@ -301,8 +301,7 @@ describe("RelayerCleartext", () => {
     });
 
     expect(encrypted.handles).toHaveLength(2);
-    expect(encrypted.inputProof).toBeInstanceOf(Uint8Array);
-    expect(encrypted.inputProof.length).toBeGreaterThan(0);
+    expect(encrypted.inputProof).toMatch(/^0x[0-9a-f]+$/);
   });
 
   test("encrypt dispatches to correct add method based on FHE type", async () => {
@@ -321,7 +320,7 @@ describe("RelayerCleartext", () => {
     });
 
     expect(encrypted.handles).toHaveLength(5);
-    expect(encrypted.inputProof).toBeInstanceOf(Uint8Array);
+    expect(encrypted.inputProof).toMatch(/^0x[0-9a-f]+$/);
   });
 
   test("encrypt throws on unsupported FHE type", async () => {
@@ -349,14 +348,14 @@ describe("RelayerCleartext", () => {
       userAddress: USER_ADDRESS,
     });
 
-    const proof = encrypted.inputProof;
+    const proof = toBytes(encrypted.inputProof);
     expect(proof[0]).toBe(2); // numHandles
     expect(proof[1]).toBe(1); // version
     expect(proof.length).toBe(195); // 2 + 2*32 + 65 + 2*32
 
     // Handles in proof match returned handles
-    expect(toHex(proof.slice(2, 34))).toBe(toHex(encrypted.handles[0]));
-    expect(toHex(proof.slice(34, 66))).toBe(toHex(encrypted.handles[1]));
+    expect(toHex(proof.slice(2, 34))).toBe(encrypted.handles[0]);
+    expect(toHex(proof.slice(34, 66))).toBe(encrypted.handles[1]);
 
     // Cleartext values at end
     const clear0 = hexToBigInt(toHex(proof.slice(131, 163)));
@@ -375,9 +374,10 @@ describe("RelayerCleartext", () => {
     });
 
     expect(encrypted.handles).toEqual([]);
-    expect(encrypted.inputProof[0]).toBe(0);
-    expect(encrypted.inputProof[1]).toBe(1);
-    expect(encrypted.inputProof.length).toBe(67); // 2 + 0 handles + 65 sig + 0 cleartexts
+    const proof = toBytes(encrypted.inputProof);
+    expect(proof[0]).toBe(0);
+    expect(proof[1]).toBe(1);
+    expect(proof.length).toBe(67); // 2 + 0 handles + 65 sig + 0 cleartexts
   });
 
   test("encrypt rejects negative values", async () => {

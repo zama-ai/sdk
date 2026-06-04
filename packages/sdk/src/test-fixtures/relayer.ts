@@ -31,8 +31,8 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       },
     }),
     encrypt: vi.fn().mockResolvedValue({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
+      handles: ["0x010203"],
+      inputProof: "0x040506",
     }),
     userDecrypt: vi.fn().mockResolvedValue({
       [VALID_HANDLE as string]: 1000n,

@@ -36,7 +36,7 @@ function EncryptValue() {
       contractAddress: "0xContract",
       userAddress: "0xUser",
     });
-    // handles[0] is the encrypted Uint8Array, inputProof is the ZK proof
+    // handles[0] is the encrypted handle (0x hex), inputProof is the ZK proof — both contract-ready
   }
 
   return (
@@ -86,7 +86,7 @@ Address of the user performing the encryption.
 import { type EncryptResult } from "@zama-fhe/sdk";
 ```
 
-`data` resolves to `{ handles: Uint8Array[], inputProof: Uint8Array }`.
+`data` resolves to `{ handles: EncryptedValue[], inputProof: Hex }` — `0x`-prefixed hex, ready to pass straight into a contract call.
 
 - **`handles`** — one encrypted value per input.
 - **`inputProof`** — the ZK input proof to submit alongside the handles in a contract call.

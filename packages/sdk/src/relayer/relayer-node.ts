@@ -4,6 +4,7 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import { toHex } from "viem";
 import type { Address, Hex } from "viem";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
@@ -131,7 +132,10 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       const result = await this.#pool.encrypt({ chainId, ...params });
-      return { handles: result.handles, inputProof: result.inputProof };
+      return {
+        handles: result.handles.map((handle) => toHex(handle)),
+        inputProof: toHex(result.inputProof),
+      };
     });
   }
 

@@ -1,5 +1,4 @@
-import type { Address } from "viem";
-import { toHex } from "viem";
+import type { Address, Hex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
@@ -35,14 +34,14 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
 export function confidentialTransferContract(
   encryptedErc20: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  handle: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "confidentialTransfer",
-    args: [to, toHex(handle), toHex(inputProof)],
+    args: [to, handle, inputProof],
   } as const;
 }
 
@@ -60,14 +59,14 @@ export function confidentialTransferFromContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  handle: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "confidentialTransferFrom",
-    args: [from, to, toHex(handle), toHex(inputProof)],
+    args: [from, to, handle, inputProof],
   } as const;
 }
 
@@ -125,14 +124,14 @@ export function unwrapContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedAmount: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "unwrap",
-    args: [from, to, toHex(encryptedAmount), toHex(inputProof)],
+    args: [from, to, encryptedAmount, inputProof],
   } as const;
 }
 

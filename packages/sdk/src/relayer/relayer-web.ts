@@ -4,6 +4,7 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import { toHex } from "viem";
 import type { Address, Hex } from "viem";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
@@ -157,7 +158,10 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
         contractAddress,
         userAddress,
       });
-      return { handles: result.handles, inputProof: result.inputProof };
+      return {
+        handles: result.handles.map((handle) => toHex(handle)),
+        inputProof: toHex(result.inputProof),
+      };
     });
   }
 

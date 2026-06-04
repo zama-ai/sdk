@@ -21,7 +21,7 @@ describe("EncryptionService", () => {
     const result = await service.encrypt(ENCRYPT_PARAMS);
 
     expect(result.handles).toHaveLength(1);
-    expect(result.inputProof).toBeInstanceOf(Uint8Array);
+    expect(result.inputProof).toBe("0x040506");
     expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },

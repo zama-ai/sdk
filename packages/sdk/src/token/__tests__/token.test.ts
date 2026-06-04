@@ -151,7 +151,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
         handles: [],
-        inputProof: new Uint8Array([4, 5, 6]),
+        inputProof: "0x040506",
       });
 
       await expect(

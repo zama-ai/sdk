@@ -56,8 +56,8 @@ export function writeConfidentialTransferContract(
   client: WalletClient,
   tokenAddress: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  handle: EncryptedValue,
+  inputProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -71,8 +71,8 @@ export function writeUnwrapContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedAmount: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,

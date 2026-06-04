@@ -123,8 +123,8 @@ export function writeConfidentialTransferContract(
   signer: EthersTransactionSigner,
   tokenAddress: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  handle: EncryptedValue,
+  inputProof: Hex,
 ) {
   return ethersWrite(signer, confidentialTransferContract(tokenAddress, to, handle, inputProof));
 }
@@ -134,8 +134,8 @@ export function writeUnwrapContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedAmount: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return ethersWrite(signer, unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof));
 }

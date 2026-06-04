@@ -113,28 +113,25 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([userAddress]);
   });
 
-  test("confidentialTransferContract converts handles to hex", ({ tokenAddress, userAddress }) => {
-    const handle = new Uint8Array([1, 2, 3]);
-    const proof = new Uint8Array([4, 5, 6]);
-    const config = confidentialTransferContract(tokenAddress, userAddress, handle, proof);
-    expect(config.functionName).toBe("confidentialTransfer");
-    expect(config.args[0]).toBe(userAddress);
-    expect(config.args[1]).toBe("0x010203");
-    expect(config.args[2]).toBe("0x040506");
-  });
-
-  test("confidentialTransferFromContract converts handles to hex", ({
+  test("confidentialTransferContract forwards hex handle and proof", ({
     tokenAddress,
     userAddress,
   }) => {
-    const handle = new Uint8Array([0xab]);
-    const proof = new Uint8Array([0xcd]);
+    const config = confidentialTransferContract(tokenAddress, userAddress, "0x010203", "0x040506");
+    expect(config.functionName).toBe("confidentialTransfer");
+    expect(config.args).toEqual([userAddress, "0x010203", "0x040506"]);
+  });
+
+  test("confidentialTransferFromContract forwards hex handle and proof", ({
+    tokenAddress,
+    userAddress,
+  }) => {
     const config = confidentialTransferFromContract(
       tokenAddress,
       userAddress,
       SPENDER,
-      handle,
-      proof,
+      "0xab",
+      "0xcd",
     );
     expect(config.functionName).toBe("confidentialTransferFrom");
     expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd"]);
@@ -160,10 +157,8 @@ describe("Encryption contract builders", () => {
     expect(config.args[1]).toBeLessThanOrEqual(after);
   });
 
-  test("unwrapContract converts handles to hex", ({ tokenAddress, userAddress }) => {
-    const handle = new Uint8Array([0xde, 0xad]);
-    const proof = new Uint8Array([0xbe, 0xef]);
-    const config = unwrapContract(tokenAddress, userAddress, SPENDER, handle, proof);
+  test("unwrapContract forwards hex handle and proof", ({ tokenAddress, userAddress }) => {
+    const config = unwrapContract(tokenAddress, userAddress, SPENDER, "0xdead", "0xbeef");
     expect(config.functionName).toBe("unwrap");
     expect(config.args).toEqual([userAddress, SPENDER, "0xdead", "0xbeef"]);
   });

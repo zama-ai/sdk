@@ -2,7 +2,6 @@ import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
 import type {
   Bytes32Hex,
   ClearValueType,
-  InputProofBytesType,
   KmsDelegatedUserDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   PublicDecryptResults,
@@ -75,11 +74,14 @@ export interface RelayerWebConfig {
   fheArtifactCacheTTL?: number;
 }
 
-/** Result from encryption operation. Alias for {@link InputProofBytesType}. */
-export type EncryptResult = InputProofBytesType;
-
 /** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
 export type EncryptedValue = Bytes32Hex;
+
+/** Result from encryption — contract-ready hex handles and input proof. */
+export type EncryptResult = {
+  handles: EncryptedValue[];
+  inputProof: Hex;
+};
 
 /** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
 export type ClearValue = ClearValueType;

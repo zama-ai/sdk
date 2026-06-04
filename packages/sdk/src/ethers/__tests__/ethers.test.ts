@@ -503,14 +503,12 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const handle = new Uint8Array(32).fill(1);
-    const proof = new Uint8Array(32).fill(2);
     const hash = await writeConfidentialTransferContract(
       mockSigner,
       tokenAddress,
       userAddress,
-      handle,
-      proof,
+      VALID_HANDLE,
+      VALID_PROOF,
     );
     expect(hash).toBe(TX_HASH);
   });
@@ -519,15 +517,13 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const handle = new Uint8Array(32).fill(0xde);
-    const proof = new Uint8Array(32).fill(0xef);
     const hash = await writeUnwrapContract(
       mockSigner,
       tokenAddress,
       userAddress,
       SPENDER,
-      handle,
-      proof,
+      VALID_HANDLE,
+      VALID_PROOF,
     );
     expect(hash).toBe(TX_HASH);
   });
