@@ -72,4 +72,40 @@ describe("useHasPermit", () => {
       );
     });
   });
+
+  test("is disabled when options.enabled is false, even with a signer", async ({
+    renderWithProviders,
+  }) => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+    const signer = makeSigner();
+
+    renderWithProviders(
+      () => useHasPermit({ contractAddresses: [CONTRACT_A] }, { enabled: false }),
+      { signer },
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: zamaQueryKeys.hasPermit.scope([CONTRACT_A], signer.walletAccount.getSnapshot()),
+          enabled: false,
+        }),
+      );
+    });
+  });
+
+  test("is disabled when the contract list is empty", async ({ renderWithProviders }) => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+    const signer = makeSigner();
+
+    renderWithProviders(() => useHasPermit({ contractAddresses: [] }), { signer });
+
+    await waitFor(() => {
+      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enabled: false,
+        }),
+      );
+    });
+  });
 });

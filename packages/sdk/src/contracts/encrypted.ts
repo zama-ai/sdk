@@ -1,5 +1,4 @@
-import type { Address } from "viem";
-import { toHex } from "viem";
+import type { Address, Hex } from "viem";
 import { encryptedAbi } from "../abi/encrypted.abi";
 import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
@@ -28,21 +27,21 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   confidentialTransferContract(tokenAddress, to, handles[0], inputProof),
+ *   confidentialTransferContract(tokenAddress, to, encryptedValues[0], inputProof),
  * );
  * ```
  */
 export function confidentialTransferContract(
   encryptedErc20: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "confidentialTransfer",
-    args: [to, toHex(handle), toHex(inputProof)],
+    args: [to, encryptedAmount, inputProof],
   } as const;
 }
 
@@ -52,7 +51,7 @@ export function confidentialTransferContract(
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   confidentialTransferFromContract(tokenAddress, from, to, handles[0], inputProof),
+ *   confidentialTransferFromContract(tokenAddress, from, to, encryptedValues[0], inputProof),
  * );
  * ```
  */
@@ -60,14 +59,14 @@ export function confidentialTransferFromContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "confidentialTransferFrom",
-    args: [from, to, toHex(handle), toHex(inputProof)],
+    args: [from, to, encryptedAmount, inputProof],
   } as const;
 }
 
@@ -117,7 +116,7 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   unwrapContract(encryptedErc20, from, to, handles[0], inputProof),
+ *   unwrapContract(encryptedErc20, from, to, encryptedValues[0], inputProof),
  * );
  * ```
  */
@@ -125,14 +124,14 @@ export function unwrapContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedAmount: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return {
     address: encryptedErc20,
     abi: encryptedAbi,
     functionName: "unwrap",
-    args: [from, to, toHex(encryptedAmount), toHex(inputProof)],
+    args: [from, to, encryptedAmount, inputProof],
   } as const;
 }
 

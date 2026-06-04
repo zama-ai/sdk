@@ -3275,7 +3275,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
 };
 
 // @public
-export function confidentialTransferContract(encryptedErc20: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): {
+export function confidentialTransferContract(encryptedErc20: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -4605,7 +4605,7 @@ export interface ConfidentialTransferEvent {
 }
 
 // @public
-export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): {
+export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -6469,7 +6469,10 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export type EncryptResult = {
+    encryptedValues: EncryptedValue[];
+    inputProof: Hex;
+};
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -16014,7 +16017,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): {
+export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -19977,10 +19980,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BK5BWk54.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BK5BWk54.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BK5BWk54.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BK5BWk54.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-cQ1r81pS.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-cQ1r81pS.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-cQ1r81pS.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-cQ1r81pS.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

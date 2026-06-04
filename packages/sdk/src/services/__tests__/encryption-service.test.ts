@@ -14,14 +14,16 @@ describe("EncryptionService", () => {
     createEncryptionService,
     relayer,
     events,
+    handle,
+    inputProof,
   }) => {
     const emitEvent = vi.fn();
     const service = createEncryptionService({ emitEvent });
 
     const result = await service.encrypt(ENCRYPT_PARAMS);
 
-    expect(result.handles).toHaveLength(1);
-    expect(result.inputProof).toBeInstanceOf(Uint8Array);
+    expect(result.encryptedValues).toEqual([handle]);
+    expect(result.inputProof).toBe(inputProof);
     expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },

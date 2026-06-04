@@ -360,20 +360,20 @@ export class WrappedToken extends Token {
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
-    const { handles, inputProof } = await this.sdk.encrypt({
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress,
     });
 
-    const [handle] = handles;
-    if (!handle) {
-      throw new EncryptionFailedError("Encryption returned no handles");
+    const [encryptedAmount] = encryptedValues;
+    if (!encryptedAmount) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
     return this.submitTransaction({
       operation: "unwrap",
-      config: unwrapContract(this.address, userAddress, userAddress, handle, inputProof),
+      config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
     });
   }
 
