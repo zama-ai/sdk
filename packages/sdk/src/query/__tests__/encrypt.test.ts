@@ -1,4 +1,11 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import {
+  describe,
+  expect,
+  test,
+  vi,
+  MOCK_ENCRYPTED_VALUE,
+  MOCK_INPUT_PROOF,
+} from "../../test-fixtures";
 
 import { encryptMutationOptions } from "../encrypt";
 import type { Address } from "viem";
@@ -18,8 +25,8 @@ describe("encryptMutationOptions", () => {
 
     expect(encrypt).toHaveBeenCalledWith(params);
     expect(result).toEqual({
-      encryptedValues: ["0x010203"],
-      inputProof: "0x040506",
+      encryptedValues: [MOCK_ENCRYPTED_VALUE],
+      inputProof: MOCK_INPUT_PROOF,
     });
   });
 });

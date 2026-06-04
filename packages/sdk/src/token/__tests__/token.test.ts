@@ -6,7 +6,7 @@ import {
   ZamaErrorCode,
 } from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { describe, expect, test, vi, MOCK_INPUT_PROOF } from "../../test-fixtures";
 
 describe("Token", () => {
   describe("balanceOf", () => {
@@ -151,7 +151,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
         encryptedValues: [],
-        inputProof: "0x040506",
+        inputProof: MOCK_INPUT_PROOF,
       });
 
       await expect(

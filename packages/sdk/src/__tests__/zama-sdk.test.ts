@@ -1,4 +1,11 @@
-import { describe, test, expect, vi } from "../test-fixtures";
+import {
+  describe,
+  test,
+  expect,
+  vi,
+  MOCK_ENCRYPTED_VALUE,
+  MOCK_INPUT_PROOF,
+} from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import type { Address } from "viem";
@@ -75,16 +82,16 @@ describe("ZamaSDK", () => {
     test("returns encrypted values", async ({ sdk }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(result.encryptedValues).toHaveLength(1);
-      expect(result.inputProof).toBe("0x040506");
+      expect(result.encryptedValues).toEqual([MOCK_ENCRYPTED_VALUE]);
+      expect(result.inputProof).toBe(MOCK_INPUT_PROOF);
     });
 
     test("works without a signer", async ({ createSDK }) => {
       const sdk = createSDK({ signer: undefined });
 
       await expect(sdk.encrypt(ENCRYPT_PARAMS)).resolves.toEqual({
-        encryptedValues: ["0x010203"],
-        inputProof: "0x040506",
+        encryptedValues: [MOCK_ENCRYPTED_VALUE],
+        inputProof: MOCK_INPUT_PROOF,
       });
     });
   });
