@@ -18,7 +18,7 @@ describe("encryptMutationOptions", () => {
 
     expect(encrypt).toHaveBeenCalledWith(params);
     expect(result).toEqual({
-      handles: ["0x010203"],
+      encryptedValues: ["0x010203"],
       inputProof: "0x040506",
     });
   });

@@ -140,7 +140,7 @@ export function readUnderlyingTokenContract(provider: EthersCallProvider, wrappe
 // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
+export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: EncryptedValue, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;

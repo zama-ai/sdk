@@ -123,10 +123,13 @@ export function writeConfidentialTransferContract(
   signer: EthersTransactionSigner,
   tokenAddress: Address,
   to: Address,
-  handle: EncryptedValue,
+  encryptedAmount: EncryptedValue,
   inputProof: Hex,
 ) {
-  return ethersWrite(signer, confidentialTransferContract(tokenAddress, to, handle, inputProof));
+  return ethersWrite(
+    signer,
+    confidentialTransferContract(tokenAddress, to, encryptedAmount, inputProof),
+  );
 }
 
 export function writeUnwrapContract(

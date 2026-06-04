@@ -31,7 +31,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       },
     }),
     encrypt: vi.fn().mockResolvedValue({
-      handles: ["0x010203"],
+      encryptedValues: ["0x010203"],
       inputProof: "0x040506",
     }),
     userDecrypt: vi.fn().mockResolvedValue({

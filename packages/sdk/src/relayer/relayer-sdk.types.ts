@@ -77,9 +77,9 @@ export interface RelayerWebConfig {
 /** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
 export type EncryptedValue = Bytes32Hex;
 
-/** Result from encryption — contract-ready hex handles and input proof. */
+/** Result from encryption — contract-ready hex encrypted values and input proof. */
 export type EncryptResult = {
-  handles: EncryptedValue[];
+  encryptedValues: EncryptedValue[];
   inputProof: Hex;
 };
 

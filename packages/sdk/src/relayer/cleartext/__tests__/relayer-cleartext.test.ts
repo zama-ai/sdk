@@ -300,7 +300,7 @@ describe("RelayerCleartext", () => {
       userAddress: USER_ADDRESS,
     });
 
-    expect(encrypted.handles).toHaveLength(2);
+    expect(encrypted.encryptedValues).toHaveLength(2);
     expect(encrypted.inputProof).toMatch(/^0x[0-9a-f]+$/);
   });
 
@@ -319,7 +319,7 @@ describe("RelayerCleartext", () => {
       userAddress: USER_ADDRESS,
     });
 
-    expect(encrypted.handles).toHaveLength(5);
+    expect(encrypted.encryptedValues).toHaveLength(5);
     expect(encrypted.inputProof).toMatch(/^0x[0-9a-f]+$/);
   });
 
@@ -353,9 +353,9 @@ describe("RelayerCleartext", () => {
     expect(proof[1]).toBe(1); // version
     expect(proof.length).toBe(195); // 2 + 2*32 + 65 + 2*32
 
-    // Handles in proof match returned handles
-    expect(toHex(proof.slice(2, 34))).toBe(encrypted.handles[0]);
-    expect(toHex(proof.slice(34, 66))).toBe(encrypted.handles[1]);
+    // Handles in proof match returned encrypted values
+    expect(toHex(proof.slice(2, 34))).toBe(encrypted.encryptedValues[0]);
+    expect(toHex(proof.slice(34, 66))).toBe(encrypted.encryptedValues[1]);
 
     // Cleartext values at end
     const clear0 = hexToBigInt(toHex(proof.slice(131, 163)));
@@ -373,7 +373,7 @@ describe("RelayerCleartext", () => {
       userAddress: USER_ADDRESS,
     });
 
-    expect(encrypted.handles).toEqual([]);
+    expect(encrypted.encryptedValues).toEqual([]);
     const proof = toBytes(encrypted.inputProof);
     expect(proof[0]).toBe(0);
     expect(proof[1]).toBe(1);

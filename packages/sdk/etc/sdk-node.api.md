@@ -261,7 +261,7 @@ export type EncryptResponseData = InputProofBytesType;
 
 // @public
 export type EncryptResult = {
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     inputProof: Hex;
 };
 

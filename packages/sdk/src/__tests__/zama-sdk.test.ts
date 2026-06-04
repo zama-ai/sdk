@@ -72,10 +72,10 @@ describe("ZamaSDK", () => {
       userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
     };
 
-    test("returns encrypted handles", async ({ sdk }) => {
+    test("returns encrypted values", async ({ sdk }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(result.handles).toHaveLength(1);
+      expect(result.encryptedValues).toHaveLength(1);
       expect(result.inputProof).toBe("0x040506");
     });
 
@@ -83,7 +83,7 @@ describe("ZamaSDK", () => {
       const sdk = createSDK({ signer: undefined });
 
       await expect(sdk.encrypt(ENCRYPT_PARAMS)).resolves.toEqual({
-        handles: ["0x010203"],
+        encryptedValues: ["0x010203"],
         inputProof: "0x040506",
       });
     });

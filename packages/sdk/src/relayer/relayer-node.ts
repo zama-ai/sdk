@@ -133,7 +133,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     return withRetry(async () => {
       const result = await this.#pool.encrypt({ chainId, ...params });
       return {
-        handles: result.handles.map((handle) => toHex(handle)),
+        encryptedValues: result.handles.map((handle) => toHex(handle)),
         inputProof: toHex(result.inputProof),
       };
     });

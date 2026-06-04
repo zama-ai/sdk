@@ -30,7 +30,7 @@ describe("useEncrypt", () => {
 
     expect(relayer.encrypt).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual({
-      handles: ["0x010203"],
+      encryptedValues: ["0x010203"],
       inputProof: "0x040506",
     });
   });

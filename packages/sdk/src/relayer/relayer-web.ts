@@ -159,7 +159,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
         userAddress,
       });
       return {
-        handles: result.handles.map((handle) => toHex(handle)),
+        encryptedValues: result.handles.map((handle) => toHex(handle)),
         inputProof: toHex(result.inputProof),
       };
     });

@@ -3275,7 +3275,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
 };
 
 // @public
-export function confidentialTransferContract(encryptedErc20: Address, to: Address, handle: EncryptedValue, inputProof: Hex): {
+export function confidentialTransferContract(encryptedErc20: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -4605,7 +4605,7 @@ export interface ConfidentialTransferEvent {
 }
 
 // @public
-export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, handle: EncryptedValue, inputProof: Hex): {
+export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -6445,7 +6445,7 @@ export interface EncryptParams {
 
 // @public
 export type EncryptResult = {
-    handles: EncryptedValue[];
+    encryptedValues: EncryptedValue[];
     inputProof: Hex;
 };
 
@@ -19980,10 +19980,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DHD2xWf7.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DHD2xWf7.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DHD2xWf7.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DHD2xWf7.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cq1_BuG_.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cq1_BuG_.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cq1_BuG_.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-Cq1_BuG_.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

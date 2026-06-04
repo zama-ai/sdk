@@ -56,13 +56,13 @@ export function writeConfidentialTransferContract(
   client: WalletClient,
   tokenAddress: Address,
   to: Address,
-  handle: EncryptedValue,
+  encryptedAmount: EncryptedValue,
   inputProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...confidentialTransferContract(tokenAddress, to, handle, inputProof),
+    ...confidentialTransferContract(tokenAddress, to, encryptedAmount, inputProof),
   });
 }
 

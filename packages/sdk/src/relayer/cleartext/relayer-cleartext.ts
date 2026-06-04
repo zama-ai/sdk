@@ -251,7 +251,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       cleartextBytes,
     ]);
 
-    return { handles, inputProof };
+    return { encryptedValues: handles, inputProof };
   }
 
   async userDecrypt(

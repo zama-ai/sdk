@@ -537,20 +537,25 @@ export class Token {
       await this.assertConfidentialBalance(amount);
     }
 
-    const { handles, inputProof } = await this.sdk.encrypt({
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
     void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.());
 
-    if (handles.length === 0) {
-      throw new EncryptionFailedError("Encryption returned no handles");
+    if (encryptedValues.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
     return this.submitTransaction({
       operation: "transfer",
-      config: confidentialTransferContract(this.address, normalizedTo, handles[0]!, inputProof),
+      config: confidentialTransferContract(
+        this.address,
+        normalizedTo,
+        encryptedValues[0]!,
+        inputProof,
+      ),
       onSubmitted: onTransferSubmitted,
     });
   }
@@ -584,15 +589,15 @@ export class Token {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
-    const { handles, inputProof } = await this.sdk.encrypt({
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });
     void swallow("transferFrom: onEncryptComplete", () => callbacks?.onEncryptComplete?.());
 
-    if (handles.length === 0) {
-      throw new EncryptionFailedError("Encryption returned no handles");
+    if (encryptedValues.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
     return this.submitTransaction({
@@ -601,7 +606,7 @@ export class Token {
         this.address,
         normalizedFrom,
         normalizedTo,
-        handles[0]!,
+        encryptedValues[0]!,
         inputProof,
       ),
       onSubmitted: callbacks?.onTransferSubmitted,
