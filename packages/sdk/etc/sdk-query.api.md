@@ -353,7 +353,10 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export type EncryptResult = {
+    encryptedValues: EncryptedValue[];
+    inputProof: Hex;
+};
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -1260,9 +1263,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-CC0Mp18i.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CC0Mp18i.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-CC0Mp18i.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-Cqh3uOZC.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-Cqh3uOZC.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-Cqh3uOZC.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

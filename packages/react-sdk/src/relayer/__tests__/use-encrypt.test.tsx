@@ -15,6 +15,8 @@ describe("useEncrypt", () => {
     relayer,
     tokenAddress,
     userAddress,
+    handle,
+    inputProof,
   }) => {
     const { result } = renderWithProviders(() => useEncrypt());
 
@@ -30,8 +32,8 @@ describe("useEncrypt", () => {
 
     expect(relayer.encrypt).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
+      encryptedValues: [handle],
+      inputProof,
     });
   });
 });

@@ -18,7 +18,6 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 ```tsx
 import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
-import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
@@ -49,7 +48,7 @@ function ConfidentialRoundTrip() {
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
-      args: [bytesToHex(encrypted.handles[0]!), bytesToHex(encrypted.inputProof)],
+      args: [encrypted.encryptedValues[0]!, encrypted.inputProof],
     });
 
     // 3. Read the encrypted value back — setting inputs triggers decryption
@@ -163,9 +162,9 @@ function EncryptExample() {
       userAddress: userAddress!,
     });
 
-    // result.handles — array of Uint8Array, one per value
-    // result.inputProof — Uint8Array, required alongside handles in contract calls
-    // Use handles and inputProof in your contract call (see next section)
+    // result.encryptedValues — array of `0x`-prefixed hex encrypted values, one per value (contract-ready)
+    // result.inputProof — `0x`-prefixed hex proof, required alongside the encrypted values in contract calls
+    // Use encryptedValues and inputProof in your contract call (see next section)
   };
 
   return (
@@ -193,14 +192,14 @@ const result = await encrypt.mutateAsync({
   userAddress,
 });
 
-// result.handles[0] — encrypted 500n
-// result.handles[1] — encrypted true
-// result.handles[2] — encrypted 42n
-// result.inputProof — shared proof for all handles
+// result.encryptedValues[0] — encrypted 500n
+// result.encryptedValues[1] — encrypted true
+// result.encryptedValues[2] — encrypted 42n
+// result.inputProof — shared proof for all encrypted values
 ```
 
 {% hint style="info" %}
-**Encryption returns empty handles?** Make sure `contractAddress` and `userAddress` are valid addresses, not `undefined`. If using wagmi, wait for the account to be connected:
+**Encryption returns empty encrypted values?** Make sure `contractAddress` and `userAddress` are valid addresses, not `undefined`. If using wagmi, wait for the account to be connected:
 
 ```tsx
 const { address } = useAccount();
@@ -213,14 +212,13 @@ if (!address) return <p role="status">Connect wallet first</p>;
 
 ### 2. Use encrypted values in contract calls
 
-After encryption, pass the handles and proof to your custom FHE contract:
+After encryption, pass the encrypted values and proof to your custom FHE contract. Both are `0x`-prefixed hex, so they go straight into a `writeContract` call — no conversion needed:
 
 {% code title="ConfidentialAction.tsx" %}
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
-import { bytesToHex } from "viem";
 
 function ConfidentialAction() {
   const sdk = useZamaSDK();
@@ -229,7 +227,7 @@ function ConfidentialAction() {
 
   const handleAction = async () => {
     // 1. Encrypt the value
-    const { handles, inputProof } = await encrypt.mutateAsync({
+    const { encryptedValues, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
       userAddress: address!,
@@ -240,7 +238,7 @@ function ConfidentialAction() {
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
-      args: [bytesToHex(handles[0]!), bytesToHex(inputProof)],
+      args: [encryptedValues[0]!, inputProof],
     });
   };
 

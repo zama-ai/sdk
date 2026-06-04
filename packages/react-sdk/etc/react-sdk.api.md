@@ -21,6 +21,7 @@ import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
+import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { JSX } from 'react/jsx-runtime';
 import { PaginatedResult } from '@zama-fhe/sdk';
@@ -142,10 +143,7 @@ export interface UseDelegationStatusConfig {
 }
 
 // @public
-export function useEncrypt(): UseMutationResult<Readonly<{
-handles: Uint8Array[];
-inputProof: Uint8Array;
-}>, Error, EncryptParams, unknown>;
+export function useEncrypt(): UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
 
 // @public
 export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;

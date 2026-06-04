@@ -145,13 +145,14 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("throws EncryptionFailed when encrypt returns empty handles", async ({
+    test("throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       token,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        handles: [],
-        inputProof: new Uint8Array([4, 5, 6]),
+        encryptedValues: [],
+        inputProof,
       });
 
       await expect(
@@ -160,7 +161,7 @@ describe("Token", () => {
         }),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
-        message: "Encryption returned no handles",
+        message: "Encryption returned no encrypted values",
       });
     });
 

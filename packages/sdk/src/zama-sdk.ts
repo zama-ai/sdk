@@ -201,7 +201,7 @@ export class ZamaSDK {
    *
    * @example
    * ```ts
-   * const { handles, inputProof } = await sdk.encrypt({
+   * const { encryptedValues, inputProof } = await sdk.encrypt({
    *   values: [{ value: 1000n, type: "euint64" }],
    *   contractAddress: "0xToken",
    *   userAddress: "0xUser",

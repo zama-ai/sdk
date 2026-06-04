@@ -280,13 +280,14 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("unwrap throws EncryptionFailed when encrypt returns empty handles", async ({
+    test("unwrap throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       wrappedToken,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        handles: [],
-        inputProof: new Uint8Array([4, 5, 6]),
+        encryptedValues: [],
+        inputProof,
       });
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
