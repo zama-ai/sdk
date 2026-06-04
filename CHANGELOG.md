@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.2...v3.1.0-alpha.3) (2026-06-04)
+
+### Bug Fixes
+
+- **react-sdk:** accept enabled option and empty contract list in useHasPermit ([#391](https://github.com/zama-ai/sdk/issues/391)) ([a35386b]())
+
 ## [3.1.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.1...v3.1.0-alpha.2) (2026-06-03)
 
 ### Build System

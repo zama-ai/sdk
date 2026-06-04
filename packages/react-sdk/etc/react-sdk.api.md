@@ -152,11 +152,11 @@ export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions
 export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>): UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useHasPermit(config: UseHasPermitConfig): UseQueryResult<boolean, Error>;
+export function useHasPermit(config: UseHasPermitConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
 // @public
 export interface UseHasPermitConfig {
-    contractAddresses: [Address, ...Address[]];
+    contractAddresses: Address[];
 }
 
 // @public

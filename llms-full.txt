@@ -10791,6 +10791,14 @@ const { data: hasPermit } = useHasPermit({
 });
 ```
 
+An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.
+
+## options
+
+`Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">` — **optional**
+
+Standard React Query options forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state (no work, no signature while disabled).
+
 
 > [!WARNING]
 > **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
@@ -17453,8 +17461,7 @@ function handleDecrypt() {
 `BalancesCard`.
 
 Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
-`useHasPermit` always receives a non-empty contract tuple and `useConfidentialBalance`
-always receives a real token address plus an explicit owner account.
+`useConfidentialBalance` always receives a real token address plus an explicit owner account.
 
 ### Mint
 
