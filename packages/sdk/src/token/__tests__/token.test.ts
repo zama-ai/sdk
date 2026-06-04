@@ -6,7 +6,7 @@ import {
   ZamaErrorCode,
 } from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
-import { describe, expect, test, vi, MOCK_INPUT_PROOF } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 
 describe("Token", () => {
   describe("balanceOf", () => {
@@ -148,10 +148,11 @@ describe("Token", () => {
     test("throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       token,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
         encryptedValues: [],
-        inputProof: MOCK_INPUT_PROOF,
+        inputProof,
       });
 
       await expect(

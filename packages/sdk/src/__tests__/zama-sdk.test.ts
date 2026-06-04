@@ -1,11 +1,4 @@
-import {
-  describe,
-  test,
-  expect,
-  vi,
-  MOCK_ENCRYPTED_VALUE,
-  MOCK_INPUT_PROOF,
-} from "../test-fixtures";
+import { describe, test, expect, vi } from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import type { Address } from "viem";
@@ -79,19 +72,19 @@ describe("ZamaSDK", () => {
       userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
     };
 
-    test("returns encrypted values", async ({ sdk }) => {
+    test("returns encrypted values", async ({ sdk, handle, inputProof }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(result.encryptedValues).toEqual([MOCK_ENCRYPTED_VALUE]);
-      expect(result.inputProof).toBe(MOCK_INPUT_PROOF);
+      expect(result.encryptedValues).toEqual([handle]);
+      expect(result.inputProof).toBe(inputProof);
     });
 
-    test("works without a signer", async ({ createSDK }) => {
+    test("works without a signer", async ({ createSDK, handle, inputProof }) => {
       const sdk = createSDK({ signer: undefined });
 
       await expect(sdk.encrypt(ENCRYPT_PARAMS)).resolves.toEqual({
-        encryptedValues: [MOCK_ENCRYPTED_VALUE],
-        inputProof: MOCK_INPUT_PROOF,
+        encryptedValues: [handle],
+        inputProof,
       });
     });
   });

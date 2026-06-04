@@ -1,17 +1,10 @@
-import {
-  describe,
-  expect,
-  test,
-  vi,
-  MOCK_ENCRYPTED_VALUE,
-  MOCK_INPUT_PROOF,
-} from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 
 import { encryptMutationOptions } from "../encrypt";
 import type { Address } from "viem";
 
 describe("encryptMutationOptions", () => {
-  test("encrypts via the SDK mutation", async ({ sdk }) => {
+  test("encrypts via the SDK mutation", async ({ sdk, handle, inputProof }) => {
     const options = encryptMutationOptions(sdk);
 
     expect(options.mutationKey).toEqual(["zama.encrypt"]);
@@ -25,8 +18,8 @@ describe("encryptMutationOptions", () => {
 
     expect(encrypt).toHaveBeenCalledWith(params);
     expect(result).toEqual({
-      encryptedValues: [MOCK_ENCRYPTED_VALUE],
-      inputProof: MOCK_INPUT_PROOF,
+      encryptedValues: [handle],
+      inputProof,
     });
   });
 });

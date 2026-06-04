@@ -1,10 +1,4 @@
-import {
-  describe,
-  test,
-  expect,
-  MOCK_ENCRYPTED_VALUE,
-  MOCK_INPUT_PROOF,
-} from "../../test-fixtures";
+import { describe, test, expect } from "../../test-fixtures";
 import type { Address } from "viem";
 
 // ERC-20
@@ -122,15 +116,12 @@ describe("Encryption contract builders", () => {
   test("confidentialTransferContract forwards hex handle and proof", ({
     tokenAddress,
     userAddress,
+    handle,
+    inputProof,
   }) => {
-    const config = confidentialTransferContract(
-      tokenAddress,
-      userAddress,
-      MOCK_ENCRYPTED_VALUE,
-      MOCK_INPUT_PROOF,
-    );
+    const config = confidentialTransferContract(tokenAddress, userAddress, handle, inputProof);
     expect(config.functionName).toBe("confidentialTransfer");
-    expect(config.args).toEqual([userAddress, MOCK_ENCRYPTED_VALUE, MOCK_INPUT_PROOF]);
+    expect(config.args).toEqual([userAddress, handle, inputProof]);
   });
 
   test("confidentialTransferFromContract forwards hex handle and proof", ({

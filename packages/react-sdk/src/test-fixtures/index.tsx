@@ -21,7 +21,6 @@ expect.extend({
 });
 
 export { expect };
-export { MOCK_ENCRYPTED_VALUE, MOCK_INPUT_PROOF } from "../../../sdk/src/test-fixtures";
 export type { ReactAddressFixtures } from "./addresses";
 export type { MutationFixtures } from "./mutations";
 export type { QueryClientFixtures } from "./query-client";

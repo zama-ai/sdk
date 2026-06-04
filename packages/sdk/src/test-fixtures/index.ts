@@ -40,7 +40,6 @@ export type { AddressFixtures } from "./addresses";
 export type { ChainFixtures } from "./chain";
 export type { ProviderFixtures } from "./provider";
 export type { RelayerFixtures } from "./relayer";
-export { MOCK_ENCRYPTED_VALUE, MOCK_INPUT_PROOF } from "./relayer";
 export type { CreateSDKFn, SdkFixtures } from "./sdk";
 export type {
   CreateCredentialServiceFn,

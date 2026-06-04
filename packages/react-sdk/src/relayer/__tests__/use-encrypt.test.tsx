@@ -1,11 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import {
-  describe,
-  expect,
-  test,
-  MOCK_ENCRYPTED_VALUE,
-  MOCK_INPUT_PROOF,
-} from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { useEncrypt } from "../use-encrypt";
 
 describe("useEncrypt", () => {
@@ -21,6 +15,8 @@ describe("useEncrypt", () => {
     relayer,
     tokenAddress,
     userAddress,
+    handle,
+    inputProof,
   }) => {
     const { result } = renderWithProviders(() => useEncrypt());
 
@@ -36,8 +32,8 @@ describe("useEncrypt", () => {
 
     expect(relayer.encrypt).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual({
-      encryptedValues: [MOCK_ENCRYPTED_VALUE],
-      inputProof: MOCK_INPUT_PROOF,
+      encryptedValues: [handle],
+      inputProof,
     });
   });
 });

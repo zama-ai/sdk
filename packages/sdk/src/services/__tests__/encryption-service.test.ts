@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { EncryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
 import type { EncryptParams } from "../../relayer/relayer-sdk.types";
-import { describe, expect, test, vi, MOCK_INPUT_PROOF } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 
 const ENCRYPT_PARAMS: EncryptParams = {
   values: [{ value: 100n, type: "euint64" }],
@@ -14,14 +14,16 @@ describe("EncryptionService", () => {
     createEncryptionService,
     relayer,
     events,
+    handle,
+    inputProof,
   }) => {
     const emitEvent = vi.fn();
     const service = createEncryptionService({ emitEvent });
 
     const result = await service.encrypt(ENCRYPT_PARAMS);
 
-    expect(result.encryptedValues).toHaveLength(1);
-    expect(result.inputProof).toBe(MOCK_INPUT_PROOF);
+    expect(result.encryptedValues).toEqual([handle]);
+    expect(result.inputProof).toBe(inputProof);
     expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },

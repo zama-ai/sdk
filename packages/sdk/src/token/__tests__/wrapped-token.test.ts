@@ -7,7 +7,7 @@ import {
   ZamaErrorCode,
 } from "../../errors";
 import { ZERO_HANDLE } from "../../utils/handles";
-import { describe, expect, test, vi, MOCK_INPUT_PROOF } from "../../test-fixtures";
+import { describe, expect, test, vi } from "../../test-fixtures";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
@@ -283,10 +283,11 @@ describe("WrappedToken", () => {
     test("unwrap throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       wrappedToken,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
         encryptedValues: [],
-        inputProof: MOCK_INPUT_PROOF,
+        inputProof,
       });
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({

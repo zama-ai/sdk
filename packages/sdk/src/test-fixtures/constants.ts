@@ -7,6 +7,7 @@ export const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 export const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
 export const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 export const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Address;
+export const VALID_INPUT_PROOF = ("0x" + "cd".repeat(64)) as Hex;
 
 export const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as Hex;
 export const TEST_PRIVATE_KEY = `0x${"22".repeat(32)}` as Hex;
