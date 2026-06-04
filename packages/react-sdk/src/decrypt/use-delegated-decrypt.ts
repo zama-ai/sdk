@@ -9,16 +9,16 @@ import {
 import { useZamaSDK } from "../provider";
 
 /**
- * Decrypt FHE ciphertext handles using delegated user credentials.
- * Returns a map of handle → plaintext bigint.
+ * Decrypt FHE encrypted values using delegated user credentials.
+ * Returns a map of encrypted value → plaintext bigint.
  *
  * @returns A mutation whose `mutate` accepts {@link DelegatedDecryptMutationParams}.
  *
  * @example
  * ```tsx
  * const decrypt = useDelegatedDecryptValues();
- * decrypt.mutate({ encryptedInputs: [{ encryptedValue: "0xHandle1", contractAddress: "0x..." }], delegatorAddress: "0x..." });
- * // decrypt.data => { "0xHandle1": 1000n }
+ * decrypt.mutate({ encryptedInputs: [{ encryptedValue: "0xEncryptedValue1", contractAddress: "0x..." }], delegatorAddress: "0x..." });
+ * // decrypt.data => { "0xEncryptedValue1": 1000n }
  * ```
  */
 export function useDelegatedDecryptValues() {

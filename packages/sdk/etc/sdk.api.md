@@ -565,7 +565,7 @@ export interface BatchDecryptAsOptions {
 }
 
 // @public (undocumented)
-export interface BatchDecryptHandleItem {
+export interface BatchDecryptItem {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -577,9 +577,9 @@ export interface BatchDecryptHandleItem {
 }
 
 // @public (undocumented)
-export interface BatchDecryptHandlesResult {
+export interface BatchDecryptResult {
     // (undocumented)
-    items: BatchDecryptHandleItem[];
+    items: BatchDecryptItem[];
 }
 
 // @public
@@ -6143,7 +6143,7 @@ export interface DecryptErrorEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export interface DecryptHandle {
+export interface DecryptInput {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -6160,14 +6160,14 @@ export class Decryption {
         decryptionService: DecryptionService | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    decryptValuesFromPairs(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
-    delegatedBatchDecryptValuesFromPairs(input: {
-        encryptedInputs: DecryptHandle[];
+    decryptValues(encryptedInput: DecryptInput[]): Promise<Record<EncryptedValue, ClearValue>>;
+    delegatedBatchDecryptValues(input: {
+        encryptedInputs: DecryptInput[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
-    }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecryptValuesFromPairs(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    }): Promise<BatchDecryptResult>;
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -11457,7 +11457,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isZeroHandle(encryptedValue: string): boolean;
+export function isZeroEncryptedValue(encryptedValue: string): boolean;
 
 // @public
 export interface Keypair {
@@ -19971,16 +19971,16 @@ export const ZamaSDKEvents: {
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
 // @public (undocumented)
-export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
+export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BmlqzHt9.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BmlqzHt9.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BmlqzHt9.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BmlqzHt9.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BK5BWk54.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BK5BWk54.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BK5BWk54.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BK5BWk54.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

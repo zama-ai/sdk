@@ -23,7 +23,7 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isZeroHandle } from "../utils/handles";
+import { isZeroEncryptedValue } from "../utils/handles";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
@@ -398,15 +398,15 @@ export class WrappedToken extends Token {
       this.sdk.provider,
     );
     const userAddress = getAddress(account.address);
-    const handle = await this.readConfidentialBalanceOf(userAddress);
+    const encryptedValue = await this.readConfidentialBalanceOf(userAddress);
 
-    if (isZeroHandle(handle)) {
+    if (isZeroEncryptedValue(encryptedValue)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
     return this.submitTransaction({
       operation: "unwrapAll",
-      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
     });
   }
 

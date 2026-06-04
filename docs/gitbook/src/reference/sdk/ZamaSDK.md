@@ -205,17 +205,13 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.decryptValuesFromPairs`](#decryption-decryptvaluesfrompairs) calls whose encrypted values span the covered set proceed without a wallet prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.decryptValues`](#decryption-decryptvalues) calls whose encrypted values span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decryption.decryptValuesFromPairs([
-  { encryptedValue: h1, contractAddress: cUSDT },
-]);
-const b = await sdk.decryption.decryptValuesFromPairs([
-  { encryptedValue: h2, contractAddress: cDAI },
-]);
+const a = await sdk.decryption.decryptValues([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.decryptValues([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
 ### permits.hasPermit
@@ -253,12 +249,12 @@ Checks whether the current signer has stored delegated-decryption permits for `d
 const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 ```
 
-### decryption.decryptValuesFromPairs
+### decryption.decryptValues
 
-`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
+`(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
 
 {% hint style="info" %}
-Renamed from `decryption.userDecrypt` to align with the `@fhevm/sdk` glossary (prerelease rename). If you were on the old name, update call sites to `decryptValuesFromPairs`.
+Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the `@fhevm/sdk` glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
 {% endhint %}
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
@@ -268,7 +264,7 @@ Inputs from different contracts can be mixed — they are grouped by `contractAd
 When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.decryption.decryptValuesFromPairs([
+const values = await sdk.decryption.decryptValues([
   { encryptedValue: balanceHandle, contractAddress: cUSDT },
   { encryptedValue: flagHandle, contractAddress: myContract },
 ]);
@@ -366,7 +362,7 @@ emitter.on(
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption. The name follows the `@fhevm/sdk` glossary: it decrypts a list of value/contract **pairs** using the connected wallet's credentials — distinguishing it from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValuesFromPairs` with TanStack Query semantics.
+This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the `@fhevm/sdk` glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
 
 ### onWalletAccountChange

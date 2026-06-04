@@ -19,9 +19,6 @@ export function delegatedDecryptMutationOptions(
   return {
     mutationKey: ["zama.delegatedDecrypt"],
     mutationFn: async (params) =>
-      sdk.decryption.delegatedDecryptValuesFromPairs(
-        params.encryptedInputs,
-        params.delegatorAddress,
-      ),
+      sdk.decryption.delegatedDecryptValues(params.encryptedInputs, params.delegatorAddress),
   };
 }

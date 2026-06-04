@@ -139,12 +139,12 @@ describe("Permits", () => {
       handle,
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits();
 
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
 
@@ -154,12 +154,12 @@ describe("Permits", () => {
       handle,
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits([CONTRACT_A]);
 
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
 
@@ -169,12 +169,12 @@ describe("Permits", () => {
       handle,
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
       await sdk.permits.clear();
 
-      await sdk.decryption.decryptValuesFromPairs(handles);
+      await sdk.decryption.decryptValues(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     });
   });

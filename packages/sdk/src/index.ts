@@ -68,11 +68,8 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
-export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
-export type {
-  BatchDecryptHandleItem,
-  BatchDecryptHandlesResult,
-} from "./services/decryption-service";
+export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
+export type { BatchDecryptItem, BatchDecryptResult } from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
@@ -86,7 +83,7 @@ export {
   clearPendingUnshield,
   type PendingUnshieldRequest,
 } from "./token";
-export { ZERO_HANDLE, isZeroHandle } from "./utils/handles";
+export { ZERO_ENCRYPTED_VALUE, isZeroEncryptedValue } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,

@@ -6,7 +6,7 @@ import {
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
-import { ZERO_HANDLE } from "../../utils/handles";
+import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
@@ -316,7 +316,7 @@ describe("WrappedToken", () => {
     });
 
     test("unwrapAll throws when balance is zero", async ({ wrappedToken, provider }) => {
-      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
       await expect(wrappedToken.unwrapAll()).rejects.toThrow("balance is zero");
     });
@@ -471,7 +471,7 @@ describe("WrappedToken", () => {
       wrappedToken,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
 
       await expect(wrappedToken.unshield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,

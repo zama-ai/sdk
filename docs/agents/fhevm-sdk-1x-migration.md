@@ -1,14 +1,15 @@
 # Low-level SDK migration & decrypt terminology
 
-**Status:** Updated 2026-06-03. Two separate tracks, two separate decisions:
+**Status:** Updated 2026-06-04. Two separate tracks, two separate decisions:
 
 1. **Swapping the low-level dependency** (`@zama-fhe/relayer-sdk` → `@fhevm/sdk@1.x`) — **parked.**
    It is a re-architecture, not a bump. Revisit at a future network upgrade. (Finding 1 below.)
-2. **Aligning our public decrypt wording** to the `@fhevm/sdk` glossary — **done** on branch
-   `align/decrypt-glossary` as a plain **rename, no back-compat aliases** (per reviewer request — the
-   `@deprecated` aliases were removed). **Not flagged as a breaking change**: we're still in the `3.x`
-   prerelease/alpha line, so the rename is absorbed there without a major bump (no `!`/`BREAKING
-CHANGE:`). (Finding 2 below.)
+2. **Aligning our public decrypt wording** to the Zama glossary — **done** on branch
+   `align/decrypt-glossary` as a plain **rename, no back-compat aliases**. Covers: glossary names
+   (no `userDecrypt`/`publicDecrypt`), the **single-entrypoint** decision (`decryptValues`, dropping the
+   `FromPairs` suffix), and **handle → encryptedValue** terminology. **Not flagged as a breaking
+   change**: we're still in the `3.x` prerelease/alpha line, so it's absorbed there without a major bump
+   (no `!`/`BREAKING CHANGE:`). (Finding 2 below.)
 
 Internal feedback that set this split: _"going from relayer-sdk to fhevm/sdk is not in scope for now
 until future network upgrades. However, aligning on a single public glossary is something we can do
@@ -40,50 +41,68 @@ already to be consistent across all products — just updating our public APIs."
 
 ## Finding 2 — decrypt wording alignment (DONE, plain rename in prerelease)
 
-Glossary source of truth: the **actual naming in `@fhevm/sdk@1.1.0-alpha.4`** (no separate "official
-glossary" doc exists). The new SDK exposes two symmetric families:
+Reference sources (reconciled 2026-06-04):
 
-- user-decrypt: `decryptValue` / `decryptValues` / `decryptValuesFromPairs` (+ `canDecryptValue(s)`)
-- public-decrypt: `decryptPublicValue` / `decryptPublicValues` (+ `decryptPublicValuesWithSignatures`)
+- **fhevm `GLOSSARY.md`** (PRs [zama-ai/fhevm#2478](https://github.com/zama-ai/fhevm/pull/2478) +
+  [#2729](https://github.com/zama-ai/fhevm/pull/2729), treated as the up-to-date source even pre-merge)
+  — public-decrypt is `decryptPublicValue` / `decryptPublicValues` / `decryptPublicValuesWithSignatures`
+  (the Notion export's `readPublicValue` proposal is **superseded** — do not use it). `EncryptedValue`
+  is canonical; **"handle" is deprecated** (kept only as a secondary `FHE.sol` alias).
+- **`@fhevm/sdk@1.1.0-alpha.4`** user-decrypt family: `decryptValue` / `decryptValues` /
+  `decryptValuesFromPairs`.
+- **Internal decision (Slack):** the zama-sdk exposes a **single** user-decrypt entrypoint, so the
+  `fromPairs` suffix is "not relevant nor wanted" — name it just **`decryptValues`** (takes one or more
+  pairs). We intentionally diverge from fhevm's three-way split.
+- **handle → encryptedValue** (zama-sdk [PR #394](https://github.com/zama-ai/sdk/pull/394), commit
+  `d22637f`): `EncryptedValue` / "encrypted value" is the canonical external term across the SDK.
 
-Our public surface always takes **pairs** (`{ encryptedValue, contractAddress }[]`), so it maps to the
-`*FromPairs` form on the SDK class. Hooks use the shorter `*Values` form for ergonomics. Strategy
-(updated 2026-06-03): the new name is the **only** export — the old name is **removed** with no
-back-compat alias. Our own callers + examples + docs are migrated to the new names. (Originally shipped
-with `@deprecated` aliases; the reviewer asked to drop them.) **Not flagged as a breaking change** —
-we're in the `3.x` prerelease/alpha line, so the commit stays `refactor(sdk):` (no `!`, no
-`BREAKING CHANGE:` footer) and semantic-release keeps it on the alpha channel without a major bump.
+Strategy: the new name is the **only** export — old names are **removed** with no back-compat alias.
+Our own callers + tests + docs are migrated; `examples/` use the high-level `Token` API and are
+unaffected. **Not flagged as a breaking change** — we're in the `3.x` prerelease/alpha line, so the
+commit stays `refactor(sdk):` (no `!`, no `BREAKING CHANGE:` footer) and semantic-release keeps it on
+the alpha channel without a major bump.
 
 ### Applied mapping (old name **removed**, migrate to new)
 
-| Old (removed)                             | New canonical name                                  | Surface               |
-| ----------------------------------------- | --------------------------------------------------- | --------------------- |
-| `Decryption.userDecrypt()`                | `Decryption.decryptValuesFromPairs()`               | `@zama-fhe/sdk`       |
-| `Decryption.publicDecrypt()`              | `Decryption.decryptPublicValues()`                  | `@zama-fhe/sdk`       |
-| `Decryption.delegatedDecrypt()`           | `Decryption.delegatedDecryptValuesFromPairs()`      | `@zama-fhe/sdk`       |
-| `Decryption.delegatedBatchDecrypt()`      | `Decryption.delegatedBatchDecryptValuesFromPairs()` | `@zama-fhe/sdk`       |
-| `UserDecryptParams`                       | `DecryptValuesParams`                               | type                  |
-| `PublicDecryptResult`                     | `DecryptPublicValuesResult`                         | type                  |
-| `DelegatedUserDecryptParams`              | `DelegatedDecryptValuesParams`                      | type                  |
-| `KmsDelegatedUserDecryptEIP712Type`       | `KmsDelegatedDecryptEIP712Type`                     | type                  |
-| `useUserDecrypt` / `UseUserDecryptResult` | `useDecryptValues` / `UseDecryptValuesResult`       | `@zama-fhe/react-sdk` |
-| `usePublicDecrypt`                        | `useDecryptPublicValues`                            | `@zama-fhe/react-sdk` |
-| `useDelegatedDecrypt`                     | `useDelegatedDecryptValues`                         | `@zama-fhe/react-sdk` |
+| Old (removed)                             | New canonical name                              | Surface               |
+| ----------------------------------------- | ----------------------------------------------- | --------------------- |
+| `Decryption.userDecrypt()`                | `Decryption.decryptValues()`                    | `@zama-fhe/sdk`       |
+| `Decryption.publicDecrypt()`              | `Decryption.decryptPublicValues()`              | `@zama-fhe/sdk`       |
+| `Decryption.delegatedDecrypt()`           | `Decryption.delegatedDecryptValues()`           | `@zama-fhe/sdk`       |
+| `Decryption.delegatedBatchDecrypt()`      | `Decryption.delegatedBatchDecryptValues()`      | `@zama-fhe/sdk`       |
+| `UserDecryptParams`                       | `DecryptValuesParams`                           | type                  |
+| `PublicDecryptResult`                     | `DecryptPublicValuesResult`                     | type                  |
+| `DelegatedUserDecryptParams`              | `DelegatedDecryptValuesParams`                  | type                  |
+| `KmsDelegatedUserDecryptEIP712Type`       | `KmsDelegatedDecryptEIP712Type`                 | type                  |
+| `DecryptHandle`                           | `DecryptInput`                                  | type                  |
+| `BatchDecryptHandleItem`                  | `BatchDecryptItem`                              | type                  |
+| `BatchDecryptHandlesResult`               | `BatchDecryptResult`                            | type                  |
+| `ZERO_HANDLE` / `isZeroHandle`            | `ZERO_ENCRYPTED_VALUE` / `isZeroEncryptedValue` | value/fn              |
+| `useUserDecrypt` / `UseUserDecryptResult` | `useDecryptValues` / `UseDecryptValuesResult`   | `@zama-fhe/react-sdk` |
+| `usePublicDecrypt`                        | `useDecryptPublicValues`                        | `@zama-fhe/react-sdk` |
+| `useDelegatedDecrypt`                     | `useDelegatedDecryptValues`                     | `@zama-fhe/react-sdk` |
+
+> Note: an earlier iteration of this PR shipped the user-decrypt method as `decryptValuesFromPairs`
+> (and `delegated*ValuesFromPairs`); the single-entrypoint decision then dropped the `FromPairs` suffix.
 
 ### Deliberately NOT renamed
 
+- **`handle` where it is the on-chain / Solidity term** — kept (the glossary confirms "handle" is the
+  `FHE.sol`/whitepaper term): `isHandleDelegatedContract` (mirrors Solidity
+  `isHandleDelegatedForUserDecryption`), the KMS EIP-712 field `ctHandles`
+  (`CiphertextVerification(bytes32[] ctHandles,…)`).
 - **Delegation-for-user-decryption family** (`DelegatedForUserDecryptionEvent`,
-  `decodeDelegatedForUserDecryption`, `delegateForUserDecryptionContract`, …) — these mirror the
-  on-chain ACL Solidity event names (`Solidity-mirror` convention); renaming would desync from chain.
-- **`*Handle*` types** (`DecryptHandle`, `BatchDecryptHandleItem`, …) — our own metaphor, not in the
-  upstream glossary.
+  `decodeDelegatedForUserDecryption`, `delegateForUserDecryptionContract`, …) — mirror on-chain ACL
+  Solidity event names (`Solidity-mirror` convention).
+- **`encrypt`-side `handle` terms** (`EncryptResult.handles`, etc.) — owned by PR #394, out of scope here.
 - **Token-flavoured / delegation hooks** (`useDecryptBalanceAs`, `useBatchDecryptBalancesAs`,
   `useDelegateDecryption`) — domain hooks, already well-named.
-- **Internal layers** (`packages/sdk/src/query/`, `services/decryption-service.ts`, the relayer
-  dispatcher/relayer-node/web/cleartext `userDecrypt`/`publicDecrypt` methods and the underlying
-  `relayer-sdk` types `UserDecryptParams`/`PublicDecryptResult`/…) — not public API; left as-is
-  (public-API-only scope). `index.ts` re-exports those underlying types under the glossary names.
-  Their internal callers use the new public method names.
+- **Internal layers** (`packages/sdk/src/query/`, `services/decryption-service.ts` incl. its internal
+  `delegatedBatchDecryptHandlesAs` method, the relayer dispatcher/node/web/cleartext
+  `userDecrypt`/`publicDecrypt` methods and the underlying `relayer-sdk` types
+  `UserDecryptParams`/`PublicDecryptResult`/…) — not public API; left as-is (public-API-only scope).
+  `index.ts` re-exports those underlying types under the glossary names. Internal callers use the new
+  public method names.
 
 ### Why a plain rename, not a breaking change
 

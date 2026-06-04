@@ -211,7 +211,7 @@ export interface DecryptErrorEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export interface DecryptHandle {
+export interface DecryptInput {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -236,7 +236,7 @@ export interface DelegatedDecryptMutationParams {
     // (undocumented)
     delegatorAddress: Address;
     // (undocumented)
-    encryptedInputs: DecryptHandle[];
+    encryptedInputs: DecryptInput[];
 }
 
 // @public (undocumented)
@@ -928,7 +928,7 @@ export interface UserDecryptParams {
 }
 
 // @public (undocumented)
-export function userDecryptQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptHandle[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
+export function userDecryptQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptInput[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
 
 // @public
 export interface WalletAccount {

@@ -28,7 +28,7 @@ import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
-import { isZeroHandle } from "../utils/handles";
+import { isZeroEncryptedValue } from "../utils/handles";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import type {
@@ -79,7 +79,7 @@ export interface BatchBalancesResult {
  *
  * Decryption, credentials, caching, and event emission are handled by the
  * owning {@link ZamaSDK} — this class only exposes token-scoped helpers
- * that delegate to `sdk.decryption.decryptValuesFromPairs` and `sdk.permits.grantPermit`.
+ * that delegate to `sdk.decryption.decryptValues` and `sdk.permits.grantPermit`.
  */
 export class Token {
   readonly sdk: ZamaSDK;
@@ -155,7 +155,7 @@ export class Token {
   async balanceOf(owner: Address): Promise<bigint> {
     const ownerAddress = getAddress(owner);
     const encryptedValue = await this.readConfidentialBalanceOf(ownerAddress);
-    const result = await this.sdk.decryption.decryptValuesFromPairs([
+    const result = await this.sdk.decryption.decryptValues([
       { encryptedValue, contractAddress: this.address },
     ]);
     const value = result[encryptedValue];
@@ -218,11 +218,11 @@ export class Token {
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
     const encryptedValue = await this.readConfidentialBalanceOf(normalizedAccount);
-    if (isZeroHandle(encryptedValue)) {
+    if (isZeroEncryptedValue(encryptedValue)) {
       return 0n;
     }
 
-    const result = await this.sdk.decryption.delegatedDecryptValuesFromPairs(
+    const result = await this.sdk.decryption.delegatedDecryptValues(
       [{ encryptedValue, contractAddress: this.address }],
       normalizedDelegator,
       normalizedAccount,
@@ -244,7 +244,7 @@ export class Token {
    * Decrypt confidential balances for multiple tokens in parallel, returning
    * successes and per-token errors separately. Pre-authorizes all token
    * addresses in a single wallet signature, then delegates each decrypt to
-   * `sdk.decryption.decryptValuesFromPairs`.
+   * `sdk.decryption.decryptValues`.
    *
    * Tokens that fail to decrypt land in `errors` rather than aborting the
    * whole batch — caller decides how to surface them.
@@ -269,7 +269,7 @@ export class Token {
     // Fail fast on chain mismatch before prompting the wallet for a signature.
     await requireChainAlignment("batchBalancesOf", sdk.signer, sdk.provider);
     // Pre-authorize the full token set in one wallet signature so subsequent
-    // per-token decryptValuesFromPairs calls reuse the cached credentials.
+    // per-token decryptValues calls reuse the cached credentials.
     await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
     const outcomes = await pLimit(
@@ -372,7 +372,7 @@ export class Token {
       if (!encryptedValue || errors.has(token.address)) {
         continue;
       }
-      if (isZeroHandle(encryptedValue)) {
+      if (isZeroEncryptedValue(encryptedValue)) {
         // Zero balance → skip the relayer; no decryption needed.
         results.set(token.address, 0n);
       } else {
@@ -381,7 +381,7 @@ export class Token {
     }
 
     if (decryptRequests.length > 0) {
-      const decrypted = await sdk.decryption.delegatedBatchDecryptValuesFromPairs({
+      const decrypted = await sdk.decryption.delegatedBatchDecryptValues({
         encryptedInputs: decryptRequests.map(({ token, encryptedValue }) => ({
           encryptedValue,
           contractAddress: token.address,

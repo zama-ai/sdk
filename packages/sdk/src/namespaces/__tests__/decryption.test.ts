@@ -10,23 +10,21 @@ describe("Decryption", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.decryptValuesFromPairs([{ encryptedValue: handle, contractAddress: TOKEN }]),
+        sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]),
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
     test("forwards handles to the underlying service", async ({ sdk, relayer, handle }) => {
-      await sdk.decryption.decryptValuesFromPairs([
-        { encryptedValue: handle, contractAddress: TOKEN },
-      ]);
+      await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
   });
 
-  describe("delegatedDecryptValuesFromPairs (signer-required)", () => {
+  describe("delegatedDecryptValues (signer-required)", () => {
     test("throws SignerNotConfiguredError when no signer", async ({ createSDK, handle }) => {
       const sdk = createSDK({ signer: undefined });
       await expect(
-        sdk.decryption.delegatedDecryptValuesFromPairs(
+        sdk.decryption.delegatedDecryptValues(
           [{ encryptedValue: handle, contractAddress: TOKEN }],
           DELEGATOR,
         ),

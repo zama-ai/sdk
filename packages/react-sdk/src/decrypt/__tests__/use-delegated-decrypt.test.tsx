@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegatedDecryptValues } from "../use-delegated-decrypt";
 
 describe("useDelegatedDecryptValues", () => {
-  test("delegates to sdk.decryption.delegatedDecryptValuesFromPairs", async ({
+  test("delegates to sdk.decryption.delegatedDecryptValues", async ({
     renderWithProviders,
     relayer,
     handle,

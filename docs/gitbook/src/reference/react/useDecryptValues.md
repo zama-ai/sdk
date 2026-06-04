@@ -107,7 +107,7 @@ When all requested inputs are already cached, `data` contains the cached values 
 `useDecryptValues` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.decryption.decryptValuesFromPairs(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
+2. **Decrypt** — calls `sdk.decryption.decryptValues(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
 
 {% hint style="warning" %}
 **`useDecryptValues` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](/reference/react/useHasPermit):

@@ -102,7 +102,7 @@ export {
 export {
   userDecryptQueryOptions,
   type DecryptResult,
-  type EncryptedInput as DecryptHandle,
+  type EncryptedInput as DecryptInput,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
