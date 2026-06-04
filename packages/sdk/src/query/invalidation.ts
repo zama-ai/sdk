@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { z } from "zod/mini";
 import { zamaQueryKeys } from "./query-keys";
 
 export interface QueryLike {
@@ -78,16 +79,24 @@ function isZamaQuery(query: QueryLike): boolean {
     : false;
 }
 
-function isWagmiBalanceQuery(query: QueryLike): boolean {
+const balanceFunctionName = z.enum(["balanceOf", "confidentialBalanceOf"]);
+
+const balanceReadArgs = z.object({ functionName: balanceFunctionName });
+
+const batchedReadArgs = z.object({ contracts: z.array(z.unknown()) });
+
+function isBalanceReadPart(part: unknown): boolean {
+  if (balanceReadArgs.safeParse(part).success) {
+    return true;
+  }
+  const batched = batchedReadArgs.safeParse(part);
   return (
-    Array.isArray(query.queryKey) &&
-    query.queryKey.some((part: unknown) => {
-      if (typeof part !== "object" || part === null || !("functionName" in part)) {
-        return false;
-      }
-      return part.functionName === "balanceOf";
-    })
+    batched.success && batched.data.contracts.some((c) => balanceReadArgs.safeParse(c).success)
   );
+}
+
+function isWagmiBalanceQuery(query: QueryLike): boolean {
+  return Array.isArray(query.queryKey) && query.queryKey.some(isBalanceReadPart);
 }
 
 export function invalidateWagmiBalanceQueries(queryClient: QueryClientLike): void {
