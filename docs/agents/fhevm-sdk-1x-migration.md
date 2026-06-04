@@ -101,8 +101,10 @@ the alpha channel without a major bump.
   `delegatedBatchDecryptHandlesAs` method, the relayer dispatcher/node/web/cleartext
   `userDecrypt`/`publicDecrypt` methods and the underlying `relayer-sdk` types
   `UserDecryptParams`/`PublicDecryptResult`/…) — not public API; left as-is (public-API-only scope).
-  `index.ts` re-exports those underlying types under the glossary names. Internal callers use the new
-  public method names.
+  Every **published barrel** (`index.ts` and the `./query` + `./node` subpaths) re-exports those
+  underlying decrypt param/result types under the glossary names (`DecryptValuesParams`,
+  `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`), so the same type carries the same name
+  on every public door. Internal callers use the new public method names.
 
 ### Why a plain rename, not a breaking change
 

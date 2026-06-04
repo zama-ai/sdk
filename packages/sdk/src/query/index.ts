@@ -130,12 +130,12 @@ export type {
   EncryptResult,
   EncryptedValue,
 } from "../relayer/relayer-sdk.types";
+export type { EncryptInput, EIP712TypedData } from "../relayer/relayer-sdk.types";
+// Decrypt parameter/result types — glossary-aligned with `@fhevm/sdk` (see main entry).
 export type {
-  DelegatedUserDecryptParams,
-  EncryptInput,
-  EIP712TypedData,
-  PublicDecryptResult,
-  UserDecryptParams,
+  UserDecryptParams as DecryptValuesParams,
+  PublicDecryptResult as DecryptPublicValuesResult,
+  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
