@@ -30,6 +30,11 @@ import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
 
+// @public
+export type EncryptedValue = Bytes32Hex;
+
+export { Hex }
+
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
 
@@ -120,8 +125,6 @@ export interface ViemSignerConfig {
     walletClient: WalletClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 

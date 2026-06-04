@@ -42,6 +42,9 @@ export { EIP1193Events }
 
 export { EIP1193Provider }
 
+// @public
+export type EncryptedValue = Bytes32Hex;
+
 // Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 //
 // @public
@@ -98,6 +101,8 @@ export type EthersSignerConfig = {
     signer: Signer;
 };
 
+export { Hex }
+
 export { ProviderConnectInfo }
 
 export { ProviderMessage }
@@ -137,7 +142,6 @@ export function readTokenPairsSliceContract(provider: EthersCallProvider, regist
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
 // Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
