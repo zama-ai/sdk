@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import type { DecryptPublicValuesResult, EncryptedValue } from "@zama-fhe/sdk";
-import { publicDecryptMutationOptions } from "@zama-fhe/sdk/query";
+import { decryptPublicValuesMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
@@ -22,6 +22,6 @@ import { useZamaSDK } from "../provider";
 export function useDecryptPublicValues() {
   const sdk = useZamaSDK();
   return useMutation<DecryptPublicValuesResult, Error, EncryptedValue[]>(
-    publicDecryptMutationOptions(sdk),
+    decryptPublicValuesMutationOptions(sdk),
   );
 }

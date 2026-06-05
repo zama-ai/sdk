@@ -16,7 +16,7 @@ import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
-import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query';
+import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
@@ -140,7 +140,7 @@ export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Om
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
 
 // @public
-export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptMutationParams, unknown>;
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptValuesMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;

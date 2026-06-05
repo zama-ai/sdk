@@ -87,10 +87,10 @@ export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
 export {
-  delegatedDecryptMutationOptions,
-  type DelegatedDecryptMutationParams,
+  delegatedDecryptValuesMutationOptions,
+  type DelegatedDecryptValuesMutationParams,
 } from "./delegated-decrypt";
-export { publicDecryptMutationOptions } from "./public-decrypt";
+export { decryptPublicValuesMutationOptions } from "./public-decrypt";
 export { grantPermitMutationOptions } from "./grant-permit";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export { revokePermitsMutationOptions } from "./revoke-permits";
@@ -100,7 +100,7 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptQueryOptions,
+  decryptValuesQueryOptions,
   type DecryptResult,
   type EncryptedInput as DecryptInput,
 } from "./user-decrypt";

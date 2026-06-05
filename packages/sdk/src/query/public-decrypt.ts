@@ -3,11 +3,15 @@ import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 
-export function publicDecryptMutationOptions(
+export function decryptPublicValuesMutationOptions(
   sdk: ZamaSDK,
-): MutationFactoryOptions<readonly ["zama.publicDecrypt"], EncryptedValue[], PublicDecryptResult> {
+): MutationFactoryOptions<
+  readonly ["zama.decryptPublicValues"],
+  EncryptedValue[],
+  PublicDecryptResult
+> {
   return {
-    mutationKey: ["zama.publicDecrypt"],
+    mutationKey: ["zama.decryptPublicValues"],
     mutationFn: async (handles) => sdk.decryption.decryptPublicValues(handles),
     onSuccess: (data, _variables, _onMutateResult, context) => {
       for (const [handle, value] of Object.entries(data.clearValues) as [

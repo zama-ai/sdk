@@ -14,7 +14,7 @@ export interface EncryptedInput {
 /** Alias for {@link UserDecryptResults}. */
 export type DecryptResult = UserDecryptResults;
 
-export function userDecryptQueryOptions(
+export function decryptValuesQueryOptions(
   sdk: ZamaSDK,
   encryptedInputs: EncryptedInput[],
   signerContext: SignerQueryContext = {},

@@ -1,6 +1,6 @@
 # Low-level SDK migration & decrypt terminology
 
-**Status:** Updated 2026-06-04. Two separate tracks, two separate decisions:
+**Status:** Updated 2026-06-05. Two separate tracks, two separate decisions:
 
 1. **Swapping the low-level dependency** (`@zama-fhe/relayer-sdk` → `@fhevm/sdk@1.x`) — **parked.**
    It is a re-architecture, not a bump. Revisit at a future network upgrade. (Finding 1 below.)
@@ -97,14 +97,31 @@ the alpha channel without a major bump.
 - **`encrypt`-side `handle` terms** (`EncryptResult.handles`, etc.) — owned by PR #394, out of scope here.
 - **Token-flavoured / delegation hooks** (`useDecryptBalanceAs`, `useBatchDecryptBalancesAs`,
   `useDelegateDecryption`) — domain hooks, already well-named.
-- **Internal layers** (`packages/sdk/src/query/`, `services/decryption-service.ts` incl. its internal
-  `delegatedBatchDecryptHandlesAs` method, the relayer dispatcher/node/web/cleartext
-  `userDecrypt`/`publicDecrypt` methods and the underlying `relayer-sdk` types
-  `UserDecryptParams`/`PublicDecryptResult`/…) — not public API; left as-is (public-API-only scope).
-  Every **published barrel** (`index.ts` and the `./query` + `./node` subpaths) re-exports those
-  underlying decrypt param/result types under the glossary names (`DecryptValuesParams`,
-  `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`), so the same type carries the same name
-  on every public door. Internal callers use the new public method names.
+- **Genuinely internal modules** — left as-is (public-API-only scope): `services/decryption-service.ts`
+  incl. its internal `delegatedBatchDecryptHandlesAs` method, the relayer node/web/cleartext
+  `userDecrypt`/`publicDecrypt` methods, and the underlying `relayer-sdk` types
+  (`UserDecryptParams`/`PublicDecryptResult`/…). Internal callers use the new public method names.
+- **`RelayerSDK` / `RelayerDispatcher`** — `@public` in the api-report but **kept on the legacy verbs**
+  (`userDecrypt`/`publicDecrypt`/`delegatedUserDecrypt`): this is the adapter that _mirrors_ the
+  third-party `@zama-fhe/relayer-sdk` interface, so renaming would make it diverge from what it adapts.
+  Deliberate upstream-mirror (could be marked `@internal` later if we want the report literally free of
+  the old verbs; not done here).
+
+### Published subpaths are public too (`./query`, `./node`)
+
+`./query` and `./node` are real published entry points (`package.json#exports`, each with its own
+golden `etc/sdk-*.api.md`), so their decrypt-wording exports fall under the rule:
+
+- **Decrypt param/result types** re-exported under the glossary names on every published barrel
+  (`index.ts` + `./query` + `./node`): `DecryptValuesParams`, `DecryptPublicValuesResult`,
+  `DelegatedDecryptValuesParams` — same type, same name on every public door.
+- **`./query` query-option factories** renamed to match the public method names:
+  `userDecryptQueryOptions` → `decryptValuesQueryOptions`,
+  `publicDecryptMutationOptions` → `decryptPublicValuesMutationOptions`,
+  `delegatedDecryptMutationOptions` → `delegatedDecryptValuesMutationOptions`
+  (+ param type `DelegatedDecryptMutationParams` → `DelegatedDecryptValuesMutationParams`, and mutation
+  keys `"zama.publicDecrypt"`/`"zama.delegatedDecrypt"` → `"zama.decryptPublicValues"`/
+  `"zama.delegatedDecryptValues"`). The three `react-sdk` decrypt hooks import the new factory names.
 
 ### Why a plain rename, not a breaking change
 
