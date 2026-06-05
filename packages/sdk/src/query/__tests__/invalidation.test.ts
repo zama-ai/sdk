@@ -184,18 +184,44 @@ describe("invalidation", () => {
     expect(qc.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
   });
 
-  test("invalidateWagmiBalanceQueries predicate only invalidates functionName=balanceOf", () => {
+  test("invalidateWagmiBalanceQueries invalidates balanceOf and confidentialBalanceOf reads", () => {
     const qc = createQueryClient();
-    const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
+    const balanceOfKey = ["readContract", { functionName: "balanceOf" }] as const;
+    const confidentialBalanceOfKey = [
+      "readContract",
+      { functionName: "confidentialBalanceOf" },
+    ] as const;
     const otherWagmiKey = ["readContract", { functionName: "totalSupply" }] as const;
 
-    qc.setQueryData(wagmiBalanceKey, "balance");
+    qc.setQueryData(balanceOfKey, "balance");
+    qc.setQueryData(confidentialBalanceOfKey, "confidential-balance");
     qc.setQueryData(otherWagmiKey, "total");
 
     invalidateWagmiBalanceQueries(qc);
 
-    expect(qc.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(balanceOfKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(confidentialBalanceOfKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(otherWagmiKey)?.isInvalidated).toBe(false);
+  });
+
+  test("invalidateWagmiBalanceQueries invalidates batched readContracts balance reads", () => {
+    const qc = createQueryClient();
+    const batchedBalanceKey = [
+      "readContracts",
+      { contracts: [{ functionName: "totalSupply" }, { functionName: "confidentialBalanceOf" }] },
+    ] as const;
+    const batchedNonBalanceKey = [
+      "readContracts",
+      { contracts: [{ functionName: "totalSupply" }, { functionName: "decimals" }] },
+    ] as const;
+
+    qc.setQueryData(batchedBalanceKey, "balances");
+    qc.setQueryData(batchedNonBalanceKey, "metadata");
+
+    invalidateWagmiBalanceQueries(qc);
+
+    expect(qc.getQueryState(batchedBalanceKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(batchedNonBalanceKey)?.isInvalidated).toBe(false);
   });
 
   test("invalidateWalletLifecycleQueries removes decryption cache and invalidates zama queries", () => {
