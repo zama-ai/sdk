@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.4...v3.1.0-alpha.5) (2026-06-05)
+
+### Bug Fixes
+
+- **sdk:** invalidate confidentialBalanceOf and batched readContracts balance reads [SDK-201] ([#395](https://github.com/zama-ai/sdk/issues/395)) ([77c5d20]())
+
 ## [3.1.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.3...v3.1.0-alpha.4) (2026-06-04)
 
 ### Code Refactoring
