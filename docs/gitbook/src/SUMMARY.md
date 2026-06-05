@@ -27,6 +27,10 @@
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
 
+## Migration
+
+- [Migrate from v2 to v3](guides/migrate-v2-to-v3.md)
+
 ## API References
 
 - [SDK reference](reference/sdk/README.md)
