@@ -164,7 +164,7 @@
     "zod": ">=4"
   },
   "devDependencies": {
-    "@tanstack/query-core": "^5.100.10"
+    "@tanstack/query-core": "^5.101.0"
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
