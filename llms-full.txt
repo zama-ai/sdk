@@ -4350,11 +4350,11 @@ For values marked as publicly decryptable on-chain, no keypair or signature is n
 import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
 
 function PublicDecryptExample() {
-  const publicDecrypt = useDecryptPublicValues();
+  const decryptPublicValues = useDecryptPublicValues();
 
   const handleDecrypt = async () => {
-    const result = await publicDecrypt.mutateAsync(["0xhandle..."]);
-    // result.clearValues: { "0xhandle...": 1000n }
+    const result = await decryptPublicValues.mutateAsync(["0xEncryptedValue..."]);
+    // result.clearValues: { "0xEncryptedValue...": 1000n }
   };
 
   return <button onClick={handleDecrypt}>Public Decrypt</button>;
@@ -4656,7 +4656,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 
 
 > [!INFO]
-> Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the `@fhevm/sdk` glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
+> Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the Zama glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
 
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
@@ -4667,10 +4667,10 @@ When the relayer is actually called, permits are resolved from the contract addr
 
 ```ts
 const values = await sdk.decryption.decryptValues([
-  { encryptedValue: balanceHandle, contractAddress: cUSDT },
-  { encryptedValue: flagHandle, contractAddress: myContract },
+  { encryptedValue: balance, contractAddress: cUSDT },
+  { encryptedValue: flag, contractAddress: myContract },
 ]);
-console.log(values[balanceHandle]); // 1000n
+console.log(values[balance]); // 1000n
 ```
 
 To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
@@ -4761,7 +4761,7 @@ emitter.on(
 
 
 > [!INFO]
-> This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the `@fhevm/sdk` glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
+> This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 
 
 ### onWalletAccountChange
@@ -13399,7 +13399,7 @@ Query hook for user decryption. Automatically fires when credentials are availab
 
 
 > [!INFO]
-> Renamed from `useUserDecrypt` to align with the `@fhevm/sdk` glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
+> Renamed from `useUserDecrypt` to align with the Zama glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
 
 
 

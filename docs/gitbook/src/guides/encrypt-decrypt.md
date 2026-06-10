@@ -421,11 +421,11 @@ For values marked as publicly decryptable on-chain, no keypair or signature is n
 import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
 
 function PublicDecryptExample() {
-  const publicDecrypt = useDecryptPublicValues();
+  const decryptPublicValues = useDecryptPublicValues();
 
   const handleDecrypt = async () => {
-    const result = await publicDecrypt.mutateAsync(["0xhandle..."]);
-    // result.clearValues: { "0xhandle...": 1000n }
+    const result = await decryptPublicValues.mutateAsync(["0xEncryptedValue..."]);
+    // result.clearValues: { "0xEncryptedValue...": 1000n }
   };
 
   return <button onClick={handleDecrypt}>Public Decrypt</button>;

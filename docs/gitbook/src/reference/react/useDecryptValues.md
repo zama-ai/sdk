@@ -8,7 +8,7 @@ description: Query hook that automatically decrypts FHE encrypted values once cr
 Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](/reference/react/useGrantPermit)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 {% hint style="info" %}
-Renamed from `useUserDecrypt` to align with the `@fhevm/sdk` glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
+Renamed from `useUserDecrypt` to align with the Zama glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
 {% endhint %}
 
 {% hint style="info" %}

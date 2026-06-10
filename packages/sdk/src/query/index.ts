@@ -131,7 +131,7 @@ export type {
   EncryptedValue,
 } from "../relayer/relayer-sdk.types";
 export type { EncryptInput, EIP712TypedData } from "../relayer/relayer-sdk.types";
-// Decrypt parameter/result types — glossary-aligned with `@fhevm/sdk` (see main entry).
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type {
   UserDecryptParams as DecryptValuesParams,
   PublicDecryptResult as DecryptPublicValuesResult,

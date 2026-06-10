@@ -254,7 +254,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 `(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
 
 {% hint style="info" %}
-Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the `@fhevm/sdk` glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
+Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the Zama glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
 {% endhint %}
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
@@ -265,10 +265,10 @@ When the relayer is actually called, permits are resolved from the contract addr
 
 ```ts
 const values = await sdk.decryption.decryptValues([
-  { encryptedValue: balanceHandle, contractAddress: cUSDT },
-  { encryptedValue: flagHandle, contractAddress: myContract },
+  { encryptedValue: balance, contractAddress: cUSDT },
+  { encryptedValue: flag, contractAddress: myContract },
 ]);
-console.log(values[balanceHandle]); // 1000n
+console.log(values[balance]); // 1000n
 ```
 
 To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
@@ -362,7 +362,7 @@ emitter.on(
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the `@fhevm/sdk` glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
+This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
 
 ### onWalletAccountChange

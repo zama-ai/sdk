@@ -44,7 +44,7 @@ export type {
   FhevmInstanceConfig,
 } from "@zama-fhe/relayer-sdk/bundle";
 
-// Decrypt parameter/result types — glossary-aligned with `@fhevm/sdk`.
+// Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
 export type {
   UserDecryptParams as DecryptValuesParams,

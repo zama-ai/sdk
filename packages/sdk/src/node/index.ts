@@ -63,7 +63,7 @@ export type {
   EncryptParams,
   EncryptResult,
 } from "../relayer/relayer-sdk.types";
-// Decrypt parameter/result types — glossary-aligned with `@fhevm/sdk` (see main entry).
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type {
   UserDecryptParams as DecryptValuesParams,
   PublicDecryptResult as DecryptPublicValuesResult,
