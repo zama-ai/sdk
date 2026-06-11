@@ -6,7 +6,6 @@ import {
 } from "../credentials/decrypt-permit";
 import type { CredentialBundle } from "../credentials/types";
 import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
-import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
@@ -16,6 +15,7 @@ import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
+import type { EventService } from "./event-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
@@ -46,26 +46,26 @@ export class DecryptionService {
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
   readonly #relayer: RelayerDispatcher;
-  readonly #emitEvent: (input: ZamaSDKEventInput) => void;
+  readonly #events: EventService;
 
   constructor({
     cache,
     credentialService,
     delegationService,
     relayer,
-    emitEvent,
+    events,
   }: {
     cache: CachingService;
     credentialService: CredentialService;
     delegationService: DelegationService;
     relayer: RelayerDispatcher;
-    emitEvent: (input: ZamaSDKEventInput) => void;
+    events: EventService;
   }) {
     this.#cache = cache;
     this.#credentialService = credentialService;
     this.#delegationService = delegationService;
     this.#relayer = relayer;
-    this.#emitEvent = emitEvent;
+    this.#events = events;
   }
 
   async userDecrypt(
@@ -265,7 +265,7 @@ export class DecryptionService {
     const t0 = Date.now();
     const uncachedEncryptedValues = uncached.map((h) => h.encryptedValue);
     try {
-      this.#emitEvent({
+      this.#events.emit({
         type: ZamaSDKEvents.DecryptStart,
         encryptedValues: uncachedEncryptedValues,
       });
@@ -298,7 +298,7 @@ export class DecryptionService {
           uncachedResult[encryptedValue] = value;
         }
       }
-      this.#emitEvent({
+      this.#events.emit({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
         encryptedValues: uncachedEncryptedValues,
@@ -306,7 +306,7 @@ export class DecryptionService {
       });
       return result;
     } catch (error) {
-      this.#emitEvent({
+      this.#events.emit({
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,

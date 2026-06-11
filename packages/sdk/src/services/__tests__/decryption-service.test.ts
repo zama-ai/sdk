@@ -38,12 +38,14 @@ describe("DecryptionService", () => {
   test("userDecrypt decrypts uncached handles grouped by contract and writes cache", async ({
     cachingService,
     createDecryptionService,
+    eventService,
     relayer,
     userAddress,
     events,
   }) => {
-    const emitEvent = vi.fn();
-    const service = createDecryptionService({ emitEvent });
+    const onEvent = vi.fn();
+    eventService.subscribe(onEvent);
+    const service = createDecryptionService();
     vi.mocked(relayer.userDecrypt)
       .mockResolvedValueOnce({ [HANDLE_A]: 10n })
       .mockResolvedValueOnce({ [HANDLE_B]: 20n });
@@ -71,8 +73,8 @@ describe("DecryptionService", () => {
         contractAddress: CONTRACT_B,
       }),
     );
-    expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptStart }));
-    expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
+    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptStart }));
+    expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
   });
 
   test("userDecrypt serves cached values without prompting for credentials", async ({

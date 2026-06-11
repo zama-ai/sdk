@@ -4,10 +4,10 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventType } from "../event
 /** Listener narrowed to one event type. */
 export type TypedListener<K extends ZamaSDKEventType> = (
   event: Extract<ZamaSDKEvent, { type: K }>,
-) => void | Promise<void>;
+) => void;
 
 /** Catch-all listener that receives the full event union. */
-export type AnyListener = (event: ZamaSDKEvent) => void | Promise<void>;
+export type AnyListener = (event: ZamaSDKEvent) => void;
 
 /** Options accepted by `on`, `once`, and `subscribe`. */
 export interface ListenerOptions {
@@ -25,16 +25,18 @@ export interface EventServiceConfig {
 }
 
 /**
- * Multi-listener, type-narrowed, awaited event bus.
+ * Multi-listener, type-narrowed event bus.
  *
  * `on(type, …)` registers per event type with a narrowed payload.
  * `subscribe(…)` registers a catch-all listener (used by the back-compat
  * `createConfig({ onEvent })` path).
  *
- * `emit` is internal: it fans out to typed + catch-all listeners in parallel
- * via `Promise.all`, awaits async returns, and swallows throws. Callers that
- * need a deadline can pass `{ signal }` when subscribing (e.g.
- * `AbortSignal.timeout(ms)`).
+ * `emit` is internal: it dispatches synchronously to typed + catch-all
+ * listeners. A listener throw never propagates back to the SDK caller; it
+ * is re-thrown on a fresh microtask so the platform's normal error
+ * pipeline (`window.onerror` / `uncaughtException` / Sentry) sees it.
+ * Listeners are expected to be synchronous — returned promises are not
+ * awaited or tracked.
  */
 export class EventService {
   readonly #typed = new Map<ZamaSDKEventType, Set<AnyListener>>();
@@ -96,7 +98,7 @@ export class EventService {
     let unsubscribe: () => void = () => {};
     const wrapper: TypedListener<K> = (event) => {
       unsubscribe();
-      return listener(event);
+      listener(event);
     };
     unsubscribe = this.on(type, wrapper, options);
     return () => unsubscribe();
@@ -122,33 +124,32 @@ export class EventService {
 
   /**
    * Emit an event to all matching typed listeners and every catch-all
-   * listener. Resolves once all listener promises settle or time out.
+   * listener. Dispatches inline; returns once every listener has been
+   * invoked. A listener throw (or returned-thenable rejection) is logged
+   * and swallowed.
    *
    * @internal
    */
-  async emit(input: ZamaSDKEventInput, tokenAddress?: Address): Promise<void> {
+  emit(input: ZamaSDKEventInput, tokenAddress?: Address): void {
     const event = {
       ...input,
       tokenAddress,
       timestamp: Date.now(),
     } satisfies ZamaSDKEvent;
 
+    // Snapshot before dispatch so a listener that subscribes during emit
+    // doesn't gain a turn in this round (Set iteration would pick it up).
     const typedSet = this.#typed.get(event.type);
-    const typed = typedSet ? [...typedSet] : [];
-    const any = [...this.#any];
-    if (typed.length === 0 && any.length === 0) {
-      return;
-    }
-
-    const tag = event.type;
-    const tasks: Promise<void>[] = [];
-    for (const listener of typed) {
-      tasks.push(this.#run(tag, () => listener(event)));
+    const typed = typedSet ? Array.from(typedSet) : undefined;
+    const any = Array.from(this.#any);
+    if (typed) {
+      for (const listener of typed) {
+        this.#run(listener, event);
+      }
     }
     for (const listener of any) {
-      tasks.push(this.#run(tag, () => listener(event)));
+      this.#run(listener, event);
     }
-    await Promise.all(tasks);
   }
 
   #wireSignal(unsubscribe: () => void, signal: AbortSignal | undefined): () => void {
@@ -163,12 +164,15 @@ export class EventService {
     };
   }
 
-  async #run(tag: string, fn: () => void | Promise<void>): Promise<void> {
+  #run(listener: AnyListener, event: ZamaSDKEvent): void {
     try {
-      await Promise.resolve().then(fn);
+      listener(event);
     } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.warn(`[zama-sdk] ${tag} listener threw:`, error);
+      // Isolate the SDK caller from a buggy listener, but surface the error
+      // to the platform's normal error pipeline instead of silencing it.
+      queueMicrotask(() => {
+        throw error;
+      });
     }
   }
 }

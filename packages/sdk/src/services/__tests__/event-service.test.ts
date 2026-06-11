@@ -5,17 +5,17 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 const TX_HASH = "0x1111111111111111111111111111111111111111111111111111111111111111" as Hex;
 
 describe("EventService", () => {
-  test("typed listener receives narrowed event for matching type only", async () => {
+  test("typed listener receives narrowed event for matching type only", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     service.on("transfer:submitted", listener);
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
-    await service.emit({
+    service.emit({
       type: "unwrap:submitted",
       txHash: TX_HASH,
     });
@@ -27,36 +27,31 @@ describe("EventService", () => {
     expect(event.timestamp).toEqual(expect.any(Number));
   });
 
-  test("multiple typed listeners fire in parallel", async () => {
+  test("multiple typed listeners fire in registration order", () => {
     const service = new EventService();
     const calls: string[] = [];
-    const makeListener = (label: string, delayMs: number) => async () => {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-      calls.push(label);
-    };
 
-    service.on("transfer:submitted", makeListener("slow", 30));
-    service.on("transfer:submitted", makeListener("fast", 5));
+    service.on("transfer:submitted", () => calls.push("first"));
+    service.on("transfer:submitted", () => calls.push("second"));
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
 
-    // Faster listener resolves first → both complete because emit awaited Promise.all.
-    expect(calls).toEqual(["fast", "slow"]);
+    expect(calls).toEqual(["first", "second"]);
   });
 
-  test("subscribe fires for every event type", async () => {
+  test("subscribe fires for every event type", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     service.subscribe(listener);
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
-    await service.emit({
+    service.emit({
       type: "unwrap:submitted",
       txHash: TX_HASH,
     });
@@ -66,17 +61,17 @@ describe("EventService", () => {
     expect(listener.mock.calls[1]![0].type).toBe("unwrap:submitted");
   });
 
-  test("unsubscribe stops further emits", async () => {
+  test("unsubscribe stops further emits", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     const unsubscribe = service.on("transfer:submitted", listener);
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     unsubscribe();
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -84,17 +79,17 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("subscribe unsubscribe stops further emits", async () => {
+  test("subscribe unsubscribe stops further emits", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     const unsubscribe = service.subscribe(listener);
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     unsubscribe();
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -102,11 +97,9 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("emit with no listeners resolves immediately", async () => {
+  test("emit with no listeners is a no-op", () => {
     const service = new EventService();
-    await expect(
-      service.emit({ type: "transfer:submitted", txHash: TX_HASH }),
-    ).resolves.toBeUndefined();
+    expect(() => service.emit({ type: "transfer:submitted", txHash: TX_HASH })).not.toThrow();
   });
 
   test("listener throw does not propagate and siblings still fire", async () => {
@@ -121,40 +114,35 @@ describe("EventService", () => {
     service.on("transfer:submitted", sibling);
     service.subscribe(anyListener);
 
-    await expect(
-      service.emit({ type: "transfer:submitted", txHash: TX_HASH }),
-    ).resolves.toBeUndefined();
-    expect(failing).toHaveBeenCalledTimes(1);
-    expect(sibling).toHaveBeenCalledTimes(1);
-    expect(anyListener).toHaveBeenCalledTimes(1);
+    const previous = process.listeners("uncaughtException");
+    process.removeAllListeners("uncaughtException");
+    const swallow = new Promise<void>((resolve) => {
+      process.once("uncaughtException", () => resolve());
+    });
+    try {
+      expect(() => service.emit({ type: "transfer:submitted", txHash: TX_HASH })).not.toThrow();
+      expect(failing).toHaveBeenCalledTimes(1);
+      expect(sibling).toHaveBeenCalledTimes(1);
+      expect(anyListener).toHaveBeenCalledTimes(1);
+      await swallow;
+    } finally {
+      for (const handler of previous) {
+        process.on("uncaughtException", handler);
+      }
+    }
   });
 
-  test("async listener is awaited by emit", async () => {
-    const service = new EventService();
-    let resolved = false;
-    service.on("transfer:submitted", async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      resolved = true;
-    });
-
-    await service.emit({
-      type: "transfer:submitted",
-      txHash: TX_HASH,
-    });
-    expect(resolved).toBe(true);
-  });
-
-  test("once(type, listener) fires exactly once and auto-unsubscribes", async () => {
+  test("once(type, listener) fires exactly once and auto-unsubscribes", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     service.once("transfer:submitted", listener);
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -162,17 +150,17 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("once unsubscribe returned fn is a no-op after auto-fire", async () => {
+  test("once unsubscribe returned fn is a no-op after auto-fire", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     const unsubscribe = service.once("transfer:submitted", listener);
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
-    unsubscribe(); // no-op
-    await service.emit({
+    unsubscribe();
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -180,13 +168,13 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("once unsubscribe before first event prevents fire", async () => {
+  test("once unsubscribe before first event prevents fire", () => {
     const service = new EventService();
     const listener = vi.fn();
 
     const unsubscribe = service.once("transfer:submitted", listener);
     unsubscribe();
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -194,11 +182,11 @@ describe("EventService", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test("back-compat: EventServiceConfig.onEvent wires through subscribe", async () => {
+  test("back-compat: EventServiceConfig.onEvent wires through subscribe", () => {
     const onEvent = vi.fn();
     const service = new EventService({ onEvent });
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -207,7 +195,7 @@ describe("EventService", () => {
     expect(onEvent.mock.calls[0]![0].type).toBe("transfer:submitted");
   });
 
-  test("on({ signal }) unsubscribes when the signal aborts", async () => {
+  test("on({ signal }) unsubscribes when the signal aborts", () => {
     const service = new EventService();
     const listener = vi.fn();
     const controller = new AbortController();
@@ -215,12 +203,12 @@ describe("EventService", () => {
     service.on("transfer:submitted", listener, {
       signal: controller.signal,
     });
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     controller.abort();
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -228,7 +216,7 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("on({ signal }) with already-aborted signal never registers the listener", async () => {
+  test("on({ signal }) with already-aborted signal never registers the listener", () => {
     const service = new EventService();
     const listener = vi.fn();
     const controller = new AbortController();
@@ -237,7 +225,7 @@ describe("EventService", () => {
     const unsubscribe = service.on("transfer:submitted", listener, {
       signal: controller.signal,
     });
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -246,18 +234,18 @@ describe("EventService", () => {
     expect(() => unsubscribe()).not.toThrow();
   });
 
-  test("subscribe({ signal }) unsubscribes when the signal aborts", async () => {
+  test("subscribe({ signal }) unsubscribes when the signal aborts", () => {
     const service = new EventService();
     const listener = vi.fn();
     const controller = new AbortController();
 
     service.subscribe(listener, { signal: controller.signal });
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     controller.abort();
-    await service.emit({
+    service.emit({
       type: "unwrap:submitted",
       txHash: TX_HASH,
     });
@@ -265,7 +253,7 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test("once({ signal }) aborted before first event prevents fire", async () => {
+  test("once({ signal }) aborted before first event prevents fire", () => {
     const service = new EventService();
     const listener = vi.fn();
     const controller = new AbortController();
@@ -274,7 +262,7 @@ describe("EventService", () => {
       signal: controller.signal,
     });
     controller.abort();
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -282,20 +270,20 @@ describe("EventService", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test("emit stamps timestamp and optional tokenAddress on the event", async () => {
+  test("emit stamps timestamp and optional tokenAddress on the event", () => {
     const service = new EventService();
     const listener = vi.fn();
     service.subscribe(listener);
 
     const tokenAddress = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as const;
-    await service.emit({ type: "transfer:submitted", txHash: TX_HASH }, tokenAddress);
+    service.emit({ type: "transfer:submitted", txHash: TX_HASH }, tokenAddress);
 
     const [event] = listener.mock.calls[0]!;
     expect(event.tokenAddress).toBe(tokenAddress);
     expect(event.timestamp).toEqual(expect.any(Number));
   });
 
-  test("typed and catch-all listeners both fire on the same emit", async () => {
+  test("typed and catch-all listeners both fire on the same emit", () => {
     const service = new EventService();
     const typed = vi.fn();
     const any = vi.fn();
@@ -303,7 +291,7 @@ describe("EventService", () => {
     service.on("transfer:submitted", typed);
     service.subscribe(any);
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -313,7 +301,7 @@ describe("EventService", () => {
     expect(typed.mock.calls[0]![0]).toEqual(any.mock.calls[0]![0]);
   });
 
-  test("subscribe({ signal }) with already-aborted signal never registers the listener", async () => {
+  test("subscribe({ signal }) with already-aborted signal never registers the listener", () => {
     const service = new EventService();
     const listener = vi.fn();
     const controller = new AbortController();
@@ -322,7 +310,7 @@ describe("EventService", () => {
     const unsubscribe = service.subscribe(listener, {
       signal: controller.signal,
     });
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
@@ -331,50 +319,57 @@ describe("EventService", () => {
     expect(() => unsubscribe()).not.toThrow();
   });
 
-  test("listener throw is logged via console.warn with the EventService tag", async () => {
+  test("listener throw does not propagate to emit and surfaces on a microtask", async () => {
     const service = new EventService();
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const boom = new Error("listener boom");
     service.on("transfer:submitted", () => {
-      throw new Error("listener boom");
+      throw boom;
+    });
+
+    // Intercept the microtask re-throw so vitest doesn't fail the test.
+    const previous = process.listeners("uncaughtException");
+    process.removeAllListeners("uncaughtException");
+    const captured = new Promise<unknown>((resolve) => {
+      process.once("uncaughtException", resolve);
     });
 
     try {
-      await service.emit({
-        type: "transfer:submitted",
-        txHash: TX_HASH,
-      });
+      expect(() =>
+        service.emit({
+          type: "transfer:submitted",
+          txHash: TX_HASH,
+        }),
+      ).not.toThrow();
 
-      expect(warn).toHaveBeenCalledTimes(1);
-      const [message, error] = warn.mock.calls[0]!;
-      expect(message).toEqual(`[zama-sdk] transfer:submitted listener threw:`);
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe("listener boom");
+      await expect(captured).resolves.toBe(boom);
     } finally {
-      warn.mockRestore();
+      for (const handler of previous) {
+        process.on("uncaughtException", handler);
+      }
     }
   });
 
-  test("listeners added during dispatch do not fire on the current emit", async () => {
+  test("listeners added during dispatch do not fire on the current emit", () => {
     const service = new EventService();
     const late = vi.fn();
     service.subscribe(() => {
       service.on("transfer:submitted", late);
     });
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     expect(late).not.toHaveBeenCalled();
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     expect(late).toHaveBeenCalledTimes(1);
   });
 
-  test("listeners removed during dispatch still fire for siblings on the current emit", async () => {
+  test("listeners removed during dispatch still fire for siblings on the current emit", () => {
     const service = new EventService();
     const sibling = vi.fn();
     let unsubscribeSibling: (() => void) | undefined;
@@ -384,13 +379,13 @@ describe("EventService", () => {
     });
     unsubscribeSibling = service.on("transfer:submitted", sibling);
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });
     expect(sibling).toHaveBeenCalledTimes(1);
 
-    await service.emit({
+    service.emit({
       type: "transfer:submitted",
       txHash: TX_HASH,
     });

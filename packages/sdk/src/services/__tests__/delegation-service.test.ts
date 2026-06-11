@@ -102,8 +102,12 @@ describe("DelegationService", () => {
       delegateAddress,
     );
 
-    expect(inactive.get(missingContract)).toMatchObject({ code: "DELEGATION_NOT_FOUND" });
-    expect(inactive.get(expiredContract)).toMatchObject({ code: "DELEGATION_EXPIRED" });
+    expect(inactive.get(missingContract)).toMatchObject({
+      code: "DELEGATION_NOT_FOUND",
+    });
+    expect(inactive.get(expiredContract)).toMatchObject({
+      code: "DELEGATION_EXPIRED",
+    });
     expect(inactive.has(activeContract)).toBe(false);
   });
 
@@ -150,14 +154,16 @@ describe("DelegationService", () => {
 
   test("delegateDecryption emits submitted event after broadcast before receipt wait", async ({
     createDelegationService,
+    eventService,
     provider,
     signer,
     userAddress,
     delegateAddress,
     events,
   }) => {
-    const emitEvent = vi.fn();
-    const service = createDelegationService({ emitEvent });
+    const onEvent = vi.fn();
+    eventService.subscribe(onEvent);
+    const service = createDelegationService();
     vi.mocked(provider.readContract).mockResolvedValue(0n);
     vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("receipt timeout"));
 
@@ -169,9 +175,12 @@ describe("DelegationService", () => {
       }),
     ).rejects.toMatchObject({ code: "TRANSACTION_REVERTED" });
 
-    expect(emitEvent).toHaveBeenCalledWith(
-      { type: events.DelegationSubmitted, txHash: "0xtxhash" },
-      CONTRACT,
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: events.DelegationSubmitted,
+        txHash: "0xtxhash",
+        tokenAddress: CONTRACT,
+      }),
     );
   });
 
@@ -196,14 +205,16 @@ describe("DelegationService", () => {
 
   test("revokeDelegation emits submitted event after broadcast before receipt wait", async ({
     createDelegationService,
+    eventService,
     provider,
     signer,
     userAddress,
     delegateAddress,
     events,
   }) => {
-    const emitEvent = vi.fn();
-    const service = createDelegationService({ emitEvent });
+    const onEvent = vi.fn();
+    eventService.subscribe(onEvent);
+    const service = createDelegationService();
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("receipt timeout"));
 
@@ -215,9 +226,12 @@ describe("DelegationService", () => {
       }),
     ).rejects.toMatchObject({ code: "TRANSACTION_REVERTED" });
 
-    expect(emitEvent).toHaveBeenCalledWith(
-      { type: events.RevokeDelegationSubmitted, txHash: "0xtxhash" },
-      CONTRACT,
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: events.RevokeDelegationSubmitted,
+        txHash: "0xtxhash",
+        tokenAddress: CONTRACT,
+      }),
     );
   });
 
@@ -242,7 +256,7 @@ describe("DelegationService", () => {
 
     expect(thrown).toBeInstanceOf(DelegationCooldownError);
     expect(thrown).toMatchObject({ code: "DELEGATION_COOLDOWN" });
-    expect(thrown.cause).toBeInstanceOf(TransactionRevertedError);
-    expect((thrown.cause as Error).cause).toBe(rootCause);
+    expect((thrown as DelegationCooldownError).cause).toBeInstanceOf(TransactionRevertedError);
+    expect(((thrown as DelegationCooldownError).cause as Error).cause).toBe(rootCause);
   });
 });

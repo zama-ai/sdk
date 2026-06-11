@@ -1,14 +1,13 @@
+// oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
-import { vi } from "vitest";
-import type { Address } from "viem";
 import type { CredentialServiceConfig } from "../credentials/credential-service";
 import { CredentialService } from "../credentials/credential-service";
-import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { CachingService } from "../services/caching-service";
 import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
 import { EncryptionService } from "../services/encryption-service";
+import { EventService } from "../services/event-service";
 import { LifecycleService } from "../services/lifecycle-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import type { ProviderFixtures } from "./provider";
@@ -24,7 +23,7 @@ export type CreateCredentialServiceFn = (
 export type CreateDelegationServiceFn = (overrides?: {
   provider?: GenericProvider;
   relayer?: RelayerDispatcher;
-  emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  events?: EventService;
 }) => DelegationService;
 
 export type CreateDecryptionServiceFn = (overrides?: {
@@ -32,12 +31,12 @@ export type CreateDecryptionServiceFn = (overrides?: {
   credentialService?: CredentialService;
   delegationService?: DelegationService;
   relayer?: RelayerDispatcher;
-  emitEvent?: (input: ZamaSDKEventInput) => void;
+  events?: EventService;
 }) => DecryptionService;
 
 export type CreateEncryptionServiceFn = (overrides?: {
   relayer?: RelayerDispatcher;
-  emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  events?: EventService;
 }) => EncryptionService;
 
 export type CreateLifecycleServiceFn = (overrides?: {
@@ -53,6 +52,7 @@ export interface ServiceFixtures {
   delegationService: DelegationService;
   decryptionService: DecryptionService;
   encryptionService: EncryptionService;
+  eventService: EventService;
   createCredentialService: CreateCredentialServiceFn;
   createDelegationService: CreateDelegationServiceFn;
   createDecryptionService: CreateDecryptionServiceFn;
@@ -65,6 +65,9 @@ type ServiceDeps = RelayerFixtures & SignerFixtures & ProviderFixtures & Storage
 export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   cachingService: async ({ storage }, use) => {
     await use(new CachingService(storage));
+  },
+  eventService: async ({}, use) => {
+    await use(new EventService());
   },
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
@@ -81,12 +84,12 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   credentialService: async ({ createCredentialService }, use) => {
     await use(createCredentialService({}));
   },
-  createDelegationService: async ({ provider, relayer }, use) => {
+  createDelegationService: async ({ provider, relayer, eventService }, use) => {
     const factory: CreateDelegationServiceFn = (overrides = {}) =>
       new DelegationService({
         provider: overrides.provider ?? provider,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
-        emitEvent: overrides.emitEvent,
+        events: overrides.events ?? eventService,
       });
     await use(factory);
   },
@@ -94,7 +97,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     await use(createDelegationService());
   },
   createDecryptionService: async (
-    { cachingService, credentialService, delegationService, relayer },
+    { cachingService, credentialService, delegationService, relayer, eventService },
     use,
   ) => {
     const factory: CreateDecryptionServiceFn = (overrides = {}) =>
@@ -103,18 +106,18 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
-        emitEvent: overrides.emitEvent ?? vi.fn(),
+        events: overrides.events ?? eventService,
       });
     await use(factory);
   },
   decryptionService: async ({ createDecryptionService }, use) => {
     await use(createDecryptionService());
   },
-  createEncryptionService: async ({ relayer }, use) => {
+  createEncryptionService: async ({ relayer, eventService }, use) => {
     const factory: CreateEncryptionServiceFn = (overrides = {}) =>
       new EncryptionService({
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
-        emitEvent: overrides.emitEvent ?? vi.fn(),
+        events: overrides.events ?? eventService,
       });
     await use(factory);
   },

@@ -15,7 +15,7 @@ import {
   TransactionRevertedError,
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
-import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
+import type { TransactionOperation } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type {
   GenericProvider,
@@ -24,6 +24,7 @@ import type {
   WriteContractConfig,
 } from "../types";
 import { submitTransaction } from "../utils/submit-transaction";
+import type { EventService } from "./event-service";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
@@ -33,20 +34,20 @@ type AclTransactionOperation = Extract<
 export class DelegationService {
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
-  readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  readonly #events: EventService;
 
   constructor({
     provider,
     relayer,
-    emitEvent = () => {},
+    events,
   }: {
     provider: GenericProvider;
     relayer: RelayerDispatcher;
-    emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+    events: EventService;
   }) {
     this.#provider = provider;
     this.#relayer = relayer;
-    this.#emitEvent = emitEvent;
+    this.#events = events;
   }
 
   async delegateDecryption(
@@ -215,7 +216,7 @@ export class DelegationService {
         signer,
         provider: this.#provider,
         config,
-        emit: (input) => this.#emitEvent(input, contractAddress),
+        emit: (input) => this.#events.emit(input, contractAddress),
       });
     } catch (error) {
       this.#throwAclRevertIfMatched(error);

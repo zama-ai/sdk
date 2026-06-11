@@ -4,7 +4,6 @@ import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import type { ZamaSDKEventInput } from "./events/sdk-events";
 import { EventService } from "./services/event-service";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
@@ -66,15 +65,12 @@ export class ZamaSDK {
     this.signer = config.signer;
     this.storage = config.storage;
     this.events = new EventService({ onEvent: config.onEvent });
-    const emitEvent = (input: ZamaSDKEventInput, tokenAddress?: Address): void => {
-      void this.events.emit(input, tokenAddress);
-    };
 
     this.#cachingService = new CachingService(config.storage);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
-      emitEvent,
+      events: this.events,
     });
 
     const registryAddresses: Record<number, Address> = {};
@@ -104,12 +100,12 @@ export class ZamaSDK {
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
-        emitEvent,
+        events: this.events,
       });
     }
     this.#encryptionService = new EncryptionService({
       relayer: this.relayer,
-      emitEvent,
+      events: this.events,
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
@@ -149,19 +145,6 @@ export class ZamaSDK {
    */
   onWalletAccountChange(listener: WalletAccountListener): () => void {
     return this.#lifecycleService.onWalletAccountChange(listener);
-  }
-
-  /**
-   * Emit a structured SDK event into the unified SDK event stream.
-   *
-   * @deprecated Use `sdk.events.on` / `sdk.events.subscribe` to subscribe and the
-   *   internal `sdk.events.emit` to publish. This shim will be removed after
-   *   one minor release.
-   *
-   * @internal
-   */
-  emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
-    void this.events.emit(input, tokenAddress);
   }
 
   /**
