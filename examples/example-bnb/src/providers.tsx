@@ -69,8 +69,8 @@ export function Providers({ children }: { children: ReactNode }) {
   const liveAccountsRef = useRef<readonly string[]>([]);
 
   // Becomes true once the initial eth_accounts call resolves. accountsChanged events
-  // that arrive before that point are ignored — some wallets (Phantom, certain MetaMask
-  // versions) fire accountsChanged on page load before the async seed completes, which
+  // that arrive before that point are ignored — some wallets fire accountsChanged
+  // on page load before the async seed completes, which
   // would cause a spurious ZamaProvider remount and force the user to re-sign.
   const refSeededRef = useRef(false);
 

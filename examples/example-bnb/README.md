@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect MetaMask (or any
+Open [http://localhost:3000](http://localhost:3000) and connect Trust Wallet (or any
 EIP-1193 wallet). The app will prompt you to add and switch to the BNB Smart
 Chain Testnet on first connection.
 

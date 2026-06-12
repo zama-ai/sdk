@@ -67,6 +67,7 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
 
     const mockEthereum = {
+      // Standard injected-wallet flag — Trust Wallet (like most EIP-1193 wallets) sets this too.
       isMetaMask: true,
       request({ method, params }: { method: string; params?: unknown[] }) {
         switch (method) {

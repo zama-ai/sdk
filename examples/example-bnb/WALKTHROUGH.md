@@ -20,7 +20,7 @@ This example uses the **cleartext stack** (`cleartext()`), which is Zama's light
 
 ## What this example demonstrates
 
-> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on BNB using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
+> Any EIP-1193 browser wallet (e.g. Trust Wallet) can interact with ERC-7984 confidential tokens on BNB using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
 
 Specifically:
 
@@ -46,10 +46,10 @@ Specifically:
 
 ## Wallet compatibility
 
-| Wallet type                                             | Supported | Notes                                                                                              |
-| ------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
-| EIP-1193 browser wallet EOA (Rabby, MetaMask, Phantom…) | Yes       | Must support `wallet_switchEthereumChain` / `wallet_addEthereumChain`.                             |
-| Smart account (ERC-4337)                                | No        | The Zama relayer uses ECDSA (`ecrecover`) — smart account signing key differs from account address |
+| Wallet type                                     | Supported | Notes                                                                                              |
+| ----------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| EIP-1193 browser wallet EOA (e.g. Trust Wallet) | Yes       | Must support `wallet_switchEthereumChain` / `wallet_addEthereumChain`.                             |
+| Smart account (ERC-4337)                        | No        | The Zama relayer uses ECDSA (`ecrecover`) — smart account signing key differs from account address |
 
 ---
 
@@ -112,7 +112,7 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
 
 ### 1. Browser wallet
 
-Install any EIP-1193 browser wallet (e.g. [Rabby](https://rabby.io), [Phantom](https://phantom.com)) and create or import an account. The app automatically adds the BNB network when you connect.
+Install [Trust Wallet](https://trustwallet.com) (or any EIP-1193 browser wallet) and create or import an account. The app automatically adds the BNB network when you connect.
 
 If you prefer to add BNB manually:
 
@@ -540,8 +540,7 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_BNB_RPC_URL` if you
 
 | Symptom                                                   | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                              |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                                                        |
-| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                                                                                  | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                                                        |
+| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install [Trust Wallet](https://trustwallet.com) (or any EIP-1193 browser wallet)                                                                                                                                                                                                                                                                                 |
 | Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                     |
 | Network switch fails with error                           | Wallet cannot reach the BNB RPC                                                                                                                          | Check `NEXT_PUBLIC_BNB_RPC_URL`; try the default `https://bsc-testnet-rpc.publicnode.com`                                                                                                                                                                                                                                                                        |
 | Wrong network screen appears                              | Wallet switched away from BNB                                                                                                                            | Click **Switch to BNB** to switch back to BNB                                                                                                                                                                                                                                                                                                                    |

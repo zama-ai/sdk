@@ -346,7 +346,7 @@ export default function Home() {
     const ethereum = getEthereumProvider();
     if (!ethereum) {
       setConnectError(
-        "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, MetaMask, or Phantom).",
+        "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Trust Wallet).",
       );
       return;
     }

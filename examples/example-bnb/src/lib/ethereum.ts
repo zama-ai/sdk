@@ -1,5 +1,5 @@
 /**
- * Returns the injected EIP-1193 provider (MetaMask, Rabby, etc.).
+ * Returns the injected EIP-1193 provider (e.g. Trust Wallet).
  * Uses window.ethereum directly — the standard injection point for EVM wallets.
  */
 export function getEthereumProvider() {
