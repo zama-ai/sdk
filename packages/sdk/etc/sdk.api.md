@@ -621,8 +621,6 @@ export function cleartext(): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
-    // Warning: (ae-forgotten-export) The symbol "RelayerCleartext" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
     // (undocumented)
@@ -11681,8 +11679,6 @@ export interface PendingUnshieldRequest {
     readonly unwrapTxHash: Hex;
 }
 
-// Warning: (ae-forgotten-export) The symbol "PermissionSchema" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type Permission = z.infer<typeof PermissionSchema>;
 
@@ -13113,8 +13109,6 @@ export class RelayerRequestFailedError extends ZamaError {
     readonly statusCode: number | undefined;
 }
 
-// Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
@@ -14640,8 +14634,6 @@ export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// Warning: (ae-forgotten-export) The symbol "StoredKeypairSchema" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 
@@ -14894,8 +14886,6 @@ export interface TransactionErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
-// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
@@ -19977,13 +19967,6 @@ export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents
 export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/index-Cq1_BuG_.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Cq1_BuG_.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Cq1_BuG_.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Cq1_BuG_.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
