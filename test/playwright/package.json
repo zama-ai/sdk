@@ -17,7 +17,7 @@
     "@playwright/test": "^1.60.0",
     "@zama-fhe/sdk": "workspace:*",
     "ethers": "^6.16.0",
-    "viem": "^2.47.12"
+    "viem": "^2.52.2"
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",
