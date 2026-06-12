@@ -108,29 +108,27 @@ async function main() {
   console.log("cUSDC balance (A) final:", fmt(await tokenA.balanceOf(walletA.address)));
   console.log("USDC  balance (A) final:", fmt(await erc20.balanceOf(walletA.address)));
 
-  section("SECTION 4 — Delegation (bonus)");
-  try {
-    await tokenA.delegateDecryption({ delegateAddress: walletB.address });
-    console.log(
-      "delegation active:",
-      await tokenA.isDelegated({
-        delegatorAddress: walletA.address,
-        delegateAddress: walletB.address,
-      }),
-    );
-    const seenByB = await tokenB.decryptBalanceAs({ delegatorAddress: walletA.address });
-    console.log("cUSDC balance (A, seen by B):", fmt(seenByB));
-    await tokenA.revokeDelegation({ delegateAddress: walletB.address });
-    console.log(
-      "delegation active after revoke:",
-      await tokenA.isDelegated({
-        delegatorAddress: walletA.address,
-        delegateAddress: walletB.address,
-      }),
-    );
-  } catch (err) {
-    console.warn("  ⚠ delegation step skipped:", err?.message ?? err);
-  }
+  // Delegation is part of the validated flow — failures here are fatal (they propagate
+  // to main().catch below), so a regression cannot pass silently.
+  section("SECTION 4 — Delegation");
+  await tokenA.delegateDecryption({ delegateAddress: walletB.address });
+  console.log(
+    "delegation active:",
+    await tokenA.isDelegated({
+      delegatorAddress: walletA.address,
+      delegateAddress: walletB.address,
+    }),
+  );
+  const seenByB = await tokenB.decryptBalanceAs({ delegatorAddress: walletA.address });
+  console.log("cUSDC balance (A, seen by B):", fmt(seenByB));
+  await tokenA.revokeDelegation({ delegateAddress: walletB.address });
+  console.log(
+    "delegation active after revoke:",
+    await tokenA.isDelegated({
+      delegatorAddress: walletA.address,
+      delegateAddress: walletB.address,
+    }),
+  );
 
   sdkA.terminate?.();
   sdkB.terminate?.();

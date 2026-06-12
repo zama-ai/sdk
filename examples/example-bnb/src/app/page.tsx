@@ -266,7 +266,7 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   // Registry address is resolved automatically from the connected chain via the
-  // chain config we passed to createConfig (registryAddress: 0x7FC3D79E…).
+  // chain config we passed to createConfig (registryAddress: 0xc0E8B73b…).
   const {
     data: pairsData,
     isPending: isRegistryPending,
