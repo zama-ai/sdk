@@ -369,6 +369,28 @@ describe("EventService", () => {
     expect(late).toHaveBeenCalledTimes(1);
   });
 
+  test("on/once/subscribe return values are Disposable for use with `using`", () => {
+    const service = new EventService();
+    const onListener = vi.fn();
+    const onceListener = vi.fn();
+    const subListener = vi.fn();
+
+    {
+      // oxlint-disable-next-line no-unused-vars
+      using onSub = service.on("transfer:submitted", onListener);
+      // oxlint-disable-next-line no-unused-vars
+      using onceSub = service.once("transfer:submitted", onceListener);
+      // oxlint-disable-next-line no-unused-vars
+      using subSub = service.subscribe(subListener);
+      service.emit({ type: "transfer:submitted", txHash: TX_HASH });
+    }
+    service.emit({ type: "transfer:submitted", txHash: TX_HASH });
+
+    expect(onListener).toHaveBeenCalledTimes(1);
+    expect(onceListener).toHaveBeenCalledTimes(1);
+    expect(subListener).toHaveBeenCalledTimes(1);
+  });
+
   test("listeners removed during dispatch still fire for siblings on the current emit", () => {
     const service = new EventService();
     const sibling = vi.fn();
