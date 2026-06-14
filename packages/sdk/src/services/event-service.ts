@@ -169,10 +169,13 @@ export class EventService {
     if (!signal) {
       return unsubscribe;
     }
-    const onAbort = () => unsubscribe();
-    signal.addEventListener("abort", onAbort, { once: true });
+    const ctrl = new AbortController();
+    signal.addEventListener("abort", () => unsubscribe(), {
+      once: true,
+      signal: ctrl.signal,
+    });
     return () => {
-      signal.removeEventListener("abort", onAbort);
+      ctrl.abort();
       unsubscribe();
     };
   }
