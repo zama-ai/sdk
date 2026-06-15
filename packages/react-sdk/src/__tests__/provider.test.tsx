@@ -32,17 +32,17 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeDefined();
-    expect(result.current.relayer).toBeDefined();
+    expect(result.current.router).toBeDefined();
   });
 
-  test("does not terminate relayer on unmount (caller owns the relayer)", ({
-    relayer,
+  test("does not terminate router on unmount (caller owns the router)", ({
+    router,
     renderWithProviders,
   }) => {
-    const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
+    const { unmount } = renderWithProviders(() => useZamaSDK(), { router });
 
     unmount();
-    expect(relayer.terminate).not.toHaveBeenCalled();
+    expect(router.terminate).not.toHaveBeenCalled();
   });
 
   test("invalidates wallet-scoped queries when the signer lifecycle changes", ({
@@ -90,8 +90,9 @@ describe("ZamaProvider & useZamaSDK", () => {
   test("warms the current wallet keypair from a client effect", async ({
     renderWithProviders,
     relayer,
+    router,
   }) => {
-    renderWithProviders(() => useZamaSDK(), { relayer });
+    renderWithProviders(() => useZamaSDK(), { router });
 
     await waitFor(() => {
       expect(relayer.generateKeypair).toHaveBeenCalled();
@@ -102,8 +103,9 @@ describe("ZamaProvider & useZamaSDK", () => {
     createWrapper,
     signer,
     relayer,
+    router,
   }) => {
-    const { Wrapper } = createWrapper({ signer, relayer });
+    const { Wrapper } = createWrapper({ signer, router });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
     vi.mocked(relayer.generateKeypair).mockClear();
 
@@ -129,7 +131,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
-    const { Wrapper, signer, relayer } = createWrapper({
+    const { Wrapper, signer, router } = createWrapper({
       keypairTTL: 604800,
       permitTTL: 1,
       onEvent,
@@ -139,7 +141,7 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBe(signer);
-    expect(result.current.relayer).toBe(relayer);
+    expect(result.current.router).toBe(router);
 
     // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);

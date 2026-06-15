@@ -46,14 +46,14 @@ describe("ZamaSDK", () => {
     expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
-  test("terminate delegates to relayer.terminate", ({ sdk, relayer }) => {
+  test("terminate delegates to router.terminate", ({ sdk, router }) => {
     sdk.terminate();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+    expect(router.terminate).toHaveBeenCalledOnce();
   });
 
-  test("[Symbol.dispose] delegates to terminate", ({ sdk, relayer }) => {
+  test("[Symbol.dispose] delegates to terminate", ({ sdk, router }) => {
     sdk[Symbol.dispose]();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+    expect(router.terminate).toHaveBeenCalledOnce();
   });
 
   test("terminate calls signer.dispose", ({ createMockSigner, createSDK }) => {

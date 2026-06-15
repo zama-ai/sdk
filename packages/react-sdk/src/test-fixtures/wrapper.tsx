@@ -5,7 +5,6 @@ import type React from "react";
 import type { ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { ChainRouter } from "@zama-fhe/sdk/relayer/chain-router";
-import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
@@ -18,7 +17,7 @@ export interface WrapperFixtures {
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     storage: GenericStorage;
   };
   renderWithProviders: <TResult>(
@@ -40,14 +39,10 @@ type WrapperDeps = QueryClientFixtures & {
 };
 
 export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
-  createWrapper: async (
-    { chain, relayer, router, provider, signer, storage, queryClient },
-    use,
-  ) => {
+  createWrapper: async ({ chain, router, provider, signer, storage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
       const config = {
         chains: [chain],
-        relayer,
         router,
         provider,
         signer,
@@ -73,7 +68,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         queryClient,
         signer: config.signer,
         provider: config.provider,
-        relayer: config.relayer,
+        router: config.router,
         storage: config.storage,
       };
     }

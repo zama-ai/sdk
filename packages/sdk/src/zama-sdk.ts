@@ -6,7 +6,6 @@ import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import type { ChainRouter } from "./relayer/chain-router";
-import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
@@ -32,7 +31,6 @@ import { WrappersRegistry } from "./wrappers-registry";
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
-  readonly relayer: RelayerDispatcher;
   readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
@@ -58,7 +56,6 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
 
   constructor(config: ZamaConfig) {
-    this.relayer = config.relayer;
     this.router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
@@ -266,7 +263,7 @@ export class ZamaSDK {
    */
   terminate(): void {
     this.dispose();
-    this.relayer.terminate();
+    this.router.terminate();
     this.signer?.dispose?.();
   }
 

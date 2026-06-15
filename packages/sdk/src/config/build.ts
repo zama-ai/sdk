@@ -22,12 +22,12 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
-  const relayer = new RelayerDispatcher(params.chains, params.relayers);
+  // RelayerDispatcher extends ChainRouter — still using the deprecated subclass; Task 6 swaps to ChainRouter.
+  const router = new RelayerDispatcher(params.chains, params.relayers);
 
   return {
     chains: params.chains,
-    relayer,
-    router: relayer, // same instance — RelayerDispatcher extends ChainRouter
+    router,
     provider,
     signer,
     storage,

@@ -40,7 +40,7 @@ export function delegationStatusQueryOptions(
       assertNonNullable(contractAddress, "delegationStatusQueryOptions: contractAddress");
       assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
       assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
-      const acl = await sdk.relayer.getAclAddress();
+      const acl = await sdk.router.relayer.getAclAddress();
       const expiryTimestamp = await sdk.provider.readContract(
         getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, contractAddress),
       );

@@ -79,7 +79,7 @@ describe("createConfig", () => {
         wagmiConfig: mockWagmiConfig([11155111]),
         relayers: { [11155111]: web() },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
 
     test("resolves relayers with default web()", () => {
@@ -90,7 +90,7 @@ describe("createConfig", () => {
           [11155111]: web(),
         },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
 
     test("throws when a chain has no relayer configured", () => {
@@ -122,7 +122,7 @@ describe("createConfig", () => {
         walletClient: {} as any,
         relayers: { [11155111]: web() },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
   });
 
