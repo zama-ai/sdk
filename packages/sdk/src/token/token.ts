@@ -28,7 +28,7 @@ import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
-import { isZeroEncryptedValue } from "../utils/handles";
+import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import type {
@@ -218,7 +218,7 @@ export class Token {
     const normalizedAccount = accountAddress ? getAddress(accountAddress) : normalizedDelegator;
 
     const encryptedValue = await this.readConfidentialBalanceOf(normalizedAccount);
-    if (isZeroEncryptedValue(encryptedValue)) {
+    if (isEncryptedValueZero(encryptedValue)) {
       return 0n;
     }
 
@@ -372,7 +372,7 @@ export class Token {
       if (!encryptedValue || errors.has(token.address)) {
         continue;
       }
-      if (isZeroEncryptedValue(encryptedValue)) {
+      if (isEncryptedValueZero(encryptedValue)) {
         // Zero balance → skip the relayer; no decryption needed.
         results.set(token.address, 0n);
       } else {

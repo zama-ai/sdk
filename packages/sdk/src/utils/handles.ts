@@ -4,6 +4,6 @@ export const ZERO_ENCRYPTED_VALUE =
 /**
  * Check whether an encrypted value represents the zero value.
  */
-export function isZeroEncryptedValue(encryptedValue: string): boolean {
+export function isEncryptedValueZero(encryptedValue: string): boolean {
   return encryptedValue === ZERO_ENCRYPTED_VALUE || encryptedValue === "0x";
 }

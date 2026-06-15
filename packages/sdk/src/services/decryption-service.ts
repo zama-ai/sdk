@@ -12,7 +12,7 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
-import { isZeroEncryptedValue } from "../utils/handles";
+import { isEncryptedValueZero } from "../utils/handles";
 import { toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
@@ -219,7 +219,7 @@ export class DecryptionService {
     const nonZero: EncryptedInput[] = [];
 
     for (const h of normalized) {
-      if (isZeroEncryptedValue(h.encryptedValue)) {
+      if (isEncryptedValueZero(h.encryptedValue)) {
         result[h.encryptedValue] = 0n;
       } else {
         nonZero.push(h);

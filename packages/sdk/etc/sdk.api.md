@@ -10051,6 +10051,9 @@ export function isConfidentialWrapperContract(tokenAddress: Address): {
 };
 
 // @public
+export function isEncryptedValueZero(encryptedValue: string): boolean;
+
+// @public
 export function isHandleDelegatedContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address, handle: `0x${string}`): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -11458,9 +11461,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly functionName: "isOperator";
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
-
-// @public
-export function isZeroEncryptedValue(encryptedValue: string): boolean;
 
 // @public
 export interface Keypair {
@@ -19980,10 +19980,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-C1YJMIRR.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C1YJMIRR.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C1YJMIRR.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C1YJMIRR.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-sVK94uNX.d.ts:19575:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-sVK94uNX.d.ts:19704:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-sVK94uNX.d.ts:19806:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-sVK94uNX.d.ts:19807:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

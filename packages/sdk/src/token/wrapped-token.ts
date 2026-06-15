@@ -23,7 +23,7 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isZeroEncryptedValue } from "../utils/handles";
+import { isEncryptedValueZero } from "../utils/handles";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
@@ -400,7 +400,7 @@ export class WrappedToken extends Token {
     const userAddress = getAddress(account.address);
     const encryptedValue = await this.readConfidentialBalanceOf(userAddress);
 
-    if (isZeroEncryptedValue(encryptedValue)) {
+    if (isEncryptedValueZero(encryptedValue)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 

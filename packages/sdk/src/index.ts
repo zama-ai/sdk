@@ -83,7 +83,7 @@ export {
   clearPendingUnshield,
   type PendingUnshieldRequest,
 } from "./token";
-export { ZERO_ENCRYPTED_VALUE, isZeroEncryptedValue } from "./utils/handles";
+export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,

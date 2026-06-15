@@ -84,12 +84,12 @@ Sometimes you need the encrypted value itself, for example to check whether a ba
 {% tab title="SDK" %}
 
 ```ts
-import { isZeroEncryptedValue } from "@zama-fhe/sdk";
+import { isEncryptedValueZero } from "@zama-fhe/sdk";
 
 const encryptedValue = await token.confidentialBalanceOf(userAddress);
 
 // Check if the encrypted value is zero (account has never shielded)
-if (isZeroEncryptedValue(encryptedValue)) {
+if (isEncryptedValueZero(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 

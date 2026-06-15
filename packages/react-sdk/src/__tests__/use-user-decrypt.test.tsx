@@ -9,7 +9,7 @@ import { useDecryptValues } from "../decrypt/use-user-decrypt";
 import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useDecryptValues", () => {
-  test("decrypts handles", async ({ relayer, tokenAddress, renderWithProviders }) => {
+  test("decrypts encrypted values", async ({ relayer, tokenAddress, renderWithProviders }) => {
     vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
 
     const { result } = renderWithProviders(() =>
@@ -29,7 +29,7 @@ describe("useDecryptValues", () => {
     expect(result.current.data).toEqual({ "0xhandle1": 100n, "0xhandle2": true });
   });
 
-  test("groups handles by contract address", async ({ relayer, renderWithProviders }) => {
+  test("groups encrypted values by contract address", async ({ relayer, renderWithProviders }) => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
@@ -85,7 +85,7 @@ describe("useDecryptValues", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  test("stays disabled with empty handles", async ({ renderWithProviders }) => {
+  test("stays disabled with empty encrypted values", async ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useDecryptValues([]));
 
     await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));

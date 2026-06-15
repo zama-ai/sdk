@@ -77,7 +77,7 @@ the alpha channel without a major bump.
 | `DecryptHandle`                           | `DecryptInput`                                  | type                  |
 | `BatchDecryptHandleItem`                  | `BatchDecryptItem`                              | type                  |
 | `BatchDecryptHandlesResult`               | `BatchDecryptResult`                            | type                  |
-| `ZERO_HANDLE` / `isZeroHandle`            | `ZERO_ENCRYPTED_VALUE` / `isZeroEncryptedValue` | value/fn              |
+| `ZERO_HANDLE` / `isZeroHandle`            | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero` | value/fn              |
 | `useUserDecrypt` / `UseUserDecryptResult` | `useDecryptValues` / `UseDecryptValuesResult`   | `@zama-fhe/react-sdk` |
 | `usePublicDecrypt`                        | `useDecryptPublicValues`                        | `@zama-fhe/react-sdk` |
 | `useDelegatedDecrypt`                     | `useDelegatedDecryptValues`                     | `@zama-fhe/react-sdk` |

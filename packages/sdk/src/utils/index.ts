@@ -8,5 +8,5 @@ export {
   assertCondition,
   assertNonNullable,
 } from "./assertions";
-export { ZERO_ENCRYPTED_VALUE, isZeroEncryptedValue } from "./handles";
+export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./handles";
 export { swallow } from "./swallow";

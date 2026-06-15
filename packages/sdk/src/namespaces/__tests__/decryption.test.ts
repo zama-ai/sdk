@@ -14,7 +14,11 @@ describe("Decryption", () => {
       ).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
-    test("forwards handles to the underlying service", async ({ sdk, relayer, handle }) => {
+    test("forwards encrypted values to the underlying service", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
       await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
     });
@@ -41,7 +45,7 @@ describe("Decryption", () => {
       expect(result.clearValues[handle]).toBe(500n);
     });
 
-    test("returns empty result for empty handles without calling the relayer", async ({
+    test("returns empty result for empty encrypted values without calling the relayer", async ({
       sdk,
       relayer,
     }) => {
