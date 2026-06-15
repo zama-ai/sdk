@@ -2666,12 +2666,12 @@ Sometimes you need the encrypted value itself, for example to check whether a ba
 ### Tab: SDK
 
 ```ts
-import { isZeroEncryptedValue } from "@zama-fhe/sdk";
+import { isEncryptedValueZero } from "@zama-fhe/sdk";
 
 const encryptedValue = await token.confidentialBalanceOf(userAddress);
 
 // Check if the encrypted value is zero (account has never shielded)
-if (isZeroEncryptedValue(encryptedValue)) {
+if (isEncryptedValueZero(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 
@@ -4881,7 +4881,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<EncryptedValue>`
 
-Returns the raw encrypted value without decrypting. Use with `isZeroEncryptedValue()` or pass to `sdk.decryption.decryptValues()` for decryption.
+Returns the raw encrypted value without decrypting. Use with `isEncryptedValueZero()` or pass to `sdk.decryption.decryptValues()` for decryption.
 
 ```ts
 const encryptedValue = await token.confidentialBalanceOf("0xOwnerAddress");
@@ -13383,7 +13383,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — high-level hook that encrypts and shields in one step
 - [`useConfidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) — high-level hook that encrypts and transfers
-- [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) — reverse operation, decrypt handles back to plaintext
+- [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) — reverse operation, decrypt encrypted values back to plaintext
 - [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with examples
 
 ## useDecryptValues
