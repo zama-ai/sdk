@@ -27,7 +27,7 @@ export class EncryptionService {
     const t0 = Date.now();
     try {
       this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
-      const result = await this.#router.active.encrypt(params);
+      const result = await this.#router.relayer.encrypt(params);
       this.#emitEvent(
         {
           type: ZamaSDKEvents.EncryptEnd,

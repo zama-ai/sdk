@@ -23,13 +23,13 @@ import type {
 export type { WorkerLike };
 
 /**
- * @deprecated Use {@link ChainRouter} directly and call `router.active.X()`.
+ * @deprecated Use {@link ChainRouter} directly and call `router.relayer.X()`.
  *   This class survives until the SDK-193 migration completes and is removed in the
  *   same PR; do not introduce new references.
  */
 export class RelayerDispatcher extends ChainRouter implements RelayerSDK {
   generateKeypair(): Promise<KeypairType<Hex>> {
-    return this.active.generateKeypair();
+    return this.relayer.generateKeypair();
   }
 
   createEIP712(
@@ -38,19 +38,19 @@ export class RelayerDispatcher extends ChainRouter implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<EIP712TypedData> {
-    return this.active.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
+    return this.relayer.createEIP712(publicKey, contractAddresses, startTimestamp, durationDays);
   }
 
   encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return this.active.encrypt(params);
+    return this.relayer.encrypt(params);
   }
 
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
-    return this.active.userDecrypt(params);
+    return this.relayer.userDecrypt(params);
   }
 
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
-    return this.active.publicDecrypt(encryptedValues);
+    return this.relayer.publicDecrypt(encryptedValues);
   }
 
   createDelegatedUserDecryptEIP712(
@@ -60,7 +60,7 @@ export class RelayerDispatcher extends ChainRouter implements RelayerSDK {
     startTimestamp: number,
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type> {
-    return this.active.createDelegatedUserDecryptEIP712(
+    return this.relayer.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
       delegatorAddress,
@@ -72,22 +72,22 @@ export class RelayerDispatcher extends ChainRouter implements RelayerSDK {
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
-    return this.active.delegatedUserDecrypt(params);
+    return this.relayer.delegatedUserDecrypt(params);
   }
 
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return this.active.requestZKProofVerification(zkProof);
+    return this.relayer.requestZKProofVerification(zkProof);
   }
 
   getPublicKey(): Promise<PublicKeyData | null> {
-    return this.active.getPublicKey();
+    return this.relayer.getPublicKey();
   }
 
   getPublicParams(bits: number): Promise<PublicParamsData | null> {
-    return this.active.getPublicParams(bits);
+    return this.relayer.getPublicParams(bits);
   }
 
   getAclAddress(): Promise<Address> {
-    return this.active.getAclAddress();
+    return this.relayer.getAclAddress();
   }
 }

@@ -85,7 +85,7 @@ export class DelegationService {
       );
     }
 
-    const acl = await this.#router.active.getAclAddress();
+    const acl = await this.#router.relayer.getAclAddress();
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
@@ -135,7 +135,7 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
-    const acl = await this.#router.active.getAclAddress();
+    const acl = await this.#router.relayer.getAclAddress();
 
     let currentExpiry: bigint;
     try {
@@ -187,7 +187,7 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.#router.active.getAclAddress();
+    const acl = await this.#router.relayer.getAclAddress();
     return this.#provider.readContract(
       getDelegationExpiryContract(
         acl,

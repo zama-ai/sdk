@@ -77,13 +77,13 @@ describe("ChainRouter", () => {
         [2]: { type: "web", createRelayer: () => relayerB },
       });
 
-      expect(router.active).toBe(relayerA);
+      expect(router.relayer).toBe(relayerA);
       router.switchChain(2);
-      expect(router.active).toBe(relayerB);
+      expect(router.relayer).toBe(relayerB);
     });
   });
 
-  describe("for(chainId)", () => {
+  describe("relayerForChain(chainId)", () => {
     test("returns the per-chain RelayerSDK for the given chainId", ({
       createMockChain,
       createMockRelayer,
@@ -97,8 +97,8 @@ describe("ChainRouter", () => {
         [2]: { type: "web", createRelayer: () => relayerB },
       });
 
-      expect(router.for(1)).toBe(relayerA);
-      expect(router.for(2)).toBe(relayerB);
+      expect(router.relayerForChain(1)).toBe(relayerA);
+      expect(router.relayerForChain(2)).toBe(relayerB);
     });
 
     test("does not depend on the active chain", ({ createMockChain, createMockRelayer }) => {
@@ -111,8 +111,8 @@ describe("ChainRouter", () => {
         [2]: { type: "web", createRelayer: () => relayerB },
       });
       router.switchChain(2);
-      // Active is now B, but for(1) still returns A.
-      expect(router.for(1)).toBe(relayerA);
+      // Active is now B, but relayerForChain(1) still returns A.
+      expect(router.relayerForChain(1)).toBe(relayerA);
     });
 
     test("throws ConfigurationError on unknown chainId", ({
@@ -121,7 +121,7 @@ describe("ChainRouter", () => {
     }) => {
       const chainA = createMockChain({ id: 1 });
       const router = new ChainRouter([chainA], configs([chainA], createMockRelayer));
-      expect(() => router.for(999)).toThrow(ConfigurationError);
+      expect(() => router.relayerForChain(999)).toThrow(ConfigurationError);
     });
   });
 

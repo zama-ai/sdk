@@ -45,7 +45,7 @@ export class CredentialService {
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new KeypairVault({
-      generator: () => config.router.active.generateKeypair(),
+      generator: () => config.router.relayer.generateKeypair(),
       storage: config.storage,
       ttl: config.keypairTTL,
     });
@@ -88,7 +88,11 @@ export class CredentialService {
       const candidate = findPermitToWiden(permits, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
-        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
+        const widened = await this.#signPermit({
+          chunk: widenedSet,
+          keypair,
+          scope,
+        });
         await swallow("replace permit", () =>
           this.#store.replace(scope, candidate.signature, widened),
         );
@@ -224,14 +228,14 @@ export class CredentialService {
 
     try {
       const eip712 = isDelegated
-        ? await this.#router.active.createDelegatedUserDecryptEIP712(
+        ? await this.#router.relayer.createDelegatedUserDecryptEIP712(
             keypair.publicKey,
             chunk,
             scope.delegatorAddress,
             startTimestamp,
             this.#permitTTL,
           )
-        : await this.#router.active.createEIP712(
+        : await this.#router.relayer.createEIP712(
             keypair.publicKey,
             chunk,
             startTimestamp,

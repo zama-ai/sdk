@@ -84,16 +84,16 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
 }
 
 /**
- * Build a `ChainRouter`-shaped mock for a single chain whose `active` and `for`
- * both resolve to the given relayer. Suitable for service-layer tests that
- * don't exercise chain-switch behaviour.
+ * Build a `ChainRouter`-shaped mock for a single chain whose `relayer` getter
+ * and `relayerForChain` method both resolve to the given relayer. Suitable for
+ * service-layer tests that don't exercise chain-switch behaviour.
  */
 export function createMockRouter(relayer: RelayerSDK, chain: FheChain): ChainRouter {
   const router = {
     chains: [chain] as readonly FheChain[],
     chain,
-    active: relayer,
-    for: vi.fn(() => relayer),
+    relayer,
+    relayerForChain: vi.fn(() => relayer),
     switchChain: vi.fn(),
     terminate: vi.fn(),
     [Symbol.dispose]: vi.fn(),

@@ -15,8 +15,8 @@ export interface WorkerLike {
  *
  * Owns the multi-chain wiring: groups chains by relayer config reference identity,
  * calls `createWorker` once per group, then `createRelayer` per chain with the
- * shared worker. The currently-active chain is reachable via {@link active}; any
- * registered chain via {@link for}. Workers are held separately so the router
+ * shared worker. The currently-active chain is reachable via {@link relayer}; any
+ * registered chain via {@link relayerForChain}. Workers are held separately so the router
  * can terminate them directly — relayers never own worker lifecycle.
  */
 export class ChainRouter implements Disposable {
@@ -88,13 +88,13 @@ export class ChainRouter implements Disposable {
     return chain;
   }
 
-  get active(): RelayerSDK {
+  get relayer(): RelayerSDK {
     const relayer = this.#relayers.get(this.#chainId);
     assertNonNullable(relayer, "ChainRouter: active relayer");
     return relayer;
   }
 
-  for(chainId: number): RelayerSDK {
+  relayerForChain(chainId: number): RelayerSDK {
     const relayer = this.#relayers.get(chainId);
     if (!relayer) {
       throw new ConfigurationError(

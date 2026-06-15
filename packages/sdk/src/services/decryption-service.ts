@@ -78,7 +78,7 @@ export class DecryptionService {
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
-        return this.#router.active.userDecrypt({
+        return this.#router.relayer.userDecrypt({
           encryptedValues,
           contractAddress,
           ...resolveUserDecryptPermit(credentials, contractAddress),
@@ -112,7 +112,7 @@ export class DecryptionService {
         // oxlint-disable-next-line no-shadow
         encryptedValues,
       }) => {
-        return this.#router.active.delegatedUserDecrypt({
+        return this.#router.relayer.delegatedUserDecrypt({
           encryptedValues: encryptedValues,
           contractAddress,
           ...resolveDelegatedDecryptPermit(credentials, contractAddress),

@@ -145,7 +145,7 @@ export class Decryption {
     }
 
     try {
-      return await this.#router.active.publicDecrypt(encryptedValues);
+      return await this.#router.relayer.publicDecrypt(encryptedValues);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }
