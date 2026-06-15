@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import { wrapperAbi } from "../abi/wrapper.abi";
 
 /**
@@ -14,7 +14,7 @@ import { wrapperAbi } from "../abi/wrapper.abi";
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  unwrapRequestIdOrAmount: Handle,
+  unwrapRequestIdOrAmount: EncryptedValue,
   unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {

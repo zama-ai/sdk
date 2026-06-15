@@ -9,7 +9,7 @@ title: {
 }
 
 # --- Phase 1 ---
-phase1: "Phase 1 — Poll Encrypted Handle (cheap)" {
+phase1: "Phase 1 — Poll EncryptedValue (cheap)" {
   style.fill: "#E3F2FD"
   style.stroke: "#1565C0"
   style.font-size: 14
@@ -22,17 +22,17 @@ phase1: "Phase 1 — Poll Encrypted Handle (cheap)" {
     style.fill: "#BBDEFB"
     style.stroke: "#1565C0"
   }
-  compare: "Compare handle\nto last known" {
+  compare: "Compare encryptedValue\nto last known" {
     style.fill: "#BBDEFB"
     style.stroke: "#1565C0"
   }
 
   timer -> rpc: "confidentialBalanceOf"
-  rpc -> compare: "bytes32 handle"
+  rpc -> compare: "bytes32 encryptedValue"
 }
 
 # --- Decision ---
-same: "Handle unchanged\n→ return cached balance\n(no network call)" {
+same: "EncryptedValue unchanged\n→ return cached balance\n(no network call)" {
   style.fill: "#E8F5E9"
   style.stroke: "#388E3C"
   style.font-size: 14
@@ -44,7 +44,7 @@ phase2: "Phase 2 — Decrypt via Relayer (expensive)" {
   style.stroke: "#6A1B9A"
   style.font-size: 14
 
-  send: "Send handle + credentials\nto Relayer KMS" {
+  send: "Send encryptedValue + credentials\nto Relayer KMS" {
     style.fill: "#E1BEE7"
     style.stroke: "#6A1B9A"
   }

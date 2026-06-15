@@ -5,7 +5,7 @@ description: How to convert public ERC-20 tokens into their confidential form.
 
 # Shield tokens
 
-Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `token.shield()`. In React, use the `useShield` hook.
+Shielding converts public ERC-20 tokens into confidential tokens. The SDK handles the ERC-20 approval and the shield transaction in a single call via `wrappedToken.shield()`. In React, use the `useShield` hook.
 
 ## Shielding paths
 
@@ -16,7 +16,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 | `transferAndCall`  | Underlying ERC-20 implements ERC-1363         | 1              | The wrapper's `onTransferReceived` mints the confidential balance in one transaction. |
 | `approve` + `wrap` | Underlying ERC-20 does not implement ERC-1363 | 2              | An ERC-20 `approve` followed by a `wrap` call on the wrapper.                         |
 
-The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `token.shield(amount)` routes correctly for any token. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
+The SDK detects ERC-1363 support automatically via ERC-165 `supportsInterface` against the underlying token. **You don't need to choose a path or detect ERC-1363 yourself** — `wrappedToken.shield(amount)` routes correctly for any wrapper. `approvalStrategy` only applies to the `approve` + `wrap` path; on the `transferAndCall` path there is no allowance step.
 
 ### Which path will my token take?
 
@@ -45,7 +45,7 @@ If you only have the underlying ERC-20 address, the built-in registry resolves t
 {% tab title="Core SDK" %}
 
 ```ts
-const token = sdk.createWrappedToken("0xWrapperAddress");
+const wrappedToken = sdk.createWrappedToken("0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -57,7 +57,7 @@ const token = sdk.createWrappedToken("0xWrapperAddress");
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
 if (!result) throw new Error("No wrapper registered for this token");
 
-const token = sdk.createWrappedToken(result.confidentialTokenAddress);
+const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 {% endtab %}
@@ -66,7 +66,7 @@ const token = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```tsx
 import { useWrappedToken } from "@zama-fhe/react-sdk";
 
-const token = useWrappedToken("0xWrapperAddress");
+const wrappedToken = useWrappedToken("0xWrapperAddress");
 ```
 
 {% endtab %}
@@ -82,7 +82,7 @@ By default, `shield` approves the exact amount before wrapping. This is the safe
 {% tab title="Core SDK" %}
 
 ```ts
-const { txHash } = await token.shield(1000n);
+const { txHash } = await wrappedToken.shield(1000n);
 console.log("Shield tx:", txHash);
 ```
 
@@ -113,10 +113,10 @@ On the `approve` + `wrap` path, the SDK sends two transactions: an ERC-20 `appro
 
 ```ts
 // First call: approve(MAX_UINT256) + shield — two wallet prompts
-await token.shield(1000n, { approvalStrategy: "max" });
+await wrappedToken.shield(1000n, { approvalStrategy: "max" });
 
 // Second call: only the shield tx — one wallet prompt
-await token.shield(500n, { approvalStrategy: "max" });
+await wrappedToken.shield(500n, { approvalStrategy: "max" });
 ```
 
 {% endtab %}
@@ -137,7 +137,7 @@ If the user has already approved the wrapper contract (for example, through a se
 {% tab title="Core SDK" %}
 
 ```ts
-await token.shield(1000n, { approvalStrategy: "skip" });
+await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
@@ -160,7 +160,7 @@ Both the core SDK and React hooks return the transaction hash. You can use it to
 {% tab title="Core SDK" %}
 
 ```ts
-const { txHash } = await token.shield(1000n);
+const { txHash } = await wrappedToken.shield(1000n);
 
 // Wait for confirmation using your provider
 const receipt = await sdk.provider.waitForTransactionReceipt(txHash);

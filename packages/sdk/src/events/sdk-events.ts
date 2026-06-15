@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { ShieldPath } from "../types/token";
 
 /**
@@ -63,17 +63,17 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 export interface DecryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptStart;
-  /** Handles being decrypted — correlate with matching DecryptEnd/DecryptError. */
-  handles: Handle[];
+  /** Encrypted values being decrypted — correlate with matching DecryptEnd/DecryptError. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface DecryptEndEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptEnd;
   durationMs: number;
-  /** Handles that were decrypted. */
-  handles: Handle[];
-  /** Decrypted values keyed by handle — use this to correlate events to specific handles. */
-  result: Record<Handle, ClearValueType>;
+  /** Encrypted values that were decrypted. */
+  encryptedValues: EncryptedValue[];
+  /** Decrypted values keyed by encrypted value — use this to correlate events to specific entries. */
+  result: Record<EncryptedValue, ClearValue>;
 }
 
 export interface DecryptErrorEvent extends BaseEvent {
@@ -81,8 +81,8 @@ export interface DecryptErrorEvent extends BaseEvent {
   /** The error that caused the decryption to fail. */
   error: Error;
   durationMs: number;
-  /** Handles that were being decrypted when the error occurred. */
-  handles: Handle[];
+  /** Encrypted values that were being decrypted when the error occurred. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface TransactionErrorEvent extends BaseEvent {
@@ -159,7 +159,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 /**
  * Discriminated union of all SDK events.
  *
- * Decrypt events carry handles and decrypted clear-text values so event
+ * Decrypt events carry encrypted values and decrypted clear-text values so event
  * subscribers can correlate and bind them in UI layers. Events never carry
  * private keys, permit signatures, or ZK proofs.
  */

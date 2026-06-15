@@ -8,9 +8,9 @@ import type { CredentialBundle } from "../credentials/types";
 import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { DecryptHandle } from "../query/user-decrypt";
+import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isZeroHandle } from "../utils/handles";
 import { toError } from "../utils";
@@ -24,16 +24,16 @@ interface DecryptionStrategy {
   decryptContract: (args: {
     credentials: CredentialBundle;
     contractAddress: Address;
-    contractHandles: Handle[];
-  }) => Promise<Record<Handle, ClearValueType>>;
+    encryptedValues: EncryptedValue[];
+  }) => Promise<Record<EncryptedValue, ClearValue>>;
   errorMessage: string;
   delegated?: boolean;
 }
 
 export interface BatchDecryptHandleItem {
-  handle: Handle;
+  encryptedValue: EncryptedValue;
   contractAddress: Address;
-  value?: ClearValueType;
+  value?: ClearValue;
   error?: ZamaError;
 }
 
@@ -69,17 +69,17 @@ export class DecryptionService {
   }
 
   async userDecrypt(
-    handles: DecryptHandle[],
+    handles: EncryptedInput[],
     signerAddress: Address,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
-      decryptContract: async ({ credentials, contractAddress, contractHandles }) => {
+      decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
         return this.#relayer.userDecrypt({
-          handles: contractHandles,
+          encryptedValues,
           contractAddress,
           ...resolveUserDecryptPermit(credentials, contractAddress),
           signerAddress: normalizedSigner,
@@ -90,14 +90,14 @@ export class DecryptionService {
   }
 
   async delegatedUserDecrypt(
-    handles: DecryptHandle[],
+    encryptedValues: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#decrypt(handles, {
+    return this.#decrypt(encryptedValues, {
       requesterAddress: getAddress(accountAddress),
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
@@ -106,9 +106,14 @@ export class DecryptionService {
           delegatorAddress: normalizedDelegator,
           delegateAddress: normalizedDelegate,
         }),
-      decryptContract: async ({ credentials, contractAddress, contractHandles }) => {
+      decryptContract: async ({
+        credentials,
+        contractAddress,
+        // oxlint-disable-next-line no-shadow
+        encryptedValues,
+      }) => {
         return this.#relayer.delegatedUserDecrypt({
-          handles: contractHandles,
+          encryptedValues: encryptedValues,
           contractAddress,
           ...resolveDelegatedDecryptPermit(credentials, contractAddress),
           delegateAddress: normalizedDelegate,
@@ -120,20 +125,20 @@ export class DecryptionService {
   }
 
   async delegatedBatchDecryptHandlesAs({
-    handles,
+    encryptedInputs,
     delegatorAddress,
     delegateAddress,
     accountAddress,
     maxConcurrency = 5,
   }: {
-    handles: DecryptHandle[];
+    encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
     delegateAddress: Address;
     accountAddress: Address;
     maxConcurrency?: number;
   }): Promise<BatchDecryptHandlesResult> {
-    const items: BatchDecryptHandleItem[] = handles.map((h) => ({
-      handle: h.handle,
+    const items: BatchDecryptHandleItem[] = encryptedInputs.map((h) => ({
+      encryptedValue: h.encryptedValue,
       contractAddress: getAddress(h.contractAddress),
     }));
     if (items.length === 0) {
@@ -143,7 +148,10 @@ export class DecryptionService {
 
     try {
       const decrypted = await this.delegatedUserDecrypt(
-        items.map(({ handle, contractAddress }) => ({ handle, contractAddress })),
+        items.map(({ encryptedValue, contractAddress }) => ({
+          encryptedValue,
+          contractAddress,
+        })),
         delegatorAddress,
         delegateAddress,
         normalizedAccount,
@@ -167,7 +175,12 @@ export class DecryptionService {
       items.map((item) => async () => {
         try {
           const decrypted = await this.delegatedUserDecrypt(
-            [{ handle: item.handle, contractAddress: item.contractAddress }],
+            [
+              {
+                encryptedValue: item.encryptedValue,
+                contractAddress: item.contractAddress,
+              },
+            ],
             delegatorAddress,
             delegateAddress,
             normalizedAccount,
@@ -187,23 +200,23 @@ export class DecryptionService {
   }
 
   async #decrypt(
-    handles: DecryptHandle[],
+    handles: EncryptedInput[],
     strategy: DecryptionStrategy,
-  ): Promise<Record<Handle, ClearValueType>> {
+  ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
       return {};
     }
 
     const normalized = handles.map((h) => ({
-      handle: h.handle,
+      encryptedValue: h.encryptedValue,
       contractAddress: getAddress(h.contractAddress),
     }));
-    const result: Record<Handle, ClearValueType> = {};
-    const nonZero: DecryptHandle[] = [];
+    const result: Record<EncryptedValue, ClearValue> = {};
+    const nonZero: EncryptedInput[] = [];
 
     for (const h of normalized) {
-      if (isZeroHandle(h.handle)) {
-        result[h.handle] = 0n;
+      if (isZeroHandle(h.encryptedValue)) {
+        result[h.encryptedValue] = 0n;
       } else {
         nonZero.push(h);
       }
@@ -219,11 +232,15 @@ export class DecryptionService {
       await strategy.validate(nonZeroContracts);
     }
 
-    const uncached: DecryptHandle[] = [];
+    const uncached: EncryptedInput[] = [];
     for (const h of nonZero) {
-      const cached = await this.#cache.get(strategy.requesterAddress, h.contractAddress, h.handle);
+      const cached = await this.#cache.get(
+        strategy.requesterAddress,
+        h.contractAddress,
+        h.encryptedValue,
+      );
       if (cached !== null) {
-        result[h.handle] = cached;
+        result[h.encryptedValue] = cached;
       } else {
         uncached.push(h);
       }
@@ -235,38 +252,38 @@ export class DecryptionService {
 
     const credentials = await strategy.resolveCredentials(allContracts);
 
-    const byContract = new Map<Address, Handle[]>();
+    const byContract = new Map<Address, EncryptedValue[]>();
     for (const h of uncached) {
       const existing = byContract.get(h.contractAddress);
       if (existing) {
-        existing.push(h.handle);
+        existing.push(h.encryptedValue);
       } else {
-        byContract.set(h.contractAddress, [h.handle]);
+        byContract.set(h.contractAddress, [h.encryptedValue]);
       }
     }
 
     const t0 = Date.now();
-    const uncachedHandles = uncached.map((h) => h.handle);
+    const uncachedEncryptedValues = uncached.map((h) => h.encryptedValue);
     try {
       this.#emitEvent({
         type: ZamaSDKEvents.DecryptStart,
-        handles: uncachedHandles,
+        encryptedValues: uncachedEncryptedValues,
       });
 
       await pLimit(
-        [...byContract.entries()].map(([contractAddress, contractHandles]) => async () => {
+        [...byContract.entries()].map(([contractAddress, encryptedValues]) => async () => {
           const decrypted = await strategy.decryptContract({
             credentials,
             contractAddress,
-            contractHandles,
+            encryptedValues,
           });
 
-          for (const [handle, value] of Object.entries(decrypted)) {
-            result[handle as Handle] = value;
+          for (const [encryptedValue, value] of Object.entries(decrypted)) {
+            result[encryptedValue as EncryptedValue] = value;
             await this.#cache.set(
               strategy.requesterAddress,
               contractAddress,
-              handle as Handle,
+              encryptedValue as EncryptedValue,
               value,
             );
           }
@@ -274,17 +291,17 @@ export class DecryptionService {
         5,
       );
 
-      const uncachedResult: Record<Handle, ClearValueType> = {};
-      for (const handle of uncachedHandles) {
-        const value = result[handle];
+      const uncachedResult: Record<EncryptedValue, ClearValue> = {};
+      for (const encryptedValue of uncachedEncryptedValues) {
+        const value = result[encryptedValue];
         if (value !== undefined) {
-          uncachedResult[handle] = value;
+          uncachedResult[encryptedValue] = value;
         }
       }
       this.#emitEvent({
         type: ZamaSDKEvents.DecryptEnd,
         durationMs: Date.now() - t0,
-        handles: uncachedHandles,
+        encryptedValues: uncachedEncryptedValues,
         result: uncachedResult,
       });
       return result;
@@ -293,17 +310,20 @@ export class DecryptionService {
         type: ZamaSDKEvents.DecryptError,
         error: toError(error),
         durationMs: Date.now() - t0,
-        handles: uncachedHandles,
+        encryptedValues: uncachedEncryptedValues,
       });
       throw wrapDecryptError(error, strategy.errorMessage, strategy.delegated);
     }
   }
 
-  #setHandleResult(item: BatchDecryptHandleItem, decrypted: Record<Handle, ClearValueType>): void {
-    const value = decrypted[item.handle];
+  #setHandleResult(
+    item: BatchDecryptHandleItem,
+    decrypted: Record<EncryptedValue, ClearValue>,
+  ): void {
+    const value = decrypted[item.encryptedValue];
     if (value === undefined) {
       item.error = new DecryptionFailedError(
-        `Batch delegated decryption returned no value for handle ${item.handle} on contract ${item.contractAddress}`,
+        `Batch delegated decryption returned no value for encrypted value ${item.encryptedValue} on contract ${item.contractAddress}`,
       );
       return;
     }

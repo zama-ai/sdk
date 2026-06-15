@@ -1,5 +1,5 @@
 import { getAddress } from "viem";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { WalletAccount } from "../types";
 
 const normalizeAddresses = (addresses: Address[]): Address[] =>
@@ -164,28 +164,31 @@ export const zamaQueryKeys = {
 
   decryption: {
     all: ["zama.decryption"] as const,
-    handle: (handle: string, contractAddress?: Address) =>
+    encryptedValue: (encryptedValue: string, contractAddress?: Address) =>
       [
         "zama.decryption",
         {
-          handle,
+          encryptedValue,
           ...(contractAddress === undefined
             ? {}
             : { contractAddress: getAddress(contractAddress) }),
         },
       ] as const,
-    handles: (
-      handles: readonly { handle: string; contractAddress: Address }[],
+    encryptedInputs: (
+      encryptedInputs: readonly {
+        encryptedValue: string;
+        contractAddress: Address;
+      }[],
       walletAccount?: WalletAccount,
     ) =>
       [
         "zama.decryption",
         {
           ...walletAccountKey(walletAccount),
-          handles: [...handles]
-            .toSorted((a, b) => a.handle.localeCompare(b.handle))
+          encryptedInputs: [...encryptedInputs]
+            .toSorted((a, b) => a.encryptedValue.localeCompare(b.encryptedValue))
             .map((h) => ({
-              handle: h.handle,
+              encryptedValue: h.encryptedValue as Hex,
               contractAddress: getAddress(h.contractAddress),
             })),
         },

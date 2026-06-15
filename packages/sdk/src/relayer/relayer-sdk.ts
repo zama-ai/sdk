@@ -5,12 +5,12 @@ import type {
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -37,11 +37,11 @@ export interface FheOperations {
   /** Encrypt plaintext values into FHE ciphertexts. */
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
-  /** Decrypt FHE ciphertext handles using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  /** Decrypt FHE encrypted values using the user's own credentials. */
+  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
-  /** Decrypt FHE handles using the network public key (no credential needed). */
-  publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+  /** Decrypt encrypted values using the network public key (no credential needed). */
+  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
@@ -52,10 +52,10 @@ export interface FheOperations {
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  /** Decrypt FHE handles using delegated user credentials. */
+  /** Decrypt FHE encrypted values using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>>;
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;

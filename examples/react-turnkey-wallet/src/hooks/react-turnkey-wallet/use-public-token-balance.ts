@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useZamaSDK, balanceOfContract } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/react-sdk";
+import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { balanceOfContract } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import type { Address } from "viem";
 
 export function usePublicTokenBalance(
@@ -18,7 +19,7 @@ export function usePublicTokenBalance(
         throw new Error("No token selected");
       }
 
-      return (await sdk.signer.readContract(
+      return (await sdk.provider.readContract(
         balanceOfContract(selectedPair.tokenAddress, walletAddress),
       )) as bigint;
     },

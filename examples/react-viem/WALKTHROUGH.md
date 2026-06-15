@@ -337,8 +337,7 @@ function handleDecrypt() {
 `BalancesCard`.
 
 Token-dependent balance and authorization hooks are inside `SelectedTokenPanel`, so
-`useHasPermit` always receives a non-empty contract tuple and `useConfidentialBalance`
-always receives a real token address plus an explicit owner account.
+`useConfidentialBalance` always receives a real token address plus an explicit owner account.
 
 ### Mint
 

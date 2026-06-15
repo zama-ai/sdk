@@ -112,7 +112,7 @@ Thrown when a write, sign, or decrypt operation is called on an SDK instance con
 import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 
 try {
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 } catch (error) {
   if (error instanceof SignerNotConfiguredError) {
     showConfigurationError("Configure a signer to perform this action");
@@ -345,7 +345,7 @@ The public ERC-20 balance is less than the requested shield amount. Thrown by `s
 import { InsufficientERC20BalanceError } from "@zama-fhe/sdk";
 
 try {
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 } catch (error) {
   if (error instanceof InsufficientERC20BalanceError) {
     showError(`Not enough tokens: you have ${error.available}, need ${error.requested}`);
@@ -368,7 +368,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Either call `token.allow()` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
+**How to handle:** Either call `sdk.permits.grantPermit([token.address])` first to sign permits, or pass `skipBalanceCheck: true` to bypass validation (useful for smart wallets that cannot produce EIP-712 signatures).
 
 ### ERC20ReadFailedError
 
@@ -534,7 +534,7 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | Symptom                                   | Cause                                       | Fix                                                                                        |
 | ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted handle is zero (never shielded)   | Catch `NoCiphertextError` and show an empty state.                                         |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                         |
 | `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                |
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
@@ -542,7 +542,7 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `token.allow()` first, or pass `skipBalanceCheck: true`.                              |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
 | `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
 
 ## Related

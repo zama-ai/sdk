@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import type { Address, Hex } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import type { GenericSigner, TransactionResult } from "../types";
@@ -46,7 +46,7 @@ function createMockTokenInternal(address: Address, signer: GenericSigner): Token
     sdk: mockSdk,
     balanceOf: vi.fn().mockResolvedValue(123n),
     decryptBalanceAs: vi.fn().mockResolvedValue(123n),
-    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as Handle),
+    confidentialBalanceOf: vi.fn().mockResolvedValue(("0x" + "aa".repeat(32)) as EncryptedValue),
     name: vi.fn().mockResolvedValue("Test"),
     symbol: vi.fn().mockResolvedValue("TST"),
     decimals: vi.fn().mockResolvedValue(18),

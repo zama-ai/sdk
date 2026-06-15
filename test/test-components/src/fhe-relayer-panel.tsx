@@ -27,7 +27,7 @@ export function FheRelayerPanel({ tokenAddresses }: { tokenAddresses: Address[] 
         </button>
         {encrypt.isSuccess && (
           <p className="text-zama-success" data-testid="encrypt-result">
-            Handles count: {encrypt.data.handles.length}
+            Encrypted values count: {encrypt.data.encryptedValues.length}
           </p>
         )}
         {encrypt.isError && (

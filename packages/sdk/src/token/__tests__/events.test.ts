@@ -127,7 +127,7 @@ describe("Token.balanceOf event emissions", () => {
     expect(endEvent).toBeDefined();
     expect("durationMs" in endEvent! && typeof endEvent.durationMs).toBe("number");
     expect("durationMs" in endEvent! && endEvent.durationMs).toBeGreaterThanOrEqual(0);
-    expect("handles" in endEvent! && endEvent.handles).toContain(handle);
+    expect("encryptedValues" in endEvent! && endEvent.encryptedValues).toContain(handle);
   });
 
   test("emits DecryptError when relayer.userDecrypt fails", async ({
@@ -460,7 +460,7 @@ describe("Token event emissions", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],

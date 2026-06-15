@@ -11,7 +11,7 @@ import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BroadcastParams } from '@zama-fhe/sdk/query';
 import { ClearValues } from '@zama-fhe/relayer-sdk/web';
-import { ClearValueType } from '@zama-fhe/sdk';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
@@ -21,7 +21,9 @@ import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
+import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { JSX } from 'react/jsx-runtime';
@@ -53,7 +55,6 @@ import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
-import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
@@ -159,10 +160,7 @@ export interface UseDelegationStatusConfig {
 }
 
 // @public
-export function useEncrypt(): UseMutationResult<Readonly<{
-handles: Uint8Array[];
-inputProof: Uint8Array;
-}>, Error, EncryptParams, unknown>;
+export function useEncrypt(): UseMutationResult<EncryptResult, Error, EncryptParams, unknown>;
 
 // @public
 export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>): UseMutationResult<TransactionResult, Error, FinalizeUnwrapParams, `0x${string}`>;
@@ -171,11 +169,11 @@ export function useFinalizeUnwrap(address: Address, options?: UseMutationOptions
 export function useGrantPermit(options?: UseMutationOptions<void, Error, Address[]>): UseMutationResult<void, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useHasPermit(config: UseHasPermitConfig): UseQueryResult<boolean, Error>;
+export function useHasPermit(config: UseHasPermitConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
 // @public
 export interface UseHasPermitConfig {
-    contractAddresses: [Address, ...Address[]];
+    contractAddresses: Address[];
 }
 
 // @public
@@ -318,7 +316,7 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
 
 // @public
-export function useUserDecrypt(config: UserDecryptQueryConfig, options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+export function useUserDecrypt(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
 
 // @public
 export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;

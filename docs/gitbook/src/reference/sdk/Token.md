@@ -39,12 +39,12 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 ### confidentialBalanceOf
 
-`(owner: Address) => Promise<Hex>`
+`(owner: Address) => Promise<EncryptedValue>`
 
-Returns the raw encrypted handle without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
+Returns the raw encrypted value without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
 
 ```ts
-const handle = await token.confidentialBalanceOf("0xOwnerAddress");
+const encryptedValue = await token.confidentialBalanceOf("0xOwnerAddress");
 ```
 
 ### decryptBalanceAs
@@ -81,7 +81,7 @@ await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true }
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `sdk.permits.grantPermit([token.address])` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
 

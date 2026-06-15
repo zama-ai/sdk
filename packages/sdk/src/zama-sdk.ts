@@ -214,12 +214,12 @@ export class ZamaSDK {
    * Encrypt one or more plaintext values into FHE ciphertexts.
    *
    * @param params - Typed FHE inputs, the target contract address, and the user address.
-   * @returns Encrypted handles and the input proof for on-chain submission.
+   * @returns External encrypted values and the input proof for on-chain submission.
    * @throws if FHE encryption fails. {@link EncryptionFailedError}
    *
    * @example
    * ```ts
-   * const { handles, inputProof } = await sdk.encrypt({
+   * const { encryptedValues, inputProof } = await sdk.encrypt({
    *   values: [{ value: 1000n, type: "euint64" }],
    *   contractAddress: "0xToken",
    *   userAddress: "0xUser",

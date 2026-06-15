@@ -34,13 +34,10 @@ function TwoStepUnshield() {
     // Step 1: submit the unwrap and find the event in the receipt
     const { receipt } = await unwrap({ amount: 500n });
     const event = findUnwrapRequested(receipt.logs);
+    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
 
-    // Step 2: finalize with the unwrap request ID (upgraded) or burn amount handle (legacy)
-    await finalize(
-      event.unwrapRequestId
-        ? { unwrapRequestId: event.unwrapRequestId }
-        : { burnAmountHandle: event.encryptedAmount },
-    );
+    // Step 2: finalize with the unwrap request ID from the event
+    await finalize({ unwrapRequestId: event.unwrapRequestId });
   };
 
   return (
@@ -72,9 +69,9 @@ The finalize function accepts a discriminated union — pass one of these:
 
 ### unwrapRequestId
 
-`Handle`
+`EncryptedValue`
 
-The unwrap request ID emitted by upgraded contract events. This is the preferred form.
+The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
@@ -82,12 +79,12 @@ await finalize({ unwrapRequestId: requestId });
 
 ### burnAmountHandle
 
-`Handle`
+`EncryptedValue`
 
-The burn amount handle from pre-upgrade contract events. Use this for legacy events only.
+Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
 
 ```tsx
-await finalize({ burnAmountHandle: handle });
+await finalize({ burnAmountHandle: encryptedAmount });
 ```
 
 ## Return Type

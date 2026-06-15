@@ -29,8 +29,8 @@ export type {
   EncryptResult,
   EncryptParams,
   EncryptInput,
-  Handle,
-  ClearValueType,
+  EncryptedValue,
+  ClearValue,
   UserDecryptParams,
   PublicDecryptResult,
   EIP712TypedData,
@@ -58,13 +58,12 @@ export {
   ERC1363_INTERFACE_ID,
   ERC7984_INTERFACE_ID,
   ERC7984_WRAPPER_INTERFACE_ID,
-  ERC7984_WRAPPER_INTERFACE_ID_LEGACY,
 } from "./contracts";
 
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption, Offline } from "./namespaces";
-export type { DecryptHandle, DecryptResult } from "./query/user-decrypt";
+export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptHandleItem,
   BatchDecryptHandlesResult,
@@ -223,7 +222,6 @@ export type {
   WrappedEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
-  UnwrappedFinalizedEvent,
   UnwrappedStartedEvent,
   OnChainEvent,
   DelegatedForUserDecryptionEvent,
@@ -245,7 +243,6 @@ export {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedFinalized,
   decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
@@ -277,7 +274,6 @@ export {
   allowanceContract,
   approveContract,
   confidentialTotalSupplyContract,
-  totalSupplyContract,
   rateContract,
   delegateForUserDecryptionContract,
   revokeDelegationContract,

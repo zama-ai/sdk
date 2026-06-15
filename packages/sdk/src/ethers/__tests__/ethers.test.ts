@@ -83,7 +83,7 @@ const PRIVATE_KEY = `0x${"11".repeat(32)}` as const;
 const WALLET_ADDRESS = "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A";
 const CHAIN_ID = 8009;
 const VERIFYING_CONTRACT = "0x0000000000000000000000000000000000000001";
-const VALID_HANDLE = ("0x" + "ab".repeat(32)) as Hex;
+const VALID_ENCRYPTED_VALUE = ("0x" + "ab".repeat(32)) as Hex;
 const VALID_PROOF = ("0x" + "cd".repeat(32)) as Hex;
 
 // ── EthersSigner ─────────────────────────────────────────────
@@ -484,10 +484,10 @@ describe("ethers read contract helpers", () => {
 
   test("readConfidentialBalanceOfContract", async ({ tokenAddress, userAddress }) => {
     vi.mocked(mockProvider.call).mockResolvedValueOnce(
-      encodeAbiParameters([{ type: "bytes32" }], [VALID_HANDLE]),
+      encodeAbiParameters([{ type: "bytes32" }], [VALID_ENCRYPTED_VALUE]),
     );
     const result = await readConfidentialBalanceOfContract(mockProvider, tokenAddress, userAddress);
-    expect(result).toBe(VALID_HANDLE);
+    expect(result).toBe(VALID_ENCRYPTED_VALUE);
   });
 
   test("readUnderlyingTokenContract", async ({ wrapperAddress }) => {
@@ -517,14 +517,12 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const handle = new Uint8Array(32).fill(1);
-    const proof = new Uint8Array(32).fill(2);
     const hash = await writeConfidentialTransferContract(
       mockSigner,
       tokenAddress,
       userAddress,
-      handle,
-      proof,
+      VALID_ENCRYPTED_VALUE,
+      VALID_PROOF,
     );
     expect(hash).toBe(TX_HASH);
   });
@@ -533,15 +531,13 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const handle = new Uint8Array(32).fill(0xde);
-    const proof = new Uint8Array(32).fill(0xef);
     const hash = await writeUnwrapContract(
       mockSigner,
       tokenAddress,
       userAddress,
       SPENDER,
-      handle,
-      proof,
+      VALID_ENCRYPTED_VALUE,
+      VALID_PROOF,
     );
     expect(hash).toBe(TX_HASH);
   });
@@ -550,7 +546,7 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const balance = VALID_HANDLE;
+    const balance = VALID_ENCRYPTED_VALUE;
     const hash = await writeUnwrapFromBalanceContract(
       mockSigner,
       tokenAddress,
@@ -565,7 +561,7 @@ describe("ethers write contract helpers", () => {
     vi.mocked(mockSigner.sendTransaction).mockResolvedValueOnce({
       hash: TX_HASH,
     });
-    const burnt = VALID_HANDLE;
+    const burnt = VALID_ENCRYPTED_VALUE;
     const proof = VALID_PROOF;
     const hash = await writeFinalizeUnwrapContract(mockSigner, wrapperAddress, burnt, 500n, proof);
     expect(hash).toBe(TX_HASH);

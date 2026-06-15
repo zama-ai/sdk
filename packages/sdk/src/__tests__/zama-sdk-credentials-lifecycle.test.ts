@@ -37,6 +37,12 @@ const test = baseTest.extend<{ fakeTime: void }>({
  *     permit and does not prompt for re-signature.
  */
 describe("ZamaSDK credentials lifecycle", () => {
+  test("constructing the SDK does not warm keypairs", ({ createSDK, relayer }) => {
+    createSDK();
+
+    expect(relayer.generateKeypair).not.toHaveBeenCalled();
+  });
+
   test("re-signs after permitTTL elapses but reuses the FHE keypair", async ({
     fakeTime: _fakeTime,
     createSDK,

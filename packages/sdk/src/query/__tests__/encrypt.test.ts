@@ -4,7 +4,7 @@ import { encryptMutationOptions } from "../encrypt";
 import type { Address } from "viem";
 
 describe("encryptMutationOptions", () => {
-  test("encrypts via the SDK mutation", async ({ sdk }) => {
+  test("encrypts via the SDK mutation", async ({ sdk, handle, inputProof }) => {
     const options = encryptMutationOptions(sdk);
 
     expect(options.mutationKey).toEqual(["zama.encrypt"]);
@@ -18,8 +18,8 @@ describe("encryptMutationOptions", () => {
 
     expect(encrypt).toHaveBeenCalledWith(params);
     expect(result).toEqual({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
+      encryptedValues: [handle],
+      inputProof,
     });
   });
 });

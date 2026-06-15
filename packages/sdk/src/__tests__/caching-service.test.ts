@@ -1,16 +1,16 @@
 import { getAddress, type Address } from "viem";
 import { describe, expect, test } from "../test-fixtures";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import { CachingService } from "../services/caching-service";
 
 const REQUESTER_A = getAddress("0x1111111111111111111111111111111111111111") as Address;
 const REQUESTER_B = getAddress("0x2222222222222222222222222222222222222222") as Address;
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
-const HANDLE_A = `0x${"aa".repeat(32)}` as Handle;
-const HANDLE_B = `0x${"bb".repeat(32)}` as Handle;
-const HANDLE_C = `0x${"cc".repeat(32)}` as Handle;
-const HANDLE_D = `0x${"dd".repeat(32)}` as Handle;
+const HANDLE_A = `0x${"aa".repeat(32)}` as EncryptedValue;
+const HANDLE_B = `0x${"bb".repeat(32)}` as EncryptedValue;
+const HANDLE_C = `0x${"cc".repeat(32)}` as EncryptedValue;
+const HANDLE_D = `0x${"dd".repeat(32)}` as EncryptedValue;
 
 describe("CachingService", () => {
   test("returns null for cachingService misses", async ({ cachingService }) => {
@@ -39,12 +39,12 @@ describe("CachingService", () => {
     await cachingService.set(
       REQUESTER_A.toLowerCase() as Address,
       CONTRACT_A.toLowerCase() as Address,
-      HANDLE_A.toUpperCase() as Handle,
+      HANDLE_A.toUpperCase() as EncryptedValue,
       7n,
     );
 
     await expect(
-      cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A.toLowerCase() as Handle),
+      cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A.toLowerCase() as EncryptedValue),
     ).resolves.toBe(7n);
   });
 

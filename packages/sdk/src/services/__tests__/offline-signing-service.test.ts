@@ -846,8 +846,8 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
 
 describe("OfflineSigningService — encryption invariants", () => {
   const empty = {
-    handles: [] as Uint8Array[],
-    inputProof: new Uint8Array([4, 5, 6]),
+    encryptedValues: [] as `0x${string}`[],
+    inputProof: "0x040506" as `0x${string}`,
   };
 
   test("ConfidentialTransfer throws EncryptionFailedError on empty handles", async ({

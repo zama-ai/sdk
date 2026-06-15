@@ -571,7 +571,7 @@ export interface BatchBalancesResult {
 export interface BatchDecryptAsOptions {
     accountAddress?: Address;
     delegatorAddress: Address;
-    handles?: Handle[];
+    encryptedValues?: EncryptedValue[];
     maxConcurrency?: number;
     onError?: (error: Error, address: Address) => bigint;
 }
@@ -581,11 +581,11 @@ export interface BatchDecryptHandleItem {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
+    encryptedValue: EncryptedValue;
+    // (undocumented)
     error?: ZamaError;
     // (undocumented)
-    handle: Handle;
-    // (undocumented)
-    value?: ClearValueType;
+    value?: ClearValue;
 }
 
 // @public (undocumented)
@@ -641,7 +641,8 @@ export interface CleartextRelayerConfig extends RelayerConfig {
     readonly type: "cleartext";
 }
 
-export { ClearValueType }
+// @public
+export type ClearValue = ClearValueType;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -3286,7 +3287,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
 };
 
 // @public
-export function confidentialTransferContract(encryptedErc20: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): {
+export function confidentialTransferContract(encryptedErc20: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -4608,7 +4609,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: Handle;
+    readonly encryptedAmountHandle: EncryptedValue;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
@@ -4616,7 +4617,7 @@ export interface ConfidentialTransferEvent {
 }
 
 // @public
-export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): {
+export function confidentialTransferFromContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -6182,9 +6183,6 @@ export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDe
 // @public
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
 
-// @public @deprecated (undocumented)
-export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null;
-
 // @public
 export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null;
 
@@ -6198,8 +6196,8 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null;
 export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
-    handles: Handle[];
-    result: Record<Handle, ClearValueType>;
+    encryptedValues: EncryptedValue[];
+    result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
@@ -6208,8 +6206,8 @@ export interface DecryptEndEvent extends BaseEvent {
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
+    encryptedValues: EncryptedValue[];
     error: Error;
-    handles: Handle[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
@@ -6219,7 +6217,7 @@ export interface DecryptHandle {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
-    handle: Handle;
+    encryptedValue: EncryptedValue;
 }
 
 // @public
@@ -6232,14 +6230,14 @@ export class Decryption {
         decryptionService: DecryptionService | undefined;
     });
     delegatedBatchDecrypt(input: {
-        handles: DecryptHandle[];
+        encryptedInputs: DecryptHandle[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
     }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(handles: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<Handle, ClearValueType>>;
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
-    userDecrypt(handles: DecryptHandle[]): Promise<Record<Handle, ClearValueType>>;
+    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -6252,7 +6250,7 @@ export type DecryptResult = UserDecryptResults;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
@@ -6298,7 +6296,7 @@ export interface DelegatedUserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -6484,6 +6482,9 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 // @public
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
+// @public
+export type EncryptedValue = Bytes32Hex;
+
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
     // (undocumented)
@@ -6528,7 +6529,10 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = InputProofBytesType;
+export type EncryptResult = {
+    encryptedValues: EncryptedValue[];
+    inputProof: Hex;
+};
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -6552,9 +6556,6 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
-
-// @public
-export const ERC7984_WRAPPER_INTERFACE_ID_LEGACY: "0xd04584ba";
 
 // @public
 export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest;
@@ -6591,7 +6592,7 @@ export { FheTypeName }
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: Handle, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
+export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly type: "constructor";
@@ -7347,26 +7348,6 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -7381,21 +7362,6 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -7623,7 +7589,7 @@ export interface FinalizeUnwrapRequest {
     readonly from: Address;
     // (undocumented)
     readonly kind: "FinalizeUnwrap";
-    readonly unwrapRequestIdOrAmount: Handle;
+    readonly unwrapRequestIdOrAmount: EncryptedValue;
     // (undocumented)
     readonly wrapper: Address;
 }
@@ -8882,9 +8848,6 @@ export function getTokenPairsSliceContract(registry: Address, fromIndex: bigint,
 };
 
 // @public
-export type Handle = Bytes32Hex;
-
-// @public
 export const hardhat: {
     readonly id: 31337;
     readonly gatewayChainId: 10901;
@@ -9689,26 +9652,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -9723,21 +9666,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -11619,7 +11547,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isZeroHandle(handle: string): boolean;
+export function isZeroHandle(encryptedValue: string): boolean;
 
 // @public
 export interface Keypair {
@@ -11873,7 +11801,7 @@ export interface OfflineSigningOptions {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -11889,7 +11817,7 @@ export interface PaginatedResult<T> {
 
 // @public
 export interface PendingUnshieldRequest {
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
     readonly unwrapTxHash: Hex;
 }
 
@@ -11916,6 +11844,7 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
+    warmKeypair(): Promise<void>;
 }
 
 // @public
@@ -13343,7 +13272,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -13355,7 +13284,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
-    publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
@@ -13363,7 +13292,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>>;
+    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -13522,7 +13451,7 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: Handle): Promise<void>;
+export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
 export const sepolia: {
@@ -15139,7 +15068,7 @@ export class Token {
     balanceOf(owner: Address): Promise<bigint>;
     static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
-    confidentialBalanceOf(owner: Address): Promise<Handle>;
+    confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     decimals(): Promise<number>;
@@ -15154,7 +15083,7 @@ export class Token {
     isWrapper(): Promise<boolean>;
     name(): Promise<string>;
     // @internal
-    protected readConfidentialBalanceOf(owner: Address): Promise<Handle>;
+    protected readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
@@ -15168,7 +15097,7 @@ export class Token {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -15201,30 +15130,9 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 export const Topics: {
     readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
-    readonly UnwrapRequested: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 amount)` */
-    readonly UnwrapRequestedLegacy: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalized: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalizedLegacy: `0x${string}`; /** @deprecated Use `Topics.UnwrapFinalized`. */
-    readonly UnwrappedFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
+    readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
+    readonly UnwrapFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
     readonly UnwrappedStarted: `0x${string}`;
-};
-
-// @public @deprecated
-export function totalSupplyContract(wrapperAddress: Address): {
-    readonly address: `0x${string}`;
-    readonly abi: readonly [{
-        readonly inputs: readonly [];
-        readonly name: "totalSupply";
-        readonly outputs: readonly [{
-            readonly internalType: "uint256";
-            readonly name: "";
-            readonly type: "uint256";
-        }];
-        readonly stateMutability: "view";
-        readonly type: "function";
-    }];
-    readonly functionName: "totalSupply";
-    readonly args: readonly [];
 };
 
 // @public (undocumented)
@@ -16091,26 +15999,6 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -16125,21 +16013,6 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -16408,7 +16281,7 @@ export interface UnwrapAllRequest {
 }
 
 // @public
-export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): {
+export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -17731,15 +17604,15 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
 // @public
 export interface UnwrapFinalizedEvent {
     readonly cleartextAmount: bigint;
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public
-export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): {
+export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly inputs: readonly [];
@@ -19059,27 +18932,13 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
 };
 
-// @public @deprecated (undocumented)
-export interface UnwrappedFinalizedEvent {
-    // (undocumented)
-    readonly cleartextAmount: bigint;
-    // (undocumented)
-    readonly encryptedAmount: Handle;
-    // (undocumented)
-    readonly eventName: "UnwrappedFinalized";
-    // (undocumented)
-    readonly receiver: Address;
-    // (undocumented)
-    readonly unwrapRequestId?: Handle;
-}
-
 // @public
 export interface UnwrappedStartedEvent {
-    readonly burnAmount: Handle;
+    readonly burnAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrappedStarted";
     readonly refund: Address;
-    readonly requestedAmount: Handle;
+    readonly requestedAmount: EncryptedValue;
     readonly requestId: bigint;
     readonly returnVal: boolean;
     readonly to: Address;
@@ -19099,11 +18958,11 @@ export interface UnwrapRequest {
 
 // @public
 export interface UnwrapRequestedEvent {
-    readonly encryptedAmount: Handle;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: Handle;
+    readonly unwrapRequestId?: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -19121,7 +18980,7 @@ export interface UserDecryptParams {
     // (undocumented)
     durationDays: number;
     // (undocumented)
-    handles: Handle[];
+    encryptedValues: EncryptedValue[];
     // (undocumented)
     privateKey: Hex;
     // (undocumented)
@@ -19935,26 +19794,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly indexed: true;
             readonly internalType: "address";
         }, {
-            readonly name: "encryptedAmount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
-        }, {
-            readonly name: "cleartextAmount";
-            readonly type: "uint64";
-            readonly indexed: false;
-            readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapFinalized";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
             readonly name: "unwrapRequestId";
             readonly type: "bytes32";
             readonly indexed: true;
@@ -19969,21 +19808,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly type: "uint64";
             readonly indexed: false;
             readonly internalType: "uint64";
-        }];
-        readonly anonymous: false;
-    }, {
-        readonly type: "event";
-        readonly name: "UnwrapRequested";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly indexed: true;
-            readonly internalType: "address";
-        }, {
-            readonly name: "amount";
-            readonly type: "bytes32";
-            readonly indexed: false;
-            readonly internalType: "euint64";
         }];
         readonly anonymous: false;
     }, {
@@ -20218,7 +20042,7 @@ export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     // (undocumented)
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     prepareShield(amount: bigint, options?: {
         recipient?: Address;
@@ -20474,10 +20298,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BEueG6vu.d.ts:19855:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BEueG6vu.d.ts:19984:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BEueG6vu.d.ts:20372:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BEueG6vu.d.ts:20373:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-LPrEeoXx.d.ts:19664:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-LPrEeoXx.d.ts:19793:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-LPrEeoXx.d.ts:20181:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-LPrEeoXx.d.ts:20182:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

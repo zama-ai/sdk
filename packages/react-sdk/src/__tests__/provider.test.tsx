@@ -60,7 +60,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     const balanceKey = zamaQueryKeys.confidentialBalance.token(
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
     );
-    const decryptionKey = zamaQueryKeys.decryption.handle(
+    const decryptionKey = zamaQueryKeys.decryption.encryptedValue(
       "0xaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbBcCdDeEfFaAbB",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
@@ -84,6 +84,44 @@ describe("ZamaProvider & useZamaSDK", () => {
       expect(queryClient.getQueryData(decryptionKey)).toBeUndefined();
       expect(queryClient.getQueryState(balanceKey)?.isInvalidated).toBe(true);
       expect(queryClient.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+    });
+  });
+
+  test("warms the current wallet keypair from a client effect", async ({
+    renderWithProviders,
+    relayer,
+  }) => {
+    renderWithProviders(() => useZamaSDK(), { relayer });
+
+    await waitFor(() => {
+      expect(relayer.generateKeypair).toHaveBeenCalled();
+    });
+  });
+
+  test("warms the next wallet keypair after SDK lifecycle handling", async ({
+    createWrapper,
+    signer,
+    relayer,
+  }) => {
+    const { Wrapper } = createWrapper({ signer, relayer });
+    renderHook(() => useZamaSDK(), { wrapper: Wrapper });
+    vi.mocked(relayer.generateKeypair).mockClear();
+
+    expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
+    const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
+    listener({
+      previous: {
+        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
+        chainId: 31337,
+      },
+      next: {
+        address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
+        chainId: 1,
+      },
+    });
+
+    await waitFor(() => {
+      expect(relayer.generateKeypair).toHaveBeenCalled();
     });
   });
 

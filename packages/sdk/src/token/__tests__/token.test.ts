@@ -90,27 +90,14 @@ describe("Token", () => {
   });
 
   describe("isWrapper", () => {
-    test("returns true when baseline interfaceId (0xd04584ba) matches", async ({
-      token,
-      provider,
-    }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(true) // baseline ID
-        .mockResolvedValueOnce(false); // upgraded ID
+    test("returns true when interfaceId (0x1f1c62b2) matches", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(true);
 
       expect(await token.isWrapper()).toBe(true);
     });
 
-    test("returns true when new interfaceId (0x1f1c62b2) matches", async ({ token, provider }) => {
-      vi.mocked(provider.readContract)
-        .mockResolvedValueOnce(false) // baseline ID
-        .mockResolvedValueOnce(true); // upgraded ID
-
-      expect(await token.isWrapper()).toBe(true);
-    });
-
-    test("returns false when neither interfaceId matches", async ({ token, provider }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    test("returns false when interfaceId does not match", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(false);
 
       expect(await token.isWrapper()).toBe(false);
     });
@@ -158,13 +145,14 @@ describe("Token", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("throws EncryptionFailed when encrypt returns empty handles", async ({
+    test("throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       token,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        handles: [],
-        inputProof: new Uint8Array([4, 5, 6]),
+        encryptedValues: [],
+        inputProof,
       });
 
       await expect(
@@ -173,7 +161,7 @@ describe("Token", () => {
         }),
       ).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
-        message: "Encryption returned no handles",
+        message: "Encryption returned no encrypted values",
       });
     });
 

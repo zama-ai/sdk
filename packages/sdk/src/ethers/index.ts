@@ -17,8 +17,10 @@ export type {
   EIP1193EventMap,
   ProviderConnectInfo,
   ProviderMessage,
+  Hex,
 } from "viem";
 export { ProviderRpcError } from "viem";
+export type { EncryptedValue } from "../relayer/relayer-sdk.types";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

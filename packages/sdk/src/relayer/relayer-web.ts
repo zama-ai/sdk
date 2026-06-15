@@ -4,6 +4,7 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import { toHex } from "viem";
 import type { Address, Hex } from "viem";
 import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
@@ -13,12 +14,12 @@ import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -157,7 +158,10 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
         contractAddress,
         userAddress,
       });
-      return { handles: result.handles, inputProof: result.inputProof };
+      return {
+        encryptedValues: result.handles.map((handle) => toHex(handle)),
+        inputProof: toHex(result.inputProof),
+      };
     });
   }
 
@@ -165,7 +169,9 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Decrypt ciphertexts using user's private key.
    * Requires a valid EIP712 signature.
    */
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -179,12 +185,12 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    * Public decryption - no authorization needed.
    * Used for publicly visible encrypted values.
    */
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.publicDecrypt({ chainId, handles });
+      const result = await this.#worker.publicDecrypt({ chainId, encryptedValues });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,
@@ -221,7 +227,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
    */
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {

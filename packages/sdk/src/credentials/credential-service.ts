@@ -8,7 +8,7 @@ import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
 import { KeypairVault } from "./keypair-vault";
-import { chunkContracts, uncoveredContracts } from "./permissions";
+import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
 import type { CredentialBundle, Permission, StoredKeypair } from "./types";
@@ -76,16 +76,9 @@ export class CredentialService {
   }
 
   /**
-   * Resolve a keypair and the permissions covering `contracts`.
-   *
-   * Passing an empty contract list warms the keypair without creating signed
-   * permits.
-   *
-   * If existing permissions already cover the requested set, no wallet prompt
-   * occurs. Otherwise the uncovered subset is chunked into groups of ≤10 and
-   * one permit per chunk is signed sequentially. Each signed chunk is persisted
-   * before the next prompt, and newly signed permits are returned in-memory even
-   * when best-effort persistence fails.
+   * Resolve a keypair and permissions covering `contracts`, minimizing wallet
+   * prompts by reusing or widening existing permits where possible. Empty
+   * `contracts` warms the keypair without prompting.
    *
    * @returns The resolved keypair and permits covering the requested contracts.
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
@@ -109,10 +102,23 @@ export class CredentialService {
     };
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
-    for (const chunk of chunkContracts(uncoveredContracts(permits, requested))) {
-      const permission = await this.#signPermit({ chunk, keypair, scope });
-      permits.push(permission);
-      await swallow("persist permit", () => this.#store.append(scope, [permission]));
+    const uncovered = uncoveredContracts(permits, requested);
+    if (uncovered.length > 0) {
+      const candidate = findPermitToWiden(permits, uncovered, requested);
+      if (candidate !== null) {
+        const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
+        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
+        await swallow("replace permit", () =>
+          this.#store.replace(scope, candidate.signature, widened),
+        );
+        permits[permits.indexOf(candidate)] = widened;
+      } else {
+        for (const chunk of chunkContracts(uncovered)) {
+          const permission = await this.#signPermit({ chunk, keypair, scope });
+          permits.push(permission);
+          await swallow("persist permit", () => this.#store.append(scope, [permission]));
+        }
+      }
     }
 
     const requestedSet = new Set(requested);
@@ -195,13 +201,23 @@ export class CredentialService {
   }
 
   /**
+   * Warm the signer keypair cache for a known address.
+   *
+   * Best-effort prefetch primitive: correctness still comes from `grantPermit`,
+   * which lazily creates the keypair when needed. Errors (storage failure,
+   * relayer 4xx, missing Worker in SSR) are **not** swallowed here — the caller
+   * decides whether to log, ignore, or surface them.
+   */
+  async warmKeypair(address: Address): Promise<void> {
+    await this.#vault.getOrCreate(checksum(address));
+  }
+
+  /**
    * Apply a wallet account transition.
    *
-   * Address change clears persisted credentials for the previous account and
-   * eagerly warms a keypair for the new one so the first decrypt does not stall
-   * on key generation. Chain-only changes keep credentials intact because
-   * permits are chain-scoped already and stale decrypt plaintext is cleared by
-   * {@link ZamaSDK}.
+   * Address change clears persisted credentials for the previous account.
+   * Chain-only changes keep credentials intact because permits are chain-scoped
+   * already and stale decrypt plaintext is cleared by {@link ZamaSDK}.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },
@@ -215,11 +231,6 @@ export class CredentialService {
     if (prevAddr) {
       await this.#vault.clear(prevAddr);
       await this.#store.clearAllForSigner(prevAddr);
-    }
-    if (nextAddr) {
-      await swallow("warm keypair", async () => {
-        await this.#vault.getOrCreate(nextAddr);
-      });
     }
   }
 

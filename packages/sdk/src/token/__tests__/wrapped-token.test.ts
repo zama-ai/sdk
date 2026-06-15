@@ -280,13 +280,14 @@ describe("WrappedToken", () => {
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("unwrap throws EncryptionFailed when encrypt returns empty handles", async ({
+    test("unwrap throws EncryptionFailed when encrypt returns empty encrypted values", async ({
       relayer,
       wrappedToken,
+      inputProof,
     }) => {
       vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        handles: [],
-        inputProof: new Uint8Array([4, 5, 6]),
+        encryptedValues: [],
+        inputProof,
       });
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
@@ -374,7 +375,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -411,7 +412,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -449,7 +450,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -492,7 +493,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -514,7 +515,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],
@@ -538,7 +539,7 @@ describe("WrappedToken", () => {
         logs: [
           {
             topics: [
-              Topics.UnwrapRequestedLegacy,
+              Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"ff".repeat(32)}`,
             ],

@@ -5,7 +5,7 @@ description: Low-level mutation hook that encrypts a plaintext value using the r
 
 # useEncrypt
 
-Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted handles and an input proof for on-chain submission.
+Low-level mutation hook that encrypts plaintext values using the relayer's FHE engine. Returns encrypted values and an input proof for on-chain submission.
 
 {% hint style="warning" %}
 For **confidential ERC-20 tokens**, use [`useShield`](/reference/react/useShield) or [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) — they handle encryption automatically.
@@ -31,12 +31,12 @@ function EncryptValue() {
   const { mutateAsync: encrypt, isPending } = useEncrypt();
 
   async function handleEncrypt() {
-    const { handles, inputProof } = await encrypt({
+    const { encryptedValues, inputProof } = await encrypt({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xContract",
       userAddress: "0xUser",
     });
-    // handles[0] is the encrypted Uint8Array, inputProof is the ZK proof
+    // encryptedValues[0] is the encrypted value (0x hex), inputProof is the ZK proof — both contract-ready
   }
 
   return (
@@ -86,10 +86,10 @@ Address of the user performing the encryption.
 import { type EncryptResult } from "@zama-fhe/sdk";
 ```
 
-`data` resolves to `{ handles: Uint8Array[], inputProof: Uint8Array }`.
+`data` resolves to `{ encryptedValues: EncryptedValue[], inputProof: Hex }` — `0x`-prefixed hex, ready to pass straight into a contract call.
 
-- **`handles`** — one encrypted handle per input value.
-- **`inputProof`** — the ZK input proof to submit alongside the handles in a contract call.
+- **`encryptedValues`** — one encrypted value per input.
+- **`inputProof`** — the ZK input proof to submit alongside the encrypted values in a contract call.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

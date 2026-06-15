@@ -72,19 +72,19 @@ describe("ZamaSDK", () => {
       userAddress: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
     };
 
-    test("returns encrypted handles", async ({ sdk }) => {
+    test("returns encrypted values", async ({ sdk, handle, inputProof }) => {
       const result = await sdk.encrypt(ENCRYPT_PARAMS);
 
-      expect(result.handles).toHaveLength(1);
-      expect(result.inputProof).toBeInstanceOf(Uint8Array);
+      expect(result.encryptedValues).toEqual([handle]);
+      expect(result.inputProof).toBe(inputProof);
     });
 
-    test("works without a signer", async ({ createSDK }) => {
+    test("works without a signer", async ({ createSDK, handle, inputProof }) => {
       const sdk = createSDK({ signer: undefined });
 
       await expect(sdk.encrypt(ENCRYPT_PARAMS)).resolves.toEqual({
-        handles: [new Uint8Array([1, 2, 3])],
-        inputProof: new Uint8Array([4, 5, 6]),
+        encryptedValues: [handle],
+        inputProof,
       });
     });
   });

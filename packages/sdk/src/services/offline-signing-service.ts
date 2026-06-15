@@ -480,12 +480,12 @@ export class OfflineSigningService {
     request: ConfidentialTransferRequest,
     from: Address,
   ): Promise<ReturnType<typeof confidentialTransferContract>> {
-    const { handles, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: from,
     });
-    const handle = handles[0];
+    const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles for ConfidentialTransfer");
     }
@@ -496,12 +496,12 @@ export class OfflineSigningService {
     request: ConfidentialTransferFromRequest,
     _from: Address,
   ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
-    const { handles, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: getAddress(request.owner),
     });
-    const handle = handles[0];
+    const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError(
         "Encryption returned no handles for ConfidentialTransferFrom",
@@ -524,12 +524,12 @@ export class OfflineSigningService {
     request: UnwrapRequest,
     from: Address,
   ): Promise<ReturnType<typeof unwrapContract>> {
-    const { handles, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: from,
     });
-    const handle = handles[0];
+    const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles for Unwrap");
     }

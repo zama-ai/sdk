@@ -25,18 +25,6 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:tutorials/README",
-      "title": "Overview",
-      "source_path": "docs/gitbook/src/tutorials/README.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/README.md",
-      "source_type": "official-doc",
-      "category": "tutorials",
-      "logical_path": "tutorials/README",
-      "description": "Learn how to set up and build your first confidential dApp with the Zama SDK. These tutorials take you from installation to a working app.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
       "id": "doc:tutorials/quick-start",
       "title": "Quick start",
       "source_path": "docs/gitbook/src/tutorials/quick-start.md",
@@ -73,14 +61,14 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:guides/README",
-      "title": "Overview",
-      "source_path": "docs/gitbook/src/guides/README.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/README.md",
+      "id": "doc:tutorials/build-with-an-llm",
+      "title": "Build with an LLM",
+      "source_path": "docs/gitbook/src/tutorials/build-with-an-llm.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md",
       "source_type": "official-doc",
-      "category": "guides",
-      "logical_path": "guides/README",
-      "description": "Step-by-step guides for common tasks with the Zama SDK. Each guide covers a single topic with code examples for both the core SDK and React hooks.",
+      "category": "tutorials",
+      "logical_path": "tutorials/build-with-an-llm",
+      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -105,6 +93,18 @@
       "category": "guides",
       "logical_path": "guides/authentication",
       "description": "How to authenticate with the relayer using a backend proxy or a direct API key.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:guides/relayer-api-keys",
+      "title": "Relayer API keys",
+      "source_path": "docs/gitbook/src/guides/relayer-api-keys.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/relayer-api-keys",
+      "description": "How to obtain, configure, and securely manage your Zama Relayer API key.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -205,18 +205,6 @@
       "include_in_llms_full": true
     },
     {
-      "id": "doc:guides/build-with-an-llm",
-      "title": "Build with an LLM",
-      "source_path": "docs/gitbook/src/guides/build-with-an-llm.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/build-with-an-llm.md",
-      "source_type": "official-doc",
-      "category": "guides",
-      "logical_path": "guides/build-with-an-llm",
-      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
       "id": "doc:guides/nextjs-ssr",
       "title": "Next.js / SSR",
       "source_path": "docs/gitbook/src/guides/nextjs-ssr.md",
@@ -260,7 +248,7 @@
       "source_type": "official-doc",
       "category": "guides",
       "logical_path": "guides/encrypt-decrypt",
-      "description": "How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.",
+      "description": "How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -680,7 +668,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useGrantPermit",
-      "description": "Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for any contract.",
+      "description": "Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for any contract.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -944,7 +932,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useUserDecrypt",
-      "description": "Query hook that automatically decrypts FHE handles once credentials are available via useGrantPermit.",
+      "description": "Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1017,18 +1005,6 @@
       "category": "reference-react",
       "logical_path": "reference/react/query-keys",
       "description": "Reference for the zamaQueryKeys factory used for manual React Query cache control.",
-      "include_in_llms_txt": true,
-      "include_in_llms_full": true
-    },
-    {
-      "id": "doc:concepts/README",
-      "title": "Overview",
-      "source_path": "docs/gitbook/src/concepts/README.md",
-      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/README.md",
-      "source_type": "official-doc",
-      "category": "concepts",
-      "logical_path": "concepts/README",
-      "description": "Core concepts and architecture behind the Zama SDK. These pages explain how the SDK works under the hood — the permit model, security guarantees, and caching strategy.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1316,7 +1292,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/react-sdk/etc/react-sdk.api",
-      "description": "import { Address } from '@zama-fhe/sdk'; import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query'; import { BatchBalancesResult } from '@zama-fhe/sdk'; import { BatchDecryptAsOptions } from '@zama-fhe/sdk'; import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query'; import { BroadcastParams } from '@zama-fhe/sdk/query'; import { ClearValues } from '@zama-fhe/relayer-sdk/web'; import { ClearValueType } from '@zama-fhe/sdk'; import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query'; import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query'; import { ConfidentialTransferParams } from '@zama-fhe/sdk/query'; import { CredentialPermitResult } from '@zama-fhe/sdk'; import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query'; import { DecryptResult } from '@zama-fhe/sdk/query'; import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query'; import { DelegateDecryptionParams } from '@zama-fhe/sdk/query'; import { DelegationStatusData } from '@zama-fhe/sdk/query'; import { EncryptParams } from '@zama-fhe/sdk'; import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query'; import { Hex } from '@zama-fhe/sdk'; import { JSX } from 'react/jsx-runtime'; import { PaginatedResult } from '@zama-fhe/sdk'; import { PermitKind } from '@zama-fhe/sdk'; import { PreparedFor } from '@zama-fhe/sdk'; import { PreparedPermitFor } from '@zama-fhe/sdk'; import { PrepareParams } from '@zama-fhe/sdk/query'; import { PropsWithChildren } from 'react'; import { RefreshPreparedParams } from '@zama-fhe/sdk/query'; import { RegisterPermitParams } from '@zama-fhe/sdk/query'; import { ResumeParams } from '@zama-fhe/sdk/query'; import { ResumeUnshieldParams } from '@zama-fhe/sdk/query'; import { RevokeDelegationParams } from '@zama-fhe/sdk/query'; import { ShieldParams } from '@zama-fhe/sdk/query'; import { SignAndBroadcastParams } from '@zama-fhe/sdk/query'; import { SignAndRegisterParams } from '@zama-fhe/sdk/query'; import { SignParams } from '@zama-fhe/sdk/query'; import { Token } from '@zama-fhe/sdk'; import { TokenMetadata } from '@zama-fhe/sdk/query'; import { TokenWrapperPair } from '@zama-fhe/sdk'; import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk'; import { TransactionKind } from '@zama-fhe/sdk'; import { TransactionResult } from '@zama-fhe/sdk'; import { UnshieldAllParams } from '@zama-fhe/sdk/query'; import { UnshieldParams } from '@zama-fhe/sdk/query'; import { UnwrapParams } from '@zama-fhe/sdk/query'; import { UseMutationOptions } from '@tanstack/react-query'; import { UseMutationResult } from '@tanstack/react-query'; import { UseQueryOptions } from '@tanstack/react-query'; import { UseQueryResult } from '@tanstack/react-query'; import { UserDecryptQueryConfig } from '@zama-fhe/sdk/query'; import { UseSuspenseQueryResult } from '@tanstack/react-query'; import { WrappedToken } from '@zama-fhe/sdk'; import { ZamaConfig } from '@zama-fhe/sdk'; import { ZamaSDK } from '@zama-fhe/sdk';",
+      "description": "import { Address } from '@zama-fhe/sdk'; import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query'; import { BatchBalancesResult } from '@zama-fhe/sdk'; import { BatchDecryptAsOptions } from '@zama-fhe/sdk'; import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query'; import { BroadcastParams } from '@zama-fhe/sdk/query'; import { ClearValues } from '@zama-fhe/relayer-sdk/web'; import { ClearValueType } from '@zama-fhe/relayer-sdk/web'; import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query'; import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query'; import { ConfidentialTransferParams } from '@zama-fhe/sdk/query'; import { CredentialPermitResult } from '@zama-fhe/sdk'; import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query'; import { DecryptResult } from '@zama-fhe/sdk/query'; import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query'; import { DelegateDecryptionParams } from '@zama-fhe/sdk/query'; import { DelegationStatusData } from '@zama-fhe/sdk/query'; import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt'; import { EncryptParams } from '@zama-fhe/sdk'; import { EncryptResult } from '@zama-fhe/sdk'; import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query'; import { Hex } from '@zama-fhe/sdk'; import { JSX } from 'react/jsx-runtime'; import { PaginatedResult } from '@zama-fhe/sdk'; import { PermitKind } from '@zama-fhe/sdk'; import { PreparedFor } from '@zama-fhe/sdk'; import { PreparedPermitFor } from '@zama-fhe/sdk'; import { PrepareParams } from '@zama-fhe/sdk/query'; import { PropsWithChildren } from 'react'; import { RefreshPreparedParams } from '@zama-fhe/sdk/query'; import { RegisterPermitParams } from '@zama-fhe/sdk/query'; import { ResumeParams } from '@zama-fhe/sdk/query'; import { ResumeUnshieldParams } from '@zama-fhe/sdk/query'; import { RevokeDelegationParams } from '@zama-fhe/sdk/query'; import { ShieldParams } from '@zama-fhe/sdk/query'; import { SignAndBroadcastParams } from '@zama-fhe/sdk/query'; import { SignAndRegisterParams } from '@zama-fhe/sdk/query'; import { SignParams } from '@zama-fhe/sdk/query'; import { Token } from '@zama-fhe/sdk'; import { TokenMetadata } from '@zama-fhe/sdk/query'; import { TokenWrapperPair } from '@zama-fhe/sdk'; import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk'; import { TransactionKind } from '@zama-fhe/sdk'; import { TransactionResult } from '@zama-fhe/sdk'; import { UnshieldAllParams } from '@zama-fhe/sdk/query'; import { UnshieldParams } from '@zama-fhe/sdk/query'; import { UnwrapParams } from '@zama-fhe/sdk/query'; import { UseMutationOptions } from '@tanstack/react-query'; import { UseMutationResult } from '@tanstack/react-query'; import { UseQueryOptions } from '@tanstack/react-query'; import { UseQueryResult } from '@tanstack/react-query'; import { UseSuspenseQueryResult } from '@tanstack/react-query'; import { WrappedToken } from '@zama-fhe/sdk'; import { ZamaConfig } from '@zama-fhe/sdk'; import { ZamaSDK } from '@zama-fhe/sdk';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },

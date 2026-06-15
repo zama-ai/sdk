@@ -41,6 +41,12 @@ describe("Permits", () => {
       const sdk = createSDK({ signer: undefined });
       await expect(sdk.permits.hasDelegationPermit(DELEGATOR, [CONTRACT_A])).resolves.toBe(false);
     });
+
+    test("warmKeypair resolves silently (no signer required)", async ({ createSDK, relayer }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(sdk.permits.warmKeypair()).resolves.toBeUndefined();
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    });
   });
 
   describe("empty-array short-circuit", () => {
@@ -104,12 +110,35 @@ describe("Permits", () => {
       expect(signer.signTypedData).toHaveBeenCalled();
     });
 
+    test("warmKeypair generates the keypair against the active dispatcher chain", async ({
+      sdk,
+      relayer,
+    }) => {
+      vi.mocked(relayer.generateKeypair).mockClear();
+
+      await sdk.permits.warmKeypair();
+
+      expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    });
+
+    test("warmKeypair resolves silently when the signer has no wallet snapshot", async ({
+      sdk,
+      signer,
+      relayer,
+    }) => {
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
+      vi.mocked(relayer.generateKeypair).mockClear();
+
+      await expect(sdk.permits.warmKeypair()).resolves.toBeUndefined();
+      expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    });
+
     test("revokePermits() after grantPermit clears the decrypt cache for the signer", async ({
       sdk,
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
@@ -124,7 +153,7 @@ describe("Permits", () => {
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 
@@ -139,7 +168,7 @@ describe("Permits", () => {
       relayer,
       handle,
     }) => {
-      const handles = [{ handle, contractAddress: CONTRACT_A }];
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.userDecrypt(handles);
       expect(relayer.userDecrypt).toHaveBeenCalledOnce();
 

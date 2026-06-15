@@ -1,7 +1,6 @@
 "use client";
 
-import type { ZamaConfig } from "@zama-fhe/sdk";
-import { ZamaSDK } from "@zama-fhe/sdk";
+import { ZamaSDK, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,6 +19,17 @@ export interface ZamaProviderProps extends PropsWithChildren {
 }
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
+
+function warmKeypair(sdk: ZamaSDK): void {
+  void sdk.permits.warmKeypair().catch((error: unknown) => {
+    // Warmup is a latency optimization — the first real permit/decrypt call
+    // will lazily retry keypair generation and surface actionable errors.
+    // We still log so persistent failures (storage corruption, relayer 4xx
+    // during keypair generation) leave a breadcrumb during debugging.
+    // oxlint-disable-next-line no-console
+    console.warn("[zama-sdk] warm keypair failed:", error);
+  });
+}
 
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
@@ -43,17 +53,21 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
 
   const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
-  // SDK internally does credential/cache cleanup. React layer clears the
-  // wallet-lifecycle query state.
-  useEffect(
-    () =>
-      sdk.onWalletAccountChange(({ previous }) => {
-        if (previous) {
-          invalidateWalletLifecycleQueries(queryClient);
-        }
-      }),
-    [sdk, queryClient],
-  );
+  // Keypair warming may touch `new Worker(...)` (web() relayer), which is
+  // undefined during SSR. Driving warmup from a client-only useEffect rather
+  // than the SDK constructor keeps server-rendered trees free of browser-only
+  // infrastructure. Non-React framework adapters need to mirror this contract:
+  // call `sdk.permits.warmKeypair()` on mount and on every
+  // `onWalletAccountChange` — the SDK no longer warms itself.
+  useEffect(() => {
+    warmKeypair(sdk);
+    return sdk.onWalletAccountChange(({ previous }) => {
+      if (previous) {
+        invalidateWalletLifecycleQueries(queryClient);
+      }
+      warmKeypair(sdk);
+    });
+  }, [sdk, queryClient]);
 
   // Clean up SDK-owned signer subscriptions on unmount without terminating
   // the caller-owned relayer. dispose() is idempotent.

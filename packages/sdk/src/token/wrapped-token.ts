@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -476,26 +476,26 @@ export class WrappedToken extends Token {
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
 
-    const { handles, inputProof } = await this.sdk.encrypt({
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress,
     });
 
-    const [handle] = handles;
-    if (!handle) {
-      throw new EncryptionFailedError("Encryption returned no handles");
+    const [encryptedAmount] = encryptedValues;
+    if (!encryptedAmount) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
     return this.submitTransaction({
       operation: "unwrap",
-      config: unwrapContract(this.address, userAddress, userAddress, handle, inputProof),
+      config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
     });
   }
 
   /**
    * Request an unwrap for the entire confidential balance.
-   * Uses the on-chain balance handle directly (no encryption needed).
+   * Uses the on-chain encrypted balance directly (no encryption needed).
    * Throws if the balance is zero.
    *
    * @returns The transaction hash and mined receipt.
@@ -530,19 +530,18 @@ export class WrappedToken extends Token {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
-   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from upgraded wrappers,
-   *   or the encrypted amount handle from legacy wrappers.
+   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
+   *   The `burnAmountHandle` form is accepted only to resume unshields persisted by an
+   *   older SDK version.
    * @returns The transaction hash and mined receipt.
    *
    * @example
    * ```ts
    * const event = findUnwrapRequested(receipt.logs);
-   * const txHash = await wrappedToken.finalizeUnwrap(
-   *   event.unwrapRequestId ?? event.encryptedAmount,
-   * );
+   * const txHash = await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: Handle): Promise<TransactionResult> {
+  async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
     const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);

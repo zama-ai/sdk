@@ -3,7 +3,14 @@
 import { vi } from "vitest";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { FixturesOf } from "./types";
-import { ACL, TEST_PRIVATE_KEY, TEST_PUBLIC_KEY, TOKEN, VALID_HANDLE } from "./constants";
+import {
+  ACL,
+  TEST_PRIVATE_KEY,
+  TEST_PUBLIC_KEY,
+  TOKEN,
+  VALID_ENCRYPTED_VALUE,
+  VALID_INPUT_PROOF,
+} from "./constants";
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
@@ -31,11 +38,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       },
     }),
     encrypt: vi.fn().mockResolvedValue({
-      handles: [new Uint8Array([1, 2, 3])],
-      inputProof: new Uint8Array([4, 5, 6]),
+      encryptedValues: [VALID_ENCRYPTED_VALUE],
+      inputProof: VALID_INPUT_PROOF,
     }),
     userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE as string]: 1000n,
+      [VALID_ENCRYPTED_VALUE as string]: 1000n,
     }),
     publicDecrypt: vi.fn().mockImplementation((handles: string[]) => {
       const clearValues: Record<string, bigint> = {};
@@ -59,7 +66,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       message: {},
     }),
     delegatedUserDecrypt: vi.fn().mockResolvedValue({
-      [VALID_HANDLE as string]: 1000n,
+      [VALID_ENCRYPTED_VALUE as string]: 1000n,
     }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),

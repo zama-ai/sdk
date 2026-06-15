@@ -273,21 +273,21 @@ import {
 } from "@zama-fhe/react-sdk";
 
 function MyTokenPage() {
-  const TOKEN = "0xYourEncryptedERC20";
+  const WRAPPER = "0xYourWrappedToken";
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const { data: meta } = useMetadata(TOKEN);
+  const { data: meta } = useMetadata(WRAPPER);
   const { data: balance, isLoading } = useConfidentialBalance({
-    address: TOKEN,
+    address: WRAPPER,
     account: address,
   });
   const { mutateAsync: shield, isPending: isShielding } = useShield({
-    address: TOKEN,
+    address: WRAPPER,
   });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
-    address: TOKEN,
+    address: WRAPPER,
   });
 
   if (!isConnected) {
@@ -347,63 +347,63 @@ function MyTokenPage() {
 {% tab title="viem" %}
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
 // Shield 1,000 public tokens into confidential form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
 const [address] = await walletClient.getAddresses();
-const balance = await token.balanceOf(address);
+const balance = await wrappedToken.balanceOf(address);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Withdraw back to public ERC-20
-await token.unshield(500n);
+await wrappedToken.unshield(500n);
 ```
 
 {% endtab %}
 {% tab title="ethers" %}
 
 ```ts
-const token = sdk.createToken("0xYourEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xYourWrappedToken");
 
 // Shield 1,000 public tokens into confidential form
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Decrypt your balance (first call prompts a wallet signature)
 const [address] = (await window.ethereum!.request({ method: "eth_accounts" })) as string[];
-const balance = await token.balanceOf(address as `0x${string}`);
+const balance = await wrappedToken.balanceOf(address as `0x${string}`);
 console.log("Confidential balance:", balance);
 
 // Send 500 tokens privately
-await token.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
 // Withdraw back to public ERC-20
-await token.unshield(500n);
+await wrappedToken.unshield(500n);
 ```
 
 {% endtab %}
 {% tab title="Node.js (viem)" %}
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const wrappedToken = sdk.createWrappedToken(process.env.WRAPPER_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf(account.address);
+  const balance = await wrappedToken.balanceOf(account.address);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
-  await token.confidentialTransfer("0xRecipient", 500n);
+  await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
   // Withdraw back to public ERC-20
-  await token.unshield(500n);
+  await wrappedToken.unshield(500n);
 } finally {
   sdk.terminate(); // clean up worker threads
 }
@@ -413,21 +413,21 @@ try {
 {% tab title="Node.js (ethers)" %}
 
 ```ts
-const token = sdk.createToken(process.env.TOKEN_ADDRESS!);
+const wrappedToken = sdk.createWrappedToken(process.env.WRAPPER_ADDRESS!);
 
 try {
   // Shield 1,000 public tokens into confidential form
-  await token.shield(1000n);
+  await wrappedToken.shield(1000n);
 
   // Decrypt your balance
-  const balance = await token.balanceOf(wallet.address as `0x${string}`);
+  const balance = await wrappedToken.balanceOf(wallet.address as `0x${string}`);
   console.log("Confidential balance:", balance);
 
   // Send 500 tokens privately
-  await token.confidentialTransfer("0xRecipient", 500n);
+  await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 
   // Withdraw back to public ERC-20
-  await token.unshield(500n);
+  await wrappedToken.unshield(500n);
 } finally {
   sdk.terminate(); // clean up worker threads
 }

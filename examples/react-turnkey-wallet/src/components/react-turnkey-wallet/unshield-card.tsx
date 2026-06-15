@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  useUnshield,
-  useResumeUnshield,
-  savePendingUnshield,
-  ZamaSDKEvents,
-  indexedDBStorage,
-} from "@zama-fhe/react-sdk";
+import { useUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import { savePendingUnshield, ZamaSDKEvents, indexedDBStorage } from "@zama-fhe/sdk";
 import type { Address, Hex } from "viem";
 import { parseAmountSafe, shortAddr, txLink } from "@/lib/react-turnkey-wallet/utils";
 import { MutationStatus } from "./mutation-status";
@@ -21,7 +16,7 @@ export function UnshieldCard({
   symbol: string;
   onSuccess: () => void;
 }) {
-  const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress });
+  const unshield = useUnshield(tokenAddress);
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<1 | 2>(1);
 
@@ -94,10 +89,7 @@ export function ResumeUnshieldCard({
   txHash: Hex;
   onSuccess: () => void;
 }) {
-  const resumeUnshield = useResumeUnshield({
-    tokenAddress,
-    wrapperAddress: tokenAddress,
-  });
+  const resumeUnshield = useResumeUnshield(tokenAddress);
 
   return (
     <div className="card border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950">

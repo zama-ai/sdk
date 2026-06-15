@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EIP712TypedData, Handle } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData, EncryptedValue } from "../relayer/relayer-sdk.types";
 
 // ─── Per-kind request payloads ──────────────────────────────────────────
 
@@ -82,7 +82,7 @@ export interface FinalizeUnwrapRequest {
   readonly from: Address;
   readonly wrapper: Address;
   /** From the `UnwrapRequested` event log (`unwrapRequestId` on upgraded wrappers, the encrypted amount handle on legacy ones). */
-  readonly unwrapRequestIdOrAmount: Handle;
+  readonly unwrapRequestIdOrAmount: EncryptedValue;
 }
 
 /**

@@ -46,16 +46,16 @@ function AuthGuard() {
 import { useHasPermit, useGrantPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
 
 function GatedDecrypt({
-  handle,
+  encryptedValue,
   contractAddress,
 }: {
-  handle: string;
+  encryptedValue: string;
   contractAddress: `0x${string}`;
 }) {
   const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
   const { mutateAsync: grantPermit } = useGrantPermit();
   const { data, isPending } = useUserDecrypt(
-    { handles: [{ handle, contractAddress }] },
+    [{ encryptedValue, contractAddress }],
     { enabled: !!hasPermit }, // only decrypt once authorized
   );
 
@@ -64,7 +64,7 @@ function GatedDecrypt({
   }
 
   if (isPending) return <span>Decrypting...</span>;
-  return <output>{data?.[handle]?.toString()}</output>;
+  return <output>{data?.[encryptedValue]?.toString()}</output>;
 }
 ```
 
@@ -84,6 +84,14 @@ const { data: hasPermit } = useHasPermit({
   contractAddresses: ["0xContractA", "0xContractB"],
 });
 ```
+
+An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.
+
+## options
+
+`Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">` — **optional**
+
+Standard React Query options forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state (no work, no signature while disabled).
 
 {% hint style="warning" %}
 **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.

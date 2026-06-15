@@ -101,10 +101,10 @@ Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUse
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ```
 
-| Key                                 | Scope                                     |
-| ----------------------------------- | ----------------------------------------- |
-| `.handle(handle, contractAddress?)` | Single decrypted value by handle          |
-| `.handles(handles[])`               | Multiple decrypted values by handle array |
+| Key                                                   | Scope                                          |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| `.encryptedValue(encryptedValue, contractAddress?)`   | Single clear value by encrypted value          |
+| `.encryptedInputs(encryptedInputs[], walletAccount?)` | Multiple clear values by encrypted-input array |
 
 ## Common patterns
 

@@ -13,7 +13,7 @@ export function TransferCard({
   decimals: number;
   symbol: string;
 }) {
-  const transfer = useConfidentialTransfer({ tokenAddress });
+  const transfer = useConfidentialTransfer({ address: tokenAddress });
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
 

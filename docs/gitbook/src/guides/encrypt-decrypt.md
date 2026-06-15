@@ -1,6 +1,6 @@
 ---
 title: Encrypt & decrypt
-description: How to encrypt values and decrypt FHE ciphertext handles for custom confidential smart contracts that are not wrapped ERC-20 tokens.
+description: How to encrypt values and decrypt FHE encrypted values for custom confidential smart contracts that are not wrapped ERC-20 tokens.
 ---
 
 # Encrypt & decrypt
@@ -11,24 +11,25 @@ Before starting, make sure your project is set up following the [Configuration](
 
 ## Example
 
-Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted handle, and decrypts it:
+Here is a complete flow that encrypts a value, sends it to a custom FHE contract, reads back the encrypted value, and decrypts it:
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
 import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
-import { bytesToHex } from "viem";
 import { useState, type FormEvent } from "react";
 
 function ConfidentialRoundTrip() {
   const sdk = useZamaSDK();
   const encrypt = useEncrypt();
   const { address: userAddress } = useAccount();
-  const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
+  const [inputs, setInputs] = useState<
+    { encryptedValue: string; contractAddress: `0x${string}` }[]
+  >([]);
 
-  // Fires when handles are non-empty.
-  const { data: decrypted } = useUserDecrypt({ handles });
+  // Fires when inputs are non-empty.
+  const { data: decrypted } = useUserDecrypt(inputs);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,18 +48,18 @@ function ConfidentialRoundTrip() {
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
-      args: [bytesToHex(encrypted.handles[0]!), bytesToHex(encrypted.inputProof)],
+      args: [encrypted.encryptedValues[0]!, encrypted.inputProof],
     });
 
-    // 3. Read the handle back — setting handles triggers decryption
-    const handle = (await sdk.provider.readContract({
+    // 3. Read the encrypted value back — setting inputs triggers decryption
+    const encryptedValue = (await sdk.provider.readContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "getHandle",
       args: [userAddress],
     })) as string;
 
-    setHandles([{ handle, contractAddress }]);
+    setInputs([{ encryptedValue, contractAddress }]);
   };
 
   return (
@@ -66,8 +67,8 @@ function ConfidentialRoundTrip() {
       <button type="submit" disabled={encrypt.isPending}>
         Encrypt → Store → Decrypt
       </button>
-      {decrypted && handles[0] && (
-        <output>Decrypted: {decrypted[handles[0].handle]?.toString()}</output>
+      {decrypted && inputs[0] && (
+        <output>Decrypted: {decrypted[inputs[0].encryptedValue]?.toString()}</output>
       )}
     </form>
   );
@@ -161,9 +162,9 @@ function EncryptExample() {
       userAddress: userAddress!,
     });
 
-    // result.handles — array of Uint8Array, one per value
-    // result.inputProof — Uint8Array, required alongside handles in contract calls
-    // Use handles and inputProof in your contract call (see next section)
+    // result.encryptedValues — array of `0x`-prefixed hex encrypted values, one per value (contract-ready)
+    // result.inputProof — `0x`-prefixed hex proof, required alongside the encrypted values in contract calls
+    // Use encryptedValues and inputProof in your contract call (see next section)
   };
 
   return (
@@ -191,14 +192,14 @@ const result = await encrypt.mutateAsync({
   userAddress,
 });
 
-// result.handles[0] — encrypted 500n
-// result.handles[1] — encrypted true
-// result.handles[2] — encrypted 42n
-// result.inputProof — shared proof for all handles
+// result.encryptedValues[0] — encrypted 500n
+// result.encryptedValues[1] — encrypted true
+// result.encryptedValues[2] — encrypted 42n
+// result.inputProof — shared proof for all encrypted values
 ```
 
 {% hint style="info" %}
-**Encryption returns empty handles?** Make sure `contractAddress` and `userAddress` are valid addresses, not `undefined`. If using wagmi, wait for the account to be connected:
+**Encryption returns empty encrypted values?** Make sure `contractAddress` and `userAddress` are valid addresses, not `undefined`. If using wagmi, wait for the account to be connected:
 
 ```tsx
 const { address } = useAccount();
@@ -211,14 +212,13 @@ if (!address) return <p role="status">Connect wallet first</p>;
 
 ### 2. Use encrypted values in contract calls
 
-After encryption, pass the handles and proof to your custom FHE contract:
+After encryption, pass the encrypted values and proof to your custom FHE contract. Both are `0x`-prefixed hex, so they go straight into a `writeContract` call — no conversion needed:
 
 {% code title="ConfidentialAction.tsx" %}
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
-import { bytesToHex } from "viem";
 
 function ConfidentialAction() {
   const sdk = useZamaSDK();
@@ -227,7 +227,7 @@ function ConfidentialAction() {
 
   const handleAction = async () => {
     // 1. Encrypt the value
-    const { handles, inputProof } = await encrypt.mutateAsync({
+    const { encryptedValues, inputProof } = await encrypt.mutateAsync({
       values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
       userAddress: address!,
@@ -238,7 +238,7 @@ function ConfidentialAction() {
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",
-      args: [bytesToHex(handles[0]!), bytesToHex(inputProof)],
+      args: [encryptedValues[0]!, inputProof],
     });
   };
 
@@ -387,20 +387,18 @@ function App() {
 }
 ```
 
-#### Decrypting handles from multiple contracts
+#### Decrypting encrypted values from multiple contracts
 
-`useUserDecrypt` automatically groups handles by contract address and issues one decryption request per contract:
+`useUserDecrypt` automatically groups inputs by contract address and issues one decryption request per contract:
 
 ```tsx
-const { data } = useUserDecrypt({
-  handles: [
-    { handle: "0xhandle1...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle2...", contractAddress: "0xTokenA" },
-    { handle: "0xhandle3...", contractAddress: "0xTokenB" },
-  ],
-});
+const { data } = useUserDecrypt([
+  { encryptedValue: "0xvalue1...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue2...", contractAddress: "0xTokenA" },
+  { encryptedValue: "0xvalue3...", contractAddress: "0xTokenB" },
+]);
 
-// data: { "0xhandle1...": 500n, "0xhandle2...": 200n, "0xhandle3...": 1000n }
+// data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
 
 #### Persistent caching

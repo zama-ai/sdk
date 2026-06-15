@@ -4,6 +4,7 @@ import type {
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
+import { toHex } from "viem";
 import type { Address, Hex } from "viem";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
@@ -14,12 +15,12 @@ import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
-  ClearValueType,
+  ClearValue,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  Handle,
+  EncryptedValue,
   PublicDecryptResult,
   PublicKeyData,
   PublicParamsData,
@@ -131,11 +132,16 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       const result = await this.#pool.encrypt({ chainId, ...params });
-      return { handles: result.handles, inputProof: result.inputProof };
+      return {
+        encryptedValues: result.handles.map((handle) => toHex(handle)),
+        inputProof: toHex(result.inputProof),
+      };
     });
   }
 
-  async userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
@@ -144,11 +150,11 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     });
   }
 
-  async publicDecrypt(handles: Handle[]): Promise<PublicDecryptResult> {
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
-      const result = await this.#pool.publicDecrypt({ chainId, handles });
+      const result = await this.#pool.publicDecrypt({ chainId, encryptedValues });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,
@@ -178,7 +184,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<Handle, ClearValueType>>> {
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {

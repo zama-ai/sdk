@@ -185,7 +185,7 @@ describe("NodeWorkerPool", () => {
 
     await pool.userDecrypt({
       chainId: 1,
-      handles: [HANDLE],
+      encryptedValues: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
       privateKey: "0xsk",
@@ -197,10 +197,10 @@ describe("NodeWorkerPool", () => {
     });
     expect(instance.userDecrypt).toHaveBeenCalled();
 
-    await pool.publicDecrypt({ chainId: 1, handles: [HANDLE] });
+    await pool.publicDecrypt({ chainId: 1, encryptedValues: [HANDLE] });
     expect(instance.publicDecrypt).toHaveBeenCalledWith({
       chainId: 1,
-      handles: [HANDLE],
+      encryptedValues: [HANDLE],
     });
 
     await pool.createDelegatedUserDecryptEIP712({
@@ -215,7 +215,7 @@ describe("NodeWorkerPool", () => {
 
     await pool.delegatedUserDecrypt({
       chainId: 1,
-      handles: [HANDLE],
+      encryptedValues: [HANDLE],
       contractAddress: "0xC",
       signedContractAddresses: ["0xS"],
       privateKey: "0xsk",

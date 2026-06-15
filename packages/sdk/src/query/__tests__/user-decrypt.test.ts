@@ -12,9 +12,7 @@ describe("userDecryptQueryOptions", () => {
 
     const options = userDecryptQueryOptions(
       sdk,
-      {
-        handles: [{ handle, contractAddress: CONTRACT }],
-      },
+      [{ encryptedValue: handle, contractAddress: CONTRACT }],
       { walletAccount: signer.walletAccount.getSnapshot() },
     );
     const result = await options.queryFn({
@@ -29,25 +27,23 @@ describe("userDecryptQueryOptions", () => {
   test("has staleTime Infinity", ({ sdk }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
-    const options = userDecryptQueryOptions(sdk, {
-      handles: [{ handle, contractAddress: CONTRACT }],
-    });
+    const options = userDecryptQueryOptions(sdk, [
+      { encryptedValue: handle, contractAddress: CONTRACT },
+    ]);
     expect(options.staleTime).toBe(Infinity);
   });
 
-  test("disabled when handles is empty", ({ sdk }) => {
-    const options = userDecryptQueryOptions(sdk, { handles: [] });
+  test("disabled when inputs is empty", ({ sdk }) => {
+    const options = userDecryptQueryOptions(sdk, []);
     expect(options.enabled).toBe(false);
   });
 
-  test("enabled when handles are provided", ({ sdk, signer }) => {
+  test("enabled when inputs are provided", ({ sdk, signer }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
     const options = userDecryptQueryOptions(
       sdk,
-      {
-        handles: [{ handle, contractAddress: CONTRACT }],
-      },
+      [{ encryptedValue: handle, contractAddress: CONTRACT }],
       { walletAccount: signer.walletAccount.getSnapshot() },
     );
     expect(options.enabled).toBe(true);
@@ -56,9 +52,9 @@ describe("userDecryptQueryOptions", () => {
   test("disabled when wallet account is absent", ({ sdk }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
-    const options = userDecryptQueryOptions(sdk, {
-      handles: [{ handle, contractAddress: CONTRACT }],
-    });
+    const options = userDecryptQueryOptions(sdk, [
+      { encryptedValue: handle, contractAddress: CONTRACT },
+    ]);
 
     expect(options.enabled).toBe(false);
   });

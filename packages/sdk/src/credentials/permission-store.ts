@@ -81,6 +81,26 @@ export class PermissionStore {
   }
 
   /**
+   * Replace the entry identified by `oldSignature` with `newPermission`.
+   *
+   * Atomic relative to the storage backend's `set`: the old entry survives in
+   * storage until the new list is written. If `oldSignature` is not found
+   * (raced eviction or concurrent prune), `newPermission` is still persisted —
+   * equivalent to {@link append}.
+   */
+  async replace(
+    scope: PermissionScope,
+    oldSignature: Hex,
+    newPermission: Permission,
+  ): Promise<void> {
+    const validated = PermissionSchema.parse(newPermission);
+    const existing = await this.list(scope);
+    const filtered = existing.filter((p) => p.signature !== oldSignature);
+    await this.#storage.set(permissionScopeKey(scope), [...filtered, validated]);
+    await this.#trackScope(scope);
+  }
+
+  /**
    * Delete every permit whose signed payload touches any listed contract.
    *
    * The store never edits `signedContractAddresses`, because that field is part
