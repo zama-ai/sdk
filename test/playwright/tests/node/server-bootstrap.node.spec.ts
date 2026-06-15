@@ -51,7 +51,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   expect(delegatedEip712.primaryType).toBe("DelegatedUserDecryptRequestVerification");
 
   // 6. Verify public key and params are available
-  const pk = await sdk.relayer.getPublicKey();
+  const pk = await sdk.relayer.fetchFheEncryptionKeyBytes();
   expect(pk).not.toBeNull();
   const pp = await sdk.relayer.getPublicParams(2048);
   expect(pp).not.toBeNull();
