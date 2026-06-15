@@ -11,9 +11,9 @@ describe("FheArtifactCache", () => {
     storage = new MemoryStorage();
   });
 
-  // ── getPublicKey ──────────────────────────────────────────────
+  // ── fetchFheEncryptionKeyBytes ──────────────────────────────────────────────
 
-  describe("getPublicKey", () => {
+  describe("fetchFheEncryptionKeyBytes", () => {
     test("returns cached public key without calling fetcher on cache hit", async () => {
       const cache = new FheArtifactCache({
         storage,
@@ -24,12 +24,12 @@ describe("FheArtifactCache", () => {
       const fetcher = vi.fn().mockResolvedValue(pk);
 
       // First call — fetches and stores
-      const result1 = await cache.getPublicKey(fetcher);
+      const result1 = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result1).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce();
 
       // Second call — returns from cache, no fetch
-      const result2 = await cache.getPublicKey(fetcher);
+      const result2 = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result2).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce(); // Still once
     });
@@ -44,7 +44,7 @@ describe("FheArtifactCache", () => {
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
-      await cache1.getPublicKey(fetcher);
+      await cache1.fetchFheEncryptionKeyBytes(fetcher);
       expect(fetcher).toHaveBeenCalledOnce();
 
       // New cache instance, same storage — should restore without fetching
@@ -54,7 +54,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
       });
       const fetcher2 = vi.fn().mockResolvedValue(null);
-      const result = await cache2.getPublicKey(fetcher2);
+      const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
 
       expect(result).toEqual(pk);
       expect(fetcher2).not.toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe("FheArtifactCache", () => {
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
       });
-      await cache1.getPublicKey(vi.fn().mockResolvedValue(pk1));
+      await cache1.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk1));
 
       const cache2 = new FheArtifactCache({
         storage,
@@ -77,7 +77,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
       });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
-      const result = await cache2.getPublicKey(fetcher2);
+      const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
 
       // Different chain → must fetch again
       expect(fetcher2).toHaveBeenCalledOnce();
@@ -92,12 +92,12 @@ describe("FheArtifactCache", () => {
       });
       const fetcher = vi.fn().mockResolvedValue(null);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toBeNull();
 
       // Next call should try again since null wasn't cached
       const fetcher2 = vi.fn().mockResolvedValue(null);
-      await cache.getPublicKey(fetcher2);
+      await cache.fetchFheEncryptionKeyBytes(fetcher2);
       expect(fetcher2).toHaveBeenCalledOnce();
     });
 
@@ -116,7 +116,7 @@ describe("FheArtifactCache", () => {
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce();
     });
@@ -136,7 +136,7 @@ describe("FheArtifactCache", () => {
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toEqual(pk);
     });
 
@@ -160,7 +160,7 @@ describe("FheArtifactCache", () => {
         logger,
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
-      await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("Failed to read public key"),
@@ -176,7 +176,7 @@ describe("FheArtifactCache", () => {
       });
       const fetcher = vi.fn().mockRejectedValue(new Error("network down"));
 
-      await expect(cache.getPublicKey(fetcher)).rejects.toThrow("network down");
+      await expect(cache.fetchFheEncryptionKeyBytes(fetcher)).rejects.toThrow("network down");
     });
 
     test("deletes corrupt cache entry and falls back to fetcher", async () => {
@@ -189,7 +189,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
-      const result = await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
+      const result = await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
 
       expect(result).toEqual(pk);
       // Corrupt entry should have been deleted
@@ -466,7 +466,7 @@ describe("FheArtifactCache", () => {
       // Prime the in-memory params map so revalidation discovers bits=2048
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
       // Also prime the public key
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       return cache;
     }
 
@@ -652,7 +652,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: RELAYER_URL,
         ttl: 0,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       // Even with fresh timestamps, TTL=0 should always proceed
@@ -684,7 +684,7 @@ describe("FheArtifactCache", () => {
         ttl: CACHE_TTL,
         logger,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network failure"));
@@ -757,7 +757,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: RELAYER_URL,
         ttl: CACHE_TTL,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       // PK artifact changed (200)
@@ -788,7 +788,7 @@ describe("FheArtifactCache", () => {
       });
       // Prime only PK (not params) — simulates a cold start where
       // getPublicParams hasn't been called yet
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
 
       // CRS artifact changed (200)
       mockFetch({
@@ -928,7 +928,7 @@ describe("FheArtifactCache", () => {
   // ── Concurrent access ─────────────────────────────────────────
 
   describe("concurrent access", () => {
-    test("deduplicates concurrent getPublicKey calls", async () => {
+    test("deduplicates concurrent fetchFheEncryptionKeyBytes calls", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
@@ -943,8 +943,8 @@ describe("FheArtifactCache", () => {
       );
 
       // Fire two concurrent calls
-      const p1 = cache.getPublicKey(fetcher);
-      const p2 = cache.getPublicKey(fetcher);
+      const p1 = cache.fetchFheEncryptionKeyBytes(fetcher);
+      const p2 = cache.fetchFheEncryptionKeyBytes(fetcher);
 
       resolveDeferred(pk);
       const [r1, r2] = await Promise.all([p1, p2]);
@@ -998,7 +998,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
         ttl: 60,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
 
       // Use a deferred promise for the manifest fetch so we can control timing
       let resolveManifest!: (v: unknown) => void;

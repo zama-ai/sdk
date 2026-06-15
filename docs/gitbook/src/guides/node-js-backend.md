@@ -63,7 +63,7 @@ For servers handling multiple users concurrently, use `asyncLocalStorage` instea
 
 ### 4. Isolate per-request state with `asyncLocalStorage`
 
-On a server where each HTTP request belongs to a different user, you need per-request FHE keypair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
+On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -90,7 +90,7 @@ app.post("/api/transfer", (req, res) => {
 });
 ```
 
-Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent requests never share FHE keypair state.
+Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent requests never share transport key pair state.
 
 ### 5. Create tokens and operate
 

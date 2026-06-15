@@ -11,7 +11,6 @@ import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
@@ -37,9 +36,10 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     // Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
     // Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
-    getPublicKey(): Promise<PublicKeyData | null>;
+    // Warning: (ae-forgotten-export) The symbol "FheEncryptionKey" needs to be exported by the entry point index.d.ts
+    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
+    // Warning: (ae-forgotten-export) The symbol "TransportKeyPair" needs to be exported by the entry point index.d.ts
+    generateTransportKeyPair(): Promise<TransportKeyPair>;
     // Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)

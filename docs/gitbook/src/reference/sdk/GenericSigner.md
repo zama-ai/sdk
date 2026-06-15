@@ -156,7 +156,7 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK clears that previous account's keypair, permits, and decrypt cache.
+When `previous` is present, the SDK clears that previous account's transport key pair, permits, and decrypt cache.
 
 ## Related
 

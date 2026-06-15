@@ -1,6 +1,5 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/node";
@@ -11,6 +10,7 @@ import type { GenericStorage } from "../types";
 import type { NodeWorkerPool } from "../worker/worker.node-pool";
 import type { GenericLogger } from "../worker/worker.types";
 import type { FheChain } from "../chains/types";
+import type { TransportKeyPair } from "../credentials/types";
 import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -21,8 +21,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
@@ -100,7 +100,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     this.terminate();
   }
 
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateTransportKeyPair(): Promise<TransportKeyPair> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const result = await this.#pool.generateKeypair({ chainId });
@@ -204,12 +204,12 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     });
   }
 
-  async getPublicKey(): Promise<PublicKeyData | null> {
+  async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const artifactCache = this.#getArtifactCache();
     if (artifactCache) {
-      return artifactCache.getPublicKey(
+      return artifactCache.fetchFheEncryptionKeyBytes(
         async () => (await this.#pool.getPublicKey({ chainId })).result,
       );
     }

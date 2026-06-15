@@ -94,7 +94,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders(() => useZamaSDK(), { relayer });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 
@@ -105,7 +105,7 @@ describe("ZamaProvider & useZamaSDK", () => {
   }) => {
     const { Wrapper } = createWrapper({ signer, relayer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
-    vi.mocked(relayer.generateKeypair).mockClear();
+    vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
@@ -121,7 +121,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 

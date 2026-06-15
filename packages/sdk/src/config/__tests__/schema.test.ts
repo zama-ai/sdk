@@ -23,12 +23,12 @@ describe("createConfig validation", () => {
       chains: [hardhat],
       relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
       provider,
-      keypairTTL: 86400,
+      transportKeyPairTTL: 86400,
       permitTTL: 7,
       registryTTL: 60,
     });
 
-    expect(config.keypairTTL).toBe(86400);
+    expect(config.transportKeyPairTTL).toBe(86400);
     expect(config.permitTTL).toBe(7);
     expect(config.registryTTL).toBe(60);
   });
@@ -39,7 +39,7 @@ describe("createConfig validation", () => {
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        keypairTTL: 0,
+        transportKeyPairTTL: 0,
       }),
     ).toThrow(ConfigurationError);
     expect(() =>
@@ -47,28 +47,28 @@ describe("createConfig validation", () => {
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        keypairTTL: 0,
+        transportKeyPairTTL: 0,
       }),
-    ).toThrow("keypairTTL must be a positive integer number of seconds");
+    ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
   });
 
-  test("rejects invalid keypairTTL even without a signer", ({ relayer, provider }) => {
+  test("rejects invalid transportKeyPairTTL even without a signer", ({ relayer, provider }) => {
     expect(() =>
       createConfig({
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        keypairTTL: 0,
+        transportKeyPairTTL: 0,
       }),
-    ).toThrow("keypairTTL must be a positive integer number of seconds");
+    ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
     expect(() =>
       createConfig({
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        keypairTTL: NaN,
+        transportKeyPairTTL: NaN,
       }),
-    ).toThrow("keypairTTL must be a positive integer number of seconds");
+    ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
   });
 
   test("rejects invalid web transport numeric options at the factory boundary", () => {

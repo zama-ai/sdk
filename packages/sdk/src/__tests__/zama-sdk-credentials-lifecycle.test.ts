@@ -40,7 +40,7 @@ describe("ZamaSDK credentials lifecycle", () => {
   test("constructing the SDK does not warm keypairs", ({ createSDK, relayer }) => {
     createSDK();
 
-    expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
   });
 
   test("re-signs after permitTTL elapses but reuses the FHE keypair", async ({
@@ -53,7 +53,7 @@ describe("ZamaSDK credentials lifecycle", () => {
 
     await sdk.permits.grantPermit([CONTRACT_A]);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
 
     // Advance just past the permit lifetime — keypair (default 30d) is still alive.
     vi.advanceTimersByTime(PERMIT_DURATION_MS + 1);
@@ -63,7 +63,7 @@ describe("ZamaSDK credentials lifecycle", () => {
     // Permit expired → fresh signature requested.
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
     // Keypair survived the permit expiry — the relayer was NOT asked to mint a new one.
-    expect(relayer.generateKeypair).toHaveBeenCalledOnce();
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
   });
 
   test("does not re-sign within permitTTL", async ({ fakeTime: _fakeTime, createSDK, signer }) => {
@@ -206,7 +206,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       expect(signerB.signTypedData).not.toHaveBeenCalled();
       // Likewise the keypair must not have been regenerated; SDK B's relayer
       // mock is independent so a regeneration would appear here.
-      expect(relayerB.generateKeypair).not.toHaveBeenCalled();
+      expect(relayerB.generateTransportKeyPair).not.toHaveBeenCalled();
     });
   });
 });

@@ -92,5 +92,5 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 - [`useHasPermit`](/reference/react/useHasPermit) -- check whether stored permits cover contracts
 - [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits for specific contracts
-- [`useClearCredentials`](/reference/react/useClearCredentials) -- wipe the keypair and all permits
+- [`useClearCredentials`](/reference/react/useClearCredentials) -- wipe the transport key pair and all permits
 - [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration

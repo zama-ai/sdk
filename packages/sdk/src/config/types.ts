@@ -65,9 +65,14 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   storage?: GenericStorage;
   /** Optional dedicated storage for permits. Defaults to `storage`. */
   permitStorage?: GenericStorage;
-  /** ML-KEM keypair TTL in seconds. Default: 2592000 (30 days). */
+  /** ML-KEM transport key pair TTL in seconds. Default: 2592000 (30 days). */
+  transportKeyPairTTL?: number;
+  /**
+   * @deprecated Renamed to {@link transportKeyPairTTL} to match the FHEVM glossary. Still accepted
+   *   as a back-compat alias; will be removed before the 3.x stable release.
+   */
   keypairTTL?: number;
-  /** Permit lifetime in days. Default: 30. Clamped to `keypairTTL / 86400`. */
+  /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
@@ -101,7 +106,7 @@ export type ZamaConfig = {
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly permitStorage: GenericStorage;
-  readonly keypairTTL: number;
+  readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;

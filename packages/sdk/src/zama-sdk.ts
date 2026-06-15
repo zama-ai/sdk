@@ -85,7 +85,7 @@ export class ZamaSDK {
       this.#credentialService = new CredentialService({
         relayer: this.relayer,
         signer: config.signer,
-        keypairTTL: config.keypairTTL,
+        transportKeyPairTTL: config.transportKeyPairTTL,
         permitTTL: config.permitTTL,
         storage: this.storage,
         permitStorage: config.permitStorage,

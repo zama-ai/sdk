@@ -7,17 +7,17 @@ import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 
 /**
- * Public namespace for permit and keypair management.
+ * Public namespace for permit and transport-key-pair management.
  *
  * Exposed as `sdk.permits`. Owns the SDK-level guards (chain alignment, empty-array
  * short-circuit, decrypt-cache invalidation) and delegates the actual work to the
  * internal {@link CredentialService}.
  *
  * The namespace is named `permits` because the user-facing concept is the signed-permit
- * store. The FHE keypair is invisible plumbing — there is no `getKeypair()` surfaced;
- * the keypair exists to sign permits and is created automatically when needed.
- * {@link clear} wipes both the permit store and the keypair (permits cascade-delete
- * with the keypair).
+ * store. The transport key pair is invisible plumbing — there is no `getTransportKeyPair()`
+ * surfaced; the key pair exists to sign permits and is created automatically when needed.
+ * {@link clear} wipes both the permit store and the transport key pair (permits
+ * cascade-delete with the key pair).
  */
 export class Permits {
   readonly #signer: GenericSigner | undefined;
@@ -106,19 +106,19 @@ export class Permits {
   }
 
   /**
-   * Best-effort keypair prefetch for the connected signer.
+   * Best-effort transport-key-pair prefetch for the connected signer.
    *
    * Optional latency optimization: decrypt and permit flows remain correct
-   * without it because they lazily create the keypair when needed.
+   * without it because they lazily create the transport key pair when needed.
    *
    * Silent no-op when no signer is configured or no wallet account is
-   * available. The keypair is generated through the relayer dispatcher's
+   * available. The transport key pair is generated through the relayer dispatcher's
    * currently active chain — see {@link LifecycleService}, which calls
    * `switchChain` before fanning the wallet-account change out to listeners,
    * so any downstream caller (including React adapters) observes the
    * dispatcher on the wallet chain by the time it invokes warmup.
    */
-  async warmKeypair(): Promise<void> {
+  async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
     if (!service) {
       return;
@@ -127,7 +127,7 @@ export class Permits {
     if (!account) {
       return;
     }
-    await service.warmKeypair(account.address);
+    await service.warmTransportKeyPair(account.address);
   }
 
   /**

@@ -88,14 +88,14 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 | Method                                  | Description                                                         |
 | --------------------------------------- | ------------------------------------------------------------------- |
-| `generateKeypair()`                     | Returns a random mock keypair.                                      |
+| `generateTransportKeyPair()`            | Returns a random mock transport key pair.                           |
 | `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
 | `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
 | `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
 | `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
 | `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
 | `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
-| `getPublicKey()`                        | Returns a mock public key.                                          |
+| `fetchFheEncryptionKeyBytes()`          | Returns a mock FHE encryption key.                                  |
 | `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
 | `terminate()`                           | No-op — no resources to release.                                    |
 

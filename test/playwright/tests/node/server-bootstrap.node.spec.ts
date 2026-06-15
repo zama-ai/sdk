@@ -28,7 +28,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   expect(aclAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
   // 3. Verify FHE worker pool initializes — generate a keypair
-  const keypair = await sdk.relayer.generateKeypair();
+  const keypair = await sdk.relayer.generateTransportKeyPair();
   expect(keypair.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 
   // 4. Verify EIP-712 generation works
@@ -67,7 +67,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   sdk.terminate();
 
   // 9. Post-terminate,requests restart the pool
-  expect(await sdk.relayer.generateKeypair()).toMatchObject({
+  expect(await sdk.relayer.generateTransportKeyPair()).toMatchObject({
     privateKey: expect.stringMatching(/0x/),
     publicKey: expect.stringMatching(/0x/),
   });

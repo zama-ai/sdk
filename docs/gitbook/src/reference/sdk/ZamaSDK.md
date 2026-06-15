@@ -106,19 +106,19 @@ Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). 
 
 `GenericStorage | undefined`
 
-Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
+Persists the encrypted transport key pair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
 ### permitStorage
 
 `GenericStorage | undefined`
 
-Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for keypair, memory for permits) for high-security flows.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for transport key pair, memory for permits) for high-security flows.
 
-### keypairTTL
+### transportKeyPairTTL
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+Transport key pair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the key pair.
 
 ### permitTTL
 
@@ -378,7 +378,7 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 
 `(contracts?: Address[]) => Promise<void>`
 
-Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The transport key pair is not affected.
 
 ```ts
 await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
@@ -389,7 +389,7 @@ await sdk.permits.revokePermits(); // all permits, all chains
 
 `() => Promise<void>`
 
-Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
+Wipe the transport key pair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
 await sdk.permits.clear();

@@ -104,8 +104,8 @@ const cache = new FheArtifactCache({
   ttl: 86_400,
 });
 
-// Fetch public key (with cache-through)
-const pk = await cache.getPublicKey(async () => {
+// Fetch FHE encryption key bytes (with cache-through)
+const pk = await cache.fetchFheEncryptionKeyBytes(async () => {
   // Your network fetcher — called only on cache miss
   return { publicKeyId: "abc", publicKey: new Uint8Array([...]) };
 });
@@ -141,13 +141,13 @@ new FheArtifactCache(opts);
 
 ## Methods
 
-### getPublicKey
+### fetchFheEncryptionKeyBytes
 
 ```ts
-cache.getPublicKey(fetcher): Promise<PublicKeyResult>
+cache.fetchFheEncryptionKeyBytes(fetcher): Promise<PublicKeyResult>
 ```
 
-Returns the cached FHE public key, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
+Returns the cached FHE encryption key bytes, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
 
 **Parameters:**
 

@@ -127,7 +127,7 @@ describe("RelayerWeb", () => {
         privateKey: "sk",
       });
 
-      await relayer.generateKeypair();
+      await relayer.generateTransportKeyPair();
       relayer.terminate();
 
       expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe("RelayerWeb", () => {
         publicKey: "pk",
         privateKey: "sk",
       });
-      await relayer.generateKeypair();
+      await relayer.generateTransportKeyPair();
 
       relayer[Symbol.dispose]();
       expect(mockWorkerClient.terminate).not.toHaveBeenCalled();
@@ -219,7 +219,7 @@ describe("RelayerWeb", () => {
         privateKey: "priv",
       });
 
-      const result = await relayer.generateKeypair();
+      const result = await relayer.generateTransportKeyPair();
 
       expect(result).toEqual({ publicKey: "pub", privateKey: "priv" });
       expect(mockWorkerClient.generateKeypair).toHaveBeenCalledOnce();
@@ -368,7 +368,7 @@ describe("RelayerWeb", () => {
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
 
       expect(result).toEqual(pk);
     });
@@ -377,7 +377,7 @@ describe("RelayerWeb", () => {
       const relayer = createWebRelayer();
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
 
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
 
       expect(result).toBeNull();
     });
@@ -408,12 +408,12 @@ describe("RelayerWeb", () => {
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createWebRelayer({ fheArtifactStorage: storage });
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
       expect(result).toEqual(pk);
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
 
       // Second call — served from cache, worker not called again
-      const result2 = await relayer.getPublicKey();
+      const result2 = await relayer.fetchFheEncryptionKeyBytes();
       expect(result2).toEqual(pk);
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
     });
@@ -443,14 +443,14 @@ describe("RelayerWeb", () => {
 
       // First instance — fetches and persists
       const relayer1 = createWebRelayer({ fheArtifactStorage: storage });
-      await relayer1.getPublicKey();
+      await relayer1.fetchFheEncryptionKeyBytes();
       relayer1.terminate();
 
       // Second instance — restores from storage without worker call
       resetMocks();
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: null });
       const relayer2 = createWebRelayer({ fheArtifactStorage: storage });
-      const result = await relayer2.getPublicKey();
+      const result = await relayer2.fetchFheEncryptionKeyBytes();
       expect(result).toEqual(pk);
       expect(mockWorkerClient.getPublicKey).not.toHaveBeenCalled();
     });
@@ -460,8 +460,8 @@ describe("RelayerWeb", () => {
       mockWorkerClient.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createWebRelayer();
-      await relayer.getPublicKey();
-      await relayer.getPublicKey();
+      await relayer.fetchFheEncryptionKeyBytes();
+      await relayer.fetchFheEncryptionKeyBytes();
 
       // Caching is always on — worker called only once
       expect(mockWorkerClient.getPublicKey).toHaveBeenCalledOnce();
@@ -488,7 +488,7 @@ describe("RelayerNode", () => {
         privateKey: "sk",
       });
 
-      await relayer.generateKeypair();
+      await relayer.generateTransportKeyPair();
       relayer.terminate();
 
       expect(mockPool.terminate).not.toHaveBeenCalled();
@@ -505,7 +505,7 @@ describe("RelayerNode", () => {
         publicKey: "pk",
         privateKey: "sk",
       });
-      await relayer.generateKeypair();
+      await relayer.generateTransportKeyPair();
 
       relayer[Symbol.dispose]();
       expect(mockPool.terminate).not.toHaveBeenCalled();
@@ -524,7 +524,7 @@ describe("RelayerNode", () => {
         privateKey: "priv",
       });
 
-      const result = await relayer.generateKeypair();
+      const result = await relayer.generateTransportKeyPair();
 
       expect(result).toEqual({ publicKey: "pub", privateKey: "priv" });
       expect(mockPool.generateKeypair).toHaveBeenCalledOnce();
@@ -673,7 +673,7 @@ describe("RelayerNode", () => {
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
 
       expect(result).toEqual(pk);
     });
@@ -682,7 +682,7 @@ describe("RelayerNode", () => {
       const relayer = createNodeRelayer();
       mockPool.getPublicKey.mockResolvedValue({ result: null });
 
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
 
       expect(result).toBeNull();
     });
@@ -713,12 +713,12 @@ describe("RelayerNode", () => {
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createNodeRelayer({ fheArtifactStorage: storage });
-      const result = await relayer.getPublicKey();
+      const result = await relayer.fetchFheEncryptionKeyBytes();
       expect(result).toEqual(pk);
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
 
       // Second call — served from cache
-      const result2 = await relayer.getPublicKey();
+      const result2 = await relayer.fetchFheEncryptionKeyBytes();
       expect(result2).toEqual(pk);
       expect(mockPool.getPublicKey).toHaveBeenCalledOnce();
     });
@@ -746,8 +746,8 @@ describe("RelayerNode", () => {
       mockPool.getPublicKey.mockResolvedValue({ result: pk });
 
       const relayer = createNodeRelayer(); // no storage
-      await relayer.getPublicKey();
-      await relayer.getPublicKey();
+      await relayer.fetchFheEncryptionKeyBytes();
+      await relayer.fetchFheEncryptionKeyBytes();
 
       expect(mockPool.getPublicKey).toHaveBeenCalledTimes(1);
     });

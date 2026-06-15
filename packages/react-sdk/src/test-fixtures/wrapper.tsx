@@ -47,7 +47,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         signer,
         storage,
         permitStorage: storage,
-        keypairTTL: 2592000,
+        transportKeyPairTTL: 2592000,
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,

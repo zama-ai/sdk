@@ -5,7 +5,7 @@ description: Browser relayer that runs FHE operations in a Web Worker via WASM.
 
 # RelayerWeb
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and keypair management for browser applications.
+Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
 
 ## Import
 

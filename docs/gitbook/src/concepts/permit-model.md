@@ -5,7 +5,7 @@ description: How EIP-712 signed permits authorize FHE decryption for specific co
 
 # Permit model
 
-Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](/concepts/security-model#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
+Decrypting an on-chain FHE ciphertext requires two things: a transport key pair (generated once, stored persistently — see [Security Model](/concepts/security-model#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
 
 ## What is a permit
 
@@ -55,7 +55,7 @@ The relayer verifies this signature before re-encrypting any ciphertext. Without
 1. A permit's duration elapses (default: 30 days, configurable via `permitTTL`).
 2. Permit is pruned from storage on next access.
 3. The next decrypt for that contract set prompts a single wallet re-sign.
-4. The FHE keypair is not affected.
+4. The transport key pair is not affected.
 
 {% hint style="info" %}
 Each permit records its start timestamp and duration at creation time. Changing `permitTTL` between sessions does not retroactively alter existing permits — they use their original duration.
@@ -84,9 +84,9 @@ Batch all contract addresses you expect to need into a single `permits.grantPerm
 Permits can be removed in two ways:
 
 - **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The transport key pair is not affected.
 
-For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#permits-revokepermits) for the full API.
+For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#permits-revokepermits) for the full API.
 
 ## Wallet account changes
 
@@ -94,7 +94,7 @@ The SDK automatically manages permits when the wallet state changes:
 
 | Event                 | Effect on permits                                                                 |
 | --------------------- | --------------------------------------------------------------------------------- |
-| **Disconnect / lock** | All permits and keypair cleared for the previous account                          |
+| **Disconnect / lock** | All permits and transport key pair cleared for the previous account               |
 | **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
 | **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
 
@@ -102,6 +102,6 @@ See [ZamaSDK.onWalletAccountChange](/reference/sdk/ZamaSDK#onwalletaccountchange
 
 ## Related
 
-- [Security Model](/concepts/security-model) — keypair storage, threat model, and trust assumptions
-- [Configuration](/guides/configuration#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
+- [Security Model](/concepts/security-model) — transport key pair storage, threat model, and trust assumptions
+- [Configuration](/guides/configuration#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](/reference/sdk/ZamaSDK) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API

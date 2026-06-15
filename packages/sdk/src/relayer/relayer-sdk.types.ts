@@ -131,11 +131,17 @@ export type PublicDecryptResult = PublicDecryptResults;
  */
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
-/** FHE encryption key */
-export interface PublicKeyData {
+/** FHE encryption key — the network's TFHE public key used to encrypt inputs for confidential contracts. */
+export interface FheEncryptionKey {
   publicKeyId: string;
   publicKey: Uint8Array;
 }
+
+/**
+ * @deprecated Renamed to {@link FheEncryptionKey} to match the FHEVM glossary. The old name is kept
+ *   as a public-API back-compat alias and will be removed before the 3.x stable release.
+ */
+export type PublicKeyData = FheEncryptionKey;
 
 /**
  * TFHE public parameters

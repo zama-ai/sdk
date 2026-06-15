@@ -5942,7 +5942,7 @@ export function createWalletAccountStore(initial?: WalletAccount): MutableWallet
 // @public
 export interface CredentialBundle {
     // (undocumented)
-    readonly keypair: StoredKeypair;
+    readonly keypair: StoredTransportKeyPair;
     // (undocumented)
     readonly permits: readonly Permission[];
 }
@@ -6494,6 +6494,14 @@ export interface FheChain<TId extends number = number> {
     readonly verifyingContractAddressDecryption: Address;
     // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
+}
+
+// @public
+export interface FheEncryptionKey {
+    // (undocumented)
+    publicKey: Uint8Array;
+    // (undocumented)
+    publicKeyId: string;
 }
 
 export { FheTypeName }
@@ -9793,8 +9801,14 @@ export class InsufficientERC20BalanceError extends ZamaError {
     readonly token: Address;
 }
 
+// @public @deprecated (undocumented)
+export const InvalidKeypairError: typeof InvalidTransportKeyPairError;
+
+// @public (undocumented)
+export type InvalidKeypairError = InvalidTransportKeyPairError;
+
 // @public
-export class InvalidKeypairError extends ZamaError {
+export class InvalidTransportKeyPairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -11437,18 +11451,14 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 // @public
 export function isZeroHandle(encryptedValue: string): boolean;
 
-// @public
-export interface Keypair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
+// @public @deprecated (undocumented)
+export type Keypair = TransportKeyPair;
 
-// @public
-export class KeypairExpiredError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
+// @public @deprecated (undocumented)
+export const KeypairExpiredError: typeof TransportKeyPairExpiredError;
+
+// @public (undocumented)
+export type KeypairExpiredError = TransportKeyPairExpiredError;
 
 export { KeypairType }
 
@@ -11701,19 +11711,14 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    warmKeypair(): Promise<void>;
+    warmTransportKeyPair(): Promise<void>;
 }
 
 // @public
 export type PublicDecryptResult = PublicDecryptResults;
 
-// @public
-export interface PublicKeyData {
-    // (undocumented)
-    publicKey: Uint8Array;
-    // (undocumented)
-    publicKeyId: string;
-}
+// @public @deprecated (undocumented)
+export type PublicKeyData = FheEncryptionKey;
 
 // @public
 export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
@@ -13088,11 +13093,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
+    // (undocumented)
+    generateTransportKeyPair(): Promise<TransportKeyPair>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
-    // (undocumented)
-    getPublicKey(): Promise<PublicKeyData | null>;
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
@@ -14640,10 +14645,13 @@ export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// Warning: (ae-forgotten-export) The symbol "StoredKeypairSchema" needs to be exported by the entry point index.d.ts
+// @public @deprecated (undocumented)
+export type StoredKeypair = StoredTransportKeyPair;
+
+// Warning: (ae-forgotten-export) The symbol "StoredTransportKeyPairSchema" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
+export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -14966,6 +14974,19 @@ export interface TransferSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
+}
+
+// @public
+export interface TransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
+
+// @public
+export class TransportKeyPairExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -19817,7 +19838,7 @@ export type ZamaConfig = {
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
     readonly permitStorage: GenericStorage;
-    readonly keypairTTL: number;
+    readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -19828,6 +19849,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    // @deprecated (undocumented)
     keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
@@ -19835,6 +19857,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     registryTTL?: number;
     relayers: { [K in TChains[number]["id"]]: RelayerConfig };
     storage?: GenericStorage;
+    transportKeyPairTTL?: number;
 }
 
 // @public
@@ -19881,9 +19904,9 @@ export const ZamaErrorCode: {
     readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
     readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
     readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
-    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
-    readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
-    readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
+    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** Transport key pair has expired and needs regeneration. */
+    readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected transport key pair (stale, expired, or malformed). */
+    readonly InvalidTransportKeyPair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
@@ -19980,10 +20003,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-Ck5s9IZw.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Ck5s9IZw.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Ck5s9IZw.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-Ck5s9IZw.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BZDkBQKC.d.ts:19541:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BZDkBQKC.d.ts:19670:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BZDkBQKC.d.ts:19772:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-BZDkBQKC.d.ts:19773:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

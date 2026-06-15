@@ -893,7 +893,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Keypair expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Transport key pair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 
@@ -1722,14 +1722,14 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 
 ### 5. (Optional) Configure TTLs and event listener
 
-You can tune how long the FHE keypair and permits remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  keypairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
+  transportKeyPairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
   permitTTL: 7, // 7 days (default: 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
@@ -1741,13 +1741,13 @@ When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thr
 
 ### 6. (Optional) Choose a storage backend
 
-The FHE keypair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
+The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
 
-| Storage             | When to use                                         |
-| ------------------- | --------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across reloads and sessions |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                  |
-| `asyncLocalStorage` | Node.js servers — isolates FHE keypair per request  |
+| Storage             | When to use                                               |
+| ------------------- | --------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                        |
+| `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
@@ -2853,8 +2853,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `EncryptionFailedError`                | `ENCRYPTION_FAILED`                 | FHE encryption failed in the Web Worker                                        |
 | `DecryptionFailedError`                | `DECRYPTION_FAILED`                 | FHE decryption failed                                                          |
 | `TransactionRevertedError`             | `TRANSACTION_REVERTED`              | On-chain transaction reverted (includes failed ERC-20 approvals during shield) |
-| `InvalidKeypairError`                  | `INVALID_KEYPAIR`                   | Relayer rejected FHE keypair (stale or malformed)                              |
-| `KeypairExpiredError`                  | `KEYPAIR_EXPIRED`                   | FHE keypair expired -- user needs to re-sign                                   |
+| `InvalidTransportKeyPairError`         | `INVALID_KEYPAIR`                   | Relayer rejected transport key pair (stale or malformed)                       |
+| `TransportKeyPairExpiredError`         | `KEYPAIR_EXPIRED`                   | Transport key pair expired -- user needs to re-sign                            |
 | `NoCiphertextError`                    | `NO_CIPHERTEXT`                     | No encrypted balance exists for this account                                   |
 | `RelayerRequestFailedError`            | `RELAYER_REQUEST_FAILED`            | Relayer HTTP request failed (check `.statusCode`)                              |
 | `ConfigurationError`                   | `CONFIGURATION`                     | Invalid SDK config or FHE worker failed to initialize                          |
@@ -2932,8 +2932,8 @@ Here is a quick reference for the most common errors and how to respond:
 | `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                                      |
 | `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                                             |
 | `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                       |
-| `InvalidKeypairError`                  | The FHE keypair is stale. Clear credentials and prompt for a fresh signature.                                                           |
-| `KeypairExpiredError`                  | Same as above -- the keypair TTL has elapsed.                                                                                           |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                    |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                    |
 | `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`.                              |
 | `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                              |
@@ -3084,7 +3084,7 @@ For servers handling multiple users concurrently, use `asyncLocalStorage` instea
 
 ### 4. Isolate per-request state with `asyncLocalStorage`
 
-On a server where each HTTP request belongs to a different user, you need per-request FHE keypair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
+On a server where each HTTP request belongs to a different user, you need per-request transport key pair isolation. `asyncLocalStorage` wraps Node.js [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html) to scope storage to the current async context.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -3111,7 +3111,7 @@ app.post("/api/transfer", (req, res) => {
 });
 ```
 
-Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent requests never share FHE keypair state.
+Each call to `asyncLocalStorage.run()` creates a fresh storage scope. Concurrent requests never share transport key pair state.
 
 ### 5. Create tokens and operate
 
@@ -3230,7 +3230,7 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 ### 3. Configure the SDK with both storage backends
 
-Pass `indexedDBStorage` for the FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for permits (ephemeral, survives service worker restarts):
+Pass `indexedDBStorage` for the transport key pair (persistent, survives browser close) and `chromeSessionStorage` for permits (ephemeral, survives service worker restarts):
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3246,7 +3246,7 @@ const config = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  storage: indexedDBStorage, // encrypted keypair — persistent
+  storage: indexedDBStorage, // encrypted transport key pair — persistent
   permitStorage: chromeSessionStorage, // signed permits — ephemeral
   relayers: { [mySepolia.id]: web() },
 });
@@ -3284,15 +3284,15 @@ With `chromeSessionStorage` in place, you get three things:
 When the user closes Chrome entirely:
 
 1. `chrome.storage.session` is cleared by the browser -- signed permits are gone
-2. `indexedDB` persists -- the FHE keypair survives
-3. On next launch, the user re-signs once to create fresh permits for their existing keypair
+2. `indexedDB` persists -- the transport key pair survives
+3. On next launch, the user re-signs once to create fresh permits for their existing transport key pair
 
 This mirrors the default browser SDK behavior (in-memory permits lost on tab close) but extends the permit lifetime to cover service worker restarts within the same browser session.
 
 ## Next steps
 
 - [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
-- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- how the keypair vault, signed permits, and storage interact
+- [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- how the transport key pair vault, signed permits, and storage interact
 
 ## Local development
 
@@ -3430,7 +3430,7 @@ The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- tha
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted keypairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
 
 This means:
 
@@ -3720,7 +3720,7 @@ This is a distinct concern from transfer approval: approving an operator for tra
 
 # Delegated decryption
 
-Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own FHE keypair and a delegated EIP-712 flow to prove they have permission.
+Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own transport key pair and a delegated EIP-712 flow to prove they have permission.
 
 Common use cases:
 
@@ -4337,12 +4337,12 @@ The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet 
 
 
 > [!INFO]
-> **Decryption fails with "invalid keypair" or "expired keypair"?** The FHE keypair has a TTL (default: 30 days). If the keypair was generated more than `keypairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh keypair and permits.
+> **Decryption fails with an invalid or expired transport key pair?** The transport key pair has a TTL (default: 30 days). If the key pair was generated more than `transportKeyPairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh transport key pair and permits.
 
 
 ### 4. Decrypt with usePublicDecrypt (advanced)
 
-For values marked as publicly decryptable on-chain, no keypair or signature is needed:
+For values marked as publicly decryptable on-chain, no transport key pair or signature is needed:
 
 {% code title="PublicDecryptExample.tsx" %}
 
@@ -4507,19 +4507,19 @@ Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). 
 
 `GenericStorage | undefined`
 
-Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
+Persists the encrypted transport key pair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
 ### permitStorage
 
 `GenericStorage | undefined`
 
-Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for keypair, memory for permits) for high-security flows.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for transport key pair, memory for permits) for high-security flows.
 
-### keypairTTL
+### transportKeyPairTTL
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+Transport key pair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the key pair.
 
 ### permitTTL
 
@@ -4776,7 +4776,7 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 
 `(contracts?: Address[]) => Promise<void>`
 
-Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The transport key pair is not affected.
 
 ```ts
 await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
@@ -4787,7 +4787,7 @@ await sdk.permits.revokePermits(); // all permits, all chains
 
 `() => Promise<void>`
 
-Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
+Wipe the transport key pair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
 await sdk.permits.clear();
@@ -5487,7 +5487,7 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 
 # RelayerWeb
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and keypair management for browser applications.
+Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
 
 ## Import
 
@@ -5758,14 +5758,14 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 | Method                                  | Description                                                         |
 | --------------------------------------- | ------------------------------------------------------------------- |
-| `generateKeypair()`                     | Returns a random mock keypair.                                      |
+| `generateTransportKeyPair()`            | Returns a random mock transport key pair.                           |
 | `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
 | `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
 | `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
 | `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
 | `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
 | `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
-| `getPublicKey()`                        | Returns a mock public key.                                          |
+| `fetchFheEncryptionKeyBytes()`          | Returns a mock FHE encryption key.                                  |
 | `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
 | `terminate()`                           | No-op — no resources to release.                                    |
 
@@ -6051,7 +6051,7 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK clears that previous account's keypair, permits, and decrypt cache.
+When `previous` is present, the SDK clears that previous account's transport key pair, permits, and decrypt cache.
 
 ## Related
 
@@ -6407,7 +6407,7 @@ All methods are inherited from [GenericSigner](https://raw.githubusercontent.com
 
 # GenericStorage
 
-Interface for async key-value storage used to persist FHE keypairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
+Interface for async key-value storage used to persist transport key pairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
 
 ## Import
 
@@ -6511,7 +6511,7 @@ const sdk = new ZamaSDK(config); // config from createConfig()
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates FHE keypairs across concurrent requests on a server.
+Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates transport key pairs across concurrent requests on a server.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
@@ -6579,8 +6579,8 @@ import {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
-  InvalidKeypairError,
-  KeypairExpiredError,
+  InvalidTransportKeyPairError,
+  TransportKeyPairExpiredError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
@@ -6638,8 +6638,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                        |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                          |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield) |
-| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed)                              |
-| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign                                        |
+| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                       |
+| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                 |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                          |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                    |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                   |
@@ -6695,7 +6695,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `SIGNING_REJECTED`
 
-Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (keypair generation or session signing).
+Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing).
 
 ```ts
 try {
@@ -6741,7 +6741,7 @@ matchZamaError(error, {
 
 **Code:** `DECRYPTION_FAILED`
 
-FHE decryption failed. Can occur after an interrupted unshield or when the keypair state is corrupted.
+FHE decryption failed. Can occur after an interrupted unshield or when the transport key pair state is corrupted.
 
 ```ts
 matchZamaError(error, {
@@ -6749,7 +6749,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
 
 ### TransactionRevertedError
 
@@ -6765,36 +6765,36 @@ matchZamaError(error, {
 
 **How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
 
-### InvalidKeypairError
+### InvalidTransportKeyPairError
 
 **Code:** `INVALID_KEYPAIR`
 
-The relayer rejected the FHE keypair. This happens when the keypair is malformed or was generated for a different chain.
+The relayer rejected the transport key pair. This happens when the key pair is malformed or was generated for a different chain.
 
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
     sdk.permits.clear();
-    showPrompt("Keypair rejected — sign again to continue");
+    showPrompt("Transport key pair rejected — sign again to continue");
   },
 });
 ```
 
-**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
+**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh transport key pair on the next operation.
 
-### KeypairExpiredError
+### TransportKeyPairExpiredError
 
 **Code:** `KEYPAIR_EXPIRED`
 
-The FHE keypair exceeded its TTL (default: 24 hours). The user needs to sign again to generate a new one.
+The transport key pair exceeded its TTL (default: 24 hours). The user needs to sign again to generate a new one.
 
 ```ts
 matchZamaError(error, {
-  KEYPAIR_EXPIRED: () => showPrompt("Keypair expired — sign to refresh"),
+  KEYPAIR_EXPIRED: () => showPrompt("Transport key pair expired — sign to refresh"),
 });
 ```
 
-**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
+**How to handle:** Prompt the user to re-sign. Adjust `transportKeyPairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
 
 ### NoCiphertextError
 
@@ -7415,8 +7415,8 @@ const cache = new FheArtifactCache({
   ttl: 86_400,
 });
 
-// Fetch public key (with cache-through)
-const pk = await cache.getPublicKey(async () => {
+// Fetch FHE encryption key bytes (with cache-through)
+const pk = await cache.fetchFheEncryptionKeyBytes(async () => {
   // Your network fetcher — called only on cache miss
   return { publicKeyId: "abc", publicKey: new Uint8Array([...]) };
 });
@@ -7450,13 +7450,13 @@ new FheArtifactCache(opts);
 
 ## Methods
 
-### getPublicKey
+### fetchFheEncryptionKeyBytes
 
 ```ts
-cache.getPublicKey(fetcher): Promise<PublicKeyResult>
+cache.fetchFheEncryptionKeyBytes(fetcher): Promise<PublicKeyResult>
 ```
 
-Returns the cached FHE public key, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
+Returns the cached FHE encryption key bytes, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
 
 **Parameters:**
 
@@ -10702,7 +10702,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) -- check whether stored permits cover contracts
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits for specific contracts
-- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) -- wipe the keypair and all permits
+- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) -- wipe the transport key pair and all permits
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
 
 ## useHasPermit
@@ -10886,7 +10886,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useRevokePermits
 
-Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The keypair survives — use [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) to also wipe the keypair.
+Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The transport key pair survives — use [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) to also wipe the transport key pair.
 
 ## Import
 
@@ -11004,11 +11004,11 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - Removes signed permits from the permission store.
 - Auto-invalidates all [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
-- The FHE keypair is not affected — only permits are removed.
+- The transport key pair is not affected — only permits are removed.
 
 ## Related
 
-- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) — wipe the keypair and all permits
+- [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md) — wipe the transport key pair and all permits
 - [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — sign permits for contracts
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether stored permits cover contracts
 
@@ -11021,7 +11021,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useClearCredentials
 
-Wipe the keypair for the current signer and cascade-delete every permit (across chains and delegators) referencing it. Use this for "log out" handlers that should leave no trace.
+Wipe the transport key pair for the current signer and cascade-delete every permit (across chains and delegators) referencing it. Use this for "log out" handlers that should leave no trace.
 
 ## Import
 
@@ -11116,10 +11116,10 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Behavior
 
-- Wipes the FHE keypair for the connected wallet.
+- Wipes the transport key pair for the connected wallet.
 - Cascade-deletes every permit across all chains and delegators.
 - Auto-invalidates all [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
-- After clearing, any decrypt operation will generate a fresh keypair and prompt for new permits.
+- After clearing, any decrypt operation will generate a fresh transport key pair and prompt for new permits.
 
 
 > [!INFO]
@@ -11128,7 +11128,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
-- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) — remove permits without touching the keypair
+- [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) — remove permits without touching the transport key pair
 - [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — sign permits for contracts
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether stored permits cover contracts
 
@@ -13561,9 +13561,9 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 `useUserDecrypt` relies on permits acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md):
 
-- **First `grantPermit()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **First `grantPermit()` call** — generates a new transport key pair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
-- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
+- **Expiry** — the transport key pair expires after `transportKeyPairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
 
 This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
@@ -14641,17 +14641,17 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ![Zama SDK Architecture Layers](../images/layers.svg)
 
-| Layer                          | Responsibility                                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                   |
-| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)       |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                |
-| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library              |
-| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library       |
-| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                 |
-| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                   |
-| **Storage & Credentials**      | `KeypairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage) |
-| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                        |
+| Layer                          | Responsibility                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                            |
+| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                         |
+| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                       |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                |
+| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                          |
+| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                            |
+| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage) |
+| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                 |
 
 ## `createConfig` pattern
 
@@ -14693,7 +14693,7 @@ Each package exposes multiple entry points for tree-shaking:
 
 # Permit model
 
-Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
+Decrypting an on-chain FHE ciphertext requires two things: a transport key pair (generated once, stored persistently — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
 
 ## What is a permit
 
@@ -14743,7 +14743,7 @@ The relayer verifies this signature before re-encrypting any ciphertext. Without
 1. A permit's duration elapses (default: 30 days, configurable via `permitTTL`).
 2. Permit is pruned from storage on next access.
 3. The next decrypt for that contract set prompts a single wallet re-sign.
-4. The FHE keypair is not affected.
+4. The transport key pair is not affected.
 
 
 > [!INFO]
@@ -14774,9 +14774,9 @@ This means users see fewer wallet popups over time. As they interact with more c
 Permits can be removed in two ways:
 
 - **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
-- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
+- **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The transport key pair is not affected.
 
-For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
+For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
 
 ## Wallet account changes
 
@@ -14784,7 +14784,7 @@ The SDK automatically manages permits when the wallet state changes:
 
 | Event                 | Effect on permits                                                                 |
 | --------------------- | --------------------------------------------------------------------------------- |
-| **Disconnect / lock** | All permits and keypair cleared for the previous account                          |
+| **Disconnect / lock** | All permits and transport key pair cleared for the previous account               |
 | **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
 | **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
 
@@ -14792,8 +14792,8 @@ See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sd
 
 ## Related
 
-- [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) — keypair storage, threat model, and trust assumptions
-- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
+- [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/security-model.md) — transport key pair storage, threat model, and trust assumptions
+- [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `transportKeyPairTTL` and `permitTTL` settings
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API
 
 ## Security model
@@ -14835,7 +14835,7 @@ An observer can see that address A sent a confidential transfer to address B on 
 
 ### The relayer and KMS
 
-The relayer provides the FHE infrastructure: encryption, decryption coordination, and keypair generation. The Key Management Service (KMS) holds the network's FHE master key and performs re-encryption.
+The relayer provides the FHE infrastructure: encryption, decryption coordination, and transport key pair generation. The Key Management Service (KMS) holds the network's FHE master key and performs re-encryption.
 
 The critical trust property: **the KMS re-encrypts ciphertexts without learning plaintext values.** When a user requests their balance, the KMS transforms the on-chain ciphertext from the network key to the user's public key. The KMS sees ciphertexts in and ciphertexts out — never plaintext.
 
@@ -14856,15 +14856,15 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 ## Credential storage
 
-### Keypair storage
+### Transport key pair storage
 
-The FHE private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
+The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
 | Parameter  | Value                                                            |
 | ---------- | ---------------------------------------------------------------- |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM keypair                                         |
-| Scope      | One keypair per signer address (chain-independent)               |
+| Key format | Plaintext ML-KEM key pair                                        |
+| Scope      | One transport key pair per signer address (chain-independent)    |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) for the full lifecycle.
 
@@ -14873,7 +14873,7 @@ The security model relies on same-origin isolation: only JavaScript running on t
 <details>
 <summary>What same-origin isolation does NOT protect against</summary>
 
-- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the FHE private key directly. Reducing XSS surface is essential.
+- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the transport private key directly. Reducing XSS surface is essential.
 - **Physical device access** — someone with access to the device's file system can read the IndexedDB contents.
 - **Malicious browser extensions** — extensions with broad permissions can access IndexedDB. Users should audit their installed extensions.
 
@@ -14902,7 +14902,7 @@ const config = createConfig({
 
 
 > [!WARNING]
-> Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
+> Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
 
 
 ## Browser security headers
@@ -14954,7 +14954,7 @@ EIP-712 permit signatures include a start timestamp and duration (in days). The 
 
 Two TTL controls are available:
 
-- `keypairTTL` — how long the FHE keypair remains valid (default: 30 days).
+- `transportKeyPairTTL` — how long the transport key pair remains valid (default: 30 days).
 - `permitTTL` — how long signed permits remain valid, in days (default: 30).
 
 ### Address-scoped authorization
@@ -14965,7 +14965,7 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
+After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
 
 ## CSRF protection
 

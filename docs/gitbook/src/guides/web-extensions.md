@@ -25,7 +25,7 @@ import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
 
 ### 3. Configure the SDK with both storage backends
 
-Pass `indexedDBStorage` for the FHE keypair (persistent, survives browser close) and `chromeSessionStorage` for permits (ephemeral, survives service worker restarts):
+Pass `indexedDBStorage` for the transport key pair (persistent, survives browser close) and `chromeSessionStorage` for permits (ephemeral, survives service worker restarts):
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -41,7 +41,7 @@ const config = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  storage: indexedDBStorage, // encrypted keypair — persistent
+  storage: indexedDBStorage, // encrypted transport key pair — persistent
   permitStorage: chromeSessionStorage, // signed permits — ephemeral
   relayers: { [mySepolia.id]: web() },
 });
@@ -81,12 +81,12 @@ With `chromeSessionStorage` in place, you get three things:
 When the user closes Chrome entirely:
 
 1. `chrome.storage.session` is cleared by the browser -- signed permits are gone
-2. `indexedDB` persists -- the FHE keypair survives
-3. On next launch, the user re-signs once to create fresh permits for their existing keypair
+2. `indexedDB` persists -- the transport key pair survives
+3. On next launch, the user re-signs once to create fresh permits for their existing transport key pair
 
 This mirrors the default browser SDK behavior (in-memory permits lost on tab close) but extends the permit lifetime to cover service worker restarts within the same browser session.
 
 ## Next steps
 
 - [GenericStorage](/reference/sdk/GenericStorage) -- implement a custom storage adapter for other extension APIs
-- [Permit Model](/concepts/permit-model) -- how the keypair vault, signed permits, and storage interact
+- [Permit Model](/concepts/permit-model) -- how the transport key pair vault, signed permits, and storage interact

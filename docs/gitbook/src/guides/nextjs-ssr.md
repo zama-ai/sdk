@@ -11,7 +11,7 @@ The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- tha
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted keypairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
 
 This means:
 

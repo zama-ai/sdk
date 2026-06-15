@@ -314,7 +314,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Keypair expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Transport key pair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 

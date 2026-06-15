@@ -15,7 +15,6 @@ import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
@@ -480,13 +479,10 @@ export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsCon
 // @public (undocumented)
 export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
-// @public
-export interface Keypair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
+// Warning: (ae-forgotten-export) The symbol "TransportKeyPair" needs to be exported by the entry point index.d.ts
+//
+// @public @deprecated (undocumented)
+export type Keypair = TransportKeyPair;
 
 // @public (undocumented)
 export interface ListPairsQueryConfig {
@@ -1003,7 +999,7 @@ export type ZamaConfig = {
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
     readonly permitStorage: GenericStorage;
-    readonly keypairTTL: number;
+    readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -1263,9 +1259,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-BlHoSWkK.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BlHoSWkK.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BlHoSWkK.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BPCbH6Yu.d.ts:642:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BPCbH6Yu.d.ts:643:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-BPCbH6Yu.d.ts:644:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
