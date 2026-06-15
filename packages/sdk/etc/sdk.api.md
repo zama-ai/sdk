@@ -18,7 +18,7 @@ import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PrivateKeyAccount } from 'viem/accounts';
 import { Provider } from 'ethers';
@@ -565,7 +565,7 @@ export interface BatchDecryptAsOptions {
 }
 
 // @public (undocumented)
-export interface BatchDecryptHandleItem {
+export interface BatchDecryptItem {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -577,9 +577,9 @@ export interface BatchDecryptHandleItem {
 }
 
 // @public (undocumented)
-export interface BatchDecryptHandlesResult {
+export interface BatchDecryptResult {
     // (undocumented)
-    items: BatchDecryptHandleItem[];
+    items: BatchDecryptItem[];
 }
 
 // @public
@@ -6141,7 +6141,7 @@ export interface DecryptErrorEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export interface DecryptHandle {
+export interface DecryptInput {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -6157,21 +6157,24 @@ export class Decryption {
         relayer: RelayerDispatcher;
         decryptionService: DecryptionService | undefined;
     });
-    delegatedBatchDecrypt(input: {
-        encryptedInputs: DecryptHandle[];
+    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    decryptValues(encryptedInput: DecryptInput[]): Promise<Record<EncryptedValue, ClearValue>>;
+    delegatedBatchDecryptValues(input: {
+        encryptedInputs: DecryptInput[];
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
-    }): Promise<BatchDecryptHandlesResult>;
-    delegatedDecrypt(encryptedInputs: DecryptHandle[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-    userDecrypt(encryptedInput: DecryptHandle[]): Promise<Record<EncryptedValue, ClearValue>>;
+    }): Promise<BatchDecryptResult>;
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+// @public
+export type DecryptPublicValuesResult = PublicDecryptResults;
 
 // @public
 export type DecryptResult = UserDecryptResults;
@@ -6184,22 +6187,32 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public
-export const DefaultRegistryAddresses: Record<number, Address>;
-
-// @public
-export interface DelegatedForUserDecryptionEvent {
-    readonly contractAddress: Address;
-    readonly delegate: Address;
-    readonly delegationCounter: bigint;
-    readonly delegator: Address;
+export interface DecryptValuesParams {
     // (undocumented)
-    readonly eventName: "DelegatedForUserDecryption";
-    readonly newExpirationDate: bigint;
-    readonly oldExpirationDate: bigint;
+    contractAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    encryptedValues: EncryptedValue[];
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    signature: Hex;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    signerAddress: Address;
+    // (undocumented)
+    startTimestamp: number;
 }
 
 // @public
-export interface DelegatedUserDecryptParams {
+export const DefaultRegistryAddresses: Record<number, Address>;
+
+// @public
+export interface DelegatedDecryptValuesParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -6220,6 +6233,18 @@ export interface DelegatedUserDecryptParams {
     signedContractAddresses: Address[];
     // (undocumented)
     startTimestamp: number;
+}
+
+// @public
+export interface DelegatedForUserDecryptionEvent {
+    readonly contractAddress: Address;
+    readonly delegate: Address;
+    readonly delegationCounter: bigint;
+    readonly delegator: Address;
+    // (undocumented)
+    readonly eventName: "DelegatedForUserDecryption";
+    readonly newExpirationDate: bigint;
+    readonly oldExpirationDate: bigint;
 }
 
 // @public
@@ -6393,7 +6418,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedDecryptEIP712Type;
 
 // @public
 export type EncryptedValue = Bytes32Hex;
@@ -10024,6 +10049,9 @@ export function isConfidentialWrapperContract(tokenAddress: Address): {
 };
 
 // @public
+export function isEncryptedValueZero(encryptedValue: string): boolean;
+
+// @public
 export function isHandleDelegatedContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address, handle: `0x${string}`): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -11433,9 +11461,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isZeroHandle(encryptedValue: string): boolean;
-
-// @public
 export interface Keypair {
     // (undocumented)
     privateKey: Hex;
@@ -11450,7 +11475,7 @@ export class KeypairExpiredError extends ZamaError {
 
 export { KeypairType }
 
-export { KmsDelegatedUserDecryptEIP712Type }
+export { KmsDelegatedDecryptEIP712Type }
 
 // @public
 export interface ListPairsOptions {
@@ -11699,9 +11724,6 @@ export class Permits {
     revokePermits(contracts?: Address[]): Promise<void>;
     warmKeypair(): Promise<void>;
 }
-
-// @public
-export type PublicDecryptResult = PublicDecryptResults;
 
 // @public
 export interface PublicKeyData {
@@ -13076,11 +13098,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     get chains(): readonly FheChain[];
     // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedDecryptEIP712Type>;
     // (undocumented)
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
@@ -13092,7 +13114,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
     // (undocumented)
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     // (undocumented)
@@ -13100,7 +13122,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     terminate(): void;
     // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -18667,28 +18689,6 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface UserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public
 export interface WalletAccount {
     // (undocumented)
     address: Address;
@@ -19964,7 +19964,7 @@ export const ZamaSDKEvents: {
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
 // @public (undocumented)
-export const ZERO_HANDLE: "0x0000000000000000000000000000000000000000000000000000000000000000";
+export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export { ZKProofLike }
 

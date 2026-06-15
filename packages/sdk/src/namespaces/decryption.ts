@@ -3,7 +3,7 @@ import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
-import type { BatchDecryptHandlesResult, DecryptionService } from "../services/decryption-service";
+import type { BatchDecryptResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 
@@ -11,12 +11,14 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
  * Public namespace for FHE decryption.
  *
  * Exposed as `sdk.decryption`. Owns the SDK-level guards (signer requirement on
- * `userDecrypt` and `delegatedDecrypt`, empty-array short-circuit on `publicDecrypt`,
- * relayer error wrapping) and delegates the actual work to the internal
- * {@link DecryptionService} or the relayer directly for `publicDecrypt`.
+ * `decryptValues` and `delegatedDecryptValues`, empty-array
+ * short-circuit on `decryptPublicValues`, relayer error wrapping) and delegates the
+ * actual work to the internal {@link DecryptionService} or the relayer directly for
+ * `decryptPublicValues`.
  *
- * **Mixed signer requirement:** `userDecrypt` and `delegatedDecrypt` need a configured
- * signer; `publicDecrypt` does not. Each method documents its requirement in its JSDoc.
+ * **Mixed signer requirement:** `decryptValues` and
+ * `delegatedDecryptValues` need a configured signer; `decryptPublicValues`
+ * does not. Each method documents its requirement in its JSDoc.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
@@ -56,22 +58,28 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const values = await sdk.decryption.userDecrypt([
-   *   { encryptedValue: balanceHandle, contractAddress: cUSDT },
+   * const values = await sdk.decryption.decryptValues([
+   *   { encryptedValue: balance, contractAddress: cUSDT },
    * ]);
-   * console.log(values[balanceHandle]); // 1000n
+   * console.log(values[balance]); // 1000n
    * ```
    */
-  async userDecrypt(encryptedInput: EncryptedInput[]): Promise<Record<EncryptedValue, ClearValue>> {
-    const service = this.#requireDecryptionService("userDecrypt");
-    const account = await requireAlignedWalletAccount("userDecrypt", this.#signer, this.#provider);
+  async decryptValues(
+    encryptedInput: EncryptedInput[],
+  ): Promise<Record<EncryptedValue, ClearValue>> {
+    const service = this.#requireDecryptionService("decryptValues");
+    const account = await requireAlignedWalletAccount(
+      "decryptValues",
+      this.#signer,
+      this.#provider,
+    );
     return service.userDecrypt(encryptedInput, account.address);
   }
 
   /**
    * Decrypt one or more FHE encrypted values using delegated credentials.
    *
-   * Mirrors {@link userDecrypt} with delegated credentials — same caching and
+   * Mirrors {@link decryptValues} with delegated credentials — same caching and
    * zero-value short-circuit. Before reading from cache or calling the relayer,
    * every non-zero encrypted value's contract must have an active delegation from the
    * delegator to the connected signer; missing or expired delegations fail fast.
@@ -86,20 +94,20 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const values = await sdk.decryption.delegatedDecrypt([
-   *   { encryptedValue: balanceHandle, contractAddress: tokenAddr },
+   * const values = await sdk.decryption.delegatedDecryptValues([
+   *   { encryptedValue: balance, contractAddress: tokenAddr },
    * ], delegatorAddr);
-   * console.log(values[balanceHandle]); // 1000n
+   * console.log(values[balance]); // 1000n
    * ```
    */
-  async delegatedDecrypt(
+  async delegatedDecryptValues(
     encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
   ): Promise<Record<EncryptedValue, ClearValue>> {
-    const service = this.#requireDecryptionService("delegatedDecrypt");
+    const service = this.#requireDecryptionService("delegatedDecryptValues");
     const account = await requireAlignedWalletAccount(
-      "delegatedDecrypt",
+      "delegatedDecryptValues",
       this.#signer,
       this.#provider,
     );
@@ -124,10 +132,10 @@ export class Decryption {
    * @example
    * ```ts
    * const { clearValues, decryptionProof, abiEncodedClearValues } =
-   *   await sdk.decryption.publicDecrypt([encryptedValue]);
+   *   await sdk.decryption.decryptPublicValues([encryptedValue]);
    * ```
    */
-  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     if (encryptedValues.length === 0) {
       return {
         clearValues: {},
@@ -161,7 +169,7 @@ export class Decryption {
    *
    * @example
    * ```ts
-   * const result = await sdk.decryption.delegatedBatchDecrypt({
+   * const result = await sdk.decryption.delegatedBatchDecryptValues({
    *   encryptedInputs: [
    *     { encryptedValue: encryptedValue1, contractAddress: tokenA },
    *     { encryptedValue: encryptedValue2, contractAddress: tokenB },
@@ -175,7 +183,7 @@ export class Decryption {
    * }
    * ```
    */
-  async delegatedBatchDecrypt({
+  async delegatedBatchDecryptValues({
     encryptedInputs,
     delegatorAddress,
     accountAddress = delegatorAddress,
@@ -185,10 +193,10 @@ export class Decryption {
     delegatorAddress: Address;
     accountAddress?: Address;
     maxConcurrency?: number;
-  }): Promise<BatchDecryptHandlesResult> {
-    const service = this.#requireDecryptionService("delegatedBatchDecrypt");
+  }): Promise<BatchDecryptResult> {
+    const service = this.#requireDecryptionService("delegatedBatchDecryptValues");
     const account = await requireAlignedWalletAccount(
-      "delegatedBatchDecrypt",
+      "delegatedBatchDecryptValues",
       this.#signer,
       this.#provider,
     );

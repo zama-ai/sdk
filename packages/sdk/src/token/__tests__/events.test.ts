@@ -10,7 +10,7 @@ import {
 import { TransactionRevertedError } from "../../errors";
 import type { Address } from "viem";
 import type { GenericProvider } from "../../types";
-import { ZERO_HANDLE } from "../../utils/handles";
+import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 
 const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 
@@ -99,7 +99,7 @@ describe("Token.balanceOf event emissions", () => {
       createSDK,
       tokenAddress,
     });
-    vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
     await readonlyToken.balanceOf(userAddress);
 
@@ -169,7 +169,7 @@ describe("Token.balanceOf event emissions", () => {
 });
 
 describe("Token.decryptBalanceAs event emissions", () => {
-  // decryptBalanceAs delegates to sdk.decryption.delegatedDecrypt(), which emits events
+  // decryptBalanceAs delegates to sdk.decryption.delegatedDecryptValues(), which emits events
   // at the SDK level (without tokenAddress). Events still carry timestamp.
 
   test("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({

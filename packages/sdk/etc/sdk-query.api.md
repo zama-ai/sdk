@@ -208,12 +208,18 @@ export interface DecryptErrorEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export interface DecryptHandle {
+export interface DecryptInput {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
     encryptedValue: EncryptedValue;
 }
+
+// @public (undocumented)
+export function decryptPublicValuesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.decryptPublicValues"], EncryptedValue[], DecryptPublicValuesResult>;
+
+// @public
+export type DecryptPublicValuesResult = PublicDecryptResults;
 
 // @public
 export type DecryptResult = UserDecryptResults;
@@ -225,30 +231,44 @@ export interface DecryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
-// @public (undocumented)
-export function delegatedDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedDecrypt"], DelegatedDecryptMutationParams, Readonly<Record<EncryptedValue, ClearValue>>>;
+// @public
+export interface DecryptValuesParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    encryptedValues: EncryptedValue[];
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    signature: Hex;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    signerAddress: Address;
+    // (undocumented)
+    startTimestamp: number;
+}
 
 // @public (undocumented)
-export interface DelegatedDecryptMutationParams {
+export function decryptValuesQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptInput[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
+
+// @public (undocumented)
+export function delegatedDecryptValuesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.delegatedDecryptValues"], DelegatedDecryptValuesMutationParams, Readonly<Record<EncryptedValue, ClearValue>>>;
+
+// @public (undocumented)
+export interface DelegatedDecryptValuesMutationParams {
     // (undocumented)
     delegatorAddress: Address;
     // (undocumented)
-    encryptedInputs: DecryptHandle[];
-}
-
-// @public (undocumented)
-export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
-
-// @public
-export interface DelegateDecryptionParams {
-    // (undocumented)
-    delegateAddress: Address;
-    // (undocumented)
-    expirationDate?: Date;
+    encryptedInputs: DecryptInput[];
 }
 
 // @public
-export interface DelegatedUserDecryptParams {
+export interface DelegatedDecryptValuesParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -269,6 +289,17 @@ export interface DelegatedUserDecryptParams {
     signedContractAddresses: Address[];
     // (undocumented)
     startTimestamp: number;
+}
+
+// @public (undocumented)
+export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress: Address): MutationFactoryOptions<readonly ["zama.delegateDecryption", Address], DelegateDecryptionParams, TransactionResult>;
+
+// @public
+export interface DelegateDecryptionParams {
+    // (undocumented)
+    delegateAddress: Address;
+    // (undocumented)
+    expirationDate?: Date;
 }
 
 // @public (undocumented)
@@ -508,12 +539,6 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
-
-// @public (undocumented)
-export function publicDecryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.publicDecrypt"], EncryptedValue[], PublicDecryptResult>;
-
-// @public
-export type PublicDecryptResult = PublicDecryptResults;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -888,31 +913,6 @@ export interface UnwrapSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
-
-// @public
-export interface UserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public (undocumented)
-export function userDecryptQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptHandle[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
 
 // @public
 export interface WalletAccount {

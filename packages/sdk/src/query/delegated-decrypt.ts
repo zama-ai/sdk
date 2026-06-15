@@ -4,21 +4,21 @@ import type { EncryptedInput } from "./user-decrypt";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
-export interface DelegatedDecryptMutationParams {
+export interface DelegatedDecryptValuesMutationParams {
   encryptedInputs: EncryptedInput[];
   delegatorAddress: Address;
 }
 
-export function delegatedDecryptMutationOptions(
+export function delegatedDecryptValuesMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<
-  readonly ["zama.delegatedDecrypt"],
-  DelegatedDecryptMutationParams,
+  readonly ["zama.delegatedDecryptValues"],
+  DelegatedDecryptValuesMutationParams,
   Readonly<Record<EncryptedValue, ClearValue>>
 > {
   return {
-    mutationKey: ["zama.delegatedDecrypt"],
+    mutationKey: ["zama.delegatedDecryptValues"],
     mutationFn: async (params) =>
-      sdk.decryption.delegatedDecrypt(params.encryptedInputs, params.delegatorAddress),
+      sdk.decryption.delegatedDecryptValues(params.encryptedInputs, params.delegatorAddress),
   };
 }

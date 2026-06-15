@@ -12,10 +12,10 @@ export { ZamaProvider, useZamaSDK, type ZamaProviderProps } from "./provider";
 
 // SDK method hooks
 export { useEncrypt } from "./relayer/use-encrypt";
-export { useUserDecrypt, type UseUserDecryptResult } from "./decrypt/use-user-decrypt";
+export { useDecryptValues, type UseDecryptValuesResult } from "./decrypt/use-user-decrypt";
 
-export { usePublicDecrypt } from "./decrypt/use-public-decrypt";
-export { useDelegatedDecrypt } from "./decrypt/use-delegated-decrypt";
+export { useDecryptPublicValues } from "./decrypt/use-public-decrypt";
+export { useDelegatedDecryptValues } from "./decrypt/use-delegated-decrypt";
 
 // Authorization hooks (generic — any contract with encrypted state)
 export { useGrantPermit } from "./permits/use-grant-permit";
