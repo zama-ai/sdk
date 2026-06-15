@@ -12,11 +12,12 @@ _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule. Apply the steps in
 order — Step 1 (configuration) unblocks everything else.
 
 {% hint style="info" %}
-**The good news.** The high-level token API did **not** change. `Token` methods
-(`shield`, `confidentialTransfer`, `unshield`, `unshieldAll`, `balanceOf`,
-`setOperator`, `delegateDecryption`, `decryptBalanceAs`, …) keep the same
-signatures. The bulk of the migration is **how you construct the SDK** (Step 1)
-plus a set of mechanical renames.
+**The good news.** The high-level token transfer/balance API did **not** change.
+`Token` methods (`shield`, `confidentialTransfer`, `unshield`, `unshieldAll`,
+`balanceOf`, `decryptBalanceAs`, …) keep the same signatures. The bulk of the
+migration is **how you construct the SDK** (Step 1) plus a set of mechanical
+renames. Two surfaces did move: ERC-20-style `approve` became the operator model
+(Step 4) and token-level delegation moved to `sdk.delegations.*` (Step 3).
 {% endhint %}
 
 {% hint style="warning" %}
@@ -65,20 +66,21 @@ direct replacement_ (see the relevant step).
 
 ### `@zama-fhe/react-sdk` (hooks)
 
-| 2.x                                                            | 3.x                                                        | Step |
-| -------------------------------------------------------------- | ---------------------------------------------------------- | ---- |
-| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>`                | 1    |
-| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`            | 1    |
-| `useReadonlyToken`                                             | `useWrappedToken`                                          | 6    |
-| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                               | 4    |
-| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                 | 4    |
-| `useAllow` / `useIsAllowed`                                    | `useConfidentialSetOperator` / `useConfidentialIsOperator` | 4    |
-| `useUserDecrypt({ handles })`                                  | `useUserDecrypt(inputs)` — arg shape change, see Step 5    | 5    |
-| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK               | 3    |
-| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                         | 3    |
-| `useDelegatedUserDecrypt`                                      | `useDelegatedDecrypt`                                      | 3    |
-| `useRevokeSession`, `useRevoke`                                | `useRevokePermits` / `useClearCredentials`                 | 3    |
-| `useActivityFeed`                                              | **removed** (activity feed dropped)                        | 7    |
+| 2.x                                                            | 3.x                                                               | Step |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- | ---- |
+| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`) | 1    |
+| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                   | 1    |
+| `useReadonlyToken`                                             | `useWrappedToken`                                                 | 6    |
+| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                      | 4    |
+| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                        | 4    |
+| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                 | 3    |
+| `useUserDecrypt({ handles })`                                  | `useUserDecrypt(inputs)` — arg shape change, see Step 5           | 5    |
+| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                      | 3    |
+| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                | 3    |
+| `useDelegatedUserDecrypt`                                      | `useDelegatedDecrypt`                                             | 3    |
+| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair             | 3    |
+| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)          | 3    |
+| `useActivityFeed`                                              | **removed** (activity feed dropped)                               | 7    |
 
 ---
 
@@ -228,7 +230,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  // permitStorage defaults to `storage`; pass it only to split the backing store.
   onEvent: handleEvent,
 });
 
@@ -252,9 +254,9 @@ Notes:
 - The wagmi adapter creates the SDK signer/provider and subscribes to wagmi
   connection changes internally — no `useMemo` for the relayer and no
   `walletKey` remount pattern needed.
-- `storage` and `sessionStorage` can now share the same `indexedDBStorage`
-  instance; the separate `new IndexedDBStorage("SessionStore")` is no longer
-  required.
+- The 2.x `sessionStorage` prop is **removed**. There is now a single `storage`
+  option (permits reuse it via `permitStorage`, which defaults to `storage`), so
+  the separate `new IndexedDBStorage("SessionStore")` is no longer required.
 - All wiring (`relayer`, `signer`, `storage`, `onEvent`) moves into
   `createConfig`; `<ZamaProvider>` takes a single `config` prop.
 
@@ -305,10 +307,12 @@ revocation.
 
 | 2.x                                                         | 3.x                                                           |
 | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| `useAllow` / `useIsAllowed`                                 | `useGrantPermit` / `useHasPermit`                             |
 | `useGenerateKeypair`, `useCreateEIP712`                     | **removed** — handled automatically; gate with `useHasPermit` |
 | `useCreateDelegatedUserDecryptEIP712`                       | `useGrantPermit`                                              |
 | `useDelegatedUserDecrypt`                                   | `useDelegatedDecrypt`                                         |
-| `useRevokeSession`, `useRevoke`                             | `useRevokePermits` / `useClearCredentials`                    |
+| `useRevoke`                                                 | `useRevokePermits` — revokes permits, keeps the keypair       |
+| `useRevokeSession`                                          | `useClearCredentials` — full logout, also wipes the keypair   |
 | `CredentialsManager` / `DelegatedCredentialsManager` (core) | `Permits` / `Delegations` / `Decryption`                      |
 
 Recommended pattern — gate any decrypt UI on `useHasPermit` so users don't get an
@@ -336,9 +340,17 @@ function DecryptGate({
 }
 ```
 
-SDK-level delegation on a token instance is unchanged
-(`token.delegateDecryption`, `token.isDelegated`, `token.revokeDelegation`,
-`token.decryptBalanceAs`).
+SDK-level delegation **moved off the `Token` instance** onto the `sdk.delegations`
+namespace, and now takes the contract address explicitly. Only `decryptBalanceAs`
+stays on `Token`.
+
+| 2.x                                                  | 3.x                                                                                       |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `token.delegateDecryption({ delegateAddress })`      | `sdk.delegations.delegateDecryption({ contractAddress: token.address, delegateAddress })` |
+| `token.revokeDelegation({ delegateAddress })`        | `sdk.delegations.revokeDelegation({ contractAddress: token.address, delegateAddress })`   |
+| `token.getDelegationExpiry({ delegatorAddress, … })` | `sdk.delegations.getExpiry({ contractAddress, delegatorAddress, delegateAddress })`       |
+| _(no Token-level status check)_                      | `sdk.delegations.isActive({ contractAddress, delegatorAddress, delegateAddress })`        |
+| `token.decryptBalanceAs(...)`                        | **unchanged** — stays on `Token`                                                          |
 
 ## Step 4 — Approvals → operators
 
@@ -393,7 +405,8 @@ the owner to the caller.
 ### Encrypt returns contract-ready hex
 
 `encrypt` results are now hex strings ready to pass straight to a contract call —
-no more `bytesToHex(...)`. The field `handles` is renamed `encryptedValues`.
+no more `bytesToHex(...)`. The field `handles` is renamed `encryptedValues`, and
+`extractEncryptedHandles(...)` is removed — read `result.encryptedValues` directly.
 
 {% tabs %}
 {% tab title="Before (2.x)" %}
@@ -425,7 +438,8 @@ const encrypted = await encrypt.mutateAsync({
   userAddress,
 });
 
-await sdk.signer!.writeContract({
+if (!sdk.signer) throw new Error("No signer — connect a wallet to write");
+await sdk.signer.writeContract({
   address: contractAddress,
   abi,
   functionName: "store",
@@ -440,8 +454,17 @@ await sdk.signer!.writeContract({
 
 `useUserDecrypt` keeps its name but its argument changed: from an object
 `{ handles }` to a positional array of `{ encryptedValue, contractAddress }`.
-Result objects are keyed by `encryptedValue` (not `handle`). Reads move from
-`sdk.signer` to `sdk.provider`, and `sdk.signer` is now nullable (`sdk.signer!`).
+Result objects are keyed by `encryptedValue` (not `handle`). Reads also move from
+`sdk.signer.readContract` to `sdk.provider.readContract` — `sdk.provider` is
+always available, whereas in 2.x reads went through the signer.
+
+{% hint style="info" %}
+**`sdk.signer` is nullable in 3.x.** In 2.x the signer was passed at construction
+and always present; in 3.x it is `null` in read-only mode (no wallet connected).
+Guard writes with `if (!sdk.signer) throw …` rather than asserting `sdk.signer!`,
+which only hides the `null` until it crashes at the call site. Reads never need
+the signer — use `sdk.provider`.
+{% endhint %}
 
 {% tabs %}
 {% tab title="Before (2.x)" %}
@@ -482,8 +505,15 @@ decrypted?.[inputs[0].encryptedValue];
 {% endtab %}
 {% endtabs %}
 
-`applyDecryptedValues` / `DecryptCache` are removed — caching is handled by the
-SDK's internal CachingService (scoped per signer + contract, survives reloads).
+{% hint style="warning" %}
+**Cache ownership changed.** In 2.x `DecryptCache` and `applyDecryptedValues` were
+public — you could seed, prune, or clear the decrypt cache on your own schedule. In
+3.x the cache is internal to the SDK: invalidation runs automatically on
+`permits.revokePermits()`, `permits.clear()`, wallet account/chain change, and
+disconnect. There is **no** public API for manual population or eviction. If your
+2.x code called `applyDecryptedValues` or `DecryptCache.clearAll()` (e.g. in a
+custom logout flow), remove that logic — there is no compile-time signal for it.
+{% endhint %}
 
 ## Step 6 — Token / WrappedToken & upgraded contracts
 
@@ -512,8 +542,8 @@ const { confidentialTokenAddress } = registryResult;
   `ActivityItem`, `ActivityAmount`, `ActivityType`, `activityFeedQueryOptions`,
   `deriveActivityFeedLogsKey`. Rebuild any history view from your own indexer or
   from on-chain event logs.
-- Utility exports `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`,
-  `extractEncryptedHandles` are removed.
+- Utility exports `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`
+  are removed.
 
 ## Validation checklist
 
@@ -523,15 +553,21 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|WagmiSigner|RelayerWeb|RelayerNode|buildRelayer|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|\.approve\(|\.isApproved\(|\.handles\b|bytesToHex\(.*encrypted|useActivityFeed|CredentialsManager|extractEncryptedHandles'
+   rg -n 'ZamaSDKConfig|ViemSigner|WagmiSigner|RelayerWeb|RelayerNode|buildRelayer|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|CredentialsManager|extractEncryptedHandles'
    ```
+
+   A few atoms can still produce hits that don't need migrating — inspect rather
+   than blind-replace: `.chainId` is legitimate on viem/EIP-1193 objects (only
+   chain-preset accesses like `SepoliaConfig.chainId` migrate to `.id`), and
+   `token.approve(` only matters for the Zama confidential token — approving an
+   underlying ERC-20 before a manual `wrap` is unchanged.
 
 3. Verify the SDK is built once via `createConfig` and `<ZamaProvider>` /
    `new ZamaSDK` receive its result.
 4. Run a smoke flow (shield → transfer → unshield, or encrypt → store → decrypt)
    against a testnet.
 
-## See also
+## Next steps
 
 - [Configuration](/guides/configuration)
 - [Operator approvals](/guides/operator-approvals)
