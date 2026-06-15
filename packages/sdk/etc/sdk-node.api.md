@@ -38,8 +38,6 @@ export const anvil: {
     readonly executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24";
 };
 
-// Warning: (ae-forgotten-export) The symbol "GenericStorage" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
     // (undocumented)
@@ -100,8 +98,6 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     protected readonly logger: GenericLogger | undefined;
     protected onWorkerReady?(_worker: TWorker): void;
     protected abstract postMessage(worker: TWorker, request: WorkerRequest): void;
-    // Warning: (ae-forgotten-export) The symbol "PublicDecryptPayload" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     publicDecrypt(params: PublicDecryptPayload): Promise<PublicDecryptResponseData>;
     // (undocumented)
@@ -118,13 +114,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     protected abstract wireEvents(worker: TWorker): void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-//
 // @public
 export const chains: Record<number, FheChain>;
 
-// Warning: (ae-forgotten-export) The symbol "CleartextRelayerConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function cleartext(): CleartextRelayerConfig;
 
@@ -181,8 +173,6 @@ export interface DecryptValuesParams {
     contractAddress: Address;
     // (undocumented)
     durationDays: number;
-    // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     encryptedValues: EncryptedValue[];
     // (undocumented)
@@ -261,7 +251,6 @@ export interface EncryptParams {
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    // Warning: (ae-forgotten-export) The symbol "EncryptInput" needs to be exported by the entry point index.d.ts
     values: EncryptInput[];
 }
 
@@ -290,8 +279,6 @@ export type EncryptResult = {
     inputProof: Hex;
 };
 
-// Warning: (ae-forgotten-export) The symbol "BaseResponse" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export interface ErrorResponse extends BaseResponse {
     // (undocumented)
@@ -400,9 +387,6 @@ export const hoodi: {
     readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
 };
 
-// Warning: (ae-forgotten-export) The symbol "InitWebPayload" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "InitNodePayload" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export type InitPayload = InitWebPayload | InitNodePayload;
 
@@ -445,12 +429,8 @@ export interface NodePoolOptions {
 
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
-    // Warning: (ae-forgotten-export) The symbol "RelayerNode" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
-    // Warning: (ae-forgotten-export) The symbol "NodeWorkerPool" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
     // (undocumented)
@@ -508,8 +488,6 @@ export interface RelayerNodeConfig {
     pool: NodeWorkerPool;
 }
 
-// Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;

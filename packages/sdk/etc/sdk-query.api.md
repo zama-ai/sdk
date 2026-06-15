@@ -60,7 +60,6 @@ export interface BaseEvent {
 
 // @public
 export interface BatchBalancesResult {
-    // Warning: (ae-forgotten-export) The symbol "ZamaError" needs to be exported by the entry point index.d.ts
     errors: Map<Address, ZamaError>;
     results: Map<Address, bigint>;
 }
@@ -96,8 +95,6 @@ export interface ConfidentialBalanceQueryConfig {
     tokenAddress: Address;
 }
 
-// Warning: (ae-forgotten-export) The symbol "SignerQueryContext" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function confidentialBalanceQueryOptions(token: Token, config: ConfidentialBalanceQueryConfig, signerContext?: SignerQueryContext): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.confidentialBalance.owner>>;
 
@@ -432,12 +429,7 @@ export interface GenericSigner {
     refreshWalletAccount?(): Promise<WalletAccount | undefined>;
     requireWalletAccount(operation: string): WalletAccount;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "WalletAccountStore" needs to be exported by the entry point index.d.ts
     readonly walletAccount: WalletAccountStore;
-    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
     writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -532,11 +524,6 @@ export interface ListPairsQueryConfig {
     registryAddress: Address | undefined;
 }
 
-// Warning: (ae-forgotten-export) The symbol "WrappersRegistry" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "PaginatedResult" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TokenWrapperPair" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TokenWrapperPairWithMetadata" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function listPairsQueryOptions(registry: WrappersRegistry, config: ListPairsQueryConfig): QueryFactoryOptions<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, Error, PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>, ReturnType<typeof zamaQueryKeys.wrappersRegistry.listPairs>>;
 
@@ -561,8 +548,6 @@ export interface QueryClientLike {
     removeQueries(filters: QueryFilterLike): void;
 }
 
-// Warning: (ae-forgotten-export) The symbol "RequiredBy" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export type QueryFactoryOptions<TQueryFnData = unknown, TError = Error, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey> = Omit<RequiredBy<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey">, "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"> & {
     queryFn: Exclude<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>["queryFn"], typeof skipToken | undefined>;
@@ -588,8 +573,6 @@ export interface RawLog {
     readonly topics: readonly Hex[];
 }
 
-// Warning: (ae-forgotten-export) The symbol "FheOperations" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
@@ -778,8 +761,6 @@ export interface TransactionErrorEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
-// Warning: (ae-forgotten-export) The symbol "transactionOperationMetadata" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type TransactionOperation = keyof typeof transactionOperationMetadata;
 
@@ -1205,9 +1186,7 @@ export class ZamaSDK {
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
-    // Warning: (ae-forgotten-export) The symbol "Decryption" needs to be exported by the entry point index.d.ts
     readonly decryption: Decryption;
-    // Warning: (ae-forgotten-export) The symbol "Delegations" needs to be exported by the entry point index.d.ts
     readonly delegations: Delegations;
     dispose(): void;
     // @internal
@@ -1215,7 +1194,6 @@ export class ZamaSDK {
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
-    // Warning: (ae-forgotten-export) The symbol "Permits" needs to be exported by the entry point index.d.ts
     readonly permits: Permits;
     // (undocumented)
     readonly provider: GenericProvider;
@@ -1260,12 +1238,6 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/types-BlHoSWkK.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BlHoSWkK.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-BlHoSWkK.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

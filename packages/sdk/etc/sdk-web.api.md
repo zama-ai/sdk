@@ -18,39 +18,24 @@ import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// Warning: (ae-forgotten-export) The symbol "BaseRelayer" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "RelayerSDK" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     [Symbol.dispose](): void;
     constructor(config: RelayerWebConfig);
-    // Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     protected get chain(): FheChain;
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // Warning: (ae-forgotten-export) The symbol "DelegatedUserDecryptParams" needs to be exported by the entry point index.d.ts
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    // Warning: (ae-forgotten-export) The symbol "EncryptParams" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "EncryptResult" needs to be exported by the entry point index.d.ts
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     generateKeypair(): Promise<KeypairType<Hex>>;
-    // Warning: (ae-forgotten-export) The symbol "PublicKeyData" needs to be exported by the entry point index.d.ts
     getPublicKey(): Promise<PublicKeyData | null>;
-    // Warning: (ae-forgotten-export) The symbol "PublicParamsData" needs to be exported by the entry point index.d.ts
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
     protected init(): Promise<void>;
-    // Warning: (ae-forgotten-export) The symbol "PublicDecryptResult" needs to be exported by the entry point index.d.ts
     publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
     requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
     terminate(): void;
-    // Warning: (ae-forgotten-export) The symbol "UserDecryptParams" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "EncryptedValue" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "ClearValue" needs to be exported by the entry point index.d.ts
     userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
@@ -58,13 +43,10 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
 export interface RelayerWebConfig {
     chain: FheChain;
     fheArtifactCacheTTL?: number;
-    // Warning: (ae-forgotten-export) The symbol "GenericStorage" needs to be exported by the entry point index.d.ts
     fheArtifactStorage?: GenericStorage;
-    // Warning: (ae-forgotten-export) The symbol "GenericLogger" needs to be exported by the entry point index.d.ts
     logger?: GenericLogger;
     security?: RelayerWebSecurityConfig;
     threads?: number;
-    // Warning: (ae-forgotten-export) The symbol "RelayerWorkerClient" needs to be exported by the entry point index.d.ts
     worker: RelayerWorkerClient;
 }
 
@@ -77,8 +59,6 @@ export interface RelayerWebSecurityConfig {
 // @public
 export function web(options?: WebRelayerOptions): WebRelayerConfig;
 
-// Warning: (ae-forgotten-export) The symbol "RelayerConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
