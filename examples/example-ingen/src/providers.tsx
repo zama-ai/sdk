@@ -44,8 +44,10 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-// Inline InGen chain config (SDK-184 deployment).
-const zamaIngen = {
+// ⚠️ Cleartext/mock fhEVM host stack for the T-Rex InGen testnet (chain 364301), deployed for
+// this demo. Dev/demo only — NOT for production: values are stored as plaintext on-chain and KMS
+// signatures are mocked, so there is no real FHE confidentiality.
+const zamaIngenCleartext = {
   id: 364301,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -117,7 +119,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const ethereum = (getEthereumProvider() ?? {
       request: async ({ method }: { method: string }) => {
         if (method === "eth_accounts") return [];
-        if (method === "eth_chainId") return `0x${zamaIngen.id.toString(16)}`;
+        if (method === "eth_chainId") return `0x${zamaIngenCleartext.id.toString(16)}`;
         throw new Error("No Ethereum wallet detected. Connect a wallet to use this app.");
       },
       on: () => {},
@@ -126,12 +128,12 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new JsonRpcProvider(INGEN_RPC_URL);
 
     return createConfig({
-      chains: [zamaIngen],
+      chains: [zamaIngenCleartext],
       ethereum,
       provider,
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
-      relayers: { [zamaIngen.id]: cleartext() },
+      relayers: { [zamaIngenCleartext.id]: cleartext() },
       onEvent: (event) => {
         if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
           const wrapperAddress = getActiveUnshieldToken();

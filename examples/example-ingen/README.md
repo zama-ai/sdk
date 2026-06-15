@@ -7,6 +7,11 @@ Next.js 16 example app demonstrating `@zama-fhe/react-sdk` integration with
 Forked from `examples/react-ethers` (Sepolia + real relayer) and adapted to use
 the `cleartext()` relayer transport against InGen.
 
+> ⚠️ **Development/demo only — not for production.** This runs against a _cleartext (mock)_
+> fhEVM deployment: values are stored as plaintext on-chain and "decryption" relies on mock KMS
+> signatures, so it provides **no real FHE confidentiality**. Use it to exercise the Zama SDK
+> end-to-end on the T-Rex InGen testnet — never to protect real assets or data.
+
 Covers: connect wallet, shield ERC-20 → confidential, confidential transfer,
 unshield, grant/revoke/use delegation, pending unshield recovery.
 

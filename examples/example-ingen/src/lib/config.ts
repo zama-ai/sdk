@@ -1,6 +1,7 @@
 // ─── InGen network configuration ──────────────────────────────────────────────
-// T-Rex InGen private testnet (chain 364301, OP stack) — cleartext fhEVM
-// deployment from SDK-184. Edit these values to target a different network.
+// T-Rex InGen private testnet (chain 364301, OP stack) — cleartext/mock fhEVM
+// deployment from SDK-184. ⚠️ Dev/demo only — NOT for production (no real FHE confidentiality).
+// Edit these values to target a different network.
 
 export const INGEN_CHAIN_ID = 364301;
 export const INGEN_CHAIN_ID_HEX = `0x${INGEN_CHAIN_ID.toString(16)}`; // "0x58f0d"
