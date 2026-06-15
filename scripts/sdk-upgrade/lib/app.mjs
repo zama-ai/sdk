@@ -8,11 +8,13 @@
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const SDK_PACKAGES = ["@zama-fhe/sdk", "@zama-fhe/react-sdk"];
 
 export function repoRoot() {
-  return new URL("../../../", import.meta.url).pathname.replace(/\/$/, "");
+  // fileURLToPath percent-decodes, so a repo path with spaces resolves correctly.
+  return fileURLToPath(new URL("../../../", import.meta.url)).replace(/\/$/, "");
 }
 
 export function exampleDir(name) {

@@ -9,7 +9,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
 
 import { resolveVersion } from "./lib/resolve-version.mjs";
@@ -60,6 +60,9 @@ function reportCoverage(guide, bundleDir) {
   console.log(
     `\nCoverage: ${covered}/${all.length} changed public exports referenced by a guide change.`,
   );
+  console.log(
+    "(top-level exports only — class-member deltas live in the api diffs and are not counted here)",
+  );
   if (uncovered.length > 0) {
     console.log(`Not referenced by any change (review — may be intentional long-tail omissions):`);
     for (const id of uncovered) {
@@ -109,13 +112,18 @@ async function cmdGuide(argv) {
   console.log(`Resolved ${values.from} -> ${from.version} (${from.gitRef}, ${from.source})`);
   console.log(`Resolved ${values.to}   -> ${to.version} (${to.gitRef}, ${to.source})`);
 
-  const summary = collectDiff({
-    fromRef: from.gitRef,
-    toRef: to.gitRef,
-    fromVersion: from.version,
-    toVersion: to.version,
-    outDir,
-  });
+  let summary;
+  try {
+    summary = collectDiff({
+      fromRef: from.gitRef,
+      toRef: to.gitRef,
+      fromVersion: from.version,
+      toVersion: to.version,
+      outDir,
+    });
+  } catch (err) {
+    fail(err.message);
+  }
   const changed = summary.files.filter((f) => ["changed", "added", "removed"].includes(f.status));
   for (const f of summary.files) {
     console.log(
@@ -199,9 +207,14 @@ function cmdApply(argv) {
   console.log("\nGate passed: pins bumped, install clean, formatted, typecheck exit 0.");
 }
 
-// Format the app's source with the repo's oxfmt. Best-effort: an external app
-// without the repo toolchain is skipped with a warning rather than failed.
+// Format the app's source with the repo's oxfmt. Only in-repo example siblings
+// are formatted (that's how they converge byte-identical); an external app under
+// --app must run its own formatter, so we never rewrite a tree outside the repo.
 function formatApp(appDir) {
+  if (!resolve(appDir).startsWith(repoRoot() + sep)) {
+    console.log("Formatting skipped (external app — run your own formatter before typecheck).");
+    return;
+  }
   const oxfmt = join(repoRoot(), "node_modules", ".bin", "oxfmt");
   if (!existsSync(oxfmt)) {
     console.log(

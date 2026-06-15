@@ -13,6 +13,8 @@ describe("collectDiff", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  const refExists = () => true; // refs are stubbed; bypass the real git check
+
   test("classifies each input and writes diffs only for changes", () => {
     // Injected ref reader: llms-full changes, changelog absent on both sides.
     const contents = {
@@ -28,6 +30,7 @@ describe("collectDiff", () => {
       toVersion: "B",
       outDir: dir,
       read,
+      refExists,
     });
 
     const byPath = Object.fromEntries(summary.files.map((f) => [f.path, f]));
@@ -46,7 +49,15 @@ describe("collectDiff", () => {
 
   test("marks an input added when absent on the from-ref only", () => {
     const read = (ref) => (ref === "vB" ? "brand new\n" : null);
-    const summary = collectDiff({ fromRef: "vA", toRef: "vB", outDir: dir, read });
+    const summary = collectDiff({ fromRef: "vA", toRef: "vB", outDir: dir, read, refExists });
     expect(summary.files.find((f) => f.path === LLMS_FULL).status).toBe("added");
+  });
+
+  test("fails fast when a ref does not resolve locally (unfetched tag)", () => {
+    const read = () => "x\n";
+    const refMissing = (ref) => ref !== "vMissing";
+    expect(() =>
+      collectDiff({ fromRef: "vMissing", toRef: "vB", outDir: dir, read, refExists: refMissing }),
+    ).toThrow(/not found locally/);
   });
 });

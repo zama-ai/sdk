@@ -30,6 +30,16 @@ export function showAtRef(ref, path) {
   return result.status === 0 ? result.stdout : null;
 }
 
+// True when `<ref>` resolves to a commit locally. Distinguishes "ref missing"
+// from "path absent at ref" — `showAtRef` returns null for both, which would
+// otherwise classify every input as added/absent and yield a silent garbage bundle.
+export function refExists(ref) {
+  const result = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], {
+    encoding: "utf8",
+  });
+  return result.status === 0;
+}
+
 // Unified diff of two strings via temp files; "" when identical, null when both absent.
 function unifiedDiff(label, before, after, tmpDir) {
   if (before === null && after === null) {
@@ -56,7 +66,23 @@ function unifiedDiff(label, before, after, tmpDir) {
  * Collect the A->B diff bundle into `outDir`. Returns the bundle summary.
  * `read` is the ref->content accessor (defaults to `showAtRef`), injectable for tests.
  */
-export function collectDiff({ fromRef, toRef, fromVersion, toVersion, outDir, read = showAtRef }) {
+export function collectDiff({
+  fromRef,
+  toRef,
+  fromVersion,
+  toVersion,
+  outDir,
+  read = showAtRef,
+  refExists: refExistsFn = refExists,
+}) {
+  for (const ref of [fromRef, toRef]) {
+    if (!refExistsFn(ref)) {
+      throw new Error(
+        `git ref "${ref}" not found locally — the tag may be missing or unfetched. ` +
+          "Run `git fetch --tags` and retry.",
+      );
+    }
+  }
   const tmpDir = join(outDir, ".diff-tmp");
   mkdirSync(join(outDir, "api"), { recursive: true });
   mkdirSync(tmpDir, { recursive: true });
