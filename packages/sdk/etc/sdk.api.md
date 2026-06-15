@@ -208,6 +208,9 @@ export const anvil: {
 };
 
 // @public
+export type AnyListener = (event: ZamaSDKEvent) => void;
+
+// @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
 
 // @public
@@ -6465,6 +6468,23 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 
 // @public
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
+
+// @public
+export class EventService {
+    constructor(config?: EventServiceConfig);
+    // @internal
+    emit(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    // Warning: (ae-forgotten-export) The symbol "ListenerOptions" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "DisposableFn" needs to be exported by the entry point index.d.ts
+    on<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): DisposableFn<() => void>;
+    once<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): DisposableFn<() => void>;
+    subscribe(listener: AnyListener, options?: ListenerOptions): DisposableFn<() => void>;
+}
+
+// @public (undocumented)
+export interface EventServiceConfig {
+    onEvent?: AnyListener;
+}
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -14966,6 +14986,11 @@ export interface TransferSubmittedEvent extends BaseEvent {
 }
 
 // @public
+export type TypedListener<K extends ZamaSDKEventType> = (event: Extract<ZamaSDKEvent, {
+    type: K;
+}>) => void;
+
+// @public
 export function underlyingContract(wrapperAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19917,9 +19942,8 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    readonly events: EventService;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;
@@ -19977,10 +20001,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-BFGqQkab.d.ts:19573:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19702:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19804:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-BFGqQkab.d.ts:19805:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZYBSdBE.d.ts:19652:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZYBSdBE.d.ts:19781:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZYBSdBE.d.ts:19883:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DZYBSdBE.d.ts:19884:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

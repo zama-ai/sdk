@@ -1207,9 +1207,9 @@ export class ZamaSDK {
     // Warning: (ae-forgotten-export) The symbol "Delegations" needs to be exported by the entry point index.d.ts
     readonly delegations: Delegations;
     dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // Warning: (ae-forgotten-export) The symbol "EventService" needs to be exported by the entry point index.d.ts
+    readonly events: EventService;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     // Warning: (ae-forgotten-export) The symbol "Permits" needs to be exported by the entry point index.d.ts

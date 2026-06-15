@@ -92,6 +92,14 @@ export interface WebRelayerConfig extends RelayerConfig {
 // @public
 export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
 
+// Warning: (ae-forgotten-export) The symbol "ZamaSDKEventType" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ZamaSDKEvent" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type ZamaSDKWindowEventMap = { [K in ZamaSDKEventType]: CustomEvent<Extract<ZamaSDKEvent, {
+        type: K;
+    }>> };
+
 // (No @packageDocumentation comment for this package)
 
 ```

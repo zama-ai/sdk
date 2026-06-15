@@ -376,12 +376,12 @@ describe("EventService", () => {
     const subListener = vi.fn();
 
     {
-      // oxlint-disable-next-line no-unused-vars
       using onSub = service.on("transfer:submitted", onListener);
-      // oxlint-disable-next-line no-unused-vars
       using onceSub = service.once("transfer:submitted", onceListener);
-      // oxlint-disable-next-line no-unused-vars
       using subSub = service.subscribe(subListener);
+      expect(onSub[Symbol.dispose]).toBeTypeOf("function");
+      expect(onceSub[Symbol.dispose]).toBeTypeOf("function");
+      expect(subSub[Symbol.dispose]).toBeTypeOf("function");
       service.emit({ type: "transfer:submitted", txHash: TX_HASH });
     }
     service.emit({ type: "transfer:submitted", txHash: TX_HASH });
