@@ -2,7 +2,7 @@
 
 **Ticket:** [SDK-208](https://linear.app/zama/issue/SDK-208/investigate-non-determinism-in-the-ai-driven-example-app-upgrade)
 **Builds on:** [`example-upgrade-determinism.md`](./example-upgrade-determinism.md) (the recommendation this plan implements)
-**Status:** Plan — not yet implemented. Supersedes the [PR #316](https://github.com/zama-ai/sdk/pull/316) design (kept open as draft reference).
+**Status:** Phases 0–3 implemented (deterministic CLI + both skills + `/sdk-upgrade` command); Phase 4 (external distribution) pending. Supersedes the [PR #316](https://github.com/zama-ai/sdk/pull/316) design (kept open as draft reference).
 
 ## Goal
 
@@ -94,20 +94,22 @@ A partner's installed version may not exactly match any committed guide's `from`
 
 ```
 scripts/sdk-upgrade/
-  cli.mjs
-  lib/resolve-version.mjs
-  lib/collect-diff.mjs        # git show + api diff (reuses diff.mjs) + changelog slice
-  lib/guide-schema.mjs        # validate(guide)
-  lib/post-process.mjs        # deterministic gates
-  lib/pr.mjs
-  __tests__/
+  cli.mjs                     # `guide` + `apply` subcommands (no LLM)
+  lib/semver.mjs              # publish-shape version compare (X.Y.Z[-alpha.N])
+  lib/resolve-version.mjs     # spec -> { version, gitRef }; dist-tags via registry
+  lib/collect-diff.mjs        # git show + unified diff of llms-full + api reports + changelog
+  lib/guide-schema.mjs        # validateGuide() + selectGuide()
+  lib/app.mjs                 # locate app, read/bump pins (deterministic gates)
+  __tests__/                  # unit coverage for every pure helper
 migrations/
   <A>__<B>.json
   <A>__<B>.md
-skills/sdk-upgrade-generate-guide/SKILL.md
-skills/sdk-upgrade-apply-guide/SKILL.md
-# /sdk-upgrade command registered with the Zama plugin
+claude-setup/skills/sdk-upgrade-generate-guide/SKILL.md   # synced to .claude/ by `pnpm setup:claude`
+claude-setup/skills/sdk-upgrade-apply-guide/SKILL.md
+claude-setup/commands/sdk-upgrade.md                      # the /sdk-upgrade slash command
 ```
+
+The skills and command live under `claude-setup/` (the repo's existing skill source) rather than a repo-root `skills/`, so `pnpm setup:claude` installs them alongside the other agent skills. External distribution (Phase 4) repackages the apply skill + committed guides for `npx skills add`.
 
 ## Phasing
 

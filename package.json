@@ -51,6 +51,8 @@
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
     "api-report:diff": "node scripts/api-report/diff.mjs",
     "setup:claude": "node scripts/setup-claude.mjs",
+    "sdk-upgrade": "node scripts/sdk-upgrade/cli.mjs",
+    "sdk-upgrade:test": "vitest run --config vitest.sdk-upgrade.config.ts",
     "llm:build": "node scripts/llm/build-llms.mjs",
     "llm:stage": "node scripts/llm/stage-artifacts.mjs",
     "llm:check": "node scripts/llm/check.mjs",
