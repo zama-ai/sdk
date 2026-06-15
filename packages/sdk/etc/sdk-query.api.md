@@ -362,33 +362,6 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
-export interface FheChain<TId extends number = number> {
-    // (undocumented)
-    readonly aclContractAddress: Address;
-    readonly auth?: Auth;
-    readonly executorAddress?: Address | undefined;
-    // (undocumented)
-    readonly gatewayChainId: number;
-    // (undocumented)
-    readonly id: TId;
-    readonly inputSignerPrivateKey?: Hex;
-    // (undocumented)
-    readonly inputVerifierContractAddress: Address;
-    // (undocumented)
-    readonly kmsContractAddress: Address;
-    readonly kmsSignerPrivateKey?: Hex;
-    // (undocumented)
-    readonly network: EIP1193Provider | string;
-    readonly registryAddress: Address | undefined;
-    // (undocumented)
-    readonly relayerUrl: string;
-    // (undocumented)
-    readonly verifyingContractAddressDecryption: Address;
-    // (undocumented)
-    readonly verifyingContractAddressInputVerification: Address;
-}
-
-// @public
 export function filterQueryOptions<TOptions extends Record<string, unknown>>(options: TOptions): Omit<TOptions, StrippedQueryOptionKeys>;
 
 // @public (undocumented)
@@ -417,14 +390,6 @@ export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
-}
-
-// @public
-export interface GenericProvider {
-    getBlockTimestamp(): Promise<bigint>;
-    getChainId(): Promise<number>;
-    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
 // @public
@@ -581,43 +546,6 @@ export interface QueryLike {
 export interface RawLog {
     readonly data: Hex;
     readonly topics: readonly Hex[];
-}
-
-// @public
-export class RelayerDispatcher implements RelayerSDK, Disposable {
-    // (undocumented)
-    [Symbol.dispose](): void;
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    // (undocumented)
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    // (undocumented)
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // (undocumented)
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    // (undocumented)
-    getAclAddress(): Promise<Address>;
-    // (undocumented)
-    getPublicKey(): Promise<PublicKeyData | null>;
-    // (undocumented)
-    getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    // (undocumented)
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-    // (undocumented)
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    // (undocumented)
-    switchChain(chainId: number): void;
-    // (undocumented)
-    terminate(): void;
-    // (undocumented)
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public

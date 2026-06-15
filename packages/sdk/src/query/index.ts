@@ -3,13 +3,6 @@ export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
 export { zamaQueryKeys } from "./query-keys";
 
-// Re-export public types referenced by this entry point's query/mutation option
-// signatures so they resolve from `@zama-fhe/sdk/query` directly (already public
-// via the root entry; this avoids api-extractor ae-forgotten-export warnings).
-export type { FheChain } from "../chains/types";
-export type { GenericProvider } from "../types";
-export type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-
 export {
   invalidateAfterApproveUnderlying,
   invalidateAfterSetOperator,
