@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.7...v3.1.0-alpha.8) (2026-06-15)
+
+### Features
+
+- **examples:** add example-bnb — cleartext SDK demo on BSC Testnet [chain 97] ([#405](https://github.com/zama-ai/sdk/issues/405)) ([8af927b]())
+
 ## [3.1.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.6...v3.1.0-alpha.7) (2026-06-15)
 
 ### Code Refactoring
