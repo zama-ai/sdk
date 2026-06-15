@@ -53,8 +53,8 @@ to fund your wallet with tBNB before interacting with the app.
 
 ## Environment variables
 
-| Variable                  | Required | Description                                                                     |
-| ------------------------- | -------- | ------------------------------------------------------------------------------- |
+| Variable                          | Required | Description                                                                                 |
+| --------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` | No       | BNB Smart Chain Testnet RPC override. Defaults to `https://bsc-testnet-rpc.publicnode.com`. |
 
 ## Deployed contracts on BNB Smart Chain Testnet (chain 97)

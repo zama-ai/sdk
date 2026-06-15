@@ -59,10 +59,20 @@ async function main() {
 
   const relayers = { [zamaBscTestnetCleartext.id]: cleartext() };
   const sdkA = new ZamaSDK(
-    createConfig({ chains: [zamaBscTestnetCleartext], signer: walletA, storage: new MemoryStorage(), relayers }),
+    createConfig({
+      chains: [zamaBscTestnetCleartext],
+      signer: walletA,
+      storage: new MemoryStorage(),
+      relayers,
+    }),
   );
   const sdkB = new ZamaSDK(
-    createConfig({ chains: [zamaBscTestnetCleartext], signer: walletB, storage: new MemoryStorage(), relayers }),
+    createConfig({
+      chains: [zamaBscTestnetCleartext],
+      signer: walletB,
+      storage: new MemoryStorage(),
+      relayers,
+    }),
   );
 
   const reg = await sdkA.registry.getConfidentialToken(USDC);

@@ -151,7 +151,11 @@ export function ShieldCard({
       {shield.isSuccess && shield.data?.txHash && (
         <div className="alert alert-success card-status">
           Shielded!{" "}
-          <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${shield.data.txHash}`} target="_blank" rel="noreferrer">
+          <a
+            href={`${BSC_TESTNET_EXPLORER_URL}/tx/${shield.data.txHash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             {shield.data.txHash.slice(0, 10)}…
           </a>
         </div>

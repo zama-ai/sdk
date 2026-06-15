@@ -52,7 +52,11 @@ export function RevokeDelegationCard({
       {revoke.isSuccess && revoke.data?.txHash && (
         <div className="alert alert-success card-status">
           Access revoked!{" "}
-          <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${revoke.data.txHash}`} target="_blank" rel="noreferrer">
+          <a
+            href={`${BSC_TESTNET_EXPLORER_URL}/tx/${revoke.data.txHash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             {revoke.data.txHash.slice(0, 10)}…
           </a>
         </div>

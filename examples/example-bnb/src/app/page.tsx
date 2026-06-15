@@ -21,7 +21,12 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { BSC_TESTNET_CHAIN_ID, BSC_TESTNET_CHAIN_ID_HEX, BSC_TESTNET_EXPLORER_URL, BSC_TESTNET_RPC_URL } from "@/lib/config";
+import {
+  BSC_TESTNET_CHAIN_ID,
+  BSC_TESTNET_CHAIN_ID_HEX,
+  BSC_TESTNET_EXPLORER_URL,
+  BSC_TESTNET_RPC_URL,
+} from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
@@ -390,7 +395,8 @@ export default function Home() {
       <div className="app-container connect-screen">
         <h1>BNB Confidential Token Quickstart</h1>
         <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on BNB Smart Chain Testnet (cleartext FHEVM).
+          Connect your wallet to interact with ERC-7984 tokens on BNB Smart Chain Testnet (cleartext
+          FHEVM).
         </p>
         <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
           {isConnecting ? "Connecting…" : "Connect Wallet"}
