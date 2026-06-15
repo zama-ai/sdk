@@ -1,6 +1,6 @@
 // ─── InGen network configuration ──────────────────────────────────────────────
-// T-Rex InGen private testnet (chain 364301, OP stack) — cleartext/mock fhEVM
-// deployment from SDK-184. ⚠️ Dev/demo only — NOT for production (no real FHE confidentiality).
+// T-Rex InGen private testnet (chain 364301, OP stack) — cleartext FHEVM
+// deployment from SDK-184. Development/integration setup, not intended for production use.
 // Edit these values to target a different network.
 
 export const INGEN_CHAIN_ID = 364301;

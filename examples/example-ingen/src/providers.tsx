@@ -26,7 +26,7 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // The InGen chain config is inlined below (no shipped preset yet for chain 364301).
 // The cleartext relayer transport (`cleartext()`) is used because InGen runs the
-// cleartext fhEVM host stack — there is no real relayer/KMS network to call.
+// cleartext FHEVM host stack — there is no real relayer/KMS network to call.
 //
 // SDK reads use a JsonRpcProvider pointed at INGEN_RPC_URL. Wallet writes and EIP-712
 // signing use the injected EIP-1193 provider through the ethers adapter.
@@ -44,9 +44,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-// ⚠️ Cleartext/mock fhEVM host stack for the T-Rex InGen testnet (chain 364301), deployed for
-// this demo. Dev/demo only — NOT for production: values are stored as plaintext on-chain and KMS
-// signatures are mocked, so there is no real FHE confidentiality.
+// Cleartext FHEVM host stack for the T-Rex InGen testnet (chain 364301), deployed for this demo.
+// Development/integration setup — values are kept in cleartext on-chain rather than encrypted — and
+// isn't intended for production use.
 const zamaIngenCleartext = {
   id: 364301,
   gatewayChainId: 10901,
