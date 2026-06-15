@@ -2,12 +2,12 @@ import type { Address } from "viem";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventType } from "../events/sdk-events";
 
 /** Listener narrowed to one event type. */
-export type TypedListener<K extends ZamaSDKEventType> = (
+export type TypedZamaSDKEventListener<K extends ZamaSDKEventType> = (
   event: Extract<ZamaSDKEvent, { type: K }>,
 ) => void;
 
 /** Catch-all listener that receives the full event union. */
-export type AnyListener = (event: ZamaSDKEvent) => void;
+export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
 /** Options accepted by `on`, `once`, and `subscribe`. */
 export interface ListenerOptions {
@@ -21,7 +21,7 @@ export interface ListenerOptions {
 
 export interface EventServiceConfig {
   /** Back-compat: catch-all listener wired through `subscribe`. */
-  onEvent?: AnyListener;
+  onEvent?: ZamaSDKEventListener;
 }
 
 /**
@@ -39,8 +39,8 @@ export interface EventServiceConfig {
  * awaited or tracked.
  */
 export class EventService {
-  readonly #typed = new Map<ZamaSDKEventType, Set<AnyListener>>();
-  readonly #any = new Set<AnyListener>();
+  readonly #typed = new Map<ZamaSDKEventType, Set<ZamaSDKEventListener>>();
+  readonly #any = new Set<ZamaSDKEventListener>();
 
   constructor(config: EventServiceConfig = {}) {
     if (config.onEvent) {
@@ -58,7 +58,7 @@ export class EventService {
    */
   on<K extends ZamaSDKEventType>(
     type: K,
-    listener: TypedListener<K>,
+    listener: TypedZamaSDKEventListener<K>,
     options?: ListenerOptions,
   ): () => void {
     if (options?.signal?.aborted) {
@@ -69,7 +69,7 @@ export class EventService {
       set = new Set();
       this.#typed.set(type, set);
     }
-    const cast = listener as AnyListener;
+    const cast = listener as ZamaSDKEventListener;
     set.add(cast);
     const unsubscribe = () => {
       const current = this.#typed.get(type);
@@ -92,11 +92,11 @@ export class EventService {
    */
   once<K extends ZamaSDKEventType>(
     type: K,
-    listener: TypedListener<K>,
+    listener: TypedZamaSDKEventListener<K>,
     options?: ListenerOptions,
   ): () => void {
     let unsubscribe: () => void = () => {};
-    const wrapper: TypedListener<K> = (event) => {
+    const wrapper: TypedZamaSDKEventListener<K> = (event) => {
       unsubscribe();
       listener(event);
     };
@@ -111,7 +111,7 @@ export class EventService {
    * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
    * @returns A function that removes the listener when called.
    */
-  subscribe(listener: AnyListener, options?: ListenerOptions): () => void {
+  subscribe(listener: ZamaSDKEventListener, options?: ListenerOptions): () => void {
     if (options?.signal?.aborted) {
       return () => {};
     }
@@ -167,7 +167,7 @@ export class EventService {
     };
   }
 
-  #run(listener: AnyListener, event: ZamaSDKEvent): void {
+  #run(listener: ZamaSDKEventListener, event: ZamaSDKEvent): void {
     try {
       listener(event);
     } catch (error) {

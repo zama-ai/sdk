@@ -149,8 +149,8 @@ export type {
 } from "./events";
 export type {
   EventService,
-  TypedListener,
-  AnyListener,
+  TypedZamaSDKEventListener as TypedListener,
+  ZamaSDKEventListener as AnyListener,
   EventServiceConfig,
 } from "./services/event-service";
 export {

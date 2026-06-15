@@ -20000,10 +20000,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-C2wffgMp.d.ts:19646:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C2wffgMp.d.ts:19775:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C2wffgMp.d.ts:19877:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-C2wffgMp.d.ts:19878:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DBEoro_q.d.ts:19646:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DBEoro_q.d.ts:19775:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DBEoro_q.d.ts:19877:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-DBEoro_q.d.ts:19878:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
