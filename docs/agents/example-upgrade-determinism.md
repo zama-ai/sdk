@@ -17,17 +17,17 @@ The ticket asks for a recommendation, not a rebuild: characterise the divergence
 
 It helps to separate the upgrade into two LLM-driven phases and ask where variance enters each.
 
-| Phase | What the model does | Variance introduced |
-| --- | --- | --- |
-| **Analysis** | Re-reads the SDK surface and the app, infers what changed between the old and new SDK, and decides what to migrate | **High and semantic.** Each run re-derives "what changed" from scratch; different runs notice different deltas, in a different order, and judge relevance differently. This is the root cause of divergence. |
-| **Application** | Edits the app to match | **Mostly cosmetic** (wording, ordering, local style) **once the plan is fixed.** Becomes semantic only when the plan itself is vague or incomplete. |
+| Phase           | What the model does                                                                                                | Variance introduced                                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Analysis**    | Re-reads the SDK surface and the app, infers what changed between the old and new SDK, and decides what to migrate | **High and semantic.** Each run re-derives "what changed" from scratch; different runs notice different deltas, in a different order, and judge relevance differently. This is the root cause of divergence. |
+| **Application** | Edits the app to match                                                                                             | **Mostly cosmetic** (wording, ordering, local style) **once the plan is fixed.** Becomes semantic only when the plan itself is vague or incomplete.                                                          |
 
-PR #316's design runs *both* phases per app, every run. So every app independently re-derives the delta — the highest-variance step is repeated N times with nothing shared between them. That is structurally why siblings drift: there is no common, frozen description of "what A→B means" that all apps consume.
+PR #316's design runs _both_ phases per app, every run. So every app independently re-derives the delta — the highest-variance step is repeated N times with nothing shared between them. That is structurally why siblings drift: there is no common, frozen description of "what A→B means" that all apps consume.
 
 **Cosmetic vs semantic, concretely:**
 
-- *Cosmetic* — comment wording, import ordering, variable naming, whether a helper is inlined or extracted. Annoying in diffs, harmless to behaviour, cheap to normalise with deterministic post-processing (format, lint, import sort).
-- *Semantic* — one app adopts a new hook, another keeps the manual path; one passes a new required option, another omits it; renamed APIs caught in one app and missed in another. These change behaviour and are what actually break the convergence and partner-handoff stories.
+- _Cosmetic_ — comment wording, import ordering, variable naming, whether a helper is inlined or extracted. Annoying in diffs, harmless to behaviour, cheap to normalise with deterministic post-processing (format, lint, import sort).
+- _Semantic_ — one app adopts a new hook, another keeps the manual path; one passes a new required option, another omits it; renamed APIs caught in one app and missed in another. These change behaviour and are what actually break the convergence and partner-handoff stories.
 
 The semantic divergence is dominated by the **analysis** phase, not the application phase. That is the lever.
 
@@ -75,13 +75,13 @@ We keep PR #316 open in draft as a reference until this approach is proven on a 
 
 ## 6. Options considered (and why not)
 
-| Option | Verdict |
-| --- | --- |
-| **Constrain generation only** (lower temperature, stricter prompts) | Reduces cosmetic jitter, does nothing about per-app re-derivation of the delta. Necessary hygiene, not sufficient. |
-| **Deterministic post-processing** (format/lint/import-sort/typecheck gates) | Strongly recommended *as a complement* — it absorbs the residual cosmetic variance. Cannot fix semantic divergence on its own. |
-| **Golden-file / snapshot tests on app output** | Useful as a regression guard once apps converge; does not *produce* convergence, and snapshots of generated apps are brittle to maintain. Revisit after the guide approach lands (overlaps SDK-172). |
-| **Per-app full re-analysis** (PR #316) | The status quo. Rejected as the primary mechanism — it is the source of the divergence. |
-| **Per-couple migration guide + apply** (this doc) | **Recommended.** Moves the high-variance step to once-per-couple, reviewable and shared. |
+| Option                                                                      | Verdict                                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Constrain generation only** (lower temperature, stricter prompts)         | Reduces cosmetic jitter, does nothing about per-app re-derivation of the delta. Necessary hygiene, not sufficient.                                                                                   |
+| **Deterministic post-processing** (format/lint/import-sort/typecheck gates) | Strongly recommended _as a complement_ — it absorbs the residual cosmetic variance. Cannot fix semantic divergence on its own.                                                                       |
+| **Golden-file / snapshot tests on app output**                              | Useful as a regression guard once apps converge; does not _produce_ convergence, and snapshots of generated apps are brittle to maintain. Revisit after the guide approach lands (overlaps SDK-172). |
+| **Per-app full re-analysis** (PR #316)                                      | The status quo. Rejected as the primary mechanism — it is the source of the divergence.                                                                                                              |
+| **Per-couple migration guide + apply** (this doc)                           | **Recommended.** Moves the high-variance step to once-per-couple, reviewable and shared.                                                                                                             |
 
 ## 7. Open questions to settle in the prototype (Step 2)
 

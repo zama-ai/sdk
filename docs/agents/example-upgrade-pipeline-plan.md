@@ -28,11 +28,11 @@ Split the upgrade into a **deterministic core** and **two bounded LLM steps**, w
 
 ## Layering (decided)
 
-| Layer | Responsibility | Why here |
-| --- | --- | --- |
+| Layer                                          | Responsibility                                                                                        | Why here                                                                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **Deterministic CLI** (`scripts/sdk-upgrade/`) | Version resolution, diff collection, guide schema validation, post-processing gates, PR/branch output | Must be reproducible. **No LLM.** Small and unit-tested — this is what keeps the process from re-bloating like #316. |
-| **Two skills** | `sdk-upgrade-generate-guide` (Half 1 LLM step), `sdk-upgrade-apply-guide` (Half 2 LLM step) | The only judgement steps. Each is bounded by a frozen artifact (diff bundle in, guide out / guide in, edits out). |
-| **Slash command** `/sdk-upgrade` | Thin interactive wrapper orchestrating CLI + skill inside Claude Code | Ergonomics; no logic of its own. |
+| **Two skills**                                 | `sdk-upgrade-generate-guide` (Half 1 LLM step), `sdk-upgrade-apply-guide` (Half 2 LLM step)           | The only judgement steps. Each is bounded by a frozen artifact (diff bundle in, guide out / guide in, edits out).    |
+| **Slash command** `/sdk-upgrade`               | Thin interactive wrapper orchestrating CLI + skill inside Claude Code                                 | Ergonomics; no logic of its own.                                                                                     |
 
 External apps consume the **`apply` skill + committed guides**, distributed through the existing `npx skills add` channel ([SDK-64](https://linear.app/zama/issue/SDK-64/create-ai-coding-skills-for-external-sdk-integrators-npx-skills-add)). Partners apply guides; they never regenerate them.
 
@@ -55,6 +55,7 @@ pnpm sdk-upgrade apply --app <path> --to <B>             # external app
 ```
 
 `guide` substeps (all deterministic except step 4):
+
 1. Resolve `--from`/`--to` to git tags + npm versions (`latest` → `dist-tags.latest`; never "newest publish time" — that was a #316 bug).
 2. Collect version A and B artifacts: `git show v<A>:llms-full.txt` etc.; fall back to checkout + `pnpm llm:build` if absent at that tag.
 3. Build the **input bundle**: `llms-full.diff` (unified), `api/<pkg>.api.md.diff` (via `diff.mjs`), `changelog` slice between A and B.
@@ -62,6 +63,7 @@ pnpm sdk-upgrade apply --app <path> --to <B>             # external app
 5. Validate guide against schema; write `migrations/<A>__<B>.json` + human `.md`.
 
 `apply` substeps:
+
 1. Select the applicable guide for (app's current version → B); see version-selection rule below.
 2. **LLM step** (`apply-migration-guide` skill): apply the frozen guide to the app. The skill is forbidden from re-deriving deltas — it only applies listed changes and reports unresolved ones.
 3. Deterministic gates: bump `package.json` deps + lockfile, `pnpm format`, lint, typecheck, build, app E2E.
@@ -74,13 +76,14 @@ JSON core (machine-applied) + generated prose (`.md`, for review). Each change:
 ```jsonc
 {
   "id": "decrypt-glossary-rename-userDecrypt",
-  "kind": "rename",                  // rename | signature-change | new-required-option | removed-api | adopt-hook | config-change
-  "appliesTo": "@zama-fhe/sdk",      // package / import the change touches
-  "from": "...", "to": "...",        // old → new symbol / signature / option
-  "detection": "call sites of <X>",  // how the apply step locates affected code
+  "kind": "rename", // rename | signature-change | new-required-option | removed-api | adopt-hook | config-change
+  "appliesTo": "@zama-fhe/sdk", // package / import the change touches
+  "from": "...",
+  "to": "...", // old → new symbol / signature / option
+  "detection": "call sites of <X>", // how the apply step locates affected code
   "action": "mechanical instruction",
-  "severity": "required",            // required | recommended
-  "references": ["<source_url into llms-full / api report>"]
+  "severity": "required", // required | recommended
+  "references": ["<source_url into llms-full / api report>"],
 }
 ```
 
@@ -129,7 +132,7 @@ The skills and command live under `claude-setup/` (the repo's existing skill sou
 
 Two independent cold generations of the guide for `3.0.0-alpha.32 → 3.1.0-alpha.5`, same deterministic bundle, neither seeing the other or the committed guide: **19 vs 31 changes (+63%)** — yet **both cover 100% of the 8 app-relevant core deltas** (config→`address`, permit renames, `requireSigner`→`signer`, `createZamaConfig`→`createConfig`, `Handle`→`EncryptedValue`, `EncryptResult` hex, `ReadonlyToken`→`WrappedToken`, unshield hooks). The variance lives entirely in (1) grouping granularity (split vs merged changes) and (2) the low-level long tail of internal removals no example app imports. So generate-step variance is real but **zero-impact on what reaches apps**; combined with the apply-side format+typecheck gate the end-to-end output converges, and generate-once + review + commit holds.
 
-**Deterministic completeness lint (built).** `pnpm sdk-upgrade guide --validate <file> --bundle <dir>` mechanically extracts the changed *public* export identifiers from the `api/*.diff` files and reports each one not referenced by any guide change (`from`/`to`/`affectedSymbols`/`action`). This turns "did the generate step cover every public delta?" from a judgment call into a number: on this couple the two generations scored **51/138 vs 100/138** referenced — the same long-tail spread, now a reviewable checklist. The generate skill runs the lint and drives coverage up; remaining gaps must be justified as internal/no-op. Advisory (warns, doesn't fail) since some long-tail exports are legitimately no-ops for any app.
+**Deterministic completeness lint (built).** `pnpm sdk-upgrade guide --validate <file> --bundle <dir>` mechanically extracts the changed _public_ export identifiers from the `api/*.diff` files and reports each one not referenced by any guide change (`from`/`to`/`affectedSymbols`/`action`). This turns "did the generate step cover every public delta?" from a judgment call into a number: on this couple the two generations scored **51/138 vs 100/138** referenced — the same long-tail spread, now a reviewable checklist. The generate skill runs the lint and drives coverage up; remaining gaps must be justified as internal/no-op. Advisory (warns, doesn't fail) since some long-tail exports are legitimately no-ops for any app.
 
 ## Testing
 

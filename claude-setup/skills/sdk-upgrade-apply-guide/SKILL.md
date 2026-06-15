@@ -5,7 +5,7 @@ description: "Apply a frozen SDK migration guide to one app (SDK-208, Half 2). U
 
 # Apply an SDK migration guide to an app (Half 2)
 
-You are **Half 2** of the SDK-upgrade pipeline. You take a **frozen, already-reviewed** migration guide (`migrations/<A>__<B>.json`) and apply its changes to one app's source. You do **not** decide *what* changed — that was settled once, in the guide. This is what makes sibling apps and external partner apps converge instead of each re-inventing the migration.
+You are **Half 2** of the SDK-upgrade pipeline. You take a **frozen, already-reviewed** migration guide (`migrations/<A>__<B>.json`) and apply its changes to one app's source. You do **not** decide _what_ changed — that was settled once, in the guide. This is what makes sibling apps and external partner apps converge instead of each re-inventing the migration.
 
 ## Inputs
 
@@ -16,7 +16,7 @@ This skill ships two ways. **In the SDK repo**, the `pnpm sdk-upgrade` CLI does 
 
 ## Hard rules
 
-1. **Apply only what the guide lists.** You are **forbidden from re-deriving deltas** or inventing changes not in the guide. If you believe a change is missing, do **not** silently invent a fix — apply what is listed, let the typecheck gate surface the gap, and **report it** so the *guide* gets fixed (in the generate skill), not patched per-app. Per-app improvisation is exactly the drift this pipeline exists to kill.
+1. **Apply only what the guide lists.** You are **forbidden from re-deriving deltas** or inventing changes not in the guide. If you believe a change is missing, do **not** silently invent a fix — apply what is listed, let the typecheck gate surface the gap, and **report it** so the _guide_ gets fixed (in the generate skill), not patched per-app. Per-app improvisation is exactly the drift this pipeline exists to kill.
 2. **Idempotent.** The app's source may already be partly migrated (its pin can lag its code). For each change: if the old pattern is present, transform it; if it is already in the target form, skip. Never double-apply.
 3. **`required` vs `recommended`.** Apply all `required` changes. Apply `recommended` ones when the pattern is present. A `required` change you cannot resolve is a **blocker** — list it explicitly in your summary.
 4. **Do not bump pins or install here.** The deterministic gate does that (`--gate`). Your job is source edits only.
@@ -31,7 +31,7 @@ This skill ships two ways. **In the SDK repo**, the `pnpm sdk-upgrade` CLI does 
    `pnpm sdk-upgrade apply --example <name> --to <B> --gate`
    which bumps the pins, installs, **formats** (oxfmt), then typechecks against B.
    Don't hand-match a sibling app's line-wrapping — the format step normalises
-   incidental whitespace, so converging on *API usage* is enough; the gate makes
+   incidental whitespace, so converging on _API usage_ is enough; the gate makes
    the source byte-identical.
 5. **If the gate's typecheck fails:** read each error. Two cases —
    - **A guide-listed change you missed at a site** → apply it (still within the guide). Re-run the gate.
@@ -40,7 +40,7 @@ This skill ships two ways. **In the SDK repo**, the `pnpm sdk-upgrade` CLI does 
 
 ## The deterministic gate is your safety net
 
-The typecheck-against-B gate is what makes an LLM apply step trustworthy: it catches both *unapplied listed sites* and *deltas the guide missed*. Treat **green typecheck as the bar** for "done", and treat any guide gap it exposes as feedback that must flow back to the guide — not as a one-off local patch.
+The typecheck-against-B gate is what makes an LLM apply step trustworthy: it catches both _unapplied listed sites_ and _deltas the guide missed_. Treat **green typecheck as the bar** for "done", and treat any guide gap it exposes as feedback that must flow back to the guide — not as a one-off local patch.
 
 ## Using this in an external app (no SDK CLI)
 

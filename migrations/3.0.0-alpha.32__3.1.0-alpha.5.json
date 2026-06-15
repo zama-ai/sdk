@@ -38,7 +38,10 @@
       "detection": "Calls to any affected hook whose first argument is an object literal `{ tokenAddress, wrapperAddress? }`.",
       "action": "Replace the first config-object argument with the bare token address. `useUnshield({ tokenAddress, wrapperAddress: tokenAddress }, opts)` becomes `useUnshield(tokenAddress, opts)`. For ERC-7984 the wrapper IS the token, so `wrapperAddress` is dropped (it was redundant).",
       "severity": "required",
-      "references": ["api/react-sdk.diff", "changelog.diff#remove-auto-signer-resolving-in-hooks-281"]
+      "references": [
+        "api/react-sdk.diff",
+        "changelog.diff#remove-auto-signer-resolving-in-hooks-281"
+      ]
     },
     {
       "id": "use-zama-config-interface-removed",
@@ -136,7 +139,10 @@
       "detection": "Imports/usages of any of the listed hooks.",
       "action": "These low-level EIP-712 / keypair / ZK-proof primitives were removed (auto-signer resolution now lives inside the higher-level hooks). Move to the corresponding high-level hook flow; there is no drop-in replacement.",
       "severity": "required",
-      "references": ["api/react-sdk.diff", "changelog.diff#remove-auto-signer-resolving-in-hooks-281"]
+      "references": [
+        "api/react-sdk.diff",
+        "changelog.diff#remove-auto-signer-resolving-in-hooks-281"
+      ]
     },
     {
       "id": "use-encrypt-returns-encrypt-result",

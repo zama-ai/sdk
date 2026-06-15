@@ -13,18 +13,18 @@ The guide is generated **once per (A,B) couple** and then applied identically to
 
 The deterministic CLI has already run `pnpm sdk-upgrade guide --from <A> --to <B>` and written a bundle to `.tmp/sdk-upgrade/<A>__<B>/`:
 
-| File | What it carries |
-| --- | --- |
-| `bundle.json` | Manifest: which inputs changed, byte sizes, refs/versions. **Read this first.** |
-| `llms-full.diff` | Unified diff of `llms-full.txt` — docs + approved examples + READMEs. The *usage-level* signal. |
-| `api/<pkg>.diff` | Per-package `*.api.md` diffs from api-extractor. The *signature-level* signal — renames, signature changes, removals, **including class members**. |
-| `changelog.diff` | The `CHANGELOG.md` slice between A and B. Human intent + PR references. |
+| File             | What it carries                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bundle.json`    | Manifest: which inputs changed, byte sizes, refs/versions. **Read this first.**                                                                    |
+| `llms-full.diff` | Unified diff of `llms-full.txt` — docs + approved examples + READMEs. The _usage-level_ signal.                                                    |
+| `api/<pkg>.diff` | Per-package `*.api.md` diffs from api-extractor. The _signature-level_ signal — renames, signature changes, removals, **including class members**. |
+| `changelog.diff` | The `CHANGELOG.md` slice between A and B. Human intent + PR references.                                                                            |
 
 ## Hard rules
 
 1. **Read the ENTIRE bundle, not just export lines.** Do not grep for `export` and stop. The most dangerous deltas hide in **class-member** changes inside `api/*.diff` (e.g. a method removed from `class ZamaSDK`) and in changelog prose. A real prototype run missed `ZamaSDK.requireSigner` being removed precisely because the generate step skimmed top-level exports only. Read every changed `api/*.diff` in full, and read `changelog.diff` in full.
 2. **Output must validate against the schema.** After writing, the operator runs `pnpm sdk-upgrade guide --validate migrations/<A>__<B>.json`. If it fails, fix the JSON. The validator is in `scripts/sdk-upgrade/lib/guide-schema.mjs`.
-3. **Describe, don't apply.** Each change is a *mechanical instruction* for the apply skill. Never edit app code here.
+3. **Describe, don't apply.** Each change is a _mechanical instruction_ for the apply skill. Never edit app code here.
 4. **Completeness over brevity.** A breaking change no app currently imports is still listed as `required` — a future app might use it. Mark genuinely additive things `recommended`.
 5. **Idempotent actions.** Write each `action` so that applying it to an app already partly migrated is a safe no-op (e.g. "rename X to Y; if already Y, skip").
 
@@ -33,30 +33,31 @@ The deterministic CLI has already run `pnpm sdk-upgrade guide --from <A> --to <B
 ```jsonc
 {
   "schemaVersion": 1,
-  "from": "<A>",                 // exact version, e.g. "3.0.0-alpha.32"
+  "from": "<A>", // exact version, e.g. "3.0.0-alpha.32"
   "to": "<B>",
   "fromRef": "v<A>",
   "toRef": "v<B>",
-  "generatedFrom": {             // provenance — which bundle files you used
+  "generatedFrom": {
+    // provenance — which bundle files you used
     "llmsFullDiff": "llms-full.diff",
     "apiReportDiffs": ["api/sdk.diff", "api/react-sdk.diff", "..."],
-    "changelogDiff": "changelog.diff"
+    "changelogDiff": "changelog.diff",
   },
   "note": "one line: how generated + any caveats",
   "changes": [
     {
       "id": "kebab-case-stable-id",
       "kind": "rename | signature-change | new-required-option | removed-api | new-api | adopt-hook | config-change",
-      "appliesTo": "@zama-fhe/sdk",        // package / entry the change touches
+      "appliesTo": "@zama-fhe/sdk", // package / entry the change touches
       "from": "old symbol or signature",
       "to": "new symbol or signature",
       "affectedSymbols": ["optional", "list", "of", "exact", "names"],
       "detection": "how the apply step locates affected code",
       "action": "mechanical, idempotent instruction",
       "severity": "required | recommended",
-      "references": ["api/sdk.diff", "changelog.diff#anchor"]
-    }
-  ]
+      "references": ["api/sdk.diff", "changelog.diff#anchor"],
+    },
+  ],
 }
 ```
 
@@ -69,7 +70,7 @@ Human-readable companion for review. Group changes by package, show a representa
 ## Procedure
 
 1. Read `bundle.json` to see what changed and the exact A/B versions and refs.
-2. Read every changed `api/*.diff` **in full** — top-level exports *and* class members. This is the authoritative signature signal.
+2. Read every changed `api/*.diff` **in full** — top-level exports _and_ class members. This is the authoritative signature signal.
 3. Read `changelog.diff` in full for intent and PR references; cross-reference each entry against the api diffs.
 4. Skim `llms-full.diff` for usage-pattern shifts (how examples call the API) that the api diff alone doesn't convey.
 5. Synthesize one `change` entry per distinct breaking or noteworthy delta. Assign stable kebab-case ids and `required`/`recommended`.
