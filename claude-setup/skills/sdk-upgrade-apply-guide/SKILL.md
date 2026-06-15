@@ -12,6 +12,8 @@ You are **Half 2** of the SDK-upgrade pipeline. You take a **frozen, already-rev
 - A guide selected by the CLI: `pnpm sdk-upgrade apply --example <name> --to <B>` (or `--app <path>`) prints the app dir, its installed version, and the chosen `migrations/<A>__<B>.json`.
 - The app's source tree (e.g. `examples/<name>/src/`).
 
+This skill ships two ways. **In the SDK repo**, the `pnpm sdk-upgrade` CLI does the selection and gating around you. **In an external partner app** (installed via `npx skills add` / the zama-ai/skills marketplace), there is no SDK CLI — see "Using this in an external app" below. The judgement steps are identical; only the surrounding plumbing differs.
+
 ## Hard rules
 
 1. **Apply only what the guide lists.** You are **forbidden from re-deriving deltas** or inventing changes not in the guide. If you believe a change is missing, do **not** silently invent a fix — apply what is listed, let the typecheck gate surface the gap, and **report it** so the *guide* gets fixed (in the generate skill), not patched per-app. Per-app improvisation is exactly the drift this pipeline exists to kill.
@@ -39,6 +41,17 @@ You are **Half 2** of the SDK-upgrade pipeline. You take a **frozen, already-rev
 ## The deterministic gate is your safety net
 
 The typecheck-against-B gate is what makes an LLM apply step trustworthy: it catches both *unapplied listed sites* and *deltas the guide missed*. Treat **green typecheck as the bar** for "done", and treat any guide gap it exposes as feedback that must flow back to the guide — not as a one-off local patch.
+
+## Using this in an external app (no SDK CLI)
+
+When this skill was installed via `npx skills add` / the zama-ai/skills marketplace, the guides travel with it under `guides/` (next to this `SKILL.md`), catalogued in `guides/index.json`. There is no `pnpm sdk-upgrade` — you run the plumbing yourself:
+
+1. **Read the app's installed version** of `@zama-fhe/sdk` (and `@zama-fhe/react-sdk`) from its `package.json`.
+2. **Select the guide** from `guides/index.json` using the same rule the CLI uses: among guides whose `to` equals the target version **B**, pick the one whose `from` is the **nearest published version ≤ the installed version**. A guide with an older `from` floor still applies — it is idempotent on a newer app. If none qualifies (the app predates every floor, or no guide targets B), **stop and report** that a guide must be generated SDK-side for this couple; do not improvise one.
+3. **Apply** the selected guide exactly as in the Procedure above — same hard rules, same idempotency, still forbidden from re-deriving deltas.
+4. **Gate with the app's own tooling**, not the SDK repo's: bump the `@zama-fhe/*` pins in `package.json` to B, install, run the app's own formatter, then its typecheck/build. Green typecheck is still the bar; any guide gap it exposes must be reported back so the SDK-side guide is fixed — never patched only locally.
+
+Partners **apply** guides; they never **generate** them. Regeneration stays SDK-side so every consumer converges on the same reviewed artifact.
 
 ## You are done when
 

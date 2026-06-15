@@ -2,7 +2,7 @@
 
 **Ticket:** [SDK-208](https://linear.app/zama/issue/SDK-208/investigate-non-determinism-in-the-ai-driven-example-app-upgrade)
 **Builds on:** [`example-upgrade-determinism.md`](./example-upgrade-determinism.md) (the recommendation this plan implements)
-**Status:** Phases 0–3 implemented (deterministic CLI + both skills + `/sdk-upgrade` command); Phase 4 (external distribution) pending. Supersedes the [PR #316](https://github.com/zama-ai/sdk/pull/316) design (kept open as draft reference).
+**Status:** Phases 0–4 implemented — deterministic CLI (`guide`/`apply`/`dist`) + both skills + `/sdk-upgrade` command + completeness lint + external skill bundle. Convergence validated on react-viem (#404) and react-ethers (#410). Supersedes the [PR #316](https://github.com/zama-ai/sdk/pull/316) design (kept open as draft reference).
 
 ## Goal
 
@@ -117,7 +117,7 @@ The skills and command live under `claude-setup/` (the repo's existing skill sou
 - **Phase 1 — `generate-guide` skill + schema.** Produce the first guide for a real couple with a known API rename (decrypt-glossary). Human review of the guide is the gate.
 - **Phase 2 — `apply-guide` skill + gates (the prototype experiment). Done — recommendation validated.** The same frozen guide was applied to `react-viem` (#404) and `react-ethers` (#410). Both typecheck clean against B; react-ethers passed the gate on the first apply (no missed sites, no guide gaps), where react-viem had needed two post-gate fixes that the guide has since absorbed. Every migrated hook call-site reaches an **identical API shape** across the two apps — semantic convergence. The only residual difference was line-wrapping, which `oxfmt` collapses to **byte-identical** source; this is why the gate now runs `format` before `typecheck`, not just `typecheck`.
 - **Phase 3 — PR automation + `/sdk-upgrade` command.** Wire output to PRs (file allowlist, `assertSafeBranch`); add the thin slash command.
-- **Phase 4 — external distribution.** Bundle the `apply` skill + committed guides for `npx skills add`; settle the version-selection rule; document the partner workflow.
+- **Phase 4 — external distribution. Done.** `pnpm sdk-upgrade dist` assembles a self-contained bundle (portable apply-guide `SKILL.md` + every committed guide + `guides/index.json`) for publishing to the `zama-ai/skills` marketplace / `npx skills add`. The apply skill is now dual-mode: in-repo it uses the CLI, externally it selects from `guides/index.json` and gates with the app's own tooling. Version-selection rule and the no-guide fallback are settled and documented in [`sdk-upgrade-distribution.md`](./sdk-upgrade-distribution.md).
 
 ## Testing
 

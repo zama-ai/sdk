@@ -17,6 +17,7 @@ import { collectDiff } from "./lib/collect-diff.mjs";
 import { validateGuide, selectGuide } from "./lib/guide-schema.mjs";
 import { changedPublicExports } from "./lib/public-symbols.mjs";
 import { uncoveredSymbols } from "./lib/guide-coverage.mjs";
+import { assembleDist } from "./lib/dist.mjs";
 import { repoRoot, exampleDir, readInstalledVersion, bumpDeps } from "./lib/app.mjs";
 
 const MIGRATIONS_DIR = join(repoRoot(), "migrations");
@@ -179,14 +180,26 @@ function formatApp(appDir) {
   if (fmt.status !== 0) fail("format failed");
 }
 
+// Phase 4: assemble the self-contained external skill bundle (apply skill + all
+// committed guides + index) for publishing to the zama-ai/skills marketplace.
+function cmdDist(argv) {
+  const { values } = parseArgs({ args: argv, options: { out: { type: "string" } } });
+  const skillDir = join(repoRoot(), "claude-setup", "skills", "sdk-upgrade-apply-guide");
+  const outDir = values.out ?? join(repoRoot(), "dist", "sdk-upgrade", "sdk-upgrade-apply-guide");
+  const { guideCount } = assembleDist({ skillDir, migrationsDir: MIGRATIONS_DIR, outDir });
+  console.log(`Bundled apply-guide skill + ${guideCount} guide(s) -> ${outDir}`);
+  console.log("Publish: copy this directory into the zama-ai/skills marketplace (consumed via `npx skills add`).");
+}
+
 const [command, ...rest] = process.argv.slice(2);
-const commands = { guide: cmdGuide, apply: cmdApply };
+const commands = { guide: cmdGuide, apply: cmdApply, dist: cmdDist };
 if (!commands[command]) {
-  console.error("Usage: sdk-upgrade <guide|apply> [options]");
+  console.error("Usage: sdk-upgrade <guide|apply|dist> [options]");
   console.error("  guide  --from <A> --to <B> [--out <dir>]   collect the diff bundle for a couple");
   console.error("  guide  --validate <file.json> [--bundle <dir>]  validate a guide (and lint coverage vs the bundle)");
   console.error("  apply  --example <name> --to <B> [--gate]  select + (with --gate) apply guide to an app");
   console.error("  apply  --app <path> --to <B> [--gate]      same, for an external app");
+  console.error("  dist   [--out <dir>]                       assemble the external skill bundle for publishing");
   process.exit(2);
 }
 await commands[command](rest);
