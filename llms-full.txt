@@ -10498,14 +10498,14 @@ The unwrap request ID emitted in the `UnwrapRequested` event. This is the prefer
 await finalize({ unwrapRequestId: requestId });
 ```
 
-### burnAmountHandle
+### burnAmount
 
 `EncryptedValue`
 
 Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
 
 ```tsx
-await finalize({ burnAmountHandle: encryptedAmount });
+await finalize({ burnAmount: encryptedAmount });
 ```
 
 ## Return Type
