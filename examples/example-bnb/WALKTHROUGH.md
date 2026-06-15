@@ -8,8 +8,8 @@
 
 > ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
 > stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
-> It lets partners explore and integrate the Zama SDK end-to-end on BNB Smart Chain Testnet, and
-> isn't intended for production use.
+> It's intended for integrating and testing the Zama SDK end-to-end on BNB Smart Chain Testnet, not
+> for production use.
 
 ---
 
