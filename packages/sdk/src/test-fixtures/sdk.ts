@@ -1,5 +1,4 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
-import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { ChainRouter } from "../relayer/chain-router";
@@ -21,7 +20,6 @@ export interface SdkFixtures {
 }
 
 function buildSDK(
-  chain: FheChain,
   router: ChainRouter,
   provider: GenericProvider,
   signer: GenericSigner,
@@ -29,7 +27,6 @@ function buildSDK(
   overrides?: Partial<ZamaConfig>,
 ): ZamaSDK {
   return new ZamaSDK({
-    chains: [chain],
     router,
     provider,
     signer,
@@ -50,12 +47,12 @@ type SdkDeps = ChainFixtures &
   StorageFixtures;
 
 export const sdkFixtures: FixturesOf<SdkFixtures, SdkDeps> = {
-  sdk: async ({ chain, router, provider, signer, storage }, use) => {
-    await use(buildSDK(chain, router, provider, signer, storage));
+  sdk: async ({ router, provider, signer, storage }, use) => {
+    await use(buildSDK(router, provider, signer, storage));
   },
-  createSDK: async ({ chain, provider, signer, router, storage }, use) => {
+  createSDK: async ({ provider, signer, router, storage }, use) => {
     const factory: CreateSDKFn = (overrides) =>
-      buildSDK(chain, router, provider, signer, storage, overrides);
+      buildSDK(router, provider, signer, storage, overrides);
     await use(factory);
   },
   events: ZamaSDKEvents,
