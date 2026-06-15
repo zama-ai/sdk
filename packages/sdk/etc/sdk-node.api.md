@@ -165,7 +165,32 @@ export interface CreateEIP712Request extends BaseRequest {
 export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
 
 // @public
-export interface DelegatedUserDecryptParams {
+export type DecryptPublicValuesResult = PublicDecryptResults;
+
+// @public
+export interface DecryptValuesParams {
+    // (undocumented)
+    contractAddress: Address;
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    encryptedValues: EncryptedValue[];
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+    // (undocumented)
+    signature: Hex;
+    // (undocumented)
+    signedContractAddresses: Address[];
+    // (undocumented)
+    signerAddress: Address;
+    // (undocumented)
+    startTimestamp: number;
+}
+
+// @public
+export interface DelegatedDecryptValuesParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -447,9 +472,6 @@ export interface PublicDecryptResponseData {
 }
 
 // @public
-export type PublicDecryptResult = PublicDecryptResults;
-
-// @public
 export interface RelayerConfig {
     readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
     readonly createWorker?: (chains: FheChain[]) => any;
@@ -516,28 +538,6 @@ export interface UpdateCsrfRequest extends BaseRequest {
     };
     // (undocumented)
     type: "UPDATE_CSRF";
-}
-
-// @public
-export interface UserDecryptParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
 }
 
 // @public (undocumented)

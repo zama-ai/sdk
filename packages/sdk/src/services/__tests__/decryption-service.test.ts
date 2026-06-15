@@ -11,7 +11,7 @@ const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as A
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
 const HANDLE_A = `0x${"aa".repeat(32)}` as EncryptedValue;
 const HANDLE_B = `0x${"bb".repeat(32)}` as EncryptedValue;
-const ZERO_HANDLE = `0x${"00".repeat(32)}` as EncryptedValue;
+const ZERO_ENCRYPTED_VALUE = `0x${"00".repeat(32)}` as EncryptedValue;
 
 function handles(items: Array<[EncryptedValue, Address]>): EncryptedInput[] {
   return items.map(([encryptedValue, contractAddress]) => ({
@@ -27,9 +27,9 @@ describe("DecryptionService", () => {
     userAddress,
   }) => {
     await expect(
-      decryptionService.userDecrypt(handles([[ZERO_HANDLE, CONTRACT_A]]), userAddress),
+      decryptionService.userDecrypt(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({
-      [ZERO_HANDLE]: 0n,
+      [ZERO_ENCRYPTED_VALUE]: 0n,
     });
     expect(relayer.createEIP712).not.toHaveBeenCalled();
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
@@ -102,12 +102,12 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.userDecrypt(
         handles([
-          [ZERO_HANDLE, CONTRACT_A],
+          [ZERO_ENCRYPTED_VALUE, CONTRACT_A],
           [HANDLE_B, CONTRACT_B],
         ]),
         userAddress,
       ),
-    ).resolves.toEqual({ [ZERO_HANDLE]: 0n, [HANDLE_B]: 20n });
+    ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n, [HANDLE_B]: 20n });
 
     expect(relayer.createEIP712).toHaveBeenCalledWith(
       TEST_PUBLIC_KEY,
