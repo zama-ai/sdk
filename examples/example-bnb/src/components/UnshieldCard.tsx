@@ -5,7 +5,7 @@ import { useUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
 import { clearPendingUnshield } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
-import { BNB_EXPLORER_URL } from "@/lib/config";
+import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 import { setActiveUnshieldToken } from "@/lib/activeUnshield";
 
 interface UnshieldCardProps {
@@ -95,7 +95,7 @@ export function UnshieldCard({
         <div className="alert alert-success card-status">
           Unshielded!{" "}
           <a
-            href={`${BNB_EXPLORER_URL}/tx/${unshield.data.txHash}`}
+            href={`${BSC_TESTNET_EXPLORER_URL}/tx/${unshield.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useZamaSDK, useResumeUnshield } from "@zama-fhe/react-sdk";
 import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 import type { Address, Hex } from "@zama-fhe/sdk";
-import { BNB_EXPLORER_URL } from "@/lib/config";
+import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
   tokenAddress: Address;
@@ -65,7 +65,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
         <div className="balance-row">
           <span className="balance-label">
             Unwrap confirmed, finalization pending —{" "}
-            <a href={`${BNB_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
+            <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${pendingTxHash}`} target="_blank" rel="noreferrer">
               {pendingTxHash.slice(0, 10)}…
             </a>
           </span>
@@ -85,7 +85,7 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
       {resume.isSuccess && resume.data?.txHash && (
         <div className="alert alert-success card-status">
           Unshielded!{" "}
-          <a href={`${BNB_EXPLORER_URL}/tx/${resume.data.txHash}`} target="_blank" rel="noreferrer">
+          <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${resume.data.txHash}`} target="_blank" rel="noreferrer">
             {resume.data.txHash.slice(0, 10)}…
           </a>
         </div>

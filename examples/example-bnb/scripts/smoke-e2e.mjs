@@ -1,4 +1,4 @@
-// Headless e2e smoke test for the BSC Testnet (chain 97) cleartext deployment.
+// Headless e2e smoke test for the BNB Smart Chain Testnet (chain 97) cleartext/mock deployment.
 //
 // Runs the full confidential-token lifecycle against the live BNB deployment:
 //   mint USDC → shield → confidential balance → confidential transfer → unshield
@@ -13,13 +13,15 @@ import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
 import { ZamaSDK, MemoryStorage, cleartext } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 
-const RPC = process.env.NEXT_PUBLIC_BNB_RPC_URL || "https://bsc-testnet-rpc.publicnode.com";
+const RPC = process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL || "https://bsc-testnet-rpc.publicnode.com";
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 if (!PRIVATE_KEY) throw new Error("Missing env: PRIVATE_KEY");
 
 const USDC = "0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c";
 
-const zamaBnb = {
+// Cleartext FHEVM host stack for BNB Smart Chain Testnet (chain 97) — development/integration setup,
+// not intended for production use.
+const zamaBscTestnetCleartext = {
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -55,12 +57,12 @@ async function main() {
   console.log("Account A:", walletA.address);
   console.log("Account B:", walletB.address, "(delegate / transfer recipient)");
 
-  const relayers = { [zamaBnb.id]: cleartext() };
+  const relayers = { [zamaBscTestnetCleartext.id]: cleartext() };
   const sdkA = new ZamaSDK(
-    createConfig({ chains: [zamaBnb], signer: walletA, storage: new MemoryStorage(), relayers }),
+    createConfig({ chains: [zamaBscTestnetCleartext], signer: walletA, storage: new MemoryStorage(), relayers }),
   );
   const sdkB = new ZamaSDK(
-    createConfig({ chains: [zamaBnb], signer: walletB, storage: new MemoryStorage(), relayers }),
+    createConfig({ chains: [zamaBscTestnetCleartext], signer: walletB, storage: new MemoryStorage(), relayers }),
   );
 
   const reg = await sdkA.registry.getConfidentialToken(USDC);

@@ -1,6 +1,6 @@
 "use client";
 
-import { BNB_EXPLORER_URL } from "@/lib/config";
+import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 
 interface BalancesCardProps {
   formattedErc20: string;
@@ -72,7 +72,7 @@ export function BalancesCard({
       {mintTxHash && (
         <div className="alert alert-success card-status">
           Minted!{" "}
-          <a href={`${BNB_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
+          <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${mintTxHash}`} target="_blank" rel="noreferrer">
             {mintTxHash.slice(0, 10)}…
           </a>
         </div>

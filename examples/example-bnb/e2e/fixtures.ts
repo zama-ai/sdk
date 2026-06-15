@@ -1,6 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-export const BNB_CHAIN_ID_HEX = "0x61"; // 97 in hex — BNB chain ID
+export const BSC_TESTNET_CHAIN_ID_HEX = "0x61"; // 97 in hex — BNB chain ID
 export const WRONG_CHAIN_ID = "0x1"; // an unsupported chain — used for wrong-network tests
 export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 

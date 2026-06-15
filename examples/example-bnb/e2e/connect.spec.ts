@@ -1,4 +1,4 @@
-import { test, expect, BNB_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import { test, expect, BSC_TESTNET_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 test.describe("connect flow", () => {
   test("shows connect screen when no wallet is installed", async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe("connect flow", () => {
   }) => {
     await mockRpc();
     // Wallet already connected on BNB — page auto-detects via useEffect.
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BNB_CHAIN_ID_HEX });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
     await page.goto("/");
 
     await expect(page.getByText("Balances")).toBeVisible();
@@ -42,7 +42,7 @@ test.describe("connect flow", () => {
     // connect() is called, without touching the eth_accounts read path.
     await mockWallet({
       accounts: [],
-      chainId: BNB_CHAIN_ID_HEX,
+      chainId: BSC_TESTNET_CHAIN_ID_HEX,
       requestAccounts: [TEST_ADDRESS],
     });
     await page.goto("/");

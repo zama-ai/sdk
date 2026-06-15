@@ -4,7 +4,7 @@ import { useState } from "react";
 import { isAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { BNB_EXPLORER_URL } from "@/lib/config";
+import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
   tokenAddress: Address;
@@ -97,7 +97,7 @@ export function DelegateDecryptionCard({
         <div className="alert alert-success card-status">
           Access granted!{" "}
           <a
-            href={`${BNB_EXPLORER_URL}/tx/${delegate.data.txHash}`}
+            href={`${BSC_TESTNET_EXPLORER_URL}/tx/${delegate.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >

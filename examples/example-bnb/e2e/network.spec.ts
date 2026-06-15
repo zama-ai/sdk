@@ -1,4 +1,4 @@
-import { test, expect, WRONG_CHAIN_ID, BNB_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
+import { test, expect, WRONG_CHAIN_ID, BSC_TESTNET_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 test.describe("wrong network screen", () => {
   // Start with the wallet connected on BNB and wait for the main screen to be visible
@@ -6,7 +6,7 @@ test.describe("wrong network screen", () => {
   // race with the auto-switch logic in page.tsx (handleSwitchToBnb on load).
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BNB_CHAIN_ID_HEX });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
     await page.goto("/");
     await expect(page.getByText("Balances")).toBeVisible();
   });
@@ -46,7 +46,7 @@ test.describe("wrong network screen", () => {
     await page.evaluate((chainId) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__emitChainChanged(chainId);
-    }, BNB_CHAIN_ID_HEX);
+    }, BSC_TESTNET_CHAIN_ID_HEX);
 
     await expect(page.getByText("Balances")).toBeVisible();
   });

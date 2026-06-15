@@ -13,7 +13,7 @@ import { createConfig } from "@zama-fhe/sdk/ethers";
 import type { EIP1193Provider } from "@zama-fhe/sdk/ethers";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { JsonRpcProvider } from "ethers";
-import { BNB_RPC_URL } from "@/lib/config";
+import { BSC_TESTNET_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
 
@@ -25,10 +25,10 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //   <ZamaProvider config={config}>
 //
 // The BNB chain config is inlined below (no shipped preset yet for chain 97).
-// The cleartext relayer transport (`cleartext()`) is used because this BSC Testnet
-// deployment runs the cleartext fhEVM host stack — there is no real relayer/KMS network.
+// The cleartext relayer transport (`cleartext()`) is used because this BNB Smart Chain Testnet
+// deployment runs the cleartext FHEVM host stack — there is no real relayer/KMS network.
 //
-// SDK reads use a JsonRpcProvider pointed at BNB_RPC_URL. Wallet writes and EIP-712
+// SDK reads use a JsonRpcProvider pointed at BSC_TESTNET_RPC_URL. Wallet writes and EIP-712
 // signing use the injected EIP-1193 provider through the ethers adapter.
 //
 // Two extra layers handle wallet reactivity:
@@ -44,12 +44,14 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-// Inline BNB (BSC Testnet, chain 97) cleartext fhEVM host stack — deployed for this demo.
-const zamaBnb = {
+// Cleartext FHEVM host stack for BNB Smart Chain Testnet (chain 97, Chapel), deployed for this demo.
+// Development/integration setup — values are kept in cleartext on-chain rather than encrypted — and
+// isn't intended for production use.
+const zamaBscTestnetCleartext = {
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
-  network: BNB_RPC_URL,
+  network: BSC_TESTNET_RPC_URL,
   aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
   kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
   inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",
@@ -117,21 +119,21 @@ export function Providers({ children }: { children: ReactNode }) {
     const ethereum = (getEthereumProvider() ?? {
       request: async ({ method }: { method: string }) => {
         if (method === "eth_accounts") return [];
-        if (method === "eth_chainId") return `0x${zamaBnb.id.toString(16)}`;
+        if (method === "eth_chainId") return `0x${zamaBscTestnetCleartext.id.toString(16)}`;
         throw new Error("No Ethereum wallet detected. Connect a wallet to use this app.");
       },
       on: () => {},
       removeListener: () => {},
     }) as EIP1193Provider;
-    const provider = new JsonRpcProvider(BNB_RPC_URL);
+    const provider = new JsonRpcProvider(BSC_TESTNET_RPC_URL);
 
     return createConfig({
-      chains: [zamaBnb],
+      chains: [zamaBscTestnetCleartext],
       ethereum,
       provider,
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
-      relayers: { [zamaBnb.id]: cleartext() },
+      relayers: { [zamaBscTestnetCleartext.id]: cleartext() },
       onEvent: (event) => {
         if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
           const wrapperAddress = getActiveUnshieldToken();

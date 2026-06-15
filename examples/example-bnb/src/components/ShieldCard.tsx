@@ -7,7 +7,7 @@ import { useZamaSDK } from "@zama-fhe/react-sdk";
 import { allowanceContract, approveContract, balanceOfContract } from "@zama-fhe/sdk";
 import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
-import { BNB_EXPLORER_URL } from "@/lib/config";
+import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
   /** Confidential wrapper address (the shield destination). */
@@ -151,7 +151,7 @@ export function ShieldCard({
       {shield.isSuccess && shield.data?.txHash && (
         <div className="alert alert-success card-status">
           Shielded!{" "}
-          <a href={`${BNB_EXPLORER_URL}/tx/${shield.data.txHash}`} target="_blank" rel="noreferrer">
+          <a href={`${BSC_TESTNET_EXPLORER_URL}/tx/${shield.data.txHash}`} target="_blank" rel="noreferrer">
             {shield.data.txHash.slice(0, 10)}…
           </a>
         </div>

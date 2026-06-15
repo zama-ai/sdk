@@ -21,7 +21,7 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { BNB_CHAIN_ID, BNB_CHAIN_ID_HEX, BNB_EXPLORER_URL, BNB_RPC_URL } from "@/lib/config";
+import { BSC_TESTNET_CHAIN_ID, BSC_TESTNET_CHAIN_ID_HEX, BSC_TESTNET_EXPLORER_URL, BSC_TESTNET_RPC_URL } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
@@ -44,9 +44,9 @@ function normalizePair(
   };
 }
 
-// Routes native tBNB balance reads through the direct BSC Testnet RPC so polling is fast
+// Routes native tBNB balance reads through the direct BNB Smart Chain Testnet RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
-const rpcProvider = new JsonRpcProvider(BNB_RPC_URL);
+const rpcProvider = new JsonRpcProvider(BSC_TESTNET_RPC_URL);
 
 // Attempt to switch to BNB. If the network is unknown to the wallet (error 4902),
 // prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
@@ -56,7 +56,7 @@ async function switchToBnb(ethereum: NonNullable<ReturnType<typeof getEthereumPr
   try {
     await ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: BNB_CHAIN_ID_HEX }],
+      params: [{ chainId: BSC_TESTNET_CHAIN_ID_HEX }],
     });
   } catch (err: unknown) {
     if ((err as { code: number }).code === 4902) {
@@ -64,11 +64,11 @@ async function switchToBnb(ethereum: NonNullable<ReturnType<typeof getEthereumPr
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: BNB_CHAIN_ID_HEX,
+            chainId: BSC_TESTNET_CHAIN_ID_HEX,
             chainName: "BNB Smart Chain Testnet",
             nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
-            rpcUrls: [BNB_RPC_URL],
-            blockExplorerUrls: [BNB_EXPLORER_URL],
+            rpcUrls: [BSC_TESTNET_RPC_URL],
+            blockExplorerUrls: [BSC_TESTNET_EXPLORER_URL],
           },
         ],
       });
@@ -261,7 +261,7 @@ export default function Home() {
   const [connectError, setConnectError] = useState<string | null>(null);
 
   // Case-insensitive: some wallets return uppercase hex.
-  const isBnb = chainId?.toLowerCase() === BNB_CHAIN_ID_HEX;
+  const isBnb = chainId?.toLowerCase() === BSC_TESTNET_CHAIN_ID_HEX;
 
   const queryClient = useQueryClient();
 
@@ -302,7 +302,7 @@ export default function Home() {
       const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
       setIsSwitching(false);
-      setSwitchFailed(current.toLowerCase() !== BNB_CHAIN_ID_HEX);
+      setSwitchFailed(current.toLowerCase() !== BSC_TESTNET_CHAIN_ID_HEX);
     }
   }
 
@@ -390,7 +390,7 @@ export default function Home() {
       <div className="app-container connect-screen">
         <h1>BNB Confidential Token Quickstart</h1>
         <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on the BSC Testnet (cleartext fhEVM).
+          Connect your wallet to interact with ERC-7984 tokens on BNB Smart Chain Testnet (cleartext FHEVM).
         </p>
         <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
           {isConnecting ? "Connecting…" : "Connect Wallet"}
@@ -406,7 +406,7 @@ export default function Home() {
       <div className="app-container connect-screen">
         <h1>BNB Network Required</h1>
         <p className="subtitle">
-          This app only works on the BSC Testnet (chain ID {BNB_CHAIN_ID}).
+          This app only works on BNB Smart Chain Testnet (chain ID {BSC_TESTNET_CHAIN_ID}).
         </p>
         <button
           type="button"

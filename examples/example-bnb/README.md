@@ -2,10 +2,15 @@
 
 Next.js 16 example app demonstrating `@zama-fhe/react-sdk` integration with
 [ethers v6](https://docs.ethers.org/v6/) on **BNB Smart Chain Testnet**
-(chain ID `97`), backed by a cleartext fhEVM stack deployed for this demo.
+(chain ID `97`), backed by a cleartext FHEVM stack deployed for this demo.
 
 Uses the `cleartext()` relayer transport — there is no real relayer/KMS network
 on this chain.
+
+> ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
+> stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
+> It's designed for exploring and integrating the Zama SDK end-to-end on BNB Smart Chain Testnet, and
+> isn't intended for production use.
 
 Covers: connect wallet, shield ERC-20 → confidential, confidential transfer,
 unshield, grant/revoke/use delegation, pending unshield recovery.
@@ -50,9 +55,9 @@ to fund your wallet with tBNB before interacting with the app.
 
 | Variable                  | Required | Description                                                                     |
 | ------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_BNB_RPC_URL` | No       | BSC Testnet RPC override. Defaults to `https://bsc-testnet-rpc.publicnode.com`. |
+| `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` | No       | BNB Smart Chain Testnet RPC override. Defaults to `https://bsc-testnet-rpc.publicnode.com`. |
 
-## Deployed contracts on BSC Testnet (chain 97)
+## Deployed contracts on BNB Smart Chain Testnet (chain 97)
 
 The chain config in `src/providers.tsx` already wires these addresses in — no
 manual setup needed. They are reproduced here for reference.

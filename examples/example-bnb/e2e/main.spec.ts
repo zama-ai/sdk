@@ -1,7 +1,7 @@
 import {
   test,
   expect,
-  BNB_CHAIN_ID_HEX,
+  BSC_TESTNET_CHAIN_ID_HEX,
   TEST_ADDRESS,
   MOCK_CTOKEN1_ADDRESS,
   MOCK_CTOKEN2_ADDRESS,
@@ -13,7 +13,7 @@ import {
 test.describe("main screen", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BNB_CHAIN_ID_HEX });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
     await page.goto("/");
   });
 
@@ -88,7 +88,7 @@ test.describe("main screen", () => {
 test.describe("registry empty state", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc({ emptyRegistry: true });
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BNB_CHAIN_ID_HEX });
+    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
     await page.goto("/");
   });
 

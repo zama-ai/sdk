@@ -1,10 +1,15 @@
 # Integrating Zama Confidential Tokens (ERC-7984) on BNB
 
-**Audience:** Partners integrating Zama confidential tokens on the BNB testnet (ethers-based stack), including on-chain ACL delegation.
+**Audience:** Partners integrating Zama confidential tokens on BNB Smart Chain Testnet (ethers-based stack), including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
-**Chain:** BNB testnet (chainId 97)
+**Chain:** BNB Smart Chain Testnet (chain 97, Chapel)
+
+> ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
+> stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
+> It lets partners explore and integrate the Zama SDK end-to-end on BNB Smart Chain Testnet, and
+> isn't intended for production use.
 
 ---
 
@@ -69,7 +74,7 @@ The full Zama FHE stack relies on:
 The SDK interface is identical in both modes. From the application developer's perspective, you swap the `web()` (or `node()`) relayer for `cleartext()` in the `relayers` map passed to `createConfig`. All hooks behave the same way.
 
 ```
-Full FHE stack (production)             Cleartext stack (BSC Testnet)
+Full FHE stack (production)             Cleartext stack (BNB Smart Chain Testnet)
 ──────────────────────────────────      ──────────────────────────────────────
 web() → external HTTP service           cleartext() → on-chain executor
   └─ FHE co-processor (on-chain)          └─ plaintexts(handle) → plaintext
@@ -91,18 +96,18 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
   │
   ▼
-@zama-fhe/sdk (ZamaSDK)  ← createConfig({ chains: [zamaBnb], ethereum, provider, relayers })
+@zama-fhe/sdk (ZamaSDK)  ← createConfig({ chains: [zamaBscTestnetCleartext], ethereum, provider, relayers })
   ├─ ethers adapter
-  │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(BNB_RPC_URL)
+  │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(BSC_TESTNET_RPC_URL)
   │    └─ writes + EIP-712 signing → injected EIP-1193 wallet
-  └─ cleartext() relayer (resolved from the inline zamaBnb chain config)
-       └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, BSC Testnet)
+  └─ cleartext() relayer (resolved from the inline zamaBscTestnetCleartext chain config)
+       └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, BNB Smart Chain Testnet)
        └─ produces mock KMS signatures locally (no external call)
 ```
 
 **`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
 
-**Reads vs writes:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` pointed at `BNB_RPC_URL` for fast, wallet-independent reads, while wallet writes and EIP-712 signing go through the injected EIP-1193 provider. This split is configured by passing both `provider` and `ethereum` to `createConfig` in `src/providers.tsx`.
+**Reads vs writes:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` pointed at `BSC_TESTNET_RPC_URL` for fast, wallet-independent reads, while wallet writes and EIP-712 signing go through the injected EIP-1193 provider. This split is configured by passing both `provider` and `ethereum` to `createConfig` in `src/providers.tsx`.
 
 **Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts (via an incrementing `walletKey`) with a fresh ethers adapter bound to the new account. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. An EIP-712 session credential is persisted in IndexedDB and survives page reloads within its TTL.
 
@@ -309,14 +314,14 @@ import { cleartext, indexedDBStorage, IndexedDBStorage } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { JsonRpcProvider } from "ethers";
-import { BNB_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_BNB_RPC_URL || fallback
+import { BSC_TESTNET_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL || fallback
 
-// Inline BSC Testnet (chain 97) cleartext fhEVM host stack — no shipped preset for chain 97.
-const zamaBnb = {
+// Inline BNB Smart Chain Testnet (chain 97) cleartext/mock FHEVM host stack — no shipped preset for chain 97.
+const zamaBscTestnetCleartext = {
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
-  network: BNB_RPC_URL,
+  network: BSC_TESTNET_RPC_URL,
   aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
   kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
   inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",
@@ -331,12 +336,12 @@ const zamaBnb = {
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 const config = createConfig({
-  chains: [zamaBnb],
+  chains: [zamaBscTestnetCleartext],
   ethereum: getEthereumProvider(), //         injected EIP-1193 wallet (writes + EIP-712 signing)
-  provider: new JsonRpcProvider(BNB_RPC_URL), // direct RPC for fast, wallet-independent reads
+  provider: new JsonRpcProvider(BSC_TESTNET_RPC_URL), // direct RPC for fast, wallet-independent reads
   storage: indexedDBStorage,
   permitStorage: permitDBStorage,
-  relayers: { [zamaBnb.id]: cleartext() }, //  cleartext transport — no relayer/KMS network
+  relayers: { [zamaBscTestnetCleartext.id]: cleartext() }, //  cleartext transport — no relayer/KMS network
 });
 
 <ZamaProvider config={config}>...</ZamaProvider>;
@@ -530,9 +535,9 @@ if (decryptAs.error instanceof DelegationExpiredError) {
 
 | Variable                  | Required | Default                                  | Description                                                                |
 | ------------------------- | -------- | ---------------------------------------- | -------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_BNB_RPC_URL` | No       | `https://bsc-testnet-rpc.publicnode.com` | Override the BNB RPC endpoint. Infura: `https://bnb.infura.io/v3/YOUR_KEY` |
+| `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` | No       | `https://bsc-testnet-rpc.publicnode.com` | Override the BNB RPC endpoint. Infura: `https://bnb.infura.io/v3/YOUR_KEY` |
 
-Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_BNB_RPC_URL` if you want to use a private RPC endpoint. Leaving the value empty is safe — the app falls back to the public endpoint automatically.
+Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` if you want to use a private RPC endpoint. Leaving the value empty is safe — the app falls back to the public endpoint automatically.
 
 ---
 
@@ -542,7 +547,7 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_BNB_RPC_URL` if you
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install [Trust Wallet](https://trustwallet.com) (or any EIP-1193 browser wallet)                                                                                                                                                                                                                                                                                 |
 | Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                     |
-| Network switch fails with error                           | Wallet cannot reach the BNB RPC                                                                                                                          | Check `NEXT_PUBLIC_BNB_RPC_URL`; try the default `https://bsc-testnet-rpc.publicnode.com`                                                                                                                                                                                                                                                                        |
+| Network switch fails with error                           | Wallet cannot reach the BNB RPC                                                                                                                          | Check `NEXT_PUBLIC_BSC_TESTNET_RPC_URL`; try the default `https://bsc-testnet-rpc.publicnode.com`                                                                                                                                                                                                                                                                        |
 | Wrong network screen appears                              | Wallet switched away from BNB                                                                                                                            | Click **Switch to BNB** to switch back to BNB                                                                                                                                                                                                                                                                                                                    |
 | ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                                                                                       | Wait for the connection to complete                                                                                                                                                                                                                                                                                                                              |
 | ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                               |
