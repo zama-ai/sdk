@@ -979,7 +979,7 @@ export interface WrappersRegistryQueryConfig {
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly relayer: RelayerDispatcher;
+    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -1199,7 +1199,7 @@ export class ZamaSDK {
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
     // (undocumented)
-    readonly relayer: RelayerDispatcher;
+    readonly router: ChainRouter;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)
