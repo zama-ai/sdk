@@ -22,9 +22,11 @@ export function buildGuideIndex(guides) {
         to: g.to,
         file: `${g.from}__${g.to}.json`,
         changes: Array.isArray(g.changes) ? g.changes.length : 0,
-        required: Array.isArray(g.changes) ? g.changes.filter((c) => c.severity === "required").length : 0,
+        required: Array.isArray(g.changes)
+          ? g.changes.filter((c) => c.severity === "required").length
+          : 0,
       }))
-      .sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to)),
+      .toSorted((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to)),
   };
 }
 
@@ -43,7 +45,9 @@ export function assembleDist({ skillDir, migrationsDir, outDir, now = new Date()
 
   const guides = [];
   for (const file of readdirSync(migrationsDir)) {
-    if (file.endsWith(".json")) guides.push(JSON.parse(readFileSync(join(migrationsDir, file), "utf8")));
+    if (file.endsWith(".json")) {
+      guides.push(JSON.parse(readFileSync(join(migrationsDir, file), "utf8")));
+    }
     if (file.endsWith(".json") || file.endsWith(".md")) {
       cpSync(join(migrationsDir, file), join(guidesOut, file));
     }

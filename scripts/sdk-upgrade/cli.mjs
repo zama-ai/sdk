@@ -28,10 +28,15 @@ function fail(msg) {
 }
 
 function loadGuides() {
-  if (!existsSync(MIGRATIONS_DIR)) return [];
+  if (!existsSync(MIGRATIONS_DIR)) {
+    return [];
+  }
   return readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".json"))
-    .map((f) => ({ ...JSON.parse(readFileSync(join(MIGRATIONS_DIR, f), "utf8")), _path: join(MIGRATIONS_DIR, f) }));
+    .map((f) => ({
+      ...JSON.parse(readFileSync(join(MIGRATIONS_DIR, f), "utf8")),
+      guidePath: join(MIGRATIONS_DIR, f),
+    }));
 }
 
 // Completeness lint: union the changed public exports across the bundle's api
@@ -45,15 +50,21 @@ function reportCoverage(guide, bundleDir) {
   }
   const symbols = new Set();
   for (const file of readdirSync(apiDir).filter((f) => f.endsWith(".diff"))) {
-    for (const id of changedPublicExports(readFileSync(join(apiDir, file), "utf8"))) symbols.add(id);
+    for (const id of changedPublicExports(readFileSync(join(apiDir, file), "utf8"))) {
+      symbols.add(id);
+    }
   }
-  const all = [...symbols].sort((a, b) => a.localeCompare(b));
+  const all = [...symbols].toSorted((a, b) => a.localeCompare(b));
   const uncovered = uncoveredSymbols(guide, all);
   const covered = all.length - uncovered.length;
-  console.log(`\nCoverage: ${covered}/${all.length} changed public exports referenced by a guide change.`);
+  console.log(
+    `\nCoverage: ${covered}/${all.length} changed public exports referenced by a guide change.`,
+  );
   if (uncovered.length > 0) {
     console.log(`Not referenced by any change (review — may be intentional long-tail omissions):`);
-    for (const id of uncovered) console.log(`  - ${id}`);
+    for (const id of uncovered) {
+      console.log(`  - ${id}`);
+    }
   }
 }
 
@@ -74,15 +85,21 @@ async function cmdGuide(argv) {
     const { ok, errors } = validateGuide(guide);
     if (!ok) {
       console.error(`Guide invalid (${errors.length}):`);
-      for (const e of errors) console.error(`  - ${e}`);
+      for (const e of errors) {
+        console.error(`  - ${e}`);
+      }
       process.exit(1);
     }
     console.log(`Guide valid: ${guide.from} -> ${guide.to}, ${guide.changes.length} changes.`);
-    if (values.bundle) reportCoverage(guide, values.bundle);
+    if (values.bundle) {
+      reportCoverage(guide, values.bundle);
+    }
     return;
   }
 
-  if (!values.from || !values.to) fail("guide requires --from <A> --to <B> (or --validate <file>)");
+  if (!values.from || !values.to) {
+    fail("guide requires --from <A> --to <B> (or --validate <file>)");
+  }
 
   const from = await resolveVersion(values.from);
   const to = await resolveVersion(values.to);
@@ -101,7 +118,9 @@ async function cmdGuide(argv) {
   });
   const changed = summary.files.filter((f) => ["changed", "added", "removed"].includes(f.status));
   for (const f of summary.files) {
-    console.log(`  ${f.status.padEnd(9)} ${f.kind.padEnd(11)} ${f.path}${f.diffBytes ? `  (${f.diffBytes} B)` : ""}`);
+    console.log(
+      `  ${f.status.padEnd(9)} ${f.kind.padEnd(11)} ${f.path}${f.diffBytes ? `  (${f.diffBytes} B)` : ""}`,
+    );
   }
   console.log(`\nBundle: ${outDir} (${changed.length}/${summary.files.length} inputs changed)`);
   console.log("Next: run the sdk-upgrade-generate-guide skill on the bundle above,");
@@ -119,14 +138,22 @@ function cmdApply(argv) {
     },
   });
 
-  if (!values.to) fail("apply requires --to <B>");
-  if (!values.example && !values.app) fail("apply requires --example <name> or --app <path>");
+  if (!values.to) {
+    fail("apply requires --to <B>");
+  }
+  if (!values.example && !values.app) {
+    fail("apply requires --example <name> or --app <path>");
+  }
 
   const appDir = values.example ? exampleDir(values.example) : values.app;
-  if (!existsSync(join(appDir, "package.json"))) fail(`no package.json at ${appDir}`);
+  if (!existsSync(join(appDir, "package.json"))) {
+    fail(`no package.json at ${appDir}`);
+  }
 
   const installed = readInstalledVersion(appDir);
-  if (!installed) fail(`no @zama-fhe SDK dependency found in ${appDir}`);
+  if (!installed) {
+    fail(`no @zama-fhe SDK dependency found in ${appDir}`);
+  }
 
   const guide = selectGuide(installed, values.to, loadGuides());
   if (!guide) {
@@ -138,7 +165,9 @@ function cmdApply(argv) {
 
   console.log(`App: ${appDir}`);
   console.log(`Installed: ${installed}  Target: ${values.to}`);
-  console.log(`Guide: ${guide._path} (${guide.from} -> ${guide.to}, ${guide.changes.length} changes)`);
+  console.log(
+    `Guide: ${guide.guidePath} (${guide.from} -> ${guide.to}, ${guide.changes.length} changes)`,
+  );
 
   if (!values.gate) {
     console.log("\nNext: run the sdk-upgrade-apply-guide skill with the guide above,");
@@ -147,11 +176,15 @@ function cmdApply(argv) {
   }
 
   const bumped = bumpDeps(appDir, values.to);
-  console.log(`\nBumped ${bumped.length} pin(s): ${bumped.map((c) => `${c.name} ${c.from}->${c.to}`).join(", ") || "(none)"}`);
+  console.log(
+    `\nBumped ${bumped.length} pin(s): ${bumped.map((c) => `${c.name} ${c.from}->${c.to}`).join(", ") || "(none)"}`,
+  );
 
   console.log("Installing...");
   const install = spawnSync("npm", ["install"], { cwd: appDir, stdio: "inherit" });
-  if (install.status !== 0) fail("npm install failed");
+  if (install.status !== 0) {
+    fail("npm install failed");
+  }
 
   // Format before typecheck. The apply step's edits carry incidental whitespace
   // variance (e.g. a collapsed multi-line call); normalising here is what makes
@@ -171,13 +204,17 @@ function cmdApply(argv) {
 function formatApp(appDir) {
   const oxfmt = join(repoRoot(), "node_modules", ".bin", "oxfmt");
   if (!existsSync(oxfmt)) {
-    console.log("Formatting skipped (oxfmt not found — external app should run its own formatter).");
+    console.log(
+      "Formatting skipped (oxfmt not found — external app should run its own formatter).",
+    );
     return;
   }
   console.log("Formatting...");
   const target = existsSync(join(appDir, "src")) ? join(appDir, "src") : appDir;
   const fmt = spawnSync(oxfmt, [target], { cwd: repoRoot(), stdio: "inherit" });
-  if (fmt.status !== 0) fail("format failed");
+  if (fmt.status !== 0) {
+    fail("format failed");
+  }
 }
 
 // Phase 4: assemble the self-contained external skill bundle (apply skill + all
@@ -188,18 +225,28 @@ function cmdDist(argv) {
   const outDir = values.out ?? join(repoRoot(), "dist", "sdk-upgrade", "sdk-upgrade-apply-guide");
   const { guideCount } = assembleDist({ skillDir, migrationsDir: MIGRATIONS_DIR, outDir });
   console.log(`Bundled apply-guide skill + ${guideCount} guide(s) -> ${outDir}`);
-  console.log("Publish: copy this directory into the zama-ai/skills marketplace (consumed via `npx skills add`).");
+  console.log(
+    "Publish: copy this directory into the zama-ai/skills marketplace (consumed via `npx skills add`).",
+  );
 }
 
 const [command, ...rest] = process.argv.slice(2);
 const commands = { guide: cmdGuide, apply: cmdApply, dist: cmdDist };
 if (!commands[command]) {
   console.error("Usage: sdk-upgrade <guide|apply|dist> [options]");
-  console.error("  guide  --from <A> --to <B> [--out <dir>]   collect the diff bundle for a couple");
-  console.error("  guide  --validate <file.json> [--bundle <dir>]  validate a guide (and lint coverage vs the bundle)");
-  console.error("  apply  --example <name> --to <B> [--gate]  select + (with --gate) apply guide to an app");
+  console.error(
+    "  guide  --from <A> --to <B> [--out <dir>]   collect the diff bundle for a couple",
+  );
+  console.error(
+    "  guide  --validate <file.json> [--bundle <dir>]  validate a guide (and lint coverage vs the bundle)",
+  );
+  console.error(
+    "  apply  --example <name> --to <B> [--gate]  select + (with --gate) apply guide to an app",
+  );
   console.error("  apply  --app <path> --to <B> [--gate]      same, for an external app");
-  console.error("  dist   [--out <dir>]                       assemble the external skill bundle for publishing");
+  console.error(
+    "  dist   [--out <dir>]                       assemble the external skill bundle for publishing",
+  );
   process.exit(2);
 }
 await commands[command](rest);

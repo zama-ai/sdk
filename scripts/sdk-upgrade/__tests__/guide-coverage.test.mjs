@@ -31,7 +31,9 @@ describe("uncoveredSymbols", () => {
   });
 
   test("uses word boundaries — Token is not covered by WrappedToken text", () => {
-    const g = { changes: [{ from: "WrappedToken", to: "WrappedToken", detection: "", action: "" }] };
+    const g = {
+      changes: [{ from: "WrappedToken", to: "WrappedToken", detection: "", action: "" }],
+    };
     expect(uncoveredSymbols(g, ["Token"])).toEqual(["Token"]);
     expect(uncoveredSymbols(g, ["WrappedToken"])).toEqual([]);
   });

@@ -32,7 +32,9 @@ export function showAtRef(ref, path) {
 
 // Unified diff of two strings via temp files; "" when identical, null when both absent.
 function unifiedDiff(label, before, after, tmpDir) {
-  if (before === null && after === null) return null;
+  if (before === null && after === null) {
+    return null;
+  }
   const a = join(tmpDir, "a");
   const b = join(tmpDir, "b");
   writeFileSync(a, before ?? "");
@@ -41,8 +43,12 @@ function unifiedDiff(label, before, after, tmpDir) {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-  if (result.status === 0) return "";
-  if (result.status !== 1) throw new Error(`diff failed for ${label}: ${result.stderr}`);
+  if (result.status === 0) {
+    return "";
+  }
+  if (result.status !== 1) {
+    throw new Error(`diff failed for ${label}: ${result.stderr}`);
+  }
   return result.stdout;
 }
 
@@ -78,7 +84,9 @@ export function collectDiff({ fromRef, toRef, fromVersion, toVersion, outDir, re
             : after === null
               ? "removed"
               : "changed";
-    if (diff) writeFileSync(join(outDir, outName), diff);
+    if (diff) {
+      writeFileSync(join(outDir, outName), diff);
+    }
     summary.files.push({
       kind,
       path,
@@ -90,7 +98,10 @@ export function collectDiff({ fromRef, toRef, fromVersion, toVersion, outDir, re
 
   record("llms-full", LLMS_FULL, "llms-full.diff");
   for (const path of API_REPORTS) {
-    const base = path.split("/").pop().replace(/\.api\.md$/, "");
+    const base = path
+      .split("/")
+      .pop()
+      .replace(/\.api\.md$/, "");
     record("api-report", path, `api/${base}.diff`);
   }
   record("changelog", CHANGELOG, "changelog.diff");

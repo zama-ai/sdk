@@ -14,8 +14,20 @@ describe("buildGuideIndex", () => {
     const index = buildGuideIndex(guides);
     expect(index.schemaVersion).toBe(1);
     expect(index.guides).toEqual([
-      { from: "3.0.0-alpha.10", to: "3.1.0-alpha.5", file: "3.0.0-alpha.10__3.1.0-alpha.5.json", changes: 2, required: 1 },
-      { from: "3.0.0-alpha.32", to: "3.2.0", file: "3.0.0-alpha.32__3.2.0.json", changes: 1, required: 1 },
+      {
+        from: "3.0.0-alpha.10",
+        to: "3.1.0-alpha.5",
+        file: "3.0.0-alpha.10__3.1.0-alpha.5.json",
+        changes: 2,
+        required: 1,
+      },
+      {
+        from: "3.0.0-alpha.32",
+        to: "3.2.0",
+        file: "3.0.0-alpha.32__3.2.0.json",
+        changes: 1,
+        required: 1,
+      },
     ]);
   });
 

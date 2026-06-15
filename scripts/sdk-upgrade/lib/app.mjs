@@ -22,12 +22,16 @@ export function exampleDir(name) {
 /** Read the highest pinned SDK version across known dep fields, or null. */
 export function readInstalledVersion(appDir, packages = SDK_PACKAGES) {
   const pkgPath = join(appDir, "package.json");
-  if (!existsSync(pkgPath)) throw new Error(`No package.json at ${pkgPath}`);
+  if (!existsSync(pkgPath)) {
+    throw new Error(`No package.json at ${pkgPath}`);
+  }
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   for (const field of ["dependencies", "devDependencies"]) {
     for (const name of packages) {
       const raw = pkg[field]?.[name];
-      if (raw) return stripRange(raw);
+      if (raw) {
+        return stripRange(raw);
+      }
     }
   }
   return null;
@@ -35,7 +39,9 @@ export function readInstalledVersion(appDir, packages = SDK_PACKAGES) {
 
 /** Strip a leading semver range operator (`^`, `~`, `>=`) from a pin. */
 export function stripRange(spec) {
-  return String(spec).replace(/^[\^~>=<\s]+/, "").trim();
+  return String(spec)
+    .replace(/^[\^~>=<\s]+/, "")
+    .trim();
 }
 
 /**

@@ -40,7 +40,9 @@ describe("validateGuide", () => {
   });
 
   test("rejects an unknown kind and severity", () => {
-    const r = validateGuide(validGuide({ changes: [validChange({ kind: "magic", severity: "maybe" })] }));
+    const r = validateGuide(
+      validGuide({ changes: [validChange({ kind: "magic", severity: "maybe" })] }),
+    );
     expect(r.ok).toBe(false);
     expect(r.errors.join()).toMatch(/kind "magic"/);
     expect(r.errors.join()).toMatch(/severity "maybe"/);

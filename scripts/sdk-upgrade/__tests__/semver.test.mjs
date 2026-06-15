@@ -4,7 +4,12 @@ import { parseVersion, compareVersions } from "../lib/semver.mjs";
 describe("parseVersion", () => {
   test("parses release and prerelease", () => {
     expect(parseVersion("3.1.0")).toEqual({ major: 3, minor: 1, patch: 0, pre: [] });
-    expect(parseVersion("3.1.0-alpha.5")).toEqual({ major: 3, minor: 1, patch: 0, pre: ["alpha", "5"] });
+    expect(parseVersion("3.1.0-alpha.5")).toEqual({
+      major: 3,
+      minor: 1,
+      patch: 0,
+      pre: ["alpha", "5"],
+    });
   });
 
   test("returns null on garbage", () => {
@@ -31,6 +36,6 @@ describe("compareVersions", () => {
   });
 
   test("throws on unparseable input", () => {
-    expect(() => compareVersions("latest", "3.0.0")).toThrow();
+    expect(() => compareVersions("latest", "3.0.0")).toThrow(/Unparseable version/);
   });
 });

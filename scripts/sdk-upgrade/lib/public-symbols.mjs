@@ -19,12 +19,18 @@ const EXPORT_DECL =
  */
 export function changedPublicExports(diffText) {
   const ids = new Set();
-  if (!diffText) return [];
+  if (!diffText) {
+    return [];
+  }
   for (const line of diffText.split("\n")) {
     // Skip the unified-diff file headers (`--- a/...`, `+++ b/...`).
-    if (line.startsWith("+++") || line.startsWith("---")) continue;
+    if (line.startsWith("+++") || line.startsWith("---")) {
+      continue;
+    }
     const match = EXPORT_DECL.exec(line);
-    if (match) ids.add(match[1]);
+    if (match) {
+      ids.add(match[1]);
+    }
   }
-  return [...ids].sort((a, b) => a.localeCompare(b));
+  return [...ids].toSorted((a, b) => a.localeCompare(b));
 }

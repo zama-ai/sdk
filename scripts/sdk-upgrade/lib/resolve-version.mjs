@@ -13,8 +13,12 @@ const REGISTRY = "https://registry.npmjs.org";
 /** Classify a spec without touching the network. Pure — unit-tested. */
 export function classifySpec(spec) {
   const trimmed = String(spec).trim();
-  if (parseVersion(trimmed)) return { kind: "exact", value: trimmed };
-  if (/^[a-z][a-z0-9-]*$/i.test(trimmed)) return { kind: "dist-tag", value: trimmed };
+  if (parseVersion(trimmed)) {
+    return { kind: "exact", value: trimmed };
+  }
+  if (/^[a-z][a-z0-9-]*$/i.test(trimmed)) {
+    return { kind: "dist-tag", value: trimmed };
+  }
   throw new Error(`Unrecognised version spec: ${spec}`);
 }
 
@@ -39,7 +43,11 @@ async function fetchPackument(pkg, fetchImpl) {
 export async function resolveVersion(spec, { pkg = "@zama-fhe/sdk", fetchImpl = fetch } = {}) {
   const classified = classifySpec(spec);
   if (classified.kind === "exact") {
-    return { version: classified.value, gitRef: gitRefForVersion(classified.value), source: "exact" };
+    return {
+      version: classified.value,
+      gitRef: gitRefForVersion(classified.value),
+      source: "exact",
+    };
   }
   const packument = await fetchPackument(pkg, fetchImpl);
   const version = packument["dist-tags"]?.[classified.value];

@@ -19,14 +19,25 @@ const CHANGE_KINDS = new Set([
   "config-change",
 ]);
 const SEVERITIES = new Set(["required", "recommended"]);
-const REQUIRED_CHANGE_FIELDS = ["id", "kind", "appliesTo", "from", "to", "detection", "action", "severity"];
+const REQUIRED_CHANGE_FIELDS = [
+  "id",
+  "kind",
+  "appliesTo",
+  "from",
+  "to",
+  "detection",
+  "action",
+  "severity",
+];
+
+const isNil = (v) => v === undefined || v === null;
 
 /** Validate a parsed guide object. Returns `{ ok, errors }` — never throws. */
 export function validateGuide(guide) {
   const errors = [];
   const push = (msg) => errors.push(msg);
 
-  if (guide == null || typeof guide !== "object") {
+  if (isNil(guide) || typeof guide !== "object") {
     return { ok: false, errors: ["guide is not an object"] };
   }
   if (guide.schemaVersion !== SCHEMA_VERSION) {
@@ -45,26 +56,28 @@ export function validateGuide(guide) {
   const ids = new Set();
   guide.changes.forEach((change, i) => {
     const at = `changes[${i}]`;
-    if (change == null || typeof change !== "object") {
+    if (isNil(change) || typeof change !== "object") {
       push(`${at} is not an object`);
       return;
     }
     for (const field of REQUIRED_CHANGE_FIELDS) {
-      if (change[field] == null || change[field] === "") {
+      if (isNil(change[field]) || change[field] === "") {
         push(`${at}.${field} is missing`);
       }
     }
-    if (change.id != null) {
-      if (ids.has(change.id)) push(`${at}.id "${change.id}" is duplicated`);
+    if (!isNil(change.id)) {
+      if (ids.has(change.id)) {
+        push(`${at}.id "${change.id}" is duplicated`);
+      }
       ids.add(change.id);
     }
-    if (change.kind != null && !CHANGE_KINDS.has(change.kind)) {
+    if (!isNil(change.kind) && !CHANGE_KINDS.has(change.kind)) {
       push(`${at}.kind "${change.kind}" is not one of ${[...CHANGE_KINDS].join(", ")}`);
     }
-    if (change.severity != null && !SEVERITIES.has(change.severity)) {
+    if (!isNil(change.severity) && !SEVERITIES.has(change.severity)) {
       push(`${at}.severity "${change.severity}" is not one of ${[...SEVERITIES].join(", ")}`);
     }
-    if (change.references != null && !Array.isArray(change.references)) {
+    if (!isNil(change.references) && !Array.isArray(change.references)) {
       push(`${at}.references must be an array when present`);
     }
   });
@@ -81,6 +94,6 @@ export function validateGuide(guide) {
 export function selectGuide(installedVersion, targetVersion, guides) {
   const candidates = guides
     .filter((g) => g.to === targetVersion && compareVersions(g.from, installedVersion) <= 0)
-    .sort((a, b) => compareVersions(b.from, a.from)); // nearest floor first
+    .toSorted((a, b) => compareVersions(b.from, a.from)); // nearest floor first
   return candidates[0] ?? null;
 }

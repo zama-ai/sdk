@@ -12,7 +12,7 @@ describe("classifySpec", () => {
   });
 
   test("rejects junk", () => {
-    expect(() => classifySpec("3.x")).toThrow();
+    expect(() => classifySpec("3.x")).toThrow(/Unrecognised version spec/);
   });
 });
 
@@ -45,7 +45,10 @@ describe("resolveVersion", () => {
   });
 
   test("throws on an unknown dist-tag", async () => {
-    const fetchImpl = async () => ({ ok: true, json: async () => ({ "dist-tags": { latest: "3.0.1" } }) });
+    const fetchImpl = async () => ({
+      ok: true,
+      json: async () => ({ "dist-tags": { latest: "3.0.1" } }),
+    });
     await expect(resolveVersion("beta", { fetchImpl })).rejects.toThrow(/No dist-tag "beta"/);
   });
 });
