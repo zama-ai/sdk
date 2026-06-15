@@ -95,7 +95,6 @@ declare const zamaConfigBrand: unique symbol;
  * adapter-specific factory — never construct by hand.
  */
 export type ZamaConfig = {
-  readonly chains: readonly FheChain[];
   readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;

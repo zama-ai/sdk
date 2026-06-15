@@ -19783,7 +19783,6 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 
 // @public
 export type ZamaConfig = {
-    readonly chains: readonly FheChain[];
     readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;

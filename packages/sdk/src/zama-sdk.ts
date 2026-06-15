@@ -69,7 +69,7 @@ export class ZamaSDK {
     });
 
     const registryAddresses: Record<number, Address> = {};
-    for (const chain of config.chains) {
+    for (const chain of config.router.chains) {
       if (chain.registryAddress) {
         registryAddresses[chain.id] = chain.registryAddress;
       }

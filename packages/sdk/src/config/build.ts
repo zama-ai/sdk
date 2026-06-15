@@ -25,7 +25,6 @@ export function buildZamaConfig(
   const router = new ChainRouter(params.chains, params.relayers);
 
   return {
-    chains: params.chains,
     router,
     provider,
     signer,
