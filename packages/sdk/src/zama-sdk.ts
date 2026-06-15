@@ -5,6 +5,7 @@ import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
+import type { ChainRouter } from "./relayer/chain-router";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
@@ -32,6 +33,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  */
 export class ZamaSDK {
   readonly relayer: RelayerDispatcher;
+  readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
@@ -57,6 +59,7 @@ export class ZamaSDK {
 
   constructor(config: ZamaConfig) {
     this.relayer = config.relayer;
+    this.router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;

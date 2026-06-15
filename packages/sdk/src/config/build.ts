@@ -27,6 +27,7 @@ export function buildZamaConfig(
   return {
     chains: params.chains,
     relayer,
+    router: relayer, // same instance — RelayerDispatcher extends ChainRouter
     provider,
     signer,
     storage,

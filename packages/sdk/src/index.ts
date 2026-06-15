@@ -23,6 +23,7 @@ export type {
   ResolvedChainRelayer,
 } from "./config";
 export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
+export type { ChainRouter } from "./relayer/chain-router";
 export type { RelayerSDK } from "./relayer/relayer-sdk";
 export type {
   RelayerSDKStatus,
