@@ -43,7 +43,7 @@ function AuthGuard() {
 {% tab title="Gated decrypt" %}
 
 ```tsx
-import { useHasPermit, useGrantPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useHasPermit, useGrantPermit, useDecryptValues } from "@zama-fhe/react-sdk";
 
 function GatedDecrypt({
   encryptedValue,
@@ -54,7 +54,7 @@ function GatedDecrypt({
 }) {
   const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
   const { mutateAsync: grantPermit } = useGrantPermit();
-  const { data, isPending } = useUserDecrypt(
+  const { data, isPending } = useDecryptValues(
     [{ encryptedValue, contractAddress }],
     { enabled: !!hasPermit }, // only decrypt once authorized
   );
@@ -94,7 +94,7 @@ An empty list is a no-op: the query is disabled and `data` stays `undefined`, so
 Standard React Query options forwarded to the underlying query. Pass `{ enabled: false }` to mount the hook in an idle state (no work, no signature while disabled).
 
 {% hint style="warning" %}
-**You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
+**You must gate decrypt queries yourself.** `useDecryptValues` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
 {% endhint %}
 
 ## Return Type

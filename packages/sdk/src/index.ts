@@ -31,10 +31,7 @@ export type {
   EncryptInput,
   EncryptedValue,
   ClearValue,
-  UserDecryptParams,
-  PublicDecryptResult,
   EIP712TypedData,
-  DelegatedUserDecryptParams,
   NetworkType,
   FheEncryptionKey,
   PublicKeyData,
@@ -42,11 +39,19 @@ export type {
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
-  KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
 } from "@zama-fhe/relayer-sdk/bundle";
+
+// Decrypt parameter/result types — aligned with the canonical Zama glossary.
+// Re-exported from the underlying relayer types under their glossary names.
+export type {
+  UserDecryptParams as DecryptValuesParams,
+  PublicDecryptResult as DecryptPublicValuesResult,
+  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
+} from "./relayer/relayer-sdk.types";
+export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
 /**
  * @deprecated Renamed to {@link TransportKeyPair} to match the FHEVM glossary. The old name is
  *   kept as a public-API back-compat alias and will be removed before the 3.x stable release.
@@ -68,11 +73,8 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
-export type { EncryptedInput as DecryptHandle, DecryptResult } from "./query/user-decrypt";
-export type {
-  BatchDecryptHandleItem,
-  BatchDecryptHandlesResult,
-} from "./services/decryption-service";
+export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
+export type { BatchDecryptItem, BatchDecryptResult } from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
@@ -86,7 +88,7 @@ export {
   clearPendingUnshield,
   type PendingUnshieldRequest,
 } from "./token";
-export { ZERO_HANDLE, isZeroHandle } from "./utils/handles";
+export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,

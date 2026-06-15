@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.6...v3.1.0-alpha.7) (2026-06-15)
+
+### Code Refactoring
+
+- **sdk:** align decrypt wording with the Zama glossary [SDK-205] ([#386](https://github.com/zama-ai/sdk/issues/386)) ([52fc176]())
+
+## [3.1.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.5...v3.1.0-alpha.6) (2026-06-15)
+
+### Build System
+
+- **api-report:** keep committed API reports semantic-only ([#406](https://github.com/zama-ai/sdk/issues/406)) ([19f2b8b]()), closes [#401]() [#401]()
+
 ## [3.1.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.4...v3.1.0-alpha.5) (2026-06-05)
 
 ### Bug Fixes

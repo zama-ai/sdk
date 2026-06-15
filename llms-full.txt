@@ -2666,23 +2666,23 @@ Sometimes you need the encrypted value itself, for example to check whether a ba
 ### Tab: SDK
 
 ```ts
-import { isZeroHandle } from "@zama-fhe/sdk";
+import { isEncryptedValueZero } from "@zama-fhe/sdk";
 
 const encryptedValue = await token.confidentialBalanceOf(userAddress);
 
 // Check if the encrypted value is zero (account has never shielded)
-if (isZeroHandle(encryptedValue)) {
+if (isEncryptedValueZero(encryptedValue)) {
   console.log("No confidential balance yet");
 }
 
 // Decrypt an encrypted value you already have
-const result = await sdk.decryption.userDecrypt([
+const result = await sdk.decryption.decryptValues([
   { encryptedValue, contractAddress: token.address },
 ]);
 const value = result[encryptedValue] as bigint;
 
 // Decrypt multiple encrypted values at once (must include the contract address per entry)
-const decrypted = await sdk.decryption.userDecrypt(
+const decrypted = await sdk.decryption.decryptValues(
   [value1, value2, value3].map((v) => ({ encryptedValue: v, contractAddress: token.address })),
 );
 ```
@@ -3932,7 +3932,7 @@ See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitb
 
 # Encrypt & decrypt
 
-The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useUserDecrypt` to interact with your contract's encrypted parameters and return values.
+The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useDecryptValues` to interact with your contract's encrypted parameters and return values.
 
 Before starting, make sure your project is set up following the [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) guide.
 
@@ -3943,7 +3943,7 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="ConfidentialRoundTrip.tsx" %}
 
 ```tsx
-import { useEncrypt, useUserDecrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { useEncrypt, useDecryptValues, useZamaSDK } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 import { useState, type FormEvent } from "react";
 
@@ -3956,7 +3956,7 @@ function ConfidentialRoundTrip() {
   >([]);
 
   // Fires when inputs are non-empty.
-  const { data: decrypted } = useUserDecrypt(inputs);
+  const { data: decrypted } = useDecryptValues(inputs);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -4066,7 +4066,7 @@ function ConfidentialRoundTrip() {
 > ```tsx
 > "use client"; // Required at the top of the file
 >
-> import { useEncrypt, useUserDecrypt } from "@zama-fhe/react-sdk";
+> import { useEncrypt, useDecryptValues } from "@zama-fhe/react-sdk";
 > ```
 
 
@@ -4181,7 +4181,7 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
-Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useUserDecrypt` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
+Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:
 
@@ -4191,7 +4191,7 @@ A good decryption UX follows three steps:
 
 
 > [!DANGER]
-> **Never** call `useConfidentialBalance` or `useUserDecrypt` without gating on `useHasPermit`:
+> **Never** call `useConfidentialBalance` or `useDecryptValues` without gating on `useHasPermit`:
 >
 > ```tsx
 > // BAD — triggers wallet popup as soon as the component mounts
@@ -4289,7 +4289,7 @@ function App() {
 
 `DecryptGate` only renders its children once `useHasPermit` returns true. This means `ConfidentialBalance` never mounts without permits — no `enabled` guard needed, no wallet popup on render. Returning users skip the prompt entirely because permits persist in IndexedDB (default TTL: 30 days).
 
-The same pattern works with `useUserDecrypt` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
+The same pattern works with `useDecryptValues` and any other decrypt hook — anything nested inside `DecryptGate` can decrypt freely without triggering a wallet prompt.
 
 When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate` automatically detects new addresses and prompts the user once to extend their authorization:
 
@@ -4317,10 +4317,10 @@ function App() {
 
 #### Decrypting encrypted values from multiple contracts
 
-`useUserDecrypt` automatically groups inputs by contract address and issues one decryption request per contract:
+`useDecryptValues` automatically groups inputs by contract address and issues one decryption request per contract:
 
 ```tsx
-const { data } = useUserDecrypt([
+const { data } = useDecryptValues([
   { encryptedValue: "0xvalue1...", contractAddress: "0xTokenA" },
   { encryptedValue: "0xvalue2...", contractAddress: "0xTokenA" },
   { encryptedValue: "0xvalue3...", contractAddress: "0xTokenB" },
@@ -4331,7 +4331,7 @@ const { data } = useUserDecrypt([
 
 #### Persistent caching
 
-Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useUserDecrypt` returns them instantly without hitting the relayer.
+Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useDecryptValues` returns them instantly without hitting the relayer.
 
 The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
 
@@ -4340,21 +4340,21 @@ The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet 
 > **Decryption fails with an invalid or expired transport key pair?** The transport key pair has a TTL (default: 30 days). If the key pair was generated more than `transportKeyPairTTL` seconds ago, the relayer rejects it. Call `useGrantPermit` again to generate a fresh transport key pair and permits.
 
 
-### 4. Decrypt with usePublicDecrypt (advanced)
+### 4. Decrypt with useDecryptPublicValues (advanced)
 
 For values marked as publicly decryptable on-chain, no transport key pair or signature is needed:
 
 {% code title="PublicDecryptExample.tsx" %}
 
 ```tsx
-import { usePublicDecrypt } from "@zama-fhe/react-sdk";
+import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
 
 function PublicDecryptExample() {
-  const publicDecrypt = usePublicDecrypt();
+  const decryptPublicValues = useDecryptPublicValues();
 
   const handleDecrypt = async () => {
-    const result = await publicDecrypt.mutateAsync(["0xhandle..."]);
-    // result.clearValues: { "0xhandle...": 1000n }
+    const result = await decryptPublicValues.mutateAsync(["0xEncryptedValue..."]);
+    // result.clearValues: { "0xEncryptedValue...": 1000n }
   };
 
   return <button onClick={handleDecrypt}>Public Decrypt</button>;
@@ -4606,13 +4606,13 @@ const pairs = await registry.getTokenPairs();
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.userDecrypt`](#decryption-userdecrypt) calls whose encrypted values span the covered set proceed without a wallet prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.decryptValues`](#decryption-decryptvalues) calls whose encrypted values span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decryption.userDecrypt([{ encryptedValue: h1, contractAddress: cUSDT }]);
-const b = await sdk.decryption.userDecrypt([{ encryptedValue: h2, contractAddress: cDAI }]);
+const a = await sdk.decryption.decryptValues([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.decryptValues([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
 ### permits.hasPermit
@@ -4650,9 +4650,14 @@ Checks whether the current signer has stored delegated-decryption permits for `d
 const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 ```
 
-### decryption.userDecrypt
+### decryption.decryptValues
 
-`(inputs: EncryptedInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
+`(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
+
+
+> [!INFO]
+> Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the Zama glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
+
 
 Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
 
@@ -4661,11 +4666,11 @@ Inputs from different contracts can be mixed — they are grouped by `contractAd
 When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
 
 ```ts
-const values = await sdk.decryption.userDecrypt([
-  { encryptedValue: balanceHandle, contractAddress: cUSDT },
-  { encryptedValue: flagHandle, contractAddress: myContract },
+const values = await sdk.decryption.decryptValues([
+  { encryptedValue: balance, contractAddress: cUSDT },
+  { encryptedValue: flag, contractAddress: myContract },
 ]);
-console.log(values[balanceHandle]); // 1000n
+console.log(values[balance]); // 1000n
 ```
 
 To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
@@ -4756,7 +4761,7 @@ emitter.on(
 
 
 > [!INFO]
-> This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) which wraps `sdk.decryption.userDecrypt` with TanStack Query semantics.
+> This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 
 
 ### onWalletAccountChange
@@ -4876,7 +4881,7 @@ const balance = await token.balanceOf("0xOwnerAddress");
 
 `(owner: Address) => Promise<EncryptedValue>`
 
-Returns the raw encrypted value without decrypting. Use with `isZeroHandle()` or pass to `sdk.decryption.userDecrypt()` for decryption.
+Returns the raw encrypted value without decrypting. Use with `isEncryptedValueZero()` or pass to `sdk.decryption.decryptValues()` for decryption.
 
 ```ts
 const encryptedValue = await token.confidentialBalanceOf("0xOwnerAddress");
@@ -10572,11 +10577,11 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
+Call this early (e.g. after wallet connect) so that [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 
 
 > [!WARNING]
-> **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that stored permits cover every contract address in its `inputs` before firing the query. If any contract is missing, the query stays disabled.
+> **Include all contracts you plan to decrypt.** `useDecryptValues` checks that stored permits cover every contract address in its `inputs` before firing the query. If any contract is missing, the query stays disabled.
 
 
 ## Import
@@ -10751,7 +10756,7 @@ function AuthGuard() {
 ### Tab: Gated decrypt
 
 ```tsx
-import { useHasPermit, useGrantPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useHasPermit, useGrantPermit, useDecryptValues } from "@zama-fhe/react-sdk";
 
 function GatedDecrypt({
   encryptedValue,
@@ -10762,7 +10767,7 @@ function GatedDecrypt({
 }) {
   const { data: hasPermit } = useHasPermit({ contractAddresses: [contractAddress] });
   const { mutateAsync: grantPermit } = useGrantPermit();
-  const { data, isPending } = useUserDecrypt(
+  const { data, isPending } = useDecryptValues(
     [{ encryptedValue, contractAddress }],
     { enabled: !!hasPermit }, // only decrypt once authorized
   );
@@ -10801,7 +10806,7 @@ Standard React Query options forwarded to the underlying query. Pass `{ enabled:
 
 
 > [!WARNING]
-> **You must gate decrypt queries yourself.** `useUserDecrypt` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
+> **You must gate decrypt queries yourself.** `useDecryptValues` does not automatically wait for permits — if you call it before `useGrantPermit`, the user sees an unexpected wallet popup. Use `useHasPermit` to conditionally enable the decrypt query via `{ enabled: !!hasPermit }` as the second argument, or conditionally render the decrypt component only when `hasPermit` is `true`.
 
 
 ## Return Type
@@ -13378,29 +13383,34 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useShield.md) — high-level hook that encrypts and shields in one step
 - [`useConfidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialTransfer.md) — high-level hook that encrypts and transfers
-- [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md) — reverse operation, decrypt handles back to plaintext
+- [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md) — reverse operation, decrypt encrypted values back to plaintext
 - [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with examples
 
-## useUserDecrypt
+## useDecryptValues
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/reference/react/useUserDecrypt.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md
-- logical_path: reference/react/useUserDecrypt
+- source_path: docs/gitbook/src/reference/react/useDecryptValues.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md
+- logical_path: reference/react/useDecryptValues
 
-# useUserDecrypt
+# useDecryptValues
 
 Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 
 > [!INFO]
-> **This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+> Renamed from `useUserDecrypt` to align with the Zama glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
+
+
+
+> [!INFO]
+> **This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) which handles decryption and caching automatically. Use `useDecryptValues` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 
 
 ## Import
 
 ```ts
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useDecryptValues } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -13409,14 +13419,14 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 ### Tab: component.tsx
 
 ```tsx
-import { useGrantPermit, useHasPermit, useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useDecryptValues } from "@zama-fhe/react-sdk";
 
 const CONTRACT = "0xYourContract" as const;
 
 function DecryptValue({ encryptedValue }: { encryptedValue: string }) {
   const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
   const { data: hasPermit } = useHasPermit({ contractAddresses: [CONTRACT] });
-  const { data, isPending } = useUserDecrypt(
+  const { data, isPending } = useDecryptValues(
     [{ encryptedValue, contractAddress: CONTRACT }],
     { enabled: !!hasPermit }, // gate: only decrypt once authorized
   );
@@ -13452,10 +13462,10 @@ import { type EncryptedInput } from "@zama-fhe/sdk";
 | `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
 | `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
 
-Inputs from different contracts can be mixed in a single call — `useUserDecrypt` automatically groups them by contract address and issues one decryption request per unique contract:
+Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useUserDecrypt([
+const { data } = useDecryptValues([
   { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
   { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
   { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
@@ -13538,18 +13548,18 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## How It Works
 
-`useUserDecrypt` chains two internal queries:
+`useDecryptValues` chains two internal queries:
 
 1. **Signer address** — resolves the connected wallet address.
-2. **Decrypt** — calls `sdk.decryption.userDecrypt(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
+2. **Decrypt** — calls `sdk.decryption.decryptValues(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
 
 
 > [!WARNING]
-> **`useUserDecrypt` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md):
+> **`useDecryptValues` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md):
 >
 > ```tsx
 > const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
-> const { data } = useUserDecrypt([{ encryptedValue, contractAddress: "0xContract" }], {
+> const { data } = useDecryptValues([{ encryptedValue, contractAddress: "0xContract" }], {
 >   enabled: !!hasPermit,
 > });
 > ```
@@ -13559,7 +13569,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Permit caching
 
-`useUserDecrypt` relies on permits acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md):
+`useDecryptValues` relies on permits acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md):
 
 - **First `grantPermit()` call** — generates a new transport key pair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
@@ -13569,7 +13579,7 @@ This means users only see a wallet signature prompt once per TTL window, even if
 
 ## Related
 
-- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) — pre-authorize contracts with one wallet signature (required before `useDecryptValues` fires)
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md) — check whether permits are cached and cover specific contracts
 - [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialBalance.md) — high-level hook that decrypts token balances with automatic caching
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
@@ -14584,7 +14594,7 @@ On-chain wrappers registry queries.
 
 ### `zamaQueryKeys.decryption`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUserDecrypt.md).
+Cached decrypted values. Populated by [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDecryptValues.md).
 
 ```ts
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";

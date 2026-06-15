@@ -110,5 +110,5 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 - [`useShield`](/reference/react/useShield) — high-level hook that encrypts and shields in one step
 - [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) — high-level hook that encrypts and transfers
-- [`useUserDecrypt`](/reference/react/useUserDecrypt) — reverse operation, decrypt handles back to plaintext
+- [`useDecryptValues`](/reference/react/useDecryptValues) — reverse operation, decrypt encrypted values back to plaintext
 - [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with examples

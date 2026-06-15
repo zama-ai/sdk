@@ -1,27 +1,27 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import type { EncryptedValue, PublicDecryptResult } from "@zama-fhe/sdk";
-import { publicDecryptMutationOptions } from "@zama-fhe/sdk/query";
+import type { DecryptPublicValuesResult, EncryptedValue } from "@zama-fhe/sdk";
+import { decryptPublicValuesMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Decrypt FHE ciphertext handles using the network public key (no credential needed).
+ * Decrypt FHE encrypted values using the network public key (no credential needed).
  * On success, results are available via `data.clearValues` and written to the
  * persistent decrypt cache.
  *
- * @returns A mutation whose `mutate` accepts an array of handle strings.
+ * @returns A mutation whose `mutate` accepts an array of encrypted values.
  *
  * @example
  * ```tsx
- * const publicDecrypt = usePublicDecrypt();
- * publicDecrypt.mutate(["0xHandle1", "0xHandle2"]);
- * // publicDecrypt.data?.clearValues => { "0xHandle1": 500n, ... }
+ * const decryptPublicValues = useDecryptPublicValues();
+ * decryptPublicValues.mutate(["0xEncryptedValue1", "0xEncryptedValue2"]);
+ * // decryptPublicValues.data?.clearValues => { "0xEncryptedValue1": 500n, ... }
  * ```
  */
-export function usePublicDecrypt() {
+export function useDecryptPublicValues() {
   const sdk = useZamaSDK();
-  return useMutation<PublicDecryptResult, Error, EncryptedValue[]>(
-    publicDecryptMutationOptions(sdk),
+  return useMutation<DecryptPublicValuesResult, Error, EncryptedValue[]>(
+    decryptPublicValuesMutationOptions(sdk),
   );
 }

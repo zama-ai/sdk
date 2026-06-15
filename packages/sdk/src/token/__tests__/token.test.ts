@@ -5,7 +5,7 @@ import {
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
-import { ZERO_HANDLE } from "../../utils/handles";
+import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 describe("Token", () => {
@@ -16,7 +16,7 @@ describe("Token", () => {
       userAddress,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
       const balance = await token.balanceOf(userAddress);
 
@@ -46,7 +46,7 @@ describe("Token", () => {
       token,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
       const otherAddress = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
 
       await token.balanceOf(otherAddress);
@@ -294,7 +294,7 @@ describe("Token", () => {
       token,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -360,7 +360,7 @@ describe("Token", () => {
     });
 
     test("allows zero-amount transfer when handle is zero", async ({ token, provider }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
 
       const result = await token.confidentialTransfer(RECIPIENT, 0n);
       expect(result.txHash).toBe("0xtxhash");
@@ -436,7 +436,7 @@ describe("Token", () => {
       token,
       provider,
     }) => {
-      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_HANDLE);
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
 
       const balance = await token.decryptBalanceAs({
         delegatorAddress: DELEGATOR,
