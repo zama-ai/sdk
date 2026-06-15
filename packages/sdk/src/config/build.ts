@@ -3,7 +3,7 @@ import {
   DEFAULT_PERMIT_DURATION_DAYS,
 } from "../credentials/credential-service";
 import { KeypairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
-import { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import { ChainRouter } from "../relayer/chain-router";
 import type { GenericProvider, GenericSigner } from "../types";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { parseConfiguration } from "../validation";
@@ -22,8 +22,7 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
-  // RelayerDispatcher extends ChainRouter — still using the deprecated subclass; Task 6 swaps to ChainRouter.
-  const router = new RelayerDispatcher(params.chains, params.relayers);
+  const router = new ChainRouter(params.chains, params.relayers);
 
   return {
     chains: params.chains,
