@@ -16,7 +16,7 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../relayer/chain-router";
 import type {
   GenericProvider,
   GenericSigner,
@@ -32,20 +32,20 @@ type AclTransactionOperation = Extract<
 
 export class DelegationService {
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 
   constructor({
     provider,
-    relayer,
+    router,
     emitEvent = () => {},
   }: {
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
@@ -85,7 +85,7 @@ export class DelegationService {
       );
     }
 
-    const acl = await this.#relayer.getAclAddress();
+    const acl = await this.#router.active.getAclAddress();
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
@@ -135,7 +135,7 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
-    const acl = await this.#relayer.getAclAddress();
+    const acl = await this.#router.active.getAclAddress();
 
     let currentExpiry: bigint;
     try {
@@ -187,7 +187,7 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.#relayer.getAclAddress();
+    const acl = await this.#router.active.getAclAddress();
     return this.#provider.readContract(
       getDelegationExpiryContract(
         acl,

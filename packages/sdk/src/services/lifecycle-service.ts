@@ -1,12 +1,12 @@
 import type { CredentialService } from "../credentials/credential-service";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../relayer/chain-router";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import { swallow } from "../utils";
 import type { CachingService } from "./caching-service";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
-  relayer: RelayerDispatcher;
+  router: ChainRouter;
   cachingService: CachingService;
   credentialService?: CredentialService;
 };
@@ -21,7 +21,7 @@ export type LifecycleServiceOptions = {
  */
 export class LifecycleService {
   readonly #signer: GenericSigner | undefined;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
@@ -29,7 +29,7 @@ export class LifecycleService {
 
   constructor(opts: LifecycleServiceOptions) {
     this.#signer = opts.signer;
-    this.#relayer = opts.relayer;
+    this.#router = opts.router;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
     if (this.#signer) {
@@ -63,10 +63,10 @@ export class LifecycleService {
     // keypair warming (driven by listeners — see ZamaProvider) therefore
     // dispatches against the wallet chain rather than chains[0]. `swallow`
     // suspends one microtask for error containment, not for I/O —
-    // RelayerDispatcher.switchChain is synchronous.
+    // ChainRouter.switchChain is synchronous.
     const nextChainId = next?.chainId;
     if (nextChainId !== undefined) {
-      await swallow("switch relayer chain", () => this.#relayer.switchChain(nextChainId));
+      await swallow("switch relayer chain", () => this.#router.switchChain(nextChainId));
     }
     const credentialService = this.#credentialService;
     if (credentialService) {

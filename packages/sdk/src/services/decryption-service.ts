@@ -9,7 +9,7 @@ import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError }
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../relayer/chain-router";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
@@ -45,26 +45,26 @@ export class DecryptionService {
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
   constructor({
     cache,
     credentialService,
     delegationService,
-    relayer,
+    router,
     emitEvent,
   }: {
     cache: CachingService;
     credentialService: CredentialService;
     delegationService: DelegationService;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
     this.#cache = cache;
     this.#credentialService = credentialService;
     this.#delegationService = delegationService;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
@@ -78,7 +78,7 @@ export class DecryptionService {
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
-        return this.#relayer.userDecrypt({
+        return this.#router.active.userDecrypt({
           encryptedValues,
           contractAddress,
           ...resolveUserDecryptPermit(credentials, contractAddress),
@@ -112,7 +112,7 @@ export class DecryptionService {
         // oxlint-disable-next-line no-shadow
         encryptedValues,
       }) => {
-        return this.#relayer.delegatedUserDecrypt({
+        return this.#router.active.delegatedUserDecrypt({
           encryptedValues: encryptedValues,
           contractAddress,
           ...resolveDelegatedDecryptPermit(credentials, contractAddress),

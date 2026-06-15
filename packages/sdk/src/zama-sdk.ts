@@ -67,7 +67,7 @@ export class ZamaSDK {
     this.#cachingService = new CachingService(config.storage);
     this.#delegationService = new DelegationService({
       provider: this.provider,
-      relayer: this.relayer,
+      router: this.router,
       emitEvent: this.emitEvent.bind(this),
     });
 
@@ -86,7 +86,7 @@ export class ZamaSDK {
 
     if (config.signer) {
       this.#credentialService = new CredentialService({
-        relayer: this.relayer,
+        router: this.router,
         signer: config.signer,
         keypairTTL: config.keypairTTL,
         permitTTL: config.permitTTL,
@@ -97,17 +97,17 @@ export class ZamaSDK {
         cache: this.#cachingService,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
-        relayer: this.relayer,
+        router: this.router,
         emitEvent: this.emitEvent.bind(this),
       });
     }
     this.#encryptionService = new EncryptionService({
-      relayer: this.relayer,
+      router: this.router,
       emitEvent: this.emitEvent.bind(this),
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
-      relayer: this.relayer,
+      router: this.router,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
     });
@@ -126,7 +126,7 @@ export class ZamaSDK {
     this.decryption = new Decryption({
       signer: this.signer,
       provider: this.provider,
-      relayer: this.relayer,
+      router: this.router,
       decryptionService: this.#decryptionService,
     });
   }

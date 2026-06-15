@@ -1,25 +1,25 @@
 import { EncryptionFailedError, ZamaError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../relayer/chain-router";
 import type { EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
 import { toError } from "../utils";
 
 export class EncryptionService {
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #emitEvent: (
     input: ZamaSDKEventInput,
     tokenAddress?: EncryptParams["contractAddress"],
   ) => void;
 
   constructor({
-    relayer,
+    router,
     emitEvent,
   }: {
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     emitEvent: (input: ZamaSDKEventInput, tokenAddress?: EncryptParams["contractAddress"]) => void;
   }) {
-    this.#relayer = relayer;
+    this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
@@ -27,7 +27,7 @@ export class EncryptionService {
     const t0 = Date.now();
     try {
       this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
-      const result = await this.#relayer.encrypt(params);
+      const result = await this.#router.active.encrypt(params);
       this.#emitEvent(
         {
           type: ZamaSDKEvents.EncryptEnd,

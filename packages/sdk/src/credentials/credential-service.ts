@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../relayer/chain-router";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
@@ -18,7 +18,7 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  relayer: RelayerDispatcher;
+  router: ChainRouter;
   signer: GenericSigner;
   /** Keypair lifetime in seconds. Pre-validated. */
   keypairTTL: number;
@@ -39,20 +39,20 @@ export interface CredentialServiceConfig {
 export class CredentialService {
   readonly #vault: KeypairVault;
   readonly #store: PermissionStore;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new KeypairVault({
-      generator: () => config.relayer.generateKeypair(),
+      generator: () => config.router.active.generateKeypair(),
       storage: config.storage,
       ttl: config.keypairTTL,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
     });
-    this.#relayer = config.relayer;
+    this.#router = config.router;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
   }
@@ -224,14 +224,14 @@ export class CredentialService {
 
     try {
       const eip712 = isDelegated
-        ? await this.#relayer.createDelegatedUserDecryptEIP712(
+        ? await this.#router.active.createDelegatedUserDecryptEIP712(
             keypair.publicKey,
             chunk,
             scope.delegatorAddress,
             startTimestamp,
             this.#permitTTL,
           )
-        : await this.#relayer.createEIP712(
+        : await this.#router.active.createEIP712(
             keypair.publicKey,
             chunk,
             startTimestamp,

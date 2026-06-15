@@ -2,6 +2,7 @@
 import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
+import type { ChainRouter } from "../relayer/chain-router";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { ZamaSDK } from "../zama-sdk";
@@ -23,6 +24,7 @@ export interface SdkFixtures {
 function buildSDK(
   chain: FheChain,
   relayer: RelayerSDK,
+  router: ChainRouter,
   provider: GenericProvider,
   signer: GenericSigner,
   storage: GenericStorage,
@@ -31,6 +33,7 @@ function buildSDK(
   return new ZamaSDK({
     chains: [chain],
     relayer: relayer as unknown as ZamaConfig["relayer"],
+    router,
     provider,
     signer,
     storage,
@@ -50,12 +53,12 @@ type SdkDeps = ChainFixtures &
   StorageFixtures;
 
 export const sdkFixtures: FixturesOf<SdkFixtures, SdkDeps> = {
-  sdk: async ({ chain, relayer, provider, signer, storage }, use) => {
-    await use(buildSDK(chain, relayer, provider, signer, storage));
+  sdk: async ({ chain, relayer, router, provider, signer, storage }, use) => {
+    await use(buildSDK(chain, relayer, router, provider, signer, storage));
   },
-  createSDK: async ({ chain, provider, signer, relayer, storage }, use) => {
+  createSDK: async ({ chain, provider, signer, relayer, router, storage }, use) => {
     const factory: CreateSDKFn = (overrides) =>
-      buildSDK(chain, relayer, provider, signer, storage, overrides);
+      buildSDK(chain, relayer, router, provider, signer, storage, overrides);
     await use(factory);
   },
   events: ZamaSDKEvents,
