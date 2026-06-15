@@ -74,10 +74,20 @@ Human-readable companion for review. Group changes by package, show a representa
 4. Skim `llms-full.diff` for usage-pattern shifts (how examples call the API) that the api diff alone doesn't convey.
 5. Synthesize one `change` entry per distinct breaking or noteworthy delta. Assign stable kebab-case ids and `required`/`recommended`.
 6. Write the `.json` and `.md` under `migrations/`.
-7. Tell the operator to run `pnpm sdk-upgrade guide --validate migrations/<A>__<B>.json` and to review the `.md` before committing.
+7. **Run the completeness lint** against the bundle and close the gaps:
+   `pnpm sdk-upgrade guide --validate migrations/<A>__<B>.json --bundle <bundleDir>`
+   It prints `Coverage: N/M changed public exports referenced` and lists every
+   changed public export **not** named by any change. For each uncovered symbol,
+   decide: is it a real public-API delta a consumer could hit? If yes, add a
+   change for it (or fold it into an existing one so its name appears). Only leave
+   it uncovered if it is genuinely internal/no-op, and say so. Drive coverage as
+   high as the real public surface allows — this is the deterministic check that
+   bounds the long-tail variance between generation runs.
+8. Tell the operator to review the `.md` before committing.
 
 ## You are done when
 
 - `migrations/<A>__<B>.json` validates, and
+- the completeness lint has been run and every uncovered public export is either covered or explicitly justified as internal/no-op, and
 - `migrations/<A>__<B>.md` lists every change with a before/after snippet, and
 - you have **explicitly confirmed** you read each changed `api/*.diff` and `changelog.diff` in full (state this in your summary).

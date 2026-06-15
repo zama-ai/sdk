@@ -15,6 +15,8 @@ import { parseArgs } from "node:util";
 import { resolveVersion } from "./lib/resolve-version.mjs";
 import { collectDiff } from "./lib/collect-diff.mjs";
 import { validateGuide, selectGuide } from "./lib/guide-schema.mjs";
+import { changedPublicExports } from "./lib/public-symbols.mjs";
+import { uncoveredSymbols } from "./lib/guide-coverage.mjs";
 import { repoRoot, exampleDir, readInstalledVersion, bumpDeps } from "./lib/app.mjs";
 
 const MIGRATIONS_DIR = join(repoRoot(), "migrations");
@@ -31,6 +33,29 @@ function loadGuides() {
     .map((f) => ({ ...JSON.parse(readFileSync(join(MIGRATIONS_DIR, f), "utf8")), _path: join(MIGRATIONS_DIR, f) }));
 }
 
+// Completeness lint: union the changed public exports across the bundle's api
+// diffs and report any not referenced by a guide change. Advisory (review aid) —
+// the long tail may be intentionally omitted, so this warns rather than fails.
+function reportCoverage(guide, bundleDir) {
+  const apiDir = join(bundleDir, "api");
+  if (!existsSync(apiDir)) {
+    console.log(`Coverage lint skipped (no api diffs at ${apiDir}).`);
+    return;
+  }
+  const symbols = new Set();
+  for (const file of readdirSync(apiDir).filter((f) => f.endsWith(".diff"))) {
+    for (const id of changedPublicExports(readFileSync(join(apiDir, file), "utf8"))) symbols.add(id);
+  }
+  const all = [...symbols].sort((a, b) => a.localeCompare(b));
+  const uncovered = uncoveredSymbols(guide, all);
+  const covered = all.length - uncovered.length;
+  console.log(`\nCoverage: ${covered}/${all.length} changed public exports referenced by a guide change.`);
+  if (uncovered.length > 0) {
+    console.log(`Not referenced by any change (review — may be intentional long-tail omissions):`);
+    for (const id of uncovered) console.log(`  - ${id}`);
+  }
+}
+
 async function cmdGuide(argv) {
   const { values } = parseArgs({
     args: argv,
@@ -39,6 +64,7 @@ async function cmdGuide(argv) {
       to: { type: "string" },
       out: { type: "string" },
       validate: { type: "string" },
+      bundle: { type: "string" },
     },
   });
 
@@ -51,6 +77,7 @@ async function cmdGuide(argv) {
       process.exit(1);
     }
     console.log(`Guide valid: ${guide.from} -> ${guide.to}, ${guide.changes.length} changes.`);
+    if (values.bundle) reportCoverage(guide, values.bundle);
     return;
   }
 
@@ -157,7 +184,7 @@ const commands = { guide: cmdGuide, apply: cmdApply };
 if (!commands[command]) {
   console.error("Usage: sdk-upgrade <guide|apply> [options]");
   console.error("  guide  --from <A> --to <B> [--out <dir>]   collect the diff bundle for a couple");
-  console.error("  guide  --validate <file.json>              validate a generated guide");
+  console.error("  guide  --validate <file.json> [--bundle <dir>]  validate a guide (and lint coverage vs the bundle)");
   console.error("  apply  --example <name> --to <B> [--gate]  select + (with --gate) apply guide to an app");
   console.error("  apply  --app <path> --to <B> [--gate]      same, for an external app");
   process.exit(2);

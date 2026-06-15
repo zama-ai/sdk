@@ -129,7 +129,7 @@ The skills and command live under `claude-setup/` (the repo's existing skill sou
 
 Two independent cold generations of the guide for `3.0.0-alpha.32 → 3.1.0-alpha.5`, same deterministic bundle, neither seeing the other or the committed guide: **19 vs 31 changes (+63%)** — yet **both cover 100% of the 8 app-relevant core deltas** (config→`address`, permit renames, `requireSigner`→`signer`, `createZamaConfig`→`createConfig`, `Handle`→`EncryptedValue`, `EncryptResult` hex, `ReadonlyToken`→`WrappedToken`, unshield hooks). The variance lives entirely in (1) grouping granularity (split vs merged changes) and (2) the low-level long tail of internal removals no example app imports. So generate-step variance is real but **zero-impact on what reaches apps**; combined with the apply-side format+typecheck gate the end-to-end output converges, and generate-once + review + commit holds.
 
-**Hardening this further — deterministic completeness lint.** Mechanically extract the changed/removed/renamed *public* export identifiers from the `api/*.diff` files and have the CLI assert each is referenced by ≥1 guide change (`from`/`to`/`affectedSymbols`/`action`). That turns "did the generate step cover every public delta?" from a judgment call into a deterministic gate, attacking the long-tail variance directly.
+**Deterministic completeness lint (built).** `pnpm sdk-upgrade guide --validate <file> --bundle <dir>` mechanically extracts the changed *public* export identifiers from the `api/*.diff` files and reports each one not referenced by any guide change (`from`/`to`/`affectedSymbols`/`action`). This turns "did the generate step cover every public delta?" from a judgment call into a number: on this couple the two generations scored **51/138 vs 100/138** referenced — the same long-tail spread, now a reviewable checklist. The generate skill runs the lint and drives coverage up; remaining gaps must be justified as internal/no-op. Advisory (warns, doesn't fail) since some long-tail exports are legitimately no-ops for any app.
 
 ## Testing
 
@@ -139,7 +139,7 @@ Two independent cold generations of the guide for `3.0.0-alpha.32 → 3.1.0-alph
 
 ## Risks
 
-- **Guide-generation variance.** Measured above — concentrated in the no-impact long tail, mitigated by generate-once + review + commit, and to be hardened by the deterministic completeness lint.
+- **Guide-generation variance.** Measured above — concentrated in the no-impact long tail, mitigated by generate-once + review + commit, and surfaced as a reviewable checklist by the deterministic completeness lint.
 - **`llms-full.txt` missing at some tags.** Confirmed: e.g. `v3.0.1` has `api.md` but not `llms-full.txt`. Handle via the checkout + `pnpm llm:build` fallback; the `api.md` diff alone still carries the semantic signal.
 - **API-extractor format drift across versions** could add noise to the `.api.md` diff. Acceptable — it is reviewed once per couple.
 - **External version mismatch** (no exact `from` guide) — see the version-selection rule; finalise in Phase 4.
