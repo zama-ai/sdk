@@ -268,32 +268,54 @@ export interface CredentialPermitContext {
 }
 
 /**
- * Result of {@link ZamaSDK.prepare} for the `CredentialPermit` kind. Unlike
- * {@link PreparedTransaction} this is a typed-data envelope (no
- * `unsignedTx`/`to`) — feed `typedData` to an external `signTypedData`,
- * then call {@link ZamaSDK.registerPermit} with the signature.
- *
- * `typedData` is `null` when the requested contracts are already covered
- * by an existing permit (no signature needed). Callers can short-circuit
- * by checking `prepared.typedData === null`.
+ * Variant emitted when every requested contract is already covered by a
+ * cached permit — no signature ceremony needed. The {@link CredentialPermitResult}
+ * is inlined so callers don't have to make a follow-up `registerPermit` call
+ * just to retrieve it.
  */
-export interface PreparedCredentialPermit {
+export interface PreparedCredentialPermitCovered {
   readonly kind: "CredentialPermit";
+  readonly status: "Covered";
   readonly request: CredentialPermitRequest;
   readonly from: Address;
   readonly chainId: number;
-  readonly typedData: EIP712TypedData | null;
+  readonly result: CredentialPermitResult;
+}
+
+/**
+ * Variant emitted when at least one requested contract is uncovered. Feed
+ * `typedData` to an external `signTypedData`, then call
+ * {@link ZamaSDK.registerPermit} with the signature.
+ */
+export interface PreparedCredentialPermitPending {
+  readonly kind: "CredentialPermit";
+  readonly status: "PendingSignature";
+  readonly request: CredentialPermitRequest;
+  readonly from: Address;
+  readonly chainId: number;
+  readonly typedData: EIP712TypedData;
   /** @internal — pass to {@link ZamaSDK.registerPermit}; do not mutate. */
   readonly context: CredentialPermitContext;
 }
 
 /**
+ * Result of {@link ZamaSDK.prepare} for the `CredentialPermit` kind. Unlike
+ * {@link PreparedTransaction} this is a typed-data envelope (no
+ * `unsignedTx`/`to`). Discriminate on `status` to decide whether to sign
+ * and register, or use the inlined `result` directly.
+ */
+export type PreparedCredentialPermit =
+  | PreparedCredentialPermitCovered
+  | PreparedCredentialPermitPending;
+
+/**
  * {@link PreparedCredentialPermit} narrowed by `kind` (currently a single
  * kind). Mirrors {@link PreparedFor} for transaction kinds.
  */
-export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
-  readonly kind: K;
-};
+export type PreparedPermitFor<K extends PermitKind> = Extract<
+  PreparedCredentialPermit,
+  { kind: K }
+>;
 
 /** Outcome of {@link ZamaSDK.registerPermit}. */
 export interface CredentialPermitResult {

@@ -619,8 +619,10 @@ export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOpti
 
 // @public
 export interface RegisterPermitParams {
+    // Warning: (ae-forgotten-export) The symbol "PreparedCredentialPermitPending" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    readonly prepared: PreparedPermitFor<PermitKind>;
+    readonly prepared: PreparedCredentialPermitPending;
     // (undocumented)
     readonly signature: Hex;
 }
@@ -726,7 +728,7 @@ export interface SignAndBroadcastParams {
 }
 
 // @public
-export function signAndRegisterMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndRegister"], SignAndRegisterParams, CredentialPermitResult | void>;
+export function signAndRegisterMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndRegister"], SignAndRegisterParams, CredentialPermitResult>;
 
 // @public
 export interface SignAndRegisterParams {
@@ -1372,9 +1374,9 @@ export const ZamaSDKEvents: {
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/types-txwZmitb.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// dist/esm/types-txwZmitb.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
-// dist/esm/types-txwZmitb.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
+// dist/esm/types-DGvUF1Yl.d.ts:637:3 - (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
+// dist/esm/types-DGvUF1Yl.d.ts:638:3 - (ae-forgotten-export) The symbol "RelayerDispatcher" needs to be exported by the entry point index.d.ts
+// dist/esm/types-DGvUF1Yl.d.ts:639:3 - (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

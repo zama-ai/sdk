@@ -11783,11 +11783,11 @@ export class Offline {
     // (undocumented)
     prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
     refresh<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
+    registerPermit(prepared: PreparedCredentialPermitPending, signature: Hex): Promise<CredentialPermitResult>;
     resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     sign(prepared: PreparedTransaction): Promise<Hex>;
     signAndBroadcast(request: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void>;
+    signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult>;
 }
 
 // @public
@@ -11848,7 +11848,26 @@ export class Permits {
 }
 
 // @public
-export interface PreparedCredentialPermit {
+export type PreparedCredentialPermit = PreparedCredentialPermitCovered | PreparedCredentialPermitPending;
+
+// @public
+export interface PreparedCredentialPermitCovered {
+    // (undocumented)
+    readonly chainId: number;
+    // (undocumented)
+    readonly from: Address;
+    // (undocumented)
+    readonly kind: "CredentialPermit";
+    // (undocumented)
+    readonly request: CredentialPermitRequest;
+    // (undocumented)
+    readonly result: CredentialPermitResult;
+    // (undocumented)
+    readonly status: "Covered";
+}
+
+// @public
+export interface PreparedCredentialPermitPending {
     // (undocumented)
     readonly chainId: number;
     // @internal
@@ -11860,7 +11879,9 @@ export interface PreparedCredentialPermit {
     // (undocumented)
     readonly request: CredentialPermitRequest;
     // (undocumented)
-    readonly typedData: EIP712TypedData | null;
+    readonly status: "PendingSignature";
+    // (undocumented)
+    readonly typedData: EIP712TypedData;
 }
 
 // @public
@@ -11872,9 +11893,9 @@ export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
 };
 
 // @public
-export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
-    readonly kind: K;
-};
+export type PreparedPermitFor<K extends PermitKind> = Extract<PreparedCredentialPermit, {
+    kind: K;
+}>;
 
 // @public
 export interface PreparedTransaction {
@@ -20298,10 +20319,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-LPrEeoXx.d.ts:19664:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-LPrEeoXx.d.ts:19793:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-LPrEeoXx.d.ts:20181:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-LPrEeoXx.d.ts:20182:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-yJyc5yI0.d.ts:19664:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-yJyc5yI0.d.ts:19793:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-yJyc5yI0.d.ts:20187:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-yJyc5yI0.d.ts:20188:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

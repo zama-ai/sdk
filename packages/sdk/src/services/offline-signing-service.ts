@@ -43,6 +43,7 @@ import type {
   GenericProvider,
   GenericSigner,
   PermitKind,
+  PreparedCredentialPermitPending,
   PreparedFor,
   PreparedPermitFor,
   PreparedTransaction,
@@ -228,8 +229,23 @@ export class OfflineSigningService {
         chainId,
         delegator: request.delegator,
       });
+    if (typedData === null) {
+      return {
+        kind: "CredentialPermit",
+        status: "Covered",
+        request,
+        from,
+        chainId,
+        result: {
+          contracts: chunk,
+          durationDays: 0,
+          startTimestamp,
+        },
+      };
+    }
     return {
       kind: "CredentialPermit",
+      status: "PendingSignature",
       request,
       from,
       chainId,
@@ -333,18 +349,18 @@ export class OfflineSigningService {
    * Bundled in-process flow for a credential permit: prepare + signTypedData
    * + register the typed-data signature in the credential cache.
    *
-   * Returns the registered permit metadata, or `void` when the permit was
-   * already cached and no signature was needed.
+   * Returns the registered permit metadata. When every requested contract
+   * is already cached, `prepare` short-circuits to the `Covered` variant
+   * and its inlined `result` is returned without prompting the signer.
    *
    * Requires a signer with `signTypedData` (any signer that satisfies
    * {@link GenericSigner}, since `signTypedData` is mandatory there).
    */
-  async signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
+  async signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult> {
     const signer = this.#requireSigner(`signAndRegister(${request.kind})`);
     const prepared = await this.#prepareCredentialPermit(request);
-    if (prepared.typedData === null) {
-      // Already covered — keypair warm, no signature needed.
-      return;
+    if (prepared.status === "Covered") {
+      return prepared.result;
     }
     const signature = await signer.signTypedData(prepared.typedData);
     return this.registerPermit(prepared, signature);
@@ -390,9 +406,11 @@ export class OfflineSigningService {
   // ── registerPermit ─────────────────────────────────────────────────────
 
   /**
-   * Register an externally-signed {@link PreparedPermitFor} into the
-   * credential cache. Pair with `prepare({ kind: "CredentialPermit", ... })`
-   * and an external `signTypedData` call over `prepared.typedData`.
+   * Register an externally-signed {@link PreparedCredentialPermitPending}
+   * into the credential cache. Pair with `prepare({ kind: "CredentialPermit", ... })`
+   * after narrowing the prepared value on `status === "PendingSignature"` —
+   * `Covered` results already inline a {@link CredentialPermitResult} and
+   * need no follow-up call.
    *
    * Signer-optional: works without a configured signer (canonical
    * cross-process custody shape).
@@ -400,19 +418,11 @@ export class OfflineSigningService {
    * @throws {@link TypeError} if `signature` is not a valid 0x-prefixed
    *   hex string.
    */
-  async registerPermit<K extends PermitKind>(
-    prepared: PreparedPermitFor<K>,
+  async registerPermit(
+    prepared: PreparedCredentialPermitPending,
     signature: Hex,
   ): Promise<CredentialPermitResult> {
     assertHex(signature, "registerPermit: signature");
-    if (prepared.typedData === null) {
-      // Already covered — nothing to register.
-      return {
-        contracts: prepared.context.chunk,
-        durationDays: 0,
-        startTimestamp: prepared.context.startTimestamp,
-      };
-    }
     const permit = await this.#credentials.registerSignedPermit({
       signature,
       keypair: { publicKey: prepared.context.keypairPublicKey },

@@ -7,6 +7,7 @@ import type {
   CredentialPermitRequest,
   CredentialPermitResult,
   PermitKind,
+  PreparedCredentialPermitPending,
   PreparedFor,
   PreparedPermitFor,
   PreparedTransaction,
@@ -128,22 +129,25 @@ export class OfflineSigning {
 
   /**
    * Bundled in-process flow for a credential permit: prepare + signTypedData
-   * + register. Returns the registered permit metadata, or `void` when the
-   * permit was already cached and no signature was needed.
+   * + register. Returns the registered permit metadata. When every requested
+   * contract is already cached, the underlying `prepare` short-circuits to
+   * the `Covered` variant and its inlined `result` is returned without
+   * prompting the signer.
    */
-  signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
+  signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult> {
     return this.#offlineSigningService.signAndRegister(request);
   }
 
   /**
    * Persist an externally-signed credential permit. Pair with
-   * `sdk.offlineSigning.prepare({ kind: "CredentialPermit", from, contracts })` and an
-   * external `signTypedData` call over `prepared.typedData`.
+   * `sdk.offlineSigning.prepare({ kind: "CredentialPermit", from, contracts })`
+   * after narrowing the prepared value on `status === "PendingSignature"` — `Covered`
+   * results already inline the {@link CredentialPermitResult}.
    *
    * Signer-optional: works without a configured signer.
    */
-  registerPermit<K extends PermitKind>(
-    prepared: PreparedPermitFor<K>,
+  registerPermit(
+    prepared: PreparedCredentialPermitPending,
     signature: Hex,
   ): Promise<CredentialPermitResult> {
     return this.#offlineSigningService.registerPermit(prepared, signature);

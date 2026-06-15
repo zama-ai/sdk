@@ -109,6 +109,8 @@ export type {
   FinalizeUnwrapRequest,
   PermitKind,
   PreparedCredentialPermit,
+  PreparedCredentialPermitCovered,
+  PreparedCredentialPermitPending,
   PreparedFor,
   PreparedPermitFor,
   PreparedTransaction,

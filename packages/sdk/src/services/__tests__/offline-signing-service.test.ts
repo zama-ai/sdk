@@ -413,7 +413,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
 });
 
 describe("OfflineSigningService — CredentialPermit offline path", () => {
-  test("prepare returns a typed-data envelope for fresh contracts", async ({
+  test("prepare returns a PendingSignature typed-data envelope for fresh contracts", async ({
     createSDK,
     signer,
     userAddress,
@@ -425,11 +425,15 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
       contracts: [TOKEN],
     });
     expect(prepared.kind).toBe("CredentialPermit");
+    expect(prepared.status).toBe("PendingSignature");
+    if (prepared.status !== "PendingSignature") {
+      throw new Error("expected PendingSignature");
+    }
     expect(prepared.typedData).not.toBeNull();
     expect(prepared.context.chunk).toEqual([TOKEN]);
   });
 
-  test("prepare returns typedData: null when contracts are empty (keypair warm)", async ({
+  test("prepare short-circuits to Covered when contracts are empty (keypair warm)", async ({
     createSDK,
     signer,
     userAddress,
@@ -440,7 +444,11 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
       from: userAddress,
       contracts: [],
     });
-    expect(prepared.typedData).toBeNull();
+    expect(prepared.status).toBe("Covered");
+    if (prepared.status !== "Covered") {
+      throw new Error("expected Covered");
+    }
+    expect(prepared.result.contracts).toEqual([]);
   });
 
   test("registerPermit round-trip: prepare → external signTypedData stub → registerPermit", async ({
@@ -454,6 +462,9 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
       from: userAddress,
       contracts: [TOKEN],
     });
+    if (prepared.status !== "PendingSignature") {
+      throw new Error("expected PendingSignature");
+    }
     const externalSignature = `0x${"ab".repeat(65)}` as Hex;
     const result = await sdk.offlineSigning.registerPermit(prepared, externalSignature);
     expect(result.contracts).toEqual([TOKEN]);
@@ -473,6 +484,9 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
       from: userAddress,
       contracts: [TOKEN],
     });
+    if (prepared.status !== "PendingSignature") {
+      throw new Error("expected PendingSignature");
+    }
     await expect(
       sdk.offlineSigning.registerPermit(prepared, "not-hex" as unknown as Hex),
     ).rejects.toBeInstanceOf(TypeError);
@@ -1191,7 +1205,9 @@ describe("OfflineSigningService — CredentialPermit cross-process", () => {
       from: userAddress,
       contracts: [TOKEN],
     });
-    expect(prepared.typedData).not.toBeNull();
+    if (prepared.status !== "PendingSignature") {
+      throw new Error("expected PendingSignature");
+    }
     const externalSignature = `0x${"ab".repeat(65)}` as Hex;
     const result = await sdk.offlineSigning.registerPermit(prepared, externalSignature);
     expect(result.contracts).toEqual([TOKEN]);

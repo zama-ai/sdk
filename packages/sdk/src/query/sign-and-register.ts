@@ -10,15 +10,16 @@ export interface SignAndRegisterParams {
 /**
  * Mutation options for `sdk.offlineSigning.signAndRegister` — bundled in-process
  * prepare + signTypedData + register for a credential permit. Returns the
- * registered permit metadata, or `void` when the permit was already cached
- * and no signature was needed.
+ * registered permit metadata. When every requested contract is already
+ * cached, the underlying `prepare` short-circuits to the `Covered` variant
+ * and its inlined `result` is returned without prompting the signer.
  */
 export function signAndRegisterMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<
   readonly ["zama.signAndRegister"],
   SignAndRegisterParams,
-  CredentialPermitResult | void
+  CredentialPermitResult
 > {
   return {
     mutationKey: ["zama.signAndRegister"] as const,

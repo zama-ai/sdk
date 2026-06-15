@@ -1,11 +1,11 @@
 import type { Hex } from "viem";
-import type { CredentialPermitResult, PermitKind, PreparedPermitFor } from "../types/offline";
+import type { CredentialPermitResult, PreparedCredentialPermitPending } from "../types/offline";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link registerPermitMutationOptions}. */
 export interface RegisterPermitParams {
-  readonly prepared: PreparedPermitFor<PermitKind>;
+  readonly prepared: PreparedCredentialPermitPending;
   readonly signature: Hex;
 }
 

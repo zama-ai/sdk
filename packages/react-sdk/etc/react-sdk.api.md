@@ -249,10 +249,8 @@ export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Er
 // @public
 export function useSignAndBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, SignAndBroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, SignAndBroadcastParams, TContext>;
 
-// Warning: (ae-forgotten-export) The symbol "SignAndRegisterResult" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>;
+export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<CredentialPermitResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<CredentialPermitResult, Error, SignAndRegisterParams, TContext>;
 
 // @public
 export function useToken(address: Address): Token;

@@ -11,8 +11,9 @@ import { useZamaSDK } from "../provider";
 
 /**
  * Persist an externally-signed credential permit. Pair with
- * `usePrepare({ kind: "CredentialPermit", ... })` and an external
- * `signTypedData` call over `prepared.typedData`.
+ * `usePrepare({ kind: "CredentialPermit", ... })` after narrowing the
+ * prepared value on `status === "PendingSignature"` — `Covered` results already
+ * inline a `CredentialPermitResult` and need no follow-up call.
  *
  * Signer-optional: works without a configured signer (canonical
  * cross-process custody shape).
@@ -20,7 +21,9 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: registerPermit } = useRegisterPermit();
- * await registerPermit({ prepared, signature });
+ * if (prepared.status === "PendingSignature") {
+ *   await registerPermit({ prepared, signature });
+ * }
  * ```
  */
 export function useRegisterPermit<TContext = unknown>(

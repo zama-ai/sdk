@@ -9,13 +9,12 @@ import type { CredentialPermitResult } from "@zama-fhe/sdk";
 import { signAndRegisterMutationOptions, type SignAndRegisterParams } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
-type SignAndRegisterResult = CredentialPermitResult | void;
-
 /**
  * Tier-2 mutation: bundled in-process prepare + signTypedData + register for
  * a credential permit. Mirrors `sdk.offlineSigning.signAndRegister(...)`. Returns
- * the registered permit metadata, or `void` when the permit was already
- * cached and no signature was needed.
+ * the registered permit metadata. When every requested contract is already
+ * cached, the underlying `prepare` short-circuits to the `Covered` variant
+ * and its inlined `result` is returned without prompting the signer.
  *
  * Requires a signer with `signTypedData` (mandatory on every
  * {@link GenericSigner}).
@@ -32,10 +31,10 @@ type SignAndRegisterResult = CredentialPermitResult | void;
  * ```
  */
 export function useSignAndRegister<TContext = unknown>(
-  options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>,
-): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext> {
+  options?: UseMutationOptions<CredentialPermitResult, Error, SignAndRegisterParams, TContext>,
+): UseMutationResult<CredentialPermitResult, Error, SignAndRegisterParams, TContext> {
   const sdk = useZamaSDK();
-  return useMutation<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>({
+  return useMutation<CredentialPermitResult, Error, SignAndRegisterParams, TContext>({
     ...signAndRegisterMutationOptions(sdk),
     ...options,
   });
