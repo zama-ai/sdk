@@ -9,8 +9,8 @@ the `cleartext()` relayer transport against InGen.
 
 > ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
 > stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
-> It's designed for exploring and integrating the Zama SDK end-to-end on the T-Rex InGen testnet, and
-> isn't intended for production use.
+> It's intended for integrating and testing the Zama SDK end-to-end on the T-Rex InGen testnet, not
+> for production use.
 
 Covers: connect wallet, shield ERC-20 → confidential, confidential transfer,
 unshield, grant/revoke/use delegation, pending unshield recovery.
