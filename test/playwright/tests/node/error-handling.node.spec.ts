@@ -97,8 +97,8 @@ test("init failure resets so next call retries", async ({ chain, publicClient, v
     },
   });
 
-  await expect(sdk.relayer.generateKeypair()).rejects.toThrow();
-  await expect(sdk.relayer.generateKeypair()).rejects.toThrow();
+  await expect(sdk.router.relayer.generateKeypair()).rejects.toThrow();
+  await expect(sdk.router.relayer.generateKeypair()).rejects.toThrow();
 });
 
 test("isConfidential on non-ERC-165 contract reverts with a ContractFunction error", async ({
@@ -121,7 +121,7 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
 
 test("terminate during pool init rejects cleanly", async ({ chain, publicClient, viemClient }) => {
   const sdk = createZamaSDK({ chain, publicClient, viemClient });
-  const initPromise = sdk.relayer.generateKeypair();
+  const initPromise = sdk.router.relayer.generateKeypair();
   sdk.terminate();
   await expect(initPromise).rejects.toThrow();
 });

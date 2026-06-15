@@ -24,15 +24,15 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   const sdk = new ZamaSDK(config);
 
   // 2. Verify ACL contract is reachable
-  const aclAddress = await sdk.relayer.getAclAddress();
+  const aclAddress = await sdk.router.relayer.getAclAddress();
   expect(aclAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
   // 3. Verify FHE worker pool initializes — generate a keypair
-  const keypair = await sdk.relayer.generateKeypair();
+  const keypair = await sdk.router.relayer.generateKeypair();
   expect(keypair.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 
   // 4. Verify EIP-712 generation works
-  const eip712 = await sdk.relayer.createEIP712(
+  const eip712 = await sdk.router.relayer.createEIP712(
     keypair.publicKey,
     [contracts.cUSDT],
     Math.floor(Date.now() / 1000),
@@ -41,7 +41,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   expect(eip712.domain.chainId).toBe(31337);
 
   // 5. Verify delegated EIP-712 generation
-  const delegatedEip712 = await sdk.relayer.createDelegatedUserDecryptEIP712(
+  const delegatedEip712 = await sdk.router.relayer.createDelegatedUserDecryptEIP712(
     keypair.publicKey,
     [contracts.cUSDT],
     "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" as Address,
@@ -51,9 +51,9 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   expect(delegatedEip712.primaryType).toBe("DelegatedUserDecryptRequestVerification");
 
   // 6. Verify public key and params are available
-  const pk = await sdk.relayer.getPublicKey();
+  const pk = await sdk.router.relayer.getPublicKey();
   expect(pk).not.toBeNull();
-  const pp = await sdk.relayer.getPublicParams(2048);
+  const pp = await sdk.router.relayer.getPublicParams(2048);
   expect(pp).not.toBeNull();
 
   // 7. Create tokens and verify on-chain metadata
@@ -67,7 +67,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   sdk.terminate();
 
   // 9. Post-terminate,requests restart the pool
-  expect(await sdk.relayer.generateKeypair()).toMatchObject({
+  expect(await sdk.router.relayer.generateKeypair()).toMatchObject({
     privateKey: expect.stringMatching(/0x/),
     publicKey: expect.stringMatching(/0x/),
   });

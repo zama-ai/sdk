@@ -6,10 +6,10 @@
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 
 test("RelayerNode resolves correct ACL address from chain config", async ({ sdk, contracts }) => {
-  expect(await sdk.relayer.getAclAddress()).toBe(contracts.acl);
+  expect(await sdk.router.relayer.getAclAddress()).toBe(contracts.acl);
 });
 
 test("RelayerNode generates a valid keypair", async ({ sdk }) => {
-  const kp = await sdk.relayer.generateKeypair();
+  const kp = await sdk.router.relayer.generateKeypair();
   expect(kp.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 });

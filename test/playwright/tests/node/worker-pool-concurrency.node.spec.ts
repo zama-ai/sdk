@@ -38,10 +38,10 @@ test("2-worker pool generates 4 unique keypairs concurrently", async ({
     poolSize: 2,
   });
   const results = await Promise.all([
-    sdk.relayer.generateKeypair(),
-    sdk.relayer.generateKeypair(),
-    sdk.relayer.generateKeypair(),
-    sdk.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
   ]);
   expect(results).toHaveLength(4);
   const publicKeys = new Set(results.map((r) => r.publicKey));
@@ -60,14 +60,14 @@ test("4-worker pool handles parallel EIP-712 creation", async ({
     walletClient: viemClient,
     poolSize: 4,
   });
-  const keypair = await sdk.relayer.generateKeypair();
+  const keypair = await sdk.router.relayer.generateKeypair();
   const now = Math.floor(Date.now() / 1000);
 
   const results = await Promise.all([
-    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 7),
-    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 7),
-    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 14),
-    sdk.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 14),
+    sdk.router.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 7),
+    sdk.router.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 7),
+    sdk.router.relayer.createEIP712(keypair.publicKey, [contracts.cUSDT], now, 14),
+    sdk.router.relayer.createEIP712(keypair.publicKey, [contracts.cUSDC], now, 14),
   ]);
   expect(results).toHaveLength(4);
   for (const eip712 of results) {
@@ -82,10 +82,10 @@ test("terminate and restart", async ({ chain, publicClient, viemClient }) => {
     walletClient: viemClient,
     poolSize: 2,
   });
-  await sdk.relayer.generateKeypair();
+  await sdk.router.relayer.generateKeypair();
   sdk.terminate();
   // Post-terminate, operations restart the pool
-  expect(await sdk.relayer.generateKeypair()).toMatchObject({
+  expect(await sdk.router.relayer.generateKeypair()).toMatchObject({
     privateKey: expect.stringMatching(/0x/),
     publicKey: expect.stringMatching(/0x/),
   });
@@ -103,8 +103,8 @@ test("concurrent init requests share pool initialization", async ({
     poolSize: 2,
   });
   const [kp1, kp2] = await Promise.all([
-    sdk.relayer.generateKeypair(),
-    sdk.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
+    sdk.router.relayer.generateKeypair(),
   ]);
   expect(kp1.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
   expect(kp2.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
