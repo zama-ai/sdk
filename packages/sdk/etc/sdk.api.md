@@ -599,20 +599,13 @@ export class ChainMismatchError extends ZamaError {
 
 // @public
 export class ChainRouter implements Disposable {
-    // (undocumented)
     [Symbol.dispose](): void;
     constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
     get chain(): FheChain;
-    // (undocumented)
     get chains(): readonly FheChain[];
-    // (undocumented)
     get relayer(): RelayerSDK;
-    // (undocumented)
     relayerForChain(chainId: number): RelayerSDK;
-    // (undocumented)
     switchChain(chainId: number): void;
-    // (undocumented)
     terminate(): void;
 }
 

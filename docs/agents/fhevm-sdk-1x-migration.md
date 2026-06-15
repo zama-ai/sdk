@@ -101,7 +101,7 @@ the alpha channel without a major bump.
   incl. its internal `delegatedBatchDecryptHandlesAs` method, the relayer node/web/cleartext
   `userDecrypt`/`publicDecrypt` methods, and the underlying `relayer-sdk` types
   (`UserDecryptParams`/`PublicDecryptResult`/…). Internal callers use the new public method names.
-- **`RelayerSDK` / `RelayerDispatcher`** — `@public` in the api-report but **kept on the legacy verbs**
+- **`RelayerSDK`** — `@public` in the api-report but **kept on the legacy verbs**
   (`userDecrypt`/`publicDecrypt`/`delegatedUserDecrypt`): this is the adapter that _mirrors_ the
   third-party `@zama-fhe/relayer-sdk` interface, so renaming would make it diverge from what it adapts.
   Deliberate upstream-mirror (could be marked `@internal` later if we want the report literally free of

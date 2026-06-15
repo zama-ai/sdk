@@ -25,6 +25,12 @@ export class ChainRouter implements Disposable {
   readonly #workers: readonly WorkerLike[];
   #chainId: number;
 
+  /**
+   * Build the router. The first chain becomes the active chain.
+   *
+   * @throws ConfigurationError if `chains` is empty or any chain is missing a relayer config.
+   *   {@link ConfigurationError}
+   */
   constructor(
     chains: readonly [FheChain, ...FheChain[]],
     configs: Readonly<Record<number, RelayerConfig>>,
@@ -78,22 +84,30 @@ export class ChainRouter implements Disposable {
     this.#workers = workers;
   }
 
+  /** All chains registered with the router, in the order they were declared. */
   get chains(): readonly FheChain[] {
     return [...this.#chains.values()];
   }
 
+  /** The currently active chain. Changes via {@link switchChain}. */
   get chain(): FheChain {
     const chain = this.#chains.get(this.#chainId);
     assertNonNullable(chain, "ChainRouter: chain");
     return chain;
   }
 
+  /** The {@link RelayerSDK} bound to the active chain. */
   get relayer(): RelayerSDK {
     const relayer = this.#relayers.get(this.#chainId);
     assertNonNullable(relayer, "ChainRouter: active relayer");
     return relayer;
   }
 
+  /**
+   * The {@link RelayerSDK} bound to a specific chain, independent of the active one.
+   *
+   * @throws if no chain with this id is registered. {@link ConfigurationError}
+   */
   relayerForChain(chainId: number): RelayerSDK {
     const relayer = this.#relayers.get(chainId);
     if (!relayer) {
@@ -104,6 +118,12 @@ export class ChainRouter implements Disposable {
     return relayer;
   }
 
+  /**
+   * Make `chainId` the active chain. Subsequent {@link chain} / {@link relayer} reads
+   * resolve to it.
+   *
+   * @throws if no chain with this id is registered. {@link ConfigurationError}
+   */
   switchChain(chainId: number): void {
     if (!this.#chains.has(chainId)) {
       throw new ConfigurationError(
@@ -113,6 +133,11 @@ export class ChainRouter implements Disposable {
     this.#chainId = chainId;
   }
 
+  /**
+   * Tear down every relayer cache and worker. Safe to call once at SDK shutdown.
+   *
+   * @throws if one or more terminations fail; all are attempted regardless. {@link AggregateError}
+   */
   terminate(): void {
     const errors: Error[] = [];
 
@@ -139,6 +164,7 @@ export class ChainRouter implements Disposable {
     }
   }
 
+  /** Enables `using router = new ChainRouter(...)` — delegates to {@link terminate}. */
   [Symbol.dispose](): void {
     this.terminate();
   }
