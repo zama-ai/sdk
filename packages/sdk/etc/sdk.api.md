@@ -6475,10 +6475,9 @@ export class EventService {
     // @internal
     emit(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     // Warning: (ae-forgotten-export) The symbol "ListenerOptions" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "DisposableFn" needs to be exported by the entry point index.d.ts
-    on<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): DisposableFn<() => void>;
-    once<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): DisposableFn<() => void>;
-    subscribe(listener: AnyListener, options?: ListenerOptions): DisposableFn<() => void>;
+    on<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): () => void;
+    once<K extends ZamaSDKEventType>(type: K, listener: TypedListener<K>, options?: ListenerOptions): () => void;
+    subscribe(listener: AnyListener, options?: ListenerOptions): () => void;
 }
 
 // @public (undocumented)
@@ -20001,10 +20000,10 @@ export { ZKProofLike }
 
 // Warnings were encountered during analysis:
 //
-// dist/esm/index-DZYBSdBE.d.ts:19652:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZYBSdBE.d.ts:19781:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZYBSdBE.d.ts:19883:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
-// dist/esm/index-DZYBSdBE.d.ts:19884:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-C2wffgMp.d.ts:19646:5 - (ae-forgotten-export) The symbol "DecryptionService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-C2wffgMp.d.ts:19775:5 - (ae-forgotten-export) The symbol "DelegationService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-C2wffgMp.d.ts:19877:5 - (ae-forgotten-export) The symbol "CachingService" needs to be exported by the entry point index.d.ts
+// dist/esm/index-C2wffgMp.d.ts:19878:5 - (ae-forgotten-export) The symbol "CredentialService" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

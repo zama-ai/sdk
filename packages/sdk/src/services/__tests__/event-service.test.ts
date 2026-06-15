@@ -369,28 +369,6 @@ describe("EventService", () => {
     expect(late).toHaveBeenCalledTimes(1);
   });
 
-  test("on/once/subscribe return values are Disposable for use with `using`", () => {
-    const service = new EventService();
-    const onListener = vi.fn();
-    const onceListener = vi.fn();
-    const subListener = vi.fn();
-
-    {
-      using onSub = service.on("transfer:submitted", onListener);
-      using onceSub = service.once("transfer:submitted", onceListener);
-      using subSub = service.subscribe(subListener);
-      expect(onSub[Symbol.dispose]).toBeTypeOf("function");
-      expect(onceSub[Symbol.dispose]).toBeTypeOf("function");
-      expect(subSub[Symbol.dispose]).toBeTypeOf("function");
-      service.emit({ type: "transfer:submitted", txHash: TX_HASH });
-    }
-    service.emit({ type: "transfer:submitted", txHash: TX_HASH });
-
-    expect(onListener).toHaveBeenCalledTimes(1);
-    expect(onceListener).toHaveBeenCalledTimes(1);
-    expect(subListener).toHaveBeenCalledTimes(1);
-  });
-
   test("listeners removed during dispatch still fire for siblings on the current emit", () => {
     const service = new EventService();
     const sibling = vi.fn();

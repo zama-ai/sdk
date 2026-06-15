@@ -25,19 +25,6 @@ export interface EventServiceConfig {
 }
 
 /**
- * Returned by `on`, `once`, and `subscribe`. Calling it unsubscribes the
- * listener; it also implements {@link Disposable} so it can be bound to a
- * `using` declaration for scope-local subscriptions.
- */
-export type DisposableFn<T extends () => void> = T & Disposable;
-
-function makeDisposableFn<T extends () => void>(callback: T): DisposableFn<T> {
-  const fn = callback as DisposableFn<T>;
-  fn[Symbol.dispose] = callback;
-  return fn;
-}
-
-/**
  * Multi-listener, type-narrowed event bus.
  *
  * `on(type, …)` registers per event type with a narrowed payload.
@@ -67,15 +54,15 @@ export class EventService {
    * @param type - Event type key (use `ZamaSDKEvents.*`).
    * @param listener - Receives the narrowed event payload.
    * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
-   * @returns {@link DisposableFn} — a function that removes the listener when called, also usable with `using` for scope-local subscriptions.
+   * @returns A function that removes the listener when called.
    */
   on<K extends ZamaSDKEventType>(
     type: K,
     listener: TypedListener<K>,
     options?: ListenerOptions,
-  ): DisposableFn<() => void> {
+  ): () => void {
     if (options?.signal?.aborted) {
-      return makeDisposableFn(() => {});
+      return () => {};
     }
     let set = this.#typed.get(type);
     if (!set) {
@@ -93,7 +80,7 @@ export class EventService {
         }
       }
     };
-    return makeDisposableFn(this.#wireSignal(unsubscribe, options?.signal));
+    return this.#wireSignal(unsubscribe, options?.signal);
   }
 
   /**
@@ -101,20 +88,20 @@ export class EventService {
    * the first matching event.
    *
    * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
-   * @returns {@link DisposableFn} — no-op after auto-fire; useful if the caller needs to bail before the event ever arrives. Also usable with `using`.
+   * @returns A no-op after auto-fire; useful if the caller needs to bail before the event ever arrives.
    */
   once<K extends ZamaSDKEventType>(
     type: K,
     listener: TypedListener<K>,
     options?: ListenerOptions,
-  ): DisposableFn<() => void> {
+  ): () => void {
     let unsubscribe: () => void = () => {};
     const wrapper: TypedListener<K> = (event) => {
       unsubscribe();
       listener(event);
     };
     unsubscribe = this.on(type, wrapper, options);
-    return makeDisposableFn(() => unsubscribe());
+    return () => unsubscribe();
   }
 
   /**
@@ -122,17 +109,17 @@ export class EventService {
    * the full {@link ZamaSDKEvent} union — narrow with `switch (event.type)`.
    *
    * @param options - Optional `{ signal }` to bind the subscription's lifetime to an `AbortSignal`.
-   * @returns {@link DisposableFn} — call it to remove the listener; also usable with `using` for scope-local subscriptions.
+   * @returns A function that removes the listener when called.
    */
-  subscribe(listener: AnyListener, options?: ListenerOptions): DisposableFn<() => void> {
+  subscribe(listener: AnyListener, options?: ListenerOptions): () => void {
     if (options?.signal?.aborted) {
-      return makeDisposableFn(() => {});
+      return () => {};
     }
     this.#any.add(listener);
     const unsubscribe = () => {
       this.#any.delete(listener);
     };
-    return makeDisposableFn(this.#wireSignal(unsubscribe, options?.signal));
+    return this.#wireSignal(unsubscribe, options?.signal);
   }
 
   /**
