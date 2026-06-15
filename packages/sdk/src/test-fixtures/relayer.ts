@@ -1,8 +1,10 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
+import type { FheChain } from "../chains/types";
+import type { ChainRouter } from "../relayer/chain-router";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { FixturesOf } from "./types";
+import type { ChainFixtures } from "./chain";
 import {
   ACL,
   TEST_PRIVATE_KEY,
@@ -11,12 +13,10 @@ import {
   VALID_ENCRYPTED_VALUE,
   VALID_INPUT_PROOF,
 } from "./constants";
+import type { FixturesOf } from "./types";
 
 export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
-    chains: [{ id: 31337 }],
-    activeChain: { id: 31337 },
-    switchChain: vi.fn(),
     generateKeypair: vi.fn().mockResolvedValue({
       publicKey: TEST_PUBLIC_KEY,
       privateKey: TEST_PRIVATE_KEY,
@@ -80,19 +80,45 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     }),
     terminate: vi.fn(),
     ...overrides,
-  } as unknown as RelayerSDK;
+  };
+}
+
+/**
+ * Build a `ChainRouter`-shaped mock for a single chain whose `active` and `for`
+ * both resolve to the given relayer. Suitable for service-layer tests that
+ * don't exercise chain-switch behaviour.
+ */
+export function createMockRouter(relayer: RelayerSDK, chain: FheChain): ChainRouter {
+  const router = {
+    chains: [chain] as readonly FheChain[],
+    chain,
+    active: relayer,
+    for: vi.fn(() => relayer),
+    switchChain: vi.fn(),
+    terminate: vi.fn(),
+    [Symbol.dispose]: vi.fn(),
+  };
+  return router as unknown as ChainRouter;
 }
 
 export interface RelayerFixtures {
   relayer: RelayerSDK;
+  router: ChainRouter;
   createMockRelayer: typeof createMockRelayer;
+  createMockRouter: typeof createMockRouter;
 }
 
-export const relayerFixtures: FixturesOf<RelayerFixtures> = {
+export const relayerFixtures: FixturesOf<RelayerFixtures, ChainFixtures> = {
   relayer: async ({}, use) => {
     await use(createMockRelayer());
   },
+  router: async ({ relayer, chain }, use) => {
+    await use(createMockRouter(relayer, chain));
+  },
   createMockRelayer: async ({}, use) => {
     await use(createMockRelayer);
+  },
+  createMockRouter: async ({}, use) => {
+    await use(createMockRouter);
   },
 };
