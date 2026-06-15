@@ -6,6 +6,7 @@ The SDK is for all Zama Protocol use cases, not just tokens. The code is in tran
 
 - **SDK-level operations use "contracts":** `contractAddress`, `contractAddresses`, generic ops like allow/revoke/session management, package descriptions, README language. These work with any confidential contract type.
 - **Token-specific operations use "tokens":** `Token`/`WrappedToken` classes, `shield`, `unshield`, `transfer`, `balanceOf`, ERC-7984/ERC-20 interfaces. These are explicitly about confidential tokens.
+- **"Encrypted value", not "handle", on public surfaces.** Public APIs and docs use `encryptedValue(s)` / `EncryptedValue` and the glossary verb names — `decryptValues` / `decryptPublicValues` / `delegatedDecryptValues`, never `userDecrypt` / `publicDecrypt`. Keep `handle` only where it mirrors an on-chain term (contract ABI fragments, `isHandleDelegatedForUserDecryption`, KMS `ctHandles`). Internal layers (worker, services, relayer dispatcher, the legacy `@zama-fhe/relayer-sdk` types) may keep `handle` / `userDecrypt` — the rule is the public surface, not internal code; public barrels re-export the internal types under the glossary names.
 - **User-facing docs:** no Slack links or internal tool references. Linear ticket refs (SDK-42) in code comments and PR titles are fine.
 - **Docs use stage-gate language, not calendar dates.** Write "once deployed to testnet" / "after mainnet launch", not "in Q2 2026" or "by March 31" — calendar dates rot, stage gates don't.
 

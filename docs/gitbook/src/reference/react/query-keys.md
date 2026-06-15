@@ -95,7 +95,7 @@ On-chain wrappers registry queries.
 
 ### `zamaQueryKeys.decryption`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
+Cached decrypted values. Populated by [`useDecryptValues`](/reference/react/useDecryptValues).
 
 ```ts
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";

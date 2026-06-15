@@ -62,9 +62,12 @@ export type {
   EIP712TypedData,
   EncryptParams,
   EncryptResult,
-  UserDecryptParams,
-  DelegatedUserDecryptParams,
-  PublicDecryptResult,
+} from "../relayer/relayer-sdk.types";
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
+export type {
+  UserDecryptParams as DecryptValuesParams,
+  PublicDecryptResult as DecryptPublicValuesResult,
+  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "../relayer/relayer-sdk.types";
 
 // Storage

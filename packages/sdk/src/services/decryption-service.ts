@@ -12,7 +12,7 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
-import { isZeroHandle } from "../utils/handles";
+import { isEncryptedValueZero } from "../utils/handles";
 import { toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
@@ -30,15 +30,15 @@ interface DecryptionStrategy {
   delegated?: boolean;
 }
 
-export interface BatchDecryptHandleItem {
+export interface BatchDecryptItem {
   encryptedValue: EncryptedValue;
   contractAddress: Address;
   value?: ClearValue;
   error?: ZamaError;
 }
 
-export interface BatchDecryptHandlesResult {
-  items: BatchDecryptHandleItem[];
+export interface BatchDecryptResult {
+  items: BatchDecryptItem[];
 }
 
 export class DecryptionService {
@@ -85,7 +85,7 @@ export class DecryptionService {
           signerAddress: normalizedSigner,
         });
       },
-      errorMessage: "Failed to decrypt handles",
+      errorMessage: "Failed to decrypt encrypted values",
     });
   }
 
@@ -119,7 +119,7 @@ export class DecryptionService {
           delegateAddress: normalizedDelegate,
         });
       },
-      errorMessage: "Failed to decrypt delegated handles",
+      errorMessage: "Failed to decrypt delegated encrypted values",
       delegated: true,
     });
   }
@@ -136,8 +136,8 @@ export class DecryptionService {
     delegateAddress: Address;
     accountAddress: Address;
     maxConcurrency?: number;
-  }): Promise<BatchDecryptHandlesResult> {
-    const items: BatchDecryptHandleItem[] = encryptedInputs.map((h) => ({
+  }): Promise<BatchDecryptResult> {
+    const items: BatchDecryptItem[] = encryptedInputs.map((h) => ({
       encryptedValue: h.encryptedValue,
       contractAddress: getAddress(h.contractAddress),
     }));
@@ -166,7 +166,7 @@ export class DecryptionService {
       }
       if (items.length === 1) {
         const [item = this.#missingBatchItem()] = items;
-        item.error = this.#toZamaError(error, "Failed to decrypt delegated handles", true);
+        item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", true);
         return { items };
       }
     }
@@ -190,7 +190,11 @@ export class DecryptionService {
           if (isFatalBatchError(error)) {
             throw error;
           }
-          item.error = this.#toZamaError(error, "Failed to decrypt delegated handles", true);
+          item.error = this.#toZamaError(
+            error,
+            "Failed to decrypt delegated encrypted values",
+            true,
+          );
         }
       }),
       maxConcurrency,
@@ -215,7 +219,7 @@ export class DecryptionService {
     const nonZero: EncryptedInput[] = [];
 
     for (const h of normalized) {
-      if (isZeroHandle(h.encryptedValue)) {
+      if (isEncryptedValueZero(h.encryptedValue)) {
         result[h.encryptedValue] = 0n;
       } else {
         nonZero.push(h);
@@ -316,10 +320,7 @@ export class DecryptionService {
     }
   }
 
-  #setHandleResult(
-    item: BatchDecryptHandleItem,
-    decrypted: Record<EncryptedValue, ClearValue>,
-  ): void {
+  #setHandleResult(item: BatchDecryptItem, decrypted: Record<EncryptedValue, ClearValue>): void {
     const value = decrypted[item.encryptedValue];
     if (value === undefined) {
       item.error = new DecryptionFailedError(

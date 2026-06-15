@@ -14,7 +14,7 @@ export interface EncryptedInput {
 /** Alias for {@link UserDecryptResults}. */
 export type DecryptResult = UserDecryptResults;
 
-export function userDecryptQueryOptions(
+export function decryptValuesQueryOptions(
   sdk: ZamaSDK,
   encryptedInputs: EncryptedInput[],
   signerContext: SignerQueryContext = {},
@@ -31,7 +31,7 @@ export function userDecryptQueryOptions(
     ),
     queryFn: (context) => {
       const [, { encryptedInputs: keyedInputs }] = context.queryKey;
-      return sdk.decryption.userDecrypt(keyedInputs);
+      return sdk.decryption.decryptValues(keyedInputs);
     },
     staleTime: Infinity,
     enabled: encryptedInputs.length > 0 && signerContext.walletAccount !== undefined,
