@@ -125,9 +125,21 @@ The skills and command live under `claude-setup/` (the repo's existing skill sou
 - LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals (overlaps [SDK-172](https://linear.app/zama/issue/SDK-172/skills-evals-with-promptfoo)).
 - Optional later: golden-file/snapshot guard on app output, once apps have converged.
 
+## Generation variance (measured)
+
+Two independent cold generations of the guide for `3.0.0-alpha.32 → 3.1.0-alpha.5`, same deterministic bundle, neither seeing the other or the committed guide: **19 vs 31 changes (+63%)** — yet **both cover 100% of the 8 app-relevant core deltas** (config→`address`, permit renames, `requireSigner`→`signer`, `createZamaConfig`→`createConfig`, `Handle`→`EncryptedValue`, `EncryptResult` hex, `ReadonlyToken`→`WrappedToken`, unshield hooks). The variance lives entirely in (1) grouping granularity (split vs merged changes) and (2) the low-level long tail of internal removals no example app imports. So generate-step variance is real but **zero-impact on what reaches apps**; combined with the apply-side format+typecheck gate the end-to-end output converges, and generate-once + review + commit holds.
+
+**Hardening this further — deterministic completeness lint.** Mechanically extract the changed/removed/renamed *public* export identifiers from the `api/*.diff` files and have the CLI assert each is referenced by ≥1 guide change (`from`/`to`/`affectedSymbols`/`action`). That turns "did the generate step cover every public delta?" from a judgment call into a deterministic gate, attacking the long-tail variance directly.
+
+## Testing
+
+- Unit (deterministic): version resolution, diff collection, guide schema validation, guide selection, post-processing argv. This is the coverage #316 lacked.
+- LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals (overlaps [SDK-172](https://linear.app/zama/issue/SDK-172/skills-evals-with-promptfoo)).
+- Optional later: golden-file/snapshot guard on app output, once apps have converged.
+
 ## Risks
 
-- **Guide-generation variance.** The guide is LLM-generated, so it inherits some variance — mitigated by generate-once + human review + commit. Measure stability across runs in Phase 1.
+- **Guide-generation variance.** Measured above — concentrated in the no-impact long tail, mitigated by generate-once + review + commit, and to be hardened by the deterministic completeness lint.
 - **`llms-full.txt` missing at some tags.** Confirmed: e.g. `v3.0.1` has `api.md` but not `llms-full.txt`. Handle via the checkout + `pnpm llm:build` fallback; the `api.md` diff alone still carries the semantic signal.
 - **API-extractor format drift across versions** could add noise to the `.api.md` diff. Acceptable — it is reviewed once per couple.
 - **External version mismatch** (no exact `from` guide) — see the version-selection rule; finalise in Phase 4.
