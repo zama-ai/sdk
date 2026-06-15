@@ -114,7 +114,7 @@ function cmdApply(argv) {
 
   if (!values.gate) {
     console.log("\nNext: run the sdk-upgrade-apply-guide skill with the guide above,");
-    console.log("then re-run with --gate to bump pins, install, and typecheck.");
+    console.log("then re-run with --gate to bump pins, install, format, and typecheck.");
     return;
   }
 
@@ -125,12 +125,31 @@ function cmdApply(argv) {
   const install = spawnSync("npm", ["install"], { cwd: appDir, stdio: "inherit" });
   if (install.status !== 0) fail("npm install failed");
 
+  // Format before typecheck. The apply step's edits carry incidental whitespace
+  // variance (e.g. a collapsed multi-line call); normalising here is what makes
+  // sibling apps converge to byte-identical source, not just identical API usage.
+  formatApp(appDir);
+
   console.log("Typechecking...");
   const typecheck = spawnSync("npm", ["run", "typecheck"], { cwd: appDir, stdio: "inherit" });
   if (typecheck.status !== 0) {
     fail("typecheck failed — the apply step left unresolved changes (see errors above)");
   }
-  console.log("\nGate passed: pins bumped, install clean, typecheck exit 0.");
+  console.log("\nGate passed: pins bumped, install clean, formatted, typecheck exit 0.");
+}
+
+// Format the app's source with the repo's oxfmt. Best-effort: an external app
+// without the repo toolchain is skipped with a warning rather than failed.
+function formatApp(appDir) {
+  const oxfmt = join(repoRoot(), "node_modules", ".bin", "oxfmt");
+  if (!existsSync(oxfmt)) {
+    console.log("Formatting skipped (oxfmt not found — external app should run its own formatter).");
+    return;
+  }
+  console.log("Formatting...");
+  const target = existsSync(join(appDir, "src")) ? join(appDir, "src") : appDir;
+  const fmt = spawnSync(oxfmt, [target], { cwd: repoRoot(), stdio: "inherit" });
+  if (fmt.status !== 0) fail("format failed");
 }
 
 const [command, ...rest] = process.argv.slice(2);

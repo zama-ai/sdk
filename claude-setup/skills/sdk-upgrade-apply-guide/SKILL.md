@@ -27,7 +27,10 @@ You are **Half 2** of the SDK-upgrade pipeline. You take a **frozen, already-rev
 3. Apply each `action` mechanically and idempotently across all sites. Work change-by-change so nothing is missed.
 4. After all edits, tell the operator to run the gate:
    `pnpm sdk-upgrade apply --example <name> --to <B> --gate`
-   which bumps the pins, installs, and typechecks against B.
+   which bumps the pins, installs, **formats** (oxfmt), then typechecks against B.
+   Don't hand-match a sibling app's line-wrapping — the format step normalises
+   incidental whitespace, so converging on *API usage* is enough; the gate makes
+   the source byte-identical.
 5. **If the gate's typecheck fails:** read each error. Two cases —
    - **A guide-listed change you missed at a site** → apply it (still within the guide). Re-run the gate.
    - **A delta the guide never mentions** → this is a guide gap. Do the minimal fix to get typecheck green **and** report it prominently so the generate skill can add it to the guide for the next app. Do not treat the per-app fix as sufficient.
@@ -40,5 +43,5 @@ The typecheck-against-B gate is what makes an LLM apply step trustworthy: it cat
 ## You are done when
 
 - every `required` change is applied or explicitly reported as an unresolved blocker, and
-- `pnpm sdk-upgrade apply --example <name> --to <B> --gate` exits 0 (pins bumped, install clean, typecheck green), and
+- `pnpm sdk-upgrade apply --example <name> --to <B> --gate` exits 0 (pins bumped, install clean, formatted, typecheck green), and
 - your summary lists: changes applied, sites touched, any `recommended` changes skipped (with why), and any guide gaps the gate exposed.

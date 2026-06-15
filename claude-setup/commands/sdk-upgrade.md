@@ -44,7 +44,7 @@ Pause for the human to review the `.md` before applying — the guide is committ
 pnpm sdk-upgrade apply --example <name> --to <B> --gate
 ```
 
-This bumps the pins, installs, and typechecks against B. If typecheck fails, the apply skill resolves it (and reports any guide gap). Re-run until exit 0.
+This bumps the pins, installs, formats (oxfmt), then typechecks against B. If typecheck fails, the apply skill resolves it (and reports any guide gap). Re-run until exit 0.
 
 ## 5. Report
 
