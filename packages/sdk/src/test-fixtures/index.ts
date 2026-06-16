@@ -1,5 +1,3 @@
-// oxlint-disable jest/expect-expect
-// oxlint-disable jest/no-disabled-tests
 import { test as base } from "vitest";
 import { addressFixtures, type AddressFixtures } from "./addresses";
 import { chainFixtures, type ChainFixtures } from "./chain";

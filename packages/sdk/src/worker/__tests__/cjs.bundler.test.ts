@@ -54,7 +54,6 @@ describe("CJS build smoke tests", () => {
 describe("package.json export conditions", () => {
   test("every export has a default condition", () => {
     for (const [subpath, conditions] of Object.entries(exports)) {
-      // oxlint-disable-next-line jest/valid-expect
       expect(conditions, `${subpath} missing "default"`).toHaveProperty("default");
     }
   });
