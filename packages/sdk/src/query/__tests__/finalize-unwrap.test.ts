@@ -15,11 +15,11 @@ describe("finalizeUnwrapMutationOptions", () => {
     );
   });
 
-  test("accepts burnAmountHandle as alternative input", async ({ mockWrappedToken }) => {
+  test("accepts burnAmount as alternative input", async ({ mockWrappedToken }) => {
     const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
     await options.mutationFn({
-      burnAmountHandle: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbb",
+      burnAmount: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbBbbbbbbbbbbbbbbbbbbbb",
     });
 
     expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
@@ -27,7 +27,9 @@ describe("finalizeUnwrapMutationOptions", () => {
     );
   });
 
-  test("throws ConfigurationError when no handle is provided", async ({ mockWrappedToken }) => {
+  test("throws ConfigurationError when no encrypted value is provided", async ({
+    mockWrappedToken,
+  }) => {
     const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
     await expect(options.mutationFn({} as never)).rejects.toThrow(ConfigurationError);

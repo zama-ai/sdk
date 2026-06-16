@@ -9,7 +9,7 @@ import type { FixturesOf } from "./types";
 const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const userAddress = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-const burnAmountHandle = `0x${"22".repeat(32)}` as const;
+const burnAmount = `0x${"22".repeat(32)}` as const;
 const unwrapRequestedTopic =
   "0x4b1bfb262557cf08a74ddeefb8aef086b81deb08484bdc1820b9f420cdd1aa0e" as const;
 
@@ -160,14 +160,14 @@ async function mutateAndExpectOnSuccess(
 }
 
 export interface MutationFixtures {
-  burnAmountHandle: typeof burnAmountHandle;
+  burnAmount: typeof burnAmount;
   wagmiBalanceKey: typeof wagmiBalanceKey;
   createUnwrapRequestedLog: typeof createUnwrapRequestedLog;
   mutateAndExpectOnSuccess: typeof mutateAndExpectOnSuccess;
 }
 
 export const mutationFixtures: FixturesOf<MutationFixtures> = {
-  burnAmountHandle,
+  burnAmount,
   wagmiBalanceKey,
   createUnwrapRequestedLog: async ({}, use) => {
     await use(createUnwrapRequestedLog);
