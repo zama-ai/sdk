@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.8...v3.1.0-alpha.9) (2026-06-16)
+
+### Code Refactoring
+
+- **sdk:** rename remaining public *Handle fields to glossary terms [SDK-203] ([#415](https://github.com/zama-ai/sdk/issues/415)) ([b8c7779]()), closes [#386]()
+
 ## [3.1.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.7...v3.1.0-alpha.8) (2026-06-15)
 
 ### Features
