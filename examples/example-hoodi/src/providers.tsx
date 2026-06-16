@@ -2,15 +2,16 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
 import {
-  ZamaProvider,
   ZamaSDKEvents,
   IndexedDBStorage,
   indexedDBStorage,
   savePendingUnshield,
-} from "@zama-fhe/react-sdk";
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
+  cleartext,
+} from "@zama-fhe/sdk";
+import { hoodi, type FheChain } from "@zama-fhe/sdk/chains";
+import { createConfig, type EIP1193Provider } from "@zama-fhe/sdk/ethers";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
 import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -226,28 +227,26 @@ export function Providers({ children }: { children: ReactNode }) {
     return () => ethereum.removeListener("accountsChanged", handleAccountsChanged);
   }, []);
 
-  // hoodiCleartextConfig and HOODI_RPC_URL are build-time constants — relayer never changes.
-  const relayer = useMemo(
-    () => new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL }),
+  // The hoodi cleartext chain preset carries the executorAddress that cleartext() needs;
+  // the network override points SDK reads at HOODI_RPC_URL.
+  const hoodiChain = useMemo(
+    () => ({ ...hoodi, network: HOODI_RPC_URL }) as const satisfies FheChain,
     [],
   );
 
-  // Recreated on wallet switch so the new EthersSigner is bound to the new account address.
-  const signer = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef) as any;
-    return new EthersSigner({ ethereum: hybridEthereum });
-  }, [walletKey]);
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ZamaProvider
-        key={walletKey}
-        relayer={relayer}
-        storage={indexedDBStorage}
-        sessionStorage={sessionDBStorage}
-        signer={signer}
-        onEvent={(event) => {
+  // Recreated on wallet switch so the ethers adapter is bound to the new account address.
+  const config = useMemo(
+    () =>
+      createConfig({
+        chains: [hoodiChain],
+        ethereum: createHybridEthereum(
+          getEthereumProvider(),
+          liveAccountsRef,
+        ) as unknown as EIP1193Provider,
+        relayers: { [hoodiChain.id]: cleartext() },
+        storage: indexedDBStorage,
+        permitStorage: sessionDBStorage,
+        onEvent: (event) => {
           // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
           // awaits the receipt before emitting). Saving here ensures the pending state
           // survives a tab close between Phase 1 and Phase 2.
@@ -261,8 +260,14 @@ export function Providers({ children }: { children: ReactNode }) {
               setActiveUnshieldToken(null);
             }
           }
-        }}
-      >
+        },
+      }),
+    [hoodiChain, walletKey],
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ZamaProvider key={walletKey} config={config}>
         {children}
       </ZamaProvider>
     </QueryClientProvider>

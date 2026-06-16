@@ -3,13 +3,9 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isError } from "ethers";
-import {
-  useZamaSDK,
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
-} from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { allowanceContract, approveContract, balanceOfContract } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
@@ -61,17 +57,19 @@ export function ShieldCard({
   // to the reset path when the user said no.
   const shield = useMutation({
     mutationFn: async (amount: bigint) => {
-      const token = sdk.createToken(tokenAddress);
-      const userAddress = await sdk.signer.getAddress();
+      const signer = sdk.signer;
+      if (!signer) throw new Error("A wallet signer is required to shield");
+      const token = sdk.createWrappedToken(tokenAddress);
+      const userAddress = signer.requireWalletAccount("shield").address;
 
       // Read the current ERC-20 allowance granted to the wrapper.
-      const currentAllowance = (await sdk.signer.readContract(
+      const currentAllowance = (await sdk.provider.readContract(
         allowanceContract(underlyingAddress, userAddress, tokenAddress),
       )) as bigint;
 
       if (currentAllowance < amount) {
         // Fetch the user's full ERC-20 balance to use as the new spend cap.
-        const erc20Balance = (await sdk.signer.readContract(
+        const erc20Balance = (await sdk.provider.readContract(
           balanceOfContract(underlyingAddress, userAddress),
         )) as bigint;
 
@@ -83,31 +81,31 @@ export function ShieldCard({
           // - USDT-style: eth_estimateGas reverts → caught below → reset path (2 confirmations).
           let needsReset = false;
           try {
-            const approveTxHash = await sdk.signer.writeContract(
+            const approveTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.signer.waitForTransactionReceipt(approveTxHash);
+            await sdk.provider.waitForTransactionReceipt(approveTxHash);
           } catch (err) {
             if (isError(err, "ACTION_REJECTED")) throw err; // user rejected — stop here
             needsReset = true; // eth_estimateGas reverted → USDT-style token
           }
 
           if (needsReset) {
-            const resetTxHash = await sdk.signer.writeContract(
+            const resetTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, 0n),
             );
-            await sdk.signer.waitForTransactionReceipt(resetTxHash);
-            const approveTxHash = await sdk.signer.writeContract(
+            await sdk.provider.waitForTransactionReceipt(resetTxHash);
+            const approveTxHash = await signer.writeContract(
               approveContract(underlyingAddress, tokenAddress, erc20Balance),
             );
-            await sdk.signer.waitForTransactionReceipt(approveTxHash);
+            await sdk.provider.waitForTransactionReceipt(approveTxHash);
           }
         } else {
           // Zero allowance: simple approve — no reset needed for any token.
-          const approveTxHash = await sdk.signer.writeContract(
+          const approveTxHash = await signer.writeContract(
             approveContract(underlyingAddress, tokenAddress, erc20Balance),
           );
-          await sdk.signer.waitForTransactionReceipt(approveTxHash);
+          await sdk.provider.waitForTransactionReceipt(approveTxHash);
         }
 
         setPhase("wrap-after-approve");
