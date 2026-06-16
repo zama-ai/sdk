@@ -59,8 +59,9 @@ export function ShieldCard({
   // to the reset path when the user said no.
   const shield = useMutation({
     mutationFn: async (amount: bigint) => {
-      const signer = sdk.requireSigner("shield");
-      const token = sdk.createToken(tokenAddress);
+      const signer = sdk.signer;
+      if (!signer) throw new Error("A wallet signer is required to shield");
+      const token = sdk.createWrappedToken(tokenAddress);
       const userAddress = signer.requireWalletAccount("shield").address;
 
       // Read the current ERC-20 allowance granted to the wrapper.
