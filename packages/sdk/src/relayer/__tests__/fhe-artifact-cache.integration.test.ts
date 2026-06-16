@@ -1,6 +1,4 @@
 // oxlint-disable no-empty-pattern
-// oxlint-disable jest/expect-expect
-// oxlint-disable jest/no-disabled-tests
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
