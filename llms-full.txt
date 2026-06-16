@@ -4439,21 +4439,21 @@ direct replacement_ (see the relevant step).
 
 ### `@zama-fhe/react-sdk` (hooks)
 
-| 2.x                                                            | 3.x                                                               | Step |
-| -------------------------------------------------------------- | ----------------------------------------------------------------- | ---- |
-| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`) | 1    |
-| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                   | 1    |
-| `useReadonlyToken`                                             | `useWrappedToken`                                                 | 6    |
-| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                      | 4    |
-| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                        | 4    |
-| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                 | 3    |
-| `useUserDecrypt({ handles })`                                  | `useUserDecrypt(inputs)` — arg shape change, see Step 5           | 5    |
-| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                      | 3    |
-| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                | 3    |
-| `useDelegatedUserDecrypt`                                      | `useDelegatedDecrypt`                                             | 3    |
-| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair             | 3    |
-| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)          | 3    |
-| `useActivityFeed`                                              | **removed** (activity feed dropped)                               | 7    |
+| 2.x                                                            | 3.x                                                                 | Step |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- | ---- |
+| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)   | 1    |
+| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                     | 1    |
+| `useReadonlyToken`                                             | `useWrappedToken`                                                   | 6    |
+| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                        | 4    |
+| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                          | 4    |
+| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                   | 3    |
+| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5 | 5    |
+| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                        | 3    |
+| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                  | 3    |
+| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                         | 3    |
+| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair               | 3    |
+| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)            | 3    |
+| `useActivityFeed`                                              | **removed** (activity feed dropped)                                 | 7    |
 
 ---
 
@@ -4669,7 +4669,7 @@ permit is a reusable EIP-712 signature granting your app decrypt rights for a se
 of contracts. See the [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) concept page.
 
 In most apps you do **not** manage permits manually — decrypt hooks
-(`useUserDecrypt`, `useConfidentialBalance`) trigger the permit signature
+(`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
 automatically on first use. The explicit hooks are for gating that prompt and for
 revocation.
 
@@ -4678,7 +4678,7 @@ revocation.
 | `useAllow` / `useIsAllowed`                                 | `useGrantPermit` / `useHasPermit`                             |
 | `useGenerateKeypair`, `useCreateEIP712`                     | **removed** — handled automatically; gate with `useHasPermit` |
 | `useCreateDelegatedUserDecryptEIP712`                       | `useGrantPermit`                                              |
-| `useDelegatedUserDecrypt`                                   | `useDelegatedDecrypt`                                         |
+| `useDelegatedUserDecrypt`                                   | `useDelegatedDecryptValues`                                   |
 | `useRevoke`                                                 | `useRevokePermits` — revokes permits, keeps the keypair       |
 | `useRevokeSession`                                          | `useClearCredentials` — full logout, also wipes the keypair   |
 | `CredentialsManager` / `DelegatedCredentialsManager` (core) | `Permits` / `Delegations` / `Decryption`                      |
@@ -4699,7 +4699,7 @@ function DecryptGate({
 }) {
   const { data: hasPermit } = useHasPermit({ contractAddresses });
   const { mutate: grantPermit, isPending } = useGrantPermit();
-  if (hasPermit) return <>{children}</>; // children can call useUserDecrypt without a prompt
+  if (hasPermit) return <>{children}</>; // children can call useDecryptValues without a prompt
   return (
     <button onClick={() => grantPermit(contractAddresses)} disabled={isPending}>
       Enable decryption
@@ -4814,8 +4814,8 @@ await sdk.signer.writeContract({
 
 ### Decrypt glossary: `handle` → `encryptedValue`
 
-`useUserDecrypt` keeps its name but its argument changed: from an object
-`{ handles }` to a positional array of `{ encryptedValue, contractAddress }`.
+`useUserDecrypt` was renamed `useDecryptValues`, and its argument changed: from an
+object `{ handles }` to a positional array of `{ encryptedValue, contractAddress }`.
 Result objects are keyed by `encryptedValue` (not `handle`). Reads also move from
 `sdk.signer.readContract` to `sdk.provider.readContract` — `sdk.provider` is
 always available, whereas in 2.x reads went through the signer.
@@ -4849,12 +4849,12 @@ decrypted?.[handles[0].handle];
 ### Tab: After (3.x)
 
 ```tsx
-import { useUserDecrypt } from "@zama-fhe/react-sdk";
+import { useDecryptValues } from "@zama-fhe/react-sdk";
 
 const [inputs, setInputs] = useState<{ encryptedValue: string; contractAddress: `0x${string}` }[]>(
   [],
 );
-const { data: decrypted } = useUserDecrypt(inputs);
+const { data: decrypted } = useDecryptValues(inputs);
 
 const encryptedValue = (await sdk.provider.readContract({
   /* ... */
@@ -4894,6 +4894,9 @@ const { confidentialTokenAddress } = registryResult;
   decode unwrap events directly, note the rename `decodeUnwrappedFinalized` →
   `decodeUnwrapFinalized` (and `UnwrappedFinalizedEvent` → `UnwrapFinalizedEvent`).
   If you only use `unshield`/`unshieldAll`/`useUnshield`, no change is needed.
+- If you read decoded transfer events directly, the field
+  `ConfidentialTransferEvent.encryptedAmountHandle` was renamed `encryptedAmount`
+  (part of the `handle` → `encryptedValue` glossary shift, Step 5).
 - If you hardcoded `ERC7984_WRAPPER_INTERFACE_ID`, its value changed; import the
   constant instead of inlining it.
 
@@ -4914,7 +4917,7 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|WagmiSigner|RelayerWeb|RelayerNode|buildRelayer|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|CredentialsManager|extractEncryptedHandles'
+   rg -n 'ZamaSDKConfig|ViemSigner|WagmiSigner|RelayerWeb|RelayerNode|buildRelayer|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|CredentialsManager|extractEncryptedHandles|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|encryptedAmountHandle'
    ```
 
    A few atoms can still produce hits that don't need migrating — inspect rather
