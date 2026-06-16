@@ -7,7 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "3.0.0-alpha.34",
+    "@zama-fhe/sdk": "3.1.0-alpha.10",
     "viem": "^2.30.0"
   },
   "devDependencies": {
