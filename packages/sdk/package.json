@@ -160,11 +160,11 @@
   },
   "dependencies": {
     "@zama-fhe/relayer-sdk": "~0.4.3",
-    "viem": ">=2",
-    "zod": ">=4"
+    "viem": "^2.52.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@tanstack/query-core": "^5.100.10"
+    "@tanstack/query-core": "^5.101.0"
   },
   "peerDependencies": {
     "@tanstack/query-core": ">=5",
