@@ -1,7 +1,9 @@
 export {
   confidentialBalanceOfContract,
   confidentialTransferContract,
+  confidentialTransferAndCallContract,
   confidentialTransferFromContract,
+  confidentialTransferFromAndCallContract,
   isOperatorContract,
   setOperatorContract,
   unwrapContract,

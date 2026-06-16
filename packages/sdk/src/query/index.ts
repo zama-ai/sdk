@@ -68,9 +68,17 @@ export {
 export { shieldMutationOptions, type ShieldParams } from "./shield";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
+  confidentialTransferAndCallMutationOptions,
+  type ConfidentialTransferAndCallParams,
+} from "./transfer-and-call";
+export {
   confidentialTransferFromMutationOptions,
   type ConfidentialTransferFromParams,
 } from "./transfer-from";
+export {
+  confidentialTransferFromAndCallMutationOptions,
+  type ConfidentialTransferFromAndCallParams,
+} from "./transfer-from-and-call";
 export {
   confidentialSetOperatorMutationOptions,
   type ConfidentialSetOperatorParams,

@@ -247,7 +247,13 @@ export const transactionOperationMetadata = {
   transfer: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
   },
+  transferAndCall: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
+  },
   transferFrom: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
+  },
+  transferFromAndCall: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
   },
   unwrap: {

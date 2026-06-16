@@ -233,6 +233,131 @@ describe("Token", () => {
     });
   });
 
+  describe("confidentialTransferAndCall", () => {
+    const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
+    const DATA = "0xdeadbeef" as const;
+
+    test("encrypts amount, forwards data and sends transaction", async ({
+      relayer,
+      signer,
+      userAddress,
+      token,
+      tokenAddress,
+    }) => {
+      const result = await token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, {
+        skipBalanceCheck: true,
+      });
+
+      expect(relayer.encrypt).toHaveBeenCalledWith({
+        values: [{ value: 100n, type: "euint64" }],
+        contractAddress: tokenAddress,
+        userAddress,
+      });
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "confidentialTransferAndCall",
+          args: expect.arrayContaining([DATA]),
+        }),
+      );
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("throws EncryptionFailed when encrypt returns empty encrypted values", async ({
+      relayer,
+      token,
+      inputProof,
+    }) => {
+      vi.mocked(relayer.encrypt).mockResolvedValueOnce({
+        encryptedValues: [],
+        inputProof,
+      });
+
+      await expect(
+        token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.EncryptionFailed,
+        message: "Encryption returned no encrypted values",
+      });
+    });
+
+    test("wraps non-ZamaError from writeContract in TransactionReverted", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
+    });
+
+    test("validates balance when skipBalanceCheck is not set", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
+
+      await expect(token.confidentialTransferAndCall(RECIPIENT, 100n, DATA)).rejects.toMatchObject({
+        code: ZamaErrorCode.InsufficientConfidentialBalance,
+      });
+    });
+
+    test("invokes onEncryptComplete callback", async ({ token }) => {
+      const onEncryptComplete = vi.fn();
+      await token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, {
+        skipBalanceCheck: true,
+        onEncryptComplete,
+      });
+      expect(onEncryptComplete).toHaveBeenCalled();
+    });
+  });
+
+  describe("confidentialTransferFromAndCall", () => {
+    const FROM = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+    const TO = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+    const DATA = "0xdeadbeef" as const;
+
+    test("encrypts amount with from as userAddress, forwards data and sends transaction", async ({
+      relayer,
+      signer,
+      token,
+      tokenAddress,
+    }) => {
+      const result = await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA);
+
+      expect(relayer.encrypt).toHaveBeenCalledWith({
+        values: [{ value: 200n, type: "euint64" }],
+        contractAddress: tokenAddress,
+        userAddress: getAddress(FROM),
+      });
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "confidentialTransferFromAndCall",
+          args: expect.arrayContaining([DATA]),
+        }),
+      );
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("wraps non-ZamaError from writeContract in TransactionReverted", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
+    });
+
+    test("invokes onEncryptComplete callback", async ({ token }) => {
+      const onEncryptComplete = vi.fn();
+      await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA, { onEncryptComplete });
+      expect(onEncryptComplete).toHaveBeenCalled();
+    });
+  });
+
   describe("setOperator", () => {
     test("calls setOperatorContract with operator", async ({ signer, token }) => {
       const operator = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;

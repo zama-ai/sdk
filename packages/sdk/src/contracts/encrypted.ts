@@ -71,6 +71,76 @@ export function confidentialTransferFromContract(
 }
 
 /**
+ * Returns the contract config for a confidential transferAndCall. The caller
+ * supplies an opaque `data` payload that is forwarded to the recipient's
+ * ERC-7984 receiver hook (`onConfidentialTransferReceived`). The SDK does not
+ * craft, validate, or inspect `data` — encoding the call site's domain message
+ * is the caller's responsibility.
+ *
+ * @example
+ * ```ts
+ * const txHash = await signer.writeContract(
+ *   confidentialTransferAndCallContract(
+ *     tokenAddress,
+ *     to,
+ *     encryptedValues[0],
+ *     inputProof,
+ *     data,
+ *   ),
+ * );
+ * ```
+ */
+export function confidentialTransferAndCallContract(
+  encryptedErc20: Address,
+  to: Address,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
+  data: Hex,
+) {
+  return {
+    address: encryptedErc20,
+    abi: encryptedAbi,
+    functionName: "confidentialTransferAndCall",
+    args: [to, encryptedAmount, inputProof, data],
+  } as const;
+}
+
+/**
+ * Returns the contract config for a confidential transferFromAndCall. The
+ * caller supplies an opaque `data` payload forwarded to the recipient's
+ * ERC-7984 receiver hook; the SDK does not craft or inspect it.
+ *
+ * @example
+ * ```ts
+ * const txHash = await signer.writeContract(
+ *   confidentialTransferFromAndCallContract(
+ *     tokenAddress,
+ *     from,
+ *     to,
+ *     encryptedValues[0],
+ *     inputProof,
+ *     data,
+ *   ),
+ * );
+ * ```
+ */
+export function confidentialTransferFromAndCallContract(
+  encryptedErc20: Address,
+  from: Address,
+  to: Address,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
+  data: Hex,
+) {
+  return {
+    address: encryptedErc20,
+    abi: encryptedAbi,
+    functionName: "confidentialTransferFromAndCall",
+    args: [from, to, encryptedAmount, inputProof, data],
+  } as const;
+}
+
+/**
  * Returns the contract config for checking operator status.
  *
  * @example

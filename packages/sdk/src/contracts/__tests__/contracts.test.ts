@@ -22,7 +22,9 @@ import {
 // Encryption (confidential ERC-20)
 import {
   confidentialBalanceOfContract,
+  confidentialTransferAndCallContract,
   confidentialTransferContract,
+  confidentialTransferFromAndCallContract,
   confidentialTransferFromContract,
   isOperatorContract,
   setOperatorContract,
@@ -137,6 +139,40 @@ describe("Encryption contract builders", () => {
     );
     expect(config.functionName).toBe("confidentialTransferFrom");
     expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd"]);
+  });
+
+  test("confidentialTransferAndCallContract forwards hex handle, proof and data", ({
+    tokenAddress,
+    userAddress,
+    handle,
+    inputProof,
+  }) => {
+    const config = confidentialTransferAndCallContract(
+      tokenAddress,
+      userAddress,
+      handle,
+      inputProof,
+      "0xdeadbeef",
+    );
+    expect(config.address).toBe(tokenAddress);
+    expect(config.functionName).toBe("confidentialTransferAndCall");
+    expect(config.args).toEqual([userAddress, handle, inputProof, "0xdeadbeef"]);
+  });
+
+  test("confidentialTransferFromAndCallContract forwards hex handle, proof and data", ({
+    tokenAddress,
+    userAddress,
+  }) => {
+    const config = confidentialTransferFromAndCallContract(
+      tokenAddress,
+      userAddress,
+      SPENDER,
+      "0xab",
+      "0xcd",
+      "0xdeadbeef",
+    );
+    expect(config.functionName).toBe("confidentialTransferFromAndCall");
+    expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd", "0xdeadbeef"]);
   });
 
   test("isOperatorContract", ({ tokenAddress, userAddress }) => {
