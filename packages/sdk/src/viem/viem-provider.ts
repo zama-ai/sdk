@@ -103,7 +103,7 @@ export class ViemProvider implements GenericProvider {
     const noncePromise =
       args.nonce !== undefined
         ? Promise.resolve(args.nonce)
-        : this.#publicClient.getTransactionCount({ address: from });
+        : this.#publicClient.getTransactionCount({ address: from, blockTag: "pending" });
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)

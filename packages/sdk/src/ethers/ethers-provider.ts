@@ -164,7 +164,7 @@ export class EthersProvider implements GenericProvider {
     const noncePromise =
       args.nonce !== undefined
         ? Promise.resolve(args.nonce)
-        : this.#readProvider.getTransactionCount(from);
+        : this.#readProvider.getTransactionCount(from, "pending");
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)

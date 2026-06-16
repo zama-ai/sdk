@@ -316,6 +316,75 @@ describe("ViemProvider", () => {
       },
     );
   });
+
+  describe("prepareTransaction", () => {
+    const balanceOfAbi = [
+      {
+        type: "function",
+        name: "balanceOf",
+        inputs: [{ name: "owner", type: "address" }],
+        outputs: [{ type: "uint256" }],
+        stateMutability: "view",
+      },
+    ] as const;
+
+    function buildPublicClient(overrides: Partial<PublicClient> = {}): PublicClient {
+      return {
+        getChainId: vi.fn().mockResolvedValue(1),
+        getTransactionCount: vi.fn().mockResolvedValue(7),
+        estimateGas: vi.fn().mockResolvedValue(21000n),
+        estimateFeesPerGas: vi.fn().mockResolvedValue({
+          maxFeePerGas: 100n,
+          maxPriorityFeePerGas: 1n,
+        }),
+        ...overrides,
+      } as unknown as PublicClient;
+    }
+
+    vit(
+      "reads the nonce with the pending block tag for queue-aware sequencing",
+      async ({ tokenAddress, userAddress }) => {
+        const publicClient = buildPublicClient();
+        const provider = new ViemProvider({ publicClient });
+
+        await provider.prepareTransaction({
+          from: userAddress,
+          call: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+        });
+
+        expect(publicClient.getTransactionCount).toHaveBeenCalledWith({
+          address: userAddress,
+          blockTag: "pending",
+        });
+      },
+    );
+
+    vit(
+      "skips getTransactionCount entirely when caller pins the nonce",
+      async ({ tokenAddress, userAddress }) => {
+        const publicClient = buildPublicClient();
+        const provider = new ViemProvider({ publicClient });
+
+        await provider.prepareTransaction({
+          from: userAddress,
+          call: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+          nonce: 42,
+        });
+
+        expect(publicClient.getTransactionCount).not.toHaveBeenCalled();
+      },
+    );
+  });
 });
 
 // ── Read contract helpers ────────────────────────────────

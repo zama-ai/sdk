@@ -475,6 +475,72 @@ describe("EthersProvider", () => {
       expect(hash).toBe("0xtxhash");
     });
   });
+
+  describe("prepareTransaction", () => {
+    const balanceOfAbi = [
+      {
+        type: "function",
+        name: "balanceOf",
+        inputs: [{ name: "owner", type: "address" }],
+        outputs: [{ type: "uint256" }],
+        stateMutability: "view",
+      },
+    ] as const;
+
+    function buildProvider(overrides: Record<string, unknown> = {}) {
+      return {
+        getNetwork: vi.fn().mockResolvedValue({ chainId: 1n }),
+        getTransactionCount: vi.fn().mockResolvedValue(7),
+        estimateGas: vi.fn().mockResolvedValue(21000n),
+        getFeeData: vi.fn().mockResolvedValue({
+          maxFeePerGas: 100n,
+          maxPriorityFeePerGas: 1n,
+        }),
+        ...overrides,
+      };
+    }
+
+    test("reads the nonce with the pending block tag for queue-aware sequencing", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      await provider.prepareTransaction({
+        from: userAddress,
+        call: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+        },
+      });
+
+      expect(mockProvider.getTransactionCount).toHaveBeenCalledWith(userAddress, "pending");
+    });
+
+    test("skips getTransactionCount entirely when caller pins the nonce", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      await provider.prepareTransaction({
+        from: userAddress,
+        call: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+        },
+        nonce: 42,
+      });
+
+      expect(mockProvider.getTransactionCount).not.toHaveBeenCalled();
+    });
+  });
 });
 
 // ── contracts.ts read helpers ────────────────────────────────

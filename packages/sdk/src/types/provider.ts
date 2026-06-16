@@ -73,6 +73,11 @@ export interface GenericProvider {
    * `estimateFeesPerGas` + `serializeTransaction` (viem), the analogous
    * `Contract.populateTransaction` + `Transaction.unsignedSerialized`
    * pipeline (ethers v6).
+   *
+   * Nonce reads use the `"pending"` block tag so parallel custodian queues
+   * with multiple in-flight approvals against the same wallet don't collide
+   * on a stale `"latest"` count. Pass `nonce` to bypass the read entirely
+   * (e.g. when the custodian assigns nonces itself).
    */
   prepareTransaction<
     const TAbi extends ContractAbi,
