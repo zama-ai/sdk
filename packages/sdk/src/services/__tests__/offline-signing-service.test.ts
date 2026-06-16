@@ -105,20 +105,22 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     );
   });
 
-  test("execute(request) prepares + signs + broadcasts in one call", async ({
+  test("prepare → sign → broadcast chains across the three calls", async ({
     createSDK,
     signer,
     provider,
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    const result = await sdk.offlineSigning.signAndBroadcast({
+    const prepared = await sdk.offlineSigning.prepare({
       kind: "ConfidentialTransfer",
       from: userAddress,
       token: TOKEN,
       to: RECIPIENT,
       amount: 1n,
     });
+    const signed = await sdk.offlineSigning.sign(prepared);
+    const result = await sdk.offlineSigning.broadcast(prepared, signed);
     expect(provider.prepareTransaction).toHaveBeenCalledOnce();
     expect(signer.signTransaction).toHaveBeenCalledOnce();
     expect(provider.sendRawTransaction).toHaveBeenCalledWith(SIGNED);
@@ -480,32 +482,36 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
 });
 
 describe("OfflineSigningService — CredentialPermit", () => {
-  test("execute({ kind: 'CredentialPermit' }) signs typed data via the signer", async ({
+  test("prepare → signTypedData → registerPermit signs typed data via the signer", async ({
     createSDK,
     signer,
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    await sdk.offlineSigning.signAndRegister({
+    const prepared = await sdk.offlineSigning.prepare({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [TOKEN],
     });
+    expect(prepared.typedData).not.toBeNull();
+    const signature = await signer.signTypedData(prepared.typedData!);
+    await sdk.offlineSigning.registerPermit(prepared, signature);
     expect(signer.signTypedData).toHaveBeenCalledOnce();
     expect(signer.signTransaction).not.toHaveBeenCalled();
   });
 
-  test("execute({ kind: 'CredentialPermit', contracts: [] }) is a no-op (keypair warm)", async ({
+  test("prepare({ contracts: [] }) returns prepared.typedData === null (keypair warm)", async ({
     createSDK,
     signer,
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    await sdk.offlineSigning.signAndRegister({
+    const prepared = await sdk.offlineSigning.prepare({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [],
     });
+    expect(prepared.typedData).toBeNull();
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
@@ -517,7 +523,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
   }) => {
     const sdk = createSDK({ signer });
     const OTHER = "0x4444444444444444444444444444444444444444" as Address;
-    await sdk.offlineSigning.signAndRegister({
+    await sdk.offlineSigning.prepare({
       kind: "CredentialPermit",
       from: userAddress,
       contracts: [TOKEN, OTHER],

@@ -11808,8 +11808,6 @@ export class Offline {
     registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
     resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     sign(prepared: PreparedTransaction): Promise<Hex>;
-    signAndBroadcast(request: TransactionPrepareRequest, options?: OfflineSigningOptions): Promise<TransactionResult>;
-    signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void>;
 }
 
 // @public

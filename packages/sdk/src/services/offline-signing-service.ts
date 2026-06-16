@@ -64,9 +64,8 @@ import type { EncryptionService } from "./encryption-service";
 export interface OfflineSigningServiceConfig {
   /**
    * Optional signer. `prepare`, `broadcast`, `resume`, and `refresh` work
-   * without a signer (canonical shape for cross-process custody). `sign`,
-   * `signAndBroadcast`, and `signAndRegister` require a signer with the
-   * `signTransaction` capability.
+   * without a signer (canonical shape for cross-process custody). `sign`
+   * requires a signer with the `signTransaction` capability.
    */
   readonly signer?: GenericSigner;
   readonly provider: GenericProvider;
@@ -162,8 +161,7 @@ export class OfflineSigningService {
    *
    * For transaction kinds, returns an RLP-encoded unsigned transaction the
    * caller signs externally (via {@link sign}, an HSM, or any out-of-process
-   * signer) and feeds back through {@link broadcast} or
-   * {@link signAndBroadcast}.
+   * signer) and feeds back through {@link broadcast}.
    *
    * For `CredentialPermit`, returns an EIP-712 typed-data envelope to be
    * signed externally and fed back through {@link registerPermit}.
@@ -249,8 +247,7 @@ export class OfflineSigningService {
 
   /**
    * Sign a prepared transaction with the configured signer and return
-   * RLP-encoded signed bytes. Pair with {@link broadcast}, or use
-   * {@link signAndBroadcast} for the bundled flow.
+   * RLP-encoded signed bytes. Pair with {@link broadcast}.
    *
    * @throws {@link SignerCapabilityError} when the configured signer has no
    *   `signTransaction` capability (online-only wallets).
@@ -305,49 +302,6 @@ export class OfflineSigningService {
     }
     this.#emitSubmitted(prepared, txHash);
     return this.#awaitReceipt(prepared, txHash);
-  }
-
-  // ── signAndBroadcast / signAndRegister ────────────────────────────────
-
-  /**
-   * Bundled in-process flow for a transaction: prepare + sign + broadcast.
-   * Equivalent to chaining
-   * `await broadcast(prepared, await sign(prepared))` for callers who
-   * already hold a prepared transaction — keeping the prepare/sign/broadcast
-   * call shape visible at the call site (code review can tell whether
-   * `prepared` is fresh or stale without inspecting types).
-   *
-   * Requires a signer with `signTransaction`.
-   */
-  async signAndBroadcast(
-    request: TransactionPrepareRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
-    this.#requireSigner(`signAndBroadcast(${request.kind})`);
-    const prepared = await this.#prepareTransaction(request, options);
-    const signedTx = await this.sign(prepared);
-    return this.broadcast(prepared, signedTx);
-  }
-
-  /**
-   * Bundled in-process flow for a credential permit: prepare + signTypedData
-   * + register the typed-data signature in the credential cache.
-   *
-   * Returns the registered permit metadata, or `void` when the permit was
-   * already cached and no signature was needed.
-   *
-   * Requires a signer with `signTypedData` (any signer that satisfies
-   * {@link GenericSigner}, since `signTypedData` is mandatory there).
-   */
-  async signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
-    const signer = this.#requireSigner(`signAndRegister(${request.kind})`);
-    const prepared = await this.#prepareCredentialPermit(request);
-    if (prepared.typedData === null) {
-      // Already covered — keypair warm, no signature needed.
-      return;
-    }
-    const signature = await signer.signTypedData(prepared.typedData);
-    return this.registerPermit(prepared, signature);
   }
 
   // ── resume ─────────────────────────────────────────────────────────────

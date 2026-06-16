@@ -107,8 +107,6 @@ export {
   type ResumeParams,
 } from "./broadcast";
 export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
-export { signAndBroadcastMutationOptions, type SignAndBroadcastParams } from "./sign-and-broadcast";
-export { signAndRegisterMutationOptions, type SignAndRegisterParams } from "./sign-and-register";
 export { refreshPreparedMutationOptions, type RefreshPreparedParams } from "./refresh-prepared";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";

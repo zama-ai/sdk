@@ -709,26 +709,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export function signAndBroadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndBroadcast"], SignAndBroadcastParams, TransactionResult>;
-
-// @public
-export interface SignAndBroadcastParams {
-    // (undocumented)
-    readonly options?: OfflineSigningOptions;
-    // (undocumented)
-    readonly request: TransactionPrepareRequest;
-}
-
-// @public
-export function signAndRegisterMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.signAndRegister"], SignAndRegisterParams, CredentialPermitResult | void>;
-
-// @public
-export interface SignAndRegisterParams {
-    // (undocumented)
-    readonly request: CredentialPermitRequest;
-}
-
-// @public
 export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex>;
 
 // @public

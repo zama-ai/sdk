@@ -39,8 +39,6 @@ import { ResumeParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
-import { SignAndBroadcastParams } from '@zama-fhe/sdk/query';
-import { SignAndRegisterParams } from '@zama-fhe/sdk/query';
 import { SignParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
@@ -251,12 +249,6 @@ export interface UseShieldConfig {
 
 // @public
 export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Error, SignParams, TContext>): UseMutationResult<Hex, Error, SignParams, TContext>;
-
-// @public
-export function useSignAndBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, SignAndBroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, SignAndBroadcastParams, TContext>;
-
-// @public
-export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>;
 
 // @public
 export function useToken(address: Address): Token;

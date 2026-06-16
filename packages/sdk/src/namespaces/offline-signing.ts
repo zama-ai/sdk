@@ -21,18 +21,16 @@ import type {
  * workflows where the three steps cannot run synchronously in a single
  * Promise.
  *
- * Three tiers — the industry-standard shape custody platforms expose
- * (transfer / sign-and-broadcast / sign-only):
- * - **Tier 1 — atomic** ({@link Token} methods like `Token.confidentialTransfer`) — *not* on this client; lives on `Token` for online-signer call sites.
- * - **Tier 2 — sign & broadcast (or sign & register) bundled** ({@link signAndBroadcast} / {@link signAndRegister}) — one in-process call, three steps internally.
- * - **Tier 3 — fully decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls.
+ * Two surfaces, picked by where the signer's keys live:
+ * - **In-process atomic** ({@link Token} methods like `Token.confidentialTransfer`) — *not* on this client; lives on `Token` for online-signer call sites where prepare/sign/broadcast can run synchronously.
+ * - **Decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls. This namespace.
  *
- * Obtained via `sdk.offlineSigning`. "Offline" refers to where the signer's keys
- * live (out-of-process: HSM, custody control plane, policy engine), not to
- * the methods themselves — {@link broadcast}, {@link signAndBroadcast}, and
- * {@link refresh} are RPC-bound. The SDK never takes custody of
- * signing material; every method that signs runs against the signer object
- * you passed to `createConfig`, in your process; keys stay where they are.
+ * Obtained via `sdk.offlineSigning`. "Offline" refers to where the signer's
+ * keys live (out-of-process: HSM, custody control plane, policy engine), not
+ * to the methods themselves — {@link broadcast} and {@link refresh} are
+ * RPC-bound. The SDK never takes custody of signing material; every method
+ * that signs runs against the signer object you passed to `createConfig`,
+ * in your process; keys stay where they are.
  */
 export class OfflineSigning {
   readonly #offlineSigningService: OfflineSigningService;
@@ -45,7 +43,7 @@ export class OfflineSigning {
    * Build an RLP-encoded unsigned transaction for the given request. The
    * caller signs it externally — via {@link sign}, an HSM ceremony, an
    * out-of-process custodian — and feeds the result back into
-   * {@link broadcast} or {@link signAndBroadcast}.
+   * {@link broadcast}.
    *
    * Signer-optional: works without a configured signer (canonical shape for
    * cross-process custody — the back-end signer service consumes
@@ -108,31 +106,6 @@ export class OfflineSigning {
    */
   broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.broadcast(prepared, signedTx);
-  }
-
-  /**
-   * Bundled in-process flow for a transaction: prepare + sign + broadcast.
-   * Equivalent to chaining `await broadcast(prepared, await sign(prepared))`
-   * for callers who already hold a prepared transaction.
-   *
-   * Tier-2 of the offline-signing surface — equivalent to the
-   * "sign-and-broadcast" entry point custody platforms typically expose
-   * alongside their lower-level sign-only API.
-   */
-  signAndBroadcast(
-    request: TransactionPrepareRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<TransactionResult> {
-    return this.#offlineSigningService.signAndBroadcast(request, options);
-  }
-
-  /**
-   * Bundled in-process flow for a credential permit: prepare + signTypedData
-   * + register. Returns the registered permit metadata, or `void` when the
-   * permit was already cached and no signature was needed.
-   */
-  signAndRegister(request: CredentialPermitRequest): Promise<CredentialPermitResult | void> {
-    return this.#offlineSigningService.signAndRegister(request);
   }
 
   /**

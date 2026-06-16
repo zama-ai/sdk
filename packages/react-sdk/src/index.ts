@@ -96,8 +96,6 @@ export { useIsConfidentialTokenValid } from "./wrappers-registry/use-is-confiden
 export { useListPairs } from "./wrappers-registry/use-list-pairs";
 
 export {
-  useSignAndBroadcast,
-  useSignAndRegister,
   usePrepare,
   useSign,
   useBroadcast,
