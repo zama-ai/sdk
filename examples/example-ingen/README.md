@@ -2,10 +2,15 @@
 
 Next.js 16 example app demonstrating `@zama-fhe/react-sdk` integration with
 [ethers v6](https://docs.ethers.org/v6/) on the **T-Rex InGen** private testnet
-(chain ID `364301`), backed by the cleartext fhEVM stack deployed in SDK-184.
+(chain ID `364301`), backed by a cleartext FHEVM stack deployed for this demo.
 
 Forked from `examples/react-ethers` (Sepolia + real relayer) and adapted to use
 the `cleartext()` relayer transport against InGen.
+
+> ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
+> stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
+> It's intended for integrating and testing the Zama SDK end-to-end on the T-Rex InGen testnet, not
+> for production use.
 
 Covers: connect wallet, shield ERC-20 → confidential, confidential transfer,
 unshield, grant/revoke/use delegation, pending unshield recovery.
