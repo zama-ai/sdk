@@ -74,6 +74,17 @@ contract Deploy is Script {
         registry.registerConfidentialToken(address(erc1363Token), address(cERC1363));
         console.log("WrappersRegistry:", address(registry));
 
+        // 7. Bring each proxy to V3 storage so denylist admin (blockUser/unblockUser/isBlocked)
+        // and V3 denylist enforcement on transfer/wrap/unwrap are active in tests. Empty initial
+        // denylist; no underlying denylist selector configured.
+        // Deferred to the end of broadcast so that no transaction is inserted between contract
+        // creations — keeps every CREATE address identical to the pre-V3 deploy script, which
+        // matters because `contracts/deployments.json` is checked in and consumed at build time
+        // by test-nextjs/test-vite.
+        cUSDC.reinitializeV3(new address[](0), bytes4(0), false);
+        cUSDT.reinitializeV3(new address[](0), bytes4(0), false);
+        cERC1363.reinitializeV3(new address[](0), bytes4(0), false);
+
         vm.stopBroadcast();
 
         // 7. Write deployments.json
@@ -105,12 +116,6 @@ contract Deploy is Script {
             ConfidentialWrapper.initialize,
             (name, symbol, contractURI, underlying, msg.sender)
         );
-        ConfidentialWrapperV3 proxy =
-            ConfidentialWrapperV3(payable(address(new ERC1967Proxy(implementation, initData))));
-        // Bring the proxy storage to V3 so denylist admin (blockUser/unblockUser/isBlocked)
-        // and the V3 denylist enforcement on transfer/wrap/unwrap are active in tests.
-        // Empty initial denylist; no underlying denylist selector configured.
-        proxy.reinitializeV3(new address[](0), bytes4(0), false);
-        return proxy;
+        return ConfidentialWrapperV3(payable(address(new ERC1967Proxy(implementation, initData))));
     }
 }
