@@ -21,6 +21,6 @@
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",
-    "@types/node": "^22.19.17"
+    "@types/node": "^22.19.21"
   }
 }
