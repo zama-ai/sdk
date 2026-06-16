@@ -128,6 +128,12 @@ export class OfflineSigning {
    * state — without holding the signed bytes. Pair with {@link prepare} when
    * the broadcast happens in a custody control plane or via
    * `eth_sendRawTransaction` outside this process.
+   *
+   * **Trust model:** the SDK takes the caller's word that `txHash`
+   * corresponds to `prepared.unsignedTx`. No on-chain check confirms that
+   * the broadcaster signed *this* payload rather than a different one from
+   * the same `from`. Callers who need a stronger guarantee can refetch the
+   * tx via the provider and compare its serialized form.
    */
   resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.resume(prepared, txHash);
@@ -139,6 +145,12 @@ export class OfflineSigning {
    * when the gap since {@link prepare} was long enough for values to drift
    * (custodian approval ceremonies, multi-party signing, etc.). The
    * original `prepared` is left untouched (immutable).
+   *
+   * **Identity is not stable across refresh** — the returned `unsignedTx`
+   * bytes (and therefore the eventual tx hash) differ from the input's.
+   * Callers that key external approvals by the unsigned-tx bytes (custodian
+   * queues, policy engines) must treat the refreshed payload as a new
+   * submission and discard any pending approval against the prior one.
    *
    * Signer-optional: works without a configured signer.
    */

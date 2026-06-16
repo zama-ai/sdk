@@ -312,6 +312,12 @@ export class OfflineSigningService {
    * for the receipt — without holding the signed bytes. Use when an external
    * process submitted `prepared.unsignedTx` directly via
    * `eth_sendRawTransaction` and this process needs to refresh its caches.
+   *
+   * **Trust model:** the SDK takes the caller's word that `txHash`
+   * corresponds to `prepared.unsignedTx`. No on-chain check confirms that
+   * the broadcaster signed *this* payload rather than a different one from
+   * the same `from`. Callers who need a stronger guarantee can refetch the
+   * tx via the provider and compare its serialized form.
    */
   async resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(prepared, "resume");
@@ -326,6 +332,12 @@ export class OfflineSigningService {
    * nonce, fee parameters, and gas limit. Useful when the gap between
    * `prepare` and `sign` was long enough for values to drift (custodian
    * ceremony, multi-party approval, etc.).
+   *
+   * **Identity is not stable across refresh** — the returned `unsignedTx`
+   * bytes (and therefore the eventual tx hash) differ from the input's.
+   * Callers that key external approvals by the unsigned-tx bytes (custodian
+   * queues, policy engines) must treat the refreshed payload as a new
+   * submission and discard any pending approval against the prior one.
    *
    * Signer-optional: works without a configured signer. The original
    * `prepared` is left untouched (immutable); the returned value is a fresh
