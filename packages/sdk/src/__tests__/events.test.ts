@@ -49,10 +49,10 @@ describe("Topic constants match keccak256", () => {
 describe("decodeConfidentialTransfer", () => {
   const from = addr("aaa1");
   const to = addr("bbb2");
-  const handle = bytes32("cc".repeat(32));
+  const encryptedAmount = bytes32("cc".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.ConfidentialTransfer, topic("aaa1"), topic("bbb2"), handle],
+    topics: [Topics.ConfidentialTransfer, topic("aaa1"), topic("bbb2"), encryptedAmount],
     data: "0x",
   };
 
@@ -62,7 +62,7 @@ describe("decodeConfidentialTransfer", () => {
       eventName: "ConfidentialTransfer",
       from,
       to,
-      encryptedAmountHandle: handle,
+      encryptedAmount,
     });
   });
 

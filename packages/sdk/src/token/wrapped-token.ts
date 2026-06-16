@@ -415,7 +415,7 @@ export class WrappedToken extends Token {
    * Call this after an unshield request has been processed on-chain.
    *
    * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
-   *   The `burnAmountHandle` form is accepted only to resume unshields persisted by an
+   *   The `burnAmount` form is accepted only to resume unshields persisted by an
    *   older SDK version.
    * @returns The transaction hash and mined receipt.
    *

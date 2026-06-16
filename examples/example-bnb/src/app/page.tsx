@@ -22,10 +22,10 @@ import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
 import {
-  INGEN_CHAIN_ID,
-  INGEN_CHAIN_ID_HEX,
-  INGEN_EXPLORER_URL,
-  INGEN_RPC_URL,
+  BSC_TESTNET_CHAIN_ID,
+  BSC_TESTNET_CHAIN_ID_HEX,
+  BSC_TESTNET_EXPLORER_URL,
+  BSC_TESTNET_RPC_URL,
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
@@ -49,19 +49,19 @@ function normalizePair(
   };
 }
 
-// Routes TREX balance reads through the direct InGen RPC so polling is fast
+// Routes native tBNB balance reads through the direct BNB Smart Chain Testnet RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
-const rpcProvider = new JsonRpcProvider(INGEN_RPC_URL);
+const rpcProvider = new JsonRpcProvider(BSC_TESTNET_RPC_URL);
 
-// Attempt to switch to InGen. If the network is unknown to the wallet (error 4902),
+// Attempt to switch to BNB. If the network is unknown to the wallet (error 4902),
 // prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
 // are swallowed — the caller re-reads the current chainId to determine the outcome.
 // Errors from wallet_addEthereumChain propagate to the caller.
-async function switchToIngen(ethereum: NonNullable<ReturnType<typeof getEthereumProvider>>) {
+async function switchToBnb(ethereum: NonNullable<ReturnType<typeof getEthereumProvider>>) {
   try {
     await ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: INGEN_CHAIN_ID_HEX }],
+      params: [{ chainId: BSC_TESTNET_CHAIN_ID_HEX }],
     });
   } catch (err: unknown) {
     if ((err as { code: number }).code === 4902) {
@@ -69,11 +69,11 @@ async function switchToIngen(ethereum: NonNullable<ReturnType<typeof getEthereum
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: INGEN_CHAIN_ID_HEX,
-            chainName: "InGen",
-            nativeCurrency: { name: "T-REX", symbol: "TREX", decimals: 18 },
-            rpcUrls: [INGEN_RPC_URL],
-            blockExplorerUrls: [INGEN_EXPLORER_URL],
+            chainId: BSC_TESTNET_CHAIN_ID_HEX,
+            chainName: "BNB Smart Chain Testnet",
+            nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+            rpcUrls: [BSC_TESTNET_RPC_URL],
+            blockExplorerUrls: [BSC_TESTNET_EXPLORER_URL],
           },
         ],
       });
@@ -85,7 +85,7 @@ interface SelectedTokenPanelProps {
   address: Address;
   token: TokenWrapperPairWithMetadata;
   validPairs: TokenWrapperPairWithMetadata[];
-  isIngen: boolean;
+  isBnb: boolean;
   ethBalanceKey: readonly unknown[];
 }
 
@@ -93,7 +93,7 @@ function SelectedTokenPanel({
   address,
   token,
   validPairs,
-  isIngen,
+  isBnb,
   ethBalanceKey,
 }: SelectedTokenPanelProps) {
   const queryClient = useQueryClient();
@@ -123,7 +123,7 @@ function SelectedTokenPanel({
       );
       return result as bigint;
     },
-    enabled: isIngen,
+    enabled: isBnb,
   });
 
   const refreshBalances = () => {
@@ -136,7 +136,7 @@ function SelectedTokenPanel({
 
   const balance = useConfidentialBalance(
     { tokenAddress: token.confidentialTokenAddress, account: address },
-    { enabled: isIngen && !!isAllowed },
+    { enabled: isBnb && !!isAllowed },
   );
 
   const mint = useMutation({
@@ -166,7 +166,7 @@ function SelectedTokenPanel({
     balance.data !== undefined
       ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
       : "—";
-  const actionsDisabled = !isIngen;
+  const actionsDisabled = !isBnb;
 
   return (
     <>
@@ -266,12 +266,12 @@ export default function Home() {
   const [connectError, setConnectError] = useState<string | null>(null);
 
   // Case-insensitive: some wallets return uppercase hex.
-  const isIngen = chainId?.toLowerCase() === INGEN_CHAIN_ID_HEX;
+  const isBnb = chainId?.toLowerCase() === BSC_TESTNET_CHAIN_ID_HEX;
 
   const queryClient = useQueryClient();
 
   // Registry address is resolved automatically from the connected chain via the
-  // chain config we passed to createConfig (registryAddress: 0x7FC3D79E…).
+  // chain config we passed to createConfig (registryAddress: 0xc0E8B73b…).
   const {
     data: pairsData,
     isPending: isRegistryPending,
@@ -294,20 +294,20 @@ export default function Home() {
 
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
-  async function handleSwitchToIngen() {
+  async function handleSwitchToBnb() {
     const ethereum = getEthereumProvider();
     if (!ethereum) return;
     setIsSwitching(true);
     setSwitchFailed(false);
     try {
-      await switchToIngen(ethereum);
+      await switchToBnb(ethereum);
     } catch (err) {
-      console.error("Failed to switch to InGen:", err);
+      console.error("Failed to switch to BNB:", err);
     } finally {
       const current = (await ethereum.request({ method: "eth_chainId" })) as string;
       setChainId(current);
       setIsSwitching(false);
-      setSwitchFailed(current.toLowerCase() !== INGEN_CHAIN_ID_HEX);
+      setSwitchFailed(current.toLowerCase() !== BSC_TESTNET_CHAIN_ID_HEX);
     }
   }
 
@@ -351,7 +351,7 @@ export default function Home() {
     const ethereum = getEthereumProvider();
     if (!ethereum) {
       setConnectError(
-        "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby, MetaMask, or Phantom).",
+        "No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Trust Wallet).",
       );
       return;
     }
@@ -363,7 +363,7 @@ export default function Home() {
         method: "eth_requestAccounts",
       })) as string[];
 
-      await handleSwitchToIngen();
+      await handleSwitchToBnb();
       setAddress(accounts[0] ?? null);
     } catch (err) {
       console.error("Failed to connect wallet:", err);
@@ -377,14 +377,14 @@ export default function Home() {
   const { data: ethBalance } = useQuery({
     queryKey: ethBalanceKey,
     queryFn: () => rpcProvider.getBalance(address!).then(formatEther),
-    enabled: !!address && isIngen,
+    enabled: !!address && isBnb,
   });
 
   // ── Screen 0: Initializing ────────────────────────────────────────────────
   if (isInitializing) {
     return (
       <div className="app-container connect-screen">
-        <h1>InGen Confidential Token Quickstart</h1>
+        <h1>BNB Confidential Token Quickstart</h1>
       </div>
     );
   }
@@ -393,9 +393,9 @@ export default function Home() {
   if (!address) {
     return (
       <div className="app-container connect-screen">
-        <h1>InGen Confidential Token Quickstart</h1>
+        <h1>BNB Confidential Token Quickstart</h1>
         <p className="subtitle">
-          Connect your wallet to interact with ERC-7984 tokens on the T-Rex InGen testnet (cleartext
+          Connect your wallet to interact with ERC-7984 tokens on BNB Smart Chain Testnet (cleartext
           FHEVM).
         </p>
         <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
@@ -407,38 +407,38 @@ export default function Home() {
   }
 
   // ── Screen 2: Wrong network ────────────────────────────────────────────────
-  if (!isIngen) {
+  if (!isBnb) {
     return (
       <div className="app-container connect-screen">
-        <h1>InGen Network Required</h1>
+        <h1>BNB Network Required</h1>
         <p className="subtitle">
-          This app only works on the T-Rex InGen testnet (chain ID {INGEN_CHAIN_ID}).
+          This app only works on BNB Smart Chain Testnet (chain ID {BSC_TESTNET_CHAIN_ID}).
         </p>
         <button
           type="button"
           className="btn btn-primary"
-          onClick={handleSwitchToIngen}
+          onClick={handleSwitchToBnb}
           disabled={isSwitching}
         >
-          {isSwitching ? "Switching…" : "Switch to InGen"}
+          {isSwitching ? "Switching…" : "Switch to BNB"}
         </button>
         {switchFailed && (
           <div className="alert alert-error card-status">
-            Could not switch to InGen. Please switch manually in your wallet.
+            Could not switch to BNB. Please switch manually in your wallet.
           </div>
         )}
       </div>
     );
   }
 
-  // ── Screen 3: Connected on InGen — main UI ─────────────────────────────────
+  // ── Screen 3: Connected on BNB — main UI ─────────────────────────────────
   return (
     <div className="app-container">
       <div className="app-header">
-        <h1>InGen Confidential Token Quickstart</h1>
+        <h1>BNB Confidential Token Quickstart</h1>
         <div className="connected-address">Connected: {address}</div>
         <div className="connected-address">
-          TREX: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
+          tBNB: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
         </div>
       </div>
 
@@ -476,7 +476,7 @@ export default function Home() {
           address={address as Address}
           token={token}
           validPairs={validPairs}
-          isIngen={isIngen}
+          isBnb={isBnb}
           ethBalanceKey={ethBalanceKey}
         />
       )}
