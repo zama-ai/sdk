@@ -1024,6 +1024,31 @@ export const wrapperAbi = [
   },
   {
     type: "event",
+    name: "Wrap",
+    inputs: [
+      {
+        name: "to",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "roundedAmount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "encryptedWrappedAmount",
+        type: "bytes32",
+        indexed: false,
+        internalType: "euint64",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "Upgraded",
     inputs: [
       {

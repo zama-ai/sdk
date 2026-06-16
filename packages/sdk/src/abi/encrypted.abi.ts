@@ -691,11 +691,17 @@ export const encryptedAbi = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "amountIn",
+        name: "roundedAmount",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "euint64",
+        name: "encryptedWrappedAmount",
+        type: "bytes32",
+      },
     ],
-    name: "Wrapped",
+    name: "Wrap",
     type: "event",
   },
   {
