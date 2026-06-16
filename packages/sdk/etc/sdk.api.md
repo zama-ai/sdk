@@ -680,14 +680,6 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
     }, {
         readonly inputs: readonly [{
             readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
             readonly name: "sender";
             readonly type: "address";
         }];
@@ -1989,14 +1981,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -3322,14 +3306,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
     }, {
         readonly inputs: readonly [{
             readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
             readonly name: "sender";
             readonly type: "address";
         }];
@@ -4640,14 +4616,6 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -7364,14 +7332,6 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
         }];
     }, {
         readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
         readonly name: "ERC7984InvalidSender";
         readonly inputs: readonly [{
             readonly name: "sender";
@@ -9647,14 +9607,6 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
         }];
     }, {
         readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
         readonly name: "ERC7984InvalidSender";
         readonly inputs: readonly [{
             readonly name: "sender";
@@ -10177,14 +10129,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -11786,14 +11730,6 @@ export function rateContract(tokenAddress: Address): {
     }, {
         readonly inputs: readonly [{
             readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
             readonly name: "sender";
             readonly type: "address";
         }];
@@ -13319,14 +13255,6 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -15821,14 +15749,6 @@ export function underlyingContract(wrapperAddress: Address): {
         }];
     }, {
         readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
-        }];
-    }, {
-        readonly type: "error";
         readonly name: "ERC7984InvalidSender";
         readonly inputs: readonly [{
             readonly name: "sender";
@@ -16044,14 +15964,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -17375,14 +17287,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "uint256";
         }];
         readonly name: "ERC7984InvalidGatewayRequest";
-        readonly type: "error";
-    }, {
-        readonly inputs: readonly [{
-            readonly internalType: "address";
-            readonly name: "receiver";
-            readonly type: "address";
-        }];
-        readonly name: "ERC7984InvalidReceiver";
         readonly type: "error";
     }, {
         readonly inputs: readonly [{
@@ -19560,14 +19464,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly name: "requestId";
             readonly type: "uint256";
             readonly internalType: "uint256";
-        }];
-    }, {
-        readonly type: "error";
-        readonly name: "ERC7984InvalidReceiver";
-        readonly inputs: readonly [{
-            readonly name: "receiver";
-            readonly type: "address";
-            readonly internalType: "address";
         }];
     }, {
         readonly type: "error";
