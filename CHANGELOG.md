@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.9...v3.1.0-alpha.10) (2026-06-16)
+
+### Code Refactoring
+
+- **contracts:** remove orphan IWrapperReceiver.sol [SDK-214] ([#420](https://github.com/zama-ai/sdk/issues/420)) ([3ba19e2]())
+
 ## [3.1.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.8...v3.1.0-alpha.9) (2026-06-16)
 
 ### Code Refactoring
