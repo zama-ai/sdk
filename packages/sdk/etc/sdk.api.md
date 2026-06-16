@@ -1171,10 +1171,15 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -2492,10 +2497,15 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -3813,10 +3823,15 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -5143,10 +5158,15 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -7311,6 +7331,26 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly internalType: "bytes32";
         }, {
             readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
             readonly type: "bytes32";
             readonly indexed: false;
             readonly internalType: "euint64";
@@ -9601,6 +9641,26 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
         readonly anonymous: false;
     }, {
         readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
         readonly name: "Upgraded";
         readonly inputs: readonly [{
             readonly name: "implementation";
@@ -10680,10 +10740,15 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -12277,10 +12342,15 @@ export function rateContract(tokenAddress: Address): {
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -13822,10 +13892,15 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -15775,6 +15850,26 @@ export function underlyingContract(wrapperAddress: Address): {
         readonly anonymous: false;
     }, {
         readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
         readonly name: "Upgraded";
         readonly inputs: readonly [{
             readonly name: "implementation";
@@ -16547,10 +16642,15 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -17878,10 +17978,15 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         }, {
             readonly indexed: false;
             readonly internalType: "uint256";
-            readonly name: "amountIn";
+            readonly name: "roundedAmount";
             readonly type: "uint256";
+        }, {
+            readonly indexed: false;
+            readonly internalType: "euint64";
+            readonly name: "encryptedWrappedAmount";
+            readonly type: "bytes32";
         }];
-        readonly name: "Wrapped";
+        readonly name: "Wrap";
         readonly type: "event";
     }, {
         readonly inputs: readonly [];
@@ -19518,6 +19623,26 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly internalType: "bytes32";
         }, {
             readonly name: "amount";
+            readonly type: "bytes32";
+            readonly indexed: false;
+            readonly internalType: "euint64";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "Wrap";
+        readonly inputs: readonly [{
+            readonly name: "to";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }, {
+            readonly name: "roundedAmount";
+            readonly type: "uint256";
+            readonly indexed: false;
+            readonly internalType: "uint256";
+        }, {
+            readonly name: "encryptedWrappedAmount";
             readonly type: "bytes32";
             readonly indexed: false;
             readonly internalType: "euint64";
