@@ -62,17 +62,6 @@ export const encryptedAbi = [
     inputs: [
       {
         internalType: "address",
-        name: "receiver",
-        type: "address",
-      },
-    ],
-    name: "ERC7984InvalidReceiver",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
         name: "sender",
         type: "address",
       },

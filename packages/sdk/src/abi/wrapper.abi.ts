@@ -1086,17 +1086,6 @@ export const wrapperAbi = [
   },
   {
     type: "error",
-    name: "ERC7984InvalidReceiver",
-    inputs: [
-      {
-        name: "receiver",
-        type: "address",
-        internalType: "address",
-      },
-    ],
-  },
-  {
-    type: "error",
     name: "ERC7984InvalidSender",
     inputs: [
       {
