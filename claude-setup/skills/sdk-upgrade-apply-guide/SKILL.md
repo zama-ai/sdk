@@ -21,6 +21,7 @@ This skill ships two ways. **In the SDK repo**, the `pnpm sdk-upgrade` CLI does 
 3. **`required` vs `recommended`.** Apply all `required` changes. Apply `recommended` ones when the pattern is present. A `required` change you cannot resolve is a **blocker** — list it explicitly in your summary.
 4. **Do not bump pins or install here.** The deterministic gate does that (`--gate`). Your job is source edits only.
 5. **Minimal diffs.** Change only what the guide's `action` requires. Don't reformat, don't rename unrelated things, don't add comments explaining the migration (the reviewer dislikes noise). Remove now-stale comments that the change invalidates.
+6. **If you commit / open a PR, type it correctly — an upgrade is not a `feat`.** Pick the Conventional Commit type from the actual diff: pin/lockfile bump only → `chore`; source edits adapting to the new API with no new features → `refactor` (or `fix` if it repairs broken behaviour); a genuinely new example feature → `feat`. Set the same type on the PR title (squash-merge uses it for release versioning). See <https://www.conventionalcommits.org/en/v1.0.0/>.
 
 ## Procedure
 

@@ -49,3 +49,13 @@ This bumps the pins, installs, formats (oxfmt), then typechecks against B. If ty
 ## 5. Report
 
 Summarize: guide used (generated or reused), changes applied, sites touched, gate result, and any guide gaps the typecheck exposed that should flow back into the guide. Do **not** commit or open a PR unless asked.
+
+## 6. Commit / PR type (only when asked to commit or open a PR)
+
+An example upgrade is **not a feature** — never use `feat`. Pick the Conventional Commit type from the actual diff (the `--gate` output tells you whether code changed), so semantic-release versions the SDK correctly (see `.releaserc.cjs`):
+
+- **Only `package.json`/lockfile changed (pin bump, no source edits)** → `chore(examples): …` (no release).
+- **Source edits to adapt to the new API, no new app features** → `refactor(examples): …` (or `fix` if it repairs broken behavior). Patch-level.
+- **The example gains a genuinely new feature** → `feat(examples): …`. Minor.
+
+The PR title carries the type too (squash-merge uses it as the release commit), so set both the commit header and the PR title. One PR per app. See [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and <https://www.conventionalcommits.org/en/v1.0.0/>.
