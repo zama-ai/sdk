@@ -144,7 +144,7 @@ export function confidentialTokenAddressQueryOptions(sdk: ZamaSDK, config: Confi
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: EncryptedValue;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
@@ -401,10 +401,10 @@ export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFact
 // @public
 export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` event. Preferred. */{
     unwrapRequestId: EncryptedValue;
-    burnAmountHandle?: never;
+    burnAmount?: never;
 }
 /**
-* Encrypted burn-amount handle. Direct-call escape hatch for resuming an
+* Encrypted burn amount. Direct-call escape hatch for resuming an
 * unshield persisted by an older SDK version that did not record
 * `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
 * always rediscovers `unwrapRequestId` from the receipt and never reaches
@@ -412,7 +412,7 @@ export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` even
 */
 | {
     unwrapRequestId?: never;
-    burnAmountHandle: EncryptedValue;
+    burnAmount: EncryptedValue;
 };
 
 // @public (undocumented)

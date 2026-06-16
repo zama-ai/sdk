@@ -65,7 +65,7 @@ describe("decodeConfidentialTransfer", () => {
     expect(event!.eventName).toBe("ConfidentialTransfer");
     expect(event!.from.toLowerCase()).toBe(ALICE.toLowerCase());
     expect(event!.to.toLowerCase()).toBe(BOB.toLowerCase());
-    expect(event!.encryptedAmountHandle).toBe(HANDLE);
+    expect(event!.encryptedAmount).toBe(HANDLE);
   });
 
   test("returns null for wrong topic0", () => {

@@ -15,7 +15,7 @@ describe("useFinalizeUnwrap", () => {
 
   test("cache: invalidates balance, allowance, and wagmi after finalize", async ({
     renderWithProviders,
-    burnAmountHandle,
+    burnAmount,
     otherTokenAddress,
     tokenAddress,
     userAddress,
@@ -34,7 +34,7 @@ describe("useFinalizeUnwrap", () => {
     queryClient.setQueryData(otherBalanceKey, 777n);
     queryClient.setQueryData(otherAllowanceKey, 333n);
 
-    await act(() => result.current.mutateAsync({ unwrapRequestId: burnAmountHandle }));
+    await act(() => result.current.mutateAsync({ unwrapRequestId: burnAmount }));
 
     expect(queryClient).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
     expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
@@ -44,7 +44,7 @@ describe("useFinalizeUnwrap", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
-    burnAmountHandle,
+    burnAmount,
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
@@ -63,7 +63,7 @@ describe("useFinalizeUnwrap", () => {
     queryClient.setQueryData(wagmiBalanceKey, 2000n);
 
     await mutateAndExpectOnSuccess(
-      () => result.current.mutateAsync({ unwrapRequestId: burnAmountHandle }),
+      () => result.current.mutateAsync({ unwrapRequestId: burnAmount }),
       onSuccess,
       (client: QueryClient) => {
         expect(client).toHaveInvalidatedQueries([balanceKey, allowanceKey]);

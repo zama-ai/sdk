@@ -7,15 +7,15 @@ import type { Address } from "viem";
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
 export type FinalizeUnwrapParams =
   /** Identifier from an `UnwrapRequested` event. Preferred. */
-  | { unwrapRequestId: EncryptedValue; burnAmountHandle?: never }
+  | { unwrapRequestId: EncryptedValue; burnAmount?: never }
   /**
-   * Encrypted burn-amount handle. Direct-call escape hatch for resuming an
+   * Encrypted burn amount. Direct-call escape hatch for resuming an
    * unshield persisted by an older SDK version that did not record
    * `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
    * always rediscovers `unwrapRequestId` from the receipt and never reaches
    * this branch.
    */
-  | { unwrapRequestId?: never; burnAmountHandle: EncryptedValue };
+  | { unwrapRequestId?: never; burnAmount: EncryptedValue };
 
 export function finalizeUnwrapMutationOptions(
   token: WrappedToken,
@@ -27,11 +27,11 @@ export function finalizeUnwrapMutationOptions(
   return {
     mutationKey: ["zama.finalizeUnwrap", token.address] as const,
     mutationFn: async (params) => {
-      const handle = params.unwrapRequestId ?? params.burnAmountHandle;
-      if (!handle) {
-        throw new ConfigurationError("finalizeUnwrap requires unwrapRequestId or burnAmountHandle");
+      const encryptedValue = params.unwrapRequestId ?? params.burnAmount;
+      if (!encryptedValue) {
+        throw new ConfigurationError("finalizeUnwrap requires unwrapRequestId or burnAmount");
       }
-      return token.finalizeUnwrap(handle);
+      return token.finalizeUnwrap(encryptedValue);
     },
   };
 }
