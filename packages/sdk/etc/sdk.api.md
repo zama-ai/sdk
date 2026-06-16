@@ -838,22 +838,6 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -1110,46 +1094,6 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -1463,7 +1407,7 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -2159,22 +2103,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -2431,46 +2359,6 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -2784,7 +2672,7 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -3480,22 +3368,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -3752,46 +3624,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -4105,7 +3937,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -4810,22 +4642,6 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -5082,46 +4898,6 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -5435,7 +5211,7 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -6110,9 +5886,6 @@ export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDe
 
 // @public
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
-
-// @public
-export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null;
 
 // @public
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
@@ -6818,7 +6591,7 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
             readonly type: "bytes32";
             readonly internalType: "bytes32";
         }, {
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
             readonly internalType: "uint64";
         }, {
@@ -9101,7 +8874,7 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
             readonly type: "bytes32";
             readonly internalType: "bytes32";
         }, {
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
             readonly internalType: "uint64";
         }, {
@@ -10347,22 +10120,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -10619,46 +10376,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -10972,7 +10689,7 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -11684,7 +11401,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -11944,22 +11661,6 @@ export function rateContract(tokenAddress: Address): {
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -12216,46 +11917,6 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -12569,7 +12230,7 @@ export function rateContract(tokenAddress: Address): {
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -13489,22 +13150,6 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -13761,46 +13406,6 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -14114,7 +13719,7 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -14862,7 +14467,7 @@ export class Token {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -14896,8 +14501,7 @@ export const Topics: {
     readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
     readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-    readonly UnwrappedStarted: `0x${string}`;
+    readonly UnwrapFinalized: `0x${string}`;
 };
 
 // @public (undocumented)
@@ -15275,7 +14879,7 @@ export function underlyingContract(wrapperAddress: Address): {
             readonly type: "bytes32";
             readonly internalType: "bytes32";
         }, {
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
             readonly internalType: "uint64";
         }, {
@@ -16214,22 +15818,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -16486,46 +16074,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -16839,7 +16387,7 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -17545,22 +17093,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly name: "UUPSUnsupportedProxiableUUID";
         readonly type: "error";
     }, {
-        readonly inputs: readonly [{
-            readonly internalType: "euint64";
-            readonly name: "burntAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly internalType: "address";
-            readonly name: "caller";
-            readonly type: "address";
-        }, {
-            readonly internalType: "address";
-            readonly name: "unwrapInitiator";
-            readonly type: "address";
-        }];
-        readonly name: "UnauthorizedFinalizeUnwrapCaller";
-        readonly type: "error";
-    }, {
         readonly inputs: readonly [];
         readonly name: "WrapperBalanceExceedsMaxSupply";
         readonly type: "error";
@@ -17817,46 +17349,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes32";
         }];
         readonly name: "UnwrapRequested";
-        readonly type: "event";
-    }, {
-        readonly anonymous: false;
-        readonly inputs: readonly [{
-            readonly indexed: false;
-            readonly internalType: "bool";
-            readonly name: "returnVal";
-            readonly type: "bool";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "requestId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "uint256";
-            readonly name: "txId";
-            readonly type: "uint256";
-        }, {
-            readonly indexed: true;
-            readonly internalType: "address";
-            readonly name: "to";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "address";
-            readonly name: "refund";
-            readonly type: "address";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "requestedAmount";
-            readonly type: "bytes32";
-        }, {
-            readonly indexed: false;
-            readonly internalType: "euint64";
-            readonly name: "burnAmount";
-            readonly type: "bytes32";
-        }];
-        readonly name: "UnwrappedStarted";
         readonly type: "event";
     }, {
         readonly anonymous: false;
@@ -18170,7 +17662,7 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
             readonly type: "bytes32";
         }, {
             readonly internalType: "uint64";
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
         }, {
             readonly internalType: "bytes";
@@ -18659,19 +18151,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: EncryptedValue;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
-}
-
-// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     // (undocumented)
@@ -19025,7 +18504,7 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
             readonly type: "bytes32";
             readonly internalType: "bytes32";
         }, {
-            readonly name: "burntAmountCleartext";
+            readonly name: "unwrapAmountCleartext";
             readonly type: "uint64";
             readonly internalType: "uint64";
         }, {

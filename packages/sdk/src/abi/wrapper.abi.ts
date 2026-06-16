@@ -380,7 +380,7 @@ export const wrapperAbi = [
         internalType: "bytes32",
       },
       {
-        name: "burntAmountCleartext",
+        name: "unwrapAmountCleartext",
         type: "uint64",
         internalType: "uint64",
       },

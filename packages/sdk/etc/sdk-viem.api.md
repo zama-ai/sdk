@@ -114,7 +114,7 @@ export interface ViemSignerConfig {
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: EncryptedValue, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;

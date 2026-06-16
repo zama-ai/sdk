@@ -538,7 +538,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -882,19 +882,6 @@ export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptio
 export interface UnwrapParams {
     // (undocumented)
     amount: bigint;
-}
-
-// @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: EncryptedValue;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
 }
 
 // @public

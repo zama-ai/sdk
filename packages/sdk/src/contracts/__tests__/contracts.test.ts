@@ -234,7 +234,7 @@ describe("wrapperAbi version smoke test (protocol-apps@3bd308fb7cb1)", () => {
     .filter((x) => x.type === "event")
     .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
 
-  test("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+  test("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 amount)", () => {
     const f = fn("finalizeUnwrap");
     expect(f).toBeDefined();
     expect(f!.inputs[0].name).toBe("unwrapRequestId");

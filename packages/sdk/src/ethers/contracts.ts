@@ -157,12 +157,12 @@ export function writeFinalizeUnwrapContract(
   signer: EthersTransactionSigner,
   wrapper: Address,
   unwrapRequestId: EncryptedValue,
-  burntAmountCleartext: bigint,
+  unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return ethersWrite(
     signer,
-    finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
+    finalizeUnwrapContract(wrapper, unwrapRequestId, unwrapAmountCleartext, decryptionProof),
   );
 }
 

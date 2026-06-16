@@ -273,27 +273,6 @@ export const encryptedAbi = [
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "euint64",
-        name: "burntAmount",
-        type: "bytes32",
-      },
-      {
-        internalType: "address",
-        name: "caller",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "unwrapInitiator",
-        type: "address",
-      },
-    ],
-    name: "UnauthorizedFinalizeUnwrapCaller",
-    type: "error",
-  },
-  {
     inputs: [],
     name: "WrapperBalanceExceedsMaxSupply",
     type: "error",
@@ -615,55 +594,6 @@ export const encryptedAbi = [
       },
     ],
     name: "UnwrapRequested",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "bool",
-        name: "returnVal",
-        type: "bool",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "requestId",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "uint256",
-        name: "txId",
-        type: "uint256",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "to",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "refund",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "euint64",
-        name: "requestedAmount",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "euint64",
-        name: "burnAmount",
-        type: "bytes32",
-      },
-    ],
-    name: "UnwrappedStarted",
     type: "event",
   },
   {
@@ -1073,7 +1003,7 @@ export const encryptedAbi = [
       },
       {
         internalType: "uint64",
-        name: "burntAmountCleartext",
+        name: "unwrapAmountCleartext",
         type: "uint64",
       },
       {
