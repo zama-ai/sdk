@@ -1946,6 +1946,132 @@ export function confidentialBalanceOfContract(tokenAddress: Address, userAddress
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "confidentialBalanceOf";
     readonly args: readonly [`0x${string}`];
@@ -3267,6 +3393,132 @@ export function confidentialTotalSupplyContract(tokenAddress: Address): {
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "confidentialTotalSupply";
     readonly args: readonly [];
@@ -4585,6 +4837,132 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
             readonly type: "uint256";
         }];
         readonly name: "wrap";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
@@ -5915,6 +6293,132 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
             readonly type: "uint256";
         }];
         readonly name: "wrap";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
@@ -7510,6 +8014,132 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount
         readonly type: "error";
         readonly name: "ZamaProtocolUnsupported";
         readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }];
     readonly functionName: "finalizeUnwrap";
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
@@ -9793,6 +10423,132 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
         readonly type: "error";
         readonly name: "ZamaProtocolUnsupported";
         readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }];
     readonly functionName: "inferredTotalSupply";
     readonly args: readonly [];
@@ -11455,6 +12211,132 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "isOperator";
     readonly args: readonly [`0x${string}`, `0x${string}`];
@@ -13052,6 +13934,132 @@ export function rateContract(tokenAddress: Address): {
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "rate";
     readonly args: readonly [];
@@ -14597,6 +15605,132 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "setOperator";
     readonly args: readonly [`0x${string}`, number];
@@ -15967,6 +17101,132 @@ export function underlyingContract(wrapperAddress: Address): {
         readonly type: "error";
         readonly name: "ZamaProtocolUnsupported";
         readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }];
     readonly functionName: "underlying";
     readonly args: readonly [];
@@ -17322,6 +18582,132 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
@@ -18653,6 +20039,132 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
         readonly outputs: readonly [];
         readonly stateMutability: "nonpayable";
         readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "BlockedUser";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyBlocked";
+        readonly type: "error";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserAlreadyUnblocked";
+        readonly type: "error";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserBlocked";
+        readonly type: "event";
+    }, {
+        readonly anonymous: false;
+        readonly inputs: readonly [{
+            readonly indexed: true;
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "UserUnblocked";
+        readonly type: "event";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "blockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [];
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "isSet";
+            readonly type: "bool";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "selector";
+            readonly type: "bytes4";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "isBlocked";
+        readonly outputs: readonly [{
+            readonly internalType: "bool";
+            readonly name: "";
+            readonly type: "bool";
+        }];
+        readonly stateMutability: "view";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address[]";
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+        }, {
+            readonly internalType: "bytes4";
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+        }, {
+            readonly internalType: "bool";
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+        }];
+        readonly name: "reinitializeV3";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
+    }, {
+        readonly inputs: readonly [{
+            readonly internalType: "address";
+            readonly name: "user";
+            readonly type: "address";
+        }];
+        readonly name: "unblockUser";
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+        readonly type: "function";
     }];
     readonly functionName: "unwrap";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
@@ -19717,6 +21229,132 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
         readonly type: "error";
         readonly name: "ZamaProtocolUnsupported";
         readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "BlockedUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "InvalidUnderlyingDenyListResponse";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListCallFailed";
+        readonly inputs: readonly [];
+    }, {
+        readonly type: "error";
+        readonly name: "UnderlyingDenyListedAddress";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "error";
+        readonly name: "UserAlreadyUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+    }, {
+        readonly type: "event";
+        readonly name: "UserBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "event";
+        readonly name: "UserUnblocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly indexed: true;
+            readonly internalType: "address";
+        }];
+        readonly anonymous: false;
+    }, {
+        readonly type: "function";
+        readonly name: "blockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "getUnderlyingDenyListSelector";
+        readonly inputs: readonly [];
+        readonly outputs: readonly [{
+            readonly name: "isSet";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }, {
+            readonly name: "selector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "isBlocked";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "reinitializeV3";
+        readonly inputs: readonly [{
+            readonly name: "blockedUsers";
+            readonly type: "address[]";
+            readonly internalType: "address[]";
+        }, {
+            readonly name: "underlyingDenyListSelector";
+            readonly type: "bytes4";
+            readonly internalType: "bytes4";
+        }, {
+            readonly name: "hasUnderlyingDenyListSelector_";
+            readonly type: "bool";
+            readonly internalType: "bool";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
+    }, {
+        readonly type: "function";
+        readonly name: "unblockUser";
+        readonly inputs: readonly [{
+            readonly name: "user";
+            readonly type: "address";
+            readonly internalType: "address";
+        }];
+        readonly outputs: readonly [];
+        readonly stateMutability: "nonpayable";
     }];
     readonly functionName: "wrap";
     readonly args: readonly [`0x${string}`, bigint];
