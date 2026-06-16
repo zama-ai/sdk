@@ -24,11 +24,7 @@ export function ShieldCard({
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<"prepare" | "approve" | "wrap">("prepare");
 
-  const shield = useShield(
-    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
-    { tokenAddress, wrapperAddress: tokenAddress },
-    { onSuccess },
-  );
+  const shield = useShield({ address: tokenAddress }, { onSuccess });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel =
