@@ -1699,4 +1699,170 @@ export const encryptedAbi = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "BlockedUser",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "InvalidUnderlyingDenyListResponse",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "UnderlyingDenyListCallFailed",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "UnderlyingDenyListedAddress",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "UserAlreadyBlocked",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "UserAlreadyUnblocked",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "UserBlocked",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "UserUnblocked",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "blockUser",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getUnderlyingDenyListSelector",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "isSet",
+        type: "bool",
+      },
+      {
+        internalType: "bytes4",
+        name: "selector",
+        type: "bytes4",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "isBlocked",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address[]",
+        name: "blockedUsers",
+        type: "address[]",
+      },
+      {
+        internalType: "bytes4",
+        name: "underlyingDenyListSelector",
+        type: "bytes4",
+      },
+      {
+        internalType: "bool",
+        name: "hasUnderlyingDenyListSelector_",
+        type: "bool",
+      },
+    ],
+    name: "reinitializeV3",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+    ],
+    name: "unblockUser",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;

@@ -1282,4 +1282,170 @@ export const wrapperAbi = [
     name: "ZamaProtocolUnsupported",
     inputs: [],
   },
+  {
+    type: "error",
+    name: "BlockedUser",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "InvalidUnderlyingDenyListResponse",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnderlyingDenyListCallFailed",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnderlyingDenyListedAddress",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "UserAlreadyBlocked",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "UserAlreadyUnblocked",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "UserBlocked",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "UserUnblocked",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "function",
+    name: "blockUser",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getUnderlyingDenyListSelector",
+    inputs: [],
+    outputs: [
+      {
+        name: "isSet",
+        type: "bool",
+        internalType: "bool",
+      },
+      {
+        name: "selector",
+        type: "bytes4",
+        internalType: "bytes4",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isBlocked",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "reinitializeV3",
+    inputs: [
+      {
+        name: "blockedUsers",
+        type: "address[]",
+        internalType: "address[]",
+      },
+      {
+        name: "underlyingDenyListSelector",
+        type: "bytes4",
+        internalType: "bytes4",
+      },
+      {
+        name: "hasUnderlyingDenyListSelector_",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "unblockUser",
+    inputs: [
+      {
+        name: "user",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
 ] as const;
