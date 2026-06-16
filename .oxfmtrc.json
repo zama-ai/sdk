@@ -10,6 +10,7 @@
     "dist",
     "node_modules",
     "pnpm-lock.yaml",
+    "CHANGELOG.md",
     "coverage",
     "*.tsbuildinfo",
     "hardhat",

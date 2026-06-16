@@ -1,5 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import { ZERO_HANDLE } from "@zama-fhe/sdk";
+import { ZERO_ENCRYPTED_VALUE } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDecryptBalanceAs } from "../use-decrypt-balance-as";
 
@@ -18,7 +18,7 @@ describe("useDecryptBalanceAs", () => {
     tokenAddress,
   }) => {
     // Return zero handle so decryptBalanceAs short-circuits to 0n
-    vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
     const { result } = renderWithProviders(() => useDecryptBalanceAs(tokenAddress));
 
@@ -39,7 +39,7 @@ describe("useDecryptBalanceAs", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(provider.readContract).mockResolvedValue(ZERO_HANDLE);
+    vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
     const onSuccess = vi.fn();
 

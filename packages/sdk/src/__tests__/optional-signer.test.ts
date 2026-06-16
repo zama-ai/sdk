@@ -11,8 +11,8 @@ type Op = (sdk: ZamaSDK, tokenAddress: Address) => Promise<unknown>;
 // when the SDK was constructed without one.
 const SIGNER_REQUIRED_OPS: ReadonlyArray<readonly [string, Op]> = [
   [
-    "decryption.userDecrypt",
-    (sdk, t) => sdk.decryption.userDecrypt([{ encryptedValue: "0xh", contractAddress: t }]),
+    "decryption.decryptValues",
+    (sdk, t) => sdk.decryption.decryptValues([{ encryptedValue: "0xh", contractAddress: t }]),
   ],
   ["permits.grantPermit", (sdk, t) => sdk.permits.grantPermit([t])],
   ["permits.revokePermits", (sdk) => sdk.permits.revokePermits()],
@@ -39,9 +39,9 @@ describe("ZamaSDK without signer", () => {
     expect(sdk.createWrappedToken(wrapperAddress)).toBeInstanceOf(WrappedToken);
   });
 
-  test("publicDecrypt works with no signer", async ({ createSDK, relayer }) => {
+  test("decryptPublicValues works with no signer", async ({ createSDK, relayer }) => {
     const sdk = createSDK({ signer: undefined });
-    await sdk.decryption.publicDecrypt(["0xhandle"]);
+    await sdk.decryption.decryptPublicValues(["0xhandle"]);
     expect(relayer.publicDecrypt).toHaveBeenCalled();
   });
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.1.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.9...v3.1.0-alpha.10) (2026-06-16)
+
+### Code Refactoring
+
+- **contracts:** remove orphan IWrapperReceiver.sol [SDK-214] ([#420](https://github.com/zama-ai/sdk/issues/420)) ([3ba19e2]())
+
+## [3.1.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.8...v3.1.0-alpha.9) (2026-06-16)
+
+### Code Refactoring
+
+- **sdk:** rename remaining public *Handle fields to glossary terms [SDK-203] ([#415](https://github.com/zama-ai/sdk/issues/415)) ([b8c7779]()), closes [#386]()
+
+## [3.1.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.7...v3.1.0-alpha.8) (2026-06-15)
+
+### Features
+
+- **examples:** add example-bnb — cleartext SDK demo on BSC Testnet [chain 97] ([#405](https://github.com/zama-ai/sdk/issues/405)) ([8af927b]())
+
+## [3.1.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.6...v3.1.0-alpha.7) (2026-06-15)
+
+### Code Refactoring
+
+- **sdk:** align decrypt wording with the Zama glossary [SDK-205] ([#386](https://github.com/zama-ai/sdk/issues/386)) ([52fc176]())
+
+## [3.1.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.5...v3.1.0-alpha.6) (2026-06-15)
+
+### Build System
+
+- **api-report:** keep committed API reports semantic-only ([#406](https://github.com/zama-ai/sdk/issues/406)) ([19f2b8b]()), closes [#401]() [#401]()
+
 ## [3.1.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.4...v3.1.0-alpha.5) (2026-06-05)
 
 ### Bug Fixes

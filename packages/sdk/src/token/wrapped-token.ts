@@ -23,7 +23,7 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isZeroHandle } from "../utils/handles";
+import { isEncryptedValueZero } from "../utils/handles";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
@@ -514,15 +514,15 @@ export class WrappedToken extends Token {
       this.sdk.provider,
     );
     const userAddress = getAddress(account.address);
-    const handle = await this.readConfidentialBalanceOf(userAddress);
+    const encryptedValue = await this.readConfidentialBalanceOf(userAddress);
 
-    if (isZeroHandle(handle)) {
+    if (isEncryptedValueZero(encryptedValue)) {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
     return this.submitTransaction({
       operation: "unwrapAll",
-      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, handle),
+      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
     });
   }
 
@@ -531,7 +531,7 @@ export class WrappedToken extends Token {
    * Call this after an unshield request has been processed on-chain.
    *
    * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
-   *   The `burnAmountHandle` form is accepted only to resume unshields persisted by an
+   *   The `burnAmount` form is accepted only to resume unshields persisted by an
    *   older SDK version.
    * @returns The transaction hash and mined receipt.
    *
@@ -544,7 +544,7 @@ export class WrappedToken extends Token {
   async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.publicDecrypt([unwrapRequestIdOrAmount]);
+    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestIdOrAmount]);
     const clearValue = result.clearValues[unwrapRequestIdOrAmount];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({

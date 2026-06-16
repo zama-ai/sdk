@@ -18,7 +18,7 @@ import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { CredentialPermitResult } from '@zama-fhe/sdk';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
 import { DecryptResult } from '@zama-fhe/sdk/query';
-import { DelegatedDecryptMutationParams } from '@zama-fhe/sdk/query';
+import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatusData } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
@@ -26,7 +26,7 @@ import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
-import { JSX } from 'react/jsx-runtime';
+import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PermitKind } from '@zama-fhe/sdk';
 import { PreparedFor } from '@zama-fhe/sdk';
@@ -144,7 +144,20 @@ export function useConfidentialTransferFrom(address: Address, options?: UseMutat
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDelegatedDecrypt(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptMutationParams, unknown>;
+export function useDecryptPublicValues(): UseMutationResult<Readonly<{
+clearValues: ClearValues;
+abiEncodedClearValues: `0x${string}`;
+decryptionProof: `0x${string}`;
+}>, Error, `0x${string}`[], unknown>;
+
+// @public
+export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+
+// @public
+export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
+
+// @public
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptValuesMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
@@ -210,13 +223,6 @@ export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResu
 export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>;
 
 // @public
-export function usePublicDecrypt(): UseMutationResult<Readonly<{
-clearValues: ClearValues;
-abiEncodedClearValues: `0x${string}`;
-decryptionProof: `0x${string}`;
-}>, Error, `0x${string}`[], unknown>;
-
-// @public
 export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
 
 // @public
@@ -249,8 +255,6 @@ export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Er
 // @public
 export function useSignAndBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, SignAndBroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, SignAndBroadcastParams, TContext>;
 
-// Warning: (ae-forgotten-export) The symbol "SignAndRegisterResult" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function useSignAndRegister<TContext = unknown>(options?: UseMutationOptions<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>): UseMutationResult<SignAndRegisterResult, Error, SignAndRegisterParams, TContext>;
 
@@ -314,12 +318,6 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 
 // @public
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
-
-// @public
-export function useUserDecrypt(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
-
-// @public
-export type UseUserDecryptResult = ReturnType<typeof useUserDecrypt>;
 
 // @public
 export function useWrappedToken(address: Address): WrappedToken;

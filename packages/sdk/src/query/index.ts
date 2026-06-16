@@ -87,10 +87,10 @@ export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
 export {
-  delegatedDecryptMutationOptions,
-  type DelegatedDecryptMutationParams,
+  delegatedDecryptValuesMutationOptions,
+  type DelegatedDecryptValuesMutationParams,
 } from "./delegated-decrypt";
-export { publicDecryptMutationOptions } from "./public-decrypt";
+export { decryptPublicValuesMutationOptions } from "./public-decrypt";
 export { grantPermitMutationOptions } from "./grant-permit";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export {
@@ -117,9 +117,9 @@ export {
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptQueryOptions,
+  decryptValuesQueryOptions,
   type DecryptResult,
-  type EncryptedInput as DecryptHandle,
+  type EncryptedInput as DecryptInput,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
@@ -147,12 +147,12 @@ export type {
   EncryptResult,
   EncryptedValue,
 } from "../relayer/relayer-sdk.types";
+export type { EncryptInput, EIP712TypedData } from "../relayer/relayer-sdk.types";
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type {
-  DelegatedUserDecryptParams,
-  EncryptInput,
-  EIP712TypedData,
-  PublicDecryptResult,
-  UserDecryptParams,
+  UserDecryptParams as DecryptValuesParams,
+  PublicDecryptResult as DecryptPublicValuesResult,
+  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";

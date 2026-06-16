@@ -24,9 +24,6 @@ import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
 import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
-// Warning: (ae-forgotten-export) The symbol "FheChain" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ZamaConfig" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
 
@@ -77,8 +74,6 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "GenericProvider" needs to be exported by the entry point index.d.ts
-//
 // @public
 export class ViemProvider implements GenericProvider {
     constructor(config: ViemProviderConfig);
@@ -86,10 +81,6 @@ export class ViemProvider implements GenericProvider {
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ContractAbi" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteFunctionName" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WriteContractArgs" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
@@ -99,14 +90,10 @@ export class ViemProvider implements GenericProvider {
         maxPriorityFeePerGas?: bigint;
         gasLimit?: bigint;
     }): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
     // (undocumented)
     sendRawTransaction(signedTx: Hex): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
@@ -116,16 +103,11 @@ export interface ViemProviderConfig {
     publicClient: PublicClient;
 }
 
-// Warning: (ae-forgotten-export) The symbol "BaseSigner" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export class ViemSigner extends BaseSigner implements GenericSigner {
     constructor(config: ViemSignerConfig);
     // (undocumented)
     protected onDispose(): void;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
@@ -157,9 +139,6 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "AtLeastOneChain" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ZamaConfigBase" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
     // (undocumented)
@@ -169,10 +148,6 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
     // (undocumented)
     walletClient: WalletClient;
 }
-
-// Warnings were encountered during analysis:
-//
-// dist/esm/viem/index.d.ts:67:5 - (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

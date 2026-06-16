@@ -26,7 +26,7 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // The InGen chain config is inlined below (no shipped preset yet for chain 364301).
 // The cleartext relayer transport (`cleartext()`) is used because InGen runs the
-// cleartext fhEVM host stack — there is no real relayer/KMS network to call.
+// cleartext FHEVM host stack — there is no real relayer/KMS network to call.
 //
 // SDK reads use a JsonRpcProvider pointed at INGEN_RPC_URL. Wallet writes and EIP-712
 // signing use the injected EIP-1193 provider through the ethers adapter.
@@ -44,8 +44,10 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-// Inline InGen chain config (SDK-184 deployment).
-const zamaIngen = {
+// Cleartext FHEVM host stack for the T-Rex InGen testnet (chain 364301), deployed for this demo.
+// Development/integration setup — values are kept in cleartext on-chain rather than encrypted — and
+// isn't intended for production use.
+const zamaIngenCleartext = {
   id: 364301,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -117,7 +119,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const ethereum = (getEthereumProvider() ?? {
       request: async ({ method }: { method: string }) => {
         if (method === "eth_accounts") return [];
-        if (method === "eth_chainId") return `0x${zamaIngen.id.toString(16)}`;
+        if (method === "eth_chainId") return `0x${zamaIngenCleartext.id.toString(16)}`;
         throw new Error("No Ethereum wallet detected. Connect a wallet to use this app.");
       },
       on: () => {},
@@ -126,12 +128,12 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new JsonRpcProvider(INGEN_RPC_URL);
 
     return createConfig({
-      chains: [zamaIngen],
+      chains: [zamaIngenCleartext],
       ethereum,
       provider,
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
-      relayers: { [zamaIngen.id]: cleartext() },
+      relayers: { [zamaIngenCleartext.id]: cleartext() },
       onEvent: (event) => {
         if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
           const wrapperAddress = getActiveUnshieldToken();

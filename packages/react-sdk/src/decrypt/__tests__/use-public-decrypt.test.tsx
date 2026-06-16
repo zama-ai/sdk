@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { usePublicDecrypt } from "../use-public-decrypt";
+import { useDecryptPublicValues } from "../use-public-decrypt";
 
-describe("usePublicDecrypt", () => {
+describe("useDecryptPublicValues", () => {
   test("delegates to relayer.publicDecrypt and populates cache", async ({
     renderWithProviders,
     relayer,
@@ -14,7 +14,7 @@ describe("usePublicDecrypt", () => {
       decryptionProof: "0xproof",
     });
 
-    const { result, queryClient } = renderWithProviders(() => usePublicDecrypt());
+    const { result, queryClient } = renderWithProviders(() => useDecryptPublicValues());
 
     result.current.mutate(["0xhandle1"]);
 
