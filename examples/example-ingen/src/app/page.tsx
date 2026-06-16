@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
@@ -99,7 +99,7 @@ function SelectedTokenPanel({
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
-  const { data: isAllowed } = useIsAllowed({
+  const { data: isAllowed } = useHasPermit({
     contractAddresses: [token.confidentialTokenAddress],
   });
 
@@ -108,7 +108,7 @@ function SelectedTokenPanel({
   const confidentialSymbol = token.confidential.symbol;
   const erc20Symbol = token.underlying.symbol;
 
-  const allowTokens = useAllow();
+  const allowTokens = useGrantPermit();
   function handleDecrypt() {
     if (validPairs.length === 0) return;
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -135,13 +135,14 @@ function SelectedTokenPanel({
   };
 
   const balance = useConfidentialBalance(
-    { tokenAddress: token.confidentialTokenAddress, account: address },
+    { address: token.confidentialTokenAddress, account: address },
     { enabled: isIngen && !!isAllowed },
   );
 
   const mint = useMutation({
     mutationFn: async () => {
-      const signer = sdk.requireSigner("mint");
+      const signer = sdk.signer;
+      if (!signer) throw new Error("A wallet signer is required to mint");
       const txHash = await signer.writeContract({
         address: token.tokenAddress,
         abi: MINT_ABI,
