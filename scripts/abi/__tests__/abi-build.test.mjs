@@ -22,32 +22,32 @@ describe("abi:build helpers", () => {
     expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
       expect(existsSync(join(repoRoot, target.path))).toBe(true);
-      expect(existsSync(join(repoRoot, target.artifactRelPath))).toBe(true);
+      expect(existsSync(join(repoRoot, target.artifactPath))).toBe(true);
       expect(target.exportName).toMatch(/^[a-zA-Z][a-zA-Z0-9]*$/u);
     }
   });
 
   test("loadAbi returns a non-empty array for every target artifact", () => {
     for (const target of targets) {
-      const abi = loadAbi(target.artifactRelPath);
+      const abi = loadAbi(target.artifactPath);
       expect(Array.isArray(abi)).toBe(true);
       expect(abi.length).toBeGreaterThan(0);
     }
   });
 
   test("buildAbiSource wraps the ABI as `export const X = [...] as const;`", () => {
-    const artifactRelPath = "contracts/out/Foo.sol/Foo.json";
-    const out = buildAbiSource("fooAbi", [], artifactRelPath);
-    expect(out.startsWith(headerFor(artifactRelPath))).toBe(true);
+    const artifactPath = "contracts/out/Foo.sol/Foo.json";
+    const out = buildAbiSource("fooAbi", [], artifactPath);
+    expect(out.startsWith(headerFor(artifactPath))).toBe(true);
     expect(out).toContain("export const fooAbi = [] as const;");
     expect(out.endsWith("\n")).toBe(true);
   });
 
   test("buildAbiSource is deterministic for the same input", () => {
     const target = targets[0];
-    const abi = loadAbi(target.artifactRelPath);
-    expect(buildAbiSource(target.exportName, abi, target.artifactRelPath)).toBe(
-      buildAbiSource(target.exportName, abi, target.artifactRelPath),
+    const abi = loadAbi(target.artifactPath);
+    expect(buildAbiSource(target.exportName, abi, target.artifactPath)).toBe(
+      buildAbiSource(target.exportName, abi, target.artifactPath),
     );
   });
 
@@ -71,13 +71,13 @@ describe("abi:build helpers", () => {
 });
 
 describe("committed ABI files match their compiled artifact", () => {
-  test.each(targets)("$path matches $exportName from $artifactRelPath", (target) => {
+  test.each(targets)("$path matches $exportName from $artifactPath", (target) => {
     const source = readFileSync(join(repoRoot, target.path), "utf8");
 
-    expect(source.startsWith(headerFor(target.artifactRelPath))).toBe(true);
+    expect(source.startsWith(headerFor(target.artifactPath))).toBe(true);
 
     const parsed = parseAbiSource(source);
     expect(parsed.exportName).toBe(target.exportName);
-    expect(parsed.abi).toEqual(loadAbi(target.artifactRelPath));
+    expect(parsed.abi).toEqual(loadAbi(target.artifactPath));
   });
 });
