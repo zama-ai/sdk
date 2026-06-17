@@ -7093,7 +7093,7 @@ matchZamaError(error, {
 
 
 > [!INFO]
-> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md#on-chain-revert-errors) for the full mapping.
+> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation method reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md#methods) for the full mapping.
 
 
 ## Common problems
@@ -8020,7 +8020,7 @@ See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/git
 
 - [Delegated decryption guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md) — step-by-step walkthrough
 - [Token.decryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#decryptbalanceas) — decrypt a delegator's balance
-- [Token.batchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#batchdecryptbalancesas-static) — batch delegated decryption
+- [Token.batchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#token-batchdecryptbalancesas-static) — batch delegated decryption
 - [Contract builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md#delegation) — low-level ACL delegation builders
 - [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md) — React hook to grant delegation
 - [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md) — React hook to revoke delegation
@@ -10877,7 +10877,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Related
 
-- [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
+- [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) -- gating balance queries to avoid blind-sign popups
 - [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) -- pre-authorize contracts with one wallet signature
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration

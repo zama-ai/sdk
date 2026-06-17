@@ -112,7 +112,7 @@ Standard React Query options forwarded to the underlying query. Pass `{ enabled:
 
 ## Related
 
-- [Avoid blind-sign wallet popups](../../guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
+- [Avoid blind-sign wallet popups](../../guides/encrypt-decrypt.md#gating-useconfidentialbalance) -- gating balance queries to avoid blind-sign popups
 - [`useGrantPermit`](./useGrantPermit.md) -- pre-authorize contracts with one wallet signature
 - [`useRevokePermits`](./useRevokePermits.md) -- revoke permits
 - [Permit Model](../../concepts/permit-model.md) -- permit lifecycle and TTL configuration

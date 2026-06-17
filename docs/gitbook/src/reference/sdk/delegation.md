@@ -226,7 +226,7 @@ See [Event Decoders](./event-decoders.md#acl-delegation-events) for the full lis
 
 - [Delegated decryption guide](../../guides/delegated-decryption.md) — step-by-step walkthrough
 - [Token.decryptBalanceAs](./Token.md#decryptbalanceas) — decrypt a delegator's balance
-- [Token.batchDecryptBalancesAs](./Token.md#batchdecryptbalancesas-static) — batch delegated decryption
+- [Token.batchDecryptBalancesAs](./Token.md#token-batchdecryptbalancesas-static) — batch delegated decryption
 - [Contract builders](./contract-builders.md#delegation) — low-level ACL delegation builders
 - [useDelegateDecryption](../react/useDelegateDecryption.md) — React hook to grant delegation
 - [useRevokeDelegation](../react/useRevokeDelegation.md) — React hook to revoke delegation
