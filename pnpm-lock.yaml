@@ -165,8 +165,8 @@ importers:
   packages/sdk:
     dependencies:
       '@zama-fhe/relayer-sdk':
-        specifier: ~0.4.3
-        version: 0.4.3
+        specifier: ~0.4.4
+        version: 0.4.4
       ethers:
         specifier: '>=6'
         version: 6.16.0
@@ -1696,6 +1696,11 @@ packages:
 
   '@zama-fhe/relayer-sdk@0.4.3':
     resolution: {integrity: sha512-/Lz+yBda4vppMx3FiCnqjRmBWxxEzGrcyOLeFQg1fqadnCWPU5GCmx7pSBQXesJHQz7MJ5hD07ERv2gdNjxv3w==}
+    engines: {node: '>=22'}
+    hasBin: true
+
+  '@zama-fhe/relayer-sdk@0.4.4':
+    resolution: {integrity: sha512-N+ateFbi7Fu9JsxExapfn/SdU3Bye3tvCfIaZQsRNXsZ7ep39S0BUnmljh+JhalUKT11xlMoA4+1TKLx72amcw==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4860,6 +4865,21 @@ snapshots:
       - use-sync-external-store
 
   '@zama-fhe/relayer-sdk@0.4.3':
+    dependencies:
+      commander: 14.0.3
+      ethers: 6.16.0
+      fetch-retry: 6.0.0
+      keccak: 3.0.4
+      node-tfhe: 1.4.0-alpha.3
+      node-tkms: 0.12.8
+      tfhe: 1.4.0-alpha.3
+      tkms: 0.12.8
+      wasm-feature-detect: 1.8.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@zama-fhe/relayer-sdk@0.4.4':
     dependencies:
       commander: 14.0.3
       ethers: 6.16.0
