@@ -5,20 +5,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-// Each entry maps a Forge artifact to one SDK ABI file. `encryptedAbi` and
-// `wrapperAbi` are kept as two exports purely for SDK-internal import
-// compatibility — both surfaces are sliced from the deployed
-// ConfidentialWrapperV3 contract, so they share the full ABI verbatim.
+// Each entry maps a Forge artifact to one SDK ABI file.
 export const targets = [
   {
     artifactPath: "contracts/out/ConfidentialWrapperV3.sol/ConfidentialWrapperV3.json",
-    path: "packages/sdk/src/abi/encrypted.abi.ts",
-    exportName: "encryptedAbi",
-  },
-  {
-    artifactPath: "contracts/out/ConfidentialWrapperV3.sol/ConfidentialWrapperV3.json",
-    path: "packages/sdk/src/abi/wrapper.abi.ts",
-    exportName: "wrapperAbi",
+    path: "packages/sdk/src/abi/confidential-wrapper.abi.ts",
+    exportName: "confidentialWrapperAbi",
   },
   {
     artifactPath: "contracts/out/Impl.sol/IACL.json",

@@ -64,8 +64,10 @@ describe("abi:build helpers", () => {
         stateMutability: "nonpayable",
       },
     ];
-    const parsed = parseAbiSource(buildAbiSource("wrapperAbi", abi, "contracts/out/X.sol/X.json"));
-    expect(parsed.exportName).toBe("wrapperAbi");
+    const parsed = parseAbiSource(
+      buildAbiSource("confidentialWrapperAbi", abi, "contracts/out/X.sol/X.json"),
+    );
+    expect(parsed.exportName).toBe("confidentialWrapperAbi");
     expect(parsed.abi).toEqual(abi);
   });
 });
