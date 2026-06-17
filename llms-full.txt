@@ -1466,6 +1466,8 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
 | `hardhat`      | `31337`    | Local Hardhat node      |
 
+`anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
+
 ### 2. Pick a relayer
 
 Relayers tell the SDK how to run FHE operations on each chain.
