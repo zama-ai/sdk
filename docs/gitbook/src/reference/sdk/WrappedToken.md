@@ -210,6 +210,6 @@ await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
 
 - [Token](Token.md) — base ERC-7984 confidential-token API
 - [ZamaSDK](ZamaSDK.md) — creates `WrappedToken` via `createWrappedToken()`
-- [Shield tokens](/guides/shield-tokens) — full shield flow
-- [Unshield tokens](/guides/unshield-tokens) — full unshield flow
-- [useWrappedToken](/reference/react/useWrappedToken) — React hook returning a `WrappedToken`
+- [Shield tokens](../../guides/shield-tokens.md) — full shield flow
+- [Unshield tokens](../../guides/unshield-tokens.md) — full unshield flow
+- [useWrappedToken](../react/useWrappedToken.md) — React hook returning a `WrappedToken`

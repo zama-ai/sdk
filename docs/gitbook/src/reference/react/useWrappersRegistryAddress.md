@@ -51,6 +51,6 @@ The underlying chain ID query uses `staleTime: 30000` (30 seconds). Chain switch
 
 ## Related
 
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level registry class
-- [Network Presets](/reference/sdk/network-presets) -- built-in chain configurations and `DefaultRegistryAddresses`
-- [useListPairs](/reference/react/useListPairs) -- paginated pair listing (depends on this hook internally)
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level registry class
+- [Network Presets](../sdk/network-presets.md) -- built-in chain configurations and `DefaultRegistryAddresses`
+- [useListPairs](./useListPairs.md) -- paginated pair listing (depends on this hook internally)

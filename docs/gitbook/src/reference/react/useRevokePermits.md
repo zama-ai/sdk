@@ -5,7 +5,7 @@ description: Revoke FHE permits for specific contract addresses, or all permits 
 
 # useRevokePermits
 
-Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The keypair survives — use [`useClearCredentials`](/reference/react/useClearCredentials) to also wipe the keypair.
+Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The keypair survives — use [`useClearCredentials`](./useClearCredentials.md) to also wipe the keypair.
 
 ## Import
 
@@ -78,11 +78,11 @@ revokePermits(); // all permits, all chains
 ## Behavior
 
 - Removes signed permits from the permission store.
-- Auto-invalidates all [`useHasPermit`](/reference/react/useHasPermit) queries on success.
+- Auto-invalidates all [`useHasPermit`](./useHasPermit.md) queries on success.
 - The FHE keypair is not affected — only permits are removed.
 
 ## Related
 
-- [`useClearCredentials`](/reference/react/useClearCredentials) — wipe the keypair and all permits
-- [`useGrantPermit`](/reference/react/useGrantPermit) — sign permits for contracts
-- [`useHasPermit`](/reference/react/useHasPermit) — check whether stored permits cover contracts
+- [`useClearCredentials`](./useClearCredentials.md) — wipe the keypair and all permits
+- [`useGrantPermit`](./useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](./useHasPermit.md) — check whether stored permits cover contracts

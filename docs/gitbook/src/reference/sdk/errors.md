@@ -526,7 +526,7 @@ matchZamaError(error, {
 **How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.
 
 {% hint style="info" %}
-The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](/reference/sdk/delegation#on-chain-revert-errors) for the full mapping.
+The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation method reference](./delegation.md#methods) for the full mapping.
 {% endhint %}
 
 ## Common problems
@@ -547,5 +547,5 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 
 ## Related
 
-- [Error handling guide](/guides/handle-errors) — practical patterns for catching and displaying errors
-- [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor and permit management
+- [Error handling guide](../../guides/handle-errors.md) — practical patterns for catching and displaying errors
+- [ZamaSDK](./ZamaSDK.md) — SDK constructor and permit management

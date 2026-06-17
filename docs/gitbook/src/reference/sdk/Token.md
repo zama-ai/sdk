@@ -150,5 +150,5 @@ Batch delegated decryption.
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — creates `Token` via `createToken()`
-- [WrappedToken](/reference/sdk/WrappedToken) — extends `Token` with shield / unshield / allowance / wrapper operations
+- [ZamaSDK](./ZamaSDK.md) — creates `Token` via `createToken()`
+- [WrappedToken](./WrappedToken.md) — extends `Token` with shield / unshield / allowance / wrapper operations

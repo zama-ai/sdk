@@ -14,7 +14,7 @@ import { RelayerWeb } from "@zama-fhe/sdk/web";
 ```
 
 {% hint style="info" %}
-For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](./network-presets.md) for examples.
 {% endhint %}
 
 ## Usage
@@ -115,6 +115,6 @@ How long cached FHE artifacts remain valid, in seconds.
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the relayer to the SDK constructor
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js variant using worker threads
-- [Configuration guide](/guides/configuration) — authentication and network presets
+- [ZamaSDK](./ZamaSDK.md) — pass the relayer to the SDK constructor
+- [RelayerNode](./RelayerNode.md) — Node.js variant using worker threads
+- [Configuration guide](../../guides/configuration.md) — authentication and network presets

@@ -103,6 +103,6 @@ import { type DelegationStatusData } from "@zama-fhe/sdk/query";
 
 ## Related
 
-- [`useDelegateDecryption`](/reference/react/useDelegateDecryption) -- grant delegation
-- [`useRevokeDelegation`](/reference/react/useRevokeDelegation) -- revoke delegation
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useDelegateDecryption`](./useDelegateDecryption.md) -- grant delegation
+- [`useRevokeDelegation`](./useRevokeDelegation.md) -- revoke delegation
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference
