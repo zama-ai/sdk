@@ -26,15 +26,15 @@ for (const step of steps) {
     );
     process.exit(1);
   }
-  if (result.status !== 0) {
-    console.error(`\n✖ abi:check failed at [${step.name}]`);
-    if (step.name === "verify-clean") {
-      console.error(
-        "Committed ABI files are stale vs the compiled artifact. Run `pnpm abi:build` and commit the result.",
-      );
-    }
-    process.exit(result.status ?? 1);
+  if (result.status === 0) {
+    return;
   }
+  if (step.name === "verify-clean") {
+    console.error(
+      "\n✖ abi:check failed at [verify-clean]: committed ABI files are stale vs the compiled artifact. Run `pnpm abi:build` and commit the result.",
+    );
+  }
+  process.exit(1);
 }
 
 console.log("\n✓ abi:check passed");
