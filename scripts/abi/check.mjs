@@ -1,10 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { targets } from "./build.mjs";
 
-const generatedFiles = [
-  "packages/sdk/src/abi/encrypted.abi.ts",
-  "packages/sdk/src/abi/wrapper.abi.ts",
-  "packages/sdk/src/abi/acl.abi.ts",
-];
+const generatedFiles = targets.map((target) => target.path);
 
 const steps = [
   { name: "build", command: "pnpm", args: ["abi:build"] },

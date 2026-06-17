@@ -9617,19 +9617,19 @@ export class InvalidKeypairError extends ZamaError {
 export function isConfidentialTokenContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "supportsInterface";
         readonly inputs: readonly [{
-            readonly internalType: "bytes4";
             readonly name: "interfaceId";
             readonly type: "bytes4";
+            readonly internalType: "bytes4";
         }];
-        readonly name: "supportsInterface";
         readonly outputs: readonly [{
-            readonly internalType: "bool";
             readonly name: "";
             readonly type: "bool";
+            readonly internalType: "bool";
         }];
         readonly stateMutability: "view";
-        readonly type: "function";
     }];
     readonly functionName: "supportsInterface";
     readonly args: readonly [`0x${string}`];
@@ -9822,19 +9822,19 @@ export function isConfidentialTokenValidContract(registry: Address, confidential
 export function isConfidentialWrapperContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "supportsInterface";
         readonly inputs: readonly [{
-            readonly internalType: "bytes4";
             readonly name: "interfaceId";
             readonly type: "bytes4";
+            readonly internalType: "bytes4";
         }];
-        readonly name: "supportsInterface";
         readonly outputs: readonly [{
-            readonly internalType: "bool";
             readonly name: "";
             readonly type: "bool";
+            readonly internalType: "bool";
         }];
         readonly stateMutability: "view";
-        readonly type: "function";
     }];
     readonly functionName: "supportsInterface";
     readonly args: readonly [`0x${string}`];
@@ -14144,19 +14144,19 @@ export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "supportsInterface";
         readonly inputs: readonly [{
-            readonly internalType: "bytes4";
             readonly name: "interfaceId";
             readonly type: "bytes4";
+            readonly internalType: "bytes4";
         }];
-        readonly name: "supportsInterface";
         readonly outputs: readonly [{
-            readonly internalType: "bool";
             readonly name: "";
             readonly type: "bool";
+            readonly internalType: "bool";
         }];
         readonly stateMutability: "view";
-        readonly type: "function";
     }];
     readonly functionName: "supportsInterface";
     readonly args: readonly [`0x${string}`];

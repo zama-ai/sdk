@@ -25,6 +25,11 @@ export const targets = [
     path: "packages/sdk/src/abi/acl.abi.ts",
     exportName: "aclAbi",
   },
+  {
+    artifactPath: "contracts/out/IERC165.sol/IERC165.json",
+    path: "packages/sdk/src/abi/erc165.abi.ts",
+    exportName: "erc165Abi",
+  },
 ];
 
 export function headerFor(artifactPath) {
