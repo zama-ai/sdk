@@ -18,7 +18,6 @@ function isPlainObject(value: any): value is Object {
   }
 
   // If constructor does not have an Object-specific method
-  // biome-ignore lint/suspicious/noPrototypeBuiltins: using
   // eslint-disable-next-line no-prototype-builtins
   if (!prot.hasOwnProperty("isPrototypeOf")) {
     return false;
