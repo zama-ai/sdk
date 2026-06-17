@@ -52,9 +52,6 @@ jobs:
       - name: Check internal doc links
         run: pnpm docs:check-links
 
-      - name: Build GitBook documentation
-        run: pnpm docs:build
-
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm llm:check
 
