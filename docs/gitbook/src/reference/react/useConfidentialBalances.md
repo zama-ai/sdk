@@ -5,7 +5,7 @@ description: Decrypt and poll multiple tokens' confidential balances in a single
 
 # useConfidentialBalances
 
-Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `BatchBalancesResult` with results and errors maps. Each token uses the same cached decryption strategy as [`useConfidentialBalance`](/reference/react/useConfidentialBalance).
+Decrypt and poll multiple tokens' confidential balances in a single query. Returns a `BatchBalancesResult` with results and errors maps. Each token uses the same cached decryption strategy as [`useConfidentialBalance`](./useConfidentialBalance.md).
 
 ## Import
 
@@ -124,6 +124,6 @@ The `data` property is `BatchBalancesResult | undefined` -- an object with `resu
 
 ## Related
 
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- single-token variant
-- [Check Balances guide](/guides/check-balances)
-- [Query Keys](/reference/react/query-keys) -- `zamaQueryKeys.confidentialBalances`
+- [useConfidentialBalance](./useConfidentialBalance.md) -- single-token variant
+- [Check Balances guide](../../guides/check-balances.md)
+- [Query Keys](./query-keys.md) -- `zamaQueryKeys.confidentialBalances`

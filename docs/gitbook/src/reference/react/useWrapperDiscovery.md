@@ -91,5 +91,5 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Related
 
-- [useMetadata](/reference/react/useMetadata) -- read token name, symbol, and decimals
-- [Hooks overview](/reference/react/query-keys) -- all available hooks
+- [useMetadata](./useMetadata.md) -- read token name, symbol, and decimals
+- [Hooks overview](./query-keys.md) -- all available hooks

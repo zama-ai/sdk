@@ -5,7 +5,7 @@ description: Provider adapter that wraps an ethers Provider or EIP-1193 source f
 
 # EthersProvider
 
-Provider adapter that wraps an ethers `Provider` or EIP-1193 source for read-only chain access. Implements [GenericProvider](/reference/sdk/GenericProvider).
+Provider adapter that wraps an ethers `Provider` or EIP-1193 source for read-only chain access. Implements [GenericProvider](./GenericProvider.md).
 
 ## Import
 
@@ -74,11 +74,11 @@ const provider = new EthersProvider({
 
 ## Methods
 
-All methods are inherited from [GenericProvider](/reference/sdk/GenericProvider).
+All methods are inherited from [GenericProvider](./GenericProvider.md).
 
 ## Related
 
-- [GenericProvider](/reference/sdk/GenericProvider) -- interface this class implements
-- [EthersSigner](/reference/sdk/EthersSigner) -- companion signer adapter
-- [ViemProvider](/reference/sdk/ViemProvider) -- viem alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericProvider](./GenericProvider.md) -- interface this class implements
+- [EthersSigner](./EthersSigner.md) -- companion signer adapter
+- [ViemProvider](./ViemProvider.md) -- viem alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

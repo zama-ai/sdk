@@ -5,7 +5,7 @@ description: How EIP-712 signed permits authorize FHE decryption for specific co
 
 # Permit model
 
-Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](/concepts/security-model#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
+Decrypting an on-chain FHE ciphertext requires two things: an FHE keypair (generated once, stored persistently — see [Security Model](./security-model.md#credential-storage)) and a **signed permit** that authorizes decryption for specific contract addresses. This page explains how permits work.
 
 ## What is a permit
 
@@ -86,7 +86,7 @@ Permits can be removed in two ways:
 - **Selective** — `sdk.permits.revokePermits(["0xTokenA"])` removes permits touching those contracts on the current chain. Other permits are untouched.
 - **Full wipe** — `sdk.permits.revokePermits()` removes all permits for the current signer across all chains and delegators. The FHE keypair is not affected.
 
-For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](/reference/sdk/ZamaSDK#permits-revokepermits) for the full API.
+For a complete "log out" that also removes the FHE keypair, use `sdk.permits.clear()`. See the [ZamaSDK reference](../reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
 
 ## Wallet account changes
 
@@ -98,10 +98,10 @@ The SDK automatically manages permits when the wallet state changes:
 | **Account switch**    | Previous account's permits cleared; new account starts fresh                      |
 | **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
 
-See [ZamaSDK.onWalletAccountChange](/reference/sdk/ZamaSDK#onwalletaccountchange) for programmatic access to these transitions.
+See [ZamaSDK.onWalletAccountChange](../reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
 
 ## Related
 
-- [Security Model](/concepts/security-model) — keypair storage, threat model, and trust assumptions
-- [Configuration](/guides/configuration#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
-- [ZamaSDK](/reference/sdk/ZamaSDK) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API
+- [Security Model](./security-model.md) — keypair storage, threat model, and trust assumptions
+- [Configuration](../guides/configuration.md#5-optional-configure-ttls-and-event-listener) — `keypairTTL` and `permitTTL` settings
+- [ZamaSDK](../reference/sdk/ZamaSDK.md) — `permits.grantPermit()`, `permits.revokePermits()`, `permits.clear()` API

@@ -107,7 +107,7 @@ const walletClient = createWalletClient({
 {% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemProvider](/reference/sdk/ViemProvider) / [ViemSigner](/reference/sdk/ViemSigner) and [EthersProvider](/reference/sdk/EthersProvider) / [EthersSigner](/reference/sdk/EthersSigner) reference pages. You can also implement [GenericProvider](/reference/sdk/GenericProvider) and [GenericSigner](/reference/sdk/GenericSigner) for a custom integration.
+For full type information, see the [ViemProvider](../reference/sdk/ViemProvider.md) / [ViemSigner](../reference/sdk/ViemSigner.md) and [EthersProvider](../reference/sdk/EthersProvider.md) / [EthersSigner](../reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](../reference/sdk/GenericProvider.md) and [GenericSigner](../reference/sdk/GenericSigner.md) for a custom integration.
 
 ### 4. Create the config
 
@@ -252,7 +252,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 ```
 
-See [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) for the interfaces your adapter must implement.
+See [GenericSigner](../reference/sdk/GenericSigner.md) and [GenericProvider](../reference/sdk/GenericProvider.md) for the interfaces your adapter must implement.
 
 {% endtab %}
 {% tab title="Web Extensions" %}
@@ -284,12 +284,12 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 ```
 
-Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](/guides/web-extensions) for manifest configuration, multi-context sharing, and browser close behavior.
+Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](./web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
 {% endtab %}
 {% endtabs %}
 
-Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](/guides/authentication) for the full setup.
+Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](./authentication.md) for the full setup.
 
 ### 5. (Optional) Configure TTLs and event listener
 
@@ -326,7 +326,7 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](/reference/sdk/GenericStorage) reference.
+For full storage options see the [GenericStorage](../reference/sdk/GenericStorage.md) reference.
 
 ## Shared relayer options
 
@@ -355,7 +355,7 @@ Chains that pass the _same_ `options` object (by reference) share a single relay
 
 ## Next steps
 
-- [Authentication](/guides/authentication) — set up a backend proxy or use a direct API key
-- [Shield Tokens](/guides/shield-tokens) — convert public ERC-20 tokens into confidential form
-- [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Sepolia, Mainnet, and more
-- [GenericStorage reference](/reference/sdk/GenericStorage) — custom storage implementations
+- [Authentication](./authentication.md) — set up a backend proxy or use a direct API key
+- [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Sepolia, Mainnet, and more
+- [GenericStorage reference](../reference/sdk/GenericStorage.md) — custom storage implementations

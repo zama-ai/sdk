@@ -64,7 +64,7 @@ The FHE private key is stored in plaintext in the configured storage backend (ty
 | Key format | Plaintext ML-KEM keypair                                         |
 | Scope      | One keypair per signer address (chain-independent)               |
 
-The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](/concepts/permit-model) for the full lifecycle.
+The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
 
 ### Limitations
 

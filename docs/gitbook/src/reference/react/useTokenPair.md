@@ -69,6 +69,6 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useTokenPairsLength](/reference/react/useTokenPairsLength) -- get total count to know valid indices
-- [useTokenPairsSlice](/reference/react/useTokenPairsSlice) -- fetch a range of pairs
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getTokenPair()` method
+- [useTokenPairsLength](./useTokenPairsLength.md) -- get total count to know valid indices
+- [useTokenPairsSlice](./useTokenPairsSlice.md) -- fetch a range of pairs
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getTokenPair()` method

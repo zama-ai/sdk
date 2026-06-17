@@ -7,7 +7,7 @@ description: On-chain delegation management — grant, revoke, and query decrypt
 
 `sdk.delegations` manages on-chain decryption delegation through the ACL contract. The delegate never receives the delegator's private keys — they sign with their own wallet, and the relayer verifies the on-chain delegation.
 
-For a step-by-step walkthrough, see the [Delegated decryption](/guides/delegated-decryption) guide.
+For a step-by-step walkthrough, see the [Delegated decryption](../../guides/delegated-decryption.md) guide.
 
 ## Import
 
@@ -171,7 +171,7 @@ A delegation between `(delegator, delegate, contract)` can be in one of four sta
 | **Expired**   | Past non-zero timestamp  | `isActive()` returns `false`, `getExpiry()` returns a non-zero past value                                               |
 | **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
 
-The ACL contract resets the expiry to `0n` on revocation, so `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
+The ACL contract resets the expiry to `0n` on revocation, so `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](./event-decoders.md#acl-delegation-events).
 
 ## Low-level contract builders
 
@@ -185,7 +185,7 @@ const isDelegated = await publicClient.readContract(
 );
 ```
 
-See [Contract Builders](/reference/sdk/contract-builders#delegation) for the full list.
+See [Contract Builders](./contract-builders.md#delegation) for the full list.
 
 ## On-chain delegation events
 
@@ -220,16 +220,16 @@ if (delegated) {
 }
 ```
 
-See [Event Decoders](/reference/sdk/event-decoders#acl-delegation-events) for the full list of ACL event decoders.
+See [Event Decoders](./event-decoders.md#acl-delegation-events) for the full list of ACL event decoders.
 
 ## Related
 
-- [Delegated decryption guide](/guides/delegated-decryption) — step-by-step walkthrough
-- [Token.decryptBalanceAs](/reference/sdk/Token#decryptbalanceas) — decrypt a delegator's balance
-- [Token.batchDecryptBalancesAs](/reference/sdk/Token#batchdecryptbalancesas-static) — batch delegated decryption
-- [Contract builders](/reference/sdk/contract-builders#delegation) — low-level ACL delegation builders
-- [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
-- [useRevokeDelegation](/reference/react/useRevokeDelegation) — React hook to revoke delegation
-- [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status
-- [useDecryptBalanceAs](/reference/react/useDecryptBalanceAs) — React hook to decrypt as a delegate
-- [useBatchDecryptBalancesAs](/reference/react/useBatchDecryptBalancesAs) — React hook for batch delegation decryption
+- [Delegated decryption guide](../../guides/delegated-decryption.md) — step-by-step walkthrough
+- [Token.decryptBalanceAs](./Token.md#decryptbalanceas) — decrypt a delegator's balance
+- [Token.batchDecryptBalancesAs](./Token.md#batchdecryptbalancesas-static) — batch delegated decryption
+- [Contract builders](./contract-builders.md#delegation) — low-level ACL delegation builders
+- [useDelegateDecryption](../react/useDelegateDecryption.md) — React hook to grant delegation
+- [useRevokeDelegation](../react/useRevokeDelegation.md) — React hook to revoke delegation
+- [useDelegationStatus](../react/useDelegationStatus.md) — React hook to query delegation status
+- [useDecryptBalanceAs](../react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
+- [useBatchDecryptBalancesAs](../react/useBatchDecryptBalancesAs.md) — React hook for batch delegation decryption

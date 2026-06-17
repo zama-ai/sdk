@@ -260,10 +260,10 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — `sdk.registry` shared instance and `createWrappersRegistry()` factory
-- [useListPairs](/reference/react/useListPairs) — React hook for paginated pair listing
-- [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) — React hook for forward lookup
-- [useTokenAddress](/reference/react/useTokenAddress) — React hook for reverse lookup
-- [useIsConfidentialTokenValid](/reference/react/useIsConfidentialTokenValid) — React hook for validity check
-- [Contract Builders](/reference/sdk/contract-builders) — low-level registry builders
-- [Network Presets](/reference/sdk/network-presets) — built-in chain configurations
+- [ZamaSDK](./ZamaSDK.md) — `sdk.registry` shared instance and `createWrappersRegistry()` factory
+- [useListPairs](../react/useListPairs.md) — React hook for paginated pair listing
+- [useConfidentialTokenAddress](../react/useConfidentialTokenAddress.md) — React hook for forward lookup
+- [useTokenAddress](../react/useTokenAddress.md) — React hook for reverse lookup
+- [useIsConfidentialTokenValid](../react/useIsConfidentialTokenValid.md) — React hook for validity check
+- [Contract Builders](./contract-builders.md) — low-level registry builders
+- [Network Presets](./network-presets.md) — built-in chain configurations
