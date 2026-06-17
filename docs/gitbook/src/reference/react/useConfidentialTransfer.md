@@ -5,7 +5,7 @@ description: Send confidential ERC-20 tokens privately.
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](/reference/react/useConfidentialBalance) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -173,6 +173,6 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 ## Related
 
-- [useConfidentialTransferFrom](/reference/react/useConfidentialTransferFrom) -- operator transfer variant
-- [Transfer Privately guide](/guides/transfer-privately)
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- auto-invalidated on success
+- [useConfidentialTransferFrom](./useConfidentialTransferFrom.md) -- operator transfer variant
+- [Transfer Privately guide](../../guides/transfer-privately.md)
+- [useConfidentialBalance](./useConfidentialBalance.md) -- auto-invalidated on success

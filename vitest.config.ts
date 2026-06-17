@@ -104,6 +104,15 @@ export default defineConfig({
         },
         resolve: sharedResolve,
       },
+      {
+        test: {
+          name: "scripts",
+          environment: "node",
+          // scripts/docs only — scripts/llm tests run via `pnpm llm:check` (vitest.llm.config.ts).
+          include: ["scripts/docs/**/*.test.mjs"],
+          exclude: ["**/node_modules/**"],
+        },
+      },
     ],
     coverage: {
       provider: "v8",

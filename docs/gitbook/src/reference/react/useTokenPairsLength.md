@@ -47,6 +47,6 @@ The `data` field resolves to `bigint` -- the total number of registered pairs.
 
 ## Related
 
-- [useListPairs](/reference/react/useListPairs) -- paginated pair listing
-- [useTokenPairsSlice](/reference/react/useTokenPairsSlice) -- fetch a range of pairs by index
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getTokenPairsLength()` method
+- [useListPairs](./useListPairs.md) -- paginated pair listing
+- [useTokenPairsSlice](./useTokenPairsSlice.md) -- fetch a range of pairs by index
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsLength()` method

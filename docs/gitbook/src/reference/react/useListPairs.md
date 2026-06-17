@@ -137,7 +137,7 @@ Results are cached with a TTL matching the SDK's `registryTTL` (default: 24 hour
 
 ## Related
 
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level registry class with `listPairs()` method
-- [useTokenPairsRegistry](/reference/react/useTokenPairsRegistry) -- fetch all pairs at once (no pagination)
-- [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) -- look up a single token's wrapper
-- [Query Keys](/reference/react/query-keys) -- manual cache control via `zamaQueryKeys.wrappersRegistry`
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level registry class with `listPairs()` method
+- [useTokenPairsRegistry](./useTokenPairsRegistry.md) -- fetch all pairs at once (no pagination)
+- [useConfidentialTokenAddress](./useConfidentialTokenAddress.md) -- look up a single token's wrapper
+- [Query Keys](./query-keys.md) -- manual cache control via `zamaQueryKeys.wrappersRegistry`

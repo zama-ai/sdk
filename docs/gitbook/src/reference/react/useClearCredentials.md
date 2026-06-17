@@ -57,7 +57,7 @@ clearCredentials();
 
 - Wipes the FHE keypair for the connected wallet.
 - Cascade-deletes every permit across all chains and delegators.
-- Auto-invalidates all [`useHasPermit`](/reference/react/useHasPermit) queries on success.
+- Auto-invalidates all [`useHasPermit`](./useHasPermit.md) queries on success.
 - After clearing, any decrypt operation will generate a fresh keypair and prompt for new permits.
 
 {% hint style="info" %}
@@ -66,6 +66,6 @@ The SDK auto-clears credentials on wallet disconnect or account change when the 
 
 ## Related
 
-- [`useRevokePermits`](/reference/react/useRevokePermits) — remove permits without touching the keypair
-- [`useGrantPermit`](/reference/react/useGrantPermit) — sign permits for contracts
-- [`useHasPermit`](/reference/react/useHasPermit) — check whether stored permits cover contracts
+- [`useRevokePermits`](./useRevokePermits.md) — remove permits without touching the keypair
+- [`useGrantPermit`](./useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](./useHasPermit.md) — check whether stored permits cover contracts

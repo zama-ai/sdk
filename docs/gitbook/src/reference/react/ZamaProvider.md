@@ -151,9 +151,9 @@ import { type ZamaProviderProps } from "@zama-fhe/react-sdk";
 
 `ZamaConfig`
 
-Configuration object created by [`createConfig`](/guides/configuration). Wires together chains, relayers, signer, and storage for the SDK.
+Configuration object created by [`createConfig`](../../guides/configuration.md). Wires together chains, relayers, signer, and storage for the SDK.
 
 ## Related
 
-- [Configuration guide](/guides/configuration)
-- [Permit Model](/concepts/permit-model)
+- [Configuration guide](../../guides/configuration.md)
+- [Permit Model](../../concepts/permit-model.md)
