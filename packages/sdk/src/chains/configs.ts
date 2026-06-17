@@ -59,6 +59,46 @@ export const hoodi = {
 } as const satisfies FheChain;
 
 /**
+ * T-Rex InGen testnet configuration (chainId 364301).
+ *
+ * InGen does not have full FHE infrastructure — use with `cleartext()` transport.
+ * Contract addresses match the cleartext deployment.
+ */
+export const ingen = {
+  id: 364301,
+  gatewayChainId: 10901,
+  relayerUrl: "",
+  network: "https://rpc.ingen.t-rex.network",
+  aclContractAddress: "0x09a4710BfBe7B557cD5CFE88BB31e9b5b85C419b",
+  kmsContractAddress: "0xd885DEa6a924785fCcdf9CE993FEe27EA11832e6",
+  inputVerifierContractAddress: "0x90f05B10db153365D8cB143EA17f5E5714D0bCD5",
+  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
+  registryAddress: "0x7FC3D79EF9d01fA318CF2Aa5D91dDC492383Be0F",
+  executorAddress: "0x1B05DE5b67b8f8363DC04E3a5996a616f11f8C7B",
+} as const satisfies FheChain;
+
+/**
+ * BNB Smart Chain testnet configuration (chainId 97, Chapel).
+ *
+ * BSC testnet does not have full FHE infrastructure — use with `cleartext()` transport.
+ * Contract addresses match the cleartext deployment.
+ */
+export const bscTestnet = {
+  id: 97,
+  gatewayChainId: 10901,
+  relayerUrl: "",
+  network: "https://bsc-testnet-rpc.publicnode.com",
+  aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
+  kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
+  inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",
+  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
+  registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
+  executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54",
+} as const satisfies FheChain;
+
+/**
  * Hardhat local network configuration (chainId 31337).
  *
  * The addresses in this configuration must match those of your deployment.
@@ -87,5 +127,7 @@ export const chains: Record<number, FheChain> = {
   [mainnet.id]: mainnet,
   [sepolia.id]: sepolia,
   [hoodi.id]: hoodi,
+  [ingen.id]: ingen,
+  [bscTestnet.id]: bscTestnet,
   [hardhat.id]: hardhat,
 } as const;

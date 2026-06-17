@@ -74,4 +74,4 @@ export type {
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
 
 // Chain presets
-export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "../chains";
+export { mainnet, sepolia, hoodi, ingen, bscTestnet, hardhat, anvil, chains } from "../chains";
