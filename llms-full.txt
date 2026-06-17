@@ -150,7 +150,7 @@ Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
 
 ## Quick start
@@ -4400,7 +4400,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
 
 ## ZamaSDK
@@ -8235,7 +8235,7 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
 
 ## ZamaProvider
@@ -17932,7 +17932,7 @@ npm run test:e2e                     # Playwright e2e tests (starts dev server a
 <hr/>
 
 <p align="center">
-  <a href="https://docs.zama.org/protocol"> 📒 Documentation</a> | <a href="https://zama.ai/community"> 💛 Community support</a> | <a href="https://github.com/zama-ai/awesome-zama"> 📚 FHE resources by Zama</a>
+  <a href="https://docs.zama.org/protocol"> 📒 Documentation</a> | <a href="https://community.zama.org"> 💛 Community support</a> | <a href="https://github.com/zama-ai/awesome-zama"> 📚 FHE resources by Zama</a>
 </p>
 
 <p align="center">
@@ -18082,7 +18082,7 @@ This software is distributed under the **BSD-3-Clause-Clear** license. Read [thi
 
 🌟 If you find this project helpful or interesting, please consider giving it a star on GitHub! Your support helps to grow the community and motivates further development.
 
-<a target="_blank" href="https://community.zama.ai">
+<a target="_blank" href="https://community.zama.org">
   💛 Community forum on Discourse
 </a>
 
