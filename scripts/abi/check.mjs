@@ -21,7 +21,7 @@ for (const step of steps) {
   console.log(`\n▶ abi:check [${step.name}] ${step.command} ${step.args.join(" ")}`);
   const result = spawnSync(step.command, step.args, { stdio: "inherit" });
   if (result.status === 0) {
-    process.exit(0);
+    continue;
   }
   if (result.error) {
     console.error(
