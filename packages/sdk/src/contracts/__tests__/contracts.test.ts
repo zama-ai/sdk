@@ -213,11 +213,11 @@ describe("Wrapper contract builders", () => {
   });
 });
 
-// Regression: verify wrapperAbi matches protocol-apps@3bd308fb7cb1 (post-mainnet upgrade).
+// Regression: verify wrapperAbi matches protocol-apps@71611c624ddc (post-mainnet upgrade).
 // These assertions pin the wrapper interface shape: finalizeUnwrap takes a bytes32
 // unwrapRequestId, unwrapAmount / unwrapRequester are exposed, and both UnwrapRequested
 // and UnwrapFinalized events include the indexed unwrapRequestId topic.
-describe("wrapperAbi version smoke test (protocol-apps@3bd308fb7cb1)", () => {
+describe("wrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
   type AbiFunction = {
     type: string;
     name: string;
