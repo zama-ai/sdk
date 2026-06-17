@@ -130,7 +130,7 @@ The `auth` field supports three modes:
 | Mode           | Shape                                            |
 | -------------- | ------------------------------------------------ |
 | API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  |
-| Bearer token   | `{ __type: "BearerToken", value: "your-token" }` |
+| Bearer token   | `{ __type: "BearerToken", token: "your-token" }` |
 | API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }`  |
 
 ### 7. Clean up on shutdown

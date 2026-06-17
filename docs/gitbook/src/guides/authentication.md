@@ -146,7 +146,7 @@ The `auth` field accepts three formats:
 | -------------- | ------------------------------------------ | --------------------------- |
 | `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | `x-api-key: key`            |
 | `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | Sets a cookie               |
-| `BearerToken`  | `{ __type: "BearerToken", value: "jwt" }`  | `Authorization: Bearer jwt` |
+| `BearerToken`  | `{ __type: "BearerToken", token: "jwt" }`  | `Authorization: Bearer jwt` |
 
 ```ts
 // API key in a header (most common)
@@ -156,7 +156,7 @@ auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 
 // Bearer token (e.g. from your own auth system)
-auth: { __type: "BearerToken", value: "your-jwt-token" }
+auth: { __type: "BearerToken", token: "your-jwt-token" }
 ```
 
 When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](/reference/sdk/RelayerWeb) for details.

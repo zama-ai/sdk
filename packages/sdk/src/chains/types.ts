@@ -32,7 +32,7 @@ export interface FheChain<TId extends number = number> {
   /**
    * Authentication for the relayer endpoint.
    * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
-   * or `{ __type: "BearerToken", value: "your-token" }` for bearer auth.
+   * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.
    */
   readonly auth?: Auth;
   /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
