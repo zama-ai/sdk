@@ -1,4 +1,4 @@
-// Public-export extraction for the completeness lint (SDK-208).
+// Public-export extraction for the completeness lint.
 //
 // The generate step is LLM-driven and its variance lives in the long tail of
 // public-API deltas it may or may not enumerate. To turn "did it cover every

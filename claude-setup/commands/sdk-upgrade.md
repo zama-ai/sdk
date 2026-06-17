@@ -1,5 +1,5 @@
 ---
-description: Upgrade an app that uses @zama-fhe/sdk to a target version, deterministically (SDK-208)
+description: Upgrade an app that uses @zama-fhe/sdk to a target version, deterministically
 argument-hint: "[--example <name> | --app <path>] --to <version> [--from <version>]"
 ---
 

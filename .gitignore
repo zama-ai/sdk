@@ -57,5 +57,5 @@ contracts/cache/
 contracts/broadcast/
 contracts/.forge-deploy-lock/
 
-# sdk-upgrade pipeline scratch (SDK-208)
+# sdk-upgrade pipeline scratch
 .tmp/

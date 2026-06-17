@@ -1,4 +1,4 @@
-// Migration-guide schema + selection for the SDK-upgrade pipeline (SDK-208).
+// Migration-guide schema + selection for the SDK-upgrade pipeline.
 //
 // The guide is the *convergence artifact*: generated once per (A,B) couple,
 // reviewed, committed, then applied identically to every app. validateGuide is

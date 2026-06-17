@@ -1,4 +1,4 @@
-// Deterministic, no-LLM collection of the A->B "what changed" signal (SDK-208).
+// Deterministic, no-LLM collection of the A->B "what changed" signal.
 //
 // Produces the frozen input bundle for the generate-migration-guide skill: a
 // unified diff of llms-full.txt, per-package API report diffs, and the root

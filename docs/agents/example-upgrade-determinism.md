@@ -1,7 +1,5 @@
 # Recommendation: making the AI-driven example-app upgrade converge
 
-**Ticket:** [SDK-208](https://linear.app/zama/issue/SDK-208/investigate-non-determinism-in-the-ai-driven-example-app-upgrade)
-**Status:** Recommendation (investigation outcome) — not yet implemented
 **Prior art:** [PR #316](https://github.com/zama-ai/sdk/pull/316) (kept open as a draft reference; this recommendation supersedes its design)
 
 ## 1. Problem
@@ -75,13 +73,13 @@ We keep PR #316 open in draft as a reference until this approach is proven on a 
 
 ## 6. Options considered (and why not)
 
-| Option                                                                      | Verdict                                                                                                                                                                                              |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Constrain generation only** (lower temperature, stricter prompts)         | Reduces cosmetic jitter, does nothing about per-app re-derivation of the delta. Necessary hygiene, not sufficient.                                                                                   |
-| **Deterministic post-processing** (format/lint/import-sort/typecheck gates) | Strongly recommended _as a complement_ — it absorbs the residual cosmetic variance. Cannot fix semantic divergence on its own.                                                                       |
-| **Golden-file / snapshot tests on app output**                              | Useful as a regression guard once apps converge; does not _produce_ convergence, and snapshots of generated apps are brittle to maintain. Revisit after the guide approach lands (overlaps SDK-172). |
-| **Per-app full re-analysis** (PR #316)                                      | The status quo. Rejected as the primary mechanism — it is the source of the divergence.                                                                                                              |
-| **Per-couple migration guide + apply** (this doc)                           | **Recommended.** Moves the high-variance step to once-per-couple, reviewable and shared.                                                                                                             |
+| Option                                                                      | Verdict                                                                                                                                                                           |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Constrain generation only** (lower temperature, stricter prompts)         | Reduces cosmetic jitter, does nothing about per-app re-derivation of the delta. Necessary hygiene, not sufficient.                                                                |
+| **Deterministic post-processing** (format/lint/import-sort/typecheck gates) | Strongly recommended _as a complement_ — it absorbs the residual cosmetic variance. Cannot fix semantic divergence on its own.                                                    |
+| **Golden-file / snapshot tests on app output**                              | Useful as a regression guard once apps converge; does not _produce_ convergence, and snapshots of generated apps are brittle to maintain. Revisit after the guide approach lands. |
+| **Per-app full re-analysis** (PR #316)                                      | The status quo. Rejected as the primary mechanism — it is the source of the divergence.                                                                                           |
+| **Per-couple migration guide + apply** (this doc)                           | **Recommended.** Moves the high-variance step to once-per-couple, reviewable and shared.                                                                                          |
 
 ## 7. Open questions to settle in the prototype (Step 2)
 

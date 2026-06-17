@@ -1,4 +1,4 @@
-// App locator + deterministic gates for the SDK-upgrade pipeline (SDK-208).
+// App locator + deterministic gates for the SDK-upgrade pipeline.
 //
 // The "apply" half of the pipeline brackets the LLM edit step with deterministic
 // steps: read the app's pinned SDK version (to select the guide), bump the pins

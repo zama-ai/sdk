@@ -1,4 +1,4 @@
-// Version resolution for the SDK-upgrade pipeline (SDK-208).
+// Version resolution for the SDK-upgrade pipeline.
 //
 // Turns a user-supplied `--from`/`--to` spec into a concrete published version
 // plus the git tag that carries its committed artifacts. A spec is either an

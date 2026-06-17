@@ -1,4 +1,4 @@
-// Minimal semver comparison for the SDK-upgrade pipeline (SDK-208).
+// Minimal semver comparison for the SDK-upgrade pipeline.
 //
 // We only ever compare versions this repo actually publishes: `X.Y.Z` and
 // `X.Y.Z-alpha.N`. A full semver dependency would be overkill, so this handles

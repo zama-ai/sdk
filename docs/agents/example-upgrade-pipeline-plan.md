@@ -1,6 +1,5 @@
 # Implementation plan: SDK-aware app upgrade pipeline
 
-**Ticket:** [SDK-208](https://linear.app/zama/issue/SDK-208/investigate-non-determinism-in-the-ai-driven-example-app-upgrade)
 **Builds on:** [`example-upgrade-determinism.md`](./example-upgrade-determinism.md) (the recommendation this plan implements)
 **Status:** Phases 0–4 implemented — deterministic CLI (`guide`/`apply`/`dist`) + both skills + `/sdk-upgrade` command + completeness lint + external skill bundle. Convergence validated on react-viem (#404) and react-ethers (#410). Supersedes the [PR #316](https://github.com/zama-ai/sdk/pull/316) design (kept open as draft reference).
 
@@ -34,7 +33,7 @@ Split the upgrade into a **deterministic core** and **two bounded LLM steps**, w
 | **Two skills**                                 | `sdk-upgrade-generate-guide` (Half 1 LLM step), `sdk-upgrade-apply-guide` (Half 2 LLM step)           | The only judgement steps. Each is bounded by a frozen artifact (diff bundle in, guide out / guide in, edits out).    |
 | **Slash command** `/sdk-upgrade`               | Thin interactive wrapper orchestrating CLI + skill inside Claude Code                                 | Ergonomics; no logic of its own.                                                                                     |
 
-External apps consume the **`apply` skill + committed guides**, distributed through the existing `npx skills add` channel ([SDK-64](https://linear.app/zama/issue/SDK-64/create-ai-coding-skills-for-external-sdk-integrators-npx-skills-add)). Partners apply guides; they never regenerate them.
+External apps consume the **`apply` skill + committed guides**, distributed through the existing `npx skills add` channel. Partners apply guides; they never regenerate them.
 
 ## What we reuse (already in the repo)
 
@@ -125,7 +124,7 @@ The skills and command live under `claude-setup/` (the repo's existing skill sou
 ## Testing
 
 - Unit (deterministic): version resolution, diff collection, guide schema validation, guide selection, post-processing argv. This is the coverage #316 lacked.
-- LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals (overlaps [SDK-172](https://linear.app/zama/issue/SDK-172/skills-evals-with-promptfoo)).
+- LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals.
 - Optional later: golden-file/snapshot guard on app output, once apps have converged.
 
 ## Generation variance (measured)
@@ -137,7 +136,7 @@ Two independent cold generations of the guide for `3.0.0-alpha.32 → 3.1.0-alph
 ## Testing
 
 - Unit (deterministic): version resolution, diff collection, guide schema validation, guide selection, post-processing argv. This is the coverage #316 lacked.
-- LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals (overlaps [SDK-172](https://linear.app/zama/issue/SDK-172/skills-evals-with-promptfoo)).
+- LLM steps: validated first by the Phase 2 convergence check, later by promptfoo evals.
 - Optional later: golden-file/snapshot guard on app output, once apps have converged.
 
 ## Risks

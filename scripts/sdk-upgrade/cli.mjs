@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// SDK-aware app upgrade pipeline CLI (SDK-208).
+// SDK-aware app upgrade pipeline CLI.
 //
 // Deterministic orchestration only — the two LLM steps live in skills
 // (sdk-upgrade-generate-guide, sdk-upgrade-apply-guide) and run *between* CLI

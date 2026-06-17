@@ -1,4 +1,4 @@
-// External-distribution packaging for the SDK-upgrade pipeline (SDK-208, Phase 4).
+// External-distribution packaging for the SDK-upgrade pipeline.
 //
 // Partners never regenerate guides — they apply committed ones. So the external
 // deliverable is a self-contained skill bundle: the (portable) apply-guide skill

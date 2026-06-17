@@ -1,4 +1,4 @@
-// Completeness lint for the SDK-upgrade pipeline (SDK-208).
+// Completeness lint for the SDK-upgrade pipeline.
 //
 // Cross-checks a generated guide against the deterministic set of changed public
 // export identifiers (from the api-report diffs): every such symbol should be

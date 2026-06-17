@@ -1,4 +1,4 @@
-# SDK-upgrade: external distribution (SDK-208, Phase 4)
+# SDK-upgrade: external distribution
 
 How the upgrade capability reaches partner apps (e.g. Ambire) that are **not** in this repo. The principle: partners **apply** committed guides; they never **generate** them. Regeneration stays SDK-side so every consumer converges on the same reviewed artifact.
 

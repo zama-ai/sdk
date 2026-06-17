@@ -1,6 +1,6 @@
 ---
 name: sdk-upgrade-generate-guide
-description: "Generate the per-couple SDK migration guide (SDK-208, Half 1). Use when upgrading example or partner apps from one @zama-fhe/sdk version (A) to another (B) and a guide for that couple does not yet exist under migrations/. Reads the deterministic diff bundle produced by `pnpm sdk-upgrade guide --from <A> --to <B>` and emits a schema-valid migrations/<A>__<B>.json plus a human-readable .md. This is the convergence artifact: generated once per couple, reviewed, committed, then applied unchanged to every app."
+description: "Generate the per-couple SDK migration guide (Half 1). Use when upgrading example or partner apps from one @zama-fhe/sdk version (A) to another (B) and a guide for that couple does not yet exist under migrations/. Reads the deterministic diff bundle produced by `pnpm sdk-upgrade guide --from <A> --to <B>` and emits a schema-valid migrations/<A>__<B>.json plus a human-readable .md. This is the convergence artifact: generated once per couple, reviewed, committed, then applied unchanged to every app."
 ---
 
 # Generate an SDK migration guide (A → B)

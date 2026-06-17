@@ -1,6 +1,6 @@
 ---
 name: sdk-upgrade-apply-guide
-description: "Apply a frozen SDK migration guide to one app (SDK-208, Half 2). Use when upgrading an example or partner app to a newer @zama-fhe/sdk version and a guide for that couple already exists under migrations/. Applies ONLY the listed changes to the app's source, then relies on the deterministic typecheck gate (`pnpm sdk-upgrade apply --example <name> --to <B> --gate`) to catch anything missed. Forbidden from re-deriving deltas — partners and sibling apps must converge, so the guide is the single source of truth."
+description: "Apply a frozen SDK migration guide to one app (Half 2). Use when upgrading an example or partner app to a newer @zama-fhe/sdk version and a guide for that couple already exists under migrations/. Applies ONLY the listed changes to the app's source, then relies on the deterministic typecheck gate (`pnpm sdk-upgrade apply --example <name> --to <B> --gate`) to catch anything missed. Forbidden from re-deriving deltas — partners and sibling apps must converge, so the guide is the single source of truth."
 ---
 
 # Apply an SDK migration guide to an app (Half 2)
