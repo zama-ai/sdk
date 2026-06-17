@@ -9,7 +9,7 @@ Read/write interface for confidential ERC-20 operations — shielding, transferr
 
 ## Import
 
-Created via [`ZamaSDK.createToken()`](/reference/sdk/ZamaSDK#createtoken). Not imported directly.
+Created via [`ZamaSDK.createToken()`](./ZamaSDK.md#createtoken). Not imported directly.
 
 ## Usage
 
@@ -324,6 +324,6 @@ await token.finalizeUnwrap(burnAmountHandle);
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — creates `Token` via `createToken()`
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only variant with batch operations
-- [Shield Tokens guide](/guides/shield-tokens) — step-by-step shielding walkthrough
+- [ZamaSDK](./ZamaSDK.md) — creates `Token` via `createToken()`
+- [ReadonlyToken](./ReadonlyToken.md) — read-only variant with batch operations
+- [Shield Tokens guide](../../guides/shield-tokens.md) — step-by-step shielding walkthrough

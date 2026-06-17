@@ -21,7 +21,7 @@ The SDK ships two relayer implementations. Pick the one that matches your runtim
 `RelayerWeb` runs FHE inside a Web Worker using WASM. `RelayerNode` uses native worker threads.
 
 {% hint style="info" %}
-For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`createCleartextRelayer`](/guides/local-development) instead — no KMS, no gateway, no WASM needed.
+For local Hardhat nodes or custom testnets deployed in cleartext mode, use [`createCleartextRelayer`](./local-development.md) instead — no KMS, no gateway, no WASM needed.
 {% endhint %}
 
 ### 2. Set up a signer
@@ -74,11 +74,11 @@ const signer = new WagmiSigner({ config: wagmiConfig });
 {% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), and [WagmiSigner](/reference/sdk/WagmiSigner) reference pages. You can also implement the [GenericSigner](/reference/sdk/GenericSigner) interface for a custom wallet integration.
+For full type information, see the [ViemSigner](../reference/sdk/ViemSigner.md), [EthersSigner](../reference/sdk/EthersSigner.md), and [WagmiSigner](../reference/sdk/WagmiSigner.md) reference pages. You can also implement the [GenericSigner](../reference/sdk/GenericSigner.md) interface for a custom wallet integration.
 
 ### 3. Configure the relayer
 
-The relayer needs a `getChainId` callback and a transport map. Use the built-in [network presets](/reference/sdk/network-presets) (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) so you don't have to specify contract addresses manually. Each preset provides `chainId`, `relayerUrl`, `gatewayAddress`, `aclAddress`, and `kmsVerifierAddress` for its network.
+The relayer needs a `getChainId` callback and a transport map. Use the built-in [network presets](../reference/sdk/network-presets.md) (`SepoliaConfig`, `MainnetConfig`, `HardhatConfig`) so you don't have to specify contract addresses manually. Each preset provides `chainId`, `relayerUrl`, `gatewayAddress`, `aclAddress`, and `kmsVerifierAddress` for its network.
 
 {% tabs %}
 {% tab title="Browser (RelayerWeb)" %}
@@ -126,9 +126,9 @@ const relayer = new RelayerNode({
 {% endtab %}
 {% endtabs %}
 
-Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](/guides/authentication) for the full setup.
+Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](./authentication.md) for the full setup.
 
-For details on multi-threaded FHE and security options, see the [RelayerWeb](/reference/sdk/RelayerWeb) and [RelayerNode](/reference/sdk/RelayerNode) reference pages.
+For details on multi-threaded FHE and security options, see the [RelayerWeb](../reference/sdk/RelayerWeb.md) and [RelayerNode](../reference/sdk/RelayerNode.md) reference pages.
 
 ### 4. Choose a storage backend
 
@@ -146,7 +146,7 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](/reference/sdk/GenericStorage) reference.
+For full storage options see the [GenericStorage](../reference/sdk/GenericStorage.md) reference.
 
 ### 5. Create the SDK instance
 
@@ -242,7 +242,7 @@ const sdk = new ZamaSDK({
 });
 ```
 
-Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](/guides/web-extensions) for manifest configuration, multi-context sharing, and browser close behavior.
+Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](./web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
 {% endtab %}
 {% endtabs %}
@@ -268,7 +268,7 @@ Setting `sessionTTL: 0` disables session caching entirely — every operation tr
 
 ## Next steps
 
-- [Authentication](/guides/authentication) — set up a backend proxy or use a direct API key
-- [Shield Tokens](/guides/shield-tokens) — convert public ERC-20 tokens into confidential form
-- [RelayerWeb reference](/reference/sdk/RelayerWeb) — multi-threading, security options, CDN configuration
-- [GenericStorage reference](/reference/sdk/GenericStorage) — custom storage implementations
+- [Authentication](./authentication.md) — set up a backend proxy or use a direct API key
+- [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [RelayerWeb reference](../reference/sdk/RelayerWeb.md) — multi-threading, security options, CDN configuration
+- [GenericStorage reference](../reference/sdk/GenericStorage.md) — custom storage implementations

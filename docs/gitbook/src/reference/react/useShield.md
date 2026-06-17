@@ -160,5 +160,5 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](/reference/react/useUnshield) — reverse operation, unshield back to public ERC-20
-- [Token.shield](/reference/sdk/Token#shield) — imperative equivalent on the `Token` class
+- [useUnshield](./useUnshield.md) — reverse operation, unshield back to public ERC-20
+- [Token.shield](../sdk/Token.md#shield) — imperative equivalent on the `Token` class

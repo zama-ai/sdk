@@ -11,7 +11,7 @@ Confidential transfers encrypt the amount before it reaches the chain -- no one 
 
 ### 1. Create a token instance
 
-Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a token pointing at your encrypted ERC-20 contract:
+Start from a configured SDK instance (see [Configuration](./configuration.md)) and create a token pointing at your encrypted ERC-20 contract:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -192,11 +192,11 @@ function TransferForm() {
 }
 ```
 
-The `matchZamaError` helper maps SDK error codes to user-friendly messages. See the [Error Handling guide](/guides/handle-errors) for the full list of error types.
+The `matchZamaError` helper maps SDK error codes to user-friendly messages. See the [Error Handling guide](./handle-errors.md) for the full list of error types.
 
 ## Next steps
 
-- [Shield Tokens](/guides/shield-tokens) — convert public ERC-20 tokens into confidential form
-- [Token.confidentialTransfer reference](/reference/sdk/Token#confidentialtransfer) — full API signature
-- [useConfidentialTransfer reference](/reference/react/useConfidentialTransfer) — React hook details
-- [useConfidentialTransferFrom reference](/reference/react/useConfidentialTransferFrom) — operator transfer hook
+- [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [Token.confidentialTransfer reference](../reference/sdk/Token.md#confidentialtransfer) — full API signature
+- [useConfidentialTransfer reference](../reference/react/useConfidentialTransfer.md) — React hook details
+- [useConfidentialTransferFrom reference](../reference/react/useConfidentialTransferFrom.md) — operator transfer hook

@@ -5,10 +5,10 @@ description: Low-level mutation hook that finalizes an unwrap with the decryptio
 
 # useFinalizeUnwrap
 
-Low-level mutation hook that finalizes an unwrap with the decryption proof. Call this after [`useUnwrap`](/reference/react/useUnwrap) or [`useUnwrapAll`](/reference/react/useUnwrapAll) has submitted the initial unwrap transaction.
+Low-level mutation hook that finalizes an unwrap with the decryption proof. Call this after [`useUnwrap`](./useUnwrap.md) or [`useUnwrapAll`](./useUnwrapAll.md) has submitted the initial unwrap transaction.
 
 {% hint style="info" %}
-Most apps should use [`useUnshield`](/reference/react/useUnshield) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
+Most apps should use [`useUnshield`](./useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call. Use this hook for custom multi-step flows where you need control over each phase.
 {% endhint %}
 
 ## Import
@@ -74,7 +74,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap({
 
 `Hex`
 
-The transaction hash returned by [`useUnwrap`](/reference/react/useUnwrap) or [`useUnwrapAll`](/reference/react/useUnwrapAll). The SDK uses this to locate and verify the decryption proof on-chain.
+The transaction hash returned by [`useUnwrap`](./useUnwrap.md) or [`useUnwrapAll`](./useUnwrapAll.md). The SDK uses this to locate and verify the decryption proof on-chain.
 
 ```tsx
 await finalize({ unwrapTxHash: "0xabc..." });
@@ -90,7 +90,7 @@ import { type UseFinalizeUnwrapReturnType } from "@zama-fhe/react-sdk";
 
 ## Related
 
-- [`useUnwrap`](/reference/react/useUnwrap) -- request unwrap for a specific amount
-- [`useUnwrapAll`](/reference/react/useUnwrapAll) -- request unwrap for the full balance
-- [`useResumeUnshield`](/reference/react/useResumeUnshield) -- resume an interrupted unshield
-- [`useUnshield`](/reference/react/useUnshield) -- high-level hook that handles both steps
+- [`useUnwrap`](./useUnwrap.md) -- request unwrap for a specific amount
+- [`useUnwrapAll`](./useUnwrapAll.md) -- request unwrap for the full balance
+- [`useResumeUnshield`](./useResumeUnshield.md) -- resume an interrupted unshield
+- [`useUnshield`](./useUnshield.md) -- high-level hook that handles both steps

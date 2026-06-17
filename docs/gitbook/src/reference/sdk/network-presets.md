@@ -129,7 +129,7 @@ The relayer selects the correct transport based on the chain ID returned by `get
 
 ## DefaultRegistryAddresses
 
-A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](/reference/sdk/WrappersRegistry) class.
+A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
 
 ```ts
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
@@ -139,11 +139,11 @@ console.log(DefaultRegistryAddresses);
 ```
 
 {% hint style="info" %}
-`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](/reference/sdk/WrappersRegistry).
+`HardhatConfig` has no registry address by default. Pass one explicitly via `registryAddresses` when creating a [WrappersRegistry](./WrappersRegistry.md).
 {% endhint %}
 
 ## Related
 
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) — high-level registry query API
-- [Configuration guide](/guides/configuration) — full relayer, signer, and storage setup
-- [ZamaSDK](/reference/sdk/ZamaSDK) — SDK constructor reference
+- [WrappersRegistry](./WrappersRegistry.md) — high-level registry query API
+- [Configuration guide](../../guides/configuration.md) — full relayer, signer, and storage setup
+- [ZamaSDK](./ZamaSDK.md) — SDK constructor reference

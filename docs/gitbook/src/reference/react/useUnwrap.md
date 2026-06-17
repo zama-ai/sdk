@@ -5,10 +5,10 @@ description: Low-level mutation hook that requests an unwrap for a specific amou
 
 # useUnwrap
 
-Low-level mutation hook that requests an unwrap for a specific amount. You must finalize manually with [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap).
+Low-level mutation hook that requests an unwrap for a specific amount. You must finalize manually with [`useFinalizeUnwrap`](./useFinalizeUnwrap.md).
 
 {% hint style="info" %}
-Most apps should use [`useUnshield`](/reference/react/useUnshield) instead, which orchestrates both steps (unwrap + finalize) in a single call.
+Most apps should use [`useUnshield`](./useUnshield.md) instead, which orchestrates both steps (unwrap + finalize) in a single call.
 {% endhint %}
 
 ## Import
@@ -89,6 +89,6 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap) -- finalize the unwrap with a decryption proof
-- [`useUnwrapAll`](/reference/react/useUnwrapAll) -- unwrap the full balance
-- [`useUnshield`](/reference/react/useUnshield) -- high-level hook that handles both steps
+- [`useFinalizeUnwrap`](./useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
+- [`useUnwrapAll`](./useUnwrapAll.md) -- unwrap the full balance
+- [`useUnshield`](./useUnshield.md) -- high-level hook that handles both steps

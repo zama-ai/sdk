@@ -165,6 +165,6 @@ const relayer = new RelayerWeb({
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the relayer to the SDK constructor
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js variant using worker threads
-- [Configuration guide](/guides/configuration) — authentication and network presets
+- [ZamaSDK](./ZamaSDK.md) — pass the relayer to the SDK constructor
+- [RelayerNode](./RelayerNode.md) — Node.js variant using worker threads
+- [Configuration guide](../../guides/configuration.md) — authentication and network presets

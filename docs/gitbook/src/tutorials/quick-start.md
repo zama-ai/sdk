@@ -29,7 +29,7 @@ relayerUrl: "https://your-app.com/api/relayer/11155111"
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 ```
 
-See [Authentication](/guides/authentication) for a backend proxy example.
+See [Authentication](../guides/authentication.md) for a backend proxy example.
 
 ## Install
 
@@ -247,7 +247,7 @@ const sdk = new ZamaSDK({
 {% endtabs %}
 
 {% hint style="info" %}
-**FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](/reference/sdk/FheArtifactCache) for details.
+**FHE artifact caching** — Both `RelayerWeb` and `RelayerNode` automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. `RelayerWeb` uses IndexedDB (persists across reloads), `RelayerNode` uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via `fheArtifactStorage` and `fheArtifactCacheTTL`. See [FheArtifactCache](../reference/sdk/FheArtifactCache.md) for details.
 {% endhint %}
 
 ## Your first confidential transfer
@@ -427,8 +427,8 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- relayer, signer, storage, and authentication setup
-- [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
-- [Network Presets](/reference/sdk/network-presets) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
-- [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks
-- [Security Model](/concepts/security-model) -- understand the cryptography and trust assumptions
+- [Configuration](../guides/configuration.md) -- relayer, signer, storage, and authentication setup
+- [Shield Tokens](../guides/shield-tokens.md) -- move tokens into confidential form
+- [Network Presets](../reference/sdk/network-presets.md) -- pre-configured contract addresses for Sepolia, Mainnet, and Hardhat
+- [React Hooks](../reference/react/ZamaProvider.md) -- provider setup and all available hooks
+- [Security Model](../concepts/security-model.md) -- understand the cryptography and trust assumptions

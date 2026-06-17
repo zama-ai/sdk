@@ -17,7 +17,7 @@ By the end of this guide, you will be able to:
 
 ## Core concepts
 
-While building support for [ERC-7984 confidential tokens](https://eips.ethereum.org/EIPS/eip-7984) you will encounter the following terminology. For a deeper architectural overview, see [Architecture](/concepts/architecture).
+While building support for [ERC-7984 confidential tokens](https://eips.ethereum.org/EIPS/eip-7984) you will encounter the following terminology. For a deeper architectural overview, see [Architecture](../concepts/architecture.md).
 
 - **FHEVM** — Zama's library for computations on encrypted values. Encrypted values are represented on-chain as **ciphertext handles** (`bytes32`).
 - **Host chain** — the EVM network your users connect to (e.g. Ethereum mainnet, Sepolia).
@@ -32,15 +32,15 @@ While building support for [ERC-7984 confidential tokens](https://eips.ethereum.
 
 You do **not** need to run FHE infrastructure to integrate. Wallets and exchanges interact with the protocol entirely through the Zama SDK:
 
-1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](/tutorials/quick-start) for stack-by-stack setup.
-2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](/reference/sdk/ZamaSDK).
+1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](./quick-start.md) for stack-by-stack setup.
+2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](../reference/sdk/ZamaSDK.md).
 3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
 
-- **Transfers**: Support the ERC-7984 transfer variants documented by OpenZeppelin, including forms that use an input proof and optional receiver callbacks. The SDK's [`Token.confidentialTransfer`](/reference/sdk/Token) and [`useConfidentialTransfer`](/reference/react/useConfidentialTransfer) handle the encrypted input pipeline for you. See [Transfer privately](/guides/transfer-privately).
-- **Operators**: Operators can move any amount during an active window. UX must capture an expiry, show risk clearly, and make revoke easy. See [Operator approvals](/guides/operator-approvals).
+- **Transfers**: Support the ERC-7984 transfer variants documented by OpenZeppelin, including forms that use an input proof and optional receiver callbacks. The SDK's [`Token.confidentialTransfer`](../reference/sdk/Token.md) and [`useConfidentialTransfer`](../reference/react/useConfidentialTransfer.md) handle the encrypted input pipeline for you. See [Transfer privately](../guides/transfer-privately.md).
+- **Operators**: Operators can move any amount during an active window. UX must capture an expiry, show risk clearly, and make revoke easy. See [Operator approvals](../guides/operator-approvals.md).
 - **Events and metadata**: Names and symbols behave like conventional ERC-20s, but on-chain amounts remain encrypted. Render user-specific amounts only after user-decrypting them.
 
 ## Display confidential balances
@@ -99,7 +99,7 @@ function Balance() {
 {% endtab %}
 {% endtabs %}
 
-A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](/guides/encrypt-decrypt) for the full pre-authorization pattern, and [Check balances](/guides/check-balances) for batch decryption across multiple tokens.
+A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](../guides/encrypt-decrypt.md) for the full pre-authorization pattern, and [Check balances](../guides/check-balances.md) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 
@@ -125,7 +125,7 @@ mutate({ to: "0xRecipient", amount: 500n });
 {% endtab %}
 {% endtabs %}
 
-For operator transfers (`transferFrom`-style with delegated authority), see [`useConfidentialTransferFrom`](/reference/react/useConfidentialTransferFrom) and [Operator approvals](/guides/operator-approvals).
+For operator transfers (`transferFrom`-style with delegated authority), see [`useConfidentialTransferFrom`](../reference/react/useConfidentialTransferFrom.md) and [Operator approvals](../guides/operator-approvals.md).
 
 ## Wrapping and unwrapping
 
@@ -175,7 +175,7 @@ mutate({ amount: 1000n });
 {% endtab %}
 {% endtabs %}
 
-See [Shield tokens](/guides/shield-tokens) for the full options surface, including custom approval strategies and progress callbacks.
+See [Shield tokens](../guides/shield-tokens.md) for the full options surface, including custom approval strategies and progress callbacks.
 
 ### Unshield (unwrap)
 
@@ -211,7 +211,7 @@ mutate({ amount: 500n });
 {% endtab %}
 {% endtabs %}
 
-If the user closes the page between unwrap and finalize, resume with `Token.resumeUnshield` / [`useResumeUnshield`](/reference/react/useResumeUnshield). See [Unshield tokens](/guides/unshield-tokens) for the full flow.
+If the user closes the page between unwrap and finalize, resume with `Token.resumeUnshield` / [`useResumeUnshield`](../reference/react/useResumeUnshield.md). See [Unshield tokens](../guides/unshield-tokens.md) for the full flow.
 
 ### Decimal conversion in your UI
 
@@ -229,7 +229,7 @@ Display balances in the underlying asset's decimals when possible — your users
 
 The Confidential Token Wrappers Registry is an on-chain contract that maps ERC-20s to their ERC-7984 wrappers. It's the canonical directory for wallets and exchanges to discover which underlying tokens have official confidential wrappers.
 
-The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](/reference/sdk/WrappersRegistry) for the full surface.
+The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](../reference/sdk/WrappersRegistry.md) for the full surface.
 
 {% hint style="warning" %}
 **Always check validity.** A non-zero wrapper address may have been revoked. Treat `isValid: false` as no wrapper for that token.
@@ -326,26 +326,26 @@ Look up the underlying ERC-20 for each via `sdk.registry.getUnderlyingToken(addr
 
 ## End-to-end example
 
-For a runnable React dApp using these APIs end-to-end, follow [Build your first confidential dApp](/tutorials/first-confidential-dapp).
+For a runnable React dApp using these APIs end-to-end, follow [Build your first confidential dApp](./first-confidential-dapp.md).
 
 ## UI and UX recommendations
 
 - **Caching**: Decrypted values are cached client-side for the session lifetime. Offer a refresh action that repeats the decrypt flow.
-- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's session model is described in [Session model](/concepts/session-model).
+- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's session model is described in [Session model](../concepts/session-model.md).
 - **Indicators**: Use distinct icons or badges for encrypted amounts. Avoid showing zero when a value is simply undisclosed.
-- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsApproved`](/reference/react/useConfidentialIsApproved) and [`useRevoke`](/reference/react/useRevoke).
+- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsApproved`](../reference/react/useConfidentialIsApproved.md) and [`useRevoke`](../reference/react/useRevoke.md).
 - **Wrapping/unwrapping**: Clearly indicate which token a user is converting between. Show the underlying ERC-20's name and symbol alongside the confidential token.
-- **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](/guides/handle-errors).
+- **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](../guides/handle-errors.md).
 
 ## Testing and environments
 
-- For local development against a Hardhat chain with no relayer, use [`RelayerCleartext`](/reference/sdk/RelayerCleartext). See [Local development](/guides/local-development).
-- For testnet, use the SDK's built-in Sepolia config or any other supported network — see [Network presets](/reference/sdk/network-presets).
+- For local development against a Hardhat chain with no relayer, use [`RelayerCleartext`](../reference/sdk/RelayerCleartext.md). See [Local development](../guides/local-development.md).
+- For testnet, use the SDK's built-in Sepolia config or any other supported network — see [Network presets](../reference/sdk/network-presets.md).
 - Keep chain selection in a single source of truth in your app.
 
 ## Further reading
 
 - [OpenZeppelin Confidential Contracts documentation](https://docs.openzeppelin.com/confidential-contracts) — ERC-7984 transfer variants, receiver callbacks, and operator semantics.
-- [`Token` reference](/reference/sdk/Token) — full method surface for shield, unshield, transfer, approve, and balance operations.
-- [`WrappersRegistry` reference](/reference/sdk/WrappersRegistry) — registry construction, caching, and pagination.
-- [Architecture](/concepts/architecture) — how the SDK, relayer, and gateway fit together.
+- [`Token` reference](../reference/sdk/Token.md) — full method surface for shield, unshield, transfer, approve, and balance operations.
+- [`WrappersRegistry` reference](../reference/sdk/WrappersRegistry.md) — registry construction, caching, and pagination.
+- [Architecture](../concepts/architecture.md) — how the SDK, relayer, and gateway fit together.

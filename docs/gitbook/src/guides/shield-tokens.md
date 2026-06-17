@@ -11,7 +11,7 @@ Shielding converts public ERC-20 tokens into confidential tokens. The SDK handle
 
 ### 1. Create a token instance
 
-Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a token pointing at your encrypted ERC-20 contract.
+Start from a configured SDK instance (see [Configuration](./configuration.md)) and create a token pointing at your encrypted ERC-20 contract.
 
 Some deployments use a **wrapper contract** that is separate from the token contract itself. If your setup has a separate wrapper address, pass it as the second argument to `createToken` or as `wrapperAddress` in hooks. If the token _is_ the wrapper (single-contract deployments), you can omit it.
 
@@ -181,6 +181,6 @@ In React, balance caches are automatically invalidated after a successful shield
 
 ## Next steps
 
-- [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address
-- [Token.shield reference](/reference/sdk/Token#shield) — full API signature and options
-- [useShield reference](/reference/react/useShield) — React hook details
+- [Transfer Privately](./transfer-privately.md) — send confidential tokens to another address
+- [Token.shield reference](../reference/sdk/Token.md#shield) — full API signature and options
+- [useShield reference](../reference/react/useShield.md) — React hook details

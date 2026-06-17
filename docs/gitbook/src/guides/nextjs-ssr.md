@@ -163,6 +163,6 @@ The server renders the page shell, and the `TokenBalance` client component hydra
 
 ## Next steps
 
-- [ZamaProvider](/reference/react/ZamaProvider) -- all provider props and configuration
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- balance hook API reference
-- [Provider Setup](/guides/configuration) -- full examples for wagmi, viem, and ethers setups
+- [ZamaProvider](../reference/react/ZamaProvider.md) -- all provider props and configuration
+- [useConfidentialBalance](../reference/react/useConfidentialBalance.md) -- balance hook API reference
+- [Provider Setup](./configuration.md) -- full examples for wagmi, viem, and ethers setups

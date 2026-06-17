@@ -5,7 +5,7 @@ description: Revoke the entire session for the connected wallet.
 
 # useRevokeSession
 
-Revoke the entire session for the connected wallet. Unlike [`useRevoke`](/reference/react/useRevoke) which targets specific contract addresses, this clears the session-level signature.
+Revoke the entire session for the connected wallet. Unlike [`useRevoke`](./useRevoke.md) which targets specific contract addresses, this clears the session-level signature.
 
 ## Import
 
@@ -56,15 +56,15 @@ revokeSession();
 ## Behavior
 
 - Clears the session-level signature for the connected wallet.
-- Auto-invalidates all [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+- Auto-invalidates all [`useIsAllowed`](./useIsAllowed.md) queries on success.
 - After revoking, any balance decrypt or FHE operation will prompt a new wallet signature.
 
 {% hint style="info" %}
-If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
+If you use [`WagmiSigner`](../sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change — you do not need to call this hook manually for that case.
 {% endhint %}
 
 ## Related
 
-- [`useRevoke`](/reference/react/useRevoke) — revoke specific contract addresses instead of the full session
-- [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with a single wallet signature
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether a session signature is valid
+- [`useRevoke`](./useRevoke.md) — revoke specific contract addresses instead of the full session
+- [`useAllow`](./useAllow.md) — pre-authorize contracts with a single wallet signature
+- [`useIsAllowed`](./useIsAllowed.md) — check whether a session signature is valid

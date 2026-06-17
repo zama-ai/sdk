@@ -99,7 +99,7 @@ await decryptAs({
 
 ## Related
 
-- [`useBatchDecryptBalancesAs`](/reference/react/useBatchDecryptBalancesAs) -- batch variant for multiple tokens
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check delegation status before decrypting
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) -- decrypt your own balance (non-delegated)
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useBatchDecryptBalancesAs`](./useBatchDecryptBalancesAs.md) -- batch variant for multiple tokens
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check delegation status before decrypting
+- [`useConfidentialBalance`](./useConfidentialBalance.md) -- decrypt your own balance (non-delegated)
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference

@@ -93,6 +93,6 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useConfidentialIsApproved`](/reference/react/useConfidentialIsApproved) — check if a spender is currently approved
-- [`useConfidentialTransferFrom`](/reference/react/useConfidentialTransferFrom) — operator transfer using an existing approval
-- [`Token.approve()`](/reference/sdk/Token#approve) — imperative equivalent on the SDK class
+- [`useConfidentialIsApproved`](./useConfidentialIsApproved.md) — check if a spender is currently approved
+- [`useConfidentialTransferFrom`](./useConfidentialTransferFrom.md) — operator transfer using an existing approval
+- [`Token.approve()`](../sdk/Token.md#approve) — imperative equivalent on the SDK class

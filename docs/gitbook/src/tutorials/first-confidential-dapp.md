@@ -82,7 +82,7 @@ export const WRAPPER_ADDRESS = "0xYourWrapperAddress" as const;
 {% endtab %}
 {% endtabs %}
 
-Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](/guides/authentication) for proxy setup details.
+Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](../guides/authentication.md) for proxy setup details.
 
 ## 4. Create the App layout with providers
 
@@ -298,11 +298,11 @@ export function UnshieldForm() {
 {% endtab %}
 {% endtabs %}
 
-See [Hooks > useUnshield](/reference/react/useUnshield) for the full callback reference.
+See [Hooks > useUnshield](../reference/react/useUnshield.md) for the full callback reference.
 
 ## 9. Add error handling
 
-Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](/guides/handle-errors) for the full list of error codes.
+Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](../guides/handle-errors.md) for the full list of error codes.
 
 {% tabs %}
 {% tab title="src/ErrorMessage.tsx" %}
@@ -382,7 +382,7 @@ Open the app in your browser, connect your wallet, and try the full flow: shield
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- customize authentication, storage backends, and network presets
-- [Error Handling](/guides/handle-errors) -- handle every SDK error type
-- [React Hooks](/reference/react/query-keys) -- explore all available hooks
-- [Core SDK](/reference/sdk/ZamaSDK) -- use the imperative API for non-React apps
+- [Configuration](../guides/configuration.md) -- customize authentication, storage backends, and network presets
+- [Error Handling](../guides/handle-errors.md) -- handle every SDK error type
+- [React Hooks](../reference/react/query-keys.md) -- explore all available hooks
+- [Core SDK](../reference/sdk/ZamaSDK.md) -- use the imperative API for non-React apps

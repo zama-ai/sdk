@@ -8,7 +8,7 @@ description: Low-level mutation hook that generates a fresh FHE keypair via the 
 Low-level mutation hook that generates a fresh FHE keypair via the relayer. Returns a public/private key pair for use in decrypt authorization.
 
 {% hint style="warning" %}
-[`useUserDecrypt`](/reference/react/useUserDecrypt), [`useAllow`](/reference/react/useAllow), and [`useConfidentialBalance`](/reference/react/useConfidentialBalance) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
+[`useUserDecrypt`](./useUserDecrypt.md), [`useAllow`](./useAllow.md), and [`useConfidentialBalance`](./useConfidentialBalance.md) handle keypair generation automatically. Call `useGenerateKeypair` only when managing FHE credentials manually.
 {% endhint %}
 
 ## Import
@@ -64,12 +64,12 @@ import { type KeypairType } from "@zama-fhe/sdk";
 - **`publicKey`** — the FHE public key (string-encoded).
 - **`privateKey`** — the FHE private key (string-encoded).
 
-Pass these to [`useUserDecrypt`](/reference/react/useUserDecrypt) when decrypting handles manually.
+Pass these to [`useUserDecrypt`](./useUserDecrypt.md) when decrypting handles manually.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related
 
-- [`useAllow`](/reference/react/useAllow) — high-level hook that generates a keypair and caches the session signature
-- [`useUserDecrypt`](/reference/react/useUserDecrypt) — uses the generated keypair to decrypt handles
-- [`useEncrypt`](/reference/react/useEncrypt) — encrypt values (does not require a keypair)
+- [`useAllow`](./useAllow.md) — high-level hook that generates a keypair and caches the session signature
+- [`useUserDecrypt`](./useUserDecrypt.md) — uses the generated keypair to decrypt handles
+- [`useEncrypt`](./useEncrypt.md) — encrypt values (does not require a keypair)

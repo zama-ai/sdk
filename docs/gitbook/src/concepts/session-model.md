@@ -179,7 +179,7 @@ To solve this, pass `chromeSessionStorage` as the `sessionStorage` option. This 
 - Is shared across popup, background, and content script contexts.
 - Is automatically cleared when the browser closes.
 
-See the [Web Extensions guide](/guides/web-extensions) for the full setup.
+See the [Web Extensions guide](../guides/web-extensions.md) for the full setup.
 
 ## Security properties
 
@@ -191,4 +191,4 @@ See the [Web Extensions guide](/guides/web-extensions) for the full setup.
 | Storage key privacy     | Wallet addresses are SHA-256 hashed before use as storage keys            |
 | Plaintext exposure      | FHE private key exists in plaintext only during active decrypt operations |
 
-For the full threat model and trust assumptions, see the [Security Model](/concepts/security-model).
+For the full threat model and trust assumptions, see the [Security Model](./security-model.md).

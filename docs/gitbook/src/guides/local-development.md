@@ -104,6 +104,6 @@ Usually, you want to use the same `gatewayChainId` and verifying contract addres
 
 ## Next steps
 
-- [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
-- [Configuration](/guides/configuration) — production setup with `RelayerWeb` or `RelayerNode`
-- [Network Presets](/reference/sdk/network-presets) — preset configs for Mainnet, Sepolia, and Hardhat
+- [RelayerCleartext reference](../reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
+- [Configuration](./configuration.md) — production setup with `RelayerWeb` or `RelayerNode`
+- [Network Presets](../reference/sdk/network-presets.md) — preset configs for Mainnet, Sepolia, and Hardhat

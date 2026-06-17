@@ -5,10 +5,10 @@ description: Low-level mutation hook that requests an unwrap for the full confid
 
 # useUnwrapAll
 
-Low-level mutation hook that requests an unwrap for the full confidential balance. You must finalize manually with [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap).
+Low-level mutation hook that requests an unwrap for the full confidential balance. You must finalize manually with [`useFinalizeUnwrap`](./useFinalizeUnwrap.md).
 
 {% hint style="info" %}
-Most apps should use [`useUnshieldAll`](/reference/react/useUnshieldAll) instead, which orchestrates both steps in a single call.
+Most apps should use [`useUnshieldAll`](./useUnshieldAll.md) instead, which orchestrates both steps in a single call.
 {% endhint %}
 
 ## Import
@@ -77,6 +77,6 @@ The mutation resolves with a transaction hash (`Hex`).
 
 ## Related
 
-- [`useFinalizeUnwrap`](/reference/react/useFinalizeUnwrap) -- finalize the unwrap with a decryption proof
-- [`useUnwrap`](/reference/react/useUnwrap) -- unwrap a specific amount
-- [`useUnshieldAll`](/reference/react/useUnshieldAll) -- high-level hook that handles both steps
+- [`useFinalizeUnwrap`](./useFinalizeUnwrap.md) -- finalize the unwrap with a decryption proof
+- [`useUnwrap`](./useUnwrap.md) -- unwrap a specific amount
+- [`useUnshieldAll`](./useUnshieldAll.md) -- high-level hook that handles both steps

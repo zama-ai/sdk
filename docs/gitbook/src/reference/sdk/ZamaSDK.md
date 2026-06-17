@@ -387,7 +387,7 @@ emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptE
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](/reference/react/useUserDecrypt) which wraps this method with TanStack Query semantics.
+This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](../react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
 {% endhint %}
 
 ### revokeSession
@@ -422,7 +422,7 @@ sdk.terminate();
 
 ## Related
 
-- [Token](/reference/sdk/Token) — read/write token operations
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — read-only token operations
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
-- [Configuration guide](/guides/configuration) — relayer, signer, and storage setup
+- [Token](./Token.md) — read/write token operations
+- [ReadonlyToken](./ReadonlyToken.md) — read-only token operations
+- [WrappersRegistry](./WrappersRegistry.md) — on-chain token wrappers registry
+- [Configuration guide](../../guides/configuration.md) — relayer, signer, and storage setup

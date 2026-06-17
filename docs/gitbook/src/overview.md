@@ -45,10 +45,10 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 
 ## Two packages, one import
 
-| Package                                                | Use when...                                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (includes everything from the core SDK)          |
+| Package                                                    | Use when...                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`@zama-fhe/sdk`](./reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
+| [`@zama-fhe/react-sdk`](./reference/react/ZamaProvider.md) | You are building a React app (includes everything from the core SDK)          |
 
 If you are using React, `@zama-fhe/react-sdk` re-exports most of the core SDK (hooks, providers, `RelayerWeb`, storage singletons). You still import signer adapters from their sub-paths (e.g. `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`).
 
@@ -122,7 +122,7 @@ await token.confidentialTransfer("0xRecipient", 500n); // private send
 await token.unshield(500n); // withdraw back to public
 ```
 
-Ready to build? Jump to the [Quick start](/tutorials/quick-start) for a full working example with your stack.
+Ready to build? Jump to the [Quick start](./tutorials/quick-start.md) for a full working example with your stack.
 
 ## Help center
 

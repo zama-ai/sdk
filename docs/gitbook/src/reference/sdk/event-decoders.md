@@ -321,6 +321,6 @@ const feed = sortByBlockNumber(enrichedItems);
 
 ## Related
 
-- [Activity Feeds guide](/guides/activity-feeds) — activity feed usage in context
-- [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
-- [Token](/reference/sdk/Token) — high-level API for token operations
+- [Activity Feeds guide](../../guides/activity-feeds.md) — activity feed usage in context
+- [Delegated Decryption](./delegation.md) — delegation API with on-chain event examples
+- [Token](./Token.md) — high-level API for token operations

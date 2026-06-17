@@ -96,6 +96,6 @@ A memoized `ReadonlyToken` instance. The reference stays the same as long as the
 
 ## Related
 
-- [useToken](/reference/react/useToken) — full read/write `Token` instance
-- [useZamaSDK](/reference/react/useZamaSDK) — access the underlying SDK instance directly
-- [ReadonlyToken](/reference/sdk/ReadonlyToken) — full API reference for the `ReadonlyToken` class
+- [useToken](./useToken.md) — full read/write `Token` instance
+- [useZamaSDK](./useZamaSDK.md) — access the underlying SDK instance directly
+- [ReadonlyToken](../sdk/ReadonlyToken.md) — full API reference for the `ReadonlyToken` class
