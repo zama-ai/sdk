@@ -20,6 +20,12 @@ const steps = [
 for (const step of steps) {
   console.log(`\n▶ abi:check [${step.name}] ${step.command} ${step.args.join(" ")}`);
   const result = spawnSync(step.command, step.args, { stdio: "inherit" });
+  if (result.error) {
+    console.error(
+      `\n✖ abi:check failed at [${step.name}]: could not spawn \`${step.command}\`: ${result.error.message}`,
+    );
+    process.exit(1);
+  }
   if (result.status !== 0) {
     console.error(`\n✖ abi:check failed at [${step.name}]`);
     if (step.name === "verify-clean") {

@@ -6,8 +6,10 @@ on:
     paths:
       - "contracts/src/**"
       - "contracts/foundry.toml"
+      - "contracts/soldeer.lock"
       - "contracts/lib/forge-fhevm/src/**"
       - "contracts/lib/forge-fhevm/foundry.toml"
+      - "contracts/lib/forge-fhevm/soldeer.lock"
       - "packages/sdk/src/abi/**"
       - "scripts/abi/**"
       - "package.json"
@@ -57,7 +59,7 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
 
       - name: Install Soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -83,7 +85,7 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
