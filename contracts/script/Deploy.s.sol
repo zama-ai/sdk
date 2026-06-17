@@ -87,7 +87,7 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // 7. Write deployments.json
+        // 8. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));
