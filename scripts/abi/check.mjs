@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 const generatedFiles = [
   "packages/sdk/src/abi/encrypted.abi.ts",
   "packages/sdk/src/abi/wrapper.abi.ts",
+  "packages/sdk/src/abi/acl.abi.ts",
 ];
 
 const steps = [

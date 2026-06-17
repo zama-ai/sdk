@@ -1,15 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import {
-  artifactPath,
-  artifactRelPath,
-  buildAbiSource,
-  header,
-  loadAbi,
-  repoRoot,
-  targets,
-} from "../build.mjs";
+import { buildAbiSource, headerFor, loadAbi, repoRoot, targets } from "../build.mjs";
 
 // Generated ABI bodies are valid JS expressions but not strict JSON (keys are
 // unquoted). Tests need to read them back to compare against the artifact; the
@@ -26,31 +18,37 @@ function parseAbiSource(source) {
 }
 
 describe("abi:build helpers", () => {
-  test("targets point at SDK ABI files that exist", () => {
-    expect(targets).toHaveLength(2);
+  test("targets point at SDK ABI files and Forge artifacts that exist", () => {
+    expect(targets.length).toBeGreaterThan(0);
     for (const target of targets) {
       expect(existsSync(join(repoRoot, target.path))).toBe(true);
+      expect(existsSync(join(repoRoot, target.artifactRelPath))).toBe(true);
       expect(target.exportName).toMatch(/^[a-zA-Z][a-zA-Z0-9]*$/u);
     }
   });
 
-  test("artifact path resolves to a present, parseable Foundry artifact", () => {
-    expect(existsSync(artifactPath)).toBe(true);
-    const abi = loadAbi();
-    expect(Array.isArray(abi)).toBe(true);
-    expect(abi.length).toBeGreaterThan(0);
+  test("loadAbi returns a non-empty array for every target artifact", () => {
+    for (const target of targets) {
+      const abi = loadAbi(target.artifactRelPath);
+      expect(Array.isArray(abi)).toBe(true);
+      expect(abi.length).toBeGreaterThan(0);
+    }
   });
 
   test("buildAbiSource wraps the ABI as `export const X = [...] as const;`", () => {
-    const out = buildAbiSource("fooAbi", []);
-    expect(out.startsWith(header)).toBe(true);
+    const artifactRelPath = "contracts/out/Foo.sol/Foo.json";
+    const out = buildAbiSource("fooAbi", [], artifactRelPath);
+    expect(out.startsWith(headerFor(artifactRelPath))).toBe(true);
     expect(out).toContain("export const fooAbi = [] as const;");
     expect(out.endsWith("\n")).toBe(true);
   });
 
   test("buildAbiSource is deterministic for the same input", () => {
-    const abi = loadAbi();
-    expect(buildAbiSource("encryptedAbi", abi)).toBe(buildAbiSource("encryptedAbi", abi));
+    const target = targets[0];
+    const abi = loadAbi(target.artifactRelPath);
+    expect(buildAbiSource(target.exportName, abi, target.artifactRelPath)).toBe(
+      buildAbiSource(target.exportName, abi, target.artifactRelPath),
+    );
   });
 
   test("parseAbiSource round-trips buildAbiSource output", () => {
@@ -66,26 +64,20 @@ describe("abi:build helpers", () => {
         stateMutability: "nonpayable",
       },
     ];
-    const parsed = parseAbiSource(buildAbiSource("wrapperAbi", abi));
+    const parsed = parseAbiSource(buildAbiSource("wrapperAbi", abi, "contracts/out/X.sol/X.json"));
     expect(parsed.exportName).toBe("wrapperAbi");
     expect(parsed.abi).toEqual(abi);
   });
 });
 
-describe("committed ABI files match the compiled artifact", () => {
-  const abi = loadAbi();
-
-  test.each(targets)("$path matches $exportName from ConfidentialWrapperV3.json", (target) => {
+describe("committed ABI files match their compiled artifact", () => {
+  test.each(targets)("$path matches $exportName from $artifactRelPath", (target) => {
     const source = readFileSync(join(repoRoot, target.path), "utf8");
 
-    expect(source.startsWith(header)).toBe(true);
+    expect(source.startsWith(headerFor(target.artifactRelPath))).toBe(true);
 
     const parsed = parseAbiSource(source);
     expect(parsed.exportName).toBe(target.exportName);
-    expect(parsed.abi).toEqual(abi);
-  });
-
-  test("header references the artifact path that the generator reads", () => {
-    expect(header).toContain(artifactRelPath);
+    expect(parsed.abi).toEqual(loadAbi(target.artifactRelPath));
   });
 });
