@@ -4595,7 +4595,7 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 
 // @public
 export interface ConfidentialTransferEvent {
-    readonly encryptedAmountHandle: EncryptedValue;
+    readonly encryptedAmount: EncryptedValue;
     // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;

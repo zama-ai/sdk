@@ -12,7 +12,7 @@ import { useAccount } from "wagmi";
 
 type FinalizeUnwrapInput =
   | { label: "Unwrap request ID"; params: { unwrapRequestId: Hex } }
-  | { label: "Legacy burn handle"; params: { burnAmountHandle: Hex } };
+  | { label: "Legacy burn handle"; params: { burnAmount: Hex } };
 
 export function UnwrapManualForm({
   tokenAddress,
@@ -46,7 +46,7 @@ export function UnwrapManualForm({
                   }
                 : {
                     label: "Legacy burn handle",
-                    params: { burnAmountHandle: event.encryptedAmount },
+                    params: { burnAmount: event.encryptedAmount },
                   },
             );
           }
@@ -94,7 +94,7 @@ export function UnwrapManualForm({
             {finalizeInput.label}:{" "}
             {"unwrapRequestId" in finalizeInput.params
               ? finalizeInput.params.unwrapRequestId
-              : finalizeInput.params.burnAmountHandle}
+              : finalizeInput.params.burnAmount}
           </p>
         )}
 

@@ -51,7 +51,7 @@ export interface ConfidentialTransferEvent {
   /** Receiver address. */
   readonly to: Address;
   /** FHE encrypted value for the transferred amount. */
-  readonly encryptedAmountHandle: EncryptedValue;
+  readonly encryptedAmount: EncryptedValue;
 }
 
 // NOTE: New wrapper contracts no longer emit this event — shields now emit
@@ -178,7 +178,7 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
     eventName: "ConfidentialTransfer",
     from: topicToAddress(log.topics[1]!),
     to: topicToAddress(log.topics[2]!),
-    encryptedAmountHandle: topicToBytes32(log.topics[3]!),
+    encryptedAmount: topicToBytes32(log.topics[3]!),
   };
 }
 
