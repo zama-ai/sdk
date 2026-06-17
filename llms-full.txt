@@ -1939,7 +1939,7 @@ The `auth` field accepts three formats. **Which one to use depends on where your
 | Method         | How it's sent                   | Use it when                                                                                                              |
 | -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `ApiKeyHeader` | `x-api-key: key` header         | **Zama-hosted relayer** — required; it only accepts the key in the `x-api-key` header. Also the default for most setups. |
-| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.   |
+| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.  |
 | `BearerToken`  | `Authorization: Bearer <token>` | **Self-hosted relayer** — only if your own auth layer expects a bearer token.                                            |
 
 
