@@ -64,7 +64,7 @@ export const hoodi = {
  * InGen does not have full FHE infrastructure — use with `cleartext()` transport.
  * Contract addresses match the cleartext deployment.
  */
-export const ingen = {
+export const ingenTestnet = {
   id: 364301,
   gatewayChainId: 10901,
   relayerUrl: "",
@@ -127,7 +127,7 @@ export const chains: Record<number, FheChain> = {
   [mainnet.id]: mainnet,
   [sepolia.id]: sepolia,
   [hoodi.id]: hoodi,
-  [ingen.id]: ingen,
+  [ingenTestnet.id]: ingenTestnet,
   [bscTestnet.id]: bscTestnet,
   [hardhat.id]: hardhat,
 } as const;

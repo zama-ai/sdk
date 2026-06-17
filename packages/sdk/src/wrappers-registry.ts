@@ -15,7 +15,7 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import { mainnet, sepolia, hoodi, ingen, bscTestnet } from "./chains";
+import { mainnet, sepolia, hoodi, ingenTestnet, bscTestnet } from "./chains";
 import { checksummedAddress, nonNegativeSeconds } from "./schemas/primitives";
 import type { GenericProvider } from "./types/provider";
 import { parseConfiguration } from "./validation";
@@ -28,7 +28,7 @@ export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,
   [sepolia.id]: sepolia.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
-  [ingen.id]: ingen.registryAddress,
+  [ingenTestnet.id]: ingenTestnet.registryAddress,
   [bscTestnet.id]: bscTestnet.registryAddress,
 };
 

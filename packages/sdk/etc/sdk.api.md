@@ -9814,7 +9814,7 @@ export function inferredTotalSupplyContract(wrapperAddress: Address): {
 };
 
 // @public
-export const ingen: {
+export const ingenTestnet: {
     readonly id: 364301;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";

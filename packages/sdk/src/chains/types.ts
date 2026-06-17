@@ -5,7 +5,7 @@ import type { Address, EIP1193Provider, Hex } from "viem";
  * Complete chain configuration — the single source of truth for
  * per-chain FHE contract addresses and network settings.
  *
- * All built-in presets (`mainnet`, `sepolia`, `hoodi`, `ingen`,
+ * All built-in presets (`mainnet`, `sepolia`, `hoodi`, `ingenTestnet`,
  * `bscTestnet`, `hardhat`) are `FheChain` objects exported from
  * `@zama-fhe/sdk/chains`.
  */
