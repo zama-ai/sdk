@@ -108,7 +108,7 @@ This is a distinct concern from transfer approval: approving an operator for tra
 
 ## Next steps
 
-- [Token.setOperator](/reference/sdk/Token) -- full method signature and options
-- [useConfidentialSetOperator](/reference/react/useConfidentialSetOperator) -- React hook reference
-- [useConfidentialIsOperator](/reference/react/useConfidentialIsOperator) -- query hook reference
-- [useConfidentialTransferFrom](/reference/react/useConfidentialTransferFrom) -- operator transfer hook reference
+- [Token.setOperator](../reference/sdk/Token.md) -- full method signature and options
+- [useConfidentialSetOperator](../reference/react/useConfidentialSetOperator.md) -- React hook reference
+- [useConfidentialIsOperator](../reference/react/useConfidentialIsOperator.md) -- query hook reference
+- [useConfidentialTransferFrom](../reference/react/useConfidentialTransferFrom.md) -- operator transfer hook reference

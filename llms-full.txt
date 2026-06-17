@@ -68,8 +68,8 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 
 ## Two packages, one import
 
-| Package                                                | Use when...                                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Package                                                    | Use when...                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | [`@zama-fhe/sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
 | [`@zama-fhe/react-sdk`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/ZamaProvider.md) | You are building a React app (hooks and React-specific providers)             |
 
@@ -1278,9 +1278,9 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 ## UI and UX recommendations
 
 - **Caching**: Decrypted values are cached client-side for the session lifetime. Offer a refresh action that repeats the decrypt flow.
-- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's session model is described in [Session model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/session-model.md).
+- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's permit model is described in [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md).
 - **Indicators**: Use distinct icons or badges for encrypted amounts. Avoid showing zero when a value is simply undisclosed.
-- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsApproved`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsApproved.md) and [`useRevoke`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevoke.md).
+- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md) and [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md).
 - **Wrapping/unwrapping**: Clearly indicate which token a user is converting between. Show the underlying ERC-20's name and symbol alongside the confidential token.
 - **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
@@ -1457,12 +1457,16 @@ Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain incl
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
 
-| Chain     | Chain ID   | Description        |
-| --------- | ---------- | ------------------ |
-| `mainnet` | `1`        | Ethereum Mainnet   |
-| `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `560048`   | Hoodi Testnet      |
-| `hardhat` | `31337`    | Local Hardhat node |
+| Chain          | Chain ID   | Description             |
+| -------------- | ---------- | ----------------------- |
+| `mainnet`      | `1`        | Ethereum Mainnet        |
+| `sepolia`      | `11155111` | Sepolia Testnet         |
+| `hoodi`        | `560048`   | Hoodi Testnet           |
+| `ingenTestnet` | `364301`   | InGen Testnet           |
+| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
+| `hardhat`      | `31337`    | Local Hardhat node      |
+
+`anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
 ### 2. Pick a relayer
 
@@ -7093,7 +7097,7 @@ matchZamaError(error, {
 
 
 > [!INFO]
-> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation error reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md#on-chain-revert-errors) for the full mapping.
+> The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation method reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md#methods) for the full mapping.
 
 
 ## Common problems
@@ -8020,7 +8024,7 @@ See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/git
 
 - [Delegated decryption guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md) — step-by-step walkthrough
 - [Token.decryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#decryptbalanceas) — decrypt a delegator's balance
-- [Token.batchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#batchdecryptbalancesas-static) — batch delegated decryption
+- [Token.batchDecryptBalancesAs](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/Token.md#token-batchdecryptbalancesas-static) — batch delegated decryption
 - [Contract builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md#delegation) — low-level ACL delegation builders
 - [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useDelegateDecryption.md) — React hook to grant delegation
 - [useRevokeDelegation](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokeDelegation.md) — React hook to revoke delegation
@@ -10877,7 +10881,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 ## Related
 
-- [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
+- [Avoid blind-sign wallet popups](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/encrypt-decrypt.md#gating-useconfidentialbalance) -- gating balance queries to avoid blind-sign popups
 - [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md) -- pre-authorize contracts with one wallet signature
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration

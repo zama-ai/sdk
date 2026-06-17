@@ -116,5 +116,5 @@ function App() {
 
 ## Related
 
-- [`useConfidentialSetOperator`](/reference/react/useConfidentialSetOperator) — approve an operator
-- [`Token.isOperator()`](/reference/sdk/Token#isoperator) — imperative equivalent on the SDK class
+- [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) — approve an operator
+- [`Token.isOperator()`](../sdk/Token.md#isoperator) — imperative equivalent on the SDK class
