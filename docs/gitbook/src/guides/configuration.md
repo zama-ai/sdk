@@ -17,12 +17,16 @@ Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain incl
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
 
-| Chain     | Chain ID   | Description        |
-| --------- | ---------- | ------------------ |
-| `mainnet` | `1`        | Ethereum Mainnet   |
-| `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `560048`   | Hoodi Testnet      |
-| `hardhat` | `31337`    | Local Hardhat node |
+| Chain          | Chain ID   | Description             |
+| -------------- | ---------- | ----------------------- |
+| `mainnet`      | `1`        | Ethereum Mainnet        |
+| `sepolia`      | `11155111` | Sepolia Testnet         |
+| `hoodi`        | `560048`   | Hoodi Testnet           |
+| `ingenTestnet` | `364301`   | InGen Testnet           |
+| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
+| `hardhat`      | `31337`    | Local Hardhat node      |
+
+`anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
 ### 2. Pick a relayer
 
