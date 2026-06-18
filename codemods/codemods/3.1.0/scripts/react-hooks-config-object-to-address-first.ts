@@ -34,7 +34,8 @@ const codemod: Codemod<Tsx> = async (root) => {
     if (!args) {
       continue;
     }
-    const firstArg = args.children().find((c) => c.isNamed());
+    // Skip a leading comment node (tree-sitter treats comments as named children).
+    const firstArg = args.children().find((c) => c.isNamed() && c.kind() !== "comment");
     if (!firstArg || firstArg.kind() !== "object") {
       continue;
     }

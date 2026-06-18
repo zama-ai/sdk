@@ -1,12 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
 version: "1"
-params:
-  schema:
-    ai:
-      name: "AI tail"
-      description: "Set to 'true' to run the optional AI step that applies the non-mechanical 3.1.0 changes. Needs an LLM configured via env (LLM_API_KEY / LLM_PROVIDER / LLM_MODEL). Off by default so the upgrade stays deterministic."
-      type: string
-      default: "false"
+
 nodes:
   - id: upgrade
     name: "Upgrade @zama-fhe/sdk to 3.1.0 (mechanical subset)"
@@ -26,16 +20,18 @@ nodes:
           config_file: "rules/rename-permit-hooks.yml"
           include: ["**/*.{ts,tsx}"]
       - name: "createZamaConfig -> createConfig"
-        ast-grep:
-          config_file: "rules/core-rename-createzamaconfig-to-createconfig.yml"
+        js-ast-grep:
+          js_file: "scripts/core-rename-createzamaconfig-to-createconfig.ts"
+          language: "tsx"
           include: ["**/*.{ts,tsx}"]
       - name: "Handle type -> EncryptedValue"
         ast-grep:
           config_file: "rules/core-handle-type-replaced-by-encrypted-value.yml"
           include: ["**/*.{ts,tsx}"]
       - name: "query-hook config field tokenAddress -> address"
-        ast-grep:
-          config_file: "rules/react-config-token-field-renamed-to-address.yml"
+        js-ast-grep:
+          js_file: "scripts/react-config-token-field-renamed-to-address.ts"
+          language: "tsx"
           include: ["**/*.{ts,tsx}"]
       - name: "useDelegationStatus tokenAddress -> contractAddress"
         ast-grep:
@@ -53,10 +49,10 @@ nodes:
           language: "tsx"
           include: ["**/*.{ts,tsx}"]
 
-  # --- optional AI tail: the non-mechanical changes the codemods can't express ---
+  # --- optional AI assisted upgrade: the non-mechanical changes the codemods can't express ---
   # Opt-in (`--param ai=true`) and runs only after the deterministic steps above,
   # so the default upgrade stays deterministic. Needs an LLM configured via env.
-  - id: ai-tail
+  - id: ai-upgrade
     name: "AI-assisted: apply the non-mechanical 3.1.0 changes"
     type: automatic
     depends_on: [upgrade]
