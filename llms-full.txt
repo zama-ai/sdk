@@ -5196,9 +5196,9 @@ const { txHash } = await wrappedToken.unwrapAll();
 
 ### finalizeUnwrap
 
-`(unwrapRequestIdOrAmount: EncryptedValue) => Promise<TransactionResult>`
+`(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Prefer passing the `unwrapRequestId` from the `UnwrapRequested` event. The older burn-amount-handle form is accepted only for compatibility with previously persisted unshield state.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
 
 ```ts
 const event = findUnwrapRequested(receipt.logs);
@@ -10490,26 +10490,14 @@ const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
 ## Mutation variables
 
-The finalize function accepts a discriminated union — pass one of these:
-
 ### unwrapRequestId
 
 `EncryptedValue`
 
-The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
+The unwrap request ID emitted in the `UnwrapRequested` event.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
-```
-
-### burnAmount
-
-`EncryptedValue`
-
-Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
-
-```tsx
-await finalize({ burnAmount: encryptedAmount });
 ```
 
 ## Return Type
