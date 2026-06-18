@@ -17,7 +17,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
   // ACL delegation events
@@ -67,7 +66,7 @@ for (const event of events) {
 | --------- | ------- | ----------------------------------------------------------- |
 | `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, or `"UnwrapFinalized"`.
 
 ## TOKEN_TOPICS
 
@@ -94,7 +93,6 @@ Each decoder takes a single log entry and returns a typed event object, or `null
 | `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
 | `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
 | `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";

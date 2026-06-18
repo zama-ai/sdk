@@ -121,7 +121,6 @@ export type {
   WrappedEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
-  UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
 export type {

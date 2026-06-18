@@ -5387,9 +5387,6 @@ export function decodeRevokedDelegationForUserDecryption(log: RawLog): RevokedDe
 export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
 
 // @public
-export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null;
-
-// @public
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 
 // @public
@@ -5921,7 +5918,7 @@ export { FheTypeName }
 export { FhevmInstanceConfig }
 
 // @public
-export function finalizeUnwrapContract(wrapper: Address, unwrapRequestIdOrAmount: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
+export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
         readonly type: "function";
@@ -11443,7 +11440,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -14373,7 +14370,7 @@ export class Token {
 }
 
 // @public
-export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
+export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
 // @public (undocumented)
 export interface TokenWrapperPair {
@@ -14407,8 +14404,7 @@ export const Topics: {
     readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
     readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
     readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-    readonly UnwrapFinalized: `0x${string}`; /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-    readonly UnwrappedStarted: `0x${string}`;
+    readonly UnwrapFinalized: `0x${string}`;
 };
 
 // @public (undocumented)
@@ -18208,19 +18204,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: EncryptedValue;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
-}
-
-// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     // (undocumented)
@@ -19427,7 +19410,7 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;

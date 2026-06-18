@@ -6,7 +6,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
@@ -33,10 +32,6 @@ describe("Topic constants match keccak256", () => {
     ["Wrapped(address,uint256)", Topics.Wrapped],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
-    [
-      "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-      Topics.UnwrappedStarted,
-    ],
   ];
 
   for (const [sig, expected] of cases) {
@@ -168,48 +163,6 @@ describe("decodeUnwrapFinalized", () => {
   test("returns null for wrong topic", () => {
     expect(
       decodeUnwrapFinalized({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
-    ).toBeNull();
-  });
-});
-
-describe("decodeUnwrappedStarted", () => {
-  const requestId = 10n;
-  const txId = 20n;
-  const toAddr = addr("cafe");
-  const refund = addr("beef");
-  const requestedAmount = bytes32("11".repeat(32));
-  const burnAmount = bytes32("22".repeat(32));
-
-  const log: RawLog = {
-    topics: [
-      Topics.UnwrappedStarted,
-      topic(requestId.toString(16)),
-      topic(txId.toString(16)),
-      topic("cafe"),
-    ],
-    data: `0x${word("1")}${word("beef")}${word("11".repeat(32))}${word("22".repeat(32))}`,
-  };
-
-  test("decodes valid log", () => {
-    const event = decodeUnwrappedStarted(log);
-    expect(event).toEqual({
-      eventName: "UnwrappedStarted",
-      requestId,
-      txId,
-      to: toAddr,
-      returnVal: true,
-      refund,
-      requestedAmount,
-      burnAmount,
-    });
-  });
-
-  test("returns null for wrong topic", () => {
-    expect(
-      decodeUnwrappedStarted({
         ...log,
         topics: [Topics.Wrapped, ...log.topics.slice(1)],
       }),
