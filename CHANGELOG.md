@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.13...v3.1.0-alpha.14) (2026-06-18)
+
+### Bug Fixes
+
+- **sdk:** use x-api-key for the Zama-hosted relayer; keep & document all three auth methods [SDK-210] ([#412](https://github.com/zama-ai/sdk/issues/412)) ([825a705]())
+
 ## [3.1.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.12...v3.1.0-alpha.13) (2026-06-18)
 
 ### Code Refactoring
