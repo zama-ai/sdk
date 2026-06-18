@@ -92,5 +92,5 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 - [`useHasPermit`](./useHasPermit.md) -- check whether stored permits cover contracts
 - [`useRevokePermits`](./useRevokePermits.md) -- revoke permits for specific contracts
-- [`useClearCredentials`](./useClearCredentials.md) -- wipe the keypair and all permits
+- [`useClearCredentials`](./useClearCredentials.md) -- wipe the transport key pair and all permits
 - [Permit Model](../../concepts/permit-model.md) -- permit lifecycle and TTL configuration

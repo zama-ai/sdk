@@ -243,8 +243,8 @@ describe("RelayerCleartext", () => {
   test("generateKeypair returns distinct 32-byte hex strings", async () => {
     const { fhevm } = createInstance();
 
-    const first = await fhevm.generateKeypair();
-    const second = await fhevm.generateKeypair();
+    const first = await fhevm.generateTransportKeyPair();
+    const second = await fhevm.generateTransportKeyPair();
 
     expect(first.publicKey).toMatch(/^0x[0-9a-fA-F]{64}$/);
     expect(first.privateKey).toMatch(/^0x[0-9a-fA-F]{64}$/);
@@ -660,7 +660,7 @@ describe("RelayerCleartext", () => {
   test("getPublicKey and getPublicParams return defined mock values", async () => {
     const { fhevm } = createInstance();
 
-    const publicKey = await fhevm.getPublicKey();
+    const publicKey = await fhevm.fetchFheEncryptionKeyBytes();
     expect(publicKey).toEqual({
       publicKeyId: "mock-public-key-id",
       publicKey: new Uint8Array([32]),

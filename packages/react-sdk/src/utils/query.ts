@@ -16,8 +16,8 @@ import { hashFn } from "@zama-fhe/sdk/query";
  * Thin wrapper around TanStack's useQuery that injects our custom queryKeyHashFn.
  * Mirrors the wagmi pattern — the type safety boundary is at the factory and hook levels.
  *
- * Callers typically specify only `<TData>` (e.g. `useQuery<PublicKeyData>(...)`) while
- * factory options carry specific tuple keys (e.g. `readonly ["zama.publicKey"]`).
+ * Callers typically specify only `<TData>` (e.g. `useQuery<FheEncryptionKey>(...)`) while
+ * factory options carry specific tuple keys (e.g. `readonly ["zama.fheEncryptionKey"]`).
  * We erase the QueryKey param via `AnyKeyQueryOptions` so callers don't need to
  * spell out the key type — any QueryKey subtype is accepted.
  */

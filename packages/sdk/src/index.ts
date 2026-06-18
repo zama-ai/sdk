@@ -33,12 +33,11 @@ export type {
   ClearValue,
   EIP712TypedData,
   NetworkType,
-  PublicKeyData,
+  FheEncryptionKey,
   PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
-  KeypairType,
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
@@ -101,7 +100,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
+export type { TransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
@@ -166,8 +165,8 @@ export {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
-  KeypairExpiredError,
-  InvalidKeypairError,
+  TransportKeyPairExpiredError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,

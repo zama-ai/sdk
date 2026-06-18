@@ -5,7 +5,7 @@ description: Revoke FHE permits for specific contract addresses, or all permits 
 
 # useRevokePermits
 
-Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The keypair survives — use [`useClearCredentials`](./useClearCredentials.md) to also wipe the keypair.
+Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The transport key pair survives — use [`useClearCredentials`](./useClearCredentials.md) to also wipe the transport key pair.
 
 ## Import
 
@@ -79,10 +79,10 @@ revokePermits(); // all permits, all chains
 
 - Removes signed permits from the permission store.
 - Auto-invalidates all [`useHasPermit`](./useHasPermit.md) queries on success.
-- The FHE keypair is not affected — only permits are removed.
+- The transport key pair is not affected — only permits are removed.
 
 ## Related
 
-- [`useClearCredentials`](./useClearCredentials.md) — wipe the keypair and all permits
+- [`useClearCredentials`](./useClearCredentials.md) — wipe the transport key pair and all permits
 - [`useGrantPermit`](./useGrantPermit.md) — sign permits for contracts
 - [`useHasPermit`](./useHasPermit.md) — check whether stored permits cover contracts

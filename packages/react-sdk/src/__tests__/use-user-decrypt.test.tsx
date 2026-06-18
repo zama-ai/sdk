@@ -60,7 +60,7 @@ describe("useDecryptValues", () => {
     tokenAddress,
     renderWithProviders,
   }) => {
-    vi.mocked(relayer.generateKeypair).mockRejectedValue(new Error("keygen failed"));
+    vi.mocked(relayer.generateTransportKeyPair).mockRejectedValue(new Error("keygen failed"));
 
     const { result } = renderWithProviders(() =>
       useDecryptValues([{ encryptedValue: "0xh", contractAddress: tokenAddress }], {

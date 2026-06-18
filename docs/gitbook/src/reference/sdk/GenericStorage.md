@@ -1,11 +1,11 @@
 ---
 title: GenericStorage
-description: Interface for async key-value storage used to persist FHE keypairs and signed permits.
+description: Interface for async key-value storage used to persist transport key pairs and signed permits.
 ---
 
 # GenericStorage
 
-Interface for async key-value storage used to persist FHE keypairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
+Interface for async key-value storage used to persist transport key pairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
 
 ## Import
 
@@ -109,7 +109,7 @@ const sdk = new ZamaSDK(config); // config from createConfig()
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates FHE keypairs across concurrent requests on a server.
+Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates transport key pairs across concurrent requests on a server.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";

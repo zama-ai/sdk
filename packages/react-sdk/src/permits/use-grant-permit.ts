@@ -14,7 +14,7 @@ import { useZamaSDK } from "../provider";
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link KeypairExpiredError} — the re-encryption keypair has expired
+ * - {@link TransportKeyPairExpiredError} — the transport key pair has expired
  *
  * @example
  * ```tsx

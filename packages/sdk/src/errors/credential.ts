@@ -1,18 +1,18 @@
 import { ZamaError, ZamaErrorCode } from "./base";
 
-/** FHE keypair has expired and needs regeneration. */
-export class KeypairExpiredError extends ZamaError {
+/** Transport key pair has expired and needs regeneration. */
+export class TransportKeyPairExpiredError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.KeypairExpired, message, options);
-    this.name = "KeypairExpiredError";
+    super(ZamaErrorCode.TransportKeyPairExpired, message, options);
+    this.name = "TransportKeyPairExpiredError";
   }
 }
 
-/** Relayer rejected FHE keypair (stale, expired, or malformed). */
-export class InvalidKeypairError extends ZamaError {
+/** Relayer rejected the transport key pair (stale, expired, or malformed). */
+export class InvalidTransportKeyPairError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.InvalidKeypair, message, options);
-    this.name = "InvalidKeypairError";
+    super(ZamaErrorCode.InvalidTransportKeyPair, message, options);
+    this.name = "InvalidTransportKeyPairError";
   }
 }
 

@@ -18,8 +18,8 @@ import {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
-  InvalidKeypairError,
-  KeypairExpiredError,
+  InvalidTransportKeyPairError,
+  TransportKeyPairExpiredError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
@@ -77,8 +77,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                        |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                          |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield) |
-| `InvalidKeypairError`                   | `INVALID_KEYPAIR`                     | Relayer rejected FHE keypair (stale or malformed)                              |
-| `KeypairExpiredError`                   | `KEYPAIR_EXPIRED`                     | FHE keypair expired — user must re-sign                                        |
+| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                       |
+| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                 |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                          |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                    |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                   |
@@ -134,7 +134,7 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **Code:** `SIGNING_REJECTED`
 
-Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (keypair generation or session signing).
+Thrown when the user clicks "Reject" in their wallet popup during an EIP-712 signature request (transport key pair generation or session signing).
 
 ```ts
 try {
@@ -180,7 +180,7 @@ matchZamaError(error, {
 
 **Code:** `DECRYPTION_FAILED`
 
-FHE decryption failed. Can occur after an interrupted unshield or when the keypair state is corrupted.
+FHE decryption failed. Can occur after an interrupted unshield or when the transport key pair state is corrupted.
 
 ```ts
 matchZamaError(error, {
@@ -188,7 +188,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh keypair.
+**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
 
 ### TransactionRevertedError
 
@@ -204,36 +204,36 @@ matchZamaError(error, {
 
 **How to handle:** Inspect the revert reason. Common causes: insufficient balance, expired operator approval, or attempting to finalize an already-finalized unwrap.
 
-### InvalidKeypairError
+### InvalidTransportKeyPairError
 
 **Code:** `INVALID_KEYPAIR`
 
-The relayer rejected the FHE keypair. This happens when the keypair is malformed or was generated for a different chain.
+The relayer rejected the transport key pair. This happens when the key pair is malformed or was generated for a different chain.
 
 ```ts
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
     sdk.permits.clear();
-    showPrompt("Keypair rejected — sign again to continue");
+    showPrompt("Transport key pair rejected — sign again to continue");
   },
 });
 ```
 
-**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh keypair on the next operation.
+**How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh transport key pair on the next operation.
 
-### KeypairExpiredError
+### TransportKeyPairExpiredError
 
 **Code:** `KEYPAIR_EXPIRED`
 
-The FHE keypair exceeded its TTL (default: 24 hours). The user needs to sign again to generate a new one.
+The transport key pair exceeded its TTL (default: 24 hours). The user needs to sign again to generate a new one.
 
 ```ts
 matchZamaError(error, {
-  KEYPAIR_EXPIRED: () => showPrompt("Keypair expired — sign to refresh"),
+  KEYPAIR_EXPIRED: () => showPrompt("Transport key pair expired — sign to refresh"),
 });
 ```
 
-**How to handle:** Prompt the user to re-sign. Adjust `keypairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
+**How to handle:** Prompt the user to re-sign. Adjust `transportKeyPairTTL` in the SDK constructor if the default TTL of 30 days is not appropriate.
 
 ### NoCiphertextError
 

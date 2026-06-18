@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { DecryptionFailedError } from "../errors";
 import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/relayer-sdk.types";
-import type { CredentialBundle, Permission } from "./types";
+import type { StoredTransportKeyPairWithPermits, Permission } from "./types";
 import { checksum } from "../schemas/primitives";
 
 export type UserDecryptPermitParams = Pick<
@@ -26,7 +26,7 @@ export type DelegatedUserDecryptPermitParams = Pick<
 >;
 
 export function resolveUserDecryptPermit(
-  credentials: CredentialBundle,
+  credentials: StoredTransportKeyPairWithPermits,
   contractAddress: Address,
 ): UserDecryptPermitParams {
   const permission = findPermissionFor(credentials, contractAddress);
@@ -37,7 +37,7 @@ export function resolveUserDecryptPermit(
 }
 
 export function resolveDelegatedDecryptPermit(
-  credentials: CredentialBundle,
+  credentials: StoredTransportKeyPairWithPermits,
   contractAddress: Address,
 ): DelegatedUserDecryptPermitParams {
   const permission = findPermissionFor(credentials, contractAddress);
@@ -52,7 +52,10 @@ export function resolveDelegatedDecryptPermit(
   };
 }
 
-function commonPermitParams(credentials: CredentialBundle, permission: Permission) {
+function commonPermitParams(
+  credentials: StoredTransportKeyPairWithPermits,
+  permission: Permission,
+) {
   return {
     signedContractAddresses: permission.signedContractAddresses,
     privateKey: credentials.keypair.privateKey,
@@ -64,7 +67,7 @@ function commonPermitParams(credentials: CredentialBundle, permission: Permissio
 }
 
 function findPermissionFor(
-  credentials: CredentialBundle,
+  credentials: StoredTransportKeyPairWithPermits,
   contractAddress: Address,
 ): Permission | undefined {
   const target = checksum(contractAddress);

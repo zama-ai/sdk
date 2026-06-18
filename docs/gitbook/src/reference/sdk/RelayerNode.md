@@ -49,7 +49,7 @@ Optional logger for observing worker lifecycle and request timing.
 
 `GenericStorage | undefined`
 
-Persistent storage for caching FHE public key and params.
+Persistent storage for caching the FHE encryption key and params.
 
 ### fheArtifactCacheTTL
 

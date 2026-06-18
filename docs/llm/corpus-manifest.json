@@ -440,7 +440,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/GenericStorage",
-      "description": "Interface for async key-value storage used to persist FHE keypairs and signed permits.",
+      "description": "Interface for async key-value storage used to persist transport key pairs and signed permits.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -476,7 +476,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/FheArtifactCache",
-      "description": "Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.",
+      "description": "Persistent cache for the FHE encryption key and public parameters, avoiding re-downloads across sessions.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -716,7 +716,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useClearCredentials",
-      "description": "Wipe the FHE keypair and all permits for the connected wallet.",
+      "description": "Wipe the transport key pair and all permits for the connected wallet.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1244,7 +1244,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle'; import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle'; import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },
@@ -1256,7 +1256,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk-ethers.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193EventMap } from 'viem'; import { EIP1193Events } from 'viem'; import { EIP1193Provider } from 'viem'; import { ethers } from 'ethers'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { Provider } from 'ethers'; import { ProviderConnectInfo } from 'viem'; import { ProviderMessage } from 'viem'; import { ProviderRpcError } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193EventMap } from 'viem'; import { EIP1193Events } from 'viem'; import { EIP1193Provider } from 'viem'; import { ethers } from 'ethers'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { Provider } from 'ethers'; import { ProviderConnectInfo } from 'viem'; import { ProviderMessage } from 'viem'; import { ProviderRpcError } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { Signer } from 'ethers'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },
@@ -1268,7 +1268,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk-node.api",
-      "description": "import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType as KeypairType_2 } from '@zama-fhe/relayer-sdk/node'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedUserDecryptEIP712Type_2 } from '@zama-fhe/relayer-sdk/node'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle'; import { ZKProofLike as ZKProofLike_2 } from '@zama-fhe/relayer-sdk/node';",
+      "description": "import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedUserDecryptEIP712Type_2 } from '@zama-fhe/relayer-sdk/node'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PrivateKeyAccount } from 'viem/accounts'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle'; import { ZKProofLike as ZKProofLike_2 } from '@zama-fhe/relayer-sdk/node';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },
@@ -1280,7 +1280,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk-query.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { MutationFunctionContext } from '@tanstack/query-core'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { QueryKey } from '@tanstack/query-core'; import { QueryObserverOptions } from '@tanstack/query-core'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { skipToken } from '@tanstack/query-core'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { MutationFunctionContext } from '@tanstack/query-core'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { QueryKey } from '@tanstack/query-core'; import { QueryObserverOptions } from '@tanstack/query-core'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { skipToken } from '@tanstack/query-core'; import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import { z } from 'zod/mini'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },
@@ -1292,7 +1292,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk-viem.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KeypairType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { Auth } from '@zama-fhe/relayer-sdk/bundle'; import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle'; import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { EIP1193Provider } from 'viem'; import { Hex } from 'viem'; import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle'; import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle'; import { PublicClient } from 'viem'; import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle'; import * as SDK from '@zama-fhe/relayer-sdk/bundle'; import { WalletClient } from 'viem'; import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },

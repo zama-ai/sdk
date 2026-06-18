@@ -6,17 +6,17 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ![Zama SDK Architecture Layers](../images/layers.svg)
 
-| Layer                          | Responsibility                                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                   |
-| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)       |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                |
-| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library              |
-| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library       |
-| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                 |
-| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                   |
-| **Storage & Credentials**      | `KeypairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage) |
-| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                        |
+| Layer                          | Responsibility                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                            |
+| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                         |
+| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                       |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                |
+| **Relayer**                    | `RelayerWeb` (browser WASM), `RelayerNode` (server), `RelayerCleartext` (testing)                          |
+| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                            |
+| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage) |
+| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                 |
 
 ## `createConfig` pattern
 
