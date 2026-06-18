@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.15](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.14...v3.1.0-alpha.15) (2026-06-18)
+
+### Code Refactoring
+
+- **sdk:** align key/keypair naming with the FHEVM glossary [SDK-204] ([#413](https://github.com/zama-ai/sdk/issues/413)) ([3bf3bf1]())
+
 ## [3.1.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.13...v3.1.0-alpha.14) (2026-06-18)
 
 ### Bug Fixes
