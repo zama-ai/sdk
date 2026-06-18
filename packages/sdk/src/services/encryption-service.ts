@@ -1,4 +1,4 @@
-import { EncryptionFailedError, ZamaError } from "../errors";
+import { wrapEncryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
@@ -45,12 +45,7 @@ export class EncryptionService {
         },
         params.contractAddress,
       );
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Encryption failed", {
-        cause: error,
-      });
+      throw wrapEncryptError(error);
     }
   }
 }
