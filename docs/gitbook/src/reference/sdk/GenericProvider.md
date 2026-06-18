@@ -5,7 +5,7 @@ description: Interface that all provider adapters must implement for read-only c
 
 # GenericProvider
 
-Interface that all provider adapters must implement for read-only chain access. You only need this if you are building a custom provider -- otherwise use [ViemProvider](/reference/sdk/ViemProvider), [EthersProvider](/reference/sdk/EthersProvider), or the wagmi `createConfig` which builds one internally.
+Interface that all provider adapters must implement for read-only chain access. You only need this if you are building a custom provider -- otherwise use [ViemProvider](./ViemProvider.md), [EthersProvider](./EthersProvider.md), or the wagmi `createConfig` which builds one internally.
 
 ## Import
 
@@ -99,7 +99,7 @@ Return the timestamp of the latest block.
 
 ## Related
 
-- [ViemProvider](/reference/sdk/ViemProvider) -- viem implementation
-- [EthersProvider](/reference/sdk/EthersProvider) -- ethers implementation
-- [GenericSigner](/reference/sdk/GenericSigner) -- wallet authority interface
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [ViemProvider](./ViemProvider.md) -- viem implementation
+- [EthersProvider](./EthersProvider.md) -- ethers implementation
+- [GenericSigner](./GenericSigner.md) -- wallet authority interface
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

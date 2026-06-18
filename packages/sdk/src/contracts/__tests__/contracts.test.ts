@@ -19,27 +19,23 @@ import {
   isConfidentialWrapperContract,
 } from "../erc165";
 
-// Encryption (confidential ERC-20)
+// Confidential wrapper (ERC-7984 + wrap/unwrap lifecycle)
 import {
   confidentialBalanceOfContract,
+  confidentialTotalSupplyContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
-  isOperatorContract,
-  setOperatorContract,
-  unwrapContract,
-  unwrapFromBalanceContract,
-  confidentialTotalSupplyContract,
-  rateContract,
-} from "../encrypted";
-
-// Wrapper
-import {
   finalizeUnwrapContract,
   inferredTotalSupplyContract,
+  isOperatorContract,
+  rateContract,
+  setOperatorContract,
   underlyingContract,
+  unwrapContract,
+  unwrapFromBalanceContract,
   wrapContract,
-} from "../wrapper";
-import { wrapperAbi } from "../../abi/wrapper.abi";
+} from "../confidential-wrapper";
+import { confidentialWrapperAbi } from "../../abi/confidential-wrapper.abi";
 
 const SPENDER = "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address;
 
@@ -213,11 +209,11 @@ describe("Wrapper contract builders", () => {
   });
 });
 
-// Regression: verify wrapperAbi matches protocol-apps@71611c624ddc (post-mainnet upgrade).
+// Regression: verify confidentialWrapperAbi matches protocol-apps@71611c624ddc (post-mainnet upgrade).
 // These assertions pin the wrapper interface shape: finalizeUnwrap takes a bytes32
 // unwrapRequestId, unwrapAmount / unwrapRequester are exposed, and both UnwrapRequested
 // and UnwrapFinalized events include the indexed unwrapRequestId topic.
-describe("wrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
+describe("confidentialWrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
   type AbiFunction = {
     type: string;
     name: string;
@@ -228,9 +224,11 @@ describe("wrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
     name: string;
     inputs: { type: string; name: string }[];
   };
-  const fns = (wrapperAbi as unknown as AbiFunction[]).filter((x) => x.type === "function");
+  const fns = (confidentialWrapperAbi as unknown as AbiFunction[]).filter(
+    (x) => x.type === "function",
+  );
   const fn = (name: string) => fns.find((f) => f.name === name);
-  const eventSignatures = (wrapperAbi as unknown as AbiEvent[])
+  const eventSignatures = (confidentialWrapperAbi as unknown as AbiEvent[])
     .filter((x) => x.type === "event")
     .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
 

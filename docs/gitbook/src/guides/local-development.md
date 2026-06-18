@@ -111,6 +111,6 @@ Usually, you want to use the same `gatewayChainId` and verifying contract addres
 
 ## Next steps
 
-- [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
-- [Configuration](/guides/configuration) — production setup with `web()` or `node()` relayer factories
-- [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Mainnet, Sepolia, and more
+- [RelayerCleartext reference](../reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
+- [Configuration](./configuration.md) — production setup with `web()` or `node()` relayer factories
+- [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Mainnet, Sepolia, and more

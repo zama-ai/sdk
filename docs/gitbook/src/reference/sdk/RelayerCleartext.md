@@ -14,7 +14,7 @@ import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 ```
 
 {% hint style="info" %}
-For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](./network-presets.md) for examples.
 {% endhint %}
 
 ## Usage
@@ -105,7 +105,7 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 ## Related
 
-- [Local Development guide](/guides/local-development) — when and how to use cleartext mode
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser relayer with real FHE
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js relayer with real FHE
-- [Network Presets](/reference/sdk/network-presets) — production network configs
+- [Local Development guide](../../guides/local-development.md) — when and how to use cleartext mode
+- [RelayerWeb](./RelayerWeb.md) — browser relayer with real FHE
+- [RelayerNode](./RelayerNode.md) — Node.js relayer with real FHE
+- [Network Presets](./network-presets.md) — production network configs

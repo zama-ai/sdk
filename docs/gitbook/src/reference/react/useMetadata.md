@@ -87,6 +87,6 @@ function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Related
 
-- [useWrapperDiscovery](/reference/react/useWrapperDiscovery) -- find the wrapper address for a token
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- read the decrypted confidential balance
-- [Hooks overview](/reference/react/query-keys) -- all available hooks
+- [useWrapperDiscovery](./useWrapperDiscovery.md) -- find the wrapper address for a token
+- [useConfidentialBalance](./useConfidentialBalance.md) -- read the decrypted confidential balance
+- [Hooks overview](./query-keys.md) -- all available hooks

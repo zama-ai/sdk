@@ -131,7 +131,7 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](/reference/react/useUnshield) — unshield a specific amount
-- [useResumeUnshield](/reference/react/useResumeUnshield) — resume an interrupted unshield
-- [useShield](/reference/react/useShield) — reverse operation, shield public tokens
-- [WrappedToken.unshieldAll](/reference/sdk/WrappedToken#unshieldall) — imperative equivalent on the `WrappedToken` class
+- [useUnshield](./useUnshield.md) — unshield a specific amount
+- [useResumeUnshield](./useResumeUnshield.md) — resume an interrupted unshield
+- [useShield](./useShield.md) — reverse operation, shield public tokens
+- [WrappedToken.unshieldAll](../sdk/WrappedToken.md#unshieldall) — imperative equivalent on the `WrappedToken` class

@@ -5,7 +5,7 @@ description: Mutation hook that grants FHE decryption rights for a token to anot
 
 # useDelegateDecryption
 
-Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](/reference/react/useDelegationStatus) queries on success.
+Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](./useDelegationStatus.md) queries on success.
 
 ## Import
 
@@ -94,7 +94,7 @@ await delegate({
 
 ## Related
 
-- [`useRevokeDelegation`](/reference/react/useRevokeDelegation) -- revoke a previously granted delegation
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check whether a delegation is active
-- [`useDecryptBalanceAs`](/reference/react/useDecryptBalanceAs) -- decrypt a balance as the delegate
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useRevokeDelegation`](./useRevokeDelegation.md) -- revoke a previously granted delegation
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check whether a delegation is active
+- [`useDecryptBalanceAs`](./useDecryptBalanceAs.md) -- decrypt a balance as the delegate
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference
