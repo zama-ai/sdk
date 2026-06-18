@@ -68,10 +68,47 @@ above and to manual review).
 ## Layout
 
 ```
-codemod.yaml             # package manifest (publishable to the Codemod registry)
-workflow.yaml            # the workflow: ast-grep + js-ast-grep steps
-rules/<id>.yml           # ast-grep rules (renames / config-key changes)
-scripts/<id>.ts          # JSSG transforms (structural rewrites)
-tests/fixtures/<id>/     # input.tsx + output.tsx per change
-tests/workflow.test.mjs  # runs the workflow over the fixtures (apply + oxfmt == output)
+codemod.yaml                 # package manifest (publishable to the Codemod registry)
+workflow.yaml                # the workflow: ast-grep + js-ast-grep steps
+rules/<id>.yml               # ast-grep rules (renames / config-key changes)
+scripts/<id>.ts              # JSSG transforms (structural rewrites)
+test.sh                      # runs `codemod jssg test` for every scripts/<id>.ts (discovered, not listed)
+tests/<script>/<case>/       # JSSG fixtures: input.tsx + expected.tsx, one dir per scripts/<script>.ts
+tests/fixtures/<rule>/       # ast-grep rule fixtures: input.tsx + expected.tsx (not yet wired to a runner)
 ```
+
+## Test
+
+The JSSG transforms are tested with the official
+[JSSG harness](https://docs.codemod.com/jssg/testing) — `codemod jssg test`. By
+convention each `scripts/<name>.ts` is tested against its `tests/<name>/` fixture
+dir (the parent holding the `<case>/` subdirs). [`test.sh`](./test.sh) discovers
+`scripts/*.ts` and runs the harness for each, so adding a transform needs no
+config edits (and a script with no `tests/<name>/` dir fails the run):
+
+```sh
+pnpm test          # -> ./test.sh
+```
+
+`test.sh` forwards extra flags to every invocation, so during development:
+
+```sh
+./test.sh -u   # rewrite expected.tsx from current output
+./test.sh -v   # per-case diff
+```
+
+To run a single transform — or to `--filter` to one case (which errors on
+scripts that don't have that case, so don't pass it through the whole loop) —
+call the documented command directly:
+
+```sh
+# codemods don't format their output, so compare ASTs not bytes (--strictness ast)
+codemod jssg test -l tsx --strictness ast --filter alias-preserved \
+  scripts/core-rename-createzamaconfig-to-createconfig.ts \
+  tests/core-rename-createzamaconfig-to-createconfig
+```
+
+> The native JSSG harness only tests JSSG (`scripts/*.ts`). The native `ast-grep`
+> rules (`rules/*.yml`) still have `input.tsx`/`expected.tsx` fixtures under
+> `tests/fixtures/`, but no automated runner — wire them with `ast-grep test` (or
+> reinstate a workflow-level check) to cover them.
