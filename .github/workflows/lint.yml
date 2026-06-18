@@ -12,6 +12,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Safe-chain enforces its own minimum-package-age check independently of
+  # pnpm-workspace.yaml#minimumReleaseAgeExclude — mirror the exemption here.
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk"
+
 jobs:
   lint:
     runs-on: ubuntu-latest

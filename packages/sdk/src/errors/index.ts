@@ -32,4 +32,5 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { wrapDecryptError } from "./decrypt";
+export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";

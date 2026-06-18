@@ -1,13 +1,20 @@
-name: License Compatibility
+name: Integration
 
+# Integration suite (`pnpm test:integration`). Separate from Vitest because it
+# hits live infrastructure — notably the hosted mainnet relayer for the
+# relayer-auth negative checks — so it has a different reliability profile.
+# Keep this check NON-REQUIRED in branch protection: a transient mainnet/network
+# blip should never block an unrelated merge.
 on:
   pull_request:
     branches: [main, prerelease]
-  push:
-    branches: [main, prerelease]
+    paths:
+      - "packages/sdk/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/integration.yml"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: integration-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,8 +26,16 @@ env:
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk"
 
 jobs:
-  check:
+  integration:
     runs-on: ubuntu-latest
+    env:
+      # Enables the live relayer-auth negative checks (cookie / bearer / no-auth
+      # / bogus-key are rejected by the hosted relayer). No API key needed.
+      # Toggle without a commit via the repo variable (Settings → Variables) —
+      # set it to "true" to run them; unset/anything-else skips them. Acts as a
+      # kill switch if the hosted relayer's auth behavior changes and the canary
+      # needs muting while it's reconciled.
+      ENABLE_RELAYER_AUTH_TESTS: ${{ vars.ENABLE_RELAYER_AUTH_TESTS }}
     steps:
       # TODO: remove once GitHub runner images ship the CVE-2026-31431 kernel fix
       - name: Workaround CVE-2026-31431 (copy.fail)
@@ -34,6 +49,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
@@ -48,29 +65,10 @@ jobs:
         run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
 
       - name: Install dependencies
-        run: pnpm ci --ignore-scripts
+        run: pnpm ci
 
-      - name: Generate license inventory
-        env:
-          SAFE_CHAIN_LOGGING: silent
-        run: |
-          mkdir -p artifacts/license
-          pnpm --filter @zama-fhe/sdk licenses list --json --prod > artifacts/license/licenses-sdk.json
-          pnpm --filter @zama-fhe/react-sdk licenses list --json --prod > artifacts/license/licenses-react-sdk.json
-          node -e 'const fs=require("node:fs"); const sdk=JSON.parse(fs.readFileSync("artifacts/license/licenses-sdk.json","utf8")); const react=JSON.parse(fs.readFileSync("artifacts/license/licenses-react-sdk.json","utf8")); fs.writeFileSync("artifacts/license/licenses-prod.json", JSON.stringify([sdk, react], null, 2));'
+      - name: Build packages
+        run: pnpm build
 
-      - name: Check compatibility policy
-        run: |
-          node scripts/release/check-license-compat.mjs \
-            artifacts/license/licenses-prod.json \
-            .github/license-policy.json \
-            artifacts/license/report.md
-          cat artifacts/license/report.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload license artifacts
-        if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: license-compat-report
-          path: artifacts/license/
-          retention-days: 7
+      - name: Run integration tests
+        run: pnpm test:integration
