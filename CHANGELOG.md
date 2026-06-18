@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.12...v3.1.0-alpha.13) (2026-06-18)
+
+### Code Refactoring
+
+- **sdk:** drop FinalizeUnwrapParams.burnAmount legacy alias [SDK-219] ([#444](https://github.com/zama-ai/sdk/issues/444)) ([e6bffcb]()), closes [#418]()
+
 ## [3.1.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.11...v3.1.0-alpha.12) (2026-06-18)
 
 ### Bug Fixes
