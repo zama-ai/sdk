@@ -4432,7 +4432,7 @@ migration.
 | `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                                                 | 2    |
 | `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                                               | 2    |
 | `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                                                         | 3    |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `CredentialBundle`, `Permission`, `StoredKeypair` (+ permit events)                                              | 3    |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | 3    |
 | `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                                            | 5    |
 | `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | 5    |
 | `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | 5    |
@@ -4444,6 +4444,9 @@ migration.
 | `token.balanceOf()` (self default)                                         | `token.balanceOf(owner)` — owner address now required                                                            | 4    |
 | `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | 7    |
 | `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                                                      | 7    |
+| `keypairTTL` (config option)                                               | `transportKeyPairTTL`                                                                                            | 1    |
+| `KeypairType`; relayer `getPublicKey()` / `generateKeypair()`              | `TransportKeyPair`; `fetchFheEncryptionKeyBytes()` / `generateTransportKeyPair()`                                | 5    |
+| `KeypairExpiredError` / `InvalidKeypairError`                              | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | 5    |
 
 ### `@zama-fhe/react-sdk` (hooks)
 
@@ -4931,6 +4934,18 @@ permit is involved since the values are already publicly decryptable.
 > custom logout flow), remove that logic — there is no compile-time signal for it.
 
 
+### Key glossary: `keypair` → `transport key pair`
+
+The same glossary pass renamed the key vocabulary. Most apps never touch this —
+`createConfig`, the `Token` API, and the hooks manage keys internally — so it
+matters only if you set the key-pair TTL, catch the key errors, or call the
+low-level relayer key API directly.
+
+- **Config:** `keypairTTL` → `transportKeyPairTTL` (same seconds units), on `createConfig` / `ZamaConfig`.
+- **Errors:** `KeypairExpiredError` / `InvalidKeypairError` → `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`. The error **code** strings are unchanged (`KEYPAIR_EXPIRED` / `INVALID_KEYPAIR`), so `matchZamaError` and `.code` checks keep working — only the imported class names changed.
+- **Types:** `KeypairType` → `TransportKeyPair`; the persisted `StoredKeypair` → `StoredTransportKeyPair`.
+- **Low-level relayer (rare):** `relayer.getPublicKey()` → `fetchFheEncryptionKeyBytes()`, `relayer.generateKeypair()` → `generateTransportKeyPair()` — the high-level SDK calls these for you. The internal credentials bundle (`CredentialBundle`) is no longer a public type; `permits.grantPermit()` returns `void`.
+
 ## Step 6 — Token / WrappedToken & upgraded contracts
 
 - `ReadonlyToken` → `WrappedToken`; the hook `useReadonlyToken` → `useWrappedToken`.
@@ -4972,7 +4987,7 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|\.balanceOf\(\)'
+   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|keypairTTL|KeypairType|KeypairExpiredError|InvalidKeypairError|\.balanceOf\(\)'
    ```
 
    A few atoms can still produce hits that don't need migrating — inspect rather
