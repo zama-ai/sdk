@@ -4,7 +4,7 @@ import {
   resolveDelegatedDecryptPermit,
   resolveUserDecryptPermit,
 } from "../credentials/decrypt-permit";
-import type { CredentialBundle } from "../credentials/types";
+import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
 import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -19,10 +19,10 @@ import type { DelegationService } from "./delegation-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  resolveCredentials: (contractAddresses: Address[]) => Promise<CredentialBundle>;
+  resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
-    credentials: CredentialBundle;
+    credentials: StoredTransportKeyPairWithPermits;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
   }) => Promise<Record<EncryptedValue, ClearValue>>;

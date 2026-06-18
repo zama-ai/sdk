@@ -8,7 +8,11 @@ import { TransportKeyPairVault } from "./keypair-vault";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
-import type { CredentialBundle, Permission, StoredTransportKeyPair } from "./types";
+import type {
+  StoredTransportKeyPairWithPermits,
+  Permission,
+  StoredTransportKeyPair,
+} from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
@@ -66,7 +70,10 @@ export class CredentialService {
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
    * @throws if signing fails for any other reason. {@link SigningFailedError}
    */
-  async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
+  async grantPermit(
+    contracts: readonly Address[],
+    delegator?: Address,
+  ): Promise<StoredTransportKeyPairWithPermits> {
     const account = this.#signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
@@ -88,7 +95,11 @@ export class CredentialService {
       const candidate = findPermitToWiden(permits, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
-        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
+        const widened = await this.#signPermit({
+          chunk: widenedSet,
+          keypair,
+          scope,
+        });
         await swallow("replace permit", () =>
           this.#store.replace(scope, candidate.signature, widened),
         );

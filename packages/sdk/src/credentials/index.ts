@@ -1,5 +1,5 @@
 export type {
-  CredentialBundle,
+  StoredTransportKeyPairWithPermits,
   TransportKeyPair,
   StoredTransportKeyPair,
   Permission,

@@ -5212,14 +5212,6 @@ export function createConfig<const TChains extends readonly [FheChain, ...FheCha
 export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
 
 // @public
-export interface CredentialBundle {
-    // (undocumented)
-    readonly keypair: StoredTransportKeyPair;
-    // (undocumented)
-    readonly permits: readonly Permission[];
-}
-
-// @public
 export function decimalsContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -14150,6 +14142,14 @@ export class SigningRejectedError extends ZamaError {
 
 // @public
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
+
+// @public
+export interface StoredTransportKeyPairWithPermits {
+    // (undocumented)
+    readonly keypair: StoredTransportKeyPair;
+    // (undocumented)
+    readonly permits: readonly Permission[];
+}
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {

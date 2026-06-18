@@ -17,8 +17,8 @@ export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema
  */
 export type Permission = z.infer<typeof PermissionSchema>;
 
-/** Resolved credentials for a decrypt operation. */
-export interface CredentialBundle {
+/** Resolved transport key pair entry with permits for a decrypt operation. */
+export interface StoredTransportKeyPairWithPermits {
   readonly keypair: StoredTransportKeyPair;
   readonly permits: readonly Permission[];
 }

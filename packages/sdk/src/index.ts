@@ -101,7 +101,7 @@ export {
   chromeSessionStorage,
 } from "./storage";
 export type {
-  CredentialBundle,
+  StoredTransportKeyPairWithPermits,
   TransportKeyPair,
   StoredTransportKeyPair,
   Permission,
