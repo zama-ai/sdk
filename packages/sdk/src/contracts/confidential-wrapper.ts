@@ -201,13 +201,13 @@ export function rateContract(tokenAddress: Address) {
  * @example
  * ```ts
  * const txHash = await signer.writeContract(
- *   finalizeUnwrapContract(wrapper, unwrapRequestIdOrAmount, cleartext, proof),
+ *   finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof),
  * );
  * ```
  */
 export function finalizeUnwrapContract(
   wrapper: Address,
-  unwrapRequestIdOrAmount: EncryptedValue,
+  unwrapRequestId: EncryptedValue,
   unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
@@ -215,7 +215,7 @@ export function finalizeUnwrapContract(
     address: wrapper,
     abi: confidentialWrapperAbi,
     functionName: "finalizeUnwrap",
-    args: [unwrapRequestIdOrAmount, unwrapAmountCleartext, decryptionProof],
+    args: [unwrapRequestId, unwrapAmountCleartext, decryptionProof],
   } as const;
 }
 
