@@ -1,4 +1,4 @@
-import type { Codemod } from "codemod:ast-grep";
+import type { Codemod, Edit, GetSelector } from "codemod:ast-grep";
 import type Tsx from "codemod:ast-grep/langs/tsx";
 
 // JSSG port of the jscodeshift transform: for the hooks whose first argument
@@ -20,9 +20,14 @@ const HOOKS = new Set([
   "useUnwrapAll",
 ]);
 
+// Pre-filter: only visit files that call one of the affected hooks.
+export const getSelector: GetSelector<Tsx> = () => ({
+  rule: { kind: "identifier", regex: `^(${[...HOOKS].join("|")})$` },
+});
+
 const codemod: Codemod<Tsx> = async (root) => {
   const rootNode = root.root();
-  const edits = [];
+  const edits: Edit[] = [];
 
   for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
     const fn = call.field("function");
@@ -60,17 +65,10 @@ const codemod: Codemod<Tsx> = async (root) => {
       continue;
     }
 
-    edits.push({
-      startPos: firstArg.range().start.index,
-      endPos: firstArg.range().end.index,
-      insertedText: valueText,
-    });
+    edits.push(firstArg.replace(valueText));
   }
 
-  if (edits.length === 0) {
-    return null;
-  }
-  return rootNode.commitEdits(edits);
+  return edits.length > 0 ? rootNode.commitEdits(edits) : null;
 };
 
 export default codemod;

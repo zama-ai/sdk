@@ -1,4 +1,4 @@
-import type { Codemod } from "codemod:ast-grep";
+import type { Codemod, Edit, GetSelector } from "codemod:ast-grep";
 import type Tsx from "codemod:ast-grep/langs/tsx";
 
 // Import-aware rename of the OLD `createZamaConfig` export to `createConfig`.
@@ -16,9 +16,15 @@ import type Tsx from "codemod:ast-grep/langs/tsx";
 const OLD = "createZamaConfig";
 const NEW = "createConfig";
 
+// Pre-filter: skip files that never mention the old name. The transform still
+// checks the identifier comes from a `@zama-fhe` import before rewriting.
+export const getSelector: GetSelector<Tsx> = () => ({
+  rule: { kind: "identifier", regex: `^${OLD}$` },
+});
+
 const codemod: Codemod<Tsx> = async (root) => {
   const rootNode = root.root();
-  const edits = [];
+  const edits: Edit[] = [];
   let renameUsages = false;
 
   for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
@@ -33,11 +39,7 @@ const codemod: Codemod<Tsx> = async (root) => {
       if (!name || name.text() !== OLD) {
         continue;
       }
-      edits.push({
-        startPos: name.range().start.index,
-        endPos: name.range().end.index,
-        insertedText: NEW,
-      });
+      edits.push(name.replace(NEW));
       // No alias => the local binding is `createZamaConfig`; rename its references.
       if (!spec.field("alias")) {
         renameUsages = true;
@@ -59,18 +61,11 @@ const codemod: Codemod<Tsx> = async (root) => {
       if (importRanges.some(([a, b]) => start >= a && start < b)) {
         continue;
       }
-      edits.push({
-        startPos: start,
-        endPos: id.range().end.index,
-        insertedText: NEW,
-      });
+      edits.push(id.replace(NEW));
     }
   }
 
-  if (edits.length === 0) {
-    return null;
-  }
-  return rootNode.commitEdits(edits);
+  return edits.length > 0 ? rootNode.commitEdits(edits) : null;
 };
 
 export default codemod;
