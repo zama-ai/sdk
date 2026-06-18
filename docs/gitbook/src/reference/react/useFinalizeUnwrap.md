@@ -65,26 +65,14 @@ const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
 ## Mutation variables
 
-The finalize function accepts a discriminated union — pass one of these:
-
 ### unwrapRequestId
 
 `EncryptedValue`
 
-The unwrap request ID emitted in the `UnwrapRequested` event. This is the preferred form.
+The unwrap request ID emitted in the `UnwrapRequested` event.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
-```
-
-### burnAmount
-
-`EncryptedValue`
-
-Alternative input accepted when no `unwrapRequestId` is available (e.g. when resuming an unshield persisted by an older SDK version).
-
-```tsx
-await finalize({ burnAmount: encryptedAmount });
 ```
 
 ## Return Type

@@ -195,9 +195,9 @@ const { txHash } = await wrappedToken.unwrapAll();
 
 ### finalizeUnwrap
 
-`(unwrapRequestIdOrAmount: EncryptedValue) => Promise<TransactionResult>`
+`(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Prefer passing the `unwrapRequestId` from the `UnwrapRequested` event. The older burn-amount-handle form is accepted only for compatibility with previously persisted unshield state.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
 
 ```ts
 const event = findUnwrapRequested(receipt.logs);

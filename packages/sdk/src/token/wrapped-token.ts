@@ -414,9 +414,7 @@ export class WrappedToken extends Token {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
-   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
-   *   The `burnAmount` form is accepted only to resume unshields persisted by an
-   *   older SDK version.
+   * @param unwrapRequestId - `unwrapRequestId` from the `UnwrapRequested` event.
    * @returns The transaction hash and mined receipt.
    *
    * @example
@@ -425,17 +423,17 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
+  async finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestIdOrAmount]);
-    const clearValue = result.clearValues[unwrapRequestIdOrAmount];
+    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId]);
+    const clearValue = result.clearValues[unwrapRequestId];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({
       operation: "finalizeUnwrap",
       config: finalizeUnwrapContract(
         this.address,
-        unwrapRequestIdOrAmount,
+        unwrapRequestId,
         clearValue,
         result.decryptionProof,
       ),

@@ -399,20 +399,8 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` event. Preferred. */{
+export type FinalizeUnwrapParams = {
     unwrapRequestId: EncryptedValue;
-    burnAmount?: never;
-}
-/**
-* Encrypted burn amount. Direct-call escape hatch for resuming an
-* unshield persisted by an older SDK version that did not record
-* `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
-* always rediscovers `unwrapRequestId` from the receipt and never reaches
-* this branch.
-*/
-| {
-    unwrapRequestId?: never;
-    burnAmount: EncryptedValue;
 };
 
 // @public (undocumented)
@@ -932,7 +920,7 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
