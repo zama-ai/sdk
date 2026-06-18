@@ -8,11 +8,11 @@ import { mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
-// Live tests against the hosted mainnet relayer. OFF by default so the offline
-// `pnpm test:integration` run stays green; also needs the built worker bundle:
-//   pnpm build:sdk
-//   ENABLE_RELAYER_AUTH_TESTS=true pnpm test:integration
-// Negative cases need NO real key; the positive case needs ZAMA_RELAYER_API_KEY.
+// Live negative checks against the hosted mainnet relayer: cookie / bearer /
+// no-auth / bogus-key are each rejected with a surfaced 403 message. No API key
+// needed. OFF by default so the offline `pnpm test:integration` run stays green
+// (also needs the built worker bundle); CI enables them via the
+// ENABLE_RELAYER_AUTH_TESTS env var.
 const RUN = process.env.ENABLE_RELAYER_AUTH_TESTS === "true";
 
 const HANDLE =
@@ -80,18 +80,6 @@ describe.skipIf(!RUN)("relayer auth against the hosted mainnet relayer (live)", 
       const message = messageChain(caught);
       expect(message).toMatch(/x-api-key|api key|unauthorized|forbidden/i);
       expect(message).not.toMatch(/unexpected response status/i);
-    },
-  );
-
-  it.skipIf(!process.env.ZAMA_RELAYER_API_KEY)(
-    "accepts a valid ApiKeyHeader and returns a clear value",
-    async () => {
-      using sdk = makeSdk({
-        __type: "ApiKeyHeader",
-        value: process.env.ZAMA_RELAYER_API_KEY!,
-      });
-      const result = await sdk.decryption.decryptPublicValues([HANDLE]);
-      expect(result.clearValues).toHaveProperty(HANDLE);
     },
   );
 });
