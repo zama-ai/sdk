@@ -138,12 +138,6 @@ export interface FheEncryptionKey {
 }
 
 /**
- * @deprecated Renamed to {@link FheEncryptionKey} to match the FHEVM glossary. The old name is kept
- *   as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export type PublicKeyData = FheEncryptionKey;
-
-/**
  * TFHE public parameters
  */
 export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];

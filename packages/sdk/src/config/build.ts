@@ -33,7 +33,7 @@ export function buildZamaConfig(
     permitStorage,
     transportKeyPairTTL: parseConfiguration(
       TransportKeyPairTTLSchema,
-      params.transportKeyPairTTL ?? params.keypairTTL ?? DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
+      params.transportKeyPairTTL ?? DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
     ),
     permitTTL: parseConfiguration(
       PermitTTLSchema,

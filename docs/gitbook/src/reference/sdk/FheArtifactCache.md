@@ -1,11 +1,11 @@
 ---
 title: FheArtifactCache
-description: Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+description: Persistent cache for the FHE encryption key and public parameters, avoiding re-downloads across sessions.
 ---
 
 # FheArtifactCache
 
-Persistent cache for the FHE network public key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
+Persistent cache for the FHE encryption key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
 
 `web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
 
@@ -218,7 +218,7 @@ Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on e
 
 ## How it works
 
-1. **First load** — The SDK fetches the public key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
+1. **First load** — The SDK fetches the FHE encryption key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
 2. **Subsequent loads** — The SDK reads from storage (instant), skipping the multi-MB network download.
 3. **Revalidation** — Periodically (controlled by `ttl`), the cache issues `HEAD` requests with conditional headers to the artifact CDN. If the server returns 405 (Method Not Allowed), the cache falls back to a `GET` request. If artifacts haven't changed (304), only timestamps are updated. If they have changed (200), the entire cache is cleared and artifacts are re-fetched on next use.
 4. **Fail-open** — On network errors or malformed manifests, the cache continues serving stale data and retries revalidation after 5 minutes.
@@ -229,7 +229,7 @@ Cache entries are scoped by chain ID:
 
 | Key pattern                   | Content                                                 |
 | ----------------------------- | ------------------------------------------------------- |
-| `fhe:pubkey:{chainId}`        | Public key (base64 + metadata)                          |
+| `fhe:pubkey:{chainId}`        | FHE encryption key (base64 + metadata)                  |
 | `fhe:params:{chainId}:{bits}` | Public parameters for a given bit size                  |
 | `fhe:params-index:{chainId}`  | Array of cached bit sizes (for cold-start revalidation) |
 

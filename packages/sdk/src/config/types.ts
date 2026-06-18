@@ -67,11 +67,6 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   permitStorage?: GenericStorage;
   /** ML-KEM transport key pair TTL in seconds. Default: 2592000 (30 days). */
   transportKeyPairTTL?: number;
-  /**
-   * @deprecated Renamed to {@link transportKeyPairTTL} to match the FHEVM glossary. Still accepted
-   *   as a back-compat alias; will be removed before the 3.x stable release.
-   */
-  keypairTTL?: number;
   /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */

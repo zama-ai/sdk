@@ -60,7 +60,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist transport key pairs and signed permits.
 - [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
-- [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+- [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for the FHE encryption key and public parameters, avoiding re-downloads across sessions.
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
 - [Delegations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.
 - [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured chain objects and legacy network configs for supported networks.

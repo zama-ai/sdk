@@ -143,7 +143,6 @@ export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type { Keypair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,

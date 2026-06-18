@@ -8,13 +8,6 @@ export class TransportKeyPairExpiredError extends ZamaError {
   }
 }
 
-/**
- * @deprecated Renamed to {@link TransportKeyPairExpiredError} to match the FHEVM glossary. The old
- *   name is kept as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export const KeypairExpiredError = TransportKeyPairExpiredError;
-export type KeypairExpiredError = TransportKeyPairExpiredError;
-
 /** Relayer rejected the transport key pair (stale, expired, or malformed). */
 export class InvalidTransportKeyPairError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
@@ -22,13 +15,6 @@ export class InvalidTransportKeyPairError extends ZamaError {
     this.name = "InvalidTransportKeyPairError";
   }
 }
-
-/**
- * @deprecated Renamed to {@link InvalidTransportKeyPairError} to match the FHEVM glossary. The old
- *   name is kept as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export const InvalidKeypairError = InvalidTransportKeyPairError;
-export type InvalidKeypairError = InvalidTransportKeyPairError;
 
 /** No FHE ciphertext exists for this account (never shielded). */
 export class NoCiphertextError extends ZamaError {

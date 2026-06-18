@@ -502,9 +502,6 @@ export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsCon
 // @public (undocumented)
 export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
-// @public @deprecated (undocumented)
-export type Keypair = TransportKeyPair;
-
 // @public (undocumented)
 export interface ListPairsQueryConfig {
     // (undocumented)

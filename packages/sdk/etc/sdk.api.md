@@ -17,7 +17,6 @@ import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PrivateKeyAccount } from 'viem/accounts';
@@ -9824,12 +9823,6 @@ export class InsufficientERC20BalanceError extends ZamaError {
     readonly token: Address;
 }
 
-// @public @deprecated (undocumented)
-export const InvalidKeypairError: typeof InvalidTransportKeyPairError;
-
-// @public (undocumented)
-export type InvalidKeypairError = InvalidTransportKeyPairError;
-
 // @public
 export class InvalidTransportKeyPairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
@@ -11474,17 +11467,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
-// @public @deprecated (undocumented)
-export type Keypair = TransportKeyPair;
-
-// @public @deprecated (undocumented)
-export const KeypairExpiredError: typeof TransportKeyPairExpiredError;
-
-// @public (undocumented)
-export type KeypairExpiredError = TransportKeyPairExpiredError;
-
-export { KeypairType }
-
 export { KmsDelegatedDecryptEIP712Type }
 
 // @public
@@ -11734,9 +11716,6 @@ export class Permits {
     revokePermits(contracts?: Address[]): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
 }
-
-// @public @deprecated (undocumented)
-export type PublicKeyData = FheEncryptionKey;
 
 // @public
 export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
@@ -14660,9 +14639,6 @@ export class SigningFailedError extends ZamaError {
 export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
-
-// @public @deprecated (undocumented)
-export type StoredKeypair = StoredTransportKeyPair;
 
 // @public
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
@@ -19839,8 +19815,6 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
-    // @deprecated (undocumented)
-    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
     permitTTL?: number;

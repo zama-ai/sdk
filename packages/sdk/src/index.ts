@@ -34,7 +34,6 @@ export type {
   EIP712TypedData,
   NetworkType,
   FheEncryptionKey,
-  PublicKeyData,
   PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
@@ -52,11 +51,6 @@ export type {
   DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "./relayer/relayer-sdk.types";
 export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
-/**
- * @deprecated Renamed to {@link TransportKeyPair} to match the FHEVM glossary. The old name is
- *   kept as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export type { KeypairType } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
 
 // Chain presets and types
@@ -101,8 +95,6 @@ export type {
   CredentialBundle,
   TransportKeyPair,
   StoredTransportKeyPair,
-  Keypair,
-  StoredKeypair,
   Permission,
 } from "./credentials";
 export type {
@@ -171,8 +163,6 @@ export {
   TransactionRevertedError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
-  KeypairExpiredError,
-  InvalidKeypairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,

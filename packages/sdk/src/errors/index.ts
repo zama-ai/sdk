@@ -5,8 +5,6 @@ export { TransactionRevertedError } from "./transaction";
 export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
-  KeypairExpiredError,
-  InvalidKeypairError,
   NoCiphertextError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";

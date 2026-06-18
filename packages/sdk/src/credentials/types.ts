@@ -8,20 +8,8 @@ export interface TransportKeyPair {
   privateKey: Hex;
 }
 
-/**
- * @deprecated Renamed to {@link TransportKeyPair} to match the FHEVM glossary. The old name is kept
- *   as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export type Keypair = TransportKeyPair;
-
 /** Persisted transport key pair entry with a bounded lifetime. */
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
-
-/**
- * @deprecated Renamed to {@link StoredTransportKeyPair} to match the FHEVM glossary. The old name is
- *   kept as a public-API back-compat alias and will be removed before the 3.x stable release.
- */
-export type StoredKeypair = StoredTransportKeyPair;
 
 /**
  * A signed EIP-712 permit binding a signer (and optional delegator) to a set of
