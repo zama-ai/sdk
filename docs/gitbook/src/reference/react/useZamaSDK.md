@@ -79,6 +79,6 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](/reference/react/useToken) — memoized `Token` instance for a given address
-- [useReadonlyToken](/reference/react/useReadonlyToken) — memoized `ReadonlyToken` instance (no write access)
-- [ZamaSDK](/reference/sdk/ZamaSDK) — full API reference for the SDK class
+- [useToken](./useToken.md) — memoized `Token` instance for a given address
+- [useReadonlyToken](./useReadonlyToken.md) — memoized `ReadonlyToken` instance (no write access)
+- [ZamaSDK](../sdk/ZamaSDK.md) — full API reference for the SDK class

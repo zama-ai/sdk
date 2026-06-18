@@ -22,7 +22,7 @@ type WriteContractConfig = ReadContractConfig & {
 ```
 
 {% hint style="warning" %}
-The [Token API](/reference/sdk/Token) (`shield`, `unshield`, `confidentialTransfer`, etc.) handles contract calls, encryption, and multi-step flows for you. Use builders only when you need raw contract-level control — custom transaction pipelines, batching, or integrating with systems that expect ABI-encoded call data.
+The [Token API](./Token.md) (`shield`, `unshield`, `confidentialTransfer`, etc.) handles contract calls, encryption, and multi-step flows for you. Use builders only when you need raw contract-level control — custom transaction pipelines, batching, or integrating with systems that expect ABI-encoded call data.
 {% endhint %}
 
 ## Import
@@ -122,7 +122,7 @@ import {
 | `isConfidentialTokenValidContract(registry, confidentialToken)` | Check if a confidential token is valid in the registry |
 
 {% hint style="info" %}
-The [WrappersRegistry class](/reference/sdk/WrappersRegistry) wraps these builders with automatic address resolution. Use builders only when you need raw contract-level control.
+The [WrappersRegistry class](./WrappersRegistry.md) wraps these builders with automatic address resolution. Use builders only when you need raw contract-level control.
 {% endhint %}
 
 ## Delegation
@@ -182,5 +182,5 @@ All builders validate addresses at call time. A malformed address throws immedia
 
 ## Related
 
-- [Token](/reference/sdk/Token) — high-level API that wraps these builders
-- [Event Decoders](/reference/sdk/event-decoders) — decode on-chain logs into typed events
+- [Token](./Token.md) — high-level API that wraps these builders
+- [Event Decoders](./event-decoders.md) — decode on-chain logs into typed events

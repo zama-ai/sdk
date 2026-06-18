@@ -5,10 +5,10 @@ description: Query hook that automatically decrypts FHE handles once credentials
 
 # useUserDecrypt
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](/reference/react/useAllow)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
+Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useAllow`](./useAllow.md)) and handles are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached handles.
 
 {% hint style="info" %}
-**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](./useConfidentialBalance.md) which handles decryption and caching automatically. Use `useUserDecrypt` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 {% endhint %}
 
 ## Import
@@ -112,7 +112,7 @@ When all requested handles are already cached, `data` contains the cached values
 2. **Decrypt** — calls `sdk.userDecrypt(handles)` which checks the persistent cache, then hits the relayer for any uncached handles.
 
 {% hint style="warning" %}
-**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](/reference/react/useIsAllowed):
+**`useUserDecrypt` does not automatically gate on credentials.** If credentials are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useIsAllowed`](./useIsAllowed.md):
 
 ```tsx
 const { data: allowed } = useIsAllowed({ contractAddresses: ["0xContract"] });
@@ -127,7 +127,7 @@ This ensures the decrypt query only fires after `useAllow` has been called.
 
 ## Credential caching
 
-`useUserDecrypt` relies on credentials acquired via [`useAllow`](/reference/react/useAllow):
+`useUserDecrypt` relies on credentials acquired via [`useAllow`](./useAllow.md):
 
 - **First `allow()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The credentials are then cached.
 - **Subsequent queries** — reuse the cached credentials if they are still valid (not expired).
@@ -137,8 +137,8 @@ This means users only see a wallet signature prompt once per session (or per TTL
 
 ## Related
 
-- [`useAllow`](/reference/react/useAllow) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether credentials are cached and cover specific contracts
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
-- [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
-- [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples
+- [`useAllow`](./useAllow.md) — pre-authorize contracts with one wallet signature (required before `useUserDecrypt` fires)
+- [`useIsAllowed`](./useIsAllowed.md) — check whether credentials are cached and cover specific contracts
+- [`useConfidentialBalance`](./useConfidentialBalance.md) — high-level hook that decrypts token balances with automatic caching
+- [`useEncrypt`](./useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
+- [Encrypt & Decrypt guide](../../guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples

@@ -5,7 +5,7 @@ description: Interface that all signer adapters must implement for the SDK to in
 
 # GenericSigner
 
-Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](/reference/sdk/ViemSigner), [EthersSigner](/reference/sdk/EthersSigner), or [WagmiSigner](/reference/sdk/WagmiSigner).
+Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](./ViemSigner.md), [EthersSigner](./EthersSigner.md), or [WagmiSigner](./WagmiSigner.md).
 
 ## Import
 
@@ -124,7 +124,7 @@ Implementing `subscribe()` is optional but recommended. Without it, stale sessio
 
 ## Related
 
-- [ViemSigner](/reference/sdk/ViemSigner) -- viem implementation
-- [EthersSigner](/reference/sdk/EthersSigner) -- ethers implementation
-- [WagmiSigner](/reference/sdk/WagmiSigner) -- wagmi implementation with auto-revoke
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [ViemSigner](./ViemSigner.md) -- viem implementation
+- [EthersSigner](./EthersSigner.md) -- ethers implementation
+- [WagmiSigner](./WagmiSigner.md) -- wagmi implementation with auto-revoke
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

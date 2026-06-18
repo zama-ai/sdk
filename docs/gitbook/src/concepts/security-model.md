@@ -70,7 +70,7 @@ The FHE private key is encrypted with AES-256-GCM before being written to storag
 | Cipher        | AES-256-GCM                    |
 | IV            | 12 random bytes per encryption |
 
-The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](/concepts/session-model) for the full lifecycle.
+The signature itself is never persisted. It lives only in the in-memory session map, cleared on page reload or revocation. See [Session Model](./session-model.md) for the full lifecycle.
 
 ### Storage key privacy
 

@@ -107,7 +107,7 @@ This is a distinct concern from transfer approval: approving an operator for tra
 
 ## Next steps
 
-- [Token.approve](/reference/sdk/Token) -- full method signature and options
-- [useConfidentialApprove](/reference/react/useConfidentialApprove) -- React hook reference
-- [useConfidentialIsApproved](/reference/react/useConfidentialIsApproved) -- query hook reference
-- [useConfidentialTransferFrom](/reference/react/useConfidentialTransferFrom) -- operator transfer hook reference
+- [Token.approve](../reference/sdk/Token.md) -- full method signature and options
+- [useConfidentialApprove](../reference/react/useConfidentialApprove.md) -- React hook reference
+- [useConfidentialIsApproved](../reference/react/useConfidentialIsApproved.md) -- query hook reference
+- [useConfidentialTransferFrom](../reference/react/useConfidentialTransferFrom.md) -- operator transfer hook reference

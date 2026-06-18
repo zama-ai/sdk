@@ -110,7 +110,7 @@ await token.confidentialTransfer("0xRecipient", 500n);
 const balance = await token.balanceOf();
 ```
 
-See the [Token Operations](/reference/sdk/Token) reference for the full API.
+See the [Token Operations](../reference/sdk/Token.md) reference for the full API.
 
 ### 7. Use direct API key auth
 
@@ -148,6 +148,6 @@ process.on("SIGTERM", () => {
 
 ## Next steps
 
-- [RelayerNode](/reference/sdk/RelayerNode) -- full constructor options and pool behavior
-- [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
-- [Configuration](/guides/configuration) -- authentication options, network presets, and session management
+- [RelayerNode](../reference/sdk/RelayerNode.md) -- full constructor options and pool behavior
+- [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
+- [Configuration](./configuration.md) -- authentication options, network presets, and session management

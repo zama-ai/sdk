@@ -5,7 +5,7 @@ description: React-only signer adapter that wraps a wagmi config with automatic 
 
 # WagmiSigner
 
-React-only signer adapter that wraps a wagmi config with automatic session revocation. Implements [GenericSigner](/reference/sdk/GenericSigner).
+React-only signer adapter that wraps a wagmi config with automatic session revocation. Implements [GenericSigner](./GenericSigner.md).
 
 ## Import
 
@@ -50,7 +50,7 @@ const signer = new WagmiSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
+All methods are inherited from [GenericSigner](./GenericSigner.md).
 
 ### subscribe()
 
@@ -67,7 +67,7 @@ Chain switches do **not** trigger revocation. Credentials are keyed by `address 
 
 ## Related
 
-- [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
-- [ViemSigner](/reference/sdk/ViemSigner) -- viem alternative (manual lifecycle wiring)
-- [EthersSigner](/reference/sdk/EthersSigner) -- ethers alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericSigner](./GenericSigner.md) -- interface this class implements
+- [ViemSigner](./ViemSigner.md) -- viem alternative (manual lifecycle wiring)
+- [EthersSigner](./EthersSigner.md) -- ethers alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

@@ -110,5 +110,5 @@ function App() {
 
 ## Related
 
-- [`useConfidentialApprove`](/reference/react/useConfidentialApprove) — approve an operator
-- [`Token.isApproved()`](/reference/sdk/Token#isapproved) — imperative equivalent on the SDK class
+- [`useConfidentialApprove`](./useConfidentialApprove.md) — approve an operator
+- [`Token.isApproved()`](../sdk/Token.md#isapproved) — imperative equivalent on the SDK class

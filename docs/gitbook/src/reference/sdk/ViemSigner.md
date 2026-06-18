@@ -5,7 +5,7 @@ description: Signer adapter that wraps viem wallet and public clients for the SD
 
 # ViemSigner
 
-Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](/reference/sdk/GenericSigner).
+Signer adapter that wraps viem wallet and public clients for the SDK. Implements [GenericSigner](./GenericSigner.md).
 
 ## Import
 
@@ -98,7 +98,7 @@ const signer = new ViemSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
+All methods are inherited from [GenericSigner](./GenericSigner.md).
 
 | Method                        | Read-only | Full                        |
 | ----------------------------- | --------- | --------------------------- |
@@ -111,12 +111,12 @@ All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
 | `subscribe()`                 | N/A       | Works (requires `ethereum`) |
 
 {% hint style="info" %}
-`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](/guides/configuration).
+`subscribe()` is only available when you pass the `ethereum` option. Without it, wire wallet lifecycle events manually to `sdk.revokeSession()`. See the [Configuration guide](../../guides/configuration.md).
 {% endhint %}
 
 ## Related
 
-- [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
-- [EthersSigner](/reference/sdk/EthersSigner) -- ethers alternative
-- [WagmiSigner](/reference/sdk/WagmiSigner) -- React adapter with auto-revoke
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericSigner](./GenericSigner.md) -- interface this class implements
+- [EthersSigner](./EthersSigner.md) -- ethers alternative
+- [WagmiSigner](./WagmiSigner.md) -- React adapter with auto-revoke
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

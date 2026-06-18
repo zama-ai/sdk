@@ -142,5 +142,5 @@ Callback fired for SDK lifecycle events (keypair generation, signing, encryption
 
 ## Related
 
-- [Configuration guide](/guides/configuration)
-- [Session Model](/concepts/session-model)
+- [Configuration guide](../../guides/configuration.md)
+- [Session Model](../../concepts/session-model.md)

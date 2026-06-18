@@ -7,7 +7,7 @@ description: Mutation hook that signs an EIP-712 message authorizing decryption 
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential handles for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](/reference/react/useUserDecrypt) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+Call this early (e.g. after wallet connect) so that [`useUserDecrypt`](./useUserDecrypt.md) queries fire automatically without wallet popups. Automatically invalidates [`useIsAllowed`](./useIsAllowed.md) queries on success.
 
 {% hint style="warning" %}
 **Include all contracts you plan to decrypt.** `useUserDecrypt` checks that cached credentials cover every contract address in its `handles` before firing the query. If any contract is missing, the query stays disabled.
@@ -90,7 +90,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 ## Related
 
-- [`useIsAllowed`](/reference/react/useIsAllowed) -- check whether a session signature is cached
-- [`useRevoke`](/reference/react/useRevoke) -- revoke decrypt authorization for specific contracts
-- [`useRevokeSession`](/reference/react/useRevokeSession) -- revoke the entire session
-- [Session Model](/concepts/session-model) -- security model and TTL configuration
+- [`useIsAllowed`](./useIsAllowed.md) -- check whether a session signature is cached
+- [`useRevoke`](./useRevoke.md) -- revoke decrypt authorization for specific contracts
+- [`useRevokeSession`](./useRevokeSession.md) -- revoke the entire session
+- [Session Model](../../concepts/session-model.md) -- security model and TTL configuration

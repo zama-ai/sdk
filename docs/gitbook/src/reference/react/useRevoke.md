@@ -60,16 +60,16 @@ revoke(["0xContractA", "0xContractB"]);
 ## Behavior
 
 - Clears the cached session signature for each contract in the array.
-- Auto-invalidates all [`useIsAllowed`](/reference/react/useIsAllowed) queries on success.
+- Auto-invalidates all [`useIsAllowed`](./useIsAllowed.md) queries on success.
 - Does **not** delete stored FHE credentials — only the session-level signature is cleared.
 
 {% hint style="info" %}
-If you use [`WagmiSigner`](/reference/sdk/WagmiSigner), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](/reference/sdk/ViemSigner) and [`EthersSigner`](/reference/sdk/EthersSigner) users.
+If you use [`WagmiSigner`](../sdk/WagmiSigner.md), the SDK auto-revokes on wallet disconnect or account change. Manual revoke is for [`ViemSigner`](../sdk/ViemSigner.md) and [`EthersSigner`](../sdk/EthersSigner.md) users.
 {% endhint %}
 
 ## Related
 
-- [`useRevokeSession`](/reference/react/useRevokeSession) — revoke the entire session instead of specific contracts
-- [`useAllow`](/reference/react/useAllow) — authorize decryption for contracts with a single wallet signature
-- [`useIsAllowed`](/reference/react/useIsAllowed) — check whether a session signature is valid
-- [`Token.revoke()`](/reference/sdk/Token#revoke) — imperative equivalent on the SDK class
+- [`useRevokeSession`](./useRevokeSession.md) — revoke the entire session instead of specific contracts
+- [`useAllow`](./useAllow.md) — authorize decryption for contracts with a single wallet signature
+- [`useIsAllowed`](./useIsAllowed.md) — check whether a session signature is valid
+- [`Token.revoke()`](../sdk/Token.md#revoke) — imperative equivalent on the SDK class

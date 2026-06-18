@@ -151,11 +151,11 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-jwt-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](/reference/sdk/RelayerWeb) for details.
+When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
 
 ## Next steps
 
-- [Configuration](/guides/configuration) — full relayer, signer, and storage setup
-- [Shield Tokens](/guides/shield-tokens) — start converting public tokens to confidential form
-- [RelayerWeb reference](/reference/sdk/RelayerWeb) — security options and multi-threading
-- [RelayerNode reference](/reference/sdk/RelayerNode) — Node.js-specific configuration
+- [Configuration](./configuration.md) — full relayer, signer, and storage setup
+- [Shield Tokens](./shield-tokens.md) — start converting public tokens to confidential form
+- [RelayerWeb reference](../reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [RelayerNode reference](../reference/sdk/RelayerNode.md) — Node.js-specific configuration

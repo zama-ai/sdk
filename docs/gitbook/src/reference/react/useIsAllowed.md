@@ -98,12 +98,12 @@ const { data: allowed } = useIsAllowed({
 `data` is a `boolean`:
 
 - `true` -- a valid session signature is cached; decrypts will not prompt the wallet.
-- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](/reference/react/useAllow) to re-authorize.
+- `false` -- no cached signature, or the `sessionTTL` has expired. Call [`useAllow`](./useAllow.md) to re-authorize.
 
 {% include ".gitbook/includes/query-result.md" %}
 
 ## Related
 
-- [`useAllow`](/reference/react/useAllow) -- pre-authorize contracts with one wallet signature
-- [`useRevoke`](/reference/react/useRevoke) -- revoke session credentials
-- [Session Model](/concepts/session-model) -- security model and TTL configuration
+- [`useAllow`](./useAllow.md) -- pre-authorize contracts with one wallet signature
+- [`useRevoke`](./useRevoke.md) -- revoke session credentials
+- [Session Model](../../concepts/session-model.md) -- security model and TTL configuration

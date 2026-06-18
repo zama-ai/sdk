@@ -222,7 +222,7 @@ A delegation between `(delegator, delegate, contract)` can be in one of four sta
 | **Expired**   | Past non-zero timestamp  | `isDelegated()` returns `false`, `getDelegationExpiry()` returns a non-zero past value                                  |
 | **Revoked**   | `0n` (reset by contract) | Indistinguishable from **never set** via state reads — use `RevokedDelegationForUserDecryption` events to differentiate |
 
-Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](/reference/sdk/event-decoders#acl-delegation-events).
+Because the ACL contract resets the expiry to `0n` on revocation, `DelegationNotFoundError` covers both the never-set and revoked cases. To distinguish them, query `RevokedDelegationForUserDecryption` events using the [ACL event decoders](./event-decoders.md#acl-delegation-events).
 
 ## Error handling
 
@@ -345,13 +345,13 @@ if (delegated) {
 }
 ```
 
-See [Event Decoders](/reference/sdk/event-decoders#acl-delegation-events) for the full list of ACL event decoders and types.
+See [Event Decoders](./event-decoders.md#acl-delegation-events) for the full list of ACL event decoders and types.
 
 ## Related
 
-- [Contract Builders](/reference/sdk/contract-builders#delegation) — low-level ACL delegation builders
-- [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
-- [useRevokeDelegation](/reference/react/useRevokeDelegation) — React hook to revoke delegation
-- [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status
-- [useDecryptBalanceAs](/reference/react/useDecryptBalanceAs) — React hook to decrypt as a delegate
-- [useBatchDecryptBalancesAs](/reference/react/useBatchDecryptBalancesAs) — React hook for batch delegation decryption
+- [Contract Builders](./contract-builders.md#delegation) — low-level ACL delegation builders
+- [useDelegateDecryption](../react/useDelegateDecryption.md) — React hook to grant delegation
+- [useRevokeDelegation](../react/useRevokeDelegation.md) — React hook to revoke delegation
+- [useDelegationStatus](../react/useDelegationStatus.md) — React hook to query delegation status
+- [useDecryptBalanceAs](../react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
+- [useBatchDecryptBalancesAs](../react/useBatchDecryptBalancesAs.md) — React hook for batch delegation decryption

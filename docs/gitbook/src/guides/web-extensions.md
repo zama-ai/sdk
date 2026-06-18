@@ -76,5 +76,5 @@ This mirrors the default browser SDK behavior (in-memory session lost on tab clo
 
 ## Next steps
 
-- [GenericStorage](/reference/sdk/GenericStorage) -- implement a custom storage adapter for other extension APIs
-- [Session Model](/concepts/session-model) -- how keypair encryption, session signatures, and storage interact
+- [GenericStorage](../reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
+- [Session Model](../concepts/session-model.md) -- how keypair encryption, session signatures, and storage interact

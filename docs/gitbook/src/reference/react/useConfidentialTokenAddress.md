@@ -64,7 +64,7 @@ The `data` field resolves to `readonly [boolean, Address]`:
 
 ## Related
 
-- [useTokenAddress](/reference/react/useTokenAddress) -- reverse lookup (confidential &rarr; plain)
-- [useIsConfidentialTokenValid](/reference/react/useIsConfidentialTokenValid) -- check if a confidential token is valid
-- [useWrapperDiscovery](/reference/react/useWrapperDiscovery) -- alternative lookup via the deployment coordinator
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getConfidentialTokenAddress()` method
+- [useTokenAddress](./useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
+- [useIsConfidentialTokenValid](./useIsConfidentialTokenValid.md) -- check if a confidential token is valid
+- [useWrapperDiscovery](./useWrapperDiscovery.md) -- alternative lookup via the deployment coordinator
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getConfidentialTokenAddress()` method

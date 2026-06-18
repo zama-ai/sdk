@@ -13,7 +13,7 @@ Read-only interface for confidential token queries and batch operations — bala
 import { ReadonlyToken } from "@zama-fhe/sdk";
 ```
 
-Instance creation via [`ZamaSDK.createReadonlyToken()`](/reference/sdk/ZamaSDK#createreadonlytoken).
+Instance creation via [`ZamaSDK.createReadonlyToken()`](./ZamaSDK.md#createreadonlytoken).
 
 ## Usage
 
@@ -233,6 +233,6 @@ if (readonlyToken.isZeroHandle(handle)) {
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — creates `ReadonlyToken` via `createReadonlyToken()`
-- [Token](/reference/sdk/Token) — read/write variant with shielding and transfers
-- [Check Balances guide](/guides/check-balances) — step-by-step balance decryption walkthrough
+- [ZamaSDK](./ZamaSDK.md) — creates `ReadonlyToken` via `createReadonlyToken()`
+- [Token](./Token.md) — read/write variant with shielding and transfers
+- [Check Balances guide](../../guides/check-balances.md) — step-by-step balance decryption walkthrough

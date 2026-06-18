@@ -138,6 +138,6 @@ await batchDecryptAs({
 
 ## Related
 
-- [`useDecryptBalanceAs`](/reference/react/useDecryptBalanceAs) -- single-token variant
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check delegation status before decrypting
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useDecryptBalanceAs`](./useDecryptBalanceAs.md) -- single-token variant
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check delegation status before decrypting
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference

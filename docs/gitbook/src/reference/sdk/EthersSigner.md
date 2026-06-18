@@ -5,7 +5,7 @@ description: Signer adapter that wraps ethers providers and signers for the SDK.
 
 # EthersSigner
 
-Signer adapter that wraps ethers providers and signers for the SDK. Implements [GenericSigner](/reference/sdk/GenericSigner).
+Signer adapter that wraps ethers providers and signers for the SDK. Implements [GenericSigner](./GenericSigner.md).
 
 ## Import
 
@@ -103,7 +103,7 @@ const signer = new EthersSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
+All methods are inherited from [GenericSigner](./GenericSigner.md).
 
 | Method                        | Browser | Node.js | Read-only |
 | ----------------------------- | ------- | ------- | --------- |
@@ -121,7 +121,7 @@ Only the browser mode (passing `ethereum`) supports `subscribe()`. In Node.js mo
 
 ## Related
 
-- [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
-- [ViemSigner](/reference/sdk/ViemSigner) -- viem alternative
-- [WagmiSigner](/reference/sdk/WagmiSigner) -- React adapter with auto-revoke
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericSigner](./GenericSigner.md) -- interface this class implements
+- [ViemSigner](./ViemSigner.md) -- viem alternative
+- [WagmiSigner](./WagmiSigner.md) -- React adapter with auto-revoke
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

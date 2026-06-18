@@ -105,7 +105,7 @@ On-chain wrappers registry queries.
 
 ### `decryptionKeys`
 
-Cached decrypted values. Populated by [`useUserDecrypt`](/reference/react/useUserDecrypt).
+Cached decrypted values. Populated by [`useUserDecrypt`](./useUserDecrypt.md).
 
 ```ts
 import { decryptionKeys } from "@zama-fhe/react-sdk";
@@ -143,5 +143,5 @@ queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 ## Related
 
-- [ZamaProvider](/reference/react/ZamaProvider) — provider setup and hook overview
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — the hook whose cache these keys control
+- [ZamaProvider](./ZamaProvider.md) — provider setup and hook overview
+- [`useConfidentialBalance`](./useConfidentialBalance.md) — the hook whose cache these keys control
