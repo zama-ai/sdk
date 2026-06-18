@@ -53,6 +53,8 @@
     "llm:build": "node scripts/llm/build-llms.mjs",
     "llm:stage": "node scripts/llm/stage-artifacts.mjs",
     "llm:check": "node scripts/llm/check.mjs",
+    "abi:build": "node scripts/abi/build.mjs",
+    "abi:check": "node scripts/abi/check.mjs",
     "size": "size-limit",
     "size:json": "size-limit --json"
   },
