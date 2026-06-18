@@ -36,8 +36,9 @@ pnpm add @zama-fhe/sdk@^3 @zama-fhe/react-sdk@^3
 
 ## Symbol mapping (quick reference)
 
-The single source of truth for mechanical renames. `—` means _removed with no
-direct replacement_ (see the relevant step).
+The tables below are the authoritative list of renames. Skim for the symbol you
+need and jump to the cited **Step**, or read Steps 1→7 in order for a full
+migration.
 
 ### `@zama-fhe/sdk` (core)
 
@@ -56,7 +57,7 @@ direct replacement_ (see the relevant step).
 | `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | 5    |
 | `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | 5    |
 | `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | 5    |
-| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK CachingService                                                                  | 5    |
+| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK's internal cache                                                                | 5    |
 | `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | 6    |
 | `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                                          | 4    |
 | `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                                              | 4    |
@@ -162,9 +163,10 @@ using sdk = new ZamaSDK(
 {% endtabs %}
 
 {% hint style="info" %}
-Import viem's own `sepolia` under an alias (e.g. `sepolia as viemSepolia`) to
-avoid colliding with the `sepolia` preset from `@zama-fhe/sdk/chains`. viem's
-chain is still used for `createPublicClient`/`createWalletClient`.
+If you also construct viem clients here (`createPublicClient` /
+`createWalletClient`), import viem's own `sepolia` under an alias (e.g. `sepolia as
+viemSepolia`) to avoid colliding with the `sepolia` preset from
+`@zama-fhe/sdk/chains`.
 {% endhint %}
 
 ### React (wagmi)
@@ -316,6 +318,14 @@ The "credentials/session" vocabulary is replaced by the **permit** model. A
 permit is a reusable EIP-712 signature granting your app decrypt rights for a set
 of contracts. See the [Permit model](../concepts/permit-model.md) concept page.
 
+The mental model changed, not just the names. In 2.x your app held a **session**:
+a decrypt **keypair** it generated (`useGenerateKeypair`) plus per-contract
+**credentials** (the grants). In 3.x the SDK owns the keypair for you — you only
+deal with **permits** (the grants). That split is exactly what separates the two
+revocation hooks: `useRevokePermits` drops grants for some (or all) contracts but
+keeps the keypair, while `useClearCredentials` is a full logout that also discards
+the locally-managed keypair.
+
 In most apps you do **not** manage permits manually — decrypt hooks
 (`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
 automatically on first use. The explicit hooks are for gating that prompt and for
@@ -410,11 +420,14 @@ await setOperator({ operator: "0xOperator" });
 {% endtab %}
 {% endtabs %}
 
-Watch the signature changes: the token-scoped React hooks now take `tokenAddress`
-**positionally** (`useConfidentialSetOperator(tokenAddress)`,
-`useConfidentialTransferFrom(tokenAddress)`) instead of `({ tokenAddress })`. The
-SDK method `isOperator` takes `(holder, spender)` whereas `isApproved` defaulted
-the owner to the caller.
+Watch the signature changes — the React calling convention is **mixed**, so don't
+blanket-convert. Only the single-token _mutation_ hooks
+`useConfidentialSetOperator(address)` and `useConfidentialTransferFrom(address)`
+take the token address **positionally**; the other token-scoped hooks
+(`useConfidentialTransfer`, `useConfidentialBalance`, `useConfidentialIsOperator`)
+still take a **config object** (with the holder now passed explicitly). On the SDK
+side, `isOperator` takes `(holder, spender)` whereas `isApproved` defaulted the
+owner to the caller.
 
 ### Balance reads now take the holder explicitly
 
@@ -480,6 +493,14 @@ await sdk.signer.writeContract({
 {% endtab %}
 {% endtabs %}
 
+{% hint style="info" %}
+**`sdk.signer` may be `undefined` in 3.x.** In 2.x the signer was passed at
+construction and always present; in 3.x it is `undefined` in read-only mode (no
+wallet connected) — hence the `if (!sdk.signer) throw …` guard above. Prefer that
+over asserting `sdk.signer!`, which only hides the `undefined` until it crashes at
+the call site. Reads never need the signer — use `sdk.provider`.
+{% endhint %}
+
 ### Decrypt glossary: `handle` → `encryptedValue`
 
 `useUserDecrypt` was renamed `useDecryptValues`, and its argument changed: from an
@@ -487,14 +508,6 @@ object `{ handles }` to a positional array of `{ encryptedValue, contractAddress
 Result objects are keyed by `encryptedValue` (not `handle`). Reads also move from
 `sdk.signer.readContract` to `sdk.provider.readContract` — `sdk.provider` is
 always available, whereas in 2.x reads went through the signer.
-
-{% hint style="info" %}
-**`sdk.signer` may be `undefined` in 3.x.** In 2.x the signer was passed at
-construction and always present; in 3.x it is `undefined` in read-only mode (no
-wallet connected). Guard writes with `if (!sdk.signer) throw …` rather than
-asserting `sdk.signer!`, which only hides the `undefined` until it crashes at the
-call site. Reads never need the signer — use `sdk.provider`.
-{% endhint %}
 
 {% tabs %}
 {% tab title="Before (2.x)" %}
