@@ -131,5 +131,5 @@ Ready to build? Jump to the [Quick start](./tutorials/quick-start.md) for a full
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)

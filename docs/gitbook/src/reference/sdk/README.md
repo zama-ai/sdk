@@ -24,5 +24,5 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)

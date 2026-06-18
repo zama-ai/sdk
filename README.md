@@ -9,7 +9,7 @@
 <hr/>
 
 <p align="center">
-  <a href="https://docs.zama.org/protocol"> 📒 Documentation</a> | <a href="https://zama.ai/community"> 💛 Community support</a> | <a href="https://github.com/zama-ai/awesome-zama"> 📚 FHE resources by Zama</a>
+  <a href="https://docs.zama.org/protocol"> 📒 Documentation</a> | <a href="https://community.zama.org"> 💛 Community support</a> | <a href="https://github.com/zama-ai/awesome-zama"> 📚 FHE resources by Zama</a>
 </p>
 
 <p align="center">
@@ -159,7 +159,7 @@ This software is distributed under the **BSD-3-Clause-Clear** license. Read [thi
 
 🌟 If you find this project helpful or interesting, please consider giving it a star on GitHub! Your support helps to grow the community and motivates further development.
 
-<a target="_blank" href="https://community.zama.ai">
+<a target="_blank" href="https://community.zama.org">
   💛 Community forum on Discourse
 </a>
 

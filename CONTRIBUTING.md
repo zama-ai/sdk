@@ -63,6 +63,12 @@ pnpm build        # Build output
 
 4. Open a pull request
 
+### GitBook Documentation
+
+The docs in `docs/gitbook/src/` are published to GitBook (both `main` and `prerelease` ship as separate spaces). **Links between doc pages must be relative `.md` paths** — e.g. `[Token](../reference/sdk/Token.md)`, never host-absolute (`/reference/sdk/Token`). GitBook serves each space under a sub-path (`docs.zama.org/protocol/sdk/…`), so a leading-slash link resolves against the site root and breaks (it only surfaces on the live site — use GitBook's per-PR preview to check rendering). Anchors must match a heading in the target page.
+
+`pnpm docs:check-links` validates this (no host-absolute links, every relative target and `#anchor` resolves) and runs in CI on any docs change. Run it locally before pushing doc edits.
+
 ### LLM Documentation Artifacts
 
 The repository publishes generated LLM entry points for coding agents:
