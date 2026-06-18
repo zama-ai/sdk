@@ -100,12 +100,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type {
-  StoredTransportKeyPairWithPermits,
-  TransportKeyPair,
-  StoredTransportKeyPair,
-  Permission,
-} from "./credentials";
+export type { TransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,

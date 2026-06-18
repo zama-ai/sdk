@@ -14144,14 +14144,6 @@ export class SigningRejectedError extends ZamaError {
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 // @public
-export interface StoredTransportKeyPairWithPermits {
-    // (undocumented)
-    readonly keypair: StoredTransportKeyPair;
-    // (undocumented)
-    readonly permits: readonly Permission[];
-}
-
-// @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
