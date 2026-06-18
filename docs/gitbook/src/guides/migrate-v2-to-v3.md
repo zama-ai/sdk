@@ -12,12 +12,13 @@ _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule. Apply the steps in
 order — Step 1 (configuration) unblocks everything else.
 
 {% hint style="info" %}
-**The good news.** The high-level token transfer/balance API did **not** change.
+**The good news.** The high-level token transfer/balance API is mostly unchanged.
 `Token` methods (`shield`, `confidentialTransfer`, `unshield`, `unshieldAll`,
-`balanceOf`, `decryptBalanceAs`, …) keep the same signatures. The bulk of the
-migration is **how you construct the SDK** (Step 1) plus a set of mechanical
-renames. Two surfaces did move: ERC-20-style `approve` became the operator model
-(Step 4) and token-level delegation moved to `sdk.delegations.*` (Step 3).
+`decryptBalanceAs`, …) keep the same signatures. The bulk of the migration is
+**how you construct the SDK** (Step 1) plus a set of mechanical renames. A few
+surfaces did move: ERC-20-style `approve` became the operator model (Step 4),
+token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads
+now take the holder address explicitly (Step 4).
 {% endhint %}
 
 {% hint style="warning" %}
@@ -40,29 +41,28 @@ direct replacement_ (see the relevant step).
 
 ### `@zama-fhe/sdk` (core)
 
-| 2.x                                                                        | 3.x                                                                                    | Step |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---- |
-| `ZamaSDKConfig`                                                            | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                 | 1    |
-| `new ZamaSDK({ relayer, signer, storage })`                                | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                    | 1    |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`) | `sepolia` / `mainnet` / `hardhat` (+ `anvil`, `hoodi`) from `@zama-fhe/sdk/chains`     | 1    |
-| `<chainConfig>.chainId`                                                    | `<chain>.id`                                                                           | 1    |
-| `ViemSigner` / `EthersSigner` (constructed)                                | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`   | 1    |
-| `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                       | 2    |
-| `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                     | 2    |
-| `RelayerWebConfig` / `RelayerWebSecurityConfig` / `RelayerNode`            | `RelayerConfig` / `CleartextRelayerConfig` / `NodeRelayerConfig` / `RelayerDispatcher` | 2    |
-| `buildRelayer(...)`                                                        | **removed** — use `web()`/`node()`/`cleartext()` factories                             | 2    |
-| `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                               | 3    |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `CredentialBundle`, `Permission`, `StoredKeypair` (+ permit events)                    | 3    |
-| `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                  | 5    |
-| `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                       | 5    |
-| `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                            | 5    |
-| `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                  | 5    |
-| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK CachingService                                        | 5    |
-| `ReadonlyToken`                                                            | `WrappedToken`                                                                         | 6    |
-| `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                | 4    |
-| `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                    | 4    |
-| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                    | 7    |
-| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                            | 7    |
+| 2.x                                                                        | 3.x                                                                                                              | Step |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---- |
+| `ZamaSDKConfig`                                                            | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | 1    |
+| `new ZamaSDK({ relayer, signer, storage })`                                | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | 1    |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`) | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | 1    |
+| `<chainConfig>.chainId`                                                    | `<chain>.id`                                                                                                     | 1    |
+| `ViemSigner` / `EthersSigner` (constructed)                                | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | 1    |
+| `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                                                 | 2    |
+| `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                                               | 2    |
+| `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                                                         | 3    |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `CredentialBundle`, `Permission`, `StoredKeypair` (+ permit events)                                              | 3    |
+| `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                                            | 5    |
+| `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | 5    |
+| `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | 5    |
+| `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | 5    |
+| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK CachingService                                                                  | 5    |
+| `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | 6    |
+| `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                                          | 4    |
+| `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                                              | 4    |
+| `token.balanceOf()` (self default)                                         | `token.balanceOf(owner)` — owner address now required                                                            | 4    |
+| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | 7    |
+| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                                                      | 7    |
 
 ### `@zama-fhe/react-sdk` (hooks)
 
@@ -73,8 +73,10 @@ direct replacement_ (see the relevant step).
 | `useReadonlyToken`                                             | `useWrappedToken`                                                   | 6    |
 | `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                        | 4    |
 | `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                          | 4    |
+| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit    | 4    |
 | `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                   | 3    |
 | `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5 | 5    |
+| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5      | 5    |
 | `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                        | 3    |
 | `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                  | 3    |
 | `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                         | 3    |
@@ -279,7 +281,6 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 | `new RelayerWeb({...})`  | `web()`       | `@zama-fhe/sdk/web`  |
 | `new RelayerNode({...})` | `node()`      | `@zama-fhe/sdk/node` |
 | (local dev mock)         | `cleartext()` | `@zama-fhe/sdk`      |
-| `buildRelayer(...)`      | **removed**   | —                    |
 
 ```ts
 // Before
@@ -294,11 +295,26 @@ The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
 `auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
 
+If you imported the relayer **config types** directly, they followed the
+constructor → factory move: the `node()` / `web()` / `cleartext()` factories
+return `NodeRelayerConfig` / `WebRelayerConfig` / `CleartextRelayerConfig` (all
+extend `RelayerConfig`). The relayer-sdk-level `RelayerWebConfig` /
+`RelayerWebSecurityConfig` are unchanged but now live under `@zama-fhe/sdk/web`.
+
+{% hint style="info" %}
+**Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
+Pick by deployment: the **Zama-hosted relayer requires `ApiKeyHeader`** (sent as
+`x-api-key` — Bearer and cookie are rejected at the edge); use `ApiKeyCookie` for
+the SDK→proxy hop behind your own proxy, and `BearerToken` for a self-hosted
+relayer whose auth layer expects it. Field names differ: `ApiKeyHeader` uses
+`value`, `BearerToken` uses `token`.
+{% endhint %}
+
 ## Step 3 — Permits & delegated decryption
 
 The "credentials/session" vocabulary is replaced by the **permit** model. A
 permit is a reusable EIP-712 signature granting your app decrypt rights for a set
-of contracts. See the [Permit model](/concepts/permit-model) concept page.
+of contracts. See the [Permit model](../concepts/permit-model.md) concept page.
 
 In most apps you do **not** manage permits manually — decrypt hooks
 (`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
@@ -399,6 +415,20 @@ Watch the signature changes: the token-scoped React hooks now take `tokenAddress
 `useConfidentialTransferFrom(tokenAddress)`) instead of `({ tokenAddress })`. The
 SDK method `isOperator` takes `(holder, spender)` whereas `isApproved` defaulted
 the owner to the caller.
+
+### Balance reads now take the holder explicitly
+
+The 2.x convenience of defaulting balance reads to the connected account is gone —
+pass the holder address:
+
+```ts
+// Before: token.balanceOf();          After: token.balanceOf(owner)
+const balance = await token.balanceOf(owner);
+```
+
+The React hook config changed to match: `useConfidentialBalance({ tokenAddress })`
+becomes `useConfidentialBalance({ address, account })` — `address` is the token,
+`account` is the holder to read.
 
 ## Step 5 — Encrypt (hex) & decrypt glossary
 
@@ -505,6 +535,10 @@ decrypted?.[inputs[0].encryptedValue];
 {% endtab %}
 {% endtabs %}
 
+Public (non-permit) decryption follows the same rename: `usePublicDecrypt` →
+`useDecryptPublicValues`. Both are mutations, so only the hook name changes — no
+permit is involved since the values are already publicly decryptable.
+
 {% hint style="warning" %}
 **Cache ownership changed.** In 2.x `DecryptCache` and `applyDecryptedValues` were
 public — you could seed, prune, or clear the decrypt cache on your own schedule. In
@@ -556,7 +590,7 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|WagmiSigner|RelayerWeb|RelayerNode|buildRelayer|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|CredentialsManager|extractEncryptedHandles|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|encryptedAmountHandle'
+   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|\.balanceOf\(\)'
    ```
 
    A few atoms can still produce hits that don't need migrating — inspect rather
@@ -572,8 +606,8 @@ After applying the steps:
 
 ## Next steps
 
-- [Configuration](/guides/configuration)
-- [Operator approvals](/guides/operator-approvals)
-- [Encrypt & decrypt](/guides/encrypt-decrypt)
-- [Delegated decryption](/guides/delegated-decryption)
-- [Permit model](/concepts/permit-model)
+- [Configuration](configuration.md)
+- [Operator approvals](operator-approvals.md)
+- [Encrypt & decrypt](encrypt-decrypt.md)
+- [Delegated decryption](delegated-decryption.md)
+- [Permit model](../concepts/permit-model.md)
