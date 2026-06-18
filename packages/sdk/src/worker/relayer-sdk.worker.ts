@@ -403,8 +403,9 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
     sendSuccess(id, type, response, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] Encrypt error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 
@@ -488,8 +489,9 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] PublicDecrypt error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 
@@ -625,8 +627,9 @@ async function handleRequestZKProofVerification(
     sendSuccess(id, type, result, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] RequestZKProofVerification error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 
@@ -646,8 +649,9 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] GetPublicKey error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 
@@ -670,8 +674,9 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const statusCode = extractHttpStatus(error);
     console.error("[Worker] GetPublicParams error:", message);
-    sendError(id, type, message);
+    sendError(id, type, message, statusCode);
   }
 }
 

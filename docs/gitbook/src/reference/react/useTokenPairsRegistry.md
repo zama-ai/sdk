@@ -7,7 +7,7 @@ description: Fetch all token wrapper pairs from the on-chain registry.
 
 Fetches all token wrapper pairs from the `ConfidentialTokenWrappersRegistry` contract on the current chain in a single call.
 
-For large registries, prefer [`useListPairs`](/reference/react/useListPairs) with pagination.
+For large registries, prefer [`useListPairs`](./useListPairs.md) with pagination.
 
 ## Import
 
@@ -65,6 +65,6 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useListPairs](/reference/react/useListPairs) -- paginated listing with optional metadata
-- [useTokenPairsLength](/reference/react/useTokenPairsLength) -- get total count without fetching pairs
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getTokenPairs()` method
+- [useListPairs](./useListPairs.md) -- paginated listing with optional metadata
+- [useTokenPairsLength](./useTokenPairsLength.md) -- get total count without fetching pairs
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getTokenPairs()` method

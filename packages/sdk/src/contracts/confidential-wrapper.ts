@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import { encryptedAbi } from "../abi/encrypted.abi";
+import { confidentialWrapperAbi } from "../abi/confidential-wrapper.abi";
 import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 
 /**
@@ -15,7 +15,7 @@ import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address) {
   return {
     address: tokenAddress,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "confidentialBalanceOf",
     args: [userAddress],
   } as const;
@@ -39,7 +39,7 @@ export function confidentialTransferContract(
 ) {
   return {
     address: encryptedErc20,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "confidentialTransfer",
     args: [to, encryptedAmount, inputProof],
   } as const;
@@ -64,7 +64,7 @@ export function confidentialTransferFromContract(
 ) {
   return {
     address: encryptedErc20,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "confidentialTransferFrom",
     args: [from, to, encryptedAmount, inputProof],
   } as const;
@@ -83,7 +83,7 @@ export function confidentialTransferFromContract(
 export function isOperatorContract(tokenAddress: Address, holder: Address, spender: Address) {
   return {
     address: tokenAddress,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "isOperator",
     args: [holder, spender],
   } as const;
@@ -104,7 +104,7 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
   const effectiveUntil = until ?? Math.floor(Date.now() / 1000) + 3600;
   return {
     address: tokenAddress,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "setOperator",
     args: [operator, effectiveUntil],
   } as const;
@@ -129,7 +129,7 @@ export function unwrapContract(
 ) {
   return {
     address: encryptedErc20,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "unwrap",
     args: [from, to, encryptedAmount, inputProof],
   } as const;
@@ -153,7 +153,7 @@ export function unwrapFromBalanceContract(
 ) {
   return {
     address: encryptedErc20,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "unwrap",
     args: [from, to, encryptedBalance],
   } as const;
@@ -172,7 +172,7 @@ export function unwrapFromBalanceContract(
 export function confidentialTotalSupplyContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "confidentialTotalSupply",
     args: [],
   } as const;
@@ -189,8 +189,87 @@ export function confidentialTotalSupplyContract(tokenAddress: Address) {
 export function rateContract(tokenAddress: Address) {
   return {
     address: tokenAddress,
-    abi: encryptedAbi,
+    abi: confidentialWrapperAbi,
     functionName: "rate",
     args: [],
+  } as const;
+}
+
+/**
+ * Returns the contract config for finalizing an unwrap.
+ *
+ * @example
+ * ```ts
+ * const txHash = await signer.writeContract(
+ *   finalizeUnwrapContract(wrapper, unwrapRequestId, cleartext, proof),
+ * );
+ * ```
+ */
+export function finalizeUnwrapContract(
+  wrapper: Address,
+  unwrapRequestId: EncryptedValue,
+  unwrapAmountCleartext: bigint,
+  decryptionProof: Hex,
+) {
+  return {
+    address: wrapper,
+    abi: confidentialWrapperAbi,
+    functionName: "finalizeUnwrap",
+    args: [unwrapRequestId, unwrapAmountCleartext, decryptionProof],
+  } as const;
+}
+
+/**
+ * Returns the contract config to read the underlying ERC-20 token of a wrapper.
+ *
+ * @example
+ * ```ts
+ * const token = await provider.readContract(underlyingContract(wrapperAddress));
+ * ```
+ */
+export function underlyingContract(wrapperAddress: Address) {
+  return {
+    address: wrapperAddress,
+    abi: confidentialWrapperAbi,
+    functionName: "underlying",
+    args: [],
+  } as const;
+}
+
+/**
+ * Returns the contract config to read the inferred plaintext total supply.
+ *
+ * @example
+ * ```ts
+ * const supply = await provider.readContract(
+ *   inferredTotalSupplyContract(wrapperAddress),
+ * );
+ * ```
+ */
+export function inferredTotalSupplyContract(wrapperAddress: Address) {
+  return {
+    address: wrapperAddress,
+    abi: confidentialWrapperAbi,
+    functionName: "inferredTotalSupply",
+    args: [],
+  } as const;
+}
+
+/**
+ * Returns the contract config for a wrap (shield) operation.
+ *
+ * @example
+ * ```ts
+ * const txHash = await signer.writeContract(
+ *   wrapContract(wrapperAddress, to, amount),
+ * );
+ * ```
+ */
+export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint) {
+  return {
+    address: wrapperAddress,
+    abi: confidentialWrapperAbi,
+    functionName: "wrap",
+    args: [to, amount],
   } as const;
 }

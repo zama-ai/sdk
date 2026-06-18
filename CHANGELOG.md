@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.1.0-alpha.14](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.13...v3.1.0-alpha.14) (2026-06-18)
+
+### Bug Fixes
+
+- **sdk:** use x-api-key for the Zama-hosted relayer; keep & document all three auth methods [SDK-210] ([#412](https://github.com/zama-ai/sdk/issues/412)) ([825a705]())
+
+## [3.1.0-alpha.13](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.12...v3.1.0-alpha.13) (2026-06-18)
+
+### Code Refactoring
+
+- **sdk:** drop FinalizeUnwrapParams.burnAmount legacy alias [SDK-219] ([#444](https://github.com/zama-ai/sdk/issues/444)) ([e6bffcb]()), closes [#418]()
+
+## [3.1.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.11...v3.1.0-alpha.12) (2026-06-18)
+
+### Bug Fixes
+
+- **wrappers:** sync wrapper ABI with protocol-apps wrapper (unwrapRequestId shape) [SDK-213] ([#418](https://github.com/zama-ai/sdk/issues/418)) ([f455685]())
+
+## [3.1.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.10...v3.1.0-alpha.11) (2026-06-17)
+
+### Bug Fixes
+
+- **chains:** add ingenTestnet + bscTestnet presets ([#442](https://github.com/zama-ai/sdk/issues/442)) ([5bdd545]())
+
+## [3.1.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.9...v3.1.0-alpha.10) (2026-06-16)
+
+### Code Refactoring
+
+- **contracts:** remove orphan IWrapperReceiver.sol [SDK-214] ([#420](https://github.com/zama-ai/sdk/issues/420)) ([3ba19e2]())
+
 ## [3.1.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.8...v3.1.0-alpha.9) (2026-06-16)
 
 ### Code Refactoring

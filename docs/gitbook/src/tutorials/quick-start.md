@@ -31,7 +31,7 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-See [Authentication](/guides/authentication) for a backend proxy example.
+See [Authentication](../guides/authentication.md) for a backend proxy example.
 
 ## Install
 
@@ -253,7 +253,7 @@ const sdk = new ZamaSDK(config);
 {% endtabs %}
 
 {% hint style="info" %}
-**FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](/reference/sdk/FheArtifactCache) for details.
+**FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](../reference/sdk/FheArtifactCache.md) for details.
 {% endhint %}
 
 ## Your first confidential transfer
@@ -440,8 +440,8 @@ The hooks and SDK methods handle FHE encryption, wallet signing, ERC-20 approval
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- chains, relayers, provider, signer, storage, and authentication setup
-- [Shield Tokens](/guides/shield-tokens) -- move tokens into confidential form
-- [Chain Objects](/reference/sdk/network-presets) -- pre-configured chain definitions for Sepolia, Mainnet, and more
-- [React Hooks](/reference/react/ZamaProvider) -- provider setup and all available hooks
-- [Security Model](/concepts/security-model) -- understand the cryptography and trust assumptions
+- [Configuration](../guides/configuration.md) -- chains, relayers, provider, signer, storage, and authentication setup
+- [Shield Tokens](../guides/shield-tokens.md) -- move tokens into confidential form
+- [Chain Objects](../reference/sdk/network-presets.md) -- pre-configured chain definitions for Sepolia, Mainnet, and more
+- [React Hooks](../reference/react/ZamaProvider.md) -- provider setup and all available hooks
+- [Security Model](../concepts/security-model.md) -- understand the cryptography and trust assumptions

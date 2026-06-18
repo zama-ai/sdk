@@ -33,11 +33,11 @@ import { withRetry } from "./relayer-utils";
  * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
  * peerDependencies range in package.json in sync (~x.y.z).
  */
-export const RELAYER_SDK_VERSION = "0.4.2";
+export const RELAYER_SDK_VERSION = "0.4.4";
 export const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
 /** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
 export const CDN_INTEGRITY =
-  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
+  "a50426aae8440e802102c8674dd8451f34fe79352d5e2cc6b89d9f1aa340296176c2ee33d9aa4657752f8ca96f74f921";
 
 /**
  * RelayerWeb — single-chain browser encryption/decryption layer.
@@ -190,7 +190,10 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.publicDecrypt({ chainId, encryptedValues });
+      const result = await this.#worker.publicDecrypt({
+        chainId,
+        encryptedValues,
+      });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,

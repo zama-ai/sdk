@@ -23,7 +23,7 @@ import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
-import { JSX } from 'react/jsx-runtime';
+import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';

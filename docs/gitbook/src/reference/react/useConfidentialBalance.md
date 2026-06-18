@@ -134,6 +134,6 @@ The `data` property is `bigint | undefined` -- the decrypted token balance.
 
 ## Related
 
-- [useConfidentialBalances](/reference/react/useConfidentialBalances) -- batch variant for multiple tokens
-- [Check Balances guide](/guides/check-balances)
-- [Query Keys](/reference/react/query-keys) -- `zamaQueryKeys.confidentialBalance`
+- [useConfidentialBalances](./useConfidentialBalances.md) -- batch variant for multiple tokens
+- [Check Balances guide](../../guides/check-balances.md)
+- [Query Keys](./query-keys.md) -- `zamaQueryKeys.confidentialBalance`

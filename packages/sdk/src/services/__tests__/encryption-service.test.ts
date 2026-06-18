@@ -1,5 +1,10 @@
 import type { Address } from "viem";
-import { EncryptionFailedError, ZamaError, ZamaErrorCode } from "../../errors";
+import {
+  EncryptionFailedError,
+  RelayerRequestFailedError,
+  ZamaError,
+  ZamaErrorCode,
+} from "../../errors";
 import type { EncryptParams } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
@@ -57,6 +62,24 @@ describe("EncryptionService", () => {
       },
       ENCRYPT_PARAMS.contractAddress,
     );
+  });
+
+  test("surfaces the relayer auth message and status when encryption is rejected", async ({
+    createEncryptionService,
+    relayer,
+  }) => {
+    const service = createEncryptionService({ emitEvent: vi.fn() });
+    const relayerError = Object.assign(
+      new Error("Input proof failed: relayer respond with HTTP code 403 Missing Zama API Key"),
+      { statusCode: 403 },
+    );
+    vi.mocked(relayer.encrypt).mockRejectedValueOnce(relayerError);
+
+    const caught = await service.encrypt(ENCRYPT_PARAMS).catch((e: unknown) => e);
+
+    expect(caught).toBeInstanceOf(RelayerRequestFailedError);
+    expect((caught as RelayerRequestFailedError).statusCode).toBe(403);
+    expect((caught as RelayerRequestFailedError).message).toMatch(/zama api key/i);
   });
 
   test("re-throws ZamaError failures as-is after emitting EncryptError", async ({

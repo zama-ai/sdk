@@ -45,10 +45,10 @@ TanStack Query-based hooks with cached decryption, automatic cache invalidation,
 
 ## Two packages, one import
 
-| Package                                                | Use when...                                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](/reference/sdk/ZamaSDK)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
-| [`@zama-fhe/react-sdk`](/reference/react/ZamaProvider) | You are building a React app (hooks and React-specific providers)             |
+| Package                                                    | Use when...                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`@zama-fhe/sdk`](./reference/sdk/ZamaSDK.md)              | You are building with vanilla TypeScript, Node.js, or any non-React framework |
+| [`@zama-fhe/react-sdk`](./reference/react/ZamaProvider.md) | You are building a React app (hooks and React-specific providers)             |
 
 If you are using React, install both packages: `@zama-fhe/react-sdk` provides the hooks and `ZamaProvider`, while `@zama-fhe/sdk` is a peer dependency that provides core utilities, relayer factories, chain presets, and error helpers. For wagmi apps, build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={zamaConfig}>`. For non-React apps, use `createConfig` from `@zama-fhe/sdk/viem` or `@zama-fhe/sdk/ethers`.
 
@@ -125,11 +125,11 @@ await wrappedToken.confidentialTransfer("0xRecipient", 500n); // private send
 await wrappedToken.unshield(500n); // withdraw back to public
 ```
 
-Ready to build? Jump to the [Quick start](/tutorials/quick-start) for a full working example with your stack.
+Ready to build? Jump to the [Quick start](./tutorials/quick-start.md) for a full working example with your stack.
 
 ## Help center
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)

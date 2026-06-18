@@ -152,5 +152,5 @@ const sdk = new ZamaSDK(config);
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) -- accepts `storage` and `permitStorage` parameters
-- [Configuration guide](/guides/configuration) -- storage selection guidance
+- [ZamaSDK](./ZamaSDK.md) -- accepts `storage` and `permitStorage` parameters
+- [Configuration guide](../../guides/configuration.md) -- storage selection guidance

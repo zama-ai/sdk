@@ -235,7 +235,7 @@ Cache entries are scoped by chain ID:
 
 ## Related
 
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser relayer that creates an `FheArtifactCache` internally
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js relayer variant
-- [GenericStorage](/reference/sdk/GenericStorage) — storage interface used by the cache
-- [Configuration guide](/guides/configuration) — network presets and relayer setup
+- [RelayerWeb](./RelayerWeb.md) — browser relayer that creates an `FheArtifactCache` internally
+- [RelayerNode](./RelayerNode.md) — Node.js relayer variant
+- [GenericStorage](./GenericStorage.md) — storage interface used by the cache
+- [Configuration guide](../../guides/configuration.md) — network presets and relayer setup

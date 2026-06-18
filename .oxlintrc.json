@@ -161,9 +161,6 @@
         "**/*.config.mts",
         "**/*.config.cts",
         "packages/sdk/src/worker/**",
-        "packages/sdk/src/token/credentials-manager.ts",
-        "packages/sdk/src/token/credential-manager-base.ts",
-        "packages/sdk/src/token/balance-cache.ts",
         "packages/sdk/src/token/token.ts"
       ],
       "rules": {
@@ -172,16 +169,13 @@
     },
     {
       "files": [
-        "packages/react-sdk/src/relayer/use-user-decrypted-values.ts",
         "packages/react-sdk/src/wagmi/wagmi-signer.ts",
         "packages/sdk/src/ethers/ethers-signer.ts",
         "packages/sdk/src/events/onchain-events.ts",
         "packages/sdk/src/query/confidential-balances.ts",
         "packages/sdk/src/relayer/cleartext/relayer-cleartext.ts",
         "packages/sdk/src/relayer/relayer-utils.ts",
-        "packages/sdk/src/token/readonly-token.ts",
         "packages/sdk/src/token/token.ts",
-        "packages/sdk/src/utils.ts",
         "packages/sdk/src/viem/viem-signer.ts",
         "packages/sdk/src/worker/worker.node-pool.ts"
       ],

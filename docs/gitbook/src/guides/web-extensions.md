@@ -88,5 +88,5 @@ This mirrors the default browser SDK behavior (in-memory permits lost on tab clo
 
 ## Next steps
 
-- [GenericStorage](/reference/sdk/GenericStorage) -- implement a custom storage adapter for other extension APIs
-- [Permit Model](/concepts/permit-model) -- how the transport key pair vault, signed permits, and storage interact
+- [GenericStorage](../reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
+- [Permit Model](../concepts/permit-model.md) -- how the transport key pair vault, signed permits, and storage interact

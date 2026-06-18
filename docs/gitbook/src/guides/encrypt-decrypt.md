@@ -7,7 +7,7 @@ description: How to encrypt values and decrypt FHE encrypted values for custom c
 
 The high-level token hooks (`useShield`, `useConfidentialTransfer`, `useConfidentialBalance`) handle encryption and decryption automatically for wrapped confidential ERC-20 tokens. This guide is for a different scenario: **your smart contract uses FHE types directly** (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract that stores `euint` values). In that case, you need `useEncrypt` and `useDecryptValues` to interact with your contract's encrypted parameters and return values.
 
-Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
+Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
 
 ## Example
 
@@ -123,7 +123,7 @@ export default defineConfig({
 {% endtab %}
 {% endtabs %}
 
-See [Configuration](/guides/configuration) for full setup instructions.
+See [Configuration](./configuration.md) for full setup instructions.
 {% endhint %}
 
 {% hint style="warning" %}

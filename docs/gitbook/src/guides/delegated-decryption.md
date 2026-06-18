@@ -12,7 +12,7 @@ Common use cases:
 - **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
 - **Auditors** — a third party verifies holdings without the token owner being online.
 
-This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
+This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
 
 ## Example
 
@@ -207,11 +207,11 @@ try {
 {% endtab %}
 {% endtabs %}
 
-See [Handle errors](/guides/handle-errors) for full error-handling patterns and [Error types](/reference/sdk/errors) for the complete list.
+See [Handle errors](./handle-errors.md) for full error-handling patterns and [Error types](../reference/sdk/errors.md) for the complete list.
 
 ## Next steps
 
-- [Delegations reference](/reference/sdk/delegation) — full `Delegations` namespace API
-- [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
-- [useDecryptBalanceAs](/reference/react/useDecryptBalanceAs) — React hook to decrypt as a delegate
-- [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status
+- [Delegations reference](../reference/sdk/delegation.md) — full `Delegations` namespace API
+- [useDelegateDecryption](../reference/react/useDelegateDecryption.md) — React hook to grant delegation
+- [useDecryptBalanceAs](../reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
+- [useDelegationStatus](../reference/react/useDelegationStatus.md) — React hook to query delegation status

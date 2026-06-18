@@ -1,6 +1,4 @@
 // oxlint-disable no-empty-pattern
-// oxlint-disable jest/expect-expect
-// oxlint-disable jest/no-disabled-tests
 import { randomBytes } from "node:crypto";
 import http from "node:http";
 import { test as base, describe, expect } from "vitest";
@@ -39,8 +37,11 @@ function createTestServer(): {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          fhePublicKey: { dataId: "pk-id-1", urls: [`${base}${pkPath}`] },
-          crs: { 2048: { dataId: "crs-id-1", urls: [`${base}${crsPath}`] } },
+          status: "succeeded",
+          response: {
+            fheKeyInfo: [{ fhePublicKey: { dataId: "pk-id-1", urls: [`${base}${pkPath}`] } }],
+            crs: { 2048: { dataId: "crs-id-1", urls: [`${base}${crsPath}`] } },
+          },
         }),
       );
       return;

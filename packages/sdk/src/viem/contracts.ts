@@ -99,13 +99,13 @@ export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
   unwrapRequestId: EncryptedValue,
-  burntAmountCleartext: bigint,
+  unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...finalizeUnwrapContract(wrapper, unwrapRequestId, burntAmountCleartext, decryptionProof),
+    ...finalizeUnwrapContract(wrapper, unwrapRequestId, unwrapAmountCleartext, decryptionProof),
   });
 }
 
