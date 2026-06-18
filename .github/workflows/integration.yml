@@ -30,9 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Enables the live relayer-auth negative checks (cookie / bearer / no-auth
-      # / bogus-key are rejected by the hosted relayer). No API key needed; set
-      # here so the run command stays clean.
-      ENABLE_RELAYER_AUTH_TESTS: "true"
+      # / bogus-key are rejected by the hosted relayer). No API key needed.
+      # Toggle without a commit via the repo variable (Settings → Variables) —
+      # set it to "true" to run them; unset/anything-else skips them. Acts as a
+      # kill switch if the hosted relayer's auth behavior changes and the canary
+      # needs muting while it's reconciled.
+      ENABLE_RELAYER_AUTH_TESTS: ${{ vars.ENABLE_RELAYER_AUTH_TESTS }}
     steps:
       # TODO: remove once GitHub runner images ship the CVE-2026-31431 kernel fix
       - name: Workaround CVE-2026-31431 (copy.fail)
