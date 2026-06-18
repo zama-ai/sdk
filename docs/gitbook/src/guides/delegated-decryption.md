@@ -5,7 +5,7 @@ description: Grant another address the right to decrypt confidential balances, t
 
 # Delegated decryption
 
-Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own FHE keypair and a delegated EIP-712 flow to prove they have permission.
+Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own transport key pair and a delegated EIP-712 flow to prove they have permission.
 
 Common use cases:
 

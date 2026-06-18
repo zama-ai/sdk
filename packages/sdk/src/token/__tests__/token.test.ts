@@ -37,7 +37,7 @@ describe("Token", () => {
       const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(1000n);
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalled();
       expect(relayer.userDecrypt).toHaveBeenCalled();
     });

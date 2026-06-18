@@ -165,7 +165,7 @@ describe("FheArtifactCache integration (real HTTP)", () => {
     paramsFetcher,
   }) => {
     // Step 1: First instance fetches and persists
-    const pk1 = await cache.getPublicKey(pkFetcher);
+    const pk1 = await cache.fetchFheEncryptionKeyBytes(pkFetcher);
     expect(pk1).not.toBeNull();
     expect(pk1!.publicKeyId).toBe("pk-id-1");
 
@@ -175,7 +175,7 @@ describe("FheArtifactCache integration (real HTTP)", () => {
 
     // Step 2: New instance restores from storage (no fetcher needed)
     const cache2 = createCache();
-    const pk2 = await cache2.getPublicKey(async () => {
+    const pk2 = await cache2.fetchFheEncryptionKeyBytes(async () => {
       throw new Error("Fetcher should not be called — cache hit");
     });
     expect(pk2).toEqual(pk1);
@@ -210,20 +210,20 @@ describe("FheArtifactCache integration (real HTTP)", () => {
     const cache = createCache({ relayerUrl: "http://127.0.0.1:1" }); // guaranteed connection refused
 
     // Populate via fetcher (bypasses relayer)
-    await cache.getPublicKey(pkFetcher);
+    await cache.fetchFheEncryptionKeyBytes(pkFetcher);
     await cache.getPublicParams(2048, paramsFetcher);
 
     // Revalidation should fail-open
     expect(await cache.revalidateIfDue()).toBe(false);
 
     // Cached data still accessible
-    const pk = await cache.getPublicKey(async () => null);
+    const pk = await cache.fetchFheEncryptionKeyBytes(async () => null);
     expect(pk).not.toBeNull();
   });
 
   test("skips revalidation when relayerUrl is empty", async ({ createCache, pkFetcher }) => {
     const cache = createCache({ relayerUrl: "" });
-    await cache.getPublicKey(pkFetcher);
+    await cache.fetchFheEncryptionKeyBytes(pkFetcher);
 
     expect(await cache.revalidateIfDue()).toBe(false);
   });
@@ -234,7 +234,7 @@ describe("FheArtifactCache integration (real HTTP)", () => {
     pkFetcher,
     paramsFetcher,
   }) => {
-    await cache.getPublicKey(pkFetcher);
+    await cache.fetchFheEncryptionKeyBytes(pkFetcher);
     await cache.getPublicParams(2048, paramsFetcher);
 
     // First revalidation — captures ETags

@@ -2,7 +2,7 @@ import { describe, test, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
-  InvalidKeypairError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   SigningRejectedError,
@@ -22,23 +22,23 @@ import {
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
 
-describe("InvalidKeypairError", () => {
+describe("InvalidTransportKeyPairError", () => {
   test("is instanceof ZamaError", () => {
-    const err = new InvalidKeypairError("creds rejected");
+    const err = new InvalidTransportKeyPairError("creds rejected");
     expect(err).toBeInstanceOf(ZamaError);
-    expect(err).toBeInstanceOf(InvalidKeypairError);
+    expect(err).toBeInstanceOf(InvalidTransportKeyPairError);
   });
 
   test("has correct code and name", () => {
-    const err = new InvalidKeypairError("creds rejected");
-    expect(err.code).toBe(ZamaErrorCode.InvalidKeypair);
-    expect(err.name).toBe("InvalidKeypairError");
+    const err = new InvalidTransportKeyPairError("creds rejected");
+    expect(err.code).toBe(ZamaErrorCode.InvalidTransportKeyPair);
+    expect(err.name).toBe("InvalidTransportKeyPairError");
     expect(err.message).toBe("creds rejected");
   });
 
   test("supports ErrorOptions cause", () => {
     const cause = new Error("upstream");
-    const err = new InvalidKeypairError("creds rejected", { cause });
+    const err = new InvalidTransportKeyPairError("creds rejected", { cause });
     expect(err.cause).toBe(cause);
   });
 });

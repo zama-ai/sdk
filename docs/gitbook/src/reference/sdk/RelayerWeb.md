@@ -5,7 +5,7 @@ description: Browser relayer that runs FHE operations in a Web Worker via WASM.
 
 # RelayerWeb
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and keypair management for browser applications.
+Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
 
 ## Import
 
@@ -105,7 +105,7 @@ Without these headers, the browser blocks `SharedArrayBuffer` and the relayer fa
 
 `GenericStorage | undefined`
 
-Persistent storage for caching FHE public key and params across sessions.
+Persistent storage for caching the FHE encryption key and params across sessions.
 
 ### fheArtifactCacheTTL
 

@@ -5,8 +5,8 @@ import type {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
-  KeypairExpiredError,
-  InvalidKeypairError,
+  TransportKeyPairExpiredError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
@@ -44,8 +44,8 @@ describe("error subclasses extend ZamaError", () => {
   });
 
   test("credential errors", () => {
-    expectTypeOf<KeypairExpiredError>().toExtend<ZamaError>();
-    expectTypeOf<InvalidKeypairError>().toExtend<ZamaError>();
+    expectTypeOf<TransportKeyPairExpiredError>().toExtend<ZamaError>();
+    expectTypeOf<InvalidTransportKeyPairError>().toExtend<ZamaError>();
     expectTypeOf<NoCiphertextError>().toExtend<ZamaError>();
   });
 

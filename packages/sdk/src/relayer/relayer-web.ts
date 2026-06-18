@@ -1,6 +1,5 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
@@ -10,6 +9,7 @@ import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
 import type { FheChain } from "../chains/types";
+import type { TransportKeyPair } from "../credentials/types";
 import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -20,8 +20,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   RelayerWebConfig,
   UserDecryptParams,
@@ -109,9 +109,9 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   }
 
   /**
-   * Generate a keypair for FHE operations.
+   * Generate a transport key pair (ML-KEM public + private key) used for user-decryption.
    */
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateTransportKeyPair(): Promise<TransportKeyPair> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const result = await this.#worker.generateKeypair({ chainId });
@@ -256,14 +256,14 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   }
 
   /**
-   * Get the TFHE compact public key.
+   * Fetch the network's FHE encryption key (ID + bytes).
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicKey(): Promise<PublicKeyData | null> {
+  async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const artifactCache = this.#getArtifactCache();
-    return artifactCache.getPublicKey(
+    return artifactCache.fetchFheEncryptionKeyBytes(
       async () => (await this.#worker.getPublicKey({ chainId })).result,
     );
   }

@@ -24,10 +24,10 @@ export const ZamaErrorCode = {
   DecryptionFailed: "DECRYPTION_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
-  /** FHE keypair has expired and needs regeneration. */
-  KeypairExpired: "KEYPAIR_EXPIRED",
-  /** Relayer rejected FHE keypair (stale, expired, or malformed). */
-  InvalidKeypair: "INVALID_KEYPAIR",
+  /** Transport key pair has expired and needs regeneration. */
+  TransportKeyPairExpired: "KEYPAIR_EXPIRED",
+  /** Relayer rejected transport key pair (stale, expired, or malformed). */
+  InvalidTransportKeyPair: "INVALID_KEYPAIR",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */

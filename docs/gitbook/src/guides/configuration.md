@@ -297,14 +297,14 @@ Browser apps should proxy relayer requests through a backend to keep the API key
 
 ### 5. (Optional) Configure TTLs and event listener
 
-You can tune how long the FHE keypair and permits remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  keypairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
+  transportKeyPairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
   permitTTL: 7, // 7 days (default: 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
@@ -316,13 +316,13 @@ When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thr
 
 ### 6. (Optional) Choose a storage backend
 
-The FHE keypair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
+The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
 
-| Storage             | When to use                                         |
-| ------------------- | --------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across reloads and sessions |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                  |
-| `asyncLocalStorage` | Node.js servers — isolates FHE keypair per request  |
+| Storage             | When to use                                               |
+| ------------------- | --------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                        |
+| `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";

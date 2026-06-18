@@ -12,8 +12,6 @@ import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType as KeypairType_2 } from '@zama-fhe/relayer-sdk/node';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedUserDecryptEIP712Type_2 } from '@zama-fhe/relayer-sdk/node';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';

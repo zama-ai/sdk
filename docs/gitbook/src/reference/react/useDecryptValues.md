@@ -126,9 +126,9 @@ This ensures the decrypt query only fires after `useGrantPermit` has been called
 
 `useDecryptValues` relies on permits acquired via [`useGrantPermit`](./useGrantPermit.md):
 
-- **First `grantPermit()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **First `grantPermit()` call** — generates a new transport key pair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
-- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
+- **Expiry** — the transport key pair expires after `transportKeyPairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
 
 This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 

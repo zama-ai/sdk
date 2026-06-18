@@ -132,7 +132,7 @@ describe("RelayerDispatcher", () => {
 
   describe("dispatches all RelayerSDK methods", () => {
     test.for([
-      ["generateKeypair", []],
+      ["generateTransportKeyPair", []],
       ["createEIP712", ["0xpubkey", ["0xcontract"], 1000]],
       ["encrypt", [{ values: [] }]],
       ["userDecrypt", [{ encryptedValues: [] }]],
@@ -140,7 +140,7 @@ describe("RelayerDispatcher", () => {
       ["createDelegatedUserDecryptEIP712", ["0xpubkey", ["0xcontract"], "0xdelegator", 1000]],
       ["delegatedUserDecrypt", [{ encryptedValues: [] }]],
       ["requestZKProofVerification", [{ proof: "0x" }]],
-      ["getPublicKey", []],
+      ["fetchFheEncryptionKeyBytes", []],
       ["getPublicParams", [2048]],
       ["getAclAddress", []],
     ] as [keyof RelayerSDK, unknown[]][])(

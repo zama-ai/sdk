@@ -57,10 +57,10 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [ViemSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ViemSigner.md): Signer adapter that wraps a viem WalletClient for wallet operations.
 - [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersProvider.md): Provider adapter that wraps an ethers Provider or EIP-1193 source for read-only chain access.
 - [EthersSigner](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/EthersSigner.md): Signer adapter that wraps an ethers Signer or EIP-1193 source for wallet operations.
-- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist FHE keypairs and signed permits.
+- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/GenericStorage.md): Interface for async key-value storage used to persist transport key pairs and signed permits.
 - [Error types](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/errors.md): All SDK error classes, codes, and the matchZamaError utility.
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
-- [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+- [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md): Persistent cache for the FHE encryption key and public parameters, avoiding re-downloads across sessions.
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
 - [Delegations](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/delegation.md): On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.
 - [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured chain objects and legacy network configs for supported networks.
@@ -83,7 +83,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useGrantPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useGrantPermit.md): Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for any contract.
 - [useHasPermit](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useHasPermit.md): Query hook that checks whether stored permits cover the requested contract addresses.
 - [useRevokePermits](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md): Revoke FHE permits for specific contract addresses, or all permits at once.
-- [useClearCredentials](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md): Wipe the FHE keypair and all permits for the connected wallet.
+- [useClearCredentials](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useClearCredentials.md): Wipe the transport key pair and all permits for the connected wallet.
 - [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md): Approve an operator to act on your confidential tokens.
 - [useConfidentialIsOperator](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md): Check if a spender is an approved operator for a holder's confidential tokens.
 - [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useUnderlyingAllowance.md): Read the ERC-20 allowance of the underlying public token for the wrapper contract.

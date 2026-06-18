@@ -1,15 +1,15 @@
 import type { Hex } from "viem";
 import type { z } from "zod/mini";
-import type { PermissionSchema, StoredKeypairSchema } from "./schemas";
+import type { PermissionSchema, StoredTransportKeyPairSchema } from "./schemas";
 
-/** In-memory FHE keypair (plaintext private key). */
-export interface Keypair {
+/** In-memory transport key pair (ML-KEM public + private key, plaintext private half). */
+export interface TransportKeyPair {
   publicKey: Hex;
   privateKey: Hex;
 }
 
-/** Persisted FHE keypair entry with a bounded lifetime. */
-export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
+/** Persisted transport key pair entry with a bounded lifetime. */
+export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 /**
  * A signed EIP-712 permit binding a signer (and optional delegator) to a set of
@@ -17,8 +17,8 @@ export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
  */
 export type Permission = z.infer<typeof PermissionSchema>;
 
-/** Resolved credentials for a decrypt operation. */
-export interface CredentialBundle {
-  readonly keypair: StoredKeypair;
+/** Resolved transport key pair entry with permits for a decrypt operation. */
+export interface StoredTransportKeyPairWithPermits {
+  readonly keypair: StoredTransportKeyPair;
   readonly permits: readonly Permission[];
 }

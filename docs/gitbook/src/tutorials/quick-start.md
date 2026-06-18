@@ -253,7 +253,7 @@ const sdk = new ZamaSDK(config);
 {% endtabs %}
 
 {% hint style="info" %}
-**FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE public key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](../reference/sdk/FheArtifactCache.md) for details.
+**FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](../reference/sdk/FheArtifactCache.md) for details.
 {% endhint %}
 
 ## Your first confidential transfer

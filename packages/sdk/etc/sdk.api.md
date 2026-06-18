@@ -17,7 +17,6 @@ import { FheTypeName } from '@zama-fhe/relayer-sdk/bundle';
 import { FhevmInstanceConfig } from '@zama-fhe/relayer-sdk/bundle';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PrivateKeyAccount } from 'viem/accounts';
@@ -5213,14 +5212,6 @@ export function createConfig<const TChains extends readonly [FheChain, ...FheCha
 export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
 
 // @public
-export interface CredentialBundle {
-    // (undocumented)
-    readonly keypair: StoredKeypair;
-    // (undocumented)
-    readonly permits: readonly Permission[];
-}
-
-// @public
 export function decimalsContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -5911,6 +5902,14 @@ export interface FheChain<TId extends number = number> {
     readonly verifyingContractAddressDecryption: Address;
     // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
+}
+
+// @public
+export interface FheEncryptionKey {
+    // (undocumented)
+    publicKey: Uint8Array;
+    // (undocumented)
+    publicKeyId: string;
 }
 
 export { FheTypeName }
@@ -9636,7 +9635,7 @@ export class InsufficientERC20BalanceError extends ZamaError {
 }
 
 // @public
-export class InvalidKeypairError extends ZamaError {
+export class InvalidTransportKeyPairError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -11216,21 +11215,6 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
-// @public
-export interface Keypair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
-
-// @public
-export class KeypairExpiredError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
-export { KeypairType }
-
 export { KmsDelegatedDecryptEIP712Type }
 
 // @public
@@ -11478,15 +11462,7 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    warmKeypair(): Promise<void>;
-}
-
-// @public
-export interface PublicKeyData {
-    // (undocumented)
-    publicKey: Uint8Array;
-    // (undocumented)
-    publicKeyId: string;
+    warmTransportKeyPair(): Promise<void>;
 }
 
 // @public
@@ -12677,11 +12653,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // (undocumented)
-    generateKeypair(): Promise<KeypairType<Hex>>;
+    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
+    // (undocumented)
+    generateTransportKeyPair(): Promise<TransportKeyPair>;
     // (undocumented)
     getAclAddress(): Promise<Address>;
-    // (undocumented)
-    getPublicKey(): Promise<PublicKeyData | null>;
     // (undocumented)
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
@@ -14165,7 +14141,7 @@ export class SigningRejectedError extends ZamaError {
 }
 
 // @public
-export type StoredKeypair = z.infer<typeof StoredKeypairSchema>;
+export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -14749,6 +14725,19 @@ export interface TransferSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
+}
+
+// @public
+export interface TransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
+
+// @public
+export class TransportKeyPairExpiredError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
 }
 
 // @public
@@ -19483,7 +19472,7 @@ export type ZamaConfig = {
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
     readonly permitStorage: GenericStorage;
-    readonly keypairTTL: number;
+    readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
@@ -19494,13 +19483,13 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
-    keypairTTL?: number;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
     relayers: { [K in TChains[number]["id"]]: RelayerConfig };
     storage?: GenericStorage;
+    transportKeyPairTTL?: number;
 }
 
 // @public
@@ -19547,9 +19536,9 @@ export const ZamaErrorCode: {
     readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
     readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
     readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
-    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** FHE keypair has expired and needs regeneration. */
-    readonly KeypairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected FHE keypair (stale, expired, or malformed). */
-    readonly InvalidKeypair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
+    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** Transport key pair has expired and needs regeneration. */
+    readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected transport key pair (stale, expired, or malformed). */
+    readonly InvalidTransportKeyPair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */

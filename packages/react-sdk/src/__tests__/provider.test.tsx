@@ -94,7 +94,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders(() => useZamaSDK(), { relayer });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 
@@ -105,7 +105,7 @@ describe("ZamaProvider & useZamaSDK", () => {
   }) => {
     const { Wrapper } = createWrapper({ signer, relayer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
-    vi.mocked(relayer.generateKeypair).mockClear();
+    vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
@@ -121,16 +121,16 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 
-  test("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
+  test("passes transportKeyPairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
     const { Wrapper, signer, relayer } = createWrapper({
-      keypairTTL: 604800,
+      transportKeyPairTTL: 604800,
       permitTTL: 1,
       onEvent,
     });
@@ -141,9 +141,11 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
+    // Verify ZamaSDK was constructed with transportKeyPairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);
-    expect(tokenSDKConstructorArgs[0]).toEqual(expect.objectContaining({ keypairTTL: 604800 }));
+    expect(tokenSDKConstructorArgs[0]).toEqual(
+      expect.objectContaining({ transportKeyPairTTL: 604800 }),
+    );
 
     // onEvent is stabilized via ref — verify it delegates correctly
     const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;

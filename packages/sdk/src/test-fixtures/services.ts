@@ -71,7 +71,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
       new CredentialService({
         relayer: (config.relayer ?? relayer) as CredentialServiceConfig["relayer"],
         signer: config.signer ?? signer,
-        keypairTTL: config.keypairTTL ?? 86400,
+        transportKeyPairTTL: config.transportKeyPairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
