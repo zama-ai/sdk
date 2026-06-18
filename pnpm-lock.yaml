@@ -106,9 +106,6 @@ importers:
       markdown-it:
         specifier: ^14.2.0
         version: 14.2.0
-      mdbook:
-        specifier: workspace:*
-        version: link:tools/mdbook
       oxfmt:
         specifier: ^0.54.0
         version: 0.54.0
@@ -324,8 +321,6 @@ importers:
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@22.19.21)(jiti@2.7.0)(yaml@2.9.0)
-
-  tools/mdbook: {}
 
 packages:
 
