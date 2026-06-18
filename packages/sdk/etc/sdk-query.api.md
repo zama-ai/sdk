@@ -781,6 +781,14 @@ export interface TransferSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
 
+// @public
+export interface TransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
+
 // @public (undocumented)
 export interface UnderlyingAllowanceQueryConfig {
     // (undocumented)
