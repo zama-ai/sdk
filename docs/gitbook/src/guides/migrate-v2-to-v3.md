@@ -489,11 +489,11 @@ Result objects are keyed by `encryptedValue` (not `handle`). Reads also move fro
 always available, whereas in 2.x reads went through the signer.
 
 {% hint style="info" %}
-**`sdk.signer` is nullable in 3.x.** In 2.x the signer was passed at construction
-and always present; in 3.x it is `null` in read-only mode (no wallet connected).
-Guard writes with `if (!sdk.signer) throw …` rather than asserting `sdk.signer!`,
-which only hides the `null` until it crashes at the call site. Reads never need
-the signer — use `sdk.provider`.
+**`sdk.signer` may be `undefined` in 3.x.** In 2.x the signer was passed at
+construction and always present; in 3.x it is `undefined` in read-only mode (no
+wallet connected). Guard writes with `if (!sdk.signer) throw …` rather than
+asserting `sdk.signer!`, which only hides the `undefined` until it crashes at the
+call site. Reads never need the signer — use `sdk.provider`.
 {% endhint %}
 
 {% tabs %}
