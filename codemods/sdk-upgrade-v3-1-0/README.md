@@ -1,4 +1,4 @@
-# @zama-fhe/sdk-upgrade-3.1.0
+# @zama-fhe/sdk-upgrade-v3-1-0
 
 Codemods for the breaking changes introduced in `@zama-fhe/sdk` / `@zama-fhe/react-sdk`
 **3.1.0**, built on the [Codemod](https://codemod.com) workflow engine. They apply
@@ -6,7 +6,7 @@ the **mechanical** breaking changes (symbol/type renames, config-key changes,
 structural removals) so the upgrade doesn't have to be done by hand.
 
 This package is keyed to the **release that introduced the breaks** (3.1.0), not a
-specific `from`→`to` couple — see the workspace [README](../../README.md) for the
+specific `from`→`to` couple — see the workspace [README](../README.md) for the
 package-per-breaking-release convention. It assumes a **3.0.x floor**; a consumer
 further behind runs earlier release packages first (codemods are idempotent, so
 order/overlap is safe).
@@ -19,7 +19,7 @@ pnpm codemod -t /path/to/app/src
 pnpm codemod -t /path/to/app/src --dry-run
 
 # or, published, with no repo access:
-npx codemod @zama-fhe/sdk-upgrade-3.1.0 -t ./src
+npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src
 ```
 
 Idempotent (re-running is a no-op); edits are not formatted (run your formatter
@@ -29,11 +29,13 @@ afterwards); pins are never bumped.
 
 - **renames + config-key changes** — native `ast-grep` steps (`rules/*.yml`):
   `useReadonlyToken→useWrappedToken`, `useDelegatedUserDecrypt→useDelegatedDecrypt`,
-  `useAllow/useIsAllowed→useGrantPermit/useHasPermit`, `createZamaConfig→createConfig`,
-  `Handle→EncryptedValue`, query-hook `tokenAddress→address`,
+  `useAllow/useIsAllowed→useGrantPermit/useHasPermit`, `Handle→EncryptedValue`,
   `useDelegationStatus tokenAddress→contractAddress`.
-- **structural rewrites** — JSSG transforms (`scripts/*.ts`): mutation-hook config
-  object → positional `address`; remove the `UseZamaConfig` interface.
+- **structural / context-sensitive rewrites** — JSSG transforms (`scripts/*.ts`):
+  import-aware `createZamaConfig→createConfig` (leaves local aliases of the new
+  export untouched), query-hook config `tokenAddress→address` (any object shape),
+  mutation-hook config object → positional `address`, remove the `UseZamaConfig`
+  interface.
 
 ## Optional AI tail
 

@@ -7,7 +7,8 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const PKG = join(TESTS_DIR, "..");
-const REPO_ROOT = join(TESTS_DIR, "..", "..", "..", "..");
+// PKG = codemods/<slug>; repo root is two levels above the package.
+const REPO_ROOT = join(PKG, "..", "..");
 const codemod = join(REPO_ROOT, "node_modules", ".bin", "codemod");
 const oxfmt = join(REPO_ROOT, "node_modules", ".bin", "oxfmt");
 

@@ -16,13 +16,14 @@ Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) and `npx code
 
 ## Repository layout
 
-Each codemod lives under `codemods/<slug>/`.
+Each codemod is a self-contained flat package directory:
 
 ```text
-codemods/<slug>/
+codemods/<slug>/   # e.g. codemods/sdk-upgrade-v3-1-0/
   workflow.yaml
   codemod.yaml
   scripts/
+  rules/
   tests/
 ```
 
@@ -30,9 +31,16 @@ Keep each codemod self-contained so maintainers can validate and publish package
 
 ### Naming convention: one package per breaking release
 
-Key each package to the **SDK release that introduced the breaking changes** (the
-target), not to a `from`→`to` couple — e.g. `sdk-upgrade-3.1.0`, published as
-`@zama-fhe/sdk-upgrade-3.1.0`. This stays O(N) in releases (vs O(N²) for couples),
+Key each package to the **release that introduced the breaking changes** (the
+target), not to a `from`→`to` couple. One package covers the whole SDK surface for
+that release — both `@zama-fhe/sdk` and `@zama-fhe/react-sdk`, which ship in lockstep —
+so a release's breaking changes (spanning both packages) live in a single codemod.
+
+The slug follows `sdk-upgrade-v<release>`, published as `@zama-fhe/sdk-upgrade-v<release>`
+— e.g. `codemods/sdk-upgrade-v3-1-0` → `@zama-fhe/sdk-upgrade-v3-1-0`. Note the
+dot-free version: Codemod package names must match `/^[a-z0-9-_/]+$/`, so `3.1.0`
+becomes `v3-1-0` (see https://docs.codemod.com/package-structure). This stays O(N) in
+releases (vs O(N²) for couples),
 and matches `ng update` / `@next/codemod`. A new package is added only when a
 release actually ships breaking changes (most patch/minor releases ship none).
 
@@ -46,7 +54,7 @@ packages, or we add a thin orchestrator later.)
 
 - Scaffold new codemods with `npx codemod init`.
 - Use Codemod MCP when creating or refining codemods, especially when symbol definitions or cross-file references matter.
-- Validate package workflows with `npx codemod workflow validate codemods/<slug>/workflow.yaml`.
+- Validate package workflows with `npx codemod workflow validate codemods/<family>/<release>/workflow.yaml`.
 - Run package tests from the codemod directory before publishing.
 
 ## Running codemods
@@ -63,7 +71,7 @@ npx codemod <codemod-name>
 ### From source
 
 ```bash
-npx codemod workflow run -w codemods/<slug>/workflow.yaml
+npx codemod workflow run -w codemods/<family>/<release>/workflow.yaml
 ```
 
 By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.

@@ -23,7 +23,7 @@
     "typecheck": "pnpm run --parallel --recursive '/^typecheck/'",
     "lint": "oxlint && pnpm ast-grep:scan",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml",
-    "codemod": "codemod workflow run -w codemods/codemods/3.1.0/workflow.yaml",
+    "codemod": "codemod workflow run -w codemods/sdk-upgrade-v3-1-0/workflow.yaml",
     "lint:fix": "oxlint --fix --fix-suggestions",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
