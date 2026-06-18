@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.11...v3.1.0-alpha.12) (2026-06-18)
+
+### Bug Fixes
+
+- **wrappers:** sync wrapper ABI with protocol-apps wrapper (unwrapRequestId shape) [SDK-213] ([#418](https://github.com/zama-ai/sdk/issues/418)) ([f455685]())
+
 ## [3.1.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.10...v3.1.0-alpha.11) (2026-06-17)
 
 ### Bug Fixes
