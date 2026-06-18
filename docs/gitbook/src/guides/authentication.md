@@ -140,23 +140,27 @@ The `auth` field supports multiple methods depending on how your relayer is conf
 
 ### 5. Auth methods reference
 
-The `auth` field accepts three formats:
+The `auth` field accepts three formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
 
-| Method         | Format                                     | Header sent                 |
-| -------------- | ------------------------------------------ | --------------------------- |
-| `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | `x-api-key: key`            |
-| `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | Sets a cookie               |
-| `BearerToken`  | `{ __type: "BearerToken", value: "jwt" }`  | `Authorization: Bearer jwt` |
+| Method         | How it's sent                   | Use it when                                                                                                              |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `ApiKeyHeader` | `x-api-key: key` header         | **Zama-hosted relayer** — required; it only accepts the key in the `x-api-key` header. Also the default for most setups. |
+| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.  |
+| `BearerToken`  | `Authorization: Bearer <token>` | **Self-hosted relayer** — only if your own auth layer expects a bearer token.                                            |
+
+{% hint style="warning" %}
+Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer.
+{% endhint %}
 
 ```ts
-// API key in a header (most common)
+// Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
-// API key in a cookie
+// Behind your own proxy — credential carried as a cookie to your proxy
 auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 
-// Bearer token (e.g. from your own auth system)
-auth: { __type: "BearerToken", value: "your-jwt-token" }
+// Self-hosted relayer — only if your auth layer expects a bearer token
+auth: { __type: "BearerToken", token: "your-token" }
 ```
 
 When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
