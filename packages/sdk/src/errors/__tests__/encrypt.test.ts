@@ -11,17 +11,17 @@ describe("wrapEncryptError", () => {
   describe("passthrough for already-typed SDK errors", () => {
     test("returns the same EncryptionFailedError unchanged", () => {
       const original = new EncryptionFailedError("boom");
-      expect(wrapEncryptError(original)).toBe(original);
+      expect(wrapEncryptError(original, "Encryption failed")).toBe(original);
     });
 
     test("returns the same RelayerRequestFailedError unchanged", () => {
       const original = new RelayerRequestFailedError("bad", 502);
-      expect(wrapEncryptError(original)).toBe(original);
+      expect(wrapEncryptError(original, "Encryption failed")).toBe(original);
     });
 
     test("returns any other ZamaError unchanged", () => {
       const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
-      expect(wrapEncryptError(original)).toBe(original);
+      expect(wrapEncryptError(original, "Encryption failed")).toBe(original);
     });
   });
 
@@ -31,7 +31,7 @@ describe("wrapEncryptError", () => {
         new Error("Input proof failed: relayer respond with HTTP code 403 Missing Zama API Key"),
         { statusCode: 403 },
       );
-      const wrapped = wrapEncryptError(relayerError);
+      const wrapped = wrapEncryptError(relayerError, "Encryption failed");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(403);
       expect(wrapped.message).toMatch(/zama api key/i);
@@ -42,23 +42,23 @@ describe("wrapEncryptError", () => {
       const relayerError = Object.assign(new Error("Unauthorized, invalid Zama API Key."), {
         statusCode: 401,
       });
-      const wrapped = wrapEncryptError(relayerError);
+      const wrapped = wrapEncryptError(relayerError, "Encryption failed");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(401);
     });
   });
 
   describe("fallback to EncryptionFailedError", () => {
-    test("wraps an Error without statusCode as EncryptionFailedError", () => {
+    test("wraps an Error without statusCode as EncryptionFailedError using the fallback message", () => {
       const error = new Error("network down");
-      const wrapped = wrapEncryptError(error);
+      const wrapped = wrapEncryptError(error, "Custom encrypt fallback");
       expect(wrapped).toBeInstanceOf(EncryptionFailedError);
-      expect(wrapped.message).toBe("Encryption failed");
+      expect(wrapped.message).toBe("Custom encrypt fallback");
       expect((wrapped as { cause?: unknown }).cause).toBe(error);
     });
 
     test("wraps a non-Error rejection as EncryptionFailedError", () => {
-      const wrapped = wrapEncryptError("string rejection");
+      const wrapped = wrapEncryptError("string rejection", "Encryption failed");
       expect(wrapped).toBeInstanceOf(EncryptionFailedError);
       expect((wrapped as { cause?: unknown }).cause).toBe("string rejection");
     });

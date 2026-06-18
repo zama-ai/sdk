@@ -45,7 +45,7 @@ export class EncryptionService {
         },
         params.contractAddress,
       );
-      throw wrapEncryptError(error);
+      throw wrapEncryptError(error, "Encryption failed");
     }
   }
 }

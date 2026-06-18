@@ -1,4 +1,4 @@
-import { toError } from "../utils";
+import { extractHttpStatus } from "../utils/error";
 import { ZamaError } from "./base";
 import { EncryptionFailedError } from "./encryption";
 import { RelayerRequestFailedError } from "./relayer";
@@ -18,25 +18,22 @@ import { RelayerRequestFailedError } from "./relayer";
  * top-level `statusCode`, so reading `statusCode` here mirrors
  * {@link wrapDecryptError}.
  */
-export function wrapEncryptError(error: unknown): ZamaError {
+export function wrapEncryptError(error: unknown, fallbackMessage: string): ZamaError {
   if (error instanceof ZamaError) {
     return error;
   }
 
-  const statusCode =
-    error !== null &&
-    error !== undefined &&
-    typeof error === "object" &&
-    "statusCode" in error &&
-    typeof (error as Record<string, unknown>).statusCode === "number"
-      ? ((error as Record<string, unknown>).statusCode as number)
-      : undefined;
+  const statusCode = extractHttpStatus(error);
 
   if (statusCode !== undefined) {
-    return new RelayerRequestFailedError(toError(error).message, statusCode, {
-      cause: error,
-    });
+    return new RelayerRequestFailedError(
+      error instanceof Error ? error.message : fallbackMessage,
+      statusCode,
+      {
+        cause: error,
+      },
+    );
   }
 
-  return new EncryptionFailedError("Encryption failed", { cause: error });
+  return new EncryptionFailedError(fallbackMessage, { cause: error });
 }
