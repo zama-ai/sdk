@@ -125,7 +125,7 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](/guides/authentication)).
+The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](./authentication.md)).
 
 | Mode           | Shape                                            | Use it when                                  |
 | -------------- | ------------------------------------------------ | -------------------------------------------- |
