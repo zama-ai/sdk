@@ -1,0 +1,21 @@
+id: rename-use-delegated-user-decrypt-hook
+language: tsx
+rule:
+  pattern: useDelegatedUserDecrypt
+fix: useDelegatedDecrypt
+---
+# Import-specifier position (`identifier` kind).
+id: rename-delegated-user-decrypt-params-import
+language: tsx
+rule:
+  pattern: DelegatedUserDecryptMutationParams
+fix: DelegatedDecryptMutationParams
+---
+# Type-position (`type_identifier` kind) needs contextual matching.
+id: rename-delegated-user-decrypt-params-type-position
+language: tsx
+rule:
+  pattern:
+    context: "let x: DelegatedUserDecryptMutationParams"
+    selector: type_identifier
+fix: DelegatedDecryptMutationParams

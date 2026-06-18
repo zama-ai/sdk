@@ -1,0 +1,5 @@
+id: core-rename-createzamaconfig-to-createconfig
+language: tsx
+rule:
+  pattern: createZamaConfig
+fix: createConfig

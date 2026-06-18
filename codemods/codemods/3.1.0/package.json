@@ -1,0 +1,10 @@
+{
+  "name": "@zama-fhe/sdk-upgrade-3.1.0",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Codemods for the breaking changes introduced in @zama-fhe/sdk 3.1.0 (assumes a 3.0.x floor)",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

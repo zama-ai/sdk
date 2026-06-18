@@ -1,0 +1,5 @@
+{
+  "name": "@zama-fhe/sdk-codemods",
+  "private": true,
+  "description": "Monorepo workspace for codemods"
+}

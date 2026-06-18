@@ -1,0 +1,14 @@
+# Only `useDelegationStatus`'s tokenAddress field maps to `contractAddress` (not `address`,
+# unlike the bulk react-config rename). Restricting the rewrite to that hook's call site
+# avoids stepping on the other rename rule.
+id: use-delegation-status-tokenaddress-to-contractaddress
+language: tsx
+rule:
+  pattern: "useDelegationStatus({ tokenAddress: $V })"
+fix: "useDelegationStatus({ contractAddress: $V })"
+---
+id: use-delegation-status-tokenaddress-shorthand
+language: tsx
+rule:
+  pattern: "useDelegationStatus({ tokenAddress })"
+fix: "useDelegationStatus({ contractAddress: tokenAddress })"

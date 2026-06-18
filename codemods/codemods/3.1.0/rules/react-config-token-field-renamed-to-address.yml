@@ -1,0 +1,68 @@
+# Scoped per-hook rewrites: ast-grep cannot easily express "any of these N hooks", so we
+# duplicate the rule pair per hook name. This is the authoring-cost gotcha the spike was
+# designed to surface — jscodeshift expresses the same thing once with a `Set` predicate.
+#
+# Two sub-edits per hook:
+#   (a) tokenAddress, wrapperAddress: tokenAddress  ->  tokenAddress  (drop redundant wrapper)
+#   (b) tokenAddress: $V                            ->  address: $V
+#   (c) tokenAddresses: $V                          ->  addresses: $V
+
+# --- useShield --------------------------------------------------------------
+id: useShield-drop-wrapper
+language: tsx
+rule:
+  pattern: "useShield({ tokenAddress, wrapperAddress: tokenAddress })"
+fix: "useShield({ address: tokenAddress })"
+---
+id: useShield-rename-key
+language: tsx
+rule:
+  pattern: "useShield({ tokenAddress: $V })"
+fix: "useShield({ address: $V })"
+---
+# --- useConfidentialBalances (plural) ---------------------------------------
+id: useConfidentialBalances-rename-key
+language: tsx
+rule:
+  pattern: "useConfidentialBalances({ tokenAddresses: $V })"
+fix: "useConfidentialBalances({ addresses: $V })"
+---
+# --- useConfidentialBalance --------------------------------------------------
+id: useConfidentialBalance-drop-wrapper
+language: tsx
+rule:
+  pattern: "useConfidentialBalance({ tokenAddress, wrapperAddress: tokenAddress })"
+fix: "useConfidentialBalance({ address: tokenAddress })"
+---
+id: useConfidentialBalance-rename-key
+language: tsx
+rule:
+  pattern: "useConfidentialBalance({ tokenAddress: $V })"
+fix: "useConfidentialBalance({ address: $V })"
+---
+# --- useConfidentialTransfer -------------------------------------------------
+id: useConfidentialTransfer-drop-wrapper
+language: tsx
+rule:
+  pattern: "useConfidentialTransfer({ tokenAddress, wrapperAddress: tokenAddress })"
+fix: "useConfidentialTransfer({ address: tokenAddress })"
+---
+id: useConfidentialTransfer-rename-key
+language: tsx
+rule:
+  pattern: "useConfidentialTransfer({ tokenAddress: $V })"
+fix: "useConfidentialTransfer({ address: $V })"
+---
+# --- useUnderlyingAllowance --------------------------------------------------
+id: useUnderlyingAllowance-rename-key
+language: tsx
+rule:
+  pattern: "useUnderlyingAllowance({ tokenAddress: $V })"
+fix: "useUnderlyingAllowance({ address: $V })"
+---
+# --- useConfidentialIsOperator -----------------------------------------------
+id: useConfidentialIsOperator-rename-key
+language: tsx
+rule:
+  pattern: "useConfidentialIsOperator({ tokenAddress: $V })"
+fix: "useConfidentialIsOperator({ address: $V })"

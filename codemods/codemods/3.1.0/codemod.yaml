@@ -1,0 +1,25 @@
+schema_version: "1.0"
+
+name: "@zama-fhe/sdk-upgrade-3.1.0"
+version: "0.1.0"
+description: "Mechanical codemods for the breaking changes introduced in @zama-fhe/sdk + @zama-fhe/react-sdk 3.1.0 (renames, config-key changes, structural removals). Assumes a 3.0.x floor (run earlier release codemods first if further behind); idempotent. Provisional until 3.1.0 ships; derived from the v3.0.1 -> v3.1.0-alpha.14 api-report diff."
+author: "Zama"
+license: "BSD-3-Clause-Clear"
+repository: "https://github.com/zama-ai/sdk"
+
+targets:
+  # Keep this aligned with the files matched in workflow.yaml.
+  languages: ["typescript", "tsx"]
+
+keywords: ["zama", "fhe", "sdk", "migration", "upgrade"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []
+
+workflows:
+  - name: main
+    default: true
+    path: workflow.yaml
