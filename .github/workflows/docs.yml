@@ -1,0 +1,66 @@
+name: Docs
+
+on:
+  pull_request:
+    branches: [main, prerelease]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "packages/*/README.md"
+      - "scripts/docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_call:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check internal doc links
+        run: pnpm docs:check-links
+
+  # External link liveness for the published docs + READMEs. Internal links and
+  # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
+  # targets. PR-only — skipped on the release `workflow_call` so external flakiness
+  # can't block a release. If it flakes on PRs, move to a scheduled (cron) workflow.
+  link-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Check external links (lychee)
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        with:
+          # Accept 403/429 so bot-hostile hosts (Discord, Etherscan) don't flake the gate.
+          # Placeholder URLs in code samples are listed in .lycheeignore.
+          args: --no-progress --max-retries 3 --accept 200..=299,403,429 --cache "docs/**/*.md" "README.md" "packages/*/README.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail: true

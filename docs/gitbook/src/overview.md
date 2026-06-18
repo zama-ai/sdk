@@ -15,7 +15,7 @@ This is the new default SDK for building on the Zama Protocol. The legacy `@zama
 
 ## Where to go next
 
-If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.ai/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.ai/protocol) to understand the foundations.
+If you're new to the Zama Protocol, start with the [Litepaper](https://docs.zama.org/protocol/zama-protocol-litepaper) or the [Protocol Overview](https://docs.zama.org/protocol) to understand the foundations.
 
 Otherwise:
 
@@ -23,7 +23,7 @@ Otherwise:
 
 🟨 Go to [**Build your first confidential dApp**](tutorials/first-confidential-dapp.md) for an end-to-end React tutorial.
 
-🟨 Go to [**Guides**](guides/README.md) for step-by-step instructions on shielding, transfers, balances, and more.
+🟨 Go to [**Configuration**](guides/configuration.md) for step-by-step instructions on shielding, transfers, balances, and more.
 
 🟨 Go to [**SDK reference**](reference/sdk/README.md) for the full core SDK API.
 
@@ -128,5 +128,5 @@ Ready to build? Jump to the [Quick start](./tutorials/quick-start.md) for a full
 
 Ask technical questions and discuss with the community.
 
-- [Community forum](https://community.zama.ai/c/zama-protocol/15)
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)

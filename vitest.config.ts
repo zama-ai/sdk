@@ -103,6 +103,15 @@ export default defineConfig({
         },
         resolve: sharedResolve,
       },
+      {
+        test: {
+          name: "scripts",
+          environment: "node",
+          // Node-side build/CI scripts (e.g. the docs link checker in scripts/docs).
+          include: ["scripts/docs/**/*.test.mjs"],
+          exclude: ["**/node_modules/**"],
+        },
+      },
     ],
     coverage: {
       provider: "v8",

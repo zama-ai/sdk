@@ -41,12 +41,6 @@ next-env.d.ts
 # worktrees
 .worktrees/
 
-docs/gitbook/book
-
-# mdbook binary (downloaded on install)
-tools/mdbook/mdbook
-tools/mdbook/.tmp-mdbook
-
 # api-extractor temp files
 packages/sdk/temp/
 packages/react-sdk/temp/
