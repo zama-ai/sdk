@@ -232,7 +232,7 @@ describe("confidentialWrapperAbi version smoke test (protocol-apps@71611c624ddc)
     .filter((x) => x.type === "event")
     .map((event) => `${event.name}(${event.inputs.map((input) => input.type).join(",")})`);
 
-  test("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 burntAmount)", () => {
+  test("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 amount)", () => {
     const f = fn("finalizeUnwrap");
     expect(f).toBeDefined();
     expect(f!.inputs[0].name).toBe("unwrapRequestId");
