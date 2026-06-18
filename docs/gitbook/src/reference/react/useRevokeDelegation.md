@@ -5,7 +5,7 @@ description: Mutation hook that revokes FHE decryption delegation for a token.
 
 # useRevokeDelegation
 
-Mutation hook that revokes a previously granted FHE decryption delegation for a token. Automatically invalidates [`useDelegationStatus`](/reference/react/useDelegationStatus) queries on success.
+Mutation hook that revokes a previously granted FHE decryption delegation for a token. Automatically invalidates [`useDelegationStatus`](./useDelegationStatus.md) queries on success.
 
 ## Import
 
@@ -82,6 +82,6 @@ await revoke({ delegateAddress: "0xDelegate" });
 
 ## Related
 
-- [`useDelegateDecryption`](/reference/react/useDelegateDecryption) -- grant delegation
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check whether a delegation is active
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useDelegateDecryption`](./useDelegateDecryption.md) -- grant delegation
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check whether a delegation is active
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference

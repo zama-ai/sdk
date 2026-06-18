@@ -5,7 +5,7 @@ description: Signer adapter that wraps a viem WalletClient for wallet operations
 
 # ViemSigner
 
-Signer adapter that wraps a viem `WalletClient` for wallet operations. Implements [GenericSigner](/reference/sdk/GenericSigner).
+Signer adapter that wraps a viem `WalletClient` for wallet operations. Implements [GenericSigner](./GenericSigner.md).
 
 ## Import
 
@@ -63,7 +63,7 @@ const signer = new ViemSigner({
 
 ## Methods
 
-All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
+All methods are inherited from [GenericSigner](./GenericSigner.md).
 
 | Method                   | Behavior              |
 | ------------------------ | --------------------- |
@@ -78,7 +78,7 @@ Wallet account transitions are only emitted when you pass the `ethereum` option.
 
 ## Related
 
-- [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
-- [ViemProvider](/reference/sdk/ViemProvider) -- companion provider adapter
-- [EthersSigner](/reference/sdk/EthersSigner) -- ethers alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericSigner](./GenericSigner.md) -- interface this class implements
+- [ViemProvider](./ViemProvider.md) -- companion provider adapter
+- [EthersSigner](./EthersSigner.md) -- ethers alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

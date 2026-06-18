@@ -362,7 +362,7 @@ emitter.on(
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
+This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](../react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
 
 ### onWalletAccountChange
@@ -408,7 +408,7 @@ await sdk.permits.clear();
 - `isActive({ contractAddress, delegatorAddress, delegateAddress })`
 - `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
 
-See the [Delegations reference](/reference/sdk/delegation) for the full API and propagation notes.
+See the [Delegations reference](./delegation.md) for the full API and propagation notes.
 
 ### dispose
 
@@ -432,7 +432,7 @@ sdk.terminate();
 
 ## Related
 
-- [Token](/reference/sdk/Token) — read/write token operations
-- [WrappedToken](/reference/sdk/WrappedToken) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
-- [Configuration guide](/guides/configuration) — relayer, signer, and storage setup
+- [Token](./Token.md) — read/write token operations
+- [WrappedToken](./WrappedToken.md) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
+- [WrappersRegistry](./WrappersRegistry.md) — on-chain token wrappers registry
+- [Configuration guide](../../guides/configuration.md) — relayer, signer, and storage setup

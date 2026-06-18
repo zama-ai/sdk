@@ -109,7 +109,7 @@ await wrappedToken.confidentialTransfer("0xRecipient", 500n);
 const balance = await wrappedToken.balanceOf(account.address);
 ```
 
-See the [Token Operations](/reference/sdk/Token) reference for the full API.
+See the [Token Operations](../reference/sdk/Token.md) reference for the full API.
 
 ### 6. Use direct API key auth
 
@@ -145,7 +145,7 @@ process.on("SIGTERM", () => {
 
 ### 8. (Optional) Use a custom signer
 
-If you are using a transaction relayer (e.g. OpenZeppelin Defender) instead of a local wallet, implement the [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) interfaces and use the generic `createConfig` from `@zama-fhe/sdk`:
+If you are using a transaction relayer (e.g. OpenZeppelin Defender) instead of a local wallet, implement the [GenericSigner](../reference/sdk/GenericSigner.md) and [GenericProvider](../reference/sdk/GenericProvider.md) interfaces and use the generic `createConfig` from `@zama-fhe/sdk`:
 
 ```ts
 import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
@@ -171,11 +171,11 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 ```
 
-The signer handles `signTypedData` and `writeContract`; the provider handles `readContract`, `waitForTransactionReceipt`, `getChainId`, and `getBlockTimestamp`. See [GenericSigner](/reference/sdk/GenericSigner) for the full interface.
+The signer handles `signTypedData` and `writeContract`; the provider handles `readContract`, `waitForTransactionReceipt`, `getChainId`, and `getBlockTimestamp`. See [GenericSigner](../reference/sdk/GenericSigner.md) for the full interface.
 
 ## Next steps
 
-- [RelayerNode](/reference/sdk/RelayerNode) -- `node()` transport factory options
-- [asyncLocalStorage](/reference/sdk/GenericStorage) -- the `GenericStorage` interface it implements
-- [Configuration](/guides/configuration) -- chains, relayers, authentication, and permit management
-- [GenericSigner](/reference/sdk/GenericSigner) -- custom signer interface for non-standard wallet integrations
+- [RelayerNode](../reference/sdk/RelayerNode.md) -- `node()` transport factory options
+- [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
+- [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management
+- [GenericSigner](../reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations

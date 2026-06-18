@@ -134,7 +134,7 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](/guides/node-js-backend) for a complete example.
+Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](./node-js-backend.md) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
@@ -163,11 +163,11 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](/reference/sdk/RelayerWeb) for details.
+When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
 
 ## Next steps
 
-- [Configuration](/guides/configuration) — full relayer, signer, and storage setup
-- [Shield Tokens](/guides/shield-tokens) — start converting public tokens to confidential form
-- [RelayerWeb reference](/reference/sdk/RelayerWeb) — security options and multi-threading
-- [RelayerNode reference](/reference/sdk/RelayerNode) — `node()` transport factory
+- [Configuration](./configuration.md) — full relayer, signer, and storage setup
+- [Shield Tokens](./shield-tokens.md) — start converting public tokens to confidential form
+- [RelayerWeb reference](../reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [RelayerNode reference](../reference/sdk/RelayerNode.md) — `node()` transport factory

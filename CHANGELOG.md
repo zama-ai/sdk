@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.10...v3.1.0-alpha.11) (2026-06-17)
+
+### Bug Fixes
+
+- **chains:** add ingenTestnet + bscTestnet presets ([#442](https://github.com/zama-ai/sdk/issues/442)) ([5bdd545]())
+
 ## [3.1.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.1.0-alpha.9...v3.1.0-alpha.10) (2026-06-16)
 
 ### Code Refactoring

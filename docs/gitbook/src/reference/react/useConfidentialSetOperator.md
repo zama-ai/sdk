@@ -91,6 +91,6 @@ await setOperator({
 
 ## Related
 
-- [`useConfidentialIsOperator`](/reference/react/useConfidentialIsOperator) — check if a spender is currently an operator
-- [`useConfidentialTransferFrom`](/reference/react/useConfidentialTransferFrom) — operator transfer using an existing approval
-- [`Token.setOperator()`](/reference/sdk/Token#setoperator) — imperative equivalent on the SDK class
+- [`useConfidentialIsOperator`](./useConfidentialIsOperator.md) — check if a spender is currently an operator
+- [`useConfidentialTransferFrom`](./useConfidentialTransferFrom.md) — operator transfer using an existing approval
+- [`Token.setOperator()`](../sdk/Token.md#setoperator) — imperative equivalent on the SDK class
