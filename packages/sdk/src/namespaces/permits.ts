@@ -81,7 +81,7 @@ export class Permits {
 
   /**
    * Pure store lookup: is there a permit covering `contracts`?
-   * No wallet prompt, no keypair generation. Returns `false` when no signer
+   * No wallet prompt, no transport key pair generation. Returns `false` when no signer
    * is configured.
    */
   async hasPermit(contracts: Address[]): Promise<boolean> {
@@ -134,8 +134,8 @@ export class Permits {
    * Wipe FHE permits for the current signer.
    *
    * - With no argument: every permit referencing this signer is removed across
-   *   all chains and delegators. The keypair survives — use {@link clear} to
-   *   also wipe the keypair.
+   *   all chains and delegators. The transport key pair survives — use {@link clear} to
+   *   also wipe the transport key pair.
    * - With a contract list: every signed permit in the direct-decrypt scope
    *   (current chain) whose immutable payload touches any listed address is
    *   removed. Delegation permits are not touched in this mode.
@@ -160,7 +160,7 @@ export class Permits {
   }
 
   /**
-   * Wipe the keypair for the current signer and cascade-delete every permit
+   * Wipe the transport key pair for the current signer and cascade-delete every permit
    * (across chains and delegators) referencing it.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
