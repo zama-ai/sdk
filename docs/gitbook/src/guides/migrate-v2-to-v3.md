@@ -471,6 +471,16 @@ await setOperator({ operator: "0xOperator" });
 {% endtab %}
 {% endtabs %}
 
+The write side is a pure rename — v2's `token.approve()` already called the
+on-chain `setOperator`, so behaviour is unchanged. The read side has one trap:
+
+{% hint style="warning" %}
+**Reversed argument order.** `isApproved(spender, holder?)` became
+`isOperator(holder, spender)`. Both arguments are addresses, so a mechanical
+`isApproved(a, b)` → `isOperator(a, b)` rename compiles fine but silently swaps
+the two — a runtime bug with no type-checker signal.
+{% endhint %}
+
 ### The hook calling convention changed for every single-token hook
 
 This is the easiest thing to under-migrate. The 2.x `UseZamaConfig` type
