@@ -7,7 +7,7 @@ description: Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x 
 
 This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line.
 
-It is written to be executed by an LLM or a developer: each step has an explicit
+It is written to be executed by an AI coding agent or a developer: each step has an explicit
 _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule. Apply the steps in
 order — Step 1 (configuration) unblocks everything else.
 
@@ -27,7 +27,7 @@ changes landed in 3.1; the 3.0 major bump itself was driven by an on-chain
 wrapper/registry contract upgrade (see Step 6) rather than TypeScript API changes.
 {% endhint %}
 
-## Migrate with an AI agent
+## Migrate with an AI coding agent
 
 This guide is built to be executed by an AI coding agent (Claude Code, Cursor,
 Copilot, …). The fastest path is to point an agent at your repository with the
@@ -76,7 +76,7 @@ No repo access (a plain chat assistant)? Paste this page as the source of truth,
 then the contents of your SDK-using files, and ask for the v3 rewrite of each
 under the same rules.
 
-## 0. Install
+## Step 0 — Install
 
 ```bash
 pnpm add @zama-fhe/sdk@^3 @zama-fhe/react-sdk@^3
@@ -618,7 +618,7 @@ custom logout flow), remove that logic — there is no compile-time signal for i
 
 The same glossary pass renamed the key vocabulary. Most apps never touch this —
 `createConfig`, the `Token` API, and the hooks manage keys internally — so it
-matters only if you set the key-pair TTL, catch the key errors, or call the
+matters only if you set the transport key pair TTL, catch the key errors, or call the
 low-level relayer key API directly.
 
 - **Config:** `keypairTTL` → `transportKeyPairTTL` (same seconds units), on `createConfig` / `ZamaConfig`.
