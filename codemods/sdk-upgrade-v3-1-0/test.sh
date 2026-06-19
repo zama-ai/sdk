@@ -34,4 +34,10 @@ if ! node test-rules.mjs; then
   rc=1
 fi
 
+# Whole-chain convergence + idempotency on a multi-file target (workflow order).
+echo "==> end-to-end chain (tests/_e2e)"
+if ! node test-e2e.mjs; then
+  rc=1
+fi
+
 exit "$rc"

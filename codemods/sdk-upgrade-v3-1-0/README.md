@@ -22,6 +22,18 @@ pnpm codemod -t /path/to/app/src --dry-run
 npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src
 ```
 
+It **edits your source files in place** (no report file). Practical flow for an app
+developer upgrading:
+
+```sh
+git status                 # start from a clean tree (codemod edits tracked files)
+npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src --dry-run   # preview
+npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src             # apply in place
+git diff                   # review the changes
+# then: run your formatter, bump @zama-fhe/* in package.json, handle the
+# non-mechanical tail (see "Optional AI tail") and any // TODO(sdk-3.1.0) markers
+```
+
 Idempotent (re-running is a no-op); edits are not formatted (run your formatter
 afterwards); pins are never bumped.
 
@@ -72,9 +84,12 @@ codemod.yaml                 # package manifest (publishable to the Codemod regi
 workflow.yaml                # the workflow: ast-grep + js-ast-grep steps
 rules/<id>.yml               # ast-grep rules (renames / config-key changes)
 scripts/<id>.ts              # JSSG transforms (structural rewrites)
-test.sh                      # runs `codemod jssg test` for every scripts/<id>.ts (discovered, not listed)
+test.sh                      # runs the JSSG harness + the rule runner + the e2e runner
+test-rules.mjs               # applies each rules/<id>.yml to its fixtures (+ idempotency)
+test-e2e.mjs                 # runs the whole chain (workflow order) on a multi-file target
 tests/<script>/<case>/       # JSSG fixtures: input.tsx + expected.tsx, one dir per scripts/<script>.ts
-tests/fixtures/<rule>/       # ast-grep rule fixtures: input.tsx + expected.tsx (not yet wired to a runner)
+tests/<rule>/                # ast-grep rule fixtures: input.tsx + expected.tsx, one dir per rules/<rule>.yml
+tests/_e2e/{input,expected}/ # multi-file fixtures for the end-to-end chain
 ```
 
 ## Test
@@ -108,7 +123,32 @@ codemod jssg test -l tsx --strictness ast --filter alias-preserved \
   tests/core-rename-createzamaconfig-to-createconfig
 ```
 
-> The native JSSG harness only tests JSSG (`scripts/*.ts`). The native `ast-grep`
-> rules (`rules/*.yml`) still have `input.tsx`/`expected.tsx` fixtures under
-> `tests/fixtures/`, but no automated runner — wire them with `ast-grep test` (or
-> reinstate a workflow-level check) to cover them.
+`test.sh` also runs two sibling runners so the whole package is covered, not just
+the JSSG scripts:
+
+- **`test-rules.mjs`** — applies each `rules/*.yml` to its `tests/<rule>/` fixtures
+  (whitespace-normalised, since codemods don't format) and checks idempotency. The
+  native JSSG harness doesn't cover the declarative rules, so these would otherwise
+  go untested.
+- **`test-e2e.mjs`** — applies the **whole chain in workflow order** to the
+  multi-file `tests/_e2e/` fixture and asserts it converges to the expected tree,
+  then re-applies it and asserts a no-op (chain-level idempotency). Catches
+  step-ordering and cross-transform regressions.
+
+CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
+@zama-fhe/sdk-upgrade-v3-1-0 test`).
+
+## Known limitations
+
+- **Type-position renames under-cover plain `.ts` files.** The `ast-grep` rules
+  declare `language: tsx`; on a `.ts` file the engine renames import specifiers but
+  **misses type-position occurrences** (e.g. `function f(h: Handle)` keeps `Handle`
+  while the import becomes `EncryptedValue`). It works in `.tsx`. Affects the
+  type-position parts of `core-handle-type`, `rename-permit-hooks`
+  (`UseIsAllowedConfig`), and `rename-use-delegated-user-decrypt`
+  (`DelegatedUserDecryptMutationParams`). Fix is to add `language: typescript`
+  rule variants (or map `.ts`→tsx in engine config). The typecheck of the consumer
+  app surfaces any dangling reference. The e2e fixtures are `.tsx` for this reason.
+- **The optional `ai` node is not formally gated** by `--param ai=true`; it is a
+  no-op only because no LLM is configured by default. Consider an explicit node
+  condition so the intent is enforced, not incidental.

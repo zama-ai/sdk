@@ -44,7 +44,9 @@ function casesFor(stem) {
 }
 
 function applyRule(rulePath, target) {
-  execFileSync(astGrep, ["scan", "-r", rulePath, target, "-U"], { stdio: ["ignore", "ignore", "inherit"] });
+  execFileSync(astGrep, ["scan", "-r", rulePath, target, "-U"], {
+    stdio: ["ignore", "ignore", "inherit"],
+  });
 }
 
 let failed = 0;
