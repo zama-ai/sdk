@@ -70,11 +70,11 @@ Permit coverage status.
 
 ERC-20 allowance of the underlying token for the wrapper.
 
-| Key                            | Scope                       |
-| ------------------------------ | --------------------------- |
-| `.all`                         | All allowance queries       |
-| `.token(addr)`                 | Allowances for one token    |
-| `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
+| Key                   | Scope                                      |
+| --------------------- | ------------------------------------------ |
+| `.all`                | All allowance queries                      |
+| `.token(addr)`        | Allowances for one token                   |
+| `.scope(addr, owner)` | Specific owner's allowance for the wrapper |
 
 ### `zamaQueryKeys.wrappersRegistry`
 

@@ -369,7 +369,7 @@ When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate`
 import { useListPairs } from "@zama-fhe/react-sdk";
 
 function App() {
-  const { data: pairs } = useListPairs();
+  const { data: pairs } = useListPairs({ metadata: true });
   const addresses = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
 
   return (
@@ -378,8 +378,8 @@ function App() {
         <ConfidentialBalance
           key={p.confidentialTokenAddress}
           tokenAddress={p.confidentialTokenAddress}
-          decimals={p.decimals}
-          symbol={p.symbol}
+          decimals={p.confidential.decimals}
+          symbol={p.confidential.symbol}
         />
       ))}
     </DecryptGate>

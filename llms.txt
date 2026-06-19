@@ -25,6 +25,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Guides
 
+- [Migrate from v2 to v3](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/migrate-v2-to-v3.md): Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x — config factory, relayer factories, permits, operators, encrypt/decrypt glossary.
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md): How to configure the SDK with createConfig — chains, relayers, provider, signer, and storage.
 - [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/authentication.md): How to authenticate with the relayer using a backend proxy or a direct API key.
 - [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/relayer-api-keys.md): How to obtain, configure, and securely manage your Zama Relayer API key.

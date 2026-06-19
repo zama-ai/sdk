@@ -162,7 +162,7 @@ Create `src/ShieldForm.tsx`. Shielding converts public ERC-20 tokens into their 
 ```tsx
 import { type FormEvent } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
   const { mutateAsync: shield, isPending } = useShield({
@@ -255,7 +255,7 @@ Create `src/UnshieldForm.tsx`. Unshielding withdraws confidential tokens back to
 ```tsx
 import { useState, type FormEvent } from "react";
 import { useUnshield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
   const [status, setStatus] = useState("");
