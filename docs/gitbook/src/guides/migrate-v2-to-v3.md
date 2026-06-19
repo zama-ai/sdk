@@ -721,6 +721,7 @@ After applying the steps:
 - [Permit model](../concepts/permit-model.md)
 
 <!-- Step anchors for the Symbol mapping tables -->
+
 [s1]: #step-1-migrate-the-sdk-configuration
 [s2]: #step-2-migrate-the-relayer
 [s3]: #step-3-permits-delegated-decryption
