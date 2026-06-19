@@ -4407,6 +4407,56 @@ order — Step 1 (configuration) unblocks everything else.
 > wrapper/registry contract upgrade (see Step 6) rather than TypeScript API changes.
 
 
+## Migrate with an AI agent
+
+This guide is built to be executed by an AI coding agent (Claude Code, Cursor,
+Copilot, …). The fastest path is to point an agent at your repository with the
+prompt below. Read the rest of this page if you'd rather migrate by hand — or to
+review what the agent is doing.
+
+
+> [!WARNING]
+> Agents trained before this SDK existed routinely confuse `@zama-fhe/sdk` (this
+> **high-level** SDK) with the legacy low-level `@zama-fhe/relayer-sdk`
+> (`createInstance` / `initSDK`). The prompt forbids that — keep the instruction to
+> treat this guide as the source of truth.
+
+
+```text
+Upgrade this repository from @zama-fhe/sdk and @zama-fhe/react-sdk v2.x to v3.x.
+
+SOURCE OF TRUTH — follow it exactly:
+https://docs.zama.org/protocol/sdk/guides/migrate-v2-to-v3.md
+
+Rules:
+1. Fetch and read that guide BEFORE doing anything. It is authoritative. Do NOT
+   rely on prior knowledge of the "Zama SDK": this is the high-level
+   @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
+   For any symbol you're unsure about, use the guide's symbol-mapping table; for
+   anything it doesn't cover, fetch
+   https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links.
+2. First print a short PLAN: list every file importing @zama-fhe/sdk or
+   @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
+3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
+   the rest. Use the symbol table for renames. Respect the per-symbol notes: the
+   React hook calling convention is MIXED (some positional, some config object),
+   and several signatures changed (e.g. balanceOf(owner),
+   isOperator(holder, spender), useConfidentialBalance({ address, account })).
+4. Do NOT change app logic or unrelated code. The high-level Token flow API
+   (shield, confidentialTransfer, unshield, …) is unchanged except where the
+   guide says otherwise.
+5. Bump the @zama-fhe/* deps to ^3 using this repo's package manager.
+6. VALIDATE: run the type checker and the guide's final leftover-symbol `rg`
+   sweep; fix until both are clean. Inspect the false-positive cases the guide
+   calls out (.chainId on viem/EIP-1193 objects, token.approve on the underlying
+   ERC-20) instead of blind-replacing.
+7. Show the result as a diff and flag anything ambiguous for human review.
+```
+
+No repo access (a plain chat assistant)? Paste this page as the source of truth,
+then the contents of your SDK-using files, and ask for the v3 rewrite of each
+under the same rules.
+
 ## 0. Install
 
 ```bash
