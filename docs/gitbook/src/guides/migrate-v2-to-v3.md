@@ -149,7 +149,7 @@ Key shifts:
   the underlying clients (`publicClient` + `walletClient`, ethers `provider` +
   `signer`, or `wagmiConfig`) to `createConfig`.
 - Relayers become factories (`web()` / `node()`) placed in a `relayers` map keyed
-  by chain id. See [Step 2](#step-2-migrate-the-relayer).
+  by each chain's `id`. See [Step 2](#step-2-migrate-the-relayer).
 - `new ZamaSDK(config)` / `<ZamaProvider config={config}>` take the object
   returned by `createConfig`.
 
@@ -325,7 +325,7 @@ Notes:
 ## Step 2 — Migrate the relayer
 
 Relayers are no longer classes you instantiate; they are factories placed in a
-`relayers` map keyed by chain id inside `createConfig`.
+`relayers` map keyed by each chain's `id`, inside `createConfig`.
 
 | 2.x                      | 3.x           | Import               |
 | ------------------------ | ------------- | -------------------- |
