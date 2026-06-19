@@ -683,8 +683,11 @@ const { confidentialTokenAddress } = registryResult;
 
 - **Activity feed** is gone: `useActivityFeed`, `parseActivityFeed`,
   `ActivityItem`, `ActivityAmount`, `ActivityType`, `activityFeedQueryOptions`,
-  `deriveActivityFeedLogsKey`. Rebuild any history view from your own indexer or
-  from on-chain event logs.
+  `deriveActivityFeedLogsKey`. It was a prebuilt transaction-history view — and
+  what that history shows and how it's grouped is your app's call, not the SDK's.
+  You keep every building block: decode events with `decodeOnChainEvent` and
+  reveal amounts with `decryptValues` / `decryptPublicValues`, or read from your
+  own indexer.
 - Utility exports `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`
   are removed.
 
