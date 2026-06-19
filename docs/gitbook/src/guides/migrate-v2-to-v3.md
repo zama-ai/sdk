@@ -7,7 +7,7 @@ description: Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x 
 
 This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line. Each step has an explicit _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule, so it works whether you migrate by hand or hand it to an [AI coding agent](#migrate-with-an-ai-coding-agent).
 
-**The happy path:** for most apps the migration is **Step 1 (how you construct the SDK)** plus a set of mechanical renames — the high-level `Token` flow API keeps its signatures. Only three surfaces really moved: `approve` became the operator model (Step 4), token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads now take the holder address (Step 4).
+**The happy path:** for most apps it's **Step 1 (config)** plus mechanical renames — the high-level `Token` flow API keeps its signatures. Only three surfaces actually moved: `approve` → operators (Step 4), token delegation → `sdk.delegations.*` (Step 3), and `balanceOf` now takes the holder (Step 4).
 
 {% hint style="info" %}
 **Before you start.** This assumes a working app on `@zama-fhe/sdk` / `@zama-fhe/react-sdk` **2.5.0** (upgrade to 2.5.0 first if you're below it), a clean git tree so you can review the migration as a diff, and Node 22+. The API here is complete as of **3.1.x**; the 3.0 major bump was an on-chain wrapper/registry upgrade (Step 6), not a TypeScript change. It's a code-only migration — to roll back, discard the diff and reinstall `@^2` (the deployed Step 6 contract upgrade isn't something your app reverts).

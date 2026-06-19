@@ -1447,7 +1447,7 @@ Debug this Zama SDK integration using the official error guide first, then compa
 
 This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line. Each step has an explicit _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule, so it works whether you migrate by hand or hand it to an [AI coding agent](#migrate-with-an-ai-coding-agent).
 
-**The happy path:** for most apps the migration is **Step 1 (how you construct the SDK)** plus a set of mechanical renames — the high-level `Token` flow API keeps its signatures. Only three surfaces really moved: `approve` became the operator model (Step 4), token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads now take the holder address (Step 4).
+**The happy path:** for most apps it's **Step 1 (config)** plus mechanical renames — the high-level `Token` flow API keeps its signatures. Only three surfaces actually moved: `approve` → operators (Step 4), token delegation → `sdk.delegations.*` (Step 3), and `balanceOf` now takes the holder (Step 4).
 
 
 > [!INFO]
