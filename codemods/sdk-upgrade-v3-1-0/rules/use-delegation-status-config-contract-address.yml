@@ -1,14 +1,30 @@
 # Only `useDelegationStatus`'s tokenAddress field maps to `contractAddress` (not `address`,
-# unlike the bulk react-config rename). Restricting the rewrite to that hook's call site
-# avoids stepping on the other rename rule.
+# unlike the bulk react-config rename). Scope the field rewrite to that hook's call via a
+# relational `inside` guard so ANY object shape is handled — extra properties
+# (`{ tokenAddress, delegateAddress }`), key order, a trailing options arg — and no other
+# call site's `tokenAddress` is touched. A bare `{ tokenAddress: $V }` object pattern only
+# matches a single-property object, so it silently skipped real call sites.
 id: use-delegation-status-tokenaddress-to-contractaddress
 language: tsx
 rule:
-  pattern: "useDelegationStatus({ tokenAddress: $V })"
-fix: "useDelegationStatus({ contractAddress: $V })"
+  pattern:
+    context: "{ tokenAddress: $V }"
+    selector: pair
+  inside:
+    pattern: useDelegationStatus($$$ARGS)
+    stopBy: end
+fix: "contractAddress: $V"
 ---
+# Shorthand form: `useDelegationStatus({ tokenAddress })` -> `{ contractAddress: tokenAddress }`.
+# The context must force object parsing (`const o = { ... }`); a bare `{ tokenAddress }`
+# parses as a block, so the shorthand node wouldn't be found.
 id: use-delegation-status-tokenaddress-shorthand
 language: tsx
 rule:
-  pattern: "useDelegationStatus({ tokenAddress })"
-fix: "useDelegationStatus({ contractAddress: tokenAddress })"
+  pattern:
+    context: "const o = { tokenAddress }"
+    selector: shorthand_property_identifier
+  inside:
+    pattern: useDelegationStatus($$$ARGS)
+    stopBy: end
+fix: "contractAddress: tokenAddress"

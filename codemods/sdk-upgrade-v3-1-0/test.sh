@@ -27,4 +27,11 @@ for f in scripts/*.ts; do
   fi
 done
 
+# The native harness only covers scripts/ (JSSG). The declarative rules/*.yml are
+# exercised by a sibling runner against the same tests/<rule>/ fixtures.
+echo "==> ast-grep rules (rules/*.yml)"
+if ! node test-rules.mjs; then
+  rc=1
+fi
+
 exit "$rc"
