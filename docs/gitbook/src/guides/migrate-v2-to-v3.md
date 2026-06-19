@@ -7,10 +7,10 @@ description: Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x 
 
 This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line. Each step has an explicit _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule, so it works whether you migrate by hand or hand it to an [AI coding agent](#migrate-with-an-ai-coding-agent).
 
-**The happy path:** for most apps the migration is **Step 1 (how you construct the SDK)** plus a set of mechanical renames. The high-level `Token` flow API — `shield`, `confidentialTransfer`, `unshield`, `unshieldAll`, `decryptBalanceAs` — keeps its signatures. Only three surfaces really moved: `approve` became the operator model (Step 4), token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads now take the holder address (Step 4).
+**The happy path:** for most apps the migration is **Step 1 (how you construct the SDK)** plus a set of mechanical renames — the high-level `Token` flow API keeps its signatures. Only three surfaces really moved: `approve` became the operator model (Step 4), token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads now take the holder address (Step 4).
 
 {% hint style="info" %}
-**Scope.** This guide targets the current 3.x line. Most developer-facing changes landed in 3.1; the 3.0 major bump itself was an on-chain wrapper/registry contract upgrade (Step 6), not a TypeScript API change.
+**Before you start.** This assumes a working app on `@zama-fhe/sdk` / `@zama-fhe/react-sdk` **2.5.0** (upgrade to 2.5.0 first if you're below it), a clean git tree so you can review the migration as a diff, and Node 22+. The API here is complete as of **3.1.x**; the 3.0 major bump was an on-chain wrapper/registry upgrade (Step 6), not a TypeScript change. It's a code-only migration — to roll back, discard the diff and reinstall `@^2` (the deployed Step 6 contract upgrade isn't something your app reverts).
 {% endhint %}
 
 ## Migrate with an AI coding agent
@@ -138,9 +138,9 @@ This is the central change and affects every integration. The imperative
 "construct a `Signer`, construct a `Relayer`, pass them in" pattern is replaced by
 a single declarative `createConfig({ chains, …client, relayers, storage })`.
 
-**Why it changed:** v2 bound one relayer to one active chain, so supporting
-another chain meant a second `ZamaSDK` instance. `createConfig` declares every
-chain and its relayer once — multichain is first-class.
+**Why:** v2 bound one relayer to one active chain (a second chain meant a second
+`ZamaSDK`); `createConfig` declares every chain and its relayer once, making
+multichain first-class.
 
 Key shifts:
 
@@ -339,7 +339,7 @@ KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
 
 ```ts
 // Before
-const relayer = new RelayerWeb({ getChainId, transports: { [id]: { ... } } });
+const relayer = new RelayerWeb({ getChainId, transports: { [id]: { network, relayerUrl } } });
 
 // After — per-chain network/auth now lives on the chain preset (Step 1),
 // the factory only selects the runtime.
@@ -360,11 +360,9 @@ but now live under `@zama-fhe/sdk/web`.
 
 {% hint style="info" %}
 **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
-Pick by deployment: the **Zama-hosted relayer requires `ApiKeyHeader`** (sent as
-`x-api-key` — Bearer and cookie are rejected at the edge); use `ApiKeyCookie` for
-the SDK→proxy hop behind your own proxy, and `BearerToken` for a self-hosted
-relayer whose auth layer expects it. Field names differ: `ApiKeyHeader` uses
-`value`, `BearerToken` uses `token`.
+The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
+and cookie are rejected at the edge). Field names differ — `ApiKeyHeader` uses
+`value`, `BearerToken` uses `token`. See [Relayer API keys](./relayer-api-keys.md).
 {% endhint %}
 
 ## Step 3 — Permits & delegated decryption
@@ -381,10 +379,9 @@ The mental model changed, not just the names:
 - **3.x:** the two are **decoupled** — one identity transport key pair (owned by
   the SDK, shared across all chains, surviving chain switches) backs many
   independent **permits** (the grants). Adding a contract signs just an
-  **incremental** permit rather than re-issuing the whole set.
-- That split is why there are two revocation hooks: `useRevokePermits` drops
-  grants but keeps the transport key pair; `useClearCredentials` is a full logout
-  that also wipes it.
+  **incremental** permit rather than re-issuing the whole set, and the two
+  revocation hooks split along that seam: `useRevokePermits` drops grants but
+  keeps the key pair, `useClearCredentials` is a full logout.
 
 In most apps you do **not** manage permits manually — decrypt hooks
 (`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
@@ -432,11 +429,9 @@ stays on `Token`.
 
 ERC-7984 uses an **operator** model instead of ERC-20-style allowances.
 
-**Why the rename:** `approve` borrowed ERC-20's verb, implying you cap a spend
-_amount_ — but a confidential balance is encrypted, so there's no cleartext
-amount to cap. What you actually grant is **time-boxed authority** for an address
-to move your tokens, which is exactly what the on-chain `setOperator` (ERC-7984)
-does — so v3 names it honestly.
+**Why:** `approve` borrowed ERC-20's verb, but a confidential balance is encrypted
+— there's no cleartext amount to cap. What you grant is **time-boxed authority**
+to move your tokens, which is what the on-chain `setOperator` (ERC-7984) does.
 
 {% tabs %}
 {% tab title="Before (2.x)" %}
@@ -490,8 +485,7 @@ unchanged just because its name is:
 | Config object — `useX({ address, … })` (was `{ tokenAddress }`) | `useShield`, `useConfidentialTransfer`, `useConfidentialBalance`, `useConfidentialBalances`, `useConfidentialIsOperator`, `useUnderlyingAllowance`, `useDelegationStatus`                                                                                                                         |
 
 Read hooks that target a holder (`useConfidentialBalance`, `useConfidentialBalances`)
-also now require an explicit `account`. On the SDK class side, `isOperator` takes
-`(holder, spender)` whereas `isApproved` defaulted the owner to the caller.
+now also require an explicit `account`.
 
 ### Balance reads now take the holder explicitly
 
@@ -584,7 +578,10 @@ const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${s
 const { data: decrypted } = useUserDecrypt({ handles });
 
 const handle = (await sdk.signer.readContract({
-  /* ... */
+  address,
+  abi,
+  functionName,
+  args,
 })) as string;
 setHandles([{ handle, contractAddress }]);
 // read result:
@@ -603,7 +600,10 @@ const [inputs, setInputs] = useState<{ encryptedValue: string; contractAddress: 
 const { data: decrypted } = useDecryptValues(inputs);
 
 const encryptedValue = (await sdk.provider.readContract({
-  /* ... */
+  address,
+  abi,
+  functionName,
+  args,
 })) as string;
 setInputs([{ encryptedValue, contractAddress }]);
 // read result:
@@ -630,12 +630,10 @@ logic that did, as there's no compile-time signal for its loss.
 ### Key glossary: transport key pair & FHE encryption key
 
 The glossary pass split two keys the old names blurred: the **transport key pair**
-(your locally-held decrypt keys — `keypair*` → `transportKeyPair*`) and the
-**FHE encryption key** (the network's input-encryption key — `getPublicKey()` /
-`PublicKeyData` → `fetchFheEncryptionKeyBytes()` / `FheEncryptionKey`). The
-[core symbol table](#zama-fhe-sdk-core) lists every rename; most apps touch none
-of them, since `createConfig`, the `Token` API, and the hooks manage keys
-internally.
+(your locally-held decrypt keys) and the **FHE encryption key** (the network's
+input-encryption key). The [core symbol table](#zama-fhe-sdk-core) lists every
+rename — most apps touch none of them, since `createConfig`, the `Token` API, and
+the hooks manage keys internally.
 
 {% hint style="info" %}
 **Error codes are stable.** Only the error class names and `ZamaErrorCode` enum
@@ -695,7 +693,7 @@ const { confidentialTokenAddress } = registryResult;
 
 After applying the steps:
 
-1. `pnpm typecheck` — the SDK is strongly typed; most missed renames surface here.
+1. Run your type-checker (`pnpm typecheck`, `tsc --noEmit`, …) — the SDK is strongly typed; most missed renames surface here.
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
@@ -713,14 +711,17 @@ After applying the steps:
 3. Verify the SDK is built once via `createConfig` and `<ZamaProvider>` /
    `new ZamaSDK` receive its result.
 4. Run a smoke flow (shield → transfer → unshield, or encrypt → store → decrypt)
-   against a testnet.
+   against a local `cleartext()` chain first, then a testnet.
+5. Hitting a renamed error class (`TransportKeyPairExpiredError`, …) or the
+   now-nullable `sdk.signer`? See [Handle errors](./handle-errors.md).
 
 ## Next steps
 
-- [Configuration](configuration.md)
-- [Operator approvals](operator-approvals.md)
-- [Encrypt & decrypt](encrypt-decrypt.md)
-- [Delegated decryption](delegated-decryption.md)
+- [Configuration](./configuration.md)
+- [Operator approvals](./operator-approvals.md)
+- [Encrypt & decrypt](./encrypt-decrypt.md)
+- [Delegated decryption](./delegated-decryption.md)
+- [Handle errors](./handle-errors.md)
 - [Permit model](../concepts/permit-model.md)
 
 <!-- Step anchors for the Symbol mapping tables -->
