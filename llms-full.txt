@@ -1580,6 +1580,10 @@ This is the central change and affects every integration. The imperative
 "construct a `Signer`, construct a `Relayer`, pass them in" pattern is replaced by
 a single declarative `createConfig({ chains, …client, relayers, storage })`.
 
+**Why it changed:** v2 bound one relayer to one active chain, so supporting
+another chain meant a second `ZamaSDK` instance. `createConfig` declares every
+chain and its relayer once — multichain is first-class.
+
 Key shifts:
 
 - Chain presets move to `@zama-fhe/sdk/chains` and expose `.id` (not `.chainId`).
@@ -1764,7 +1768,11 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 | ------------------------ | ------------- | -------------------- |
 | `new RelayerWeb({...})`  | `web()`       | `@zama-fhe/sdk/web`  |
 | `new RelayerNode({...})` | `node()`      | `@zama-fhe/sdk/node` |
-| (local dev mock)         | `cleartext()` | `@zama-fhe/sdk`      |
+| _(new in v3)_            | `cleartext()` | `@zama-fhe/sdk`      |
+
+`cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
+KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
+`ingenTestnet`, `bscTestnet`).
 
 ```ts
 // Before
@@ -1807,9 +1815,12 @@ of contracts. See the [Permit model](https://raw.githubusercontent.com/zama-ai/s
 The mental model changed, not just the names:
 
 - **2.x:** your app held a **session** — a decrypt transport key pair
-  (`useGenerateKeypair`) plus per-contract **credentials** (the grants).
-- **3.x:** the SDK owns the transport key pair; you deal only with **permits**
-  (the grants).
+  (`useGenerateKeypair`) plus per-contract **credentials** (the grants), all under
+  one TTL. The key pair was **chain-scoped**, so switching chains threw it away.
+- **3.x:** the two are **decoupled** — one identity transport key pair (owned by
+  the SDK, shared across all chains, surviving chain switches) backs many
+  independent **permits** (the grants). Adding a contract signs just an
+  **incremental** permit rather than re-issuing the whole set.
 - That split is why there are two revocation hooks: `useRevokePermits` drops
   grants but keeps the transport key pair; `useClearCredentials` is a full logout
   that also wipes it.
@@ -1859,6 +1870,12 @@ stays on `Token`.
 ## Step 4 — Approvals → operators
 
 ERC-7984 uses an **operator** model instead of ERC-20-style allowances.
+
+**Why the rename:** `approve` borrowed ERC-20's verb, implying you cap a spend
+_amount_ — but a confidential balance is encrypted, so there's no cleartext
+amount to cap. What you actually grant is **time-boxed authority** for an address
+to move your tokens, which is exactly what the on-chain `setOperator` (ERC-7984)
+does — so v3 names it honestly.
 
 
 ### Tab: Before (2.x)
@@ -2029,7 +2046,9 @@ decrypted?.[inputs[0].encryptedValue];
 
 Public (non-permit) decryption follows the same rename: `usePublicDecrypt` →
 `useDecryptPublicValues`. Both are mutations, so only the hook name changes — no
-permit is involved since the values are already publicly decryptable.
+permit is involved since the values are already publicly decryptable. The verb now
+says **who** reads — `decryptValues` (you, via your permit) vs `decryptPublicValues`
+(everyone).
 
 
 > [!WARNING]
