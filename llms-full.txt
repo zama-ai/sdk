@@ -148,10 +148,11 @@ Ready to build? Jump to the [Quick start](https://raw.githubusercontent.com/zama
 
 ## Help center
 
-Ask technical questions and discuss with the community.
+Ask technical questions, discuss with the community, or report a bug.
 
 - [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
+- [Open an issue](https://github.com/zama-ai/sdk/issues) on the SDK repository
 
 ## Quick start
 
@@ -2167,6 +2168,13 @@ After applying the steps:
 - [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/delegated-decryption.md)
 - [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md)
 - [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md)
+
+## Help center
+
+Stuck on the migration, or spotted a step or rename this guide is missing? **Open an issue** in the [SDK repository](https://github.com/zama-ai/sdk/issues) — migration gaps are useful feedback. For general questions, ask the community:
+
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
+- [Discord channel](https://discord.com/invite/zama)
 
 <!-- Step anchors for the Symbol mapping tables -->
 
@@ -5164,10 +5172,11 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 ## Help center
 
-Ask technical questions and discuss with the community.
+Ask technical questions, discuss with the community, or report a bug.
 
 - [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
+- [Open an issue](https://github.com/zama-ai/sdk/issues) on the SDK repository
 
 ## ZamaSDK
 
@@ -8983,10 +8992,11 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 ## Help center
 
-Ask technical questions and discuss with the community.
+Ask technical questions, discuss with the community, or report a bug.
 
 - [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
+- [Open an issue](https://github.com/zama-ai/sdk/issues) on the SDK repository
 
 ## ZamaProvider
 

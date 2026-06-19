@@ -734,6 +734,13 @@ After applying the steps:
 - [Handle errors](./handle-errors.md)
 - [Permit model](../concepts/permit-model.md)
 
+## Help center
+
+Stuck on the migration, or spotted a step or rename this guide is missing? **Open an issue** in the [SDK repository](https://github.com/zama-ai/sdk/issues) — migration gaps are useful feedback. For general questions, ask the community:
+
+- [Community forum](https://community.zama.org/c/zama-protocol/15)
+- [Discord channel](https://discord.com/invite/zama)
+
 <!-- Step anchors for the Symbol mapping tables -->
 
 [s1]: #step-1-migrate-the-sdk-configuration

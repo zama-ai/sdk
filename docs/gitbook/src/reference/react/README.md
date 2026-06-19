@@ -20,7 +20,8 @@ API reference for the `@zama-fhe/react-sdk` package. Each page documents a singl
 
 ## Help center
 
-Ask technical questions and discuss with the community.
+Ask technical questions, discuss with the community, or report a bug.
 
 - [Community forum](https://community.zama.org/c/zama-protocol/15)
 - [Discord channel](https://discord.com/invite/zama)
+- [Open an issue](https://github.com/zama-ai/sdk/issues) on the SDK repository
