@@ -54,7 +54,7 @@ afterwards); pins are never bumped.
 The deterministic codemods cover the mechanical subset only. The **non-mechanical**
 3.1.0 changes (removed-without-replacement APIs, signature reshapes — `useUserDecrypt`,
 `useEncrypt`, the removed EIP-712/keypair hooks, the `ZamaSDK` capability refactor)
-can be handled by an **opt-in `ai` step** that runs *after* the deterministic ones:
+can be handled by an **opt-in `ai` step** that runs _after_ the deterministic ones:
 
 ```sh
 # configure an LLM, then opt in

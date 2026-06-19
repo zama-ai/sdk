@@ -21,6 +21,7 @@ const pkgDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(pkgDir, "..", "..");
 const astGrep = join(repoRoot, "node_modules", ".bin", "ast-grep");
 const codemod = join(repoRoot, "node_modules", ".bin", "codemod");
+const oxfmt = join(repoRoot, "node_modules", ".bin", "oxfmt");
 const e2e = join(pkgDir, "tests", "_e2e");
 
 // Workflow order (must match workflow.yaml).
@@ -36,7 +37,12 @@ const CHAIN = [
   ["jssg", "use-zama-config-interface-removed.ts"],
 ];
 
-const norm = (s) => s.replace(/\s+/g, " ").trim();
+// Codemods don't format their output; the committed expected fixtures are
+// repo-formatted. Format the chain output the same way so the comparison is exact
+// (this also mirrors the real "run the codemod, then your formatter" flow).
+function formatDir(targetDir) {
+  execFileSync(oxfmt, [targetDir], { stdio: ["ignore", "ignore", "inherit"] });
+}
 
 function runChain(targetDir) {
   for (const [kind, file] of CHAIN) {
@@ -66,7 +72,7 @@ function runChain(targetDir) {
 function snapshot(dir) {
   return readdirSync(dir)
     .toSorted((a, b) => a.localeCompare(b))
-    .map((f) => `${f}\n${norm(readFileSync(join(dir, f), "utf8"))}`)
+    .map((f) => `${f}\n${readFileSync(join(dir, f), "utf8")}`)
     .join("\n----\n");
 }
 
@@ -75,8 +81,10 @@ let failed = 0;
 try {
   cpSync(join(e2e, "input"), tmp, { recursive: true });
 
-  // 1. Full chain converges to the expected migrated tree.
+  // 1. Full chain converges to the expected migrated tree (formatted to match the
+  //    committed fixtures).
   runChain(tmp);
+  formatDir(tmp);
   const got = snapshot(tmp);
   const want = snapshot(join(e2e, "expected"));
   if (got === want) {

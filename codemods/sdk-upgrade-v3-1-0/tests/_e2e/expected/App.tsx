@@ -15,7 +15,10 @@ export function App(cfg: UseHasPermitConfig) {
   const s = useShield({ address: cfg.address });
   const allowed = useHasPermit(cfg);
   const grant = useGrantPermit(cfg.address);
-  const status = useDelegationStatus({ contractAddress: cfg.address, delegateAddress: cfg.address });
+  const status = useDelegationStatus({
+    contractAddress: cfg.address,
+    delegateAddress: cfg.address,
+  });
   const u = useUnshield(cfg.address);
   return { config, tok, s, allowed, grant, status, u };
 }
