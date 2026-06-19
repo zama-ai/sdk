@@ -5,26 +5,12 @@ description: Step-by-step guide to upgrade an app from @zama-fhe/sdk 2.x to 3.x 
 
 # Migrate from v2 to v3
 
-This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line.
+This guide upgrades an application that uses `@zama-fhe/sdk` and `@zama-fhe/react-sdk` from **2.5.0** (the last 2.x release) to the **3.x** line. Each step has an explicit _Before (2.x)_ / _After (3.x)_ pair and a find/replace rule, so it works whether you migrate by hand or hand it to an [AI coding agent](#migrate-with-an-ai-coding-agent).
 
-It is written to be executed by an AI coding agent or a developer: each step has an explicit
-_Before (2.x)_ / _After (3.x)_ pair and a find/replace rule. Apply the steps in
-order — Step 1 (configuration) unblocks everything else.
+**The happy path:** for most apps the migration is **Step 1 (how you construct the SDK)** plus a set of mechanical renames. The high-level `Token` flow API — `shield`, `confidentialTransfer`, `unshield`, `unshieldAll`, `decryptBalanceAs` — keeps its signatures. Only three surfaces really moved: `approve` became the operator model (Step 4), token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads now take the holder address (Step 4).
 
 {% hint style="info" %}
-**The good news.** The high-level token transfer/balance API is mostly unchanged.
-`Token` methods (`shield`, `confidentialTransfer`, `unshield`, `unshieldAll`,
-`decryptBalanceAs`, …) keep the same signatures. The bulk of the migration is
-**how you construct the SDK** (Step 1) plus a set of mechanical renames. A few
-surfaces did move: ERC-20-style `approve` became the operator model (Step 4),
-token-level delegation moved to `sdk.delegations.*` (Step 3), and balance reads
-now take the holder address explicitly (Step 4).
-{% endhint %}
-
-{% hint style="warning" %}
-**Scope.** This guide targets the current 3.x line. Most of the developer-facing
-changes landed in 3.1; the 3.0 major bump itself was driven by an on-chain
-wrapper/registry contract upgrade (see Step 6) rather than TypeScript API changes.
+**Scope.** This guide targets the current 3.x line. Most developer-facing changes landed in 3.1; the 3.0 major bump itself was an on-chain wrapper/registry contract upgrade (Step 6), not a TypeScript API change.
 {% endhint %}
 
 ## Migrate with an AI coding agent
@@ -58,9 +44,10 @@ Rules:
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
    the rest. Use the symbol table for renames. Respect the per-symbol notes: the
-   React hook calling convention is MIXED (some positional, some config object),
-   and several signatures changed (e.g. balanceOf(owner),
-   isOperator(holder, spender), useConfidentialBalance({ address, account })).
+   React hook calling convention is MIXED — see the Step 4 convention table (most
+   hooks are positional `useX(address)`, the rest take `{ address }`, and the old
+   `{ tokenAddress }` field is gone), and several signatures changed (e.g.
+   balanceOf(owner), isOperator(holder, spender)).
 4. Do NOT change app logic or unrelated code. The high-level Token flow API
    (shield, confidentialTransfer, unshield, …) is unchanged except where the
    guide says otherwise.
@@ -68,7 +55,7 @@ Rules:
 6. VALIDATE: run the type checker and the guide's final leftover-symbol `rg`
    sweep; fix until both are clean. Inspect the false-positive cases the guide
    calls out (.chainId on viem/EIP-1193 objects, token.approve on the underlying
-   ERC-20) instead of blind-replacing.
+   ERC-20, tokenAddress in your own variable names) instead of blind-replacing.
 7. Show the result as a diff and flag anything ambiguous for human review.
 ```
 
@@ -91,52 +78,57 @@ migration.
 
 ### `@zama-fhe/sdk` (core)
 
-| 2.x                                                                        | 3.x                                                                                                              | Step    |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------- |
-| `ZamaSDKConfig`                                                            | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | [1][s1] |
-| `new ZamaSDK({ relayer, signer, storage })`                                | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | [1][s1] |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`) | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1][s1] |
-| `<chainConfig>.chainId`                                                    | `<chain>.id`                                                                                                     | [1][s1] |
-| `ViemSigner` / `EthersSigner` (constructed)                                | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | [1][s1] |
-| `keypairTTL` (config option)                                               | `transportKeyPairTTL`                                                                                            | [1][s1] |
-| `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                                                 | [2][s2] |
-| `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                                               | [2][s2] |
-| `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                                                         | [3][s3] |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | [3][s3] |
-| `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                                          | [4][s4] |
-| `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                                              | [4][s4] |
-| `token.balanceOf()` (self default)                                         | `token.balanceOf(owner)` — owner address now required                                                            | [4][s4] |
-| `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                                            | [5][s5] |
-| `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | [5][s5] |
-| `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | [5][s5] |
-| `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | [5][s5] |
-| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK's internal cache                                                                | [5][s5] |
-| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`           | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                      | [5][s5] |
-| relayer `getPublicKey()`; `PublicKeyData`                                  | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                               | [5][s5] |
-| `KeypairExpiredError` / `InvalidKeypairError`                              | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5][s5] |
-| `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | [6][s6] |
-| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | [7][s7] |
-| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                                                      | [7][s7] |
+| 2.x                                                                                       | 3.x                                                                                                              | Step    |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------- |
+| `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | [1][s1] |
+| `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | [1][s1] |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1][s1] |
+| `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                     | [1][s1] |
+| `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | [1][s1] |
+| `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                            | [1][s1] |
+| `new RelayerWeb(...)`                                                                     | `web()` from `@zama-fhe/sdk/web`                                                                                 | [2][s2] |
+| `new RelayerNode(...)`                                                                    | `node()` from `@zama-fhe/sdk/node`                                                                               | [2][s2] |
+| `CredentialsManager` / `DelegatedCredentialsManager`                                      | `Permits` / `Delegations` / `Decryption`                                                                         | [3][s3] |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, `StoredKeypair`     | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | [3][s3] |
+| `token.approve(spender[, expiry])`                                                        | `token.setOperator(operator[, expiry])`                                                                          | [4][s4] |
+| `token.isApproved(spender[, owner])`                                                      | `token.isOperator(holder, spender)`                                                                              | [4][s4] |
+| `token.balanceOf()` (self default)                                                        | `token.balanceOf(owner)` — owner address now required                                                            | [4][s4] |
+| `EncryptResult.handles` (bytes)                                                           | `EncryptResult.encryptedValues` (hex; `inputProof` is now hex too)                                               | [5][s5] |
+| `extractEncryptedHandles(...)`                                                            | **removed** — read `result.encryptedValues`                                                                      | [5][s5] |
+| `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                            | [5][s5] |
+| `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                | [5][s5] |
+| `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`               | [5][s5] |
+| `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                | [5][s5] |
+| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                      | [5][s5] |
+| relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                               | [5][s5] |
+| `KeypairExpiredError` / `InvalidKeypairError`                                             | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5][s5] |
+| `sdk.createReadonlyToken(addr)`; `sdk.createToken(addr, wrapper?)`                        | `sdk.createToken(addr)` (read/transfer); `sdk.createWrappedToken(addr)` (wrap/shield/unshield)                   | [6][s6] |
+| `ReadonlyToken`                                                                           | `Token` (read/transfer) / `WrappedToken` (wrap)                                                                  | [6][s6] |
+| `decodeUnwrappedFinalized`, `UnwrappedFinalizedEvent`                                     | `decodeUnwrapFinalized`, `UnwrapFinalizedEvent`                                                                  | [6][s6] |
+| `decodeUnwrappedStarted`, `UnwrappedStartedEvent`                                         | **removed**                                                                                                      | [6][s6] |
+| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`                     | **removed** (activity feed dropped)                                                                              | [7][s7] |
+| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`                              | **removed**                                                                                                      | [7][s7] |
 
 ### `@zama-fhe/react-sdk` (hooks)
 
-| 2.x                                                            | 3.x                                                                     | Step    |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------- | ------- |
-| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)       | [1][s1] |
-| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                         | [1][s1] |
-| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                       | [3][s3] |
-| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                            | [3][s3] |
-| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                      | [3][s3] |
-| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                             | [3][s3] |
-| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the transport key pair        | [3][s3] |
-| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes the transport key pair) | [3][s3] |
-| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                            | [4][s4] |
-| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                              | [4][s4] |
-| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit        | [4][s4] |
-| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5     | [5][s5] |
-| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5          | [5][s5] |
-| `useReadonlyToken`                                             | `useWrappedToken`                                                       | [6][s6] |
-| `useActivityFeed`                                              | **removed** (activity feed dropped)                                     | [7][s7] |
+| 2.x                                                                | 3.x                                                                                               | Step    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------- |
+| `<ZamaProvider relayer signer storage sessionStorage onEvent>`     | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)                                 | [1][s1] |
+| `new WagmiSigner({ config })`                                      | `createConfig` from `@zama-fhe/react-sdk/wagmi`                                                   | [1][s1] |
+| `useAllow` / `useIsAllowed`                                        | `useGrantPermit` / `useHasPermit`                                                                 | [3][s3] |
+| `useGenerateKeypair`                                               | **removed** — permits are managed by the SDK                                                      | [3][s3] |
+| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`          | **removed** — use `useGrantPermit`                                                                | [3][s3] |
+| `useDelegatedUserDecrypt`                                          | `useDelegatedDecryptValues`                                                                       | [3][s3] |
+| `useRevoke`                                                        | `useRevokePermits` — revoke permits, keep the transport key pair                                  | [3][s3] |
+| `useRevokeSession`                                                 | `useClearCredentials` — full logout (also wipes the transport key pair)                           | [3][s3] |
+| `useConfidentialApprove`                                           | `useConfidentialSetOperator`                                                                      | [4][s4] |
+| `useConfidentialIsApproved` (+ `Suspense`)                         | `useConfidentialIsOperator` (+ `Suspense`)                                                        | [4][s4] |
+| token hooks taking `{ tokenAddress }`                              | positional `(address)` or `{ address }` — see the [convention table](#step-4-approvals-operators) | [4][s4] |
+| `useUserDecrypt({ handles })`                                      | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5                               | [5][s5] |
+| `usePublicDecrypt`                                                 | `useDecryptPublicValues` — public-decrypt mutation, see Step 5                                    | [5][s5] |
+| `usePublicKey`, `usePublicParams`, `useRequestZKProofVerification` | **removed** — low-level key/proof hooks; the SDK handles these                                    | [5][s5] |
+| `useReadonlyToken`                                                 | `useWrappedToken`                                                                                 | [6][s6] |
+| `useActivityFeed`                                                  | **removed** (activity feed dropped)                                                               | [7][s7] |
 
 ---
 
@@ -350,11 +342,13 @@ The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
 `auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
 
-If you imported the relayer **config types** directly, they followed the
-constructor → factory move: the `node()` / `web()` / `cleartext()` factories
-return `NodeRelayerConfig` / `WebRelayerConfig` / `CleartextRelayerConfig` (all
-extend `RelayerConfig`). The relayer-sdk-level `RelayerWebConfig` /
-`RelayerWebSecurityConfig` are unchanged but now live under `@zama-fhe/sdk/web`.
+{% hint style="info" %}
+**Imported the relayer config types directly?** They followed the constructor →
+factory move: `node()` / `web()` / `cleartext()` return `NodeRelayerConfig` /
+`WebRelayerConfig` / `CleartextRelayerConfig` (all extend `RelayerConfig`). The
+relayer-sdk-level `RelayerWebConfig` / `RelayerWebSecurityConfig` are unchanged
+but now live under `@zama-fhe/sdk/web`.
+{% endhint %}
 
 {% hint style="info" %}
 **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
@@ -371,28 +365,20 @@ The "credentials/session" vocabulary is replaced by the **permit** model. A
 permit is a reusable EIP-712 signature granting your app decrypt rights for a set
 of contracts. See the [Permit model](../concepts/permit-model.md) concept page.
 
-The mental model changed, not just the names. In 2.x your app held a **session**:
-a decrypt **transport key pair** it generated (`useGenerateKeypair`) plus per-contract
-**credentials** (the grants). In 3.x the SDK owns the transport key pair for you — you only
-deal with **permits** (the grants). That split is exactly what separates the two
-revocation hooks: `useRevokePermits` drops grants for some (or all) contracts but
-keeps the transport key pair, while `useClearCredentials` is a full logout that also discards
-the locally-managed transport key pair.
+The mental model changed, not just the names:
+
+- **2.x:** your app held a **session** — a decrypt transport key pair
+  (`useGenerateKeypair`) plus per-contract **credentials** (the grants).
+- **3.x:** the SDK owns the transport key pair; you deal only with **permits**
+  (the grants).
+- That split is why there are two revocation hooks: `useRevokePermits` drops
+  grants but keeps the transport key pair; `useClearCredentials` is a full logout
+  that also wipes it.
 
 In most apps you do **not** manage permits manually — decrypt hooks
 (`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
 automatically on first use. The explicit hooks are for gating that prompt and for
-revocation.
-
-| 2.x                                                         | 3.x                                                                    |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `useAllow` / `useIsAllowed`                                 | `useGrantPermit` / `useHasPermit`                                      |
-| `useGenerateKeypair`, `useCreateEIP712`                     | **removed** — handled automatically; gate with `useHasPermit`          |
-| `useCreateDelegatedUserDecryptEIP712`                       | `useGrantPermit`                                                       |
-| `useDelegatedUserDecrypt`                                   | `useDelegatedDecryptValues`                                            |
-| `useRevoke`                                                 | `useRevokePermits` — revokes permits, keeps the transport key pair     |
-| `useRevokeSession`                                          | `useClearCredentials` — full logout, also wipes the transport key pair |
-| `CredentialsManager` / `DelegatedCredentialsManager` (core) | `Permits` / `Delegations` / `Decryption`                               |
+revocation. The full hook renames are in the [react-sdk symbol table](#zama-fhe-react-sdk-hooks).
 
 Recommended pattern — gate any decrypt UI on `useHasPermit` so users don't get an
 unsolicited wallet popup on render:
@@ -473,14 +459,22 @@ await setOperator({ operator: "0xOperator" });
 {% endtab %}
 {% endtabs %}
 
-Watch the signature changes — the React calling convention is **mixed**, so don't
-blanket-convert. Only the single-token _mutation_ hooks
-`useConfidentialSetOperator(address)` and `useConfidentialTransferFrom(address)`
-take the token address **positionally**; the other token-scoped hooks
-(`useConfidentialTransfer`, `useConfidentialBalance`, `useConfidentialIsOperator`)
-still take a **config object** (with the holder now passed explicitly). On the SDK
-side, `isOperator` takes `(holder, spender)` whereas `isApproved` defaulted the
-owner to the caller.
+### The hook calling convention changed for every single-token hook
+
+This is the easiest thing to under-migrate. The 2.x `UseZamaConfig` type
+(`{ tokenAddress }`) was **removed**. Every single-token hook either takes the
+token address **positionally** as its first argument, or keeps a config object
+with the field renamed `tokenAddress` → `address`. Don't assume a hook is
+unchanged just because its name is:
+
+| Calling convention                                              | Hooks                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Positional — `useX(address, options?)`                          | `useConfidentialSetOperator`, `useConfidentialTransferFrom`, `useApproveUnderlying`, `useUnshield`, `useUnshieldAll`, `useUnwrap`, `useUnwrapAll`, `useResumeUnshield`, `useFinalizeUnwrap`, `useDelegateDecryption`, `useRevokeDelegation`, `useDecryptBalanceAs`, `useToken`, `useWrappedToken` |
+| Config object — `useX({ address, … })` (was `{ tokenAddress }`) | `useShield`, `useConfidentialTransfer`, `useConfidentialBalance`, `useConfidentialBalances`, `useConfidentialIsOperator`, `useUnderlyingAllowance`, `useDelegationStatus`                                                                                                                         |
+
+Read hooks that target a holder (`useConfidentialBalance`, `useConfidentialBalances`)
+also now require an explicit `account`. On the SDK class side, `isOperator` takes
+`(holder, spender)` whereas `isApproved` defaulted the owner to the caller.
 
 ### Balance reads now take the holder explicitly
 
@@ -501,8 +495,9 @@ becomes `useConfidentialBalance({ address, account })` — `address` is the toke
 ### Encrypt returns contract-ready hex
 
 `encrypt` results are now hex strings ready to pass straight to a contract call —
-no more `bytesToHex(...)`. The field `handles` is renamed `encryptedValues`, and
-`extractEncryptedHandles(...)` is removed — read `result.encryptedValues` directly.
+no more `bytesToHex(...)`. The field `handles` is renamed `encryptedValues` (and
+`inputProof` is hex too), and `extractEncryptedHandles(...)` is removed — read
+`result.encryptedValues` directly.
 
 {% tabs %}
 {% tab title="Before (2.x)" %}
@@ -606,33 +601,39 @@ Public (non-permit) decryption follows the same rename: `usePublicDecrypt` →
 permit is involved since the values are already publicly decryptable.
 
 {% hint style="warning" %}
-**Cache ownership changed.** In 2.x `DecryptCache` and `applyDecryptedValues` were
-public — you could seed, prune, or clear the decrypt cache on your own schedule. In
-3.x the cache is internal to the SDK: invalidation runs automatically on
+**Cache ownership changed.** `DecryptCache` and `applyDecryptedValues` were public
+in 2.x; in 3.x the cache is internal and invalidates automatically (on
 `permits.revokePermits()`, `permits.clear()`, wallet account/chain change, and
-disconnect. There is **no** public API for manual population or eviction. If your
-2.x code called `applyDecryptedValues` or `DecryptCache.clearAll()` (e.g. in a
-custom logout flow), remove that logic — there is no compile-time signal for it.
+disconnect). There is **no** public API to populate or evict it — remove any 2.x
+logic that did, as there's no compile-time signal for its loss.
 {% endhint %}
 
 ### Key glossary: transport key pair & FHE encryption key
 
-The same glossary pass renamed the key vocabulary and separated the two distinct
-keys it had blurred: the **transport key pair** (your locally-held decrypt keys)
-and the **FHE encryption key** (the network's public key for encrypting inputs).
-Most apps never touch either — `createConfig`, the `Token` API, and the hooks
-manage keys internally — so it matters only if you set the transport key pair
-TTL, catch the key errors, or call the low-level relayer key API directly.
+The glossary pass split two keys the old names blurred: the **transport key pair**
+(your locally-held decrypt keys — `keypair*` → `transportKeyPair*`) and the
+**FHE encryption key** (the network's input-encryption key — `getPublicKey()` /
+`PublicKeyData` → `fetchFheEncryptionKeyBytes()` / `FheEncryptionKey`). The
+[core symbol table](#zama-fhe-sdk-core) lists every rename; most apps touch none
+of them, since `createConfig`, the `Token` API, and the hooks manage keys
+internally.
 
-- **Config:** `keypairTTL` → `transportKeyPairTTL` (same seconds units), on `createConfig` / `ZamaConfig`.
-- **Errors:** `KeypairExpiredError` / `InvalidKeypairError` → `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`, and the `ZamaErrorCode` enum keys `KeypairExpired` / `InvalidKeypair` → `TransportKeyPairExpired` / `InvalidTransportKeyPair`. The error **code string values** are unchanged (`KEYPAIR_EXPIRED` / `INVALID_KEYPAIR`), so `matchZamaError` and `err.code === "KEYPAIR_EXPIRED"` checks keep working — only the class names and enum keys changed.
-- **Transport key pair** (your decrypt keys): `KeypairType` / `Keypair` → `TransportKeyPair`; persisted `StoredKeypair` → `StoredTransportKeyPair`; low-level relayer `generateKeypair()` → `generateTransportKeyPair()` and `warmKeypair()` → `warmTransportKeyPair()`.
-- **FHE encryption key** (the network's input-encryption key): low-level relayer `getPublicKey()` → `fetchFheEncryptionKeyBytes()`, and its type `PublicKeyData` → `FheEncryptionKey`.
-- The high-level SDK calls those relayer methods for you. The internal credentials bundle (`CredentialBundle`) is no longer a public type; `permits.grantPermit()` returns `void`.
+{% hint style="info" %}
+**Error codes are stable.** Only the error class names and `ZamaErrorCode` enum
+keys changed (`KeypairExpiredError` → `TransportKeyPairExpiredError`, enum key
+`KeypairExpired` → `TransportKeyPairExpired`, etc.). The string code **values**
+(`KEYPAIR_EXPIRED` / `INVALID_KEYPAIR`) are unchanged, so `matchZamaError` and
+`err.code === "KEYPAIR_EXPIRED"` checks keep working.
+{% endhint %}
 
 ## Step 6 — Token / WrappedToken & upgraded contracts
 
-- `ReadonlyToken` → `WrappedToken`; the hook `useReadonlyToken` → `useWrappedToken`.
+- `ReadonlyToken` was the read-only base in 2.x. In 3.x the base read/transfer
+  class is **`Token`**, and **`WrappedToken`** extends it with wrap/shield/unshield.
+  Build them via `sdk.createToken(addr)` (read/transfer) or
+  `sdk.createWrappedToken(addr)` — the 2.x `sdk.createReadonlyToken(addr)` is
+  removed and `sdk.createToken(addr, wrapper?)` lost its second argument. The hook
+  `useReadonlyToken` → `useWrappedToken`.
 - The wrapper/registry contracts were upgraded in 3.0. If you read registry
   results, check the new `isValid` flag before using a wrapper:
 
@@ -645,9 +646,14 @@ const { confidentialTokenAddress } = registryResult;
 ```
 
 - Unwrap events/results now carry a new optional `unwrapRequestId` field. If you
-  decode unwrap events directly, note the rename `decodeUnwrappedFinalized` →
-  `decodeUnwrapFinalized` (and `UnwrappedFinalizedEvent` → `UnwrapFinalizedEvent`).
-  If you only use `unshield`/`unshieldAll`/`useUnshield`, no change is needed.
+  decode unwrap events directly: `decodeUnwrappedFinalized` → `decodeUnwrapFinalized`
+  (and `UnwrappedFinalizedEvent` → `UnwrapFinalizedEvent`), and the "started"
+  decoder/event (`decodeUnwrappedStarted` / `UnwrappedStartedEvent`) were
+  **removed**. If you only use `unshield`/`unshieldAll`/`useUnshield`, no change
+  is needed.
+- If you call `Token.finalizeUnwrap` directly (an escape hatch — most apps use
+  `unshield`), its argument changed from `burnAmountHandle` to
+  `unwrapRequestId: EncryptedValue` (the id returned by the request phase).
 - If you read decoded transfer events directly, the field
   `ConfidentialTransferEvent.encryptedAmountHandle` was renamed `encryptedAmount`
   (part of the `handle` → `encryptedValue` glossary shift, Step 5).
@@ -671,14 +677,16 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|keypairTTL|KeypairType|KeypairExpiredError|InvalidKeypairError|StoredKeypair|PublicKeyData|\.getPublicKey\(|\.generateKeypair\(|\.warmKeypair\(|\.balanceOf\(\)'
+   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|createReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|usePublicKey|usePublicParams|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrapped(Finalized|Started)|encryptedAmountHandle|keypairTTL|KeypairType|KeypairExpiredError|InvalidKeypairError|StoredKeypair|PublicKeyData|ZERO_HANDLE|isZeroHandle|UserDecryptParams|PublicDecryptResult|DelegatedUserDecryptParams|DecryptHandle|\.getPublicKey\(|\.generateKeypair\(|\.warmKeypair\(|tokenAddress|\.balanceOf\(\)'
    ```
 
    A few atoms can still produce hits that don't need migrating — inspect rather
    than blind-replace: `.chainId` is legitimate on viem/EIP-1193 objects (only
-   chain-preset accesses like `SepoliaConfig.chainId` migrate to `.id`), and
-   `token.approve(` only matters for the Zama confidential token — approving an
-   underlying ERC-20 before a manual `wrap` is unchanged.
+   chain-preset accesses like `SepoliaConfig.chainId` migrate to `.id`),
+   `token.approve(` only matters for the Zama confidential token (approving an
+   underlying ERC-20 before a manual `wrap` is unchanged), and `tokenAddress`
+   appears in plenty of your own variable names — only the hook config field
+   migrates to `address`.
 
 3. Verify the SDK is built once via `createConfig` and `<ZamaProvider>` /
    `new ZamaSDK` receive its result.
