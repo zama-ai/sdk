@@ -111,7 +111,8 @@ migration.
 | `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | [5][s5] |
 | `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | [5][s5] |
 | `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK's internal cache                                                                | [5][s5] |
-| `KeypairType`; relayer `getPublicKey()` / `generateKeypair()`              | `TransportKeyPair`; `fetchFheEncryptionKeyBytes()` / `generateTransportKeyPair()`                                | [5][s5] |
+| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`           | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                      | [5][s5] |
+| relayer `getPublicKey()`; `PublicKeyData`                                  | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                               | [5][s5] |
 | `KeypairExpiredError` / `InvalidKeypairError`                              | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5][s5] |
 | `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | [6][s6] |
 | `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | [7][s7] |
@@ -119,23 +120,23 @@ migration.
 
 ### `@zama-fhe/react-sdk` (hooks)
 
-| 2.x                                                            | 3.x                                                                 | Step    |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- | ------- |
-| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)   | [1][s1] |
-| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                     | [1][s1] |
-| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                   | [3][s3] |
-| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                        | [3][s3] |
-| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                  | [3][s3] |
-| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                         | [3][s3] |
-| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair               | [3][s3] |
-| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)            | [3][s3] |
-| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                        | [4][s4] |
-| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                          | [4][s4] |
-| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit    | [4][s4] |
-| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5 | [5][s5] |
-| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5      | [5][s5] |
-| `useReadonlyToken`                                             | `useWrappedToken`                                                   | [6][s6] |
-| `useActivityFeed`                                              | **removed** (activity feed dropped)                                 | [7][s7] |
+| 2.x                                                            | 3.x                                                                     | Step    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------- | ------- |
+| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)       | [1][s1] |
+| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                         | [1][s1] |
+| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                       | [3][s3] |
+| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                            | [3][s3] |
+| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                      | [3][s3] |
+| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                             | [3][s3] |
+| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the transport key pair        | [3][s3] |
+| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes the transport key pair) | [3][s3] |
+| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                            | [4][s4] |
+| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                              | [4][s4] |
+| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit        | [4][s4] |
+| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5     | [5][s5] |
+| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5          | [5][s5] |
+| `useReadonlyToken`                                             | `useWrappedToken`                                                       | [6][s6] |
+| `useActivityFeed`                                              | **removed** (activity feed dropped)                                     | [7][s7] |
 
 ---
 
@@ -371,27 +372,27 @@ permit is a reusable EIP-712 signature granting your app decrypt rights for a se
 of contracts. See the [Permit model](../concepts/permit-model.md) concept page.
 
 The mental model changed, not just the names. In 2.x your app held a **session**:
-a decrypt **keypair** it generated (`useGenerateKeypair`) plus per-contract
-**credentials** (the grants). In 3.x the SDK owns the keypair for you — you only
+a decrypt **transport key pair** it generated (`useGenerateKeypair`) plus per-contract
+**credentials** (the grants). In 3.x the SDK owns the transport key pair for you — you only
 deal with **permits** (the grants). That split is exactly what separates the two
 revocation hooks: `useRevokePermits` drops grants for some (or all) contracts but
-keeps the keypair, while `useClearCredentials` is a full logout that also discards
-the locally-managed keypair.
+keeps the transport key pair, while `useClearCredentials` is a full logout that also discards
+the locally-managed transport key pair.
 
 In most apps you do **not** manage permits manually — decrypt hooks
 (`useDecryptValues`, `useConfidentialBalance`) trigger the permit signature
 automatically on first use. The explicit hooks are for gating that prompt and for
 revocation.
 
-| 2.x                                                         | 3.x                                                           |
-| ----------------------------------------------------------- | ------------------------------------------------------------- |
-| `useAllow` / `useIsAllowed`                                 | `useGrantPermit` / `useHasPermit`                             |
-| `useGenerateKeypair`, `useCreateEIP712`                     | **removed** — handled automatically; gate with `useHasPermit` |
-| `useCreateDelegatedUserDecryptEIP712`                       | `useGrantPermit`                                              |
-| `useDelegatedUserDecrypt`                                   | `useDelegatedDecryptValues`                                   |
-| `useRevoke`                                                 | `useRevokePermits` — revokes permits, keeps the keypair       |
-| `useRevokeSession`                                          | `useClearCredentials` — full logout, also wipes the keypair   |
-| `CredentialsManager` / `DelegatedCredentialsManager` (core) | `Permits` / `Delegations` / `Decryption`                      |
+| 2.x                                                         | 3.x                                                                    |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `useAllow` / `useIsAllowed`                                 | `useGrantPermit` / `useHasPermit`                                      |
+| `useGenerateKeypair`, `useCreateEIP712`                     | **removed** — handled automatically; gate with `useHasPermit`          |
+| `useCreateDelegatedUserDecryptEIP712`                       | `useGrantPermit`                                                       |
+| `useDelegatedUserDecrypt`                                   | `useDelegatedDecryptValues`                                            |
+| `useRevoke`                                                 | `useRevokePermits` — revokes permits, keeps the transport key pair     |
+| `useRevokeSession`                                          | `useClearCredentials` — full logout, also wipes the transport key pair |
+| `CredentialsManager` / `DelegatedCredentialsManager` (core) | `Permits` / `Delegations` / `Decryption`                               |
 
 Recommended pattern — gate any decrypt UI on `useHasPermit` so users don't get an
 unsolicited wallet popup on render:
@@ -614,17 +615,20 @@ disconnect. There is **no** public API for manual population or eviction. If you
 custom logout flow), remove that logic — there is no compile-time signal for it.
 {% endhint %}
 
-### Key glossary: `keypair` → `transport key pair`
+### Key glossary: transport key pair & FHE encryption key
 
-The same glossary pass renamed the key vocabulary. Most apps never touch this —
-`createConfig`, the `Token` API, and the hooks manage keys internally — so it
-matters only if you set the transport key pair TTL, catch the key errors, or call the
-low-level relayer key API directly.
+The same glossary pass renamed the key vocabulary and separated the two distinct
+keys it had blurred: the **transport key pair** (your locally-held decrypt keys)
+and the **FHE encryption key** (the network's public key for encrypting inputs).
+Most apps never touch either — `createConfig`, the `Token` API, and the hooks
+manage keys internally — so it matters only if you set the transport key pair
+TTL, catch the key errors, or call the low-level relayer key API directly.
 
 - **Config:** `keypairTTL` → `transportKeyPairTTL` (same seconds units), on `createConfig` / `ZamaConfig`.
-- **Errors:** `KeypairExpiredError` / `InvalidKeypairError` → `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`. The error **code** strings are unchanged (`KEYPAIR_EXPIRED` / `INVALID_KEYPAIR`), so `matchZamaError` and `.code` checks keep working — only the imported class names changed.
-- **Types:** `KeypairType` → `TransportKeyPair`; the persisted `StoredKeypair` → `StoredTransportKeyPair`.
-- **Low-level relayer (rare):** `relayer.getPublicKey()` → `fetchFheEncryptionKeyBytes()`, `relayer.generateKeypair()` → `generateTransportKeyPair()` — the high-level SDK calls these for you. The internal credentials bundle (`CredentialBundle`) is no longer a public type; `permits.grantPermit()` returns `void`.
+- **Errors:** `KeypairExpiredError` / `InvalidKeypairError` → `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`, and the `ZamaErrorCode` enum keys `KeypairExpired` / `InvalidKeypair` → `TransportKeyPairExpired` / `InvalidTransportKeyPair`. The error **code string values** are unchanged (`KEYPAIR_EXPIRED` / `INVALID_KEYPAIR`), so `matchZamaError` and `err.code === "KEYPAIR_EXPIRED"` checks keep working — only the class names and enum keys changed.
+- **Transport key pair** (your decrypt keys): `KeypairType` / `Keypair` → `TransportKeyPair`; persisted `StoredKeypair` → `StoredTransportKeyPair`; low-level relayer `generateKeypair()` → `generateTransportKeyPair()` and `warmKeypair()` → `warmTransportKeyPair()`.
+- **FHE encryption key** (the network's input-encryption key): low-level relayer `getPublicKey()` → `fetchFheEncryptionKeyBytes()`, and its type `PublicKeyData` → `FheEncryptionKey`.
+- The high-level SDK calls those relayer methods for you. The internal credentials bundle (`CredentialBundle`) is no longer a public type; `permits.grantPermit()` returns `void`.
 
 ## Step 6 — Token / WrappedToken & upgraded contracts
 
@@ -667,7 +671,7 @@ After applying the steps:
 2. Search your codebase for leftover 2.x symbols:
 
    ```bash
-   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|keypairTTL|KeypairType|KeypairExpiredError|InvalidKeypairError|\.balanceOf\(\)'
+   rg -n 'ZamaSDKConfig|ViemSigner|EthersSigner|WagmiSigner|RelayerWeb|RelayerNode|SepoliaConfig|MainnetConfig|HardhatConfig|\.chainId\b|ReadonlyToken|useReadonlyToken|useConfidentialApprove|useConfidentialIsApproved|token\.approve\(|token\.isApproved\(|\.handles\b|bytesToHex\(encrypted\.(handles|inputProof)|useActivityFeed|parseActivityFeed|CredentialsManager|extractEncryptedHandles|applyDecryptedValues|DecryptCache|useUserDecrypt|useDelegatedUserDecrypt|usePublicDecrypt|useAllow|useIsAllowed|useGenerateKeypair|useCreateEIP712|useRevokeSession|decodeUnwrappedFinalized|encryptedAmountHandle|keypairTTL|KeypairType|KeypairExpiredError|InvalidKeypairError|StoredKeypair|PublicKeyData|\.getPublicKey\(|\.generateKeypair\(|\.warmKeypair\(|\.balanceOf\(\)'
    ```
 
    A few atoms can still produce hits that don't need migrating — inspect rather
