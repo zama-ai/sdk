@@ -34,7 +34,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](./quick-start.md) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](../reference/sdk/ZamaSDK.md).
-3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
+3. For each confidential token contract, create a `Token` instance via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -340,7 +340,7 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 - **Caching**: Decrypted values are cached client-side for the session lifetime. Offer a refresh action that repeats the decrypt flow.
 - **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's permit model is described in [Permit model](../concepts/permit-model.md).
 - **Indicators**: Use distinct icons or badges for encrypted amounts. Avoid showing zero when a value is simply undisclosed.
-- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsOperator`](../reference/react/useConfidentialIsOperator.md) and [`useRevokePermits`](../reference/react/useRevokePermits.md).
+- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke (call `setOperator` with a past timestamp to revoke). See [`useConfidentialIsOperator`](../reference/react/useConfidentialIsOperator.md) and [`useConfidentialSetOperator`](../reference/react/useConfidentialSetOperator.md).
 - **Wrapping/unwrapping**: Clearly indicate which token a user is converting between. Show the underlying ERC-20's name and symbol alongside the confidential token.
 - **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](../guides/handle-errors.md).
 

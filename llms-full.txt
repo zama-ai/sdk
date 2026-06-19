@@ -400,7 +400,7 @@ const sdk = new ZamaSDK(config);
 
 
 > [!INFO]
-> **FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure via the relayer options in the second argument. See [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
+> **FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure it via the options passed to `web()` / `node()`. See [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
 
 
 ## Your first confidential transfer
@@ -747,7 +747,7 @@ Create `src/ShieldForm.tsx`. Shielding converts public ERC-20 tokens into their 
 ```tsx
 import { type FormEvent } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
   const { mutateAsync: shield, isPending } = useShield({
@@ -836,7 +836,7 @@ Create `src/UnshieldForm.tsx`. Unshielding withdraws confidential tokens back to
 ```tsx
 import { useState, type FormEvent } from "react";
 import { useUnshield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
   const [status, setStatus] = useState("");
@@ -993,7 +993,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/ZamaSDK.md).
-3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
+3. For each confidential token contract, create a `Token` instance via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -1280,7 +1280,7 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 - **Caching**: Decrypted values are cached client-side for the session lifetime. Offer a refresh action that repeats the decrypt flow.
 - **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's permit model is described in [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/concepts/permit-model.md).
 - **Indicators**: Use distinct icons or badges for encrypted amounts. Avoid showing zero when a value is simply undisclosed.
-- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md) and [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useRevokePermits.md).
+- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke (call `setOperator` with a past timestamp to revoke). See [`useConfidentialIsOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialIsOperator.md) and [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/react/useConfidentialSetOperator.md).
 - **Wrapping/unwrapping**: Clearly indicate which token a user is converting between. Show the underlying ERC-20's name and symbol alongside the confidential token.
 - **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md).
 
@@ -3866,7 +3866,8 @@ app.post("/api/transfer", (req, res) => {
     // Everything inside this callback has its own isolated storage
     const config = createConfig({
       chains: [mySepolia],
-      signer: wallet,
+      publicClient,
+      walletClient,
       storage: asyncLocalStorage,
       relayers: {
         [mySepolia.id]: node(),
@@ -3985,7 +3986,7 @@ MV3 Chrome extensions present a unique challenge: the background service worker 
 
 ### 1. Understand the problem
 
-By default, the SDK stores signed permits (used to authorize FHE decryption) in an in-memory JavaScript object. In a normal web page, that memory lives for the duration of the tab. In an MV3 extension, the service worker can shut down after 30 seconds of inactivity.
+In a normal web page, the SDK defaults to persistent IndexedDB storage for signed permits. But an MV3 service worker has no `window`, so the SDK falls back to an in-memory store — and the service worker can shut down after 30 seconds of inactivity, taking those permits with it.
 
 When the service worker restarts, the in-memory permits are gone. The user would need to re-sign with their wallet on every interaction -- a broken experience.
 
@@ -4056,7 +4057,7 @@ When the user closes Chrome entirely:
 2. `indexedDB` persists -- the transport key pair survives
 3. On next launch, the user re-signs once to create fresh permits for their existing transport key pair
 
-This mirrors the default browser SDK behavior (in-memory permits lost on tab close) but extends the permit lifetime to cover service worker restarts within the same browser session.
+Unlike a normal web page (which defaults to persistent IndexedDB), a service worker would otherwise fall back to in-memory permits lost on restart; `chromeSessionStorage` keeps them alive across service worker restarts within the same browser session.
 
 ## Next steps
 
@@ -4180,7 +4181,7 @@ const sdk = new ZamaSDK(config);
 
 ## Next steps
 
-- [RelayerCleartext reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — full constructor options and `CleartextConfig` type
+- [RelayerCleartext reference](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the cleartext relayer and its chain-definition fields
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/configuration.md) — production setup with `web()` or `node()` relayer factories
 - [Chain Objects](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/reference/sdk/network-presets.md) — pre-configured chain definitions for Mainnet, Sepolia, and more
 
@@ -4219,7 +4220,7 @@ import { useAccount } from "wagmi";
 export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
   const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 
@@ -4346,7 +4347,7 @@ import { useAccount } from "wagmi";
 export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
   const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 
@@ -5066,7 +5067,7 @@ When contract addresses come from the chain (e.g. `useListPairs`), `DecryptGate`
 import { useListPairs } from "@zama-fhe/react-sdk";
 
 function App() {
-  const { data: pairs } = useListPairs();
+  const { data: pairs } = useListPairs({ metadata: true });
   const addresses = pairs?.items.map((p) => p.confidentialTokenAddress) ?? [];
 
   return (
@@ -5075,8 +5076,8 @@ function App() {
         <ConfidentialBalance
           key={p.confidentialTokenAddress}
           tokenAddress={p.confidentialTokenAddress}
-          decimals={p.decimals}
-          symbol={p.symbol}
+          decimals={p.confidential.decimals}
+          symbol={p.confidential.symbol}
         />
       ))}
     </DecryptGate>
@@ -7988,15 +7989,15 @@ import {
 
 ## Confidential operations
 
-| Builder                                                                 | What it does                |
-| ----------------------------------------------------------------------- | --------------------------- |
-| `confidentialBalanceOfContract(token, user)`                            | Read encrypted balance      |
-| `confidentialTransferContract(token, to, handle, inputProof)`           | Encrypted transfer          |
-| `confidentialTransferFromContract(token, from, to, handle, inputProof)` | Operator encrypted transfer |
-| `isOperatorContract(token, holder, spender)`                            | Check operator approval     |
-| `setOperatorContract(token, operator, until?)`                          | Set operator approval       |
-| `confidentialTotalSupplyContract(token)`                                | Read encrypted total supply |
-| `rateContract(token)`                                                   | Read conversion rate        |
+| Builder                                                                          | What it does                |
+| -------------------------------------------------------------------------------- | --------------------------- |
+| `confidentialBalanceOfContract(token, user)`                                     | Read encrypted balance      |
+| `confidentialTransferContract(token, to, encryptedAmount, inputProof)`           | Encrypted transfer          |
+| `confidentialTransferFromContract(token, from, to, encryptedAmount, inputProof)` | Operator encrypted transfer |
+| `isOperatorContract(token, holder, spender)`                                     | Check operator approval     |
+| `setOperatorContract(token, operator, until?)`                                   | Set operator approval       |
+| `confidentialTotalSupplyContract(token)`                                         | Read encrypted total supply |
+| `rateContract(token)`                                                            | Read conversion rate        |
 
 ## Wrapping and unwrapping
 
@@ -8123,9 +8124,7 @@ Persistent cache for the FHE encryption key and public parameters (CRS). Stores 
 
 ## Import
 
-```ts
-import { FheArtifactCache } from "@zama-fhe/sdk";
-```
+`FheArtifactCache` is an **internal class** — it is not exported from `@zama-fhe/sdk`, and you do not import or instantiate it directly. Configure artifact caching through the `web()` / `node()` transport factories (below); the constructor and methods are documented here only as internal reference.
 
 ## Usage
 
@@ -8194,37 +8193,6 @@ const config = createConfig({
 
 > [!INFO]
 > The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
-
-### Tab: Direct instantiation
-
-```ts
-import { FheArtifactCache } from "@zama-fhe/sdk";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-const cache = new FheArtifactCache({
-  storage: myStorage,
-  chainId: sepolia.id,
-  relayerUrl: sepolia.relayerUrl,
-  ttl: 86_400,
-});
-
-// Fetch FHE encryption key bytes (with cache-through)
-const pk = await cache.fetchFheEncryptionKeyBytes(async () => {
-  // Your network fetcher — called only on cache miss
-  return { publicKeyId: "abc", publicKey: new Uint8Array([...]) };
-});
-
-// Fetch public parameters for a specific bit size
-const params = await cache.getPublicParams(2048, async () => {
-  return { publicParamsId: "def", publicParams: new Uint8Array([...]) };
-});
-
-// Check if cached artifacts are still fresh
-const invalidated = await cache.revalidateIfDue();
-if (invalidated) {
-  // Re-fetch artifacts — cache was cleared
-}
-```
 
 
 ## Constructor
@@ -8379,7 +8347,7 @@ import {
 
 ## decodeOnChainEvents
 
-`(logs: Log[]) => DecodedEvent[]`
+`(logs: RawLog[]) => OnChainEvent[]`
 
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
@@ -8397,7 +8365,7 @@ for (const event of events) {
       console.log(event.from, event.to, event.encryptedAmount);
       break;
     case "Wrapped":
-      console.log(event.account, event.amount);
+      console.log(event.to, event.amountIn);
       break;
     case "UnwrapRequested":
       console.log(event.receiver, event.unwrapRequestId);
@@ -8409,11 +8377,11 @@ for (const event of events) {
 }
 ```
 
-| Parameter | Type    | Description                                                 |
-| --------- | ------- | ----------------------------------------------------------- |
-| `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
+| Parameter | Type       | Description                                                 |
+| --------- | ---------- | ----------------------------------------------------------- |
+| `logs`    | `RawLog[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, or `"UnwrapFinalized"`.
+**Returns:** `OnChainEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, or `"UnwrapFinalized"`.
 
 ## TOKEN_TOPICS
 
@@ -8458,7 +8426,7 @@ Search a log array and return the first matching event.
 
 ### findWrapped
 
-`(logs: Log[]) => WrappedEvent | undefined`
+`(logs: RawLog[]) => WrappedEvent | null`
 
 Finds the first `Wrapped` event in a set of logs. Useful after a shield transaction.
 
@@ -8468,13 +8436,13 @@ import { findWrapped } from "@zama-fhe/sdk";
 const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
 const wrappedEvent = findWrapped(receipt.logs);
 if (wrappedEvent) {
-  console.log(`Wrapped ${wrappedEvent.amount} tokens`);
+  console.log(`Wrapped ${wrappedEvent.amountIn} tokens`);
 }
 ```
 
 ### findUnwrapRequested
 
-`(logs: Log[]) => UnwrapRequestedEvent | undefined`
+`(logs: RawLog[]) => UnwrapRequestedEvent | null`
 
 Finds the first `UnwrapRequested` event in a set of logs. Useful after an unshield initiation.
 
@@ -14406,10 +14374,6 @@ function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
 ### address
 
 `Address`
@@ -14573,10 +14537,6 @@ function RevokeButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 
 ## Parameters
-
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
 
 ### address
 
@@ -15343,11 +15303,11 @@ Permit coverage status.
 
 ERC-20 allowance of the underlying token for the wrapper.
 
-| Key                            | Scope                       |
-| ------------------------------ | --------------------------- |
-| `.all`                         | All allowance queries       |
-| `.token(addr)`                 | Allowances for one token    |
-| `.scope(addr, owner, wrapper)` | Specific owner-wrapper pair |
+| Key                   | Scope                                      |
+| --------------------- | ------------------------------------------ |
+| `.all`                | All allowance queries                      |
+| `.token(addr)`        | Allowances for one token                   |
+| `.scope(addr, owner)` | Specific owner's allowance for the wrapper |
 
 ### `zamaQueryKeys.wrappersRegistry`
 
@@ -17861,7 +17821,7 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **React 19** + **viem v2** (`isAddress`, `parseAbi`, `parseUnits`, `formatUnits`, `createPublicClient`, `createWalletClient`)
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/sdk** — `createConfig`, Sepolia chain preset, `ViemProvider`, optional `ViemSigner`, and `web()` relayer factory
+- **@zama-fhe/sdk** — `createConfig` (root), the Sepolia preset (`/chains`), `ViemProvider` / optional `ViemSigner` (`/viem`), and the `web()` relayer factory (`/web`)
 - **Next.js relayer proxy** — routes browser relayer requests through `/api/relayer` so API credentials stay server-side
 
 ## Setup
@@ -18644,7 +18604,7 @@ transaction(s), shield transaction, and cache invalidation.
 
 ---
 
-## 8. RelayerWeb proxy
+## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
 Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
@@ -18923,7 +18883,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourConfidentialToken");
 
-const balance = await token.balanceOf();
+const balance = await token.balanceOf("0xYourAddress");
 await token.confidentialTransfer("0xRecipient", 100n);
 ```
 
@@ -19046,7 +19006,8 @@ function AuthGate({
 
 function Balance() {
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
+    account,
   });
 
   if (isLoading) return <p>Decrypting...</p>;

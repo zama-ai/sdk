@@ -250,7 +250,7 @@ transaction(s), shield transaction, and cache invalidation.
 
 ---
 
-## 8. RelayerWeb proxy
+## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
 Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).

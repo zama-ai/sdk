@@ -45,10 +45,6 @@ function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
 ### address
 
 `Address`

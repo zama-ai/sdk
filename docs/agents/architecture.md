@@ -20,4 +20,4 @@ The directory structure is shallow, so understanding how data moves through the 
 
 **Unshield (confidential → public):** two-phase — request (encrypt + contract call) then finalize (after off-chain processing).
 
-**Transparent routing:** the SDK routes between host-chain RPC and Relayer API automatically. Callers never choose which backend to use. Multiple relayer implementations exist (browser, Node.js, multichain), but all expose the same `RelayerSDK` interface, so SDK and Token code never branches on the runtime.
+**Transparent routing:** the SDK routes between host-chain RPC and Relayer API automatically. Callers never choose which backend to use. Multiple relayer implementations exist (browser `RelayerWeb`, Node.js `RelayerNode`, cleartext `RelayerCleartext`), but all expose the same `RelayerSDK` interface, so SDK and Token code never branches on the runtime.
