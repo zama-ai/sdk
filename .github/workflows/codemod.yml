@@ -6,7 +6,6 @@ on:
     paths:
       - "codemods/**"
       - ".github/workflows/codemod.yml"
-  workflow_call:
 
 concurrency:
   group: codemod-${{ github.ref }}
