@@ -91,51 +91,51 @@ migration.
 
 ### `@zama-fhe/sdk` (core)
 
-| 2.x                                                                        | 3.x                                                                                                              | Step |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---- |
-| `ZamaSDKConfig`                                                            | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | 1    |
-| `new ZamaSDK({ relayer, signer, storage })`                                | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | 1    |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`) | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | 1    |
-| `<chainConfig>.chainId`                                                    | `<chain>.id`                                                                                                     | 1    |
-| `ViemSigner` / `EthersSigner` (constructed)                                | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | 1    |
-| `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                                                 | 2    |
-| `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                                               | 2    |
-| `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                                                         | 3    |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | 3    |
-| `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                                            | 5    |
-| `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | 5    |
-| `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | 5    |
-| `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | 5    |
-| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK's internal cache                                                                | 5    |
-| `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | 6    |
-| `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                                          | 4    |
-| `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                                              | 4    |
-| `token.balanceOf()` (self default)                                         | `token.balanceOf(owner)` — owner address now required                                                            | 4    |
-| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | 7    |
-| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                                                      | 7    |
-| `keypairTTL` (config option)                                               | `transportKeyPairTTL`                                                                                            | 1    |
-| `KeypairType`; relayer `getPublicKey()` / `generateKeypair()`              | `TransportKeyPair`; `fetchFheEncryptionKeyBytes()` / `generateTransportKeyPair()`                                | 5    |
-| `KeypairExpiredError` / `InvalidKeypairError`                              | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | 5    |
+| 2.x                                                                        | 3.x                                                                                                              | Step    |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------- |
+| `ZamaSDKConfig`                                                            | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | [1][s1] |
+| `new ZamaSDK({ relayer, signer, storage })`                                | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | [1][s1] |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`) | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1][s1] |
+| `<chainConfig>.chainId`                                                    | `<chain>.id`                                                                                                     | [1][s1] |
+| `ViemSigner` / `EthersSigner` (constructed)                                | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | [1][s1] |
+| `keypairTTL` (config option)                                               | `transportKeyPairTTL`                                                                                            | [1][s1] |
+| `new RelayerWeb(...)`                                                      | `web()` from `@zama-fhe/sdk/web`                                                                                 | [2][s2] |
+| `new RelayerNode(...)`                                                     | `node()` from `@zama-fhe/sdk/node`                                                                               | [2][s2] |
+| `CredentialsManager` / `DelegatedCredentialsManager`                       | `Permits` / `Delegations` / `Decryption`                                                                         | [3][s3] |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, …    | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | [3][s3] |
+| `token.approve(spender[, expiry])`                                         | `token.setOperator(operator[, expiry])`                                                                          | [4][s4] |
+| `token.isApproved(spender[, owner])`                                       | `token.isOperator(holder, spender)`                                                                              | [4][s4] |
+| `token.balanceOf()` (self default)                                         | `token.balanceOf(owner)` — owner address now required                                                            | [4][s4] |
+| `EncryptResult.handles` (bytes)                                            | `EncryptResult.encryptedValues` (hex)                                                                            | [5][s5] |
+| `EncryptResult.inputProof` (bytes)                                         | `EncryptResult.inputProof` (hex)                                                                                 | [5][s5] |
+| `extractEncryptedHandles(...)`                                             | **removed** — read `result.encryptedValues`                                                                      | [5][s5] |
+| `Handle` (type), `ClearValueType`                                          | `EncryptedValue` (term), `ClearValue`                                                                            | [5][s5] |
+| `applyDecryptedValues`, `DecryptCache`                                     | **removed** — handled by the SDK's internal cache                                                                | [5][s5] |
+| `KeypairType`; relayer `getPublicKey()` / `generateKeypair()`              | `TransportKeyPair`; `fetchFheEncryptionKeyBytes()` / `generateTransportKeyPair()`                                | [5][s5] |
+| `KeypairExpiredError` / `InvalidKeypairError`                              | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5][s5] |
+| `ReadonlyToken`                                                            | `WrappedToken`                                                                                                   | [6][s6] |
+| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`      | **removed** (activity feed dropped)                                                                              | [7][s7] |
+| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`               | **removed**                                                                                                      | [7][s7] |
 
 ### `@zama-fhe/react-sdk` (hooks)
 
-| 2.x                                                            | 3.x                                                                 | Step |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- | ---- |
-| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)   | 1    |
-| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                     | 1    |
-| `useReadonlyToken`                                             | `useWrappedToken`                                                   | 6    |
-| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                        | 4    |
-| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                          | 4    |
-| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit    | 4    |
-| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                   | 3    |
-| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5 | 5    |
-| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5      | 5    |
-| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                        | 3    |
-| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                  | 3    |
-| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                         | 3    |
-| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair               | 3    |
-| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)            | 3    |
-| `useActivityFeed`                                              | **removed** (activity feed dropped)                                 | 7    |
+| 2.x                                                            | 3.x                                                                 | Step    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- | ------- |
+| `<ZamaProvider relayer signer storage sessionStorage onEvent>` | `<ZamaProvider config={createConfig({…})}>` (no `sessionStorage`)   | [1][s1] |
+| `new WagmiSigner({ config })`                                  | `createConfig` from `@zama-fhe/react-sdk/wagmi`                     | [1][s1] |
+| `useAllow` / `useIsAllowed`                                    | `useGrantPermit` / `useHasPermit`                                   | [3][s3] |
+| `useGenerateKeypair`                                           | **removed** — permits are managed by the SDK                        | [3][s3] |
+| `useCreateEIP712` / `useCreateDelegatedUserDecryptEIP712`      | **removed** — use `useGrantPermit`                                  | [3][s3] |
+| `useDelegatedUserDecrypt`                                      | `useDelegatedDecryptValues`                                         | [3][s3] |
+| `useRevoke`                                                    | `useRevokePermits` — revoke permits, keep the keypair               | [3][s3] |
+| `useRevokeSession`                                             | `useClearCredentials` — full logout (also wipes keypair)            | [3][s3] |
+| `useConfidentialApprove`                                       | `useConfidentialSetOperator`                                        | [4][s4] |
+| `useConfidentialIsApproved` (+ `Suspense`)                     | `useConfidentialIsOperator` (+ `Suspense`)                          | [4][s4] |
+| `useConfidentialBalance({ tokenAddress })`                     | `useConfidentialBalance({ address, account })` — holder explicit    | [4][s4] |
+| `useUserDecrypt({ handles })`                                  | `useDecryptValues(inputs)` — renamed + arg shape change, see Step 5 | [5][s5] |
+| `usePublicDecrypt`                                             | `useDecryptPublicValues` — public-decrypt mutation, see Step 5      | [5][s5] |
+| `useReadonlyToken`                                             | `useWrappedToken`                                                   | [6][s6] |
+| `useActivityFeed`                                              | **removed** (activity feed dropped)                                 | [7][s7] |
 
 ---
 
@@ -688,3 +688,12 @@ After applying the steps:
 - [Encrypt & decrypt](encrypt-decrypt.md)
 - [Delegated decryption](delegated-decryption.md)
 - [Permit model](../concepts/permit-model.md)
+
+<!-- Step anchors for the Symbol mapping tables -->
+[s1]: #step-1-migrate-the-sdk-configuration
+[s2]: #step-2-migrate-the-relayer
+[s3]: #step-3-permits-delegated-decryption
+[s4]: #step-4-approvals-operators
+[s5]: #step-5-encrypt-hex-decrypt-glossary
+[s6]: #step-6-token-wrappedtoken-upgraded-contracts
+[s7]: #step-7-removed-with-no-replacement
