@@ -1313,8 +1313,8 @@ Prefer the smallest source that can answer the task, and keep the source order s
 
 The SDK documentation provides:
 
-- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for lightweight discovery
-- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding
+- [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt) for lightweight discovery
+- [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms-full.txt) for full-context grounding
 - guidance for using the external [`zama-protocol`](https://github.com/zama-ai/skills) Claude Code skill
 
 ## Choose the right source
@@ -1335,7 +1335,7 @@ You do not need to clone the SDK repository to use the LLM artifacts.
 
 Use this mode when integrating the SDK into an external app:
 
-1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) for full-context grounding.
+1. Give the agent [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt) for discovery, or [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms-full.txt) for full-context grounding.
 2. When using `llms.txt`, follow the raw GitHub links to fetch the smallest relevant source.
 3. Treat `source_path` values such as `docs/gitbook/src/...` as provenance metadata, not as local paths you need to have.
 
@@ -1482,7 +1482,7 @@ Rules:
    @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
    For any symbol you're unsure about, use the guide's symbol-mapping table; for
    anything it doesn't cover, fetch
-   https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links.
+   https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt and follow its links.
 2. First print a short PLAN: list every file importing @zama-fhe/sdk or
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
