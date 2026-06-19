@@ -31,7 +31,7 @@ treat this guide as the source of truth.
 Upgrade this repository from @zama-fhe/sdk and @zama-fhe/react-sdk v2.x to v3.x.
 
 SOURCE OF TRUTH — follow it exactly:
-https://docs.zama.org/protocol/sdk/guides/migrate-v2-to-v3.md
+https://docs.zama.org/protocol/sdk/alpha/migration/migrate-v2-to-v3.md
 
 Rules:
 1. Fetch and read that guide BEFORE doing anything. It is authoritative. Do NOT
