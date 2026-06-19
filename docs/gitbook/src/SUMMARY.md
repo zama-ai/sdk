@@ -9,6 +9,10 @@
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
 
+## Migration
+
+- [Migrate from v2 to v3](guides/migrate-v2-to-v3.md)
+
 ## Guides
 
 - [Configuration](guides/configuration.md)
@@ -26,10 +30,6 @@
 - [Operator approvals](guides/operator-approvals.md)
 - [Delegated decryption](guides/delegated-decryption.md)
 - [Encrypt & decrypt](guides/encrypt-decrypt.md)
-
-## Migration
-
-- [Migrate from v2 to v3](guides/migrate-v2-to-v3.md)
 
 ## API References
 
