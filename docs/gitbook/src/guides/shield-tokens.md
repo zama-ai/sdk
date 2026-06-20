@@ -96,7 +96,7 @@ const { mutateAsync: shield, isPending } = useShield({
   address: "0xWrapperAddress",
 });
 
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}
@@ -182,7 +182,7 @@ const {
 // isPending is true while the transaction is in flight
 // isSuccess flips to true when the mutation completes
 // Balance caches are automatically invalidated on success
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}

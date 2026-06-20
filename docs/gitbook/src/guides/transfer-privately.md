@@ -56,7 +56,7 @@ const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
   address: "0xEncryptedERC20Address",
 });
 
-const txHash = await transfer({
+const { txHash } = await transfer({
   to: "0xRecipientAddress",
   amount: 500n,
 });

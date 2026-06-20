@@ -334,12 +334,12 @@ For full storage options see the [GenericStorage](../reference/sdk/GenericStorag
 
 ## Shared relayer options
 
-When multiple chains use the same relayer type, pass a shared options object to reuse a single relayer instance:
+When multiple chains use the same relayer, create it once and reference that single instance from each chain:
 
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedOpts = { threads: 8, logger: console };
+const sharedWeb = web({ threads: 8, logger: console });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
@@ -349,13 +349,13 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: {
-    [mySepolia.id]: web(sharedOpts),
-    [myMainnet.id]: web(sharedOpts),
+    [mySepolia.id]: sharedWeb,
+    [myMainnet.id]: sharedWeb,
   },
 });
 ```
 
-Chains that pass the _same_ `options` object (by reference) share a single relayer instance, reducing memory usage.
+Chains that reference the _same_ relayer object — the result of a single `web()` call — share one worker, reducing memory usage.
 
 ## Next steps
 

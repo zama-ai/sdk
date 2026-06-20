@@ -607,7 +607,8 @@ import { useDecryptValues } from "@zama-fhe/react-sdk";
 const [inputs, setInputs] = useState<{ encryptedValue: string; contractAddress: `0x${string}` }[]>(
   [],
 );
-const { data: decrypted } = useDecryptValues(inputs);
+// `useDecryptValues` is disabled by default — opt in with `enabled: true`.
+const { data: decrypted } = useDecryptValues(inputs, { enabled: true });
 
 const encryptedValue = (await sdk.provider.readContract({
   address,

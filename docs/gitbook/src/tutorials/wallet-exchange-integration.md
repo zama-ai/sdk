@@ -149,7 +149,7 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
+`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions). The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
 {% tab title="SDK" %}
