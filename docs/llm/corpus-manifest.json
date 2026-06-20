@@ -944,7 +944,7 @@
       "source_type": "official-doc",
       "category": "reference-react",
       "logical_path": "reference/react/useDecryptValues",
-      "description": "Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.",
+      "description": "Query hook for FHE user decryption. Disabled by default — enable it to fire, and gate on a cached permit to avoid an unexpected wallet prompt.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

@@ -230,7 +230,7 @@ Wrappers enforce a maximum of **6 decimals** on the confidential side. When wrap
 | 6                   | 6                | 1               | 1:1                                     |
 | 2                   | 2                | 1               | 1:1                                     |
 
-Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper's `decimals()` and `rate()` views are exposed via the underlying contract for UI conversions.
+Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper contract itself exposes `decimals()` and `rate()` views (read them from the confidential token address, not the underlying ERC-20) for these UI conversions.
 
 ## Discover wrapped tokens via the Registry
 

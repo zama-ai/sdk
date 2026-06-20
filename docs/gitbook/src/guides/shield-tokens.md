@@ -154,7 +154,7 @@ This sends only the shield transaction. If the allowance is insufficient, the tr
 
 ### 5. Track the transaction
 
-Both the core SDK and React hooks return the transaction hash. You can use it to wait for confirmation or show progress in your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to wait for confirmation or show progress in your UI:
 
 {% tabs %}
 {% tab title="Core SDK" %}

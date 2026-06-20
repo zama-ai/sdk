@@ -104,7 +104,7 @@ The operator must have been approved beforehand. Check approval status with `tok
 
 ### 4. Handle the transaction result
 
-Both the core SDK and React hooks return the transaction hash. Use it to confirm the transaction or update your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to confirm the transaction or update your UI:
 
 {% tabs %}
 {% tab title="Core SDK" %}

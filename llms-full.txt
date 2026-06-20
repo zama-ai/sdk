@@ -1179,7 +1179,7 @@ Wrappers enforce a maximum of **6 decimals** on the confidential side. When wrap
 | 6                   | 6                | 1               | 1:1                                     |
 | 2                   | 2                | 1               | 1:1                                     |
 
-Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper's `decimals()` and `rate()` views are exposed via the underlying contract for UI conversions.
+Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper contract itself exposes `decimals()` and `rate()` views (read them from the confidential token address, not the underlying ERC-20) for these UI conversions.
 
 ## Discover wrapped tokens via the Registry
 
@@ -2942,7 +2942,7 @@ This sends only the shield transaction. If the allowance is insufficient, the tr
 
 ### 5. Track the transaction
 
-Both the core SDK and React hooks return the transaction hash. You can use it to wait for confirmation or show progress in your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to wait for confirmation or show progress in your UI:
 
 
 ### Tab: Core SDK
@@ -3080,7 +3080,7 @@ The operator must have been approved beforehand. Check approval status with `tok
 
 ### 4. Handle the transaction result
 
-Both the core SDK and React hooks return the transaction hash. Use it to confirm the transaction or update your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to confirm the transaction or update your UI:
 
 
 ### Tab: Core SDK
@@ -14149,7 +14149,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useDecryptValues
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useGrantPermit.md)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
+Query hook for user decryption. **Disabled by default** — pass `enabled` to run it, and gate on a cached permit (via [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useHasPermit.md)) to avoid an unexpected wallet prompt. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 
 > [!INFO]
@@ -14219,11 +14219,14 @@ import { type EncryptedInput } from "@zama-fhe/sdk";
 Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useDecryptValues([
-  { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
-]);
+const { data } = useDecryptValues(
+  [
+    { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
+  ],
+  { enabled: true },
+);
 
 // data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
