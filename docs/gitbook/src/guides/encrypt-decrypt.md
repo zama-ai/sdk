@@ -28,8 +28,9 @@ function ConfidentialRoundTrip() {
     { encryptedValue: string; contractAddress: `0x${string}` }[]
   >([]);
 
-  // Fires when inputs are non-empty.
-  const { data: decrypted } = useDecryptValues(inputs);
+  // Disabled by default — opt in with `enabled`. The hook still waits for
+  // non-empty inputs and a connected wallet before it decrypts.
+  const { data: decrypted } = useDecryptValues(inputs, { enabled: true });
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

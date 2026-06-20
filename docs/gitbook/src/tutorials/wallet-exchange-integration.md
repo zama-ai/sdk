@@ -149,7 +149,7 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions) — plus decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
+`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions). The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -230,7 +230,7 @@ Wrappers enforce a maximum of **6 decimals** on the confidential side. When wrap
 | 6                   | 6                | 1               | 1:1                                     |
 | 2                   | 2                | 1               | 1:1                                     |
 
-Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper's `decimals()` and `rate()` views are exposed via the underlying contract for UI conversions.
+Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper contract itself exposes `decimals()` and `rate()` views (read them from the confidential token address, not the underlying ERC-20) for these UI conversions.
 
 ## Discover wrapped tokens via the Registry
 
