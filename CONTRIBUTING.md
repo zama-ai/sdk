@@ -86,6 +86,14 @@ pnpm llm:check
 
 The pre-commit hook regenerates and stages the LLM artifacts automatically when relevant staged sources change. If a corpus source is partially staged, stage or discard the remaining changes before committing so the generated files match the committed source state.
 
+Doc URLs are branch-specific: the corpus and the migration-guide prompt link to `raw.githubusercontent.com/zama-ai/sdk/<branch>/…` and `docs.zama.org/protocol/sdk/<space>/…` — `main`/`stable` on the release branch, `prerelease`/`alpha` on the prerelease branch. They can't be derived at build time (CI checks out PRs detached, and the committed artifacts must match the rebuild), so the branch is committed and flipped at promotion with one idempotent command:
+
+```bash
+pnpm llm:retarget main        # or: prerelease
+```
+
+CI (`pnpm llm:check-target`, driven by the PR's base branch) fails any PR whose committed URLs target the wrong branch and points you at the command above.
+
 ### API Reports
 
 Public API surface is tracked with [API Extractor](https://api-extractor.com/) reports committed to the repo. When you change a public export, regenerate the reports and commit the result:

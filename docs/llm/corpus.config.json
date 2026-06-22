@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "rawGithubBaseUrl": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease",
+  "rawGithubBaseUrl": "https://raw.githubusercontent.com/zama-ai/sdk/main",
   "docs": {
     "root": "docs/gitbook/src",
     "summary": "docs/gitbook/src/SUMMARY.md"
