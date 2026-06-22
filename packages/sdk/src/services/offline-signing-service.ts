@@ -35,8 +35,8 @@ import type {
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
-  CredentialPermitRequest,
-  CredentialPermitResult,
+  DecryptionPermitRequest,
+  DecryptionPermitResult,
   DelegateDecryptionRequest,
   ExecuteRequest,
   FinalizeUnwrapRequest,
@@ -163,7 +163,7 @@ export class OfflineSigningService {
    * caller signs externally (via {@link sign}, an HSM, or any out-of-process
    * signer) and feeds back through {@link broadcast}.
    *
-   * For `CredentialPermit`, returns an EIP-712 typed-data envelope to be
+   * For `DecryptionPermit`, returns an EIP-712 typed-data envelope to be
    * signed externally and fed back through {@link registerPermit}.
    *
    * Signer-optional: when a signer IS configured, its connected wallet
@@ -175,15 +175,15 @@ export class OfflineSigningService {
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>>;
   prepare<K extends PermitKind>(
-    request: CredentialPermitRequest,
+    request: DecryptionPermitRequest,
     options?: OfflineSigningOptions,
   ): Promise<PreparedPermitFor<K>>;
   async prepare(
-    request: TransactionPrepareRequest | CredentialPermitRequest,
+    request: TransactionPrepareRequest | DecryptionPermitRequest,
     options?: OfflineSigningOptions,
   ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
-    if (isCredentialPermitRequest(request)) {
-      return this.#prepareCredentialPermit(request);
+    if (isDecryptionPermitRequest(request)) {
+      return this.#prepareDecryptionPermit(request);
     }
     return this.#prepareTransaction(request, options);
   }
@@ -214,9 +214,9 @@ export class OfflineSigningService {
     } as PreparedFor<K>;
   }
 
-  async #prepareCredentialPermit(
-    request: CredentialPermitRequest,
-  ): Promise<PreparedPermitFor<"CredentialPermit">> {
+  async #prepareDecryptionPermit(
+    request: DecryptionPermitRequest,
+  ): Promise<PreparedPermitFor<"DecryptionPermit">> {
     const from = getAddress(request.from);
     await this.#assertMatchesConfiguredSigner(from, `prepare(${request.kind})`);
     const chainId = await this.#provider.getChainId();
@@ -227,7 +227,7 @@ export class OfflineSigningService {
         delegator: request.delegator,
       });
     return {
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       request,
       from,
       chainId,
@@ -357,7 +357,7 @@ export class OfflineSigningService {
 
   /**
    * Register an externally-signed {@link PreparedPermitFor} into the
-   * credential cache. Pair with `prepare({ kind: "CredentialPermit", ... })`
+   * credential cache. Pair with `prepare({ kind: "DecryptionPermit", ... })`
    * and an external `signTypedData` call over `prepared.typedData`.
    *
    * Signer-optional: works without a configured signer (canonical
@@ -369,7 +369,7 @@ export class OfflineSigningService {
   async registerPermit<K extends PermitKind>(
     prepared: PreparedPermitFor<K>,
     signature: Hex,
-  ): Promise<CredentialPermitResult> {
+  ): Promise<DecryptionPermitResult> {
     assertHex(signature, "registerPermit: signature");
     if (prepared.typedData === null) {
       // Already covered — nothing to register.
@@ -659,6 +659,6 @@ export class OfflineSigningService {
   }
 }
 
-function isCredentialPermitRequest(value: ExecuteRequest): value is CredentialPermitRequest {
-  return value.kind === "CredentialPermit";
+function isDecryptionPermitRequest(value: ExecuteRequest): value is DecryptionPermitRequest {
+  return value.kind === "DecryptionPermit";
 }

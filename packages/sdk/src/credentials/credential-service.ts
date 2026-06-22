@@ -236,7 +236,7 @@ export class CredentialService {
 
   /**
    * Build the EIP-712 envelope and permit context for an offline-signing
-   * credential permit. The caller signs `typedData` externally (custodian,
+   * decryption permit. The caller signs `typedData` externally (custodian,
    * HSM, …) and feeds the signature back to {@link registerSignedPermit}.
    *
    * Signer-optional: when no signer is configured, the caller supplies the
@@ -292,7 +292,7 @@ export class CredentialService {
     const [chunk, ...extra] = chunks;
     if (chunk === undefined || extra.length > 0) {
       throw new ConfigurationError(
-        `Offline credential permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
+        `Offline decryption permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
       );
     }
     const startTimestamp = nowSeconds();

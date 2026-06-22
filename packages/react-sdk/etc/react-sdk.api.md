@@ -15,8 +15,8 @@ import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
-import { CredentialPermitResult } from '@zama-fhe/sdk';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
+import { DecryptionPermitResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
@@ -224,7 +224,7 @@ export function usePrepare<TContext = unknown>(options?: UseMutationOptions<Prep
 export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
 
 // @public
-export function useRegisterPermit<TContext = unknown>(options?: UseMutationOptions<CredentialPermitResult, Error, RegisterPermitParams, TContext>): UseMutationResult<CredentialPermitResult, Error, RegisterPermitParams, TContext>;
+export function useRegisterPermit<TContext = unknown>(options?: UseMutationOptions<DecryptionPermitResult, Error, RegisterPermitParams, TContext>): UseMutationResult<DecryptionPermitResult, Error, RegisterPermitParams, TContext>;
 
 // @public
 export function useResume<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, ResumeParams, TContext>): UseMutationResult<TransactionResult, Error, ResumeParams, TContext>;

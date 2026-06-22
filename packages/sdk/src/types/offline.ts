@@ -147,15 +147,15 @@ export interface RevokeDelegationRequest {
 }
 
 /**
- * FHE credential permit request. Unlike the transaction-kind requests, this
+ * FHE decryption permit request. Unlike the transaction-kind requests, this
  * produces an EIP-712 typed-data envelope (no on-chain transaction). Pair
  * `prepare` with an external `signTypedData`, then call
  * {@link ZamaSDK.registerPermit} to register the signature.
  *
  * @see {@link ExecuteRequest} — the union accepted by `sdk.offlineSigning.execute(...)`.
  */
-export interface CredentialPermitRequest {
-  readonly kind: "CredentialPermit";
+export interface DecryptionPermitRequest {
+  readonly kind: "DecryptionPermit";
   /** Tx-sender / permit-signer wallet address. */
   readonly from: Address;
   /** Contract addresses to authorize. */
@@ -169,26 +169,26 @@ export interface CredentialPermitRequest {
 /**
  * Kinds of write operations that follow the prepare → sign → broadcast
  * pipeline (yields a {@link TransactionResult}). Excludes typed-data flows
- * like {@link CredentialPermitRequest}.
+ * like {@link DecryptionPermitRequest}.
  *
  * Single-tx kinds. Multi-step flows (shield over a non-1363 underlying,
  * the request → finalize unshield round-trip) are composed at the Token
  * level out of these primitives.
  */
-export type TransactionKind = TransactionPrepareRequest["kind"];
+export type TransactionKind = PrepareTransactionRequest["kind"];
 
 /** Alias for {@link TransactionKind} — used in method generic constraints. */
 export type TxKind = TransactionKind;
 
 /**
  * Kinds of typed-data ("permit") flows that follow the prepare → sign →
- * registerPermit pipeline. Produces a {@link CredentialPermitResult} rather
+ * registerPermit pipeline. Produces a {@link DecryptionPermitResult} rather
  * than a {@link TransactionResult}.
  */
-export type PermitKind = "CredentialPermit";
+export type PermitKind = "DecryptionPermit";
 
 /** Discriminated union of all transaction prepare requests. */
-export type TransactionPrepareRequest =
+export type PrepareTransactionRequest =
   | ConfidentialTransferRequest
   | ConfidentialTransferFromRequest
   | SetOperatorRequest
@@ -202,7 +202,7 @@ export type TransactionPrepareRequest =
   | RevokeDelegationRequest;
 
 /** Anything accepted by {@link ZamaSDK.execute}. */
-export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest;
+export type ExecuteRequest = PrepareTransactionRequest | DecryptionPermitRequest;
 
 // ─── Prepared payloads ──────────────────────────────────────────────────
 
@@ -225,7 +225,7 @@ export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest
  */
 export interface PreparedTransaction {
   readonly kind: TransactionKind;
-  readonly request: TransactionPrepareRequest;
+  readonly request: PrepareTransactionRequest;
   readonly unsignedTx: Hex;
   readonly from: Address;
   readonly to: Address;
@@ -245,20 +245,20 @@ export interface PreparedTransaction {
  */
 export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
   readonly kind: K;
-  readonly request: Extract<TransactionPrepareRequest, { kind: K }>;
+  readonly request: Extract<PrepareTransactionRequest, { kind: K }>;
 };
 
 // ─── Prepared permit (typed-data) payloads ─────────────────────────────
 
 /**
  * The opaque per-prepare context the credential service stashes on a
- * {@link PreparedCredentialPermit}. Callers should never construct or
+ * {@link PreparedDecryptionPermit}. Callers should never construct or
  * mutate this; pass it back into {@link ZamaSDK.registerPermit} alongside
  * the external signature.
  *
  * @internal
  */
-export interface CredentialPermitContext {
+export interface DecryptionPermitContext {
   readonly keypairPublicKey: Hex;
   readonly signerAddress: Address;
   readonly delegatorAddress: Address;
@@ -268,7 +268,7 @@ export interface CredentialPermitContext {
 }
 
 /**
- * Result of {@link ZamaSDK.prepare} for the `CredentialPermit` kind. Unlike
+ * Result of {@link ZamaSDK.prepare} for the `DecryptionPermit` kind. Unlike
  * {@link PreparedTransaction} this is a typed-data envelope (no
  * `unsignedTx`/`to`) — feed `typedData` to an external `signTypedData`,
  * then call {@link ZamaSDK.registerPermit} with the signature.
@@ -277,26 +277,26 @@ export interface CredentialPermitContext {
  * by an existing permit (no signature needed). Callers can short-circuit
  * by checking `prepared.typedData === null`.
  */
-export interface PreparedCredentialPermit {
-  readonly kind: "CredentialPermit";
-  readonly request: CredentialPermitRequest;
+export interface PreparedDecryptionPermit {
+  readonly kind: "DecryptionPermit";
+  readonly request: DecryptionPermitRequest;
   readonly from: Address;
   readonly chainId: number;
   readonly typedData: EIP712TypedData | null;
   /** @internal — pass to {@link ZamaSDK.registerPermit}; do not mutate. */
-  readonly context: CredentialPermitContext;
+  readonly context: DecryptionPermitContext;
 }
 
 /**
- * {@link PreparedCredentialPermit} narrowed by `kind` (currently a single
+ * {@link PreparedDecryptionPermit} narrowed by `kind` (currently a single
  * kind). Mirrors {@link PreparedFor} for transaction kinds.
  */
-export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
+export type PreparedPermitFor<K extends PermitKind> = PreparedDecryptionPermit & {
   readonly kind: K;
 };
 
 /** Outcome of {@link ZamaSDK.registerPermit}. */
-export interface CredentialPermitResult {
+export interface DecryptionPermitResult {
   /** The newly persisted permit chunk's contract addresses. */
   readonly contracts: readonly Address[];
   /** Permit duration in days (mirrors `permitTTL`). */

@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import type { Address, CredentialPermitResult, PreparedCredentialPermit } from "@zama-fhe/sdk";
+import type { Address, DecryptionPermitResult, PreparedDecryptionPermit } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRegisterPermit } from "../use-register-permit";
 import { useZamaSDK } from "../../provider";
@@ -7,9 +7,9 @@ import { useZamaSDK } from "../../provider";
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
-const PREPARED: PreparedCredentialPermit = {
-  kind: "CredentialPermit",
-  request: { kind: "CredentialPermit", from: USER, contracts: [TOKEN] },
+const PREPARED: PreparedDecryptionPermit = {
+  kind: "DecryptionPermit",
+  request: { kind: "DecryptionPermit", from: USER, contracts: [TOKEN] },
   from: USER,
   chainId: 31337,
   typedData: null,
@@ -23,7 +23,7 @@ const PREPARED: PreparedCredentialPermit = {
   },
 };
 
-const RESULT: CredentialPermitResult = {
+const RESULT: DecryptionPermitResult = {
   contracts: [TOKEN],
   durationDays: 30,
   startTimestamp: 1700000000,

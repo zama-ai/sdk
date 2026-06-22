@@ -5,13 +5,13 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { CredentialPermitResult } from "@zama-fhe/sdk";
+import type { DecryptionPermitResult } from "@zama-fhe/sdk";
 import { registerPermitMutationOptions, type RegisterPermitParams } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
 /**
- * Persist an externally-signed credential permit. Pair with
- * `usePrepare({ kind: "CredentialPermit", ... })` and an external
+ * Persist an externally-signed decryption permit. Pair with
+ * `usePrepare({ kind: "DecryptionPermit", ... })` and an external
  * `signTypedData` call over `prepared.typedData`.
  *
  * Signer-optional: works without a configured signer (canonical
@@ -24,10 +24,10 @@ import { useZamaSDK } from "../provider";
  * ```
  */
 export function useRegisterPermit<TContext = unknown>(
-  options?: UseMutationOptions<CredentialPermitResult, Error, RegisterPermitParams, TContext>,
-): UseMutationResult<CredentialPermitResult, Error, RegisterPermitParams, TContext> {
+  options?: UseMutationOptions<DecryptionPermitResult, Error, RegisterPermitParams, TContext>,
+): UseMutationResult<DecryptionPermitResult, Error, RegisterPermitParams, TContext> {
   const sdk = useZamaSDK();
-  return useMutation<CredentialPermitResult, Error, RegisterPermitParams, TContext>({
+  return useMutation<DecryptionPermitResult, Error, RegisterPermitParams, TContext>({
     ...registerPermitMutationOptions(sdk),
     ...options,
   });

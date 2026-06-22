@@ -414,7 +414,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
   });
 });
 
-describe("OfflineSigningService — CredentialPermit offline path", () => {
+describe("OfflineSigningService — DecryptionPermit offline path", () => {
   test("prepare returns a typed-data envelope for fresh contracts", async ({
     createSDK,
     signer,
@@ -422,11 +422,11 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN],
     });
-    expect(prepared.kind).toBe("CredentialPermit");
+    expect(prepared.kind).toBe("DecryptionPermit");
     expect(prepared.typedData).not.toBeNull();
     expect(prepared.context.chunk).toEqual([TOKEN]);
   });
@@ -438,7 +438,7 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [],
     });
@@ -452,7 +452,7 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN],
     });
@@ -471,7 +471,7 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN],
     });
@@ -481,7 +481,7 @@ describe("OfflineSigningService — CredentialPermit offline path", () => {
   });
 });
 
-describe("OfflineSigningService — CredentialPermit", () => {
+describe("OfflineSigningService — DecryptionPermit", () => {
   test("prepare → signTypedData → registerPermit signs typed data via the signer", async ({
     createSDK,
     signer,
@@ -489,7 +489,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN],
     });
@@ -507,7 +507,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
   }) => {
     const sdk = createSDK({ signer });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [],
     });
@@ -524,7 +524,7 @@ describe("OfflineSigningService — CredentialPermit", () => {
     const sdk = createSDK({ signer });
     const OTHER = "0x4444444444444444444444444444444444444444" as Address;
     await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN, OTHER],
     });
@@ -1186,14 +1186,14 @@ describe("OfflineSigningService — refreshPrepared", () => {
   });
 });
 
-describe("OfflineSigningService — CredentialPermit cross-process", () => {
+describe("OfflineSigningService — DecryptionPermit cross-process", () => {
   test("signer-absent SDK: prepare → external sign → registerPermit round-trip", async ({
     createSDK,
     userAddress,
   }) => {
     const sdk = createSDK({ signer: undefined });
     const prepared = await sdk.offlineSigning.prepare({
-      kind: "CredentialPermit",
+      kind: "DecryptionPermit",
       from: userAddress,
       contracts: [TOKEN],
     });

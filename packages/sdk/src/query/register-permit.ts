@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { CredentialPermitResult, PermitKind, PreparedPermitFor } from "../types/offline";
+import type { DecryptionPermitResult, PermitKind, PreparedPermitFor } from "../types/offline";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
@@ -18,7 +18,7 @@ export function registerPermitMutationOptions(
 ): MutationFactoryOptions<
   readonly ["zama.registerPermit"],
   RegisterPermitParams,
-  CredentialPermitResult
+  DecryptionPermitResult
 > {
   return {
     mutationKey: ["zama.registerPermit"] as const,

@@ -214,7 +214,7 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
     "prepare → DFNS async signTypedData (policy approval) → registerPermit",
     async ({ sdk, pollDfnsSignature, dfnsAccount, env }) => {
       const prepared = await sdk.offlineSigning.prepare({
-        kind: "CredentialPermit",
+        kind: "DecryptionPermit",
         from: dfnsAccount.address,
         contracts: [env.TOKEN_ADDRESS],
       });

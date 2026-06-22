@@ -5981,40 +5981,6 @@ export interface CredentialBundle {
     readonly permits: readonly Permission[];
 }
 
-// Warning: (ae-internal-missing-underscore) The name "CredentialPermitContext" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export interface CredentialPermitContext {
-    // (undocumented)
-    readonly chainId: number;
-    // (undocumented)
-    readonly chunk: readonly Address[];
-    // (undocumented)
-    readonly delegatorAddress: Address;
-    // (undocumented)
-    readonly keypairPublicKey: Hex;
-    // (undocumented)
-    readonly signerAddress: Address;
-    // (undocumented)
-    readonly startTimestamp: number;
-}
-
-// @public
-export interface CredentialPermitRequest {
-    readonly contracts: readonly Address[];
-    readonly delegator?: Address;
-    readonly from: Address;
-    // (undocumented)
-    readonly kind: "CredentialPermit";
-}
-
-// @public
-export interface CredentialPermitResult {
-    readonly contracts: readonly Address[];
-    readonly durationDays: number;
-    readonly startTimestamp: number;
-}
-
 // @public
 export function decimalsContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
@@ -6241,6 +6207,40 @@ export class Decryption {
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// Warning: (ae-internal-missing-underscore) The name "DecryptionPermitContext" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
+export interface DecryptionPermitContext {
+    // (undocumented)
+    readonly chainId: number;
+    // (undocumented)
+    readonly chunk: readonly Address[];
+    // (undocumented)
+    readonly delegatorAddress: Address;
+    // (undocumented)
+    readonly keypairPublicKey: Hex;
+    // (undocumented)
+    readonly signerAddress: Address;
+    // (undocumented)
+    readonly startTimestamp: number;
+}
+
+// @public
+export interface DecryptionPermitRequest {
+    readonly contracts: readonly Address[];
+    readonly delegator?: Address;
+    readonly from: Address;
+    // (undocumented)
+    readonly kind: "DecryptionPermit";
+}
+
+// @public
+export interface DecryptionPermitResult {
+    readonly contracts: readonly Address[];
+    readonly durationDays: number;
+    readonly startTimestamp: number;
 }
 
 // @public
@@ -6581,7 +6581,7 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
-export type ExecuteRequest = TransactionPrepareRequest | CredentialPermitRequest;
+export type ExecuteRequest = TransactionPrepareRequest | DecryptionPermitRequest;
 
 // @public
 export interface FheChain<TId extends number = number> {
@@ -11803,9 +11803,9 @@ export class Offline {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     // (undocumented)
-    prepare<K extends PermitKind>(request: CredentialPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
+    prepare<K extends PermitKind>(request: DecryptionPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
     refresh<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<CredentialPermitResult>;
+    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<DecryptionPermitResult>;
     resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     sign(prepared: PreparedTransaction): Promise<Hex>;
 }
@@ -11845,7 +11845,7 @@ export interface PendingUnshieldRequest {
 export type Permission = z.infer<typeof PermissionSchema>;
 
 // @public
-export type PermitKind = "CredentialPermit";
+export type PermitKind = "DecryptionPermit";
 
 // @public
 export class Permits {
@@ -11866,17 +11866,17 @@ export class Permits {
 }
 
 // @public
-export interface PreparedCredentialPermit {
+export interface PreparedDecryptionPermit {
     // (undocumented)
     readonly chainId: number;
     // @internal
-    readonly context: CredentialPermitContext;
+    readonly context: DecryptionPermitContext;
     // (undocumented)
     readonly from: Address;
     // (undocumented)
-    readonly kind: "CredentialPermit";
+    readonly kind: "DecryptionPermit";
     // (undocumented)
-    readonly request: CredentialPermitRequest;
+    readonly request: DecryptionPermitRequest;
     // (undocumented)
     readonly typedData: EIP712TypedData | null;
 }
@@ -11890,7 +11890,7 @@ export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
 };
 
 // @public
-export type PreparedPermitFor<K extends PermitKind> = PreparedCredentialPermit & {
+export type PreparedPermitFor<K extends PermitKind> = PreparedDecryptionPermit & {
     readonly kind: K;
 };
 

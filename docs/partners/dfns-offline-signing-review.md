@@ -78,7 +78,7 @@ There are **two flows**, distinguished by what `prepare` returns:
 | Flow                                                                              | `prepare` returns                                               | DFNS signs with       | Finalize with                                            |
 | --------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
 | **Transaction** (transfers, operator approvals, shield/unshield legs, delegation) | `PreparedTransaction` with `unsignedTx` (RLP, EIP-1559)         | `kind: "Transaction"` | `sdk.offlineSigning.broadcast(prepared, signedTx)`       |
-| **Credential permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedCredentialPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `sdk.offlineSigning.registerPermit(prepared, signature)` |
+| **Decryption permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedDecryptionPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `sdk.offlineSigning.registerPermit(prepared, signature)` |
 
 The transaction kinds we support today (`TransactionKind`): `ConfidentialTransfer`,
 `ConfidentialTransferFrom`, `SetOperator`, `Unwrap`, `UnwrapAll`, `FinalizeUnwrap`,
@@ -184,7 +184,7 @@ doesn't control fails). **(Question Q5.)**
 
 ## 5. EIP-712 envelope reshaping (permit flow)
 
-For the credential-permit flow, `prepared.typedData` is a standard EIP-712 envelope,
+For the decryption-permit flow, `prepared.typedData` is a standard EIP-712 envelope,
 but our working integration had to reshape it for the DFNS `Eip712` signing API:
 
 - drop the `EIP712Domain` entry from `types` (DFNS supplies it);
@@ -276,7 +276,7 @@ Grouped by topic; the ★ items are the ones we care most about.
   hours-to-days, so nonce/fee staleness and our `refresh()` re-stamping (§3.2, §4) bite
   hardest here — once a request bundle is exported for signing, can its nonce/fees still be
   updated, or is the exported payload frozen? (c) does Offline Signer sign **EIP-712
-  typed-data** bundles (`kind: "Eip712"`) for our credential-permit flow, or
+  typed-data** bundles (`kind: "Eip712"`) for our decryption-permit flow, or
   transactions only?
 
 ### Operational

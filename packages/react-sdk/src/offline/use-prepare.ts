@@ -6,7 +6,7 @@ import {
   type UseMutationResult,
 } from "@tanstack/react-query";
 import type {
-  CredentialPermitRequest,
+  DecryptionPermitRequest,
   PermitKind,
   PreparedFor,
   PreparedPermitFor,
@@ -18,7 +18,7 @@ import { useZamaSDK } from "../provider";
 
 /**
  * Build an unsigned transaction (for transaction kinds) or an EIP-712
- * typed-data envelope (for the `CredentialPermit` kind). Generic over `kind`
+ * typed-data envelope (for the `DecryptionPermit` kind). Generic over `kind`
  * — the return shape narrows on the request discriminant.
  *
  * Signer-optional: works without a configured signer (canonical cross-process
@@ -42,11 +42,11 @@ import { useZamaSDK } from "../provider";
  * });
  * ```
  *
- * @example Credential permit
+ * @example Decryption permit
  * ```tsx
  * const { mutateAsync: prepare } = usePrepare();
  * const prepared = await prepare({
- *   request: { kind: "CredentialPermit", from: userAddress, contracts: [tokenAddress] },
+ *   request: { kind: "DecryptionPermit", from: userAddress, contracts: [tokenAddress] },
  * });
  * ```
  */
@@ -77,4 +77,4 @@ export function usePrepare<TContext = unknown>(
 
 // Re-export the canonical request types so callers can type their literals
 // without importing from two places.
-export type { TransactionPrepareRequest, CredentialPermitRequest };
+export type { TransactionPrepareRequest, DecryptionPermitRequest };

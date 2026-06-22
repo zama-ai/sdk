@@ -1,12 +1,12 @@
 import type { Hex } from "viem";
 import type {
-  CredentialPermitRequest,
+  DecryptionPermitRequest,
   PermitKind,
   PreparedFor,
   PreparedPermitFor,
   PreparedTransaction,
   TransactionKind,
-  TransactionPrepareRequest,
+  PrepareTransactionRequest,
 } from "../types/offline";
 import type { OfflineSigningOptions } from "../services/offline-signing-service";
 import type { ZamaSDK } from "../zama-sdk";
@@ -14,7 +14,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link prepareMutationOptions}. */
 export interface PrepareParams {
-  readonly request: TransactionPrepareRequest | CredentialPermitRequest;
+  readonly request: PrepareTransactionRequest | DecryptionPermitRequest;
   readonly options?: OfflineSigningOptions;
 }
 

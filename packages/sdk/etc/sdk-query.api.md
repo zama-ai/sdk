@@ -560,7 +560,7 @@ export interface PrepareParams {
     // (undocumented)
     readonly options?: OfflineSigningOptions;
     // (undocumented)
-    readonly request: TransactionPrepareRequest | CredentialPermitRequest;
+    readonly request: PrepareTransactionRequest | DecryptionPermitRequest;
 }
 
 // @public
@@ -611,7 +611,7 @@ export interface RefreshPreparedParams {
 }
 
 // @public
-export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, CredentialPermitResult>;
+export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, DecryptionPermitResult>;
 
 // @public
 export interface RegisterPermitParams {
