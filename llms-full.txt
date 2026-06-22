@@ -1352,33 +1352,13 @@ Point your agent at the SDK's LLM-ready files when it can't use skills — or to
 | [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt)           | the agent needs to **discover** the right guide, example, or reference, then fetch only that | a compact map of guides, concepts, SDK and React reference pages, and approved examples   |
 | [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) | the agent has a **large context window** and you want the whole public corpus in one paste   | the complete docs bundle plus approved examples and README context (API reports excluded) |
 
-Start with `llms.txt` for normal coding tasks and let the agent follow the raw GitHub links to the smallest relevant source; reach for `llms-full.txt` only when you want everything loaded at once. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs (working inside a clone, read those paths directly).
+Start with `llms.txt` for normal coding tasks; reach for `llms-full.txt` only when you want everything loaded at once. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
 
-## Source of truth
-
-Whichever path you use, agent guidance follows one source order:
-
-1. **Official documentation** — published through GitBook from `docs/gitbook/src`.
-2. **Approved official examples** — listed in the `Official Examples` section of `llms.txt`.
-3. **API reports** — fallback only, for exported-API details.
-
-Prefer docs over examples when the docs already answer the question, and prefer the approved examples in this repo over ad hoc implementations.
-
-## Recommended workflows
-
-- **New integration** — install the skills, read the closest approved example, then open the matching guide for detail.
-- **Deeper grounding** — load `llms-full.txt` (or follow the `llms.txt` links), and fall back to API reports only for exported-surface questions.
-- **Debugging** — start with the [error guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md), compare against the closest approved example, and inspect API reports last.
-
-## Example prompts
-
-If you installed the skills (`zama-ai/skills`) above, paste a task below — `zama-typescript` loads automatically. Otherwise ground the agent first, then give it a task.
-
-**Ground the agent** (skip if the skills are installed):
+To ground an agent, paste:
 
 > Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
 
-**Pick a task:**
+Then give it a task. (With the skills installed your agent is already grounded — skip straight here.)
 
 
 ### Tab: React (wagmi)
@@ -1392,6 +1372,25 @@ If you installed the skills (`zama-ai/skills`) above, paste a task below — `za
 ### Tab: Debugging
 
 > Debug this Zama SDK integration: check the official error guide first, then compare against the closest approved example.
+
+
+## Agent guidance
+
+### Source of truth
+
+Whichever path you use, agent guidance follows one source order:
+
+1. **Official documentation** — published through GitBook from `docs/gitbook/src`.
+2. **Approved official examples** — listed in the `Official Examples` section of `llms.txt`.
+3. **API reports** — fallback only, for exported-API details.
+
+Prefer docs over examples when the docs already answer the question, and prefer the approved examples in this repo over ad hoc implementations.
+
+### Recommended workflows
+
+- **New integration** — install the skills, read the closest approved example, then open the matching guide for detail.
+- **Deeper grounding** — load `llms-full.txt` (or follow the `llms.txt` links), and fall back to API reports only for exported-surface questions.
+- **Debugging** — start with the [error guide](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/guides/handle-errors.md), compare against the closest approved example, and inspect API reports last.
 
 ## Migrate from v2 to v3
 
