@@ -68,15 +68,10 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     delegatedUserDecrypt: vi.fn().mockResolvedValue({
       [VALID_ENCRYPTED_VALUE as string]: 1000n,
     }),
-    requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
     fetchFheEncryptionKeyBytes: vi.fn().mockResolvedValue({
       publicKeyId: "pk-1",
       publicKey: new Uint8Array([1]),
-    }),
-    getPublicParams: vi.fn().mockResolvedValue({
-      publicParams: new Uint8Array([2]),
-      publicParamsId: "pp-1",
     }),
     terminate: vi.fn(),
     ...overrides,

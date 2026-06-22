@@ -3,7 +3,7 @@
  * and verifies it can talk to the FHE infrastructure before serving requests.
  */
 import { ZamaSDK } from "@zama-fhe/sdk";
-import { node } from "@zama-fhe/sdk/node";
+import { cleartext } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import type { Address } from "viem";
 import { expect, nodeTest as test } from "../../fixtures/node-test";
@@ -18,7 +18,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     chains: [chain],
     publicClient,
     walletClient: viemClient,
-    relayers: { [chain.id]: node() },
+    relayers: { [chain.id]: cleartext() },
   });
 
   const sdk = new ZamaSDK(config);
@@ -27,7 +27,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   const aclAddress = await sdk.relayer.getAclAddress();
   expect(aclAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
-  // 3. Verify FHE worker pool initializes — generate a keypair
+  // 3. Verify the FHE backend initializes — generate a keypair
   const keypair = await sdk.relayer.generateTransportKeyPair();
   expect(keypair.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 
@@ -38,7 +38,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
     Math.floor(Date.now() / 1000),
     7,
   );
-  expect(eip712.domain.chainId).toBe(31337);
+  expect(eip712.domain.chainId).toBe(31337n);
 
   // 5. Verify delegated EIP-712 generation
   const delegatedEip712 = await sdk.relayer.createDelegatedUserDecryptEIP712(
@@ -50,11 +50,9 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   );
   expect(delegatedEip712.primaryType).toBe("DelegatedUserDecryptRequestVerification");
 
-  // 6. Verify public key and params are available
+  // 6. Verify the FHE encryption key is available
   const pk = await sdk.relayer.fetchFheEncryptionKeyBytes();
   expect(pk).not.toBeNull();
-  const pp = await sdk.relayer.getPublicParams(2048);
-  expect(pp).not.toBeNull();
 
   // 7. Create tokens and verify on-chain metadata
   const readonlyUSDT = sdk.createToken(contracts.cUSDT as Address);
@@ -66,7 +64,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   // 8. Clean shutdown
   sdk.terminate();
 
-  // 9. Post-terminate,requests restart the pool
+  // 9. Post-terminate, requests re-initialize the backend
   expect(await sdk.relayer.generateTransportKeyPair()).toMatchObject({
     privateKey: expect.stringMatching(/0x/),
     publicKey: expect.stringMatching(/0x/),

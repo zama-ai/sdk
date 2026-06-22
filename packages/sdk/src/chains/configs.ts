@@ -12,7 +12,7 @@ import type { FheChain } from "./types";
 export const mainnet = {
   id: 1,
   gatewayChainId: 261131,
-  relayerUrl: "https://relayer.mainnet.zama.org/v2",
+  relayerUrl: "https://relayer.mainnet.zama.org",
   network: "https://ethereum-rpc.publicnode.com",
   aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6",
   kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03",
@@ -28,7 +28,7 @@ export const mainnet = {
 export const sepolia = {
   id: 11155111,
   gatewayChainId: 10901,
-  relayerUrl: "https://relayer.testnet.zama.org/v2",
+  relayerUrl: "https://relayer.testnet.zama.org",
   network: "https://ethereum-sepolia-rpc.publicnode.com",
   aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",

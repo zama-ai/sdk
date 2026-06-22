@@ -1,11 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import {
-  MOCK_RELAYER_PORT,
-  NEXTJS_ANVIL_PORT,
-  NEXTJS_PORT,
-  VITE_ANVIL_PORT,
-  VITE_PORT,
-} from "./fixtures/constants";
+import { NEXTJS_ANVIL_PORT, NEXTJS_PORT, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -51,11 +45,6 @@ export default defineConfig<{}, WorkerFixtures>({
   ],
   webServer: [
     {
-      command: `node fixtures/relayer-sdk-server.mjs ${MOCK_RELAYER_PORT}`,
-      port: MOCK_RELAYER_PORT,
-      reuseExistingServer: !CI,
-    },
-    {
       command: `./start-anvil.sh ${NEXTJS_ANVIL_PORT}`,
       name: "anvil-nextjs",
       wait: {
@@ -65,8 +54,8 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       command: CI
-        ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} NEXT_PUBLIC_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-nextjs start`
-        : `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} NEXT_PUBLIC_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-nextjs dev`,
+        ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs start`
+        : `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs dev`,
       port: NEXTJS_PORT,
       reuseExistingServer: !CI,
     },
@@ -80,8 +69,8 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       command: CI
-        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite preview`
-        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite dev`,
+        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite preview`
+        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite dev`,
       port: VITE_PORT,
       timeout: 90_000,
       reuseExistingServer: !CI,

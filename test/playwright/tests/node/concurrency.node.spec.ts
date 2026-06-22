@@ -1,9 +1,10 @@
 /**
- * Scenario: A high-throughput backend fires concurrent FHE requests through
- * a multi-worker pool to verify parallelism and clean shutdown.
+ * Scenario: A high-throughput backend fires concurrent FHE requests at a single
+ * FhevmRelayer to verify it serves them correctly, shares one lazy init, and
+ * restarts cleanly after termination.
  */
 import { type FheChain, ZamaSDK } from "@zama-fhe/sdk";
-import { node } from "@zama-fhe/sdk/node";
+import { cleartext } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import type { PublicClient, WalletClient } from "viem";
 import { expect, nodeTest as test } from "../../fixtures/node-test";
@@ -12,31 +13,21 @@ interface CreateZamaSDKParams {
   chain: FheChain;
   publicClient: PublicClient;
   walletClient: WalletClient;
-  poolSize: number;
 }
 
-function createZamaSDK({ chain, publicClient, walletClient, poolSize }: CreateZamaSDKParams) {
+function createZamaSDK({ chain, publicClient, walletClient }: CreateZamaSDKParams) {
   return new ZamaSDK(
     createConfig({
       chains: [chain],
       publicClient,
       walletClient,
-      relayers: { [chain.id]: node({ poolSize }) },
+      relayers: { [chain.id]: cleartext() },
     }),
   );
 }
 
-test("2-worker pool generates 4 unique keypairs concurrently", async ({
-  chain,
-  publicClient,
-  viemClient,
-}) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+test("generates 4 unique keypairs concurrently", async ({ chain, publicClient, viemClient }) => {
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient });
   const results = await Promise.all([
     sdk.relayer.generateTransportKeyPair(),
     sdk.relayer.generateTransportKeyPair(),
@@ -48,18 +39,13 @@ test("2-worker pool generates 4 unique keypairs concurrently", async ({
   expect(publicKeys.size).toBe(4);
 });
 
-test("4-worker pool handles parallel EIP-712 creation", async ({
+test("handles parallel EIP-712 creation", async ({
   chain,
   publicClient,
   viemClient,
   contracts,
 }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 4,
-  });
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient });
   const keypair = await sdk.relayer.generateTransportKeyPair();
   const now = Math.floor(Date.now() / 1000);
 
@@ -71,37 +57,27 @@ test("4-worker pool handles parallel EIP-712 creation", async ({
   ]);
   expect(results).toHaveLength(4);
   for (const eip712 of results) {
-    expect(eip712.domain.chainId).toBe(31337);
+    expect(eip712.domain.chainId).toBe(31337n);
   }
 });
 
 test("terminate and restart", async ({ chain, publicClient, viemClient }) => {
-  const sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+  const sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient });
   await sdk.relayer.generateTransportKeyPair();
   sdk.terminate();
-  // Post-terminate, operations restart the pool
+  // Post-terminate, operations re-initialize the backend.
   expect(await sdk.relayer.generateTransportKeyPair()).toMatchObject({
     privateKey: expect.stringMatching(/0x/),
     publicKey: expect.stringMatching(/0x/),
   });
 });
 
-test("concurrent init requests share pool initialization", async ({
+test("concurrent init requests share a single initialization", async ({
   chain,
   publicClient,
   viemClient,
 }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient });
   const [kp1, kp2] = await Promise.all([
     sdk.relayer.generateTransportKeyPair(),
     sdk.relayer.generateTransportKeyPair(),

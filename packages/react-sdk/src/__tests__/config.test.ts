@@ -163,14 +163,12 @@ describe("createConfig", () => {
     test("returns tagged config when called with no args", () => {
       const result = web();
       expect(result.type).toBe("web");
-      expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });
 
-    test("captures options in createWorker/createRelayer closures", () => {
-      const result = web({ threads: 4 });
+    test("returns tagged config when called with options", () => {
+      const result = web({});
       expect(result.type).toBe("web");
-      expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });
   });

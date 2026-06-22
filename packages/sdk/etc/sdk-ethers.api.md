@@ -6,9 +6,6 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Auth } from '@zama-fhe/relayer-sdk/bundle';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -17,17 +14,11 @@ import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { Provider } from 'ethers';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { Signer } from 'ethers';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
@@ -39,7 +30,7 @@ export { EIP1193Events }
 export { EIP1193Provider }
 
 // @public
-export type EncryptedValue = Bytes32Hex;
+export type EncryptedValue = Hex;
 
 // @public
 export class EthersProvider implements GenericProvider {

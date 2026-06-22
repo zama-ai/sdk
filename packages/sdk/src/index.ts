@@ -35,13 +35,8 @@ export type {
   NetworkType,
   FheEncryptionKey,
   PublicParamsData,
-} from "./relayer/relayer-sdk.types";
-export type {
   FheTypeName,
-  ZKProofLike,
-  InputProofBytesType,
-  FhevmInstanceConfig,
-} from "@zama-fhe/relayer-sdk/bundle";
+} from "./relayer/relayer-sdk.types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
@@ -50,8 +45,7 @@ export type {
   PublicDecryptResult as DecryptPublicValuesResult,
   DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "./relayer/relayer-sdk.types";
-export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
-export type { GenericLogger } from "./worker/worker.types";
+export type { GenericLogger } from "./types/logger";
 
 // Chain presets and types
 export {

@@ -6,26 +6,16 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Auth } from '@zama-fhe/relayer-sdk/bundle';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { skipToken } from '@tanstack/query-core';
-import { UserDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
 import { z } from 'zod/mini';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
@@ -82,7 +72,7 @@ export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 // @public
-export type ClearValue = ClearValueType;
+export type ClearValue = bigint | boolean | string;
 
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
@@ -218,10 +208,17 @@ export interface DecryptInput {
 export function decryptPublicValuesMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.decryptPublicValues"], EncryptedValue[], DecryptPublicValuesResult>;
 
 // @public
-export type DecryptPublicValuesResult = PublicDecryptResults;
+export interface DecryptPublicValuesResult {
+    // (undocumented)
+    abiEncodedClearValues: Hex;
+    // (undocumented)
+    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+    // (undocumented)
+    decryptionProof: Hex;
+}
 
 // @public
-export type DecryptResult = UserDecryptResults;
+export type DecryptResult = Readonly<Record<EncryptedValue, ClearValue>>;
 
 // @public (undocumented)
 export interface DecryptStartEvent extends BaseEvent {
@@ -333,10 +330,22 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export interface EIP712TypedData {
+    // (undocumented)
+    domain: Record<string, unknown>;
+    // (undocumented)
+    message: Record<string, unknown>;
+    // (undocumented)
+    primaryType: string;
+    // (undocumented)
+    types: Record<string, ReadonlyArray<{
+        name: string;
+        type: string;
+    }>>;
+}
 
 // @public
-export type EncryptedValue = Bytes32Hex;
+export type EncryptedValue = Hex;
 
 // @public (undocumented)
 export interface EncryptEndEvent extends BaseEvent {
@@ -361,7 +370,7 @@ export type EncryptInput = {
     type: "ebool";
 } | {
     value: bigint;
-    type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+    type: Exclude<FheTypeName, "ebool" | "eaddress">;
 } | {
     value: Address;
     type: "eaddress";

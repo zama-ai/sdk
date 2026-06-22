@@ -5,21 +5,9 @@
 ```ts
 
 import { Address } from 'viem';
-import { Auth } from '@zama-fhe/relayer-sdk/bundle';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedUserDecryptEIP712Type_2 } from '@zama-fhe/relayer-sdk/node';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { PrivateKeyAccount } from 'viem/accounts';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
-import { ZKProofLike as ZKProofLike_2 } from '@zama-fhe/relayer-sdk/node';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public
 export const anvil: {
@@ -50,68 +38,6 @@ export class AsyncLocalMapStorage implements GenericStorage {
 // @public
 export const asyncLocalStorage: AsyncLocalMapStorage;
 
-// @public (undocumented)
-export interface BaseRequest {
-    // (undocumented)
-    id: string;
-    // (undocumented)
-    type: WorkerRequestType;
-}
-
-// @public
-export abstract class BaseWorkerClient<TWorker, TConfig> {
-    constructor(config: TConfig, logger: GenericLogger | undefined);
-    // (undocumented)
-    protected readonly config: TConfig;
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(params: CreateDelegatedEIP712Payload): Promise<CreateDelegatedEIP712ResponseData>;
-    // (undocumented)
-    createEIP712(params: CreateEIP712Payload): Promise<CreateEIP712ResponseData>;
-    protected abstract createWorker(): TWorker;
-    // (undocumented)
-    delegatedUserDecrypt(params: DelegatedUserDecryptPayload): Promise<DelegatedUserDecryptResponseData>;
-    // (undocumented)
-    encrypt(params: EncryptPayload): Promise<EncryptResponseData>;
-    protected abstract readonly env: WorkerEnv;
-    // (undocumented)
-    generateKeypair(params: GenerateKeypairRequest["payload"]): Promise<GenerateKeypairResponseData>;
-    protected abstract generateRequestId(): string;
-    protected abstract getInitPayload(): {
-        type: WorkerRequestType;
-        payload: WorkerRequest["payload"];
-    };
-    // (undocumented)
-    getPublicKey(params: GetPublicKeyRequest["payload"]): Promise<GetPublicKeyResponseData>;
-    // (undocumented)
-    getPublicParams(params: GetPublicParamsRequest["payload"]): Promise<GetPublicParamsResponseData>;
-    // (undocumented)
-    protected handleResponse(response: WorkerResponse<unknown>): void;
-    // (undocumented)
-    protected handleWorkerError(message: string): void;
-    // (undocumented)
-    protected handleWorkerMessageError(): void;
-    // (undocumented)
-    initWorker(): Promise<TWorker>;
-    // (undocumented)
-    protected readonly logger: GenericLogger | undefined;
-    protected onWorkerReady?(_worker: TWorker): void;
-    protected abstract postMessage(worker: TWorker, request: WorkerRequest): void;
-    // (undocumented)
-    publicDecrypt(params: PublicDecryptPayload): Promise<PublicDecryptResponseData>;
-    // (undocumented)
-    requestZKProofVerification(params: RequestZKProofVerificationRequest["payload"]): Promise<RequestZKProofVerificationResponseData>;
-    // (undocumented)
-    protected sendRequest<T>(type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
-    // (undocumented)
-    protected sendRequestTo<T>(worker: TWorker, type: WorkerRequestType, payload: WorkerRequest["payload"], timeoutMs?: number): Promise<T>;
-    // (undocumented)
-    terminate(): void;
-    protected abstract terminateWorker(worker: TWorker): void;
-    // (undocumented)
-    userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
-    protected abstract wireEvents(worker: TWorker): void;
-}
-
 // @public
 export const bscTestnet: {
     readonly id: 97;
@@ -131,54 +57,20 @@ export const bscTestnet: {
 export const chains: Record<number, FheChain>;
 
 // @public
-export function cleartext(): CleartextRelayerConfig;
+export function cleartext(runtime?: FhevmRuntimeConfig): CleartextRelayerConfig;
 
 // @public
-export type ClearValue = ClearValueType;
-
-// @public (undocumented)
-export type CreateDelegatedEIP712Payload = CreateDelegatedEIP712Request["payload"];
-
-// @public (undocumented)
-export interface CreateDelegatedEIP712Request extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        publicKey: Hex;
-        contractAddresses: Address[];
-        delegatorAddress: Address;
-        startTimestamp: number;
-        durationDays: number;
-    };
-    // (undocumented)
-    type: "CREATE_DELEGATED_EIP712";
-}
-
-// @public (undocumented)
-export type CreateDelegatedEIP712ResponseData = KmsDelegatedUserDecryptEIP712Type;
-
-// @public (undocumented)
-export type CreateEIP712Payload = CreateEIP712Request["payload"];
-
-// @public (undocumented)
-export interface CreateEIP712Request extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        publicKey: Hex;
-        contractAddresses: Address[];
-        startTimestamp: number;
-        durationDays: number;
-    };
-    // (undocumented)
-    type: "CREATE_EIP712";
-}
-
-// @public (undocumented)
-export type CreateEIP712ResponseData = KmsUserDecryptEIP712Type;
+export type ClearValue = bigint | boolean | string;
 
 // @public
-export type DecryptPublicValuesResult = PublicDecryptResults;
+export interface DecryptPublicValuesResult {
+    // (undocumented)
+    abiEncodedClearValues: Hex;
+    // (undocumented)
+    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+    // (undocumented)
+    decryptionProof: Hex;
+}
 
 // @public
 export interface DecryptValuesParams {
@@ -226,37 +118,20 @@ export interface DelegatedDecryptValuesParams {
     startTimestamp: number;
 }
 
-// @public (undocumented)
-export type DelegatedUserDecryptPayload = DelegatedUserDecryptRequest["payload"];
-
-// @public (undocumented)
-export interface DelegatedUserDecryptRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        encryptedValues: EncryptedValue[];
-        contractAddress: Address;
-        signedContractAddresses: Address[];
-        privateKey: Hex;
-        publicKey: Hex;
-        signature: Hex;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-        startTimestamp: number;
-        durationDays: number;
-    };
-    // (undocumented)
-    type: "DELEGATED_USER_DECRYPT";
-}
-
-// @public (undocumented)
-export interface DelegatedUserDecryptResponseData {
-    // (undocumented)
-    clearValues: Record<EncryptedValue, ClearValue>;
-}
-
 // @public
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export interface EIP712TypedData {
+    // (undocumented)
+    domain: Record<string, unknown>;
+    // (undocumented)
+    message: Record<string, unknown>;
+    // (undocumented)
+    primaryType: string;
+    // (undocumented)
+    types: Record<string, ReadonlyArray<{
+        name: string;
+        type: string;
+    }>>;
+}
 
 // @public
 export interface EncryptParams {
@@ -267,57 +142,11 @@ export interface EncryptParams {
     values: EncryptInput[];
 }
 
-// @public (undocumented)
-export type EncryptPayload = EncryptRequest["payload"];
-
-// @public (undocumented)
-export interface EncryptRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        values: EncryptInput[];
-        contractAddress: Address;
-        userAddress: Address;
-    };
-    // (undocumented)
-    type: "ENCRYPT";
-}
-
-// @public (undocumented)
-export type EncryptResponseData = InputProofBytesType;
-
 // @public
 export type EncryptResult = {
     encryptedValues: EncryptedValue[];
     inputProof: Hex;
 };
-
-// @public (undocumented)
-export interface ErrorResponse extends BaseResponse {
-    // (undocumented)
-    error: string;
-    statusCode?: number;
-    // (undocumented)
-    success: false;
-}
-
-// @public (undocumented)
-export interface GenerateKeypairRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-    };
-    // (undocumented)
-    type: "GENERATE_KEYPAIR";
-}
-
-// @public (undocumented)
-export interface GenerateKeypairResponseData {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
 
 // @public
 export interface GenericLogger {
@@ -329,45 +158,6 @@ export interface GenericLogger {
     info: (message: string, data?: Record<string, unknown>) => void;
     // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
-}
-
-// @public (undocumented)
-export interface GetPublicKeyRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-    };
-    // (undocumented)
-    type: "GET_PUBLIC_KEY";
-}
-
-// @public (undocumented)
-export interface GetPublicKeyResponseData {
-    // (undocumented)
-    result: {
-        publicKeyId: string;
-        publicKey: Uint8Array;
-    } | null;
-}
-
-// @public (undocumented)
-export interface GetPublicParamsRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        bits: number;
-    };
-    // (undocumented)
-    type: "GET_PUBLIC_PARAMS";
-}
-
-// @public (undocumented)
-export interface GetPublicParamsResponseData {
-    // (undocumented)
-    result: {
-        publicParams: Uint8Array;
-        publicParamsId: string;
-    } | null;
 }
 
 // @public
@@ -415,22 +205,11 @@ export const ingenTestnet: {
     readonly executorAddress: "0x1B05DE5b67b8f8363DC04E3a5996a616f11f8C7B";
 };
 
-// @public (undocumented)
-export type InitPayload = InitWebPayload | InitNodePayload;
-
-// @public (undocumented)
-export interface InitRequest extends BaseRequest {
-    // (undocumented)
-    payload: InitPayload;
-    // (undocumented)
-    type: "INIT";
-}
-
 // @public
 export const mainnet: {
     readonly id: 1;
     readonly gatewayChainId: 261131;
-    readonly relayerUrl: "https://relayer.mainnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.mainnet.zama.org";
     readonly network: "https://ethereum-rpc.publicnode.com";
     readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
     readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
@@ -441,62 +220,14 @@ export const mainnet: {
 };
 
 // @public
-export function node(options?: NodePoolOptions): NodeRelayerConfig;
-
-// @public
-export interface NodePoolOptions {
-    // (undocumented)
-    fheArtifactCacheTTL?: number;
-    // (undocumented)
-    fheArtifactStorage?: GenericStorage;
-    // (undocumented)
-    logger?: GenericLogger;
-    // (undocumented)
-    poolSize?: number;
-}
+export function node(runtime?: FhevmRuntimeConfig): NodeRelayerConfig;
 
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
-    // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
+    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: "node";
-}
-
-// @public (undocumented)
-export interface NodeWorkerClientConfig {
-    // (undocumented)
-    chains: FheChain[];
-    logger?: GenericLogger;
-}
-
-// @public (undocumented)
-export interface NodeWorkerPoolConfig extends NodeWorkerClientConfig {
-    // (undocumented)
-    poolSize?: number;
-}
-
-// @public (undocumented)
-export interface PublicDecryptRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        encryptedValues: EncryptedValue[];
-    };
-    // (undocumented)
-    type: "PUBLIC_DECRYPT";
-}
-
-// @public (undocumented)
-export interface PublicDecryptResponseData {
-    // (undocumented)
-    abiEncodedClearValues: Hex;
-    // (undocumented)
-    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
-    // (undocumented)
-    decryptionProof: Hex;
 }
 
 // @public
@@ -507,40 +238,17 @@ export interface RelayerConfig {
     readonly type: string;
 }
 
-// @public (undocumented)
-export interface RelayerNodeConfig {
-    chain: FheChain;
-    fheArtifactCacheTTL?: number;
-    fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
-    pool: NodeWorkerPool;
-}
-
 // @public
 export interface RelayerSDK extends FheOperations {
     getAclAddress(): Promise<Address>;
     terminate(): void;
 }
 
-// @public (undocumented)
-export interface RequestZKProofVerificationRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        zkProof: ZKProofLike;
-    };
-    // (undocumented)
-    type: "REQUEST_ZK_PROOF_VERIFICATION";
-}
-
-// @public (undocumented)
-export type RequestZKProofVerificationResponseData = InputProofBytesType;
-
 // @public
 export const sepolia: {
     readonly id: 11155111;
     readonly gatewayChainId: 10901;
-    readonly relayerUrl: "https://relayer.testnet.zama.org/v2";
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
     readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
     readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
     readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
@@ -549,64 +257,6 @@ export const sepolia: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
-
-// @public (undocumented)
-export interface SuccessResponse<T> extends BaseResponse {
-    // (undocumented)
-    data: T;
-    // (undocumented)
-    success: true;
-}
-
-// @public (undocumented)
-export interface UpdateCsrfRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        csrfToken: string;
-    };
-    // (undocumented)
-    type: "UPDATE_CSRF";
-}
-
-// @public (undocumented)
-export type UserDecryptPayload = UserDecryptRequest["payload"];
-
-// @public (undocumented)
-export interface UserDecryptRequest extends BaseRequest {
-    // (undocumented)
-    payload: {
-        chainId: number;
-        encryptedValues: EncryptedValue[];
-        contractAddress: Address;
-        signedContractAddresses: Address[];
-        privateKey: Hex;
-        publicKey: Hex;
-        signature: Hex;
-        signerAddress: Address;
-        startTimestamp: number;
-        durationDays: number;
-    };
-    // (undocumented)
-    type: "USER_DECRYPT";
-}
-
-// @public (undocumented)
-export interface UserDecryptResponseData {
-    // (undocumented)
-    clearValues: Record<EncryptedValue, ClearValue>;
-}
-
-// @public (undocumented)
-export type WorkerEnv = "web" | "node";
-
-// @public (undocumented)
-export type WorkerRequest = InitRequest | UpdateCsrfRequest | EncryptRequest | UserDecryptRequest | PublicDecryptRequest | GenerateKeypairRequest | CreateEIP712Request | CreateDelegatedEIP712Request | DelegatedUserDecryptRequest | RequestZKProofVerificationRequest | GetPublicKeyRequest | GetPublicParamsRequest;
-
-// @public (undocumented)
-export type WorkerRequestType = "INIT" | "UPDATE_CSRF" | "ENCRYPT" | "USER_DECRYPT" | "PUBLIC_DECRYPT" | "GENERATE_KEYPAIR" | "CREATE_EIP712" | "CREATE_DELEGATED_EIP712" | "DELEGATED_USER_DECRYPT" | "REQUEST_ZK_PROOF_VERIFICATION" | "GET_PUBLIC_KEY" | "GET_PUBLIC_PARAMS";
-
-// @public (undocumented)
-export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 // (No @packageDocumentation comment for this package)
 

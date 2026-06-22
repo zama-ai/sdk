@@ -2,8 +2,6 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import { node } from "../../node/config";
-import { web } from "../web";
 import { createConfig } from "../create";
 import type { RelayerConfig } from "../types";
 
@@ -69,15 +67,5 @@ describe("createConfig validation", () => {
         transportKeyPairTTL: NaN,
       }),
     ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
-  });
-
-  test("rejects invalid web transport numeric options at the factory boundary", () => {
-    expect(() => web({ threads: 0 })).toThrow(ConfigurationError);
-    expect(() => web({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
-  });
-
-  test("rejects invalid node transport numeric options at the factory boundary", () => {
-    expect(() => node({ poolSize: 0 })).toThrow(ConfigurationError);
-    expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
   });
 });

@@ -1,42 +1,24 @@
-import { z } from "zod/mini";
-import { CDN_INTEGRITY, CDN_URL, RelayerWeb } from "../relayer/relayer-web";
-import { parseConfiguration } from "../validation";
-import { RelayerWorkerClient } from "../worker/worker.client";
-import type { WebRelayerConfig, WebRelayerOptions } from "./types";
-
-const WebRelayerOptionsSchema = z.object({
-  threads: z.optional(z.int().check(z.positive())),
-  fheArtifactCacheTTL: z.optional(z.int().check(z.nonnegative())),
-});
+import { FhevmRelayer, type FhevmRuntimeConfig } from "../relayer/fhevm-relayer";
+import type { WebRelayerConfig } from "./types";
 
 /**
- * Browser relayer — routes to RelayerWeb (Web Worker + WASM).
+ * Browser relayer — drives `@fhevm/sdk` via {@link FhevmRelayer}.
  *
- * @param options - Worker options (threads, security, logger, storage).
+ * @param runtime - Global `@fhevm/sdk` runtime config (WASM load mode, threads,
+ *   logger, auth). Applied once per process when the client first initializes.
+ *   Per-chain `auth` from the chain definition is merged in by {@link FhevmRelayer}.
  *
  * @example
  * ```ts
  * relayers: {
  *   [sepolia.id]: web(),
- *   [mainnet.id]: web({ threads: 4 }),
+ *   [mainnet.id]: web(),
  * }
  * ```
  */
-export function web(options?: WebRelayerOptions): WebRelayerConfig {
-  if (options !== undefined) {
-    parseConfiguration(WebRelayerOptionsSchema, options);
-  }
+export function web(runtime: FhevmRuntimeConfig = {}): WebRelayerConfig {
   return {
     type: "web",
-    createWorker: (chains) =>
-      new RelayerWorkerClient({
-        cdnUrl: CDN_URL,
-        chains,
-        csrfToken: options?.security?.getCsrfToken?.() ?? "",
-        integrity: options?.security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
-        logger: options?.logger,
-        thread: options?.threads,
-      }),
-    createRelayer: (chain, worker) => new RelayerWeb({ chain, worker, ...options }),
+    createRelayer: (chain) => new FhevmRelayer({ chain, runtime }),
   };
 }

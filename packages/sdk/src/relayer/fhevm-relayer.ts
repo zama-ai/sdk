@@ -1,0 +1,378 @@
+/**
+ * `FhevmRelayer` — single-chain FHE backend that drives `@fhevm/sdk` directly on
+ * the calling thread.
+ *
+ * Owns the `@fhevm/sdk` client lifecycle (runtime config + creation + WASM init,
+ * lazily on first operation) and implements the
+ * {@link RelayerSDK} domain interface by translating between zama-sdk's domain
+ * shapes and the new SDK's API. Each public method maps onto the underlying
+ * `@fhevm/sdk` call(s) it reflects — `encrypt` → `encryptValues`, `publicDecrypt`
+ * → `decryptPublicValuesWithSignatures`, `userDecrypt` → `parseTransportKeyPair`
+ * + `parseSignedDecryptionPermit` + `decryptValuesFromPairs`.
+ *
+ * Uses the `@fhevm/sdk/viem` adapter with a read-only viem public client built
+ * from the chain's network URL (viem is a hard dependency; ethers is only an
+ * optional peer). EIP-712 signing happens in the signer layer; this backend
+ * builds the typed data and, on decrypt, reassembles the new SDK's signed permit
+ * from the interface's params + the previously returned signature.
+ *
+ * The off-main-thread worker variant is a tracked follow-up.
+ *
+ * @see {@link toFhevmChain} for the chain projection.
+ */
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
+import {
+  createKmsDelegatedUserDecryptEip712,
+  createKmsUserDecryptEip712,
+} from "@fhevm/sdk/actions/chain";
+import { createPublicClient, custom, http, toHex } from "viem";
+import type { Address, Hex } from "viem";
+import type { FheChain } from "../chains/types";
+import { toFhevmChain } from "../chains/to-fhevm-chain";
+import type { TransportKeyPair } from "../credentials/types";
+import type { RelayerSDK } from "./relayer-sdk";
+import type {
+  ClearValue,
+  DelegatedUserDecryptParams,
+  EIP712TypedData,
+  EncryptInput,
+  EncryptParams,
+  EncryptResult,
+  EncryptedValue,
+  FheEncryptionKey,
+  PublicDecryptResult,
+  UserDecryptParams,
+} from "./relayer-sdk.types";
+
+/** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
+type FhevmClient = ReturnType<typeof createFhevmClient>;
+
+/** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+/**
+ * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
+ * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
+ * is one-shot and idempotent; conflicting configs across chains will throw).
+ */
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
+
+/** Serialized transport key pair as it crosses the signer / worker boundary. */
+type SerializedTransportKeyPair = ReturnType<FhevmClient["serializeTransportKeyPair"]>;
+
+/** Serialized signed decryption permit as it crosses the signer / worker boundary. */
+type SerializedSignedPermit = Parameters<
+  FhevmClient["parseSignedDecryptionPermit"]
+>[0]["serializedPermit"];
+
+/** A handle/contract pair to user-decrypt. */
+interface DecryptPair {
+  readonly encryptedValue: EncryptedValue;
+  readonly contractAddress: Address;
+}
+
+/** Construction config for {@link FhevmRelayer}. */
+export interface FhevmRelayerConfig {
+  /** FHE chain configuration. */
+  chain: FheChain;
+  /**
+   * Cleartext mode for local dev/test chains without FHE infrastructure — reads
+   * mock plaintexts from the on-chain executor (discovered automatically)
+   * instead of calling the relayer.
+   */
+  cleartext?: boolean;
+  /** Per-client `@fhevm/sdk` options forwarded to `createFhevmClient`. */
+  options?: FhevmClientOptions;
+  /** Global `@fhevm/sdk` runtime config forwarded to `setFhevmRuntimeConfig`. */
+  runtime?: FhevmRuntimeConfig;
+}
+
+/**
+ * Map zama-sdk's FHE type names (`ebool`, `euint64`, `eaddress`) to the
+ * Solidity-style names `@fhevm/sdk` expects (`bool`, `uint64`, `address`):
+ * exactly "drop the leading `e`".
+ */
+function toSolidityType(type: EncryptInput["type"]): string {
+  return type.slice(1);
+}
+
+/**
+ * Single-chain FHE backend that drives `@fhevm/sdk` on the calling thread.
+ * EIP-712 signing is done by the signer layer; this backend builds the typed
+ * data and, on decrypt, reassembles the new SDK's signed permit from the
+ * interface's params + the previously returned signature.
+ */
+export class FhevmRelayer implements RelayerSDK, Disposable {
+  readonly #config: FhevmRelayerConfig;
+  #client: FhevmClient | null = null;
+  #initPromise: Promise<void> | null = null;
+
+  constructor(config: FhevmRelayerConfig) {
+    this.#config = config;
+  }
+
+  get #chain(): FheChain {
+    return this.#config.chain;
+  }
+
+  /** Return the ACL contract address for the current chain. */
+  async getAclAddress(): Promise<Address> {
+    return this.#chain.aclContractAddress;
+  }
+
+  /**
+   * Lazily run `#init` exactly once. Concurrency-safe: the in-flight promise is
+   * cached and shared; a failed init clears the cache so a later call can retry.
+   */
+  #ensureInit(): Promise<void> {
+    if (!this.#initPromise) {
+      this.#initPromise = this.#init().catch((error) => {
+        this.#initPromise = null;
+        throw error;
+      });
+    }
+    return this.#initPromise;
+  }
+
+  /** Configure the `@fhevm/sdk` runtime (once per process) and build + init the client. */
+  async #init(): Promise<void> {
+    // Default load mode embeds WASM as base64 (no runtime fetch). Tracked
+    // follow-up: switch to a hosted `locateFile` once CDN assets exist.
+    // Per-chain `auth` is the default; an explicit `runtime.auth` overrides it.
+    setFhevmRuntimeConfig({ auth: this.#chain.auth, ...this.#config.runtime });
+
+    const params = {
+      publicClient: createPublicClient({
+        transport:
+          typeof this.#chain.network === "string"
+            ? http(this.#chain.network)
+            : custom(this.#chain.network),
+      }),
+      chain: toFhevmChain(this.#chain),
+      options: this.#config.options,
+    };
+    const client = this.#config.cleartext
+      ? createFhevmCleartextClient(params)
+      : createFhevmClient(params);
+    await client.init();
+    this.#client = client;
+  }
+
+  get #fhevm(): FhevmClient {
+    if (!this.#client) {
+      throw new Error("FhevmRelayer not initialized.");
+    }
+    return this.#client;
+  }
+
+  /** Generate a transport key pair, serialized to hex for the signer layer / storage. */
+  async generateTransportKeyPair(): Promise<TransportKeyPair> {
+    await this.#ensureInit();
+    const transportKeyPair = await this.#fhevm.generateTransportKeyPair();
+    return this.#fhevm.serializeTransportKeyPair({ transportKeyPair });
+  }
+
+  async createEIP712(
+    publicKey: Hex,
+    contractAddresses: Address[],
+    startTimestamp: number,
+    durationDays = 7,
+  ): Promise<EIP712TypedData> {
+    await this.#ensureInit();
+    return this.#userDecryptEip712(
+      publicKey,
+      contractAddresses,
+      startTimestamp,
+      durationDays,
+    ) as unknown as EIP712TypedData;
+  }
+
+  /** Encrypt typed plaintext inputs into ciphertext handles + a shared input proof. */
+  async encrypt(params: EncryptParams): Promise<EncryptResult> {
+    await this.#ensureInit();
+    const result = await this.#fhevm.encryptValues({
+      values: params.values.map((v) => ({
+        type: toSolidityType(v.type),
+        value: v.value,
+      })),
+      contractAddress: params.contractAddress,
+      userAddress: params.userAddress,
+    });
+    return {
+      encryptedValues: result.encryptedValues.map((h) => toHex(h)),
+      inputProof: toHex(result.inputProof),
+    };
+  }
+
+  async userDecrypt(
+    params: UserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
+    await this.#ensureInit();
+    const eip712 = this.#userDecryptEip712(
+      params.publicKey,
+      params.signedContractAddresses,
+      params.startTimestamp,
+      params.durationDays,
+    );
+    return this.#decryptValuesFromPairs({
+      pairs: params.encryptedValues.map((encryptedValue) => ({
+        encryptedValue,
+        contractAddress: params.contractAddress,
+      })),
+      transportKeyPair: this.#serializeKeyPair(params.publicKey, params.privateKey),
+      signedPermit: {
+        eip712,
+        signature: params.signature,
+        signerAddress: params.signerAddress,
+      } as unknown as SerializedSignedPermit,
+    });
+  }
+
+  /** Public-decrypt handles (no permit needed) with the KMS signature material. */
+  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+    await this.#ensureInit();
+    const result = await this.#fhevm.decryptPublicValuesWithSignatures({
+      encryptedValues,
+    });
+    const clearValues: Record<EncryptedValue, ClearValue> = {};
+    result.checkSignaturesArgs.handlesList.forEach((handle: Hex, i: number) => {
+      clearValues[handle] = result.clearValues[i]?.value as ClearValue;
+    });
+    return {
+      clearValues,
+      abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+      decryptionProof: result.checkSignaturesArgs.decryptionProof,
+    };
+  }
+
+  async createDelegatedUserDecryptEIP712(
+    publicKey: Hex,
+    contractAddresses: Address[],
+    delegatorAddress: Address,
+    startTimestamp: number,
+    durationDays = 7,
+  ): Promise<EIP712TypedData> {
+    await this.#ensureInit();
+    return this.#delegatedUserDecryptEip712(
+      publicKey,
+      contractAddresses,
+      delegatorAddress,
+      startTimestamp,
+      durationDays,
+    ) as unknown as EIP712TypedData;
+  }
+
+  async delegatedUserDecrypt(
+    params: DelegatedUserDecryptParams,
+  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
+    await this.#ensureInit();
+    const eip712 = this.#delegatedUserDecryptEip712(
+      params.publicKey,
+      params.signedContractAddresses,
+      params.delegatorAddress,
+      params.startTimestamp,
+      params.durationDays,
+    );
+    return this.#decryptValuesFromPairs({
+      pairs: params.encryptedValues.map((encryptedValue) => ({
+        encryptedValue,
+        contractAddress: params.contractAddress,
+      })),
+      transportKeyPair: this.#serializeKeyPair(params.publicKey, params.privateKey),
+      signedPermit: {
+        eip712,
+        signature: params.signature,
+        signerAddress: params.delegateAddress,
+      } as unknown as SerializedSignedPermit,
+    });
+  }
+
+  /** Fetch the network's FHE encryption key, mapped to zama-sdk's shape. */
+  async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
+    await this.#ensureInit();
+    const result = await this.#fhevm.fetchFheEncryptionKeyBytes();
+    return {
+      publicKeyId: result.publicKeyBytes.id,
+      publicKey: result.publicKeyBytes.bytes as Uint8Array,
+    };
+  }
+
+  /**
+   * User-decrypt handle/contract pairs: parse the serialized transport key pair
+   * and signed permit (built + signed in the signer layer), then decrypt and map
+   * back to a `handle → clear value` record. Delegated decryption uses the same
+   * path — the delegation is encoded in the permit.
+   */
+  async #decryptValuesFromPairs(params: {
+    pairs: readonly DecryptPair[];
+    transportKeyPair: SerializedTransportKeyPair;
+    signedPermit: SerializedSignedPermit;
+  }): Promise<Record<EncryptedValue, ClearValue>> {
+    const transportKeyPair = await this.#fhevm.parseTransportKeyPair(params.transportKeyPair);
+    const signedPermit = await this.#fhevm.parseSignedDecryptionPermit({
+      serializedPermit: params.signedPermit,
+      transportKeyPair,
+    });
+    const typed = await this.#fhevm.decryptValuesFromPairs({
+      pairs: params.pairs.map((p) => ({
+        encryptedValue: p.encryptedValue,
+        contractAddress: p.contractAddress,
+      })),
+      transportKeyPair,
+      signedPermit,
+    });
+    const out: Record<EncryptedValue, ClearValue> = {};
+    params.pairs.forEach((pair, i) => {
+      out[pair.encryptedValue] = typed[i]?.value as ClearValue;
+    });
+    return out;
+  }
+
+  /** Build EIP-712 typed data for a (self) user-decrypt permit. */
+  #userDecryptEip712(
+    publicKey: Hex,
+    contractAddresses: Address[],
+    startTimestamp: number,
+    durationDays: number,
+  ) {
+    return createKmsUserDecryptEip712(this.#fhevm, {
+      publicKey,
+      contractAddresses,
+      startTimestamp,
+      durationDays,
+      extraData: "0x",
+    });
+  }
+
+  /** Build EIP-712 typed data for a delegated user-decrypt permit. */
+  #delegatedUserDecryptEip712(
+    publicKey: Hex,
+    contractAddresses: Address[],
+    delegatorAddress: Address,
+    startTimestamp: number,
+    durationDays: number,
+  ) {
+    return createKmsDelegatedUserDecryptEip712(this.#fhevm, {
+      publicKey,
+      contractAddresses,
+      delegatorAddress,
+      startTimestamp,
+      durationDays,
+      extraData: "0x",
+    });
+  }
+
+  #serializeKeyPair(publicKey: Hex, privateKey: Hex): SerializedTransportKeyPair {
+    return { publicKey, privateKey } as unknown as SerializedTransportKeyPair;
+  }
+
+  terminate(): void {
+    this.#client = null;
+    this.#initPromise = null;
+  }
+
+  [Symbol.dispose](): void {
+    this.terminate();
+  }
+}

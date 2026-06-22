@@ -5,71 +5,25 @@
 ```ts
 
 import { Address } from 'viem';
-import { Auth } from '@zama-fhe/relayer-sdk/bundle';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public
-export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
-    [Symbol.dispose](): void;
-    constructor(config: RelayerWebConfig);
-    // (undocumented)
-    protected get chain(): FheChain;
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<KmsDelegatedUserDecryptEIP712Type>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-    generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getPublicParams(bits: number): Promise<PublicParamsData | null>;
-    // (undocumented)
-    protected init(): Promise<void>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-    requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-    terminate(): void;
-    userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-}
-
-// @public
-export interface RelayerWebConfig {
-    chain: FheChain;
-    fheArtifactCacheTTL?: number;
-    fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
-    security?: RelayerWebSecurityConfig;
-    threads?: number;
-    worker: RelayerWorkerClient;
-}
-
-// @public
-export interface RelayerWebSecurityConfig {
-    getCsrfToken?: () => string;
-    integrityCheck?: boolean;
-}
-
-// @public
-export function web(options?: WebRelayerOptions): WebRelayerConfig;
+export function web(runtime?: FhevmRuntimeConfig): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
-    // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: "web";
 }
 
 // @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
+export interface WebRelayerOptions {
+    logger?: GenericLogger;
+}
 
 // (No @packageDocumentation comment for this package)
 

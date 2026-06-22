@@ -139,9 +139,7 @@ describe("RelayerDispatcher", () => {
       ["publicDecrypt", [["0xhandle"]]],
       ["createDelegatedUserDecryptEIP712", ["0xpubkey", ["0xcontract"], "0xdelegator", 1000]],
       ["delegatedUserDecrypt", [{ encryptedValues: [] }]],
-      ["requestZKProofVerification", [{ proof: "0x" }]],
       ["fetchFheEncryptionKeyBytes", []],
-      ["getPublicParams", [2048]],
       ["getAclAddress", []],
     ] as [keyof RelayerSDK, unknown[]][])(
       "forwards %s to the active relayer",

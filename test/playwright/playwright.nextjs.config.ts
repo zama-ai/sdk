@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { MOCK_RELAYER_PORT, NEXTJS_ANVIL_PORT, NEXTJS_PORT } from "./fixtures/constants";
+import { NEXTJS_ANVIL_PORT, NEXTJS_PORT } from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -42,8 +42,8 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       command: CI
-        ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} NEXT_PUBLIC_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-nextjs start`
-        : `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} NEXT_PUBLIC_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-nextjs dev`,
+        ? `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs start`
+        : `NEXT_PUBLIC_ANVIL_PORT=${NEXTJS_ANVIL_PORT} pnpm --filter @zama-fhe/test-nextjs dev`,
       port: NEXTJS_PORT,
       reuseExistingServer: !CI,
     },

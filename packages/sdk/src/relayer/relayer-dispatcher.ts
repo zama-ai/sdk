@@ -1,8 +1,3 @@
-import type {
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
@@ -20,7 +15,6 @@ import type {
   EncryptedValue,
   FheEncryptionKey,
   PublicDecryptResult,
-  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 
@@ -156,7 +150,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type> {
+  ): Promise<EIP712TypedData> {
     return this.#active.createDelegatedUserDecryptEIP712(
       publicKey,
       contractAddresses,
@@ -172,16 +166,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.delegatedUserDecrypt(params);
   }
 
-  requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType> {
-    return this.#active.requestZKProofVerification(zkProof);
-  }
-
   fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     return this.#active.fetchFheEncryptionKeyBytes();
-  }
-
-  getPublicParams(bits: number): Promise<PublicParamsData | null> {
-    return this.#active.getPublicParams(bits);
   }
 
   getAclAddress(): Promise<Address> {

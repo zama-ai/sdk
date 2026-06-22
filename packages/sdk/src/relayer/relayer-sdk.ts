@@ -1,8 +1,3 @@
-import type {
-  InputProofBytesType,
-  KmsDelegatedUserDecryptEIP712Type,
-  ZKProofLike,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { TransportKeyPair } from "../credentials/types";
 import type {
   ClearValue,
@@ -13,14 +8,13 @@ import type {
   EncryptedValue,
   FheEncryptionKey,
   PublicDecryptResult,
-  PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 import type { Address, Hex } from "viem";
 
 /**
- * Core FHE cryptographic operations — the 10 methods that perform
- * encryption, decryption, key generation, and proof verification.
+ * Core FHE cryptographic operations — encryption, decryption, key generation,
+ * and EIP-712 typed-data construction for decrypt permits.
  */
 export interface FheOperations {
   /** Generate a transport key pair (ML-KEM public + private key) used for user-decryption. */
@@ -50,27 +44,21 @@ export interface FheOperations {
     delegatorAddress: Address,
     startTimestamp: number,
     durationDays?: number,
-  ): Promise<KmsDelegatedUserDecryptEIP712Type>;
+  ): Promise<EIP712TypedData>;
 
   /** Decrypt FHE encrypted values using delegated user credentials. */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
-  /** Submit a ZK proof for on-chain verification. */
-  requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
-
   /** Fetch the network's FHE encryption key. Returns `null` if not available. */
   fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-
-  /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
-  getPublicParams(bits: number): Promise<PublicParamsData | null>;
 }
 
 /**
  * Interface for FHE relayer operations.
  * Extends `FheOperations` with lifecycle and chain-specific methods.
- * Implemented by `RelayerWeb` (browser, via Web Worker + WASM) and `RelayerNode` (Node.js, direct).
+ * Implemented by `FhevmRelayer` (drives `@fhevm/sdk`).
  */
 export interface RelayerSDK extends FheOperations {
   /** Return the ACL contract address for the current chain. */

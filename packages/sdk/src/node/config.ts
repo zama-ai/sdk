@@ -1,59 +1,32 @@
-import { z } from "zod/mini";
 import type { RelayerConfig } from "../config/types";
-import { RelayerNode } from "../relayer/relayer-node";
+import { FhevmRelayer, type FhevmRuntimeConfig } from "../relayer/fhevm-relayer";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { FheChain } from "../chains/types";
-import type { GenericStorage } from "../types";
-import { parseConfiguration } from "../validation";
-import { NodeWorkerPool } from "../worker/worker.node-pool";
-import type { GenericLogger } from "../worker/worker.types";
-import { assertCondition } from "../utils";
 
-/** Pool options for the `node()` transport factory. */
-export interface NodePoolOptions {
-  poolSize?: number;
-  logger?: GenericLogger;
-  fheArtifactStorage?: GenericStorage;
-  fheArtifactCacheTTL?: number;
-}
-
-/** Node transport — narrows worker type to `NodeWorkerPool`. */
+/** Node transport — drives the FHE backend directly (no worker pool). */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
-  readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
-  readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
+  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
-const NodePoolOptionsSchema = z.object({
-  poolSize: z.optional(z.int().check(z.positive())),
-  fheArtifactCacheTTL: z.optional(z.int().check(z.nonnegative())),
-});
-
 /**
- * Node.js transport — routes to RelayerNode (worker thread pool).
+ * Node.js transport — drives `@fhevm/sdk` via {@link FhevmRelayer} on the calling thread.
  *
- * @param options - Pool options (poolSize, logger, fheArtifactStorage, fheArtifactCacheTTL).
+ * @param runtime - Global `@fhevm/sdk` runtime config (WASM load mode, threads,
+ *   logger, auth). Applied once per process when the client first initializes.
+ *   Per-chain `auth` from the chain definition is merged in by {@link FhevmRelayer}.
  *
  * @example
  * ```ts
  * relayers: {
  *   [sepolia.id]: node(),
- *   [mainnet.id]: node({ poolSize: 4 }),
+ *   [mainnet.id]: node(),
  * }
  * ```
  */
-export function node(options?: NodePoolOptions): NodeRelayerConfig {
-  if (options !== undefined) {
-    parseConfiguration(NodePoolOptionsSchema, options);
-  }
+export function node(runtime: FhevmRuntimeConfig = {}): NodeRelayerConfig {
   return {
     type: "node",
-    createWorker: (chains) => new NodeWorkerPool({ chains, ...options }),
-    createRelayer: (chain, pool) => {
-      assertCondition(
-        !!pool,
-        "node() relayer requires a worker pool — createWorker must be called first.",
-      );
-      return new RelayerNode({ chain, pool, ...options });
-    },
+    createRelayer: (chain) => new FhevmRelayer({ chain, runtime }),
   };
 }

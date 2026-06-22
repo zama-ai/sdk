@@ -9,52 +9,11 @@
  */
 
 export { node } from "./config";
-export type { NodeRelayerConfig, NodePoolOptions } from "./config";
+export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
-export type { RelayerNodeConfig } from "../relayer/relayer-node";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { NodeWorkerClientConfig } from "../worker/worker.node-client";
-export type { NodeWorkerPoolConfig } from "../worker/worker.node-pool";
-export type {
-  GenericLogger,
-  WorkerRequestType,
-  WorkerRequest,
-  WorkerResponse,
-  InitRequest,
-  InitPayload,
-  WorkerEnv,
-  UpdateCsrfRequest,
-  EncryptRequest,
-  UserDecryptRequest,
-  PublicDecryptRequest,
-  GenerateKeypairRequest,
-  CreateEIP712Request,
-  CreateDelegatedEIP712Request,
-  DelegatedUserDecryptRequest,
-  RequestZKProofVerificationRequest,
-  GetPublicKeyRequest,
-  GetPublicParamsRequest,
-  EncryptPayload,
-  UserDecryptPayload,
-  DelegatedUserDecryptPayload,
-  CreateEIP712Payload,
-  CreateDelegatedEIP712Payload,
-  EncryptResponseData,
-  UserDecryptResponseData,
-  PublicDecryptResponseData,
-  GenerateKeypairResponseData,
-  CreateEIP712ResponseData,
-  CreateDelegatedEIP712ResponseData,
-  DelegatedUserDecryptResponseData,
-  RequestZKProofVerificationResponseData,
-  GetPublicKeyResponseData,
-  GetPublicParamsResponseData,
-  BaseRequest,
-  SuccessResponse,
-  ErrorResponse,
-} from "../worker/worker.types";
-export { BaseWorkerClient } from "../worker/worker.base-client";
+export type { GenericLogger } from "../types/logger";
 
 // Relayer types used in RelayerNode's public API
 export type {

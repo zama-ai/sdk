@@ -1,81 +1,30 @@
-import type * as SDK from "@zama-fhe/relayer-sdk/bundle";
-import type {
-  Bytes32Hex,
-  ClearValueType,
-  KmsDelegatedUserDecryptEIP712Type,
-  KmsUserDecryptEIP712Type,
-  PublicDecryptResults,
-} from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import type { GenericLogger } from "../worker/worker.types";
-import type { GenericStorage } from "../types";
-import type { FheChain } from "../chains/types";
-import type { RelayerWorkerClient } from "../worker/worker.client";
 
 // ============================================================================
 // Application Types
+//
+// zama-sdk's canonical domain shapes. The FHE backend (`FhevmRelayer` + the
+// `@fhevm/sdk` engine) translates between these and `@fhevm/sdk`'s API, so the
+// rest of the SDK (token, namespaces, credentials, signer) keeps a stable
+// surface independent of the underlying FHE library.
 // ============================================================================
 
-/** Global SDK interface (from CDN script window.relayerSDK) */
-export interface RelayerSDKGlobal {
-  initSDK: typeof SDK.initSDK;
-  createInstance: typeof SDK.createInstance;
-  SepoliaConfig: SDK.FhevmInstanceConfig;
-  MainnetConfig: SDK.FhevmInstanceConfig;
-}
-
-/** Network configuration for the Relayer SDK */
+/** Network configuration for the relayer. */
 export type NetworkType = "hardhat" | "sepolia" | "mainnet";
 
-/** Security options for RelayerWeb. */
-export interface RelayerWebSecurityConfig {
-  /** Resolve the current CSRF token. Called before each authenticated network request. */
-  getCsrfToken?: () => string;
-  /** Verify SHA-384 integrity of the CDN bundle. Defaults to `true`. Set to `false` only in test environments with mocked SDK scripts. */
-  integrityCheck?: boolean;
-}
+/** Canonical FHE type names accepted by encryption. */
+export type FheTypeName =
+  | "ebool"
+  | "euint8"
+  | "euint16"
+  | "euint32"
+  | "euint64"
+  | "euint128"
+  | "euint256"
+  | "eaddress";
 
-/** Configuration for RelayerWeb (browser backend) initialization. */
-export interface RelayerWebConfig {
-  /** FHE chain configuration. */
-  chain: FheChain;
-  /** Worker client — handles WASM operations off the main thread. */
-  worker: RelayerWorkerClient;
-  /** Security options (CSRF, CDN integrity). */
-  security?: RelayerWebSecurityConfig;
-  /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: GenericLogger;
-  /**
-   * Number of WASM threads for parallel FHE operations inside the Web Worker.
-   * Uses `wasm-bindgen-rayon` under the hood via `SharedArrayBuffer`.
-   *
-   * **Requirements:** The page must be served with COOP/COEP headers:
-   * - `Cross-Origin-Opener-Policy: same-origin`
-   * - `Cross-Origin-Embedder-Policy: require-corp`
-   *
-   * 4–8 threads is the practical sweet spot; beyond that, diminishing returns
-   * and higher memory usage on low-end devices.
-   *
-   * When omitted, the relayer SDK uses its default (single-threaded).
-   */
-  threads?: number;
-  /**
-   * Persistent storage for caching FHE public key and params across sessions.
-   *
-   * Defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")`.
-   * Pass a custom `IndexedDBStorage` instance to configure the database name,
-   * version, or store name. FHE public params can be several MB — avoid
-   * `localStorage`-backed storage which caps at ~5 MB.
-   *
-   * **Not to be confused with `ZamaProvider.storage`** which stores credentials.
-   */
-  fheArtifactStorage?: GenericStorage;
-  /** Cache TTL in seconds for FHE public material. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. Ignored when storage is not set. */
-  fheArtifactCacheTTL?: number;
-}
-
-/** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. Alias for {@link Bytes32Hex}. */
-export type EncryptedValue = Bytes32Hex;
+/** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. */
+export type EncryptedValue = Hex;
 
 /** Result from encryption — contract-ready hex encrypted values and input proof. */
 export type EncryptResult = {
@@ -83,8 +32,8 @@ export type EncryptResult = {
   inputProof: Hex;
 };
 
-/** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
-export type ClearValue = ClearValueType;
+/** Canonical SDK type for a decrypted clear-text value. */
+export type ClearValue = bigint | boolean | string;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
@@ -94,7 +43,7 @@ export type EncryptInput =
     }
   | {
       value: bigint;
-      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
+      type: Exclude<FheTypeName, "ebool" | "eaddress">;
     }
   | {
       value: Address;
@@ -122,14 +71,23 @@ export interface UserDecryptParams {
   durationDays: number;
 }
 
-/** Result from public decryption. Alias for {@link PublicDecryptResults}. */
-export type PublicDecryptResult = PublicDecryptResults;
+/** Result from public decryption. */
+export interface PublicDecryptResult {
+  clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+  abiEncodedClearValues: Hex;
+  decryptionProof: Hex;
+}
 
 /**
- * EIP712 typed data structure for user or delegated user decrypt requests.
- * Union of the relayer-sdk's two user-decrypt EIP712 shapes.
+ * EIP-712 typed data for a (delegated) user-decrypt permit. Built by the FHE
+ * backend and signed by the signer layer (`GenericSigner.signTypedData`).
  */
-export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
+export interface EIP712TypedData {
+  domain: Record<string, unknown>;
+  types: Record<string, ReadonlyArray<{ name: string; type: string }>>;
+  primaryType: string;
+  message: Record<string, unknown>;
+}
 
 /** FHE encryption key — the network's TFHE public key used to encrypt inputs for confidential contracts. */
 export interface FheEncryptionKey {
@@ -137,10 +95,8 @@ export interface FheEncryptionKey {
   publicKey: Uint8Array;
 }
 
-/**
- * TFHE public parameters
- */
-export type PublicParamsData = SDK.PublicParams<Uint8Array>[keyof SDK.PublicParams<Uint8Array>];
+/** TFHE public parameters (managed internally by `@fhevm/sdk`). */
+export type PublicParamsData = unknown;
 
 /** Parameters for delegated user decryption */
 export interface DelegatedUserDecryptParams {

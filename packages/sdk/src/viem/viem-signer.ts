@@ -70,8 +70,8 @@ export class ViemSigner extends BaseSigner {
       domain: typedData.domain,
       message: {
         ...typedData.message,
-        startTimestamp: BigInt(typedData.message.startTimestamp),
-        durationDays: BigInt(typedData.message.durationDays),
+        startTimestamp: BigInt(typedData.message.startTimestamp as string | number | bigint),
+        durationDays: BigInt(typedData.message.durationDays as string | number | bigint),
       },
       // Cast: EIP712TypedData is a union; viem cannot correlate primaryType/types/message across union members, so the inferred `message` collapses to `never`.
     } as Parameters<typeof walletClient.signTypedData>[0]);

@@ -1,24 +1,18 @@
 import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
-import type { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
-import type { RelayerWeb } from "../relayer/relayer-web";
-import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
-import type { RelayerWorkerClient } from "../worker/worker.client";
+import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
 
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
-/** Options for web() relayer (threads, security, logger, storage). */
-export type WebRelayerOptions = Partial<
-  Pick<
-    RelayerWebConfig,
-    "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL"
-  >
->;
+/** Options for the web() relayer. */
+export interface WebRelayerOptions {
+  /** Optional logger for observing FHE operation lifecycle and timing. */
+  logger?: GenericLogger;
+}
 
 // ── Relayer config types ─────────────────────────────────────────────────────
 
@@ -42,17 +36,16 @@ export interface RelayerConfig {
   ) => RelayerSDK;
 }
 
-/** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
+/** Web relayer config — drives the FHE backend directly (no worker). */
 export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
-  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
-  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
-/** Cleartext relayer config — no worker, returns `RelayerCleartext`. */
+/** Cleartext relayer config — drives the FHE backend in cleartext mode. */
 export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
-  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
 /** Shared options across all adapter paths. */

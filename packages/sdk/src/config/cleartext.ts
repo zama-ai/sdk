@@ -1,12 +1,16 @@
 import { ConfigurationError } from "../errors";
-import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
+import { FhevmRelayer, type FhevmRuntimeConfig } from "../relayer/fhevm-relayer";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
- * Cleartext relayer — routes to RelayerCleartext (no FHE infrastructure).
+ * Cleartext relayer — drives the FHE backend in cleartext mode (no FHE infrastructure).
  *
  * When `executorAddress` is set on the chain definition (e.g. `hardhat`, `hoodi`),
  * it is picked up automatically.
+ *
+ * @param runtime - Global `@fhevm/sdk` runtime config (WASM load mode, threads,
+ *   logger, auth). Applied once per process when the client first initializes.
+ *   Per-chain `auth` from the chain definition is merged in by {@link FhevmRelayer}.
  *
  * @example
  * ```ts
@@ -14,7 +18,7 @@ import type { CleartextRelayerConfig } from "./types";
  * relayers: { [hardhat.id]: cleartext() }
  * ```
  */
-export function cleartext(): CleartextRelayerConfig {
+export function cleartext(runtime: FhevmRuntimeConfig = {}): CleartextRelayerConfig {
   return {
     type: "cleartext",
     createRelayer: (chain) => {
@@ -25,7 +29,7 @@ export function cleartext(): CleartextRelayerConfig {
             `or set it on the chain definition.`,
         );
       }
-      return new RelayerCleartext(chain);
+      return new FhevmRelayer({ chain, runtime, cleartext: true });
     },
   };
 }
