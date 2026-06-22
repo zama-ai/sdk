@@ -1,6 +1,6 @@
 // Retarget the doc URLs to a publish branch and rebuild the LLM corpus.
 //
-//   pnpm llm:retarget <main|prerelease>
+//   pnpm docs:retarget <main|prerelease>
 //
 // Two kinds of branch-specific URL live in the docs (see docs/llm/corpus.config.json
 // and the migration guide):
@@ -27,7 +27,7 @@ const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
 
 const target = process.argv[2];
 if (!Object.hasOwn(BRANCH_TO_SPACE, target)) {
-  console.error(`Usage: pnpm llm:retarget <main|prerelease>\nGot: ${target ?? "(nothing)"}`);
+  console.error(`Usage: pnpm docs:retarget <main|prerelease>\nGot: ${target ?? "(nothing)"}`);
   process.exit(1);
 }
 const space = BRANCH_TO_SPACE[target];

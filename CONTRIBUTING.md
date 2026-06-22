@@ -89,10 +89,10 @@ The pre-commit hook regenerates and stages the LLM artifacts automatically when 
 Doc URLs are branch-specific: the corpus and the migration-guide prompt link to `raw.githubusercontent.com/zama-ai/sdk/<branch>/…` and `docs.zama.org/protocol/sdk/<space>/…` — `main`/`stable` on the release branch, `prerelease`/`alpha` on the prerelease branch. They can't be derived at build time (CI checks out PRs detached, and the committed artifacts must match the rebuild), so the branch is committed and flipped at promotion with one idempotent command:
 
 ```bash
-pnpm llm:retarget main        # or: prerelease
+pnpm docs:retarget main        # or: prerelease
 ```
 
-CI (`pnpm llm:check-target`, driven by the PR's base branch) fails any PR whose committed URLs target the wrong branch and points you at the command above.
+CI (`pnpm docs:check-target`, driven by the PR's base branch) fails any PR whose committed URLs target the wrong branch and points you at the command above.
 
 ### API Reports
 
