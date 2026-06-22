@@ -5,7 +5,7 @@ description: Resolve the wrappers registry contract address for the current chai
 
 # useWrappersRegistryAddress
 
-Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with any `registryAddresses` overrides passed to `ZamaProvider`.
+Resolves the wrappers registry address for the connected chain. Uses built-in defaults (Mainnet, Sepolia) merged with chain-level registry addresses from the config.
 
 Returns `undefined` when the chain ID hasn't been fetched yet or when no registry is configured for the connected chain.
 

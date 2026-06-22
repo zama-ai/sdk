@@ -15,6 +15,7 @@ interface BalancesCardProps {
   isAllowed: boolean;
   onDecrypt: () => void;
   isDecrypting: boolean;
+  decryptDisabled?: boolean;
   decryptError?: string | null;
 }
 
@@ -31,6 +32,7 @@ export function BalancesCard({
   isAllowed,
   onDecrypt,
   isDecrypting,
+  decryptDisabled = false,
   decryptError,
 }: BalancesCardProps) {
   return (
@@ -57,7 +59,7 @@ export function BalancesCard({
             type="button"
             className="btn btn-sm btn-secondary"
             onClick={onDecrypt}
-            disabled={isDecrypting}
+            disabled={decryptDisabled || isDecrypting}
           >
             {isDecrypting ? "Signing…" : "Decrypt Balance"}
           </button>

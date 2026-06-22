@@ -5,7 +5,7 @@ import { erc20Abi, type Address } from "viem";
  *
  * @example
  * ```ts
- * const name = await signer.readContract(nameContract(tokenAddress));
+ * const name = await provider.readContract(nameContract(tokenAddress));
  * ```
  */
 export function nameContract(tokenAddress: Address) {
@@ -22,7 +22,7 @@ export function nameContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const symbol = await signer.readContract(symbolContract(tokenAddress));
+ * const symbol = await provider.readContract(symbolContract(tokenAddress));
  * ```
  */
 export function symbolContract(tokenAddress: Address) {
@@ -39,7 +39,7 @@ export function symbolContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const decimals = await signer.readContract(decimalsContract(tokenAddress));
+ * const decimals = await provider.readContract(decimalsContract(tokenAddress));
  * ```
  */
 export function decimalsContract(tokenAddress: Address) {
@@ -56,7 +56,7 @@ export function decimalsContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const supply = await signer.readContract(erc20TotalSupplyContract(tokenAddress));
+ * const supply = await provider.readContract(erc20TotalSupplyContract(tokenAddress));
  * ```
  */
 export function erc20TotalSupplyContract(tokenAddress: Address) {
@@ -73,7 +73,7 @@ export function erc20TotalSupplyContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const balance = await signer.readContract(
+ * const balance = await provider.readContract(
  *   balanceOfContract(tokenAddress, account),
  * );
  * ```
@@ -92,7 +92,7 @@ export function balanceOfContract(tokenAddress: Address, account: Address) {
  *
  * @example
  * ```ts
- * const allowance = await signer.readContract(
+ * const allowance = await provider.readContract(
  *   allowanceContract(tokenAddress, owner, spender),
  * );
  * ```

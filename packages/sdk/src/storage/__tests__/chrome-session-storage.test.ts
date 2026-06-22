@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "../../test-fixtures";
+import { describe, test, expect, vi, beforeEach } from "../../test-fixtures";
 import { ChromeSessionStorage } from "../chrome-session-storage";
 
 // ---------------------------------------------------------------------------
@@ -34,12 +34,12 @@ describe("ChromeSessionStorage", () => {
     storage = new ChromeSessionStorage();
   });
 
-  it("returns null for missing keys", async () => {
+  test("returns null for missing keys", async () => {
     expect(await storage.get("missing")).toBeNull();
     expect(mockSession.get).toHaveBeenCalledWith("missing");
   });
 
-  it("stores and retrieves values", async () => {
+  test("stores and retrieves values", async () => {
     await storage.set("key", "value");
     expect(mockSession.set).toHaveBeenCalledWith({ key: "value" });
 
@@ -47,30 +47,30 @@ describe("ChromeSessionStorage", () => {
     expect(result).toBe("value");
   });
 
-  it("overwrites existing values", async () => {
+  test("overwrites existing values", async () => {
     await storage.set("key", "old");
     await storage.set("key", "new");
     expect(await storage.get("key")).toBe("new");
   });
 
-  it("deletes values", async () => {
+  test("deletes values", async () => {
     await storage.set("key", "value");
     await storage.delete("key");
     expect(mockSession.remove).toHaveBeenCalledWith("key");
     expect(await storage.get("key")).toBeNull();
   });
 
-  it("delete is a no-op for missing keys", async () => {
+  test("delete is a no-op for missing keys", async () => {
     await expect(storage.delete("missing")).resolves.not.toThrow();
   });
 
-  it("handles complex objects", async () => {
+  test("handles complex objects", async () => {
     const obj = { nested: { array: [1, 2, 3] } };
     await storage.set("complex", obj);
     expect(await storage.get("complex")).toEqual(obj);
   });
 
-  it("returns null for falsy stored values via nullish coalescing", async () => {
+  test("returns null for falsy stored values via nullish coalescing", async () => {
     // Verify ?? null coalescing: explicitly stored undefined should still return null
     store.set("falsy", undefined);
     expect(await storage.get("falsy")).toBeNull();

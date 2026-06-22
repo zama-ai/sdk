@@ -11,16 +11,16 @@ title: {
 # --- Modules ---
 token: "token/" {
   zama-sdk: "ZamaSDK\n(factory)"
-  tok: "Token\n(write ops)"
-  readonly: "ReadonlyToken\n(read ops)"
-  creds: "CredentialsManager"
+  tok: "Token\n(read + base writes)"
+  wrapped: "WrappedToken\n(extends Token —\nshield/unshield)"
+  creds: "Permits\n(CredentialService)"
   cache: "BalanceCache"
 
-  zama-sdk -> tok: creates
-  zama-sdk -> readonly: creates
-  tok -> creds: loads credentials
-  readonly -> creds: loads credentials
-  readonly -> cache: caches balances
+  zama-sdk -> tok: createToken
+  zama-sdk -> wrapped: createWrappedToken
+  wrapped -> tok: extends
+  tok -> creds: requests permits
+  tok -> cache: caches balances
 }
 
 query: "query/" {

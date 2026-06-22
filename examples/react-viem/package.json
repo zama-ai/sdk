@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
-    "@zama-fhe/react-sdk": "2.2.0-alpha.3",
-    "@zama-fhe/sdk": "2.2.0-alpha.3",
-    "next": "^16.2.6",
+    "@zama-fhe/react-sdk": "3.0.0-alpha.32",
+    "@zama-fhe/sdk": "3.0.0-alpha.32",
+    "next": "^16.2.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "viem": "^2.30.0"

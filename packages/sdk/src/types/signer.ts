@@ -2,36 +2,75 @@ import type { Address, Hex } from "viem";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
 import type {
   ContractAbi,
-  ReadContractArgs,
-  ReadContractConfig,
-  ReadContractReturnType,
-  ReadFunctionName,
   WriteContractArgs,
   WriteContractConfig,
   WriteFunctionName,
 } from "./contract";
-import type { TransactionReceipt } from "./transaction";
 
-/** Callbacks for signer lifecycle events (wallet disconnect, account switch). */
-export interface SignerLifecycleCallbacks {
-  /** Called when the wallet disconnects. */
-  onDisconnect?: () => void;
-  /** Called when the active account changes. */
-  onAccountChange?: (newAddress: Address) => void;
-  /** Called when the connected chain changes. */
-  onChainChange?: (newChainId: number) => void;
+/** Snapshot of the connected wallet account at a point in time. */
+export interface WalletAccount {
+  address: Address;
+  chainId: number;
+}
+
+/** A wallet account transition emitted by signer adapters. */
+export interface WalletAccountChange {
+  previous?: WalletAccount;
+  next?: WalletAccount;
+}
+
+/** Listener for wallet account transitions. */
+export type WalletAccountListener = (change: WalletAccountChange) => void;
+
+/**
+ * Synchronous observable store for wallet account readiness.
+ *
+ * Direct subscriptions observe raw signer adapter transitions. For SDK-
+ * coordinated cleanup and React query invalidation, subscribe through
+ * `ZamaSDK.onWalletAccountChange` so credential/cache cleanup runs first.
+ */
+export interface WalletAccountStore {
+  /** Synchronous, non-prompting snapshot of the currently connected wallet account. */
+  getSnapshot(): WalletAccount | undefined;
+  /**
+   * Whether the store has received at least one snapshot. Adapters whose
+   * initial account is only available asynchronously start unready; callers
+   * can distinguish "still loading" from "wallet not connected".
+   */
+  isReady(): boolean;
+  /**
+   * Subscribe to wallet account transitions (connect, disconnect, account
+   * change, chain change). Returns an unsubscribe function.
+   *
+   * If a wallet account is already known when `subscribe` is called, the
+   * listener MUST be invoked synchronously with
+   * `{ previous: undefined, next: <current> }`. The SDK relies on this to
+   * warm credentials for already-connected signers; custom stores that skip
+   * this initial emit will silently break credential pre-warming.
+   */
+  subscribe(onWalletAccountChange: WalletAccountListener): () => void;
 }
 
 /**
- * Framework-agnostic signer interface.
- * Wallet devs implement this with their library of choice.
- * The React SDK ships pre-built adapters for wagmi/viem/ethers.
+ * Framework-agnostic signer interface — wallet authority only.
+ *
+ * Public chain reads have moved to {@link GenericProvider}. A signer is only
+ * required for operations that involve a user-controlled wallet
+ * (`requireWalletAccount`, `signTypedData`, `writeContract`).
  */
 export interface GenericSigner {
-  /** Return the chain ID of the connected network. */
-  getChainId(): Promise<number>;
-  /** The connected wallet address. */
-  getAddress: () => Promise<Address>;
+  /** Observable wallet account readiness state. */
+  readonly walletAccount: WalletAccountStore;
+  /**
+   * Return the currently connected wallet account or throw
+   * {@link WalletNotConnectedError}. Must not initiate wallet connection.
+   */
+  requireWalletAccount(operation: string): WalletAccount;
+  /**
+   * Optional non-prompting account discovery hook for adapters whose initial
+   * account snapshot is only available asynchronously.
+   */
+  refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
   /** Send a write transaction and return the tx hash. */
@@ -42,28 +81,6 @@ export interface GenericSigner {
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  /** Execute a read-only call and return the decoded result. */
-  readContract<
-    const TAbi extends ContractAbi,
-    TFunctionName extends ReadFunctionName<TAbi>,
-    const TArgs extends ReadContractArgs<TAbi, TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-  /** Wait for a transaction to be mined and return its receipt. */
-  waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-  /**
-   * Return the latest block timestamp in seconds.
-   * Used by {@link ReadonlyToken.isDelegated} to compare delegation expiry
-   * against the chain clock instead of the local clock.
-   */
-  getBlockTimestamp: () => Promise<bigint>;
-  /**
-   * Subscribe to wallet lifecycle events (disconnect, account change, chain change).
-   * Returns an unsubscribe function.
-   *
-   * Optional — server-side signers or custom implementations that don't
-   * support lifecycle events can omit this method entirely.
-   */
-  subscribe?: (callbacks: SignerLifecycleCallbacks) => () => void;
+  /** Release adapter-owned wallet watchers or provider event listeners. */
+  dispose?(): void;
 }

@@ -10,9 +10,9 @@ Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, u
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **viem v2** (`isAddress`, `parseAbi`, `parseUnits`, `formatUnits`, `createPublicClient`, `createWalletClient`)
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **ViemSigner** — wraps viem `walletClient` + `publicClient` for all SDK operations
-- **RelayerWeb** — browser FHE worker, routes through a local Next.js proxy (`/api/relayer`)
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/sdk** — `createConfig` (root), the Sepolia preset (`/chains`), `ViemProvider` / optional `ViemSigner` (`/viem`), and the `web()` relayer factory (`/web`)
+- **Next.js relayer proxy** — routes browser relayer requests through `/api/relayer` so API credentials stay server-side
 
 ## Setup
 

@@ -49,19 +49,52 @@ Use descriptive branch names:
 
 ### Making Changes
 
-1. Create a feature branch from `main`
+1. Create a feature branch from `prerelease` (the default PR base; `main` is reserved for release/CI-infra PRs)
 2. Make your changes
 3. Ensure all checks pass:
 
 ```bash
 pnpm typecheck    # Type checking
-pnpm lint         # ESLint
-pnpm format:check # Prettier formatting
+pnpm lint         # oxlint + ast-grep rules
+pnpm format:check # oxfmt formatting
 pnpm test:run     # Unit tests
 pnpm build        # Build output
 ```
 
 4. Open a pull request
+
+### GitBook Documentation
+
+The docs in `docs/gitbook/src/` are published to GitBook (both `main` and `prerelease` ship as separate spaces). **Links between doc pages must be relative `.md` paths** — e.g. `[Token](../reference/sdk/Token.md)`, never host-absolute (`/reference/sdk/Token`). GitBook serves each space under a sub-path (`docs.zama.org/protocol/sdk/…`), so a leading-slash link resolves against the site root and breaks (it only surfaces on the live site — use GitBook's per-PR preview to check rendering). Anchors must match a heading in the target page.
+
+`pnpm docs:check-links` validates this (no host-absolute links, every relative target and `#anchor` resolves) and runs in CI on any docs change. Run it locally before pushing doc edits.
+
+### LLM Documentation Artifacts
+
+The repository publishes generated LLM entry points for coding agents:
+
+- `llms.txt` — compact discovery index with raw GitHub links
+- `llms-full.txt` — full public documentation bundle for large-context agents
+- `docs/llm/corpus-manifest.json` — generated manifest used to build both files
+
+When changing SDK docs, approved example docs, package READMEs, API reports, or the LLM corpus scripts, run:
+
+```bash
+pnpm llm:build
+pnpm llm:check
+```
+
+The pre-commit hook regenerates and stages the LLM artifacts automatically when relevant staged sources change. If a corpus source is partially staged, stage or discard the remaining changes before committing so the generated files match the committed source state.
+
+### API Reports
+
+Public API surface is tracked with [API Extractor](https://api-extractor.com/) reports committed to the repo. When you change a public export, regenerate the reports and commit the result:
+
+```bash
+pnpm api-report        # regenerate all reports locally (runs a build first)
+pnpm api-report:check  # CI gate — fails if committed reports are stale
+pnpm api-report:diff   # show what changed in the public surface
+```
 
 ### Running Tests
 
@@ -85,7 +118,7 @@ pnpm e2e:test
 ### Code Style
 
 - **ESM-only** — all packages use `"type": "module"`
-- **Prettier + ESLint** — enforced via pre-commit hooks (Husky + lint-staged)
+- **oxfmt + oxlint** — enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
 - **Unused variables** — prefix with `_` (e.g., `_unused`)
 - **Tests** — place in `__tests__/` directories adjacent to source files, use vitest with `vi.fn()` for mocks
 - **React SDK** — all source files use `"use client"` directive
@@ -95,7 +128,7 @@ pnpm e2e:test
 1. **Keep PRs focused** — one feature or fix per PR
 2. **Add tests** — new features and bug fixes should include tests
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
-4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes
+4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
 
 ### Release Automation

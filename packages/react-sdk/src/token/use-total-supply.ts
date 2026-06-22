@@ -28,7 +28,7 @@ export function useTotalSupply(
   const sdk = useZamaSDK();
 
   return useQuery<bigint>({
-    ...totalSupplyQueryOptions(sdk.signer, tokenAddress),
+    ...totalSupplyQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -48,5 +48,5 @@ export function useTotalSupply(
 export function useTotalSupplySuspense(tokenAddress: Address) {
   const sdk = useZamaSDK();
 
-  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(sdk.signer, tokenAddress));
+  return useSuspenseQuery<bigint>(totalSupplyQueryOptions(sdk, tokenAddress));
 }

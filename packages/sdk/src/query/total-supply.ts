@@ -1,5 +1,5 @@
-import { totalSupplyContract } from "../contracts";
-import type { GenericSigner } from "../types";
+import { inferredTotalSupplyContract } from "../contracts";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
@@ -10,7 +10,7 @@ export interface TotalSupplyQueryConfig {
 }
 
 export function totalSupplyQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config?: TotalSupplyQueryConfig,
 ): QueryFactoryOptions<bigint, Error, bigint, ReturnType<typeof zamaQueryKeys.totalSupply.token>> {
@@ -21,7 +21,7 @@ export function totalSupplyQueryOptions(
     queryKey,
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
-      return signer.readContract(totalSupplyContract(keyTokenAddress));
+      return sdk.provider.readContract(inferredTotalSupplyContract(keyTokenAddress));
     },
     staleTime: 30_000,
     enabled: config?.query?.enabled !== false,

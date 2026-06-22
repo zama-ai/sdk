@@ -5,7 +5,7 @@ description: Query hook that checks whether a decryption delegation is active be
 
 # useDelegationStatus
 
-Query hook that checks whether a decryption delegation is active between a delegator and delegate for a specific token. Returns both the active status and the raw expiry timestamp.
+Query hook that checks whether a decryption delegation is active between a delegator and delegate for a specific contract. Returns both the active status and the raw expiry timestamp.
 
 ## Import
 
@@ -22,22 +22,22 @@ import { useDelegationStatus } from "@zama-fhe/react-sdk";
 import { useDelegationStatus } from "@zama-fhe/react-sdk";
 
 function DelegationBadge({
-  tokenAddress,
+  contractAddress,
   delegatorAddress,
   delegateAddress,
 }: {
-  tokenAddress: `0x${string}`;
+  contractAddress: `0x${string}`;
   delegatorAddress: `0x${string}`;
   delegateAddress: `0x${string}`;
 }) {
   const { data, isLoading } = useDelegationStatus({
-    tokenAddress,
+    contractAddress,
     delegatorAddress,
     delegateAddress,
   });
 
   if (isLoading) return <span>Checking...</span>;
-  if (!data?.isDelegated) return <span>Not delegated</span>;
+  if (!data?.isActive) return <span>Not delegated</span>;
 
   const expiry = data.expiryTimestamp;
   const label =
@@ -58,11 +58,11 @@ function DelegationBadge({
 import { type UseDelegationStatusConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### contractAddress
 
 `Address`
 
-Address of the confidential token contract.
+Address of the confidential contract.
 
 ### delegatorAddress
 
@@ -78,7 +78,7 @@ The address that received delegation rights. The query is disabled until this is
 
 ```ts
 const { data } = useDelegationStatus({
-  tokenAddress: "0xToken",
+  contractAddress: "0xToken",
   delegatorAddress: "0xDelegator",
   delegateAddress: "0xDelegate",
 });
@@ -96,7 +96,7 @@ import { type DelegationStatusData } from "@zama-fhe/sdk/query";
 
 | Property          | Type      | Description                                                               |
 | ----------------- | --------- | ------------------------------------------------------------------------- |
-| `isDelegated`     | `boolean` | `true` if delegation exists and hasn't expired.                           |
+| `isActive`        | `boolean` | `true` if delegation exists and hasn't expired.                           |
 | `expiryTimestamp` | `bigint`  | `0n` = no delegation, `2^64 - 1` = permanent, otherwise UTC Unix seconds. |
 
 {% include ".gitbook/includes/query-result.md" %}

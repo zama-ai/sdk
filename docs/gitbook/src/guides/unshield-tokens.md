@@ -11,7 +11,7 @@ Unshielding converts encrypted tokens back into standard ERC-20 tokens that are 
 
 ### 1. Unshield a specific amount
 
-Call `token.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
+Call `wrappedToken.unshield()` with the amount you want to convert back to public tokens. The SDK submits the unwrap transaction, waits for the decryption proof, and then submits the finalize transaction.
 
 By default, the SDK validates the confidential balance before submitting. If the balance is insufficient, it throws `InsufficientConfidentialBalanceError` before any transaction is sent. Pass `skipBalanceCheck: true` to bypass (e.g. for smart wallets that cannot produce EIP-712 signatures).
 
@@ -19,12 +19,22 @@ By default, the SDK validates the confidential balance before submitting. If the
 {% tab title="SDK" %}
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
 import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
-const token = sdk.createToken("0xEncryptedERC20");
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  storage,
+  relayers: { [sepolia.id]: web() },
+});
+const sdk = new ZamaSDK(config);
+const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 
-const { txHash, receipt } = await token.unshield(500n);
+const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
 {% endtab %}
@@ -40,7 +50,7 @@ Because unshielding involves two transactions with a waiting period in between, 
 {% tab title="SDK" %}
 
 ```ts
-await token.unshield(500n, {
+await wrappedToken.unshield(500n, {
   onUnwrapSubmitted: (txHash) => {
     updateUI("Unwrap submitted...");
   },
@@ -64,13 +74,13 @@ Callbacks are safe to use -- if one throws, the unshield still completes. The ty
 
 ### 3. Unshield your entire balance
 
-If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance, decrypts it, and unshields the full amount.
+If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance and unshields the full amount directly, without decrypting it first.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-await token.unshieldAll();
+await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
@@ -94,7 +104,7 @@ await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
 // On next page load, check for pending unshields
 const pending = await loadPendingUnshield(storage, wrapperAddress);
 if (pending) {
-  await token.resumeUnshield(pending);
+  await wrappedToken.resumeUnshield(pending);
   await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
@@ -119,10 +129,7 @@ The React SDK provides hooks that wrap the above operations with React Query mut
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshield, isPending } = useUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
 await unshield({
   amount: 500n,
@@ -138,10 +145,7 @@ await unshield({
 ```tsx
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: unshieldAll } = useUnshieldAll({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const { mutateAsync: unshieldAll } = useUnshieldAll("0xWrapper");
 
 await unshieldAll();
 ```
@@ -151,18 +155,16 @@ await unshieldAll();
 
 ```tsx
 import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 
-const { mutateAsync: resumeUnshield } = useResumeUnshield({
-  tokenAddress: "0xToken",
-  wrapperAddress: "0xWrapper", // omit if token is the wrapper
-});
+const WRAPPER = "0xWrapper";
+const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
 // On mount
-const pending = await loadPendingUnshield(storage, wrapperAddress);
+const pending = await loadPendingUnshield(storage, WRAPPER);
 if (pending) {
   await resumeUnshield({ unwrapTxHash: pending });
-  await clearPendingUnshield(storage, wrapperAddress);
+  await clearPendingUnshield(storage, WRAPPER);
 }
 ```
 
@@ -173,6 +175,6 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 ## Next steps
 
-- See [Token Operations](../reference/sdk/Token.md) for the full `Token.unshield` and `Token.unshieldAll` API.
+- See [WrappedToken](../reference/sdk/WrappedToken.md) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
 - See [Hooks](../reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
 - If your unshield fails, see [Handle Errors](handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.

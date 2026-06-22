@@ -30,10 +30,10 @@ cd my-confidential-dapp
 ## 2. Install dependencies
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/sdk @zama-fhe/react-sdk @tanstack/react-query wagmi viem
 ```
 
-`@zama-fhe/react-sdk` re-exports everything from the core SDK, so we never need to import from `@zama-fhe/sdk` directly.
+`@zama-fhe/react-sdk` provides React hooks. Core SDK symbols (classes, types, chain presets, relayer factories) are imported from `@zama-fhe/sdk` directly.
 
 ## 3. Configure wagmi and the SDK
 
@@ -46,8 +46,9 @@ Create `src/config.ts`. This file sets up wagmi, the signer, and the relayer -- 
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient } from "@tanstack/react-query";
-import { RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
@@ -56,21 +57,18 @@ export const wagmiConfig = createConfig({
   },
 });
 
-export const signer = new WagmiSigner({ config: wagmiConfig });
+export const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-export const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [sepolia.id]: {
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
-  },
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
 
 export const queryClient = new QueryClient();
-
-export const storage = indexedDBStorage;
 
 export const TOKEN_ADDRESS = "0xYourEncryptedERC20" as const;
 
@@ -86,7 +84,7 @@ Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the rela
 
 ## 4. Create the App layout with providers
 
-Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations.
+Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi for wallet state, React Query for async caching, and `ZamaProvider` for FHE operations. The Zama config is built by `createConfig` from `@zama-fhe/react-sdk/wagmi`, which derives the signer from your wagmi config so it tracks connection state automatically.
 
 {% tabs %}
 {% tab title="src/App.tsx" %}
@@ -95,14 +93,14 @@ Replace the contents of `src/App.tsx`. We wrap the app in three providers: wagmi
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { wagmiConfig, queryClient, relayer, signer, storage } from "./config";
+import { wagmiConfig, queryClient, zamaConfig } from "./config";
 import { Dashboard } from "./Dashboard";
 
 export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={storage}>
+        <ZamaProvider config={zamaConfig}>
           <h1>Confidential Token Dashboard</h1>
           <Dashboard />
         </ZamaProvider>
@@ -117,22 +115,25 @@ export default function App() {
 
 ## 5. Build the balance display
 
-Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted handle cheaply and only triggers full decryption when the balance changes.
+Create `src/BalanceDisplay.tsx`. The `useConfidentialBalance` hook decrypts the on-chain balance. It polls the encrypted value cheaply and only triggers full decryption when the balance changes.
 
 {% tabs %}
 {% tab title="src/BalanceDisplay.tsx" %}
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 import { TOKEN_ADDRESS } from "./config";
 
 export function BalanceDisplay() {
+  const { address } = useAccount();
   const {
     data: balance,
     isLoading,
     error,
   } = useConfidentialBalance({
-    tokenAddress: TOKEN_ADDRESS,
+    address: TOKEN_ADDRESS,
+    account: address,
   });
 
   if (error) return <p>Failed to load balance.</p>;
@@ -149,7 +150,7 @@ export function BalanceDisplay() {
 {% endtab %}
 {% endtabs %}
 
-The first call prompts the wallet for a signature to generate FHE decrypt credentials. Subsequent calls reuse cached credentials silently.
+The first call prompts the wallet for a signature to generate FHE decrypt permits. Subsequent calls reuse cached permits silently.
 
 ## 6. Add shielding
 
@@ -161,12 +162,11 @@ Create `src/ShieldForm.tsx`. Shielding converts public ERC-20 tokens into their 
 ```tsx
 import { type FormEvent } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
   const { mutateAsync: shield, isPending } = useShield({
-    tokenAddress: TOKEN_ADDRESS,
-    wrapperAddress: WRAPPER_ADDRESS,
+    address: WRAPPER_ADDRESS,
   });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -211,7 +211,7 @@ import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    tokenAddress: TOKEN_ADDRESS,
+    address: TOKEN_ADDRESS,
   });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -255,14 +255,11 @@ Create `src/UnshieldForm.tsx`. Unshielding withdraws confidential tokens back to
 ```tsx
 import { useState, type FormEvent } from "react";
 import { useUnshield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
   const [status, setStatus] = useState("");
-  const { mutateAsync: unshield, isPending } = useUnshield({
-    tokenAddress: TOKEN_ADDRESS,
-    wrapperAddress: WRAPPER_ADDRESS,
-  });
+  const { mutateAsync: unshield, isPending } = useUnshield(WRAPPER_ADDRESS);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -308,7 +305,7 @@ Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes
 {% tab title="src/ErrorMessage.tsx" %}
 
 ```tsx
-import { matchZamaError } from "@zama-fhe/react-sdk";
+import { matchZamaError } from "@zama-fhe/sdk";
 
 export function ErrorMessage({ error }: { error: Error | null }) {
   if (!error) return null;
@@ -317,7 +314,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Session expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Transport key pair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 
@@ -331,11 +328,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
 Use this component alongside any mutation hook. Pass the hook's `error` property:
 
 ```tsx
-const {
-  mutateAsync: shield,
-  isPending,
-  error,
-} = useShield({ tokenAddress: TOKEN_ADDRESS, wrapperAddress: WRAPPER_ADDRESS });
+const { mutateAsync: shield, isPending, error } = useShield({ address: WRAPPER_ADDRESS });
 
 // In your JSX:
 <ErrorMessage error={error} />;

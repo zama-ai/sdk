@@ -245,7 +245,7 @@ const ALLOWED_CORS_ORIGINS = new Set([
  * @param {import("node:http").ServerResponse} res
  */
 function setCorsHeaders(res) {
-  const origin = res._corsOrigin;
+  const origin = res.corsOrigin;
   if (ALLOWED_CORS_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -592,7 +592,7 @@ const PORT = parseInt(process.argv[2] || "4200", 10);
 async function handleRequest(req, res) {
   // Stash the request origin for CORS headers (credentials: "include" requires
   // a specific origin, not "*").
-  res._corsOrigin = req.headers.origin || "";
+  res.corsOrigin = req.headers.origin || "";
   setCorsHeaders(res);
 
   if (req.method === "OPTIONS") {

@@ -3,23 +3,17 @@ import type {
   Abi,
   ContractFunctionArgs,
   ContractFunctionName,
-  ContractFunctionReturnType,
   EIP1193Provider,
-  PublicClient,
   WalletClient,
-  Address,
   Hex,
 } from "viem";
+import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
+import { WalletNotConnectedError } from "../errors";
 import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type {
-  GenericSigner,
-  ReadContractConfig,
-  SignerLifecycleCallbacks,
-  TransactionReceipt,
-  WriteContractConfig,
-} from "../types";
-import { eip1193Subscribe } from "../token/eip1193-subscribe";
+import { BaseSigner } from "../signer/base-signer";
+import { eip1193Subscribe } from "../signer/eip1193-subscribe";
+import type { WalletAccount, WriteContractConfig } from "../types";
 
 /**
  * Configuration for {@link ViemSigner}.
@@ -34,61 +28,53 @@ import { eip1193Subscribe } from "../token/eip1193-subscribe";
  * wallet lifecycle handling, consider using `WagmiSigner` instead.
  */
 export interface ViemSignerConfig {
-  /** Wallet client for signing and write operations. Optional — omit for read-only usage. */
-  walletClient?: WalletClient;
-  publicClient: PublicClient;
+  /** Wallet client for signing and write operations. */
+  walletClient: WalletClient;
   ethereum?: EIP1193Provider;
 }
 
-/**
- * GenericSigner backed by viem.
- *
- * @param config - {@link ViemSignerConfig} with walletClient and publicClient
- */
-export class ViemSigner implements GenericSigner {
-  readonly #walletClient?: WalletClient;
-  readonly #publicClient: PublicClient;
+function walletAccountFromWalletClient(walletClient: WalletClient): WalletAccount | undefined {
+  if (!walletClient.account || !walletClient.chain) {
+    return undefined;
+  }
+  const address = getAddress(walletClient.account.address);
+  return { address, chainId: walletClient.chain.id };
+}
+
+export class ViemSigner extends BaseSigner {
+  readonly #walletClient: WalletClient;
   readonly #ethereum?: EIP1193Provider;
+  readonly #unsubscribeProvider: () => void;
 
   constructor(config: ViemSignerConfig) {
+    super(walletAccountFromWalletClient(config.walletClient));
     this.#walletClient = config.walletClient;
-    this.#publicClient = config.publicClient;
     this.#ethereum = config.ethereum;
+    this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
-  #requireWalletClient(): WalletClient {
-    if (!this.#walletClient) {
-      throw new TypeError("No walletClient configured — read-only mode");
+  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
+    if (!this.#walletClient.account) {
+      throw new WalletNotConnectedError(operation);
     }
-    return this.#walletClient;
-  }
-
-  #requireWalletAndAccount(): { walletClient: WalletClient; account: Account } {
-    const walletClient = this.#requireWalletClient();
-    if (!walletClient.account) {
-      throw new TypeError("WalletClient has no account");
-    }
-    return { walletClient, account: walletClient.account };
-  }
-
-  async getChainId(): Promise<number> {
-    return this.#publicClient.getChainId();
-  }
-
-  async getAddress(): Promise<Address> {
-    return this.#requireWalletAndAccount().account.address;
+    return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
-    const { walletClient, account } = this.#requireWalletAndAccount();
+    const { walletClient, account } = this.#requireAccount("signTypedData");
     const { EIP712Domain: _, ...sigTypes } = typedData.types;
     return walletClient.signTypedData({
       account,
-      primaryType: Object.keys(sigTypes)[0]!,
+      primaryType: typedData.primaryType,
       types: sigTypes,
       domain: typedData.domain,
-      message: typedData.message,
-    });
+      message: {
+        ...typedData.message,
+        startTimestamp: BigInt(typedData.message.startTimestamp),
+        durationDays: BigInt(typedData.message.durationDays),
+      },
+      // Cast: EIP712TypedData is a union; viem cannot correlate primaryType/types/message across union members, so the inferred `message` collapses to `never`.
+    } as Parameters<typeof walletClient.signTypedData>[0]);
   }
 
   async writeContract<
@@ -96,7 +82,7 @@ export class ViemSigner implements GenericSigner {
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,
     const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>,
   >(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex> {
-    const { walletClient, account } = this.#requireWalletAndAccount();
+    const { walletClient, account } = this.#requireAccount("writeContract");
     return walletClient.writeContract({
       chain: walletClient.chain,
       account,
@@ -104,29 +90,20 @@ export class ViemSigner implements GenericSigner {
     } as Parameters<typeof writeContract>[1]);
   }
 
-  async readContract<
-    const TAbi extends Abi | readonly unknown[],
-    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
-    const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>,
-  >(
-    config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
-  ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
-    return this.#publicClient.readContract(config);
-  }
-
-  async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
-    return this.#publicClient.waitForTransactionReceipt({ hash });
-  }
-
-  async getBlockTimestamp(): Promise<bigint> {
-    const block = await this.#publicClient.getBlock();
-    return block.timestamp;
-  }
-
-  subscribe(callbacks: SignerLifecycleCallbacks): () => void {
-    if (!this.#walletClient) {
+  #subscribeToProvider(): () => void {
+    if (!this.#ethereum) {
       return () => {};
     }
-    return eip1193Subscribe(this.#ethereum, () => this.getAddress(), callbacks);
+    return eip1193Subscribe({
+      provider: this.#ethereum,
+      getInitialWalletAccount: () => walletAccountFromWalletClient(this.#walletClient),
+      onWalletAccountChange: ({ next }) => {
+        this.walletAccount.setSnapshot(next);
+      },
+    });
+  }
+
+  protected override onDispose(): void {
+    this.#unsubscribeProvider();
   }
 }

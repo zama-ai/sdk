@@ -22,8 +22,8 @@ test("should shield, approve, then transfer-from on cUSDT", async ({
 
   // Approve the operator (self-approve so we can transferFrom our own tokens)
   await page.goto(`/approve?token=${contracts.cUSDT}&spender=${operator}`);
-  await page.getByTestId("approve-button").click();
-  await expect(page.getByTestId("approve-success")).toContainText("Tx: 0x");
+  await page.getByTestId("set-operator-button").click();
+  await expect(page.getByTestId("set-operator-success")).toContainText("Tx: 0x");
 
   // Transfer from
   await page.goto(`/transfer-from?token=${contracts.cUSDT}&from=${operator}`);

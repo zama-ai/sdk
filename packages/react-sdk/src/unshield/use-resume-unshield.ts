@@ -8,7 +8,7 @@ import {
   type ResumeUnshieldParams,
   resumeUnshieldMutationOptions,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Resume an interrupted unshield from an existing unwrap tx hash.
@@ -19,27 +19,27 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link DecryptionFailedError} — public decryption failed during finalize
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
- * @param config - Token and wrapper addresses.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const resumeUnshield = useResumeUnshield({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * const resumeUnshield = useResumeUnshield("0xWrapper");
  * resumeUnshield.mutate({ unwrapTxHash: "0xabc..." });
  * ```
  */
 export function useResumeUnshield(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, ResumeUnshieldParams, Address>({
     ...resumeUnshieldMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnshield(context.client, config.tokenAddress);
+      invalidateAfterUnshield(context.client, token.address);
     },
   });
 }

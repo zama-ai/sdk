@@ -19,11 +19,11 @@ By the end of this guide, you will be able to:
 
 While building support for [ERC-7984 confidential tokens](https://eips.ethereum.org/EIPS/eip-7984) you will encounter the following terminology. For a deeper architectural overview, see [Architecture](../concepts/architecture.md).
 
-- **FHEVM** — Zama's library for computations on encrypted values. Encrypted values are represented on-chain as **ciphertext handles** (`bytes32`).
+- **FHEVM** — Zama's library for computations on encrypted values. Each **encrypted value** is represented on-chain as a `bytes32` reference (also called a "handle" in Solidity / FHE.sol).
 - **Host chain** — the EVM network your users connect to (e.g. Ethereum mainnet, Sepolia).
 - **Gateway chain** — Zama's L3 chain that coordinates encryptions and decryptions.
 - **Relayer** — off-chain service that registers encrypted inputs, coordinates decryptions, and returns results. Wallets and dApps talk to the Relayer via the Zama SDK.
-- **ACL** — access control for ciphertext handles. Contracts grant per-address permissions so a user can read data they should have access to.
+- **ACL** — access control for encrypted values. Contracts grant per-address permissions so a user can read data they should have access to.
 - **Native confidential token** — an ERC-7984 token where balances and transfer amounts are encrypted by default. Not derived from an underlying ERC-20.
 - **Wrapped confidential token** — a standard ERC-20 wrapped into ERC-7984 form via a wrapper contract. The underlying ERC-20 is unchanged.
 - **Confidential Token Wrappers Registry** — on-chain registry mapping ERC-20s to their ERC-7984 wrappers.
@@ -34,7 +34,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 1. Install and configure `@zama-fhe/sdk` (or `@zama-fhe/react-sdk` for React apps). See [Quick start](./quick-start.md) for stack-by-stack setup.
 2. Initialize a `ZamaSDK` instance with a relayer, signer, and storage. See the [`ZamaSDK` reference](../reference/sdk/ZamaSDK.md).
-3. For each confidential token contract, build a `Token` handle via `sdk.createToken(address)`.
+3. For each confidential token contract, create a `Token` instance via `sdk.createToken(address)`.
 4. Read encrypted balances, build transfers, and manage operators using the `Token` API or React hooks.
 
 ## What wallets and exchanges should support
@@ -45,7 +45,7 @@ You do **not** need to run FHE infrastructure to integrate. Wallets and exchange
 
 ## Display confidential balances
 
-Balances are stored as ciphertext handles. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
+Balances are stored on-chain as encrypted values. To display one, the user authorizes the wallet's session via an EIP-712 signature, after which the SDK performs **user decryption** to obtain the cleartext value. The session signature is cached, so subsequent decryptions for authorized contracts complete without prompting.
 
 {% hint style="warning" %}
 **Don't trigger the first signature automatically.** Gate the initial EIP-712 prompt behind an explicit user action — a "View balance" or "Authorize" button — so users opt into the wallet popup instead of being surprised by it. Once the session is cached, balance reads in other components decrypt silently.
@@ -57,12 +57,13 @@ Balances are stored as ciphertext handles. To display one, the user authorizes t
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({ relayer, signer, storage });
+const sdk = new ZamaSDK(config); // config from createConfig()
 const token = sdk.createToken("0xConfidentialToken");
 
 // First call prompts the wallet for an EIP-712 session signature;
 // invoke it from a user action, not on app start.
-const balance = await token.balanceOf(); // connected wallet
+const [owner] = await walletClient.getAddresses();
+const balance = await token.balanceOf(owner); // connected wallet
 const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
@@ -70,23 +71,25 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 {% tab title="React" %}
 
 ```tsx
-import { useAllow, useIsAllowed, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
 const TOKEN = "0xConfidentialToken" as const;
 
 function Balance() {
-  const { mutate: allow, isPending: isAllowing } = useAllow();
-  const { data: isAllowed } = useIsAllowed({ contractAddresses: [TOKEN] });
+  const { address } = useAccount();
+  const { mutate: grantPermit, isPending: isGranting } = useGrantPermit();
+  const { data: hasPermit } = useHasPermit({ contractAddresses: [TOKEN] });
 
   const { data, isPending, error } = useConfidentialBalance(
-    { tokenAddress: TOKEN },
-    { enabled: !!isAllowed },
+    { address: TOKEN, account: address },
+    { enabled: !!hasPermit },
   );
 
-  if (!isAllowed) {
+  if (!hasPermit) {
     return (
-      <button onClick={() => allow([TOKEN])} disabled={isAllowing}>
-        {isAllowing ? "Signing…" : "View balance"}
+      <button onClick={() => grantPermit([TOKEN])} disabled={isGranting}>
+        {isGranting ? "Signing…" : "View balance"}
       </button>
     );
   }
@@ -99,7 +102,7 @@ function Balance() {
 {% endtab %}
 {% endtabs %}
 
-A common pattern is to call `useAllow` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](../guides/encrypt-decrypt.md) for the full pre-authorization pattern, and [Check balances](../guides/check-balances.md) for batch decryption across multiple tokens.
+A common pattern is to call `useGrantPermit` once when the user first connects (covering every confidential contract you'll touch), then read balances anywhere in the app without further prompts. Credentials persist in IndexedDB and survive page reloads. See [Encrypt & decrypt](../guides/encrypt-decrypt.md) for the full pre-authorization pattern, and [Check balances](../guides/check-balances.md) for batch decryption across multiple tokens.
 
 ## Send a confidential transfer
 
@@ -118,7 +121,7 @@ const { txHash, receipt } = await token.confidentialTransfer("0xRecipient", 500n
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
-const { mutate, isPending } = useConfidentialTransfer({ token: tokenAddress });
+const { mutate, isPending } = useConfidentialTransfer({ address: tokenAddress });
 mutate({ to: "0xRecipient", amount: 500n });
 ```
 
@@ -146,20 +149,22 @@ In all cases, the user sees a single unified balance for the underlying asset.
 
 ### Shield (wrap)
 
-`Token.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the underlying ERC-20 approval, the wrapper deposit, and decimal conversion. The encrypted balance lands in the recipient's address (defaulting to the connected wallet).
+`WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions). The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
 // Exact-amount approval (default)
-await token.shield(1000n);
+await wrappedToken.shield(1000n);
 
 // Custom recipient (e.g. exchange's hot wallet)
-await token.shield(1000n, { to: "0xExchangeWallet" });
+await wrappedToken.shield(1000n, { to: "0xExchangeWallet" });
 
 // Skip approval if you've already approved the wrapper
-await token.shield(1000n, { approvalStrategy: "skip" });
+await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
@@ -168,7 +173,7 @@ await token.shield(1000n, { approvalStrategy: "skip" });
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutate, isPending } = useShield({ token: confidentialTokenAddress });
+const { mutate, isPending } = useShield({ address: confidentialTokenAddress });
 mutate({ amount: 1000n });
 ```
 
@@ -179,23 +184,25 @@ See [Shield tokens](../guides/shield-tokens.md) for the full options surface, in
 
 ### Unshield (unwrap)
 
-Unwrapping is a **two-step asynchronous process** at the contract level: an unwrap request burns the encrypted amount, then a finalize call sends the cleartext amount of underlying ERC-20 once the gateway has publicly decrypted it. `Token.unshield` does both steps in one SDK call, including waiting for the decryption proof.
+Unwrapping is a **two-step asynchronous process** at the contract level: an unwrap request burns the encrypted amount, then a finalize call sends the cleartext amount of underlying ERC-20 once the gateway has publicly decrypted it. `WrappedToken.unshield` does both steps in one SDK call, including waiting for the decryption proof.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-const { txHash, receipt } = await token.unshield(500n);
+const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
+
+const { txHash, receipt } = await wrappedToken.unshield(500n);
 
 // Track each phase for UI updates
-await token.unshield(500n, {
+await wrappedToken.unshield(500n, {
   onUnwrapSubmitted: (h) => updateUI("Unwrap submitted…"),
   onFinalizing: () => updateUI("Waiting for decryption proof…"),
   onFinalizeSubmitted: (h) => updateUI("Unshield complete!"),
 });
 
 // Drain the entire balance
-await token.unshieldAll();
+await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
@@ -204,14 +211,14 @@ await token.unshieldAll();
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
 
-const { mutate } = useUnshield({ token: confidentialTokenAddress });
+const { mutate } = useUnshield(confidentialTokenAddress);
 mutate({ amount: 500n });
 ```
 
 {% endtab %}
 {% endtabs %}
 
-If the user closes the page between unwrap and finalize, resume with `Token.resumeUnshield` / [`useResumeUnshield`](../reference/react/useResumeUnshield.md). See [Unshield tokens](../guides/unshield-tokens.md) for the full flow.
+If the user closes the page between unwrap and finalize, resume with `WrappedToken.resumeUnshield` / [`useResumeUnshield`](../reference/react/useResumeUnshield.md). See [Unshield tokens](../guides/unshield-tokens.md) for the full flow.
 
 ### Decimal conversion in your UI
 
@@ -223,7 +230,7 @@ Wrappers enforce a maximum of **6 decimals** on the confidential side. When wrap
 | 6                   | 6                | 1               | 1:1                                     |
 | 2                   | 2                | 1               | 1:1                                     |
 
-Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper's `decimals()` and `rate()` views are exposed via the underlying contract for UI conversions.
+Display balances in the underlying asset's decimals when possible — your users think in USDT, not cUSDT-with-6-decimals. The wrapper contract itself exposes `decimals()` and `rate()` views (read them from the confidential token address, not the underlying ERC-20) for these UI conversions.
 
 ## Discover wrapped tokens via the Registry
 
@@ -243,7 +250,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](..
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
 if (result?.isValid) {
-  const cUsdc = sdk.createToken(result.confidentialTokenAddress);
+  const cUsdc = sdk.createWrappedToken(result.confidentialTokenAddress);
 }
 ```
 
@@ -253,8 +260,8 @@ if (result?.isValid) {
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useConfidentialTokenAddress({ token: "0xUSDC" });
-// data: { confidentialTokenAddress, isValid } | null
+const { data } = useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
+// data: readonly [isValid: boolean, confidentialTokenAddress: Address]
 ```
 
 {% endtab %}
@@ -275,7 +282,7 @@ const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
-const { data } = useTokenAddress({ token: confidentialTokenAddress });
+const { data } = useTokenAddress({ confidentialTokenAddress });
 ```
 
 {% endtab %}
@@ -331,9 +338,9 @@ For a runnable React dApp using these APIs end-to-end, follow [Build your first 
 ## UI and UX recommendations
 
 - **Caching**: Decrypted values are cached client-side for the session lifetime. Offer a refresh action that repeats the decrypt flow.
-- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's session model is described in [Session model](../concepts/session-model.md).
+- **Permissions**: Treat user decryption as a permission grant with scope and duration. Show which contracts are included and when access expires. The SDK's permit model is described in [Permit model](../concepts/permit-model.md).
 - **Indicators**: Use distinct icons or badges for encrypted amounts. Avoid showing zero when a value is simply undisclosed.
-- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke. See [`useConfidentialIsApproved`](../reference/react/useConfidentialIsApproved.md) and [`useRevoke`](../reference/react/useRevoke.md).
+- **Operator visibility**: Always show current operator approvals with expiry and a one-tap revoke (call `setOperator` with a past timestamp to revoke). See [`useConfidentialIsOperator`](../reference/react/useConfidentialIsOperator.md) and [`useConfidentialSetOperator`](../reference/react/useConfidentialSetOperator.md).
 - **Wrapping/unwrapping**: Clearly indicate which token a user is converting between. Show the underlying ERC-20's name and symbol alongside the confidential token.
 - **Failure modes**: Differentiate between decryption denied, missing ACL grant, and expired session. Offer guided recovery actions. See [Handle errors](../guides/handle-errors.md).
 

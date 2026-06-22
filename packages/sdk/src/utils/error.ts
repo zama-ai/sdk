@@ -33,3 +33,31 @@ export function isContractCallError(error: unknown): boolean {
   const msg = error.message.toLowerCase();
   return msg.includes("execution reverted") || msg.includes("call revert exception");
 }
+
+/**
+ * Extract an HTTP status code from an error, if present.
+ * Relayer SDK errors may carry a `status` or `statusCode` property.
+ */
+export function extractHttpStatus(error: unknown): number | undefined {
+  if (error === null || error === undefined || typeof error !== "object") {
+    return undefined;
+  }
+  const e = error as Record<string, unknown>;
+  if (typeof e.statusCode === "number") {
+    return e.statusCode;
+  }
+  if (typeof e.status === "number") {
+    return e.status;
+  }
+  // Check nested cause
+  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
+    const cause = e.cause as Record<string, unknown>;
+    if (typeof cause.statusCode === "number") {
+      return cause.statusCode;
+    }
+    if (typeof cause.status === "number") {
+      return cause.status;
+    }
+  }
+  return undefined;
+}

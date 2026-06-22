@@ -1,43 +1,42 @@
 ---
 title: FheArtifactCache
-description: Persistent cache for FHE public key and public parameters, avoiding re-downloads across sessions.
+description: Persistent cache for the FHE encryption key and public parameters, avoiding re-downloads across sessions.
 ---
 
 # FheArtifactCache
 
-Persistent cache for the FHE network public key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
+Persistent cache for the FHE encryption key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
 
-`RelayerWeb` and `RelayerNode` create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the relayer constructor.
+`web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
 
 {% hint style="info" %}
-**RelayerWeb** defaults to IndexedDB — artifact caching persists across page reloads.
-**RelayerNode** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
+**`web()`** defaults to IndexedDB — artifact caching persists across page reloads.
+**`node()`** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
 {% endhint %}
 
 ## Import
 
-```ts
-import { FheArtifactCache } from "@zama-fhe/sdk";
-```
+`FheArtifactCache` is an **internal class** — it is not exported from `@zama-fhe/sdk`, and you do not import or instantiate it directly. Configure artifact caching through the `web()` / `node()` transport factories (below); the constructor and methods are documented here only as internal reference.
 
 ## Usage
 
-In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer constructor:
+In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer transport factory:
 
 {% tabs %}
 {% tab title="Default (IndexedDB)" %}
 
 ```ts
-import { RelayerWeb, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerWeb uses IndexedDB artifact cache by default — no config needed
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+// web() uses IndexedDB artifact cache by default — no config needed
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
   },
 });
 ```
@@ -46,38 +45,41 @@ const relayer = new RelayerWeb({
 {% tab title="Custom storage" %}
 
 ```ts
-import { RelayerWeb, IndexedDBStorage, SepoliaConfig } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { IndexedDBStorage } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web({
+      // Custom IndexedDB database name
+      fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
+      // Revalidate every 12 hours instead of the default 24h
+      fheArtifactCacheTTL: 43_200,
+    }),
   },
-  // Custom IndexedDB database name
-  fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
-  // Revalidate every 12 hours instead of the default 24h
-  fheArtifactCacheTTL: 43_200,
 });
 ```
 
 {% endtab %}
-{% tab title="RelayerNode (default)" %}
+{% tab title="node() (default)" %}
 
 ```ts
-import { RelayerNode } from "@zama-fhe/sdk/node";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-// RelayerNode defaults to MemoryStorage — artifacts are cached in-process
-const relayer = new RelayerNode({
-  getChainId: () => signer.getChainId(),
-  poolSize: 4,
-  transports: {
-    [11155111]: {
-      network: process.env.RPC_URL!,
-      auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
-    },
+// node() defaults to MemoryStorage — artifacts are cached in-process
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: node({ poolSize: 4 }),
   },
 });
 ```
@@ -85,37 +87,6 @@ const relayer = new RelayerNode({
 {% hint style="info" %}
 The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
 {% endhint %}
-
-{% endtab %}
-{% tab title="Direct instantiation" %}
-
-```ts
-import { FheArtifactCache, SepoliaConfig } from "@zama-fhe/sdk";
-
-const cache = new FheArtifactCache({
-  storage: myStorage,
-  chainId: 11155111,
-  relayerUrl: SepoliaConfig.relayerUrl,
-  ttl: 86_400,
-});
-
-// Fetch public key (with cache-through)
-const pk = await cache.getPublicKey(async () => {
-  // Your network fetcher — called only on cache miss
-  return { publicKeyId: "abc", publicKey: new Uint8Array([...]) };
-});
-
-// Fetch public parameters for a specific bit size
-const params = await cache.getPublicParams(2048, async () => {
-  return { publicParamsId: "def", publicParams: new Uint8Array([...]) };
-});
-
-// Check if cached artifacts are still fresh
-const invalidated = await cache.revalidateIfDue();
-if (invalidated) {
-  // Re-fetch artifacts — cache was cleared
-}
-```
 
 {% endtab %}
 {% endtabs %}
@@ -136,13 +107,13 @@ new FheArtifactCache(opts);
 
 ## Methods
 
-### getPublicKey
+### fetchFheEncryptionKeyBytes
 
 ```ts
-cache.getPublicKey(fetcher): Promise<PublicKeyResult>
+cache.fetchFheEncryptionKeyBytes(fetcher): Promise<PublicKeyResult>
 ```
 
-Returns the cached FHE public key, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
+Returns the cached FHE encryption key bytes, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
 
 **Parameters:**
 
@@ -188,7 +159,7 @@ Concurrent calls are coalesced. On transient failures (network errors, 5xx), the
 
 ## Relayer config options
 
-When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these constructor options:
+When using `web()` or `node()` transport factories, configure artifact caching with these options:
 
 ### fheArtifactStorage
 
@@ -196,8 +167,8 @@ When using `RelayerWeb` or `RelayerNode`, configure artifact caching with these 
 
 Persistent storage backend for caching FHE artifacts.
 
-- **`RelayerWeb`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`RelayerNode`**: defaults to `new MemoryStorage()` — in-process caching.
+- **`web()`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
+- **`node()`**: defaults to `new MemoryStorage()` — in-process caching.
 
 FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
 
@@ -213,7 +184,7 @@ Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on e
 
 ## How it works
 
-1. **First load** — The SDK fetches the public key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
+1. **First load** — The SDK fetches the FHE encryption key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
 2. **Subsequent loads** — The SDK reads from storage (instant), skipping the multi-MB network download.
 3. **Revalidation** — Periodically (controlled by `ttl`), the cache issues `HEAD` requests with conditional headers to the artifact CDN. If the server returns 405 (Method Not Allowed), the cache falls back to a `GET` request. If artifacts haven't changed (304), only timestamps are updated. If they have changed (200), the entire cache is cleared and artifacts are re-fetched on next use.
 4. **Fail-open** — On network errors or malformed manifests, the cache continues serving stale data and retries revalidation after 5 minutes.
@@ -224,7 +195,7 @@ Cache entries are scoped by chain ID:
 
 | Key pattern                   | Content                                                 |
 | ----------------------------- | ------------------------------------------------------- |
-| `fhe:pubkey:{chainId}`        | Public key (base64 + metadata)                          |
+| `fhe:pubkey:{chainId}`        | FHE encryption key (base64 + metadata)                  |
 | `fhe:params:{chainId}:{bits}` | Public parameters for a given bit size                  |
 | `fhe:params-index:{chainId}`  | Array of cached bit sizes (for cold-start revalidation) |
 

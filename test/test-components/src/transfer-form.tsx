@@ -1,22 +1,14 @@
 "use client";
 
-import {
-  useConfidentialTransfer,
-  useConfidentialBalance,
-  useMetadata,
-  type Address,
-} from "@zama-fhe/react-sdk";
+import { useConfidentialTransfer, useConfidentialBalance, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
+import { useAccount } from "wagmi";
 
-export function TransferForm({
-  tokenAddress,
-  wrapperAddress,
-}: {
-  tokenAddress: Address;
-  wrapperAddress?: Address;
-}) {
+export function TransferForm({ tokenAddress }: { tokenAddress: Address }) {
+  const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ tokenAddress });
-  const transfer = useConfidentialTransfer({ tokenAddress, wrapperAddress });
+  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
+  const transfer = useConfidentialTransfer({ address: tokenAddress });
 
   return (
     <form
@@ -42,6 +34,7 @@ export function TransferForm({
         type="text"
         name="recipient"
         placeholder="Recipient address (0x...)"
+        aria-label="Recipient address"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="recipient-input"
@@ -51,6 +44,7 @@ export function TransferForm({
         type="text"
         name="amount"
         placeholder="Amount"
+        aria-label="Amount"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="amount-input"

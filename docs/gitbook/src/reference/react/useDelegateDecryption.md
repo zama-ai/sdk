@@ -22,7 +22,7 @@ import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
 
 function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: delegate, isPending, error } = useDelegateDecryption({ tokenAddress });
+  const { mutateAsync: delegate, isPending, error } = useDelegateDecryption(tokenAddress);
 
   async function handleDelegate() {
     const { txHash } = await delegate({
@@ -45,20 +45,14 @@ function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 token contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: delegate } = useDelegateDecryption({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: delegate } = useDelegateDecryption("0xToken");
 ```
 
 ---

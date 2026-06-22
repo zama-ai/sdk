@@ -22,7 +22,7 @@ import { useUnshield } from "@zama-fhe/react-sdk";
 import { useUnshield } from "@zama-fhe/react-sdk";
 
 function UnshieldButton() {
-  const { mutateAsync: unshield, isPending } = useUnshield({ tokenAddress: "0xToken" });
+  const { mutateAsync: unshield, isPending } = useUnshield("0xWrapper");
 
   async function handleUnshield() {
     await unshield({
@@ -45,28 +45,28 @@ function UnshieldButton() {
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 {% endtab %}
@@ -74,20 +74,14 @@ const sdk = new ZamaSDK({
 
 ## Parameters
 
-```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: unshield } = useUnshield({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: unshield } = useUnshield("0xWrapper");
 ```
 
 ---
@@ -148,12 +142,12 @@ await unshield({
 **Throws:**
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no cached credentials). Call `allow()` first or use `skipBalanceCheck: true`
+- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
 ```ts
-import { type UnshieldParams } from "@zama-fhe/react-sdk";
+import { type UnshieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
@@ -167,4 +161,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 - [useUnshieldAll](./useUnshieldAll.md) — unshield the entire confidential balance
 - [useResumeUnshield](./useResumeUnshield.md) — resume an interrupted unshield
 - [useShield](./useShield.md) — reverse operation, shield public tokens
-- [Token.unshield](../sdk/Token.md#unshield) — imperative equivalent on the `Token` class
+- [WrappedToken.unshield](../sdk/WrappedToken.md#unshield) — imperative equivalent on the `WrappedToken` class

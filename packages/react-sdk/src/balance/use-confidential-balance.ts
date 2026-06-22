@@ -2,40 +2,36 @@
 
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { confidentialBalanceQueryOptions, signerAddressQueryOptions } from "@zama-fhe/sdk/query";
-import { useZamaSDK } from "../provider";
-import { useReadonlyToken } from "../token/use-readonly-token";
+import { confidentialBalanceQueryOptions } from "@zama-fhe/sdk/query";
+import { useToken } from "../token/use-token";
 import { useQuery } from "../utils/query";
+import { useWalletAccount } from "../utils/wallet-account";
 
-/** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
   /** Address of the confidential token contract. */
-  tokenAddress: Address;
+  address: Address;
+  /** Account to fetch balance for. The query is disabled while `undefined`. */
+  account: Address | undefined;
 }
 
-/** Query options for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceOptions extends Omit<
   UseQueryOptions<bigint>,
   "queryKey" | "queryFn" | "enabled"
 > {
-  /** Whether the query is enabled. Callback form is not supported in composite hooks. */
+  /** Set this to `false` to disable this query from automatically running. */
   enabled?: boolean;
 }
 
 /**
- * Declarative hook to read the connected wallet's confidential token balance.
- * Calls `token.balanceOf(owner)` which reads the on-chain handle and decrypts
- * via the SDK. Cached values are returned instantly — the relayer is only hit
- * when the handle changes.
- *
- * @param config - Token address configuration.
- * @param options - React Query options forwarded to the balance query.
- * @returns The balance query result.
+ * Hook for fetching a confidential token balance. Reads the on-chain encrypted
+ * value and decrypts via the SDK; cached clear values are returned instantly
+ * and the relayer is only hit when the encrypted value changes.
  *
  * @example
  * ```tsx
- * const { data: balance, isLoading } = useConfidentialBalance({
- *   tokenAddress: "0x...",
+ * const { data: balance } = useConfidentialBalance({
+ *   address: "0xToken",
+ *   account: "0xAccount",
  * });
  * ```
  */
@@ -43,23 +39,23 @@ export function useConfidentialBalance(
   config: UseConfidentialBalanceConfig,
   options?: UseConfidentialBalanceOptions,
 ) {
-  const { tokenAddress } = config;
+  const { address, account } = config;
   const { enabled = true } = options ?? {};
-  const sdk = useZamaSDK();
-  const token = useReadonlyToken(tokenAddress);
+  const token = useToken(address);
+  const walletAccount = useWalletAccount(token.sdk);
 
-  const addressQuery = useQuery<Address>(signerAddressQueryOptions(sdk.signer));
-
-  const owner = addressQuery.data;
-
-  const baseOptions = confidentialBalanceQueryOptions(token, {
-    tokenAddress,
-    owner,
-  });
+  const baseOptions = confidentialBalanceQueryOptions(
+    token,
+    {
+      tokenAddress: address,
+      account,
+    },
+    { walletAccount },
+  );
 
   return useQuery<bigint>({
     ...baseOptions,
     ...options,
-    enabled: baseOptions.enabled && enabled,
+    enabled: Boolean(baseOptions.enabled) && enabled,
   });
 }

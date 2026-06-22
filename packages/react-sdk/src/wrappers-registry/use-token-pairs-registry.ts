@@ -15,7 +15,7 @@ export function useTokenPairsRegistry() {
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly TokenWrapperPair[]>(
-    tokenPairsQueryOptions(sdk.signer, {
+    tokenPairsQueryOptions(sdk, {
       registryAddress,
     }),
   );

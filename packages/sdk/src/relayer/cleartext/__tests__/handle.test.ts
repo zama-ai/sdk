@@ -3,10 +3,11 @@ import { toBytes } from "viem";
 import { HANDLE_VERSION } from "../constants";
 import { fheTypeIdFromName } from "../fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
-import { hardhatCleartextConfig } from "../presets";
+import { hardhat } from "../../../chains";
+import { describe, expect, test } from "../../../test-fixtures";
 
 describe("handle", () => {
-  it("computeInputHandle matches precomputed test vector for index 0", () => {
+  test("computeInputHandle matches precomputed test vector for index 0", () => {
     const random32 = toBytes(("0x" + "11".repeat(32)) as `0x${string}`);
     const mockCiphertext = computeMockCiphertext(fheTypeIdFromName("euint8"), 42n, random32);
     const expectedCiphertext = "0x1668ad37a597863340858d59a40264ceed77d79ff8001c02d8768c2a6f098da6";
@@ -15,8 +16,8 @@ describe("handle", () => {
       mockCiphertext,
       0,
       fheTypeIdFromName("euint8"),
-      hardhatCleartextConfig.aclContractAddress,
-      BigInt(hardhatCleartextConfig.chainId),
+      hardhat.aclContractAddress,
+      BigInt(hardhat.id),
     );
     const expectedHandle = "0x9067cd93773315815e07e738be1bd5c043044a8fc1000000000000007a690200";
 
@@ -24,14 +25,14 @@ describe("handle", () => {
     expect(handleHex).toBe(expectedHandle);
   });
 
-  it("computeInputHandle matches precomputed test vector for non-zero index", () => {
+  test("computeInputHandle matches precomputed test vector for non-zero index", () => {
     const random32 = toBytes(("0x" + "22".repeat(32)) as `0x${string}`);
     const mockCiphertext = computeMockCiphertext(fheTypeIdFromName("euint8"), 99n, random32);
     const handleHex = computeInputHandle(
       mockCiphertext,
       5,
       fheTypeIdFromName("euint8"),
-      hardhatCleartextConfig.aclContractAddress,
+      hardhat.aclContractAddress,
       31_337n,
     );
     const expectedHandle = "0xcd3bf5700ed87292362798f9ee0f28510348fa3b78050000000000007a690200";
@@ -44,7 +45,7 @@ describe("handle", () => {
     expect((handle >> 80n) & 0xffn).toBe(5n);
   });
 
-  it("computeMockCiphertext matches a precomputed test vector", () => {
+  test("computeMockCiphertext matches a precomputed test vector", () => {
     const random32 = toBytes(("0x" + "33".repeat(32)) as `0x${string}`);
     const result = computeMockCiphertext(fheTypeIdFromName("euint16"), 0x1234n, random32);
     const expected = "0xc9e84391d90f823647ae0840c852a338860399a6a8e1d4862d64db814bd491d6";
@@ -52,7 +53,7 @@ describe("handle", () => {
     expect(result).toBe(expected);
   });
 
-  it("computeMockCiphertext distinguishes bool and uint256 vectors", () => {
+  test("computeMockCiphertext distinguishes bool and uint256 vectors", () => {
     const random32 = toBytes(("0x" + "44".repeat(32)) as `0x${string}`);
 
     const boolCiphertext = computeMockCiphertext(fheTypeIdFromName("ebool"), 1n, random32);
@@ -65,13 +66,13 @@ describe("handle", () => {
     expect(boolCiphertext).not.toBe(uint256Ciphertext);
   });
 
-  it("computeMockCiphertext rejects random values not equal to 32 bytes", () => {
+  test("computeMockCiphertext rejects random values not equal to 32 bytes", () => {
     expect(() => computeMockCiphertext(fheTypeIdFromName("euint8"), 1n, toBytes("0x1234"))).toThrow(
       /exactly 32 bytes/i,
     );
   });
 
-  it("computeInputHandle validates index range", () => {
+  test("computeInputHandle validates index range", () => {
     const mockCiphertext = "0x1668ad37a597863340858d59a40264ceed77d79ff8001c02d8768c2a6f098da6";
 
     expect(() =>
@@ -79,7 +80,7 @@ describe("handle", () => {
         mockCiphertext,
         -1,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);
@@ -88,7 +89,7 @@ describe("handle", () => {
         mockCiphertext,
         256,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);
@@ -97,7 +98,7 @@ describe("handle", () => {
         mockCiphertext,
         1.5,
         fheTypeIdFromName("euint8"),
-        hardhatCleartextConfig.aclContractAddress,
+        hardhat.aclContractAddress,
         31_337n,
       ),
     ).toThrow(/between 0 and 255/i);

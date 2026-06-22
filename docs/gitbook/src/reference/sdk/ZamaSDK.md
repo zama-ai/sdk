@@ -5,7 +5,7 @@ description: Entry point for all confidential contract operations.
 
 # ZamaSDK
 
-Entry point for all confidential contract operations — creates tokens, manages sessions, and coordinates the relayer and signer.
+Entry point for all confidential contract operations — creates tokens, manages permits, and coordinates the relayer and signer.
 
 ## Import
 
@@ -16,174 +16,121 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 ## Usage
 
 {% tabs %}
-{% tab title="app.ts" %}
+{% tab title="viem" %}
 
 ```ts
-import { ZamaSDK, indexedDBStorage } from "@zama-fhe/sdk";
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  publicClient,
+  walletClient,
+  relayers: {
+    [sepolia.id]: web(),
+    [mainnet.id]: web(),
+  },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
-{% tab title="config.ts" %}
+{% tab title="custom signer" %}
 
 ```ts
-import { RelayerWeb, MainnetConfig, SepoliaConfig } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { createConfig, ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [MainnetConfig.chainId]: {
-      ...MainnetConfig,
-      relayerUrl: "https://your-app.com/api/relayer/1",
-      network: "https://mainnet.infura.io/v3/YOUR_KEY",
-    },
-    [SepoliaConfig.chainId]: {
-      ...SepoliaConfig,
-      relayerUrl: "https://your-app.com/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
-  },
+const config = createConfig({
+  chains: [sepolia],
+  signer: myCustomSigner, // GenericSigner
+  provider: myCustomProvider, // GenericProvider
+  storage: memoryStorage,
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
+
+const sdk = new ZamaSDK(config);
 ```
 
 {% endtab %}
 {% endtabs %}
 
-## Constructor
+{% hint style="warning" %}
+`ZamaConfig` is a branded type — always obtain it via `createConfig()` (or an adapter-specific factory like `createConfig` from `@zama-fhe/sdk/viem`). Do not construct the config object by hand.
+{% endhint %}
 
-### relayer
+## createConfig options
 
-`RelayerWeb | RelayerNode`
+All options below are passed to `createConfig()`, which validates them and returns a `ZamaConfig` for the `ZamaSDK` constructor.
 
-Handles FHE encryption, decryption, and keypair management.
+### chains
+
+`readonly FheChain[]`
+
+FHE chain configurations. At least one chain is required. Use built-in presets from `@zama-fhe/sdk/chains`.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
+import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia, mainnet],
+  // ...
 });
 ```
 
-### signer
+### relayers
 
-`GenericSigner`
+`Record<number, RelayerConfig>`
 
-Wallet interface for signing transactions and typed data. Use `ViemSigner`, `EthersSigner`, `WagmiSigner`, or implement `GenericSigner`.
+Per-chain relayer factories. Each chain in `chains` must have a matching entry.
 
 ```ts
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
 
-const signer = new ViemSigner({ walletClient, publicClient });
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
+const config = createConfig({
+  chains: [sepolia],
+  relayers: { [sepolia.id]: web() },
+  // ...
 });
 ```
+
+### provider / signer
+
+Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). For the generic `createConfig` from `@zama-fhe/sdk`, pass a `GenericProvider` and optionally a `GenericSigner`. Omit the signer for read-only usage (indexers, SSR). Signer-dependent operations throw `SignerNotConfiguredError` when invoked without a signer.
 
 ### storage
 
-`GenericStorage`
+`GenericStorage | undefined`
 
-Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers).
+Persists the encrypted transport key pair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
-```ts
-import { indexedDBStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-});
-```
-
----
-
-### sessionStorage
+### permitStorage
 
 `GenericStorage | undefined`
 
-Stores wallet signatures for the current session. Defaults to in-memory storage. Use `chromeSessionStorage` for MV3 web extensions.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for transport key pair, memory for permits) for high-security flows.
 
-```ts
-import { chromeSessionStorage } from "@zama-fhe/sdk";
-
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
-});
-```
-
-### keypairTTL
+### transportKeyPairTTL
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `2592000` (30 days). After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+Transport key pair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the key pair.
 
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-  keypairTTL: 604800, // 7 days
-});
-```
+### permitTTL
 
-### sessionTTL
+`number | undefined`
 
-`number | "infinite" | undefined`
-
-Session signature lifetime in seconds. Default: `2592000` (30 days). Set to `0` to require a wallet signature on every operation. Pass `"infinite"` for a session that never expires.
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-  sessionTTL: 3600, // 1 hour
-});
-```
-
-### registryAddresses
-
-`Record<number, Address> | undefined`
-
-Per-chain wrappers registry address overrides, merged on top of built-in defaults. Use this for custom or local chains (e.g. Hardhat) where no default registry exists.
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-  registryAddresses: { [31337]: "0xYourHardhatRegistry" },
-});
-```
+Permit lifetime in days. Default: `30`. Controls how long each signed EIP-712 permit remains valid.
 
 ### registryTTL
 
 `number | undefined`
 
-How long cached registry results remain valid, in seconds. Default: `86400` (24 hours).
-
-```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-  registryTTL: 3600, // 1 hour
-});
-```
+How long cached registry results remain valid, in seconds. Default: `86400` (24 hours). Must be a non-negative integer.
 
 ### onEvent
 
@@ -192,10 +139,11 @@ const sdk = new ZamaSDK({
 Lifecycle event callback for debugging and telemetry. Events never contain sensitive data.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
   },
@@ -204,33 +152,11 @@ const sdk = new ZamaSDK({
 
 ## Properties
 
-### cache
-
-`DecryptCache` (readonly)
-
-Persistent cache for decrypted FHE plaintext values. Backed by the same `GenericStorage` passed to the constructor (e.g. IndexedDB in browsers), so **cached values survive page reloads**.
-
-Entries are scoped by `(requester, contractAddress, handle)` — a different signer cannot read another user's cached decryptions, mirroring the on-chain ACL. When the on-chain handle changes (e.g. after a transfer), the old entry is automatically a miss.
-
-The cache is cleared automatically on:
-
-- `revoke()` / `revokeSession()` — clears entries for the current signer
-- Wallet disconnect, account change, or chain change — clears all entries
-
-```ts
-// Manual clear for the current signer
-const address = await sdk.signer.getAddress();
-await sdk.cache.clearForRequester(address);
-
-// Clear everything
-await sdk.cache.clearAll();
-```
-
 ### registry
 
 `WrappersRegistry` (readonly)
 
-Auto-configured wrappers registry instance. Shares the SDK's signer, `registryAddresses`, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
+Auto-configured wrappers registry instance. Shares the SDK's provider, chain registry addresses, and `registryTTL`. Prefer this over `createWrappersRegistry()` to benefit from a single shared cache.
 
 ```ts
 const pairs = await sdk.registry.listPairs({ page: 1 });
@@ -241,75 +167,111 @@ const result = await sdk.registry.getConfidentialToken(erc20Address);
 
 ### createToken
 
-`(address: Address, wrapperAddress?: Address) => Token`
+`(address: Address) => Token`
 
-Creates a read/write token instance for shielding, transferring, and unshielding.
+Creates a [`Token`](Token.md) instance for an ERC-7984 confidential token. Supports balance reads, encrypted transfers, operator approvals, and delegated decryption.
 
 ```ts
-const token = sdk.createToken("0xEncryptedERC20");
-
-// When the wrapper differs from the encrypted ERC-20 contract
-const token = sdk.createToken("0xTokenAddress", "0xWrapperAddress");
+const token = sdk.createToken("0xConfidentialToken");
 ```
 
-### createReadonlyToken
+### createWrappedToken
 
-`(address: Address) => ReadonlyToken`
+`(address: Address) => WrappedToken`
 
-Creates a read-only token instance for balance decryption and metadata queries.
+Creates a [`WrappedToken`](WrappedToken.md) instance for an ERC-7984 ERC-20 wrapper. Adds wrapper-specific operations (shield, unshield, allowance) on top of the base `Token` API. The address is the wrapper contract itself — the wrapper IS the confidential token.
 
 ```ts
-const readonlyToken = sdk.createReadonlyToken("0xEncryptedERC20");
+const wrappedToken = sdk.createWrappedToken("0xWrapper");
 ```
 
 ### createWrappersRegistry
 
 `(registryAddresses?: Record<number, Address>) => WrappersRegistry`
 
-Creates a wrappers registry instance for querying on-chain token wrapper pairs. On Mainnet and Sepolia the registry address is resolved automatically.
+Creates a wrappers registry instance for querying on-chain token wrapper pairs. Registry addresses come from built-in defaults, configured chain definitions, and optional overrides passed to this method.
 
 ```ts
 // Mainnet / Sepolia — resolved automatically
 const registry = sdk.createWrappersRegistry();
 
-// Hardhat or custom chain — override per chain
+// Hardhat or custom chain — override per chain for this registry instance
 const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
 
 const pairs = await registry.getTokenPairs();
 ```
 
-### allow
+### permits.grantPermit
 
 `(contractAddresses: Address[]) => Promise<void>`
 
-Pre-authorize contract addresses for decryption, triggering a single wallet signature prompt. Subsequent [`userDecrypt`](#userdecrypt) calls whose handles span the same set reuse the cached credentials without another prompt.
+Pre-authorize contract addresses for decryption. Signs permits only for contracts not already covered by existing permits. Subsequent [`decryption.decryptValues`](#decryption-decryptvalues) calls whose encrypted values span the covered set proceed without a wallet prompt.
 
 ```ts
 // Sign once for three tokens, then decrypt individually
-await sdk.allow([cUSDT, cDAI, cWETH]);
-const a = await sdk.userDecrypt([{ handle: h1, contractAddress: cUSDT }]);
-const b = await sdk.userDecrypt([{ handle: h2, contractAddress: cDAI }]);
+await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
+const a = await sdk.decryption.decryptValues([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.decryptValues([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
-### userDecrypt
+### permits.hasPermit
 
-`(handles: DecryptHandle[]) => Promise<Record<Handle, ClearValueType>>`
+`(contractAddresses: Address[]) => Promise<boolean>`
 
-Decrypt one or more FHE handles. Returns cached values when available, only calling the relayer for uncached handles. Results are written to the persistent cache (`sdk.cache`) so subsequent calls for the same handles return instantly.
-
-Handles from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero handles (32 zero bytes) resolve to `0n` without hitting the relayer.
-
-When the relayer is actually called, credentials are derived from the contract addresses of the full input handle set (including cached and zero handles), ensuring a stable credential cache key regardless of which handles happen to be cached. If every handle is zero or already cached, no credentials are acquired and no wallet prompt is shown.
+Checks whether the current signer already has stored permits covering every requested contract address. This is a pure storage lookup: it does not prompt the wallet and returns `false` when the SDK has no signer.
 
 ```ts
-const values = await sdk.userDecrypt([
-  { handle: balanceHandle, contractAddress: cUSDT },
-  { handle: flagHandle, contractAddress: myContract },
-]);
-console.log(values[balanceHandle]); // 1000n
+const hasPermit = await sdk.permits.hasPermit([cUSDT, cDAI]);
+if (!hasPermit) {
+  showAuthorizeButton();
+}
 ```
 
-To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the zero-handle-only and fully-cached paths return silently.
+Use this for UI state. `sdk.permits.grantPermit()` is already idempotent and skips the wallet prompt when a covering permit exists.
+
+### permits.grantDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<void>`
+
+Signs and stores a delegated-decryption permit for contracts that the connected signer will decrypt on behalf of `delegator`. The on-chain delegation must already exist and have propagated before delegated decryption succeeds.
+
+```ts
+await sdk.permits.grantDelegationPermit(delegator, [cUSDT]);
+```
+
+### permits.hasDelegationPermit
+
+`(delegator: Address, contractAddresses: Address[]) => Promise<boolean>`
+
+Checks whether the current signer has stored delegated-decryption permits for `delegator` and every requested contract.
+
+```ts
+const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
+```
+
+### decryption.decryptValues
+
+`(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
+
+{% hint style="info" %}
+Renamed from `decryption.userDecrypt` (then briefly `decryptValuesFromPairs`) to align with the Zama glossary and the SDK's single-entrypoint design (prerelease rename). If you were on an old name, update call sites to `decryptValues`.
+{% endhint %}
+
+Decrypt one or more FHE encrypted values. Returns cached values when available, only calling the relayer for uncached inputs. Results are written through the SDK's internal CachingService so subsequent calls for the same inputs return instantly.
+
+Inputs from different contracts can be mixed — they are grouped by `contractAddress` and batched into one relayer call per contract (up to 5 concurrently). Zero encrypted values (32 zero bytes) resolve to `0n` without hitting the relayer.
+
+When the relayer is actually called, permits are resolved from the contract addresses of the full input set (including cached and zero entries), ensuring a stable permit scope regardless of which entries happen to be cached. If every entry is zero or already cached, no permits are needed and no wallet prompt is shown.
+
+```ts
+const values = await sdk.decryption.decryptValues([
+  { encryptedValue: balance, contractAddress: cUSDT },
+  { encryptedValue: flag, contractAddress: myContract },
+]);
+console.log(values[balance]); // 1000n
+```
+
+To observe decryption lifecycle, subscribe to SDK events (`DecryptStart`, `DecryptEnd`, `DecryptError`) via the `onEvent` config. Events fire only when the relayer is actually called — the all-zero and fully-cached paths return silently.
 
 The `onEvent` callback is a single function, so for multi-listener observability you can bridge it into a standard event bus. Pick whichever matches your runtime:
 
@@ -324,27 +286,32 @@ import {
   type DecryptErrorEvent,
 } from "@zama-fhe/sdk";
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
   onEvent: (event) => {
     window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
   },
 });
+const sdk = new ZamaSDK(config);
 
 window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
-  const { durationMs, handles, result } = e.detail;
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
+  const { durationMs, encryptedValues, result } = e.detail;
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
   }
 });
 
 window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
-  const { error, durationMs, handles } = e.detail;
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
+  const { error, durationMs, encryptedValues } = e.detail;
+  console.error(
+    `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+    error,
+  );
 });
 ```
 
@@ -363,42 +330,85 @@ import {
 
 const emitter = new EventEmitter();
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage,
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
   onEvent: (event) => emitter.emit(event.type, event),
 });
+const sdk = new ZamaSDK(config);
 
-emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, handles, result }: DecryptEndEvent) => {
-  console.log(`Decrypted ${handles.length} handle(s) in ${durationMs}ms`);
-  // result is Record<Handle, ClearValueType> — look up a specific handle
-  for (const h of handles) {
-    console.log(`${h} → ${result[h]}`);
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
   }
 });
 
-emitter.on(ZamaSDKEvents.DecryptError, ({ error, durationMs, handles }: DecryptErrorEvent) => {
-  console.error(`Decryption failed after ${durationMs}ms for ${handles.length} handle(s):`, error);
-});
+emitter.on(
+  ZamaSDKEvents.DecryptError,
+  ({ error, durationMs, encryptedValues }: DecryptErrorEvent) => {
+    console.error(
+      `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+      error,
+    );
+  },
+);
 ```
 
 {% endtab %}
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption. The method is named `userDecrypt` (not `decrypt`) because it requires the connected wallet's credentials — distinguishing it from gateway-level decryption that happens on-chain without user authentication. In React, use [`useUserDecrypt`](../react/useUserDecrypt.md) which wraps this method with TanStack Query semantics.
+This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](../react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
 
-### revokeSession
+### onWalletAccountChange
+
+`(listener: (change: WalletAccountChange) => void) => () => void`
+
+Subscribe to wallet account transitions (connect, disconnect, account change, chain change). Returns an unsubscribe function. Each transition carries `previous` and `next` wallet account objects (`{ address, chainId }`).
+
+```ts
+const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
+  if (!next) console.log("Wallet disconnected");
+  else console.log(`Switched to ${next.address} on chain ${next.chainId}`);
+});
+```
+
+### permits.revokePermits
+
+`(contracts?: Address[]) => Promise<void>`
+
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The transport key pair is not affected.
+
+```ts
+await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
+await sdk.permits.revokePermits(); // all permits, all chains
+```
+
+### permits.clear
 
 `() => Promise<void>`
 
-Clears the session signature **and** cached decrypted values without specifying addresses. The next decrypt requires a fresh wallet signature.
+Wipe the transport key pair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
-await sdk.revokeSession();
+await sdk.permits.clear();
 ```
+
+### delegations
+
+`sdk.delegations` manages on-chain decryption delegation through the ACL contract:
+
+- `delegateDecryption({ contractAddress, delegateAddress, expirationDate? })`
+- `revokeDelegation({ contractAddress, delegateAddress })`
+- `isActive({ contractAddress, delegatorAddress, delegateAddress })`
+- `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
+
+See the [Delegations reference](./delegation.md) for the full API and propagation notes.
 
 ### dispose
 
@@ -423,6 +433,6 @@ sdk.terminate();
 ## Related
 
 - [Token](./Token.md) — read/write token operations
-- [ReadonlyToken](./ReadonlyToken.md) — read-only token operations
+- [WrappedToken](./WrappedToken.md) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
 - [WrappersRegistry](./WrappersRegistry.md) — on-chain token wrappers registry
 - [Configuration guide](../../guides/configuration.md) — relayer, signer, and storage setup

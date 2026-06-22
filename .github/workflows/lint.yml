@@ -12,6 +12,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Safe-chain enforces its own minimum-package-age check independently of
+  # pnpm-workspace.yaml#minimumReleaseAgeExclude — mirror the exemption here.
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -32,16 +37,19 @@ jobs:
           submodules: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
 
       - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm ci
 
       - name: Build packages
         run: pnpm build

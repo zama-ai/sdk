@@ -1,0 +1,108 @@
+import type { FheChain, AtLeastOneChain } from "../chains";
+import type { ZamaSDKEventListener } from "../events";
+import type { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
+import type { RelayerWeb } from "../relayer/relayer-web";
+import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
+import type { RelayerWorkerClient } from "../worker/worker.client";
+
+export type { AtLeastOneChain };
+
+// ── Shared option shapes ─────────────────────────────────────────────────────
+
+/** Options for web() relayer (threads, security, logger, storage). */
+export type WebRelayerOptions = Partial<
+  Pick<
+    RelayerWebConfig,
+    "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL"
+  >
+>;
+
+// ── Relayer config types ─────────────────────────────────────────────────────
+
+/**
+ * Base relayer config.
+ *
+ * Groups chains by config reference identity, calls `createWorker`
+ * once per group with all chain configs, then calls `createRelayer`
+ * per chain with the shared worker.
+ */
+export interface RelayerConfig {
+  readonly type: string;
+  /** Create a shared worker/pool for all chains in this relayer group. */
+  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+  readonly createWorker?: (chains: FheChain[]) => any;
+  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
+  readonly createRelayer: (
+    chain: FheChain,
+    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
+    worker: any,
+  ) => RelayerSDK;
+}
+
+/** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
+export interface WebRelayerConfig extends RelayerConfig {
+  readonly type: "web";
+  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+}
+
+/** Cleartext relayer config — no worker, returns `RelayerCleartext`. */
+export interface CleartextRelayerConfig extends RelayerConfig {
+  readonly type: "cleartext";
+  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+}
+
+/** Shared options across all adapter paths. */
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+  /** FHE chain configurations. Defines which chains support FHE operations. */
+  chains: TChains;
+  /** Per-chain relayer configuration. Every chain must have a relayer entry. */
+  relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+  /** Credential storage. Default: IndexedDB in browser, memory in Node. */
+  storage?: GenericStorage;
+  /** Optional dedicated storage for permits. Defaults to `storage`. */
+  permitStorage?: GenericStorage;
+  /** ML-KEM transport key pair TTL in seconds. Default: 2592000 (30 days). */
+  transportKeyPairTTL?: number;
+  /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
+  permitTTL?: number;
+  /** Registry cache TTL in seconds. Default: 86400 (24h). */
+  registryTTL?: number;
+  /** SDK lifecycle event listener. */
+  onEvent?: ZamaSDKEventListener;
+}
+
+/** Generic config — pass any {@link GenericSigner} and {@link GenericProvider} directly. */
+export interface ZamaConfigGeneric<
+  TChains extends AtLeastOneChain = AtLeastOneChain,
+> extends ZamaConfigBase<TChains> {
+  /**
+   * Optional wallet signer. Omit for read-only usage (indexers, SSR,
+   * pre-wallet-connect states). Signer-required SDK operations throw
+   * `SignerNotConfiguredError` when invoked without a signer.
+   */
+  signer?: GenericSigner;
+  provider: GenericProvider;
+}
+
+declare const zamaConfigBrand: unique symbol;
+
+/**
+ * Resolved, validated config object. Obtain via `createConfig()` or an
+ * adapter-specific factory — never construct by hand.
+ */
+export type ZamaConfig = {
+  readonly chains: readonly FheChain[];
+  readonly relayer: RelayerDispatcher;
+  readonly provider: GenericProvider;
+  readonly signer: GenericSigner | undefined;
+  readonly storage: GenericStorage;
+  readonly permitStorage: GenericStorage;
+  readonly transportKeyPairTTL: number;
+  readonly permitTTL: number;
+  readonly registryTTL: number;
+  readonly onEvent: ZamaSDKEventListener | undefined;
+} & { readonly [zamaConfigBrand]: true };

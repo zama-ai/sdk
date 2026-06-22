@@ -6,8 +6,6 @@ import { tokenMetadataQueryOptions, type TokenMetadata } from "@zama-fhe/sdk/que
 import { useZamaSDK } from "../provider";
 import { useQuery, useSuspenseQuery } from "../utils/query";
 
-export { type TokenMetadata };
-
 /**
  * Read ERC-20 token metadata (name, symbol, decimals).
  * Fetches all three in parallel. Cached indefinitely since metadata is immutable.
@@ -28,7 +26,7 @@ export function useMetadata(
 ) {
   const sdk = useZamaSDK();
   return useQuery<TokenMetadata>({
-    ...tokenMetadataQueryOptions(sdk.signer, tokenAddress),
+    ...tokenMetadataQueryOptions(sdk, tokenAddress),
     ...options,
   });
 }
@@ -47,5 +45,5 @@ export function useMetadata(
  */
 export function useMetadataSuspense(tokenAddress: Address) {
   const sdk = useZamaSDK();
-  return useSuspenseQuery<TokenMetadata>(tokenMetadataQueryOptions(sdk.signer, tokenAddress));
+  return useSuspenseQuery<TokenMetadata>(tokenMetadataQueryOptions(sdk, tokenAddress));
 }

@@ -27,7 +27,7 @@ function extractRevertErrorName(error: unknown): string | null {
 }
 
 /** ACL error name -> typed SDK error mapping. */
-const ACL_ERROR_MAP: Record<string, (cause: Error | undefined) => ZamaError> = {
+const ACL_ERROR_MAP = {
   AlreadyDelegatedOrRevokedInSameBlock: (cause) =>
     new DelegationCooldownError(
       "Only one delegate/revoke per (delegator, delegate, contract) per block. Wait for the next block before retrying.",
@@ -61,30 +61,31 @@ const ACL_ERROR_MAP: Record<string, (cause: Error | undefined) => ZamaError> = {
     }),
   NotDelegatedYet: (cause) =>
     new DelegationNotFoundError("Cannot revoke: no active delegation exists.", { cause }),
-};
+} satisfies Record<string, (cause: unknown) => ZamaError>;
+
+function isAclRevertName(name: string): name is keyof typeof ACL_ERROR_MAP {
+  return name in ACL_ERROR_MAP;
+}
 
 /**
  * Map known ACL Solidity revert error names to typed ZamaError subclasses.
  * Prefers viem's structured `error.cause.data.errorName` when available,
  * falling back to string-includes matching on the error message.
  * Returns `null` if the revert reason is not recognized.
- * @public
+ * @internal
  */
-export function matchAclRevert(error: unknown): ZamaError | null {
-  const cause = error instanceof Error ? error : undefined;
-
+export function matchAclRevert(error: unknown, mappedCause: unknown): ZamaError | null {
   // Prefer structured error data from viem's ContractFunctionRevertedError
   const errorName = extractRevertErrorName(error);
-  if (errorName && errorName in ACL_ERROR_MAP) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by `in` check above
-    return ACL_ERROR_MAP[errorName]!(cause);
+  if (errorName && isAclRevertName(errorName)) {
+    return ACL_ERROR_MAP[errorName](mappedCause);
   }
 
   // Fallback: string matching for non-viem RPC providers
   const message = error instanceof Error ? error.message : String(error);
   for (const [name, factory] of Object.entries(ACL_ERROR_MAP)) {
     if (message.includes(name)) {
-      return factory(cause);
+      return factory(mappedCause);
     }
   }
 

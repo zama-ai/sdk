@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "node_modules/oxlint/configuration_schema.json",
   "plugins": [
     "typescript",
     "unicorn",
@@ -73,6 +73,7 @@
     "curly": "error",
     "no-console": "error",
     "no-eval": "error",
+    "no-underscore-dangle": ["error", { "allow": ["_default"] }],
     "no-implied-eval": "error",
     "import/no-cycle": "error",
     "import/no-duplicates": "error",
@@ -88,6 +89,7 @@
     "@typescript-eslint/no-misused-promises": "error",
     "@typescript-eslint/no-unsafe-type-assertion": "off",
     "@typescript-eslint/no-unnecessary-type-assertion": "off",
+    "@typescript-eslint/no-unnecessary-type-parameters": "off",
     "@typescript-eslint/unbound-method": "off",
     "unicorn/prefer-node-protocol": "error",
     "unicorn/prefer-type-error": "error",
@@ -114,6 +116,7 @@
         "**/__tests__/**",
         "**/test-fixtures.ts",
         "**/test-fixtures.tsx",
+        "**/test-fixtures/**",
         "**/vitest.setup.ts",
         "vitest.setup.ts"
       ],
@@ -121,6 +124,7 @@
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
         "@typescript-eslint/no-floating-promises": "off",
+        "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
         "@typescript-eslint/unbound-method": "off",
         "no-shadow": "off",
         "import/no-cycle": "off",
@@ -128,6 +132,7 @@
         "no-new": "off",
         "vitest/hoisted-apis-on-top": "off",
         "vitest/require-mock-type-parameters": "off",
+        "vitest/no-standalone-expect": "off",
         "react/rules-of-hooks": "off"
       }
     },
@@ -156,9 +161,6 @@
         "**/*.config.mts",
         "**/*.config.cts",
         "packages/sdk/src/worker/**",
-        "packages/sdk/src/token/credentials-manager.ts",
-        "packages/sdk/src/token/credential-manager-base.ts",
-        "packages/sdk/src/token/balance-cache.ts",
         "packages/sdk/src/token/token.ts"
       ],
       "rules": {
@@ -167,16 +169,13 @@
     },
     {
       "files": [
-        "packages/react-sdk/src/relayer/use-user-decrypted-values.ts",
         "packages/react-sdk/src/wagmi/wagmi-signer.ts",
         "packages/sdk/src/ethers/ethers-signer.ts",
         "packages/sdk/src/events/onchain-events.ts",
         "packages/sdk/src/query/confidential-balances.ts",
         "packages/sdk/src/relayer/cleartext/relayer-cleartext.ts",
         "packages/sdk/src/relayer/relayer-utils.ts",
-        "packages/sdk/src/token/readonly-token.ts",
         "packages/sdk/src/token/token.ts",
-        "packages/sdk/src/utils.ts",
         "packages/sdk/src/viem/viem-signer.ts",
         "packages/sdk/src/worker/worker.node-pool.ts"
       ],

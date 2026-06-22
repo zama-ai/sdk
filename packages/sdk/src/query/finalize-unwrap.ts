@@ -1,15 +1,16 @@
-import type { Token } from "../token/token";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
-
 /** Variables for {@link finalizeUnwrapMutationOptions}. */
-export interface FinalizeUnwrapParams {
-  burnAmountHandle: Address;
-}
+export type FinalizeUnwrapParams = {
+  /** Identifier from an `UnwrapRequested` event. */
+  unwrapRequestId: EncryptedValue;
+};
 
 export function finalizeUnwrapMutationOptions(
-  token: Token,
+  token: WrappedToken,
 ): MutationFactoryOptions<
   readonly ["zama.finalizeUnwrap", Address],
   FinalizeUnwrapParams,
@@ -17,6 +18,6 @@ export function finalizeUnwrapMutationOptions(
 > {
   return {
     mutationKey: ["zama.finalizeUnwrap", token.address] as const,
-    mutationFn: async ({ burnAmountHandle }) => token.finalizeUnwrap(burnAmountHandle),
+    mutationFn: async ({ unwrapRequestId }) => token.finalizeUnwrap(unwrapRequestId),
   };
 }

@@ -11,7 +11,7 @@ The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- tha
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted keypairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
 
 This means:
 
@@ -26,10 +26,13 @@ Any component that imports from `@zama-fhe/react-sdk` must be a Client Component
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    address: tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Loading...</span>;
@@ -48,23 +51,25 @@ Create a dedicated client component that sets up the SDK providers. This keeps t
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ZamaProvider, RelayerWeb, indexedDBStorage } from "@zama-fhe/react-sdk";
-import { WagmiSigner } from "@zama-fhe/react-sdk/wagmi";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 const wagmiConfig = createConfig({
   chains: [sepolia],
   transports: { [sepolia.id]: http() },
 });
 
-const signer = new WagmiSigner({ config: wagmiConfig });
-const relayer = new RelayerWeb({
-  getChainId: () => signer.getChainId(),
-  transports: {
-    [sepolia.id]: {
-      relayerUrl: "/api/relayer/11155111",
-      network: "https://sepolia.infura.io/v3/YOUR_KEY",
-    },
-  },
+const mySepolia = {
+  ...sepoliaFhe,
+  relayerUrl: "/api/relayer/11155111",
+} as const satisfies FheChain;
+
+const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
 
 const queryClient = new QueryClient();
@@ -73,9 +78,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ZamaProvider relayer={relayer} signer={signer} storage={indexedDBStorage}>
-          {children}
-        </ZamaProvider>
+        <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
@@ -109,19 +112,21 @@ A common mistake is initializing the relayer or signer in a shared module that g
 
 ```ts
 // lib/sdk.ts — DO NOT do this
-import { RelayerWeb } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { createConfig } from "@zama-fhe/sdk/viem";
 
 // This runs during SSR and crashes — Web Worker is not available
-export const relayer = new RelayerWeb({ ... });
+export const config = createConfig({ ... });
 ```
 
 Instead, keep all SDK initialization inside a `"use client"` file (like the `Providers` component above), or gate it behind a dynamic import:
 
 ```ts
 // lib/sdk.ts — safe alternative
-export async function getRelayer() {
-  const { RelayerWeb } = await import("@zama-fhe/sdk");
-  return new RelayerWeb({ ... });
+export async function getConfig() {
+  const { web } = await import("@zama-fhe/sdk");
+  const { createConfig } = await import("@zama-fhe/sdk/viem");
+  return createConfig({ ... });
 }
 ```
 
@@ -137,7 +142,7 @@ export default function PortfolioPage() {
   return (
     <div>
       <h1>My Portfolio</h1>
-      <TokenBalance address="0xEncryptedERC20" />
+      <TokenBalance tokenAddress="0xEncryptedERC20" />
     </div>
   );
 }
@@ -148,10 +153,13 @@ export default function PortfolioPage() {
 "use client";
 
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
 
-export function TokenBalance({ address }: { address: string }) {
+export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
+  const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress: address,
+    address: tokenAddress,
+    account: address,
   });
 
   if (isLoading) return <span>Decrypting...</span>;

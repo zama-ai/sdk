@@ -6,6 +6,9 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
@@ -14,10 +17,20 @@ import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { ethers } from 'ethers';
 import { Hex } from 'viem';
+import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { Provider } from 'ethers';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { Signer } from 'ethers';
+import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
+
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
 
 export { EIP1193EventMap }
 
@@ -25,35 +38,40 @@ export { EIP1193Events }
 
 export { EIP1193Provider }
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
-export class EthersSigner implements GenericSigner {
-    constructor(config: EthersSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
+export type EncryptedValue = Bytes32Hex;
+
+// @public
+export class EthersProvider implements GenericProvider {
+    constructor(config: EthersProviderConfig);
     // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    //
+}
+
+// @public
+export type EthersProviderConfig = {
+    ethereum: EIP1193Provider;
+} | {
+    provider: ethers.Provider;
+};
+
+// @public
+export class EthersSigner extends BaseSigner {
+    constructor(config: EthersSignerConfig);
+    // (undocumented)
+    protected onDispose(): void;
+    // (undocumented)
+    refreshWalletAccount(): Promise<WalletAccount | undefined>;
+    // (undocumented)
+    requireWalletAccount(operation: string): WalletAccount;
+    // (undocumented)
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -63,9 +81,9 @@ export type EthersSignerConfig = {
     ethereum: EIP1193Provider;
 } | {
     signer: Signer;
-} | {
-    provider: ethers.Provider;
 };
+
+export { Hex }
 
 export { ProviderConnectInfo }
 
@@ -73,8 +91,6 @@ export { ProviderMessage }
 
 export { ProviderRpcError }
 
-// Warning: (ae-forgotten-export) The symbol "EthersCallProvider" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(provider: EthersCallProvider, tokenAddress: Address, userAddress: Address): Promise<unknown>;
 
@@ -105,27 +121,38 @@ export function readTokenPairsSliceContract(provider: EthersCallProvider, regist
 // @public (undocumented)
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
-// Warning: (ae-forgotten-export) The symbol "EthersTransactionSigner" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
-export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
-
-// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
+export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): Promise<`0x${string}`>;
+export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
+
+// @public (undocumented)
+export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
+
+// @public
+export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> = ZamaConfigBase<TChains> & ({
+    ethereum: EIP1193Provider;
+    signer?: never;
+    provider?: never;
+} | {
+    signer: Signer;
+    ethereum?: never;
+    provider?: never;
+} | {
+    ethereum: EIP1193Provider;
+    provider: Provider;
+    signer?: never;
+});
 
 // (No @packageDocumentation comment for this package)
 

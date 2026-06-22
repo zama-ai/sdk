@@ -1,34 +1,43 @@
 import type { Address } from "viem";
-import { ReadonlyToken, type BatchBalancesResult } from "../token/readonly-token";
+import { Token, type BatchBalancesResult } from "../token/token";
+import { assertNonNullable } from "../utils/assertions";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
+import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
 export interface ConfidentialBalancesQueryConfig {
-  owner?: Address;
+  account?: Address;
   query?: Record<string, unknown>;
 }
 
 export function confidentialBalancesQueryOptions(
-  tokens: ReadonlyToken[],
+  tokens: Token[],
   config?: ConfidentialBalancesQueryConfig,
+  signerContext: SignerQueryContext = {},
 ): QueryFactoryOptions<
   BatchBalancesResult,
   Error,
   BatchBalancesResult,
   ReturnType<typeof zamaQueryKeys.confidentialBalances.tokens>
 > {
-  const ownerKey = config?.owner;
+  const accountKey = config?.account;
+  const walletAccount = signerContext.walletAccount;
   const queryOpts = config?.query ?? {};
   const tokenAddresses = tokens.map((token) => token.address);
 
   return {
     ...filterQueryOptions(queryOpts),
-    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, ownerKey),
-    queryFn: async (context) => {
-      const [, { owner: keyOwner }] = context.queryKey;
-      return ReadonlyToken.batchBalancesOf(tokens, keyOwner);
+    queryKey: zamaQueryKeys.confidentialBalances.tokens(tokenAddresses, accountKey, walletAccount),
+    queryFn: async (signerContextQuery) => {
+      const [, { owner: keyOwner }] = signerContextQuery.queryKey;
+      assertNonNullable(keyOwner, "confidentialBalancesQueryOptions: owner");
+      return Token.batchBalancesOf(tokens, keyOwner);
     },
-    enabled: tokens.length > 0 && queryOpts?.enabled !== false,
+    enabled:
+      Boolean(accountKey) &&
+      tokens.length > 0 &&
+      walletAccount !== undefined &&
+      queryOpts?.enabled !== false,
   };
 }

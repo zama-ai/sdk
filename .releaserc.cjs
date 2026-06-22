@@ -54,6 +54,25 @@ module.exports = {
       "@semantic-release/release-notes-generator",
       {
         preset: "conventionalcommits",
+        // Make release-notes sections mirror `releaseRules` above: every type
+        // that triggers a release is shown, the rest hidden. The conventional-
+        // commits preset hides refactor and build by default, so a version cut
+        // from only those commits produced an empty GitHub release body.
+        presetConfig: {
+          types: [
+            { type: "feat", section: "Features" },
+            { type: "fix", section: "Bug Fixes" },
+            { type: "perf", section: "Performance Improvements" },
+            { type: "revert", section: "Reverts" },
+            { type: "refactor", section: "Code Refactoring" },
+            { type: "build", section: "Build System" },
+            { type: "chore", hidden: true },
+            { type: "ci", hidden: true },
+            { type: "docs", hidden: true },
+            { type: "style", hidden: true },
+            { type: "test", hidden: true },
+          ],
+        },
         writerOpts: {
           mainTemplate,
           commitPartial,

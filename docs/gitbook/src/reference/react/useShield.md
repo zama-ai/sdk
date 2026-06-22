@@ -22,7 +22,7 @@ import { useShield } from "@zama-fhe/react-sdk";
 import { useShield } from "@zama-fhe/react-sdk";
 
 function ShieldButton() {
-  const { mutateAsync: shield, isPending, error } = useShield({ tokenAddress: "0xToken" });
+  const { mutateAsync: shield, isPending, error } = useShield({ address: "0xWrapper" });
 
   async function handleShield() {
     const { txHash, receipt } = await shield({ amount: 1000n });
@@ -41,28 +41,28 @@ function ShieldButton() {
 {% tab title="config.ts" %}
 
 ```ts
-import { ZamaSDK, RelayerWeb, indexedDBStorage } from "@zama-fhe/sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
 
-const signer = new ViemSigner({ walletClient, publicClient });
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
 
-const sdk = new ZamaSDK({
-  relayer: new RelayerWeb({
-    getChainId: () => signer.getChainId(),
-    transports: {
-      [1]: {
-        relayerUrl: "https://your-app.com/api/relayer/1",
-        network: "https://mainnet.infura.io/v3/YOUR_KEY",
-      },
-      [11155111]: {
-        relayerUrl: "https://your-app.com/api/relayer/11155111",
-        network: "https://sepolia.infura.io/v3/YOUR_KEY",
-      },
-    },
-  }),
-  signer,
-  storage: indexedDBStorage,
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
 });
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
 ```
 
 {% endtab %}
@@ -74,15 +74,28 @@ const sdk = new ZamaSDK({
 import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 ```
 
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 wrapper contract.
+Address of the confidential wrapper contract.
 
 ```ts
 const { mutateAsync: shield } = useShield({
-  tokenAddress: "0xToken",
+  address: "0xWrapper",
+});
+```
+
+### optimistic
+
+`boolean | undefined`
+
+Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
+
+```ts
+const { mutateAsync: shield } = useShield({
+  address: "0xWrapper",
+  optimistic: true,
 });
 ```
 
@@ -149,7 +162,7 @@ await shield({
 ## Return Type
 
 ```ts
-import { type ShieldParams } from "@zama-fhe/react-sdk";
+import { type ShieldParams } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
@@ -161,4 +174,4 @@ Auto-invalidates the `confidentialBalance` cache on success.
 ## Related
 
 - [useUnshield](./useUnshield.md) — reverse operation, unshield back to public ERC-20
-- [Token.shield](../sdk/Token.md#shield) — imperative equivalent on the `Token` class
+- [WrappedToken.shield](../sdk/WrappedToken.md#shield) — imperative equivalent on the `WrappedToken` class

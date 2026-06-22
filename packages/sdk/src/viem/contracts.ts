@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -56,13 +56,13 @@ export function writeConfidentialTransferContract(
   client: WalletClient,
   tokenAddress: Address,
   to: Address,
-  handle: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...confidentialTransferContract(tokenAddress, to, handle, inputProof),
+    ...confidentialTransferContract(tokenAddress, to, encryptedAmount, inputProof),
   });
 }
 
@@ -71,8 +71,8 @@ export function writeUnwrapContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedAmount: Uint8Array,
-  inputProof: Uint8Array,
+  encryptedAmount: EncryptedValue,
+  inputProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -86,7 +86,7 @@ export function writeUnwrapFromBalanceContract(
   encryptedErc20: Address,
   from: Address,
   to: Address,
-  encryptedBalance: Handle,
+  encryptedBalance: EncryptedValue,
 ) {
   return client.writeContract({
     chain: client.chain,
@@ -98,27 +98,27 @@ export function writeUnwrapFromBalanceContract(
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
-  burntAmount: Handle,
-  burntAmountCleartext: bigint,
+  unwrapRequestId: EncryptedValue,
+  unwrapAmountCleartext: bigint,
   decryptionProof: Hex,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...finalizeUnwrapContract(wrapper, burntAmount, burntAmountCleartext, decryptionProof),
+    ...finalizeUnwrapContract(wrapper, unwrapRequestId, unwrapAmountCleartext, decryptionProof),
   });
 }
 
 export function writeSetOperatorContract(
   client: WalletClient,
   tokenAddress: Address,
-  spender: Address,
-  timestamp?: number,
+  operator: Address,
+  until?: number,
 ) {
   return client.writeContract({
     chain: client.chain,
     account: requireAccount(client),
-    ...setOperatorContract(tokenAddress, spender, timestamp),
+    ...setOperatorContract(tokenAddress, operator, until),
   });
 }
 

@@ -1,19 +1,19 @@
 import { hashFn, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, expect, it } from "../../test-fixtures";
+import { describe, expect, test } from "../../test-fixtures";
 import { useQueries } from "../query";
 
 describe("useQueries wrapper", () => {
-  it("injects queryKeyHashFn on every query in the array", ({ renderWithProviders }) => {
+  test("injects queryKeyHashFn on every query in the array", ({ renderWithProviders }) => {
     const { queryClient } = renderWithProviders(() =>
       useQueries({
         queries: [
           {
-            queryKey: zamaQueryKeys.decryption.handle("0xabc"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0xabc"),
             queryFn: () => undefined as never,
             enabled: false,
           },
           {
-            queryKey: zamaQueryKeys.decryption.handle("0xdef"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0xdef"),
             queryFn: () => undefined as never,
             enabled: false,
           },
@@ -28,12 +28,12 @@ describe("useQueries wrapper", () => {
     }
   });
 
-  it("works with a single query", ({ renderWithProviders }) => {
+  test("works with a single query", ({ renderWithProviders }) => {
     const { queryClient } = renderWithProviders(() =>
       useQueries({
         queries: [
           {
-            queryKey: zamaQueryKeys.decryption.handle("0x123"),
+            queryKey: zamaQueryKeys.decryption.encryptedValue("0x123"),
             queryFn: () => undefined as never,
             enabled: false,
           },
@@ -46,7 +46,7 @@ describe("useQueries wrapper", () => {
     expect(cached[0]!.options.queryKeyHashFn).toBe(hashFn);
   });
 
-  it("works with empty queries array", ({ renderWithProviders }) => {
+  test("works with empty queries array", ({ renderWithProviders }) => {
     const { result } = renderWithProviders(() => useQueries({ queries: [] }));
 
     expect(result.current).toHaveLength(0);

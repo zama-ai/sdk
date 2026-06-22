@@ -57,8 +57,9 @@ useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
 
 The `data` field resolves to `readonly [boolean, Address]`:
 
-- `[true, address]` -- a confidential token was found at `address`
-- `[false, address]` -- no registered pair (the address value is meaningless)
+- `[true, address]` -- registered and valid; `address` is the confidential token
+- `[false, nonZeroAddress]` -- registered but revoked; `address` is the former confidential token
+- `[false, zeroAddress]` -- no registered pair
 
 {% include "../../.gitbook/includes/query-result.md" %}
 

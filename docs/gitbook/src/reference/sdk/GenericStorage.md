@@ -1,11 +1,11 @@
 ---
 title: GenericStorage
-description: Interface for async key-value storage used to persist FHE keypairs and session signatures.
+description: Interface for async key-value storage used to persist transport key pairs and signed permits.
 ---
 
 # GenericStorage
 
-Interface for async key-value storage used to persist FHE keypairs and session signatures. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
+Interface for async key-value storage used to persist transport key pairs and signed permits. The SDK ships with four built-in implementations -- you only need this interface if building a custom backend.
 
 ## Import
 
@@ -41,11 +41,14 @@ const redisStorage: GenericStorage = {
   },
 };
 
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
+const config = createConfig({
+  chains: [sepolia],
+  signer: mySigner,
+  provider: myProvider,
   storage: redisStorage,
+  relayers: { [sepolia.id]: node() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Methods
@@ -85,11 +88,7 @@ import { indexedDBStorage } from "@zama-fhe/sdk";
 Browser-based persistent storage backed by IndexedDB. Survives page reloads and browser restarts. Use this as the primary `storage` in browser apps.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: indexedDBStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### memoryStorage
@@ -101,11 +100,7 @@ import { memoryStorage } from "@zama-fhe/sdk";
 In-memory storage cleared when the process exits. Suitable for tests and throwaway scripts.
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
-  storage: memoryStorage,
-});
+const sdk = new ZamaSDK(config); // config from createConfig()
 ```
 
 ### asyncLocalStorage
@@ -114,14 +109,20 @@ const sdk = new ZamaSDK({
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates FHE keypairs across concurrent requests on a server.
+Node.js per-request storage using [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html). Isolates transport key pairs across concurrent requests on a server.
 
 ```ts
 import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 
 app.post("/api/transfer", (req, res) => {
   asyncLocalStorage.run(async () => {
-    const sdk = new ZamaSDK({ relayer, signer, storage: asyncLocalStorage });
+    const config = createConfig({
+      chains: [mySepolia],
+      signer: wallet,
+      storage: asyncLocalStorage,
+      relayers: { [mySepolia.id]: node() },
+    });
+    const sdk = new ZamaSDK(config);
     await sdk.createToken("0x...").confidentialTransfer("0x...", 100n);
   });
 });
@@ -135,18 +136,21 @@ import { chromeSessionStorage } from "@zama-fhe/sdk";
 
 MV3 web extension storage backed by `chrome.storage.session`. Survives service worker restarts and is shared across popup, background, and content script contexts. Cleared when the browser closes.
 
-Pass as `sessionStorage` (not `storage`) to persist wallet signatures across service worker restarts:
+Pass as `permitStorage` (not `storage`) to persist signed permits across service worker restarts:
 
 ```ts
-const sdk = new ZamaSDK({
-  relayer,
-  signer,
+const config = createConfig({
+  chains: [mySepolia],
+  publicClient,
+  walletClient,
   storage: indexedDBStorage,
-  sessionStorage: chromeSessionStorage,
+  permitStorage: chromeSessionStorage,
+  relayers: { [mySepolia.id]: web() },
 });
+const sdk = new ZamaSDK(config);
 ```
 
 ## Related
 
-- [ZamaSDK](./ZamaSDK.md) -- accepts `storage` and `sessionStorage` parameters
+- [ZamaSDK](./ZamaSDK.md) -- accepts `storage` and `permitStorage` parameters
 - [Configuration guide](../../guides/configuration.md) -- storage selection guidance

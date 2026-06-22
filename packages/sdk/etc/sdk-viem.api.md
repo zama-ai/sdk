@@ -6,13 +6,30 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
+import { Auth } from '@zama-fhe/relayer-sdk/bundle';
+import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
+import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
+import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
+import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicClient } from 'viem';
+import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
+import * as SDK from '@zama-fhe/relayer-sdk/bundle';
 import { WalletClient } from 'viem';
+import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
+
+// @public
+export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
+
+// @public
+export type EncryptedValue = Bytes32Hex;
+
+export { Hex }
 
 // @public (undocumented)
 export function readConfidentialBalanceOfContract(client: PublicClient, tokenAddress: Address, userAddress: Address): Promise<`0x${string}`>;
@@ -56,35 +73,31 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
 
-// Warning: (ae-forgotten-export) The symbol "GenericSigner" needs to be exported by the entry point index.d.ts
-//
 // @public
-export class ViemSigner implements GenericSigner {
-    constructor(config: ViemSignerConfig);
-    // (undocumented)
-    getAddress(): Promise<Address>;
+export class ViemProvider implements GenericProvider {
+    constructor(config: ViemProviderConfig);
     // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
     // (undocumented)
     getChainId(): Promise<number>;
-    // Warning: (ae-forgotten-export) The symbol "ReadContractConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    // Warning: (ae-forgotten-export) The symbol "EIP712TypedData" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // Warning: (ae-forgotten-export) The symbol "SignerLifecycleCallbacks" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
-    subscribe(callbacks: SignerLifecycleCallbacks): () => void;
-    // Warning: (ae-forgotten-export) The symbol "TransactionReceipt" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
-    // Warning: (ae-forgotten-export) The symbol "WriteContractConfig" needs to be exported by the entry point index.d.ts
-    //
+}
+
+// @public
+export interface ViemProviderConfig {
+    publicClient: PublicClient;
+}
+
+// @public (undocumented)
+export class ViemSigner extends BaseSigner {
+    constructor(config: ViemSignerConfig);
+    // (undocumented)
+    protected onDispose(): void;
+    // (undocumented)
+    signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
@@ -93,30 +106,36 @@ export class ViemSigner implements GenericSigner {
 export interface ViemSignerConfig {
     // (undocumented)
     ethereum?: EIP1193Provider;
-    // (undocumented)
-    publicClient: PublicClient;
-    walletClient?: WalletClient;
+    walletClient: WalletClient;
 }
 
 // @public (undocumented)
-export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, handle: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
-
-// Warning: (ae-forgotten-export) The symbol "Handle" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, burntAmount: Handle, burntAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
+export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, spender: Address, timestamp?: number): Promise<`0x${string}`>;
+export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: Uint8Array, inputProof: Uint8Array): Promise<`0x${string}`>;
+export function writeSetOperatorContract(client: WalletClient, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
 // @public (undocumented)
-export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: Handle): Promise<`0x${string}`>;
+export function writeUnwrapContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
+
+// @public (undocumented)
+export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): Promise<`0x${string}`>;
 
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
+
+// @public
+export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
+    // (undocumented)
+    ethereum?: EIP1193Provider;
+    // (undocumented)
+    publicClient: PublicClient;
+    // (undocumented)
+    walletClient: WalletClient;
+}
 
 // (No @packageDocumentation comment for this package)
 

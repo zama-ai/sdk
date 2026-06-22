@@ -2,14 +2,14 @@ import { describe, expect, test } from "../../test-fixtures";
 import { finalizeUnwrapMutationOptions } from "../finalize-unwrap";
 
 describe("finalizeUnwrapMutationOptions", () => {
-  test("delegates finalizeUnwrap", async ({ mockToken }) => {
-    const options = finalizeUnwrapMutationOptions(mockToken);
+  test("delegates finalizeUnwrap with unwrapRequestId", async ({ mockWrappedToken }) => {
+    const options = finalizeUnwrapMutationOptions(mockWrappedToken);
 
-    expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockToken.address]);
+    expect(options.mutationKey).toEqual(["zama.finalizeUnwrap", mockWrappedToken.address]);
     await options.mutationFn({
-      burnAmountHandle: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
+      unwrapRequestId: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     });
-    expect(mockToken.finalizeUnwrap).toHaveBeenCalledWith(
+    expect(mockWrappedToken.finalizeUnwrap).toHaveBeenCalledWith(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
   });

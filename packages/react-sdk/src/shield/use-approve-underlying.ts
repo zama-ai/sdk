@@ -8,7 +8,7 @@ import {
   invalidateAfterApproveUnderlying,
   type ApproveUnderlyingParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Approve the wrapper contract to spend the underlying ERC-20.
@@ -19,28 +19,28 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link TransactionRevertedError} — approval transaction reverted
  *
- * @param config - Token and wrapper addresses.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const approve = useApproveUnderlying({ tokenAddress: "0x...", wrapperAddress: "0x..." });
+ * const approve = useApproveUnderlying("0xWrapper");
  * approve.mutate({}); // max approval
  * approve.mutate({ amount: 1000n }); // exact amount
  * ```
  */
 export function useApproveUnderlying(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, ApproveUnderlyingParams, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, ApproveUnderlyingParams, Address>({
     ...approveUnderlyingMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterApproveUnderlying(context.client, config.tokenAddress);
+      invalidateAfterApproveUnderlying(context.client, token.address);
     },
   });
 }

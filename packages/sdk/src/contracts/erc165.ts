@@ -7,6 +7,9 @@ export const ERC7984_INTERFACE_ID = "0x4958f2a4" as const;
 /** ERC-165 interface ID for IERC7984ERC20Wrapper (confidential wrapper). */
 export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
 
+/** ERC-165 interface ID for ERC-1363 (payable token — `transferAndCall`). */
+export const ERC1363_INTERFACE_ID = "0xb0202a11" as const;
+
 /**
  * Returns the contract config for an ERC-165 `supportsInterface` check.
  *
@@ -15,7 +18,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID = "0x1f1c62b2" as const;
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   supportsInterfaceContract(tokenAddress, ERC7984_INTERFACE_ID),
  * );
  * ```
@@ -34,7 +37,7 @@ export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Ad
  *
  * @example
  * ```ts
- * const isConfidential = await signer.readContract(
+ * const isConfidential = await provider.readContract(
  *   isConfidentialTokenContract("0xTokenAddress"),
  * );
  * ```
@@ -48,11 +51,25 @@ export function isConfidentialTokenContract(tokenAddress: Address) {
  *
  * @example
  * ```ts
- * const isWrapper = await signer.readContract(
+ * const isWrapper = await provider.readContract(
  *   isConfidentialWrapperContract("0xWrapperAddress"),
  * );
  * ```
  */
 export function isConfidentialWrapperContract(tokenAddress: Address) {
   return supportsInterfaceContract(tokenAddress, ERC7984_WRAPPER_INTERFACE_ID);
+}
+
+/**
+ * Returns contract config to check if a token implements ERC-1363 (payable token).
+ *
+ * @example
+ * ```ts
+ * const isPayable = await provider.readContract(
+ *   isPayableTokenContract("0xTokenAddress"),
+ * );
+ * ```
+ */
+export function isPayableTokenContract(tokenAddress: Address) {
+  return supportsInterfaceContract(tokenAddress, ERC1363_INTERFACE_ID);
 }

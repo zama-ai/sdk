@@ -2,20 +2,20 @@ import { describe, expect, test } from "../../test-fixtures";
 import { unshieldAllMutationOptions } from "../unshield-all";
 
 describe("unshieldAllMutationOptions", () => {
-  test("delegates unshieldAll", async ({ mockToken }) => {
-    const options = unshieldAllMutationOptions(mockToken);
+  test("delegates unshieldAll", async ({ mockWrappedToken }) => {
+    const options = unshieldAllMutationOptions(mockWrappedToken);
 
-    expect(options.mutationKey).toEqual(["zama.unshieldAll", mockToken.address]);
+    expect(options.mutationKey).toEqual(["zama.unshieldAll", mockWrappedToken.address]);
     await options.mutationFn(undefined);
-    expect(mockToken.unshieldAll).toHaveBeenCalledWith(undefined);
+    expect(mockWrappedToken.unshieldAll).toHaveBeenCalledWith(undefined);
   });
 
-  test("passes flat callbacks to unshieldAll", async ({ mockToken }) => {
-    const options = unshieldAllMutationOptions(mockToken);
+  test("passes flat callbacks to unshieldAll", async ({ mockWrappedToken }) => {
+    const options = unshieldAllMutationOptions(mockWrappedToken);
     const onUnwrapSubmitted = () => {};
     const onFinalizing = () => {};
 
     await options.mutationFn({ onUnwrapSubmitted, onFinalizing });
-    expect(mockToken.unshieldAll).toHaveBeenCalledWith({ onUnwrapSubmitted, onFinalizing });
+    expect(mockWrappedToken.unshieldAll).toHaveBeenCalledWith({ onUnwrapSubmitted, onFinalizing });
   });
 });

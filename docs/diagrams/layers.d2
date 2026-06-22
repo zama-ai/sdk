@@ -9,7 +9,7 @@ title: {
 }
 
 # --- UI Layer ---
-react-hooks: "@zama-fhe/react-sdk\nZamaProvider, useShield, useConfidentialBalance, useActivityFeed, ..." {
+react-hooks: "@zama-fhe/react-sdk\nZamaProvider, useShield, useConfidentialBalance, ..." {
   style.fill: "#E8F5E9"
   style.stroke: "#388E3C"
   style.font-size: 14
@@ -29,13 +29,13 @@ query: "Query & Mutation Factories\nqueryOptions · mutationOptions · queryKeys
 }
 
 # --- Abstraction Layer ---
-token: "Token Abstraction\nZamaSDK · Token · ReadonlyToken" {
+token: "Token Abstraction\nZamaSDK · Token · WrappedToken" {
   style.fill: "#E3F2FD"
   style.stroke: "#1565C0"
   style.font-size: 14
 }
 
-contracts: "Contract Call Builders\nshieldContract · confidentialTransferContract · batchTransferContract · ..." {
+contracts: "Contract Call Builders\napproveContract · wrapContract · confidentialTransferContract · ..." {
   style.fill: "#E3F2FD"
   style.stroke: "#1565C0"
   style.font-size: 14
@@ -62,7 +62,7 @@ worker: "Worker Layer\nWeb Worker + WASM (browser) · Worker Pool (Node.js)" {
 }
 
 # --- Storage Layer ---
-storage: "Storage & Credentials\nCredentialsManager · IndexedDB · Memory · AsyncLocalStorage · ChromeSessionStorage" {
+storage: "Storage & Permits\nCredentialService · IndexedDB · Memory · AsyncLocalStorage · ChromeSessionStorage" {
   style.fill: "#FBE9E7"
   style.stroke: "#BF360C"
   style.font-size: 14

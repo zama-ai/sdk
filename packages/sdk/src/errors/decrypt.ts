@@ -4,6 +4,7 @@ import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
 import { SigningRejectedError, SigningFailedError } from "./signing";
+import { extractHttpStatus } from "../utils/error";
 
 /**
  * Inspect a caught error for an HTTP status code and return the appropriate
@@ -34,14 +35,7 @@ export function wrapDecryptError(
     return error;
   }
 
-  const statusCode =
-    error !== null &&
-    error !== undefined &&
-    typeof error === "object" &&
-    "statusCode" in error &&
-    typeof (error as Record<string, unknown>).statusCode === "number"
-      ? ((error as Record<string, unknown>).statusCode as number)
-      : undefined;
+  const statusCode = extractHttpStatus(error);
 
   if (statusCode === 400) {
     return new NoCiphertextError(

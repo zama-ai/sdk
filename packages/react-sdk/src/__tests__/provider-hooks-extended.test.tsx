@@ -1,42 +1,40 @@
-import { describe, expect, it, vi } from "../test-fixtures";
 import { waitFor } from "@testing-library/react";
 import type { Address } from "@zama-fhe/sdk";
+import { ERC7984_WRAPPER_INTERFACE_ID } from "@zama-fhe/sdk";
 import { useUnderlyingAllowance } from "../shield/use-underlying-allowance";
-import { useUnshield } from "../unshield/use-unshield";
-import { useUnshieldAll } from "../unshield/use-unshield-all";
+import { describe, expect, test, vi } from "../test-fixtures";
 import { useMetadataSuspense } from "../token/use-metadata";
 import { useTotalSupplySuspense } from "../token/use-total-supply";
 import { useWrapperDiscoverySuspense } from "../token/use-wrapper-discovery";
+import { useUnshield } from "../unshield/use-unshield";
+import { useUnshieldAll } from "../unshield/use-unshield-all";
 
 describe("useUnderlyingAllowance", () => {
-  it("returns allowance value", async ({
+  test("returns allowance value", async ({
     signer,
-    tokenAddress,
     wrapperAddress,
     renderWithProviders,
+    provider,
+    userAddress,
   }) => {
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce("0x5e5E5e5e5E5e5E5E5e5E5E5e5e5E5E5E5e5E5E5e")
       .mockResolvedValueOnce(5000n);
 
     const { result } = renderWithProviders(
-      () =>
-        useUnderlyingAllowance({
-          tokenAddress,
-          wrapperAddress,
-        }),
+      () => useUnderlyingAllowance({ address: wrapperAddress, owner: userAddress }),
       { signer },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(5000n);
-    expect(signer.readContract).toHaveBeenCalled();
+    expect(provider.readContract).toHaveBeenCalled();
   });
 });
 
 describe("useUnshield", () => {
-  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnshield({ tokenAddress, wrapperAddress }));
+  test("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshield(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
@@ -44,8 +42,8 @@ describe("useUnshield", () => {
 });
 
 describe("useUnshieldAll", () => {
-  it("provides mutate function", ({ tokenAddress, wrapperAddress, renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useUnshieldAll({ tokenAddress, wrapperAddress }));
+  test("provides mutate function", ({ wrapperAddress, renderWithProviders }) => {
+    const { result } = renderWithProviders(() => useUnshieldAll(wrapperAddress));
 
     expect(result.current.mutate).toBeDefined();
     expect(result.current.isIdle).toBe(true);
@@ -53,8 +51,13 @@ describe("useUnshieldAll", () => {
 });
 
 describe("useMetadataSuspense", () => {
-  it("returns metadata via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(signer.readContract)
+  test("returns metadata via suspense", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce("TestToken")
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
@@ -69,8 +72,18 @@ describe("useMetadataSuspense", () => {
 });
 
 describe("useTotalSupplySuspense", () => {
-  it("returns total supply via suspense", async ({ signer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(signer.readContract).mockResolvedValue(100000n);
+  test("returns total supply via suspense", async ({
+    signer,
+    tokenAddress,
+    renderWithProviders,
+    provider,
+  }) => {
+    vi.mocked(provider.readContract).mockImplementation(async (config) => {
+      if (config.functionName === "supportsInterface") {
+        return config.args![0] === ERC7984_WRAPPER_INTERFACE_ID;
+      }
+      return 100000n;
+    });
 
     const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
       signer,
@@ -82,14 +95,15 @@ describe("useTotalSupplySuspense", () => {
 });
 
 describe("useWrapperDiscoverySuspense", () => {
-  it("returns wrapper address via suspense", async ({
+  test("returns wrapper address via suspense", async ({
     signer,
     tokenAddress,
     renderWithProviders,
+    provider,
   }) => {
     const wrapperAddr = "0x4D4d4D4d4d4D4D4d4D4D4D4d4d4d4d4D4D4d4d4D" as Address;
-    vi.mocked(signer.getChainId).mockResolvedValue(1);
-    vi.mocked(signer.readContract)
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    vi.mocked(provider.readContract)
       .mockResolvedValueOnce([true, wrapperAddr])
       .mockResolvedValueOnce(true);
 

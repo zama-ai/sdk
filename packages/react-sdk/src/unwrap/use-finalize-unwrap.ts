@@ -8,7 +8,7 @@ import {
   invalidateAfterUnshield,
   type FinalizeUnwrapParams,
 } from "@zama-fhe/sdk/query";
-import { useToken, type UseZamaConfig } from "../token/use-token";
+import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Complete an unwrap by providing the public decryption proof.
@@ -16,30 +16,32 @@ import { useToken, type UseZamaConfig } from "../token/use-token";
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link DecryptionFailedError} — public decryption of the burn amount failed
+ * - {@link DecryptionFailedError} — public decryption of the unwrap amount failed
  * - {@link TransactionRevertedError} — on-chain finalize transaction reverted
  *
- * @param config - Token address (and optional wrapper) identifying the token.
+ * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
  *
  * @example
  * ```tsx
- * const finalize = useFinalizeUnwrap({ tokenAddress: "0x..." });
- * finalize.mutate({ burnAmountHandle: event.encryptedAmount });
+ * const finalize = useFinalizeUnwrap("0xWrapper");
+ * const event = findUnwrapRequested(receipt.logs);
+ * if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
+ * finalize.mutate({ unwrapRequestId: event.unwrapRequestId });
  * ```
  */
 export function useFinalizeUnwrap(
-  config: UseZamaConfig,
+  address: Address,
   options?: UseMutationOptions<TransactionResult, Error, FinalizeUnwrapParams, Address>,
 ) {
-  const token = useToken(config);
+  const token = useWrappedToken(address);
 
   return useMutation<TransactionResult, Error, FinalizeUnwrapParams, Address>({
     ...finalizeUnwrapMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
-      invalidateAfterUnshield(context.client, config.tokenAddress);
+      invalidateAfterUnshield(context.client, token.address);
     },
   });
 }

@@ -5,7 +5,7 @@ export { zamaQueryKeys } from "./query-keys";
 
 export {
   invalidateAfterApproveUnderlying,
-  invalidateAfterApprove,
+  invalidateAfterSetOperator,
   invalidateAfterShield,
   invalidateAfterTransfer,
   invalidateAfterUnwrap,
@@ -16,7 +16,6 @@ export {
 } from "./invalidation";
 export type { QueryClientLike, QueryFilterLike, QueryLike } from "./invalidation";
 
-export { signerAddressQueryOptions, type SignerAddressQueryConfig } from "./signer-address";
 export {
   tokenMetadataQueryOptions,
   type TokenMetadata,
@@ -37,11 +36,9 @@ export {
   type UnderlyingAllowanceQueryConfig,
 } from "./underlying-allowance";
 export {
-  confidentialIsApprovedQueryOptions,
-  type ConfidentialIsApprovedQueryConfig,
-} from "./confidential-is-approved";
-export { publicKeyQueryOptions, type PublicKeyQueryConfig } from "./public-key";
-export { publicParamsQueryOptions, type PublicParamsQueryConfig } from "./public-params";
+  confidentialIsOperatorQueryOptions,
+  type ConfidentialIsOperatorQueryConfig,
+} from "./confidential-is-operator";
 export {
   confidentialBalanceQueryOptions,
   type ConfidentialBalanceQueryConfig,
@@ -50,13 +47,6 @@ export {
   confidentialBalancesQueryOptions,
   type ConfidentialBalancesQueryConfig,
 } from "./confidential-balances";
-export {
-  activityFeedQueryOptions,
-  deriveActivityFeedLogsKey,
-  type ActivityFeedConfig,
-  type ActivityFeedQueryConfig,
-} from "./activity-feed";
-
 export {
   tokenPairsQueryOptions,
   tokenPairsLengthQueryOptions,
@@ -81,7 +71,10 @@ export {
   confidentialTransferFromMutationOptions,
   type ConfidentialTransferFromParams,
 } from "./transfer-from";
-export { confidentialApproveMutationOptions, type ConfidentialApproveParams } from "./approve";
+export {
+  confidentialSetOperatorMutationOptions,
+  type ConfidentialSetOperatorParams,
+} from "./set-operator";
 export {
   approveUnderlyingMutationOptions,
   type ApproveUnderlyingParams,
@@ -93,28 +86,23 @@ export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";
-export { generateKeypairMutationOptions } from "./generate-keypair";
-export { createEIP712MutationOptions, type CreateEIP712Params } from "./create-eip712";
 export {
-  createDelegatedUserDecryptEIP712MutationOptions,
-  type CreateDelegatedUserDecryptEIP712Params,
-} from "./create-delegated-user-decrypt-eip712";
-export { delegatedUserDecryptMutationOptions } from "./delegated-user-decrypt";
-export { publicDecryptMutationOptions } from "./public-decrypt";
-export { requestZKProofVerificationMutationOptions } from "./request-zk-proof-verification";
-export { allowMutationOptions } from "./allow";
-export { isAllowedQueryOptions, type IsAllowedQueryConfig } from "./is-allowed";
-export { revokeMutationOptions } from "./revoke";
-export { revokeSessionMutationOptions } from "./revoke-session";
+  delegatedDecryptValuesMutationOptions,
+  type DelegatedDecryptValuesMutationParams,
+} from "./delegated-decrypt";
+export { decryptPublicValuesMutationOptions } from "./public-decrypt";
+export { grantPermitMutationOptions } from "./grant-permit";
+export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
+export { revokePermitsMutationOptions } from "./revoke-permits";
+export { clearCredentialsMutationOptions } from "./clear-credentials";
 export {
   delegateDecryptionMutationOptions,
   type DelegateDecryptionParams,
 } from "./delegate-decryption";
 export {
-  userDecryptQueryOptions,
-  type UserDecryptQueryConfig,
+  decryptValuesQueryOptions,
   type DecryptResult,
-  type DecryptHandle,
+  type EncryptedInput as DecryptInput,
 } from "./user-decrypt";
 export { decryptBalanceAsMutationOptions, type DecryptBalanceAsParams } from "./decrypt-balance-as";
 export {
@@ -127,42 +115,46 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
-export type { ActivityItem, ActivityLogMetadata } from "../activity";
-export type { ActivityAmount, ActivityDirection, ActivityType } from "../activity";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
   WrappedEvent,
   UnwrapRequestedEvent,
-  UnwrappedFinalizedEvent,
-  UnwrappedStartedEvent,
+  UnwrapFinalizedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValueType, EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
 export type {
-  DelegatedUserDecryptParams,
-  EncryptInput,
-  EIP712TypedData,
-  PublicDecryptResult,
-  UserDecryptParams,
+  ClearValue,
+  EncryptParams,
+  EncryptResult,
+  EncryptedValue,
+} from "../relayer/relayer-sdk.types";
+export type { EncryptInput, EIP712TypedData } from "../relayer/relayer-sdk.types";
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
+export type {
+  UserDecryptParams as DecryptValuesParams,
+  PublicDecryptResult as DecryptPublicValuesResult,
+  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "../relayer/relayer-sdk.types";
 export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/readonly-token";
-export type { ReadonlyToken } from "../token/readonly-token";
+export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
-export type { ZamaSDKConfig } from "../zama-sdk";
+export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
-export type { CredentialsManager } from "../credentials/credentials-manager";
-export type { CredentialsManagerConfig } from "../credentials/credentials-manager";
+export type { ZamaConfig } from "../config";
+export type { TransportKeyPair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,
+  ApprovalStrategy,
   ShieldCallbacks,
-  SignerLifecycleCallbacks,
-  StoredCredentials,
+  WalletAccount,
+  WalletAccountChange,
+  WalletAccountListener,
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,
+  ShieldPath,
   TransferCallbacks,
   TransferOptions,
   UnshieldCallbacks,
@@ -170,16 +162,9 @@ export type {
 } from "../types";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
-  ApproveSubmittedEvent,
+  SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
   BaseEvent,
-  CredentialsAllowedEvent,
-  CredentialsCachedEvent,
-  CredentialsCreatedEvent,
-  CredentialsCreatingEvent,
-  CredentialsExpiredEvent,
-  CredentialsLoadingEvent,
-  CredentialsRevokedEvent,
   DecryptEndEvent,
   DecryptErrorEvent,
   DecryptStartEvent,
@@ -189,6 +174,7 @@ export type {
   FinalizeUnwrapSubmittedEvent,
   ShieldSubmittedEvent,
   TransactionErrorEvent,
+  TransactionOperation,
   TransferFromSubmittedEvent,
   TransferSubmittedEvent,
   UnshieldPhase1SubmittedEvent,
@@ -198,9 +184,6 @@ export type {
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,
-  SessionExpiredEvent,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
-  CredentialsPersistFailedEvent,
-  CredentialsCorruptedEvent,
 } from "../events/sdk-events";

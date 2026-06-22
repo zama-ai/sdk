@@ -22,7 +22,7 @@ import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
 
 function RevokeButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: revoke, isPending } = useRevokeDelegation({ tokenAddress });
+  const { mutateAsync: revoke, isPending } = useRevokeDelegation(tokenAddress);
 
   async function handleRevoke() {
     const { txHash } = await revoke({ delegateAddress: "0xDelegate" });
@@ -42,20 +42,14 @@ function RevokeButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
-### tokenAddress
+### address
 
 `Address`
 
-Address of the confidential ERC-20 token contract.
+Address of the confidential token contract. Passed positionally as the first argument.
 
 ```ts
-const { mutateAsync: revoke } = useRevokeDelegation({
-  tokenAddress: "0xToken",
-});
+const { mutateAsync: revoke } = useRevokeDelegation("0xToken");
 ```
 
 ---

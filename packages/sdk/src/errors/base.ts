@@ -22,14 +22,12 @@ export const ZamaErrorCode = {
   EncryptionFailed: "ENCRYPTION_FAILED",
   /** FHE decryption failed. */
   DecryptionFailed: "DECRYPTION_FAILED",
-  /** ERC-20 approval transaction failed. */
-  ApprovalFailed: "APPROVAL_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
-  /** FHE keypair has expired and needs regeneration. */
-  KeypairExpired: "KEYPAIR_EXPIRED",
-  /** Relayer rejected FHE keypair (stale, expired, or malformed). */
-  InvalidKeypair: "INVALID_KEYPAIR",
+  /** Transport key pair has expired and needs regeneration. */
+  TransportKeyPairExpired: "KEYPAIR_EXPIRED",
+  /** Relayer rejected transport key pair (stale, expired, or malformed). */
+  InvalidTransportKeyPair: "INVALID_KEYPAIR",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
@@ -64,6 +62,14 @@ export const ZamaErrorCode = {
   DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON",
   /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
+  /** Signer and provider are connected to different chains. */
+  ChainMismatch: "CHAIN_MISMATCH",
+  /** Operation requires a signer but none is configured. */
+  SignerNotConfigured: "SIGNER_NOT_CONFIGURED",
+  /** Operation requires a connected wallet account. */
+  WalletNotConnected: "WALLET_NOT_CONNECTED",
+  /** Wallet account discovery is still resolving. */
+  WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

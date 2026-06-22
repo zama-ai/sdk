@@ -3,7 +3,7 @@
  * Works with raw log data from any provider.
  */
 
-import type { Handle } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
@@ -24,16 +24,15 @@ function eventTopic(signature: string): Hex {
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: eventTopic("ConfidentialTransfer(address,address,bytes32)"),
+  // NOTE: New wrapper contracts no longer emit Wrapped — shields now emit
+  // ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+  // compatibility with older deployments.
   /** `Wrapped(address indexed to, uint256 amountIn)` */
   Wrapped: eventTopic("Wrapped(address,uint256)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
-  UnwrappedFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
-  /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-  UnwrappedStarted: eventTopic(
-    "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-  ),
+  UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -47,10 +46,13 @@ export interface ConfidentialTransferEvent {
   readonly from: Address;
   /** Receiver address. */
   readonly to: Address;
-  /** FHE ciphertext handle for the transferred amount. */
-  readonly encryptedAmountHandle: Handle;
+  /** FHE encrypted value for the transferred amount. */
+  readonly encryptedAmount: EncryptedValue;
 }
 
+// NOTE: New wrapper contracts no longer emit this event — shields now emit
+// ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
+// compatibility with older deployments.
 /** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
 export interface WrappedEvent {
   readonly eventName: "Wrapped";
@@ -65,42 +67,23 @@ export interface UnwrapRequestedEvent {
   readonly eventName: "UnwrapRequested";
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
-  /** FHE ciphertext handle for the requested unshield amount. */
-  readonly encryptedAmount: Handle;
+  /** FHE encrypted value for the requested unshield amount. */
+  readonly encryptedAmount: EncryptedValue;
   /** Request identifier from the `UnwrapRequested` event topic. */
-  readonly unwrapRequestId?: Handle;
+  readonly unwrapRequestId?: EncryptedValue;
 }
 
 /** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
-export interface UnwrappedFinalizedEvent {
-  readonly eventName: "UnwrappedFinalized";
+export interface UnwrapFinalizedEvent {
+  readonly eventName: "UnwrapFinalized";
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
-  /** FHE ciphertext handle of the burnt confidential balance. */
-  readonly encryptedAmount: Handle;
+  /** FHE encrypted value of the burnt confidential balance. */
+  readonly encryptedAmount: EncryptedValue;
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
   /** Request identifier from the `UnwrapFinalized` event topic. */
-  readonly unwrapRequestId?: Handle;
-}
-
-/** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
-export interface UnwrappedStartedEvent {
-  readonly eventName: "UnwrappedStarted";
-  /** Whether the unwrap start succeeded. */
-  readonly returnVal: boolean;
-  /** On-chain request ID. */
-  readonly requestId: bigint;
-  /** On-chain transaction ID. */
-  readonly txId: bigint;
-  /** Receiver address. */
-  readonly to: Address;
-  /** Refund address (if applicable). */
-  readonly refund: Address;
-  /** FHE handle of the requested amount. */
-  readonly requestedAmount: Handle;
-  /** FHE handle of the burn amount. */
-  readonly burnAmount: Handle;
+  readonly unwrapRequestId?: EncryptedValue;
 }
 
 /** Union of all decoded confidential token event types. */
@@ -108,8 +91,7 @@ export type OnChainEvent =
   | ConfidentialTransferEvent
   | WrappedEvent
   | UnwrapRequestedEvent
-  | UnwrappedFinalizedEvent
-  | UnwrappedStartedEvent;
+  | UnwrapFinalizedEvent;
 
 // ---------------------------------------------------------------------------
 // ABI decoding helpers (no external deps)
@@ -119,13 +101,9 @@ function topicToAddress(topic: Hex): Address {
   return getAddress(prefixHex(topic.slice(-40)));
 }
 
-function topicToBigInt(topic: Hex): bigint {
-  return BigInt(topic);
-}
-
-function topicToBytes32(topic: Hex): Handle {
+function topicToBytes32(topic: Hex): EncryptedValue {
   // EVM topics are already 32-byte 0x-prefixed hex — cast directly
-  return topic as Handle;
+  return topic as EncryptedValue;
 }
 
 function wordAt(data: Hex, index: number): string {
@@ -143,13 +121,9 @@ function wordToBigInt(data: Hex, index: number): bigint {
   return BigInt("0x" + wordAt(data, index));
 }
 
-function wordToBool(data: Hex, index: number): boolean {
-  return BigInt("0x" + wordAt(data, index)) !== 0n;
-}
-
-function wordToBytes32(data: Hex, index: number): Handle {
+function wordToBytes32(data: Hex, index: number): EncryptedValue {
   // wordAt returns exactly 64 hex chars — prefix and cast directly
-  return prefixHex(wordAt(data, index)) as Handle;
+  return prefixHex(wordAt(data, index)) as EncryptedValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,10 +146,12 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
     eventName: "ConfidentialTransfer",
     from: topicToAddress(log.topics[1]!),
     to: topicToAddress(log.topics[2]!),
-    encryptedAmountHandle: topicToBytes32(log.topics[3]!),
+    encryptedAmount: topicToBytes32(log.topics[3]!),
   };
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Wrapped(address indexed to, uint256 amountIn)
  * Indexed: to (topics[1])
@@ -198,8 +174,6 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
 
 /**
  * UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)
- * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
- * Data: amount (bytes32)
  */
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null {
   if (log.topics[0] !== Topics.UnwrapRequested) {
@@ -218,13 +192,10 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null 
 }
 
 /**
- * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId,
- *                 bytes32 encryptedAmount, uint64 cleartextAmount)
- * Indexed: receiver (topics[1]), unwrapRequestId (topics[2])
- * Data: encryptedAmount (bytes32 FHE handle, word 0), cleartextAmount (uint64, word 1)
+ * UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
  */
-export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedFinalized) {
+export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null {
+  if (log.topics[0] !== Topics.UnwrapFinalized) {
     return null;
   }
   if (log.topics.length < 3) {
@@ -232,37 +203,11 @@ export function decodeUnwrappedFinalized(log: RawLog): UnwrappedFinalizedEvent |
   }
 
   return {
-    eventName: "UnwrappedFinalized",
+    eventName: "UnwrapFinalized",
     receiver: topicToAddress(log.topics[1]!),
     unwrapRequestId: topicToBytes32(log.topics[2]!),
     encryptedAmount: wordToBytes32(log.data, 0),
     cleartextAmount: wordToBigInt(log.data, 1),
-  };
-}
-
-/**
- * UnwrappedStarted(bool returnVal, uint256 indexed requestId, uint256 indexed txId, address indexed to,
- *                  address refund, bytes32 requestedAmount, bytes32 burnAmount)
- * Indexed: requestId (topics[1]), txId (topics[2]), to (topics[3])
- * Data: returnVal, refund, requestedAmount, burnAmount
- */
-export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedStarted) {
-    return null;
-  }
-  if (log.topics.length < 4) {
-    return null;
-  }
-
-  return {
-    eventName: "UnwrappedStarted",
-    requestId: topicToBigInt(log.topics[1]!),
-    txId: topicToBigInt(log.topics[2]!),
-    to: topicToAddress(log.topics[3]!),
-    returnVal: wordToBool(log.data, 0),
-    refund: wordToAddress(log.data, 1),
-    requestedAmount: wordToBytes32(log.data, 2),
-    burnAmount: wordToBytes32(log.data, 3),
   };
 }
 
@@ -286,8 +231,7 @@ export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
     decodeUnwrapRequested(log) ??
-    decodeUnwrappedFinalized(log) ??
-    decodeUnwrappedStarted(log)
+    decodeUnwrapFinalized(log)
   );
 }
 
@@ -329,6 +273,8 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
   return null;
 }
 
+// NOTE: New wrapper contracts no longer emit this event. Retained for backward
+// compatibility with older deployments.
 /**
  * Find the first {@link WrappedEvent} in a logs array.
  *
@@ -349,7 +295,7 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
 }
 
 /**
- * All 5 confidential token event topic0 hashes.
+ * All confidential token event topic0 hashes.
  * Pass to `getLogs({ topics: [TOKEN_TOPICS] })` to fetch
  * all confidential token events in a single RPC call.
  */
@@ -357,8 +303,7 @@ export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
   Topics.Wrapped,
   Topics.UnwrapRequested,
-  Topics.UnwrappedFinalized,
-  Topics.UnwrappedStarted,
+  Topics.UnwrapFinalized,
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -371,10 +316,13 @@ export const TOKEN_TOPICS = [
  */
 export const AclTopics = {
   /** `DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)` */
-  DelegatedForUserDecryption: "0x527b025d7ff06689c1ab9d32dfd7881c964cce72ce8ac5b2fe1d3be8cfda5bfc",
+  DelegatedForUserDecryption: eventTopic(
+    "DelegatedForUserDecryption(address,address,address,uint64,uint64,uint64)",
+  ),
   /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
-  RevokedDelegationForUserDecryption:
-    "0x7aca80b6b7928b9038f186e3d9922a0fc5d52c398fbf144725c142c52a5277e4",
+  RevokedDelegationForUserDecryption: eventTopic(
+    "RevokedDelegationForUserDecryption(address,address,address,uint64,uint64)",
+  ),
 } as const;
 
 // ---------------------------------------------------------------------------

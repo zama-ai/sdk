@@ -14,13 +14,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.61.0",
     "@zama-fhe/sdk": "workspace:*",
-    "ethers": "^6.16.0",
-    "viem": "^2.47.12"
+    "ethers": "^6.17.0",
+    "viem": "^2.52.2"
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",
-    "@types/node": "^22.19.17"
+    "@types/node": "^22.19.21"
   }
 }

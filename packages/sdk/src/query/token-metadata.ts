@@ -1,6 +1,6 @@
 import { decimalsContract, nameContract, symbolContract } from "../contracts";
 
-import type { GenericSigner } from "../types";
+import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
@@ -18,7 +18,7 @@ export interface TokenMetadataQueryConfig {
 }
 
 export function tokenMetadataQueryOptions(
-  signer: GenericSigner,
+  sdk: ZamaSDK,
   tokenAddress: Address,
   config?: TokenMetadataQueryConfig,
 ): QueryFactoryOptions<
@@ -35,9 +35,9 @@ export function tokenMetadataQueryOptions(
     queryFn: async (context) => {
       const [, { tokenAddress: keyTokenAddress }] = context.queryKey;
       const [name, symbol, decimals] = await Promise.all([
-        signer.readContract(nameContract(keyTokenAddress)),
-        signer.readContract(symbolContract(keyTokenAddress)),
-        signer.readContract(decimalsContract(keyTokenAddress)),
+        sdk.provider.readContract(nameContract(keyTokenAddress)),
+        sdk.provider.readContract(symbolContract(keyTokenAddress)),
+        sdk.provider.readContract(decimalsContract(keyTokenAddress)),
       ]);
       return { name, symbol, decimals };
     },

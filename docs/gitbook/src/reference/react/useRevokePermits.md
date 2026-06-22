@@ -1,0 +1,88 @@
+---
+title: useRevokePermits
+description: Revoke FHE permits for specific contract addresses, or all permits at once.
+---
+
+# useRevokePermits
+
+Revoke FHE permits for the current signer. With a contract list, removes direct-decrypt permits on the current chain. Without arguments, removes every permit across all chains and delegators. The transport key pair survives — use [`useClearCredentials`](./useClearCredentials.md) to also wipe the transport key pair.
+
+## Import
+
+```ts
+import { useRevokePermits } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+{% tabs %}
+{% tab title="RevokeButton.tsx" %}
+
+```tsx
+import { useRevokePermits } from "@zama-fhe/react-sdk";
+
+function RevokeButton({ contracts }: { contracts: `0x${string}`[] }) {
+  const { mutate: revokePermits, isPending, isSuccess } = useRevokePermits();
+
+  return (
+    <button onClick={() => revokePermits(contracts)} disabled={isPending}>
+      {isPending ? "Revoking..." : "Revoke permits"}
+    </button>
+  );
+}
+```
+
+{% endtab %}
+{% tab title="RevokeAll.tsx" %}
+
+```tsx
+import { useRevokePermits } from "@zama-fhe/react-sdk";
+
+function RevokeAllButton() {
+  const { mutate: revokePermits, isPending } = useRevokePermits();
+
+  return (
+    <button onClick={() => revokePermits()} disabled={isPending}>
+      {isPending ? "Revoking all..." : "Revoke all permits"}
+    </button>
+  );
+}
+```
+
+{% endtab %}
+{% endtabs %}
+
+## Parameters
+
+`useRevokePermits` takes no constructor parameters.
+
+## Mutation variables
+
+### addresses
+
+`Address[] | void`
+
+Optional array of contract addresses. When provided, revokes permits on the current chain whose payload touches any listed address. When omitted, revokes all permits across all chains and delegators.
+
+```ts
+const { mutate: revokePermits } = useRevokePermits();
+
+revokePermits(["0xContractA", "0xContractB"]); // current chain only
+revokePermits(); // all permits, all chains
+```
+
+## Return Type
+
+{% include ".gitbook/includes/mutation-result.md" %}
+
+## Behavior
+
+- Removes signed permits from the permission store.
+- Auto-invalidates all [`useHasPermit`](./useHasPermit.md) queries on success.
+- The transport key pair is not affected — only permits are removed.
+
+## Related
+
+- [`useClearCredentials`](./useClearCredentials.md) — wipe the transport key pair and all permits
+- [`useGrantPermit`](./useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](./useHasPermit.md) — check whether stored permits cover contracts

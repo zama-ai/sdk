@@ -5,6 +5,7 @@ import path from "node:path";
 function iifeStub(): Plugin {
   return {
     name: "iife-stub",
+    enforce: "pre",
     resolveId(source) {
       if (source.endsWith("?iife")) {
         return `\0${source}`;
@@ -107,7 +108,7 @@ export default defineConfig({
         test: {
           name: "scripts",
           environment: "node",
-          // Node-side build/CI scripts (e.g. the docs link checker in scripts/docs).
+          // scripts/docs only — scripts/llm tests run via `pnpm llm:check` (vitest.llm.config.ts).
           include: ["scripts/docs/**/*.test.mjs"],
           exclude: ["**/node_modules/**"],
         },

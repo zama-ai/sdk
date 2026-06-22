@@ -1,7 +1,7 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { QueryClient } from "@tanstack/react-query";
 import {
-  invalidateAfterApprove,
+  invalidateAfterSetOperator,
   invalidateAfterApproveUnderlying,
   invalidateAfterShield,
   invalidateAfterTransfer,
@@ -67,7 +67,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -85,7 +84,6 @@ describe("invalidation", () => {
     const otherKeys = [
       zamaQueryKeys.confidentialBalance.token(OTHER_TOKEN),
       zamaQueryKeys.underlyingAllowance.token(OTHER_TOKEN),
-      zamaQueryKeys.activityFeed.token(OTHER_TOKEN),
     ];
 
     for (const key of otherKeys) {
@@ -98,13 +96,12 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterUnshield invalidates balance keys, wagmi, underlyingAllowance, and activityFeed", () => {
+  test("invalidateAfterUnshield invalidates balance keys, wagmi, and underlyingAllowance", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -117,12 +114,11 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterTransfer invalidates balance keys and activityFeed", () => {
+  test("invalidateAfterTransfer invalidates balance keys", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -154,7 +150,6 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
-      zamaQueryKeys.activityFeed.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -167,25 +162,15 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterApprove invalidates confidential approval key", () => {
+  test("invalidateAfterSetOperator invalidates confidential operator key", () => {
     const qc = createQueryClient();
-    const approvalKey = zamaQueryKeys.confidentialIsApproved.token(TOKEN);
+    const operatorKey = zamaQueryKeys.confidentialIsOperator.token(TOKEN);
 
-    qc.setQueryData(approvalKey, true);
-    invalidateAfterApprove(qc, TOKEN);
+    qc.setQueryData(operatorKey, true);
+    invalidateAfterSetOperator(qc, TOKEN);
 
-    expect(qc.getQueryData(approvalKey)).toBe(true);
-    expect(qc.getQueryState(approvalKey)?.isInvalidated).toBe(true);
-  });
-
-  test("invalidateAfterApprove invalidates activityFeed.token", () => {
-    const qc = createQueryClient();
-    const activityKey = zamaQueryKeys.activityFeed.token(TOKEN);
-
-    qc.setQueryData(activityKey, [{ id: "evt-1" }]);
-    invalidateAfterApprove(qc, TOKEN);
-
-    expect(qc.getQueryState(activityKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryData(operatorKey)).toBe(true);
+    expect(qc.getQueryState(operatorKey)?.isInvalidated).toBe(true);
   });
 
   test("invalidateAfterApproveUnderlying invalidates underlying allowance and keeps data", () => {
@@ -199,39 +184,76 @@ describe("invalidation", () => {
     expect(qc.getQueryState(allowanceKey)?.isInvalidated).toBe(true);
   });
 
-  test("invalidateWagmiBalanceQueries predicate only invalidates functionName=balanceOf", () => {
+  test("invalidateWagmiBalanceQueries invalidates balanceOf and confidentialBalanceOf reads", () => {
     const qc = createQueryClient();
-    const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
+    const balanceOfKey = ["readContract", { functionName: "balanceOf" }] as const;
+    const confidentialBalanceOfKey = [
+      "readContract",
+      { functionName: "confidentialBalanceOf" },
+    ] as const;
     const otherWagmiKey = ["readContract", { functionName: "totalSupply" }] as const;
 
-    qc.setQueryData(wagmiBalanceKey, "balance");
+    qc.setQueryData(balanceOfKey, "balance");
+    qc.setQueryData(confidentialBalanceOfKey, "confidential-balance");
     qc.setQueryData(otherWagmiKey, "total");
 
     invalidateWagmiBalanceQueries(qc);
 
-    expect(qc.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(balanceOfKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(confidentialBalanceOfKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(otherWagmiKey)?.isInvalidated).toBe(false);
   });
 
-  test("invalidateWalletLifecycleQueries removes signerAddress and invalidates zama queries", () => {
+  test("invalidateWagmiBalanceQueries invalidates batched readContracts balance reads", () => {
     const qc = createQueryClient();
-    const signerKey = zamaQueryKeys.signerAddress.all;
+    const batchedBalanceKey = [
+      "readContracts",
+      { contracts: [{ functionName: "totalSupply" }, { functionName: "confidentialBalanceOf" }] },
+    ] as const;
+    const batchedNonBalanceKey = [
+      "readContracts",
+      { contracts: [{ functionName: "totalSupply" }, { functionName: "decimals" }] },
+    ] as const;
+
+    qc.setQueryData(batchedBalanceKey, "balances");
+    qc.setQueryData(batchedNonBalanceKey, "metadata");
+
+    invalidateWagmiBalanceQueries(qc);
+
+    expect(qc.getQueryState(batchedBalanceKey)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(batchedNonBalanceKey)?.isInvalidated).toBe(false);
+  });
+
+  test("invalidateWalletLifecycleQueries removes decryption cache and invalidates zama queries", () => {
+    const qc = createQueryClient();
     const balanceKey = zamaQueryKeys.confidentialBalance.token(TOKEN);
-    const decryptionKey = zamaQueryKeys.decryption.handle(
+    const decryptionKey = zamaQueryKeys.decryption.encryptedValue(
       "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
     const wagmiBalanceKey = ["readContract", { functionName: "balanceOf" }] as const;
 
-    qc.setQueryData(signerKey, "0xuser");
     qc.setQueryData(balanceKey, { balance: 1n });
     qc.setQueryData(decryptionKey, 123n);
     qc.setQueryData(wagmiBalanceKey, "balance");
 
     invalidateWalletLifecycleQueries(qc);
 
-    expect(qc.getQueryData(signerKey)).toBeUndefined();
     expect(qc.getQueryData(decryptionKey)).toBeUndefined();
     expect(qc.getQueryState(balanceKey)?.isInvalidated).toBe(true);
     expect(qc.getQueryState(wagmiBalanceKey)?.isInvalidated).toBe(true);
+  });
+
+  test("invalidateWalletLifecycleQueries removes wallet-local isAllowed cache", () => {
+    const qc = createQueryClient();
+    const isAllowedKey = zamaQueryKeys.hasPermit.scope([TOKEN]);
+
+    qc.setQueryData(isAllowedKey, true);
+    expect(qc.getQueryData(isAllowedKey)).toBe(true);
+
+    invalidateWalletLifecycleQueries(qc);
+
+    // Cache is removed outright so a disconnected or swapped signer cannot
+    // read a stale `true` before the next refetch.
+    expect(qc.getQueryData(isAllowedKey)).toBeUndefined();
   });
 });

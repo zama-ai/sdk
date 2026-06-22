@@ -5,7 +5,14 @@
  * @packageDocumentation
  */
 
+export type { ZamaConfigViem } from "./types";
+export type { Hex } from "viem";
+export type { EncryptedValue } from "../relayer/relayer-sdk.types";
+
+export { createConfig } from "./config";
+
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
+export { ViemProvider, type ViemProviderConfig } from "./viem-provider";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

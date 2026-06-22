@@ -3,15 +3,16 @@
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  ZamaProvider,
   ZamaSDKEvents,
   IndexedDBStorage,
+  createConfig,
   indexedDBStorage,
   savePendingUnshield,
-  RelayerWeb,
-} from "@zama-fhe/react-sdk";
-import { ViemSigner } from "@zama-fhe/sdk/viem";
-import { SepoliaConfig } from "@zama-fhe/sdk";
+} from "@zama-fhe/sdk";
+import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
+import { web } from "@zama-fhe/sdk/web";
+import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
 import {
   createWalletClient,
   createPublicClient,
@@ -27,31 +28,27 @@ import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
 //
-// This file wires together the three SDK primitives every integration needs:
+// This file builds the SDK 3.x config used by ZamaProvider:
 //
-//   const signer  = new ViemSigner({ walletClient, publicClient });
-//   const relayer = new RelayerWeb({ getChainId, transports: { [SepoliaConfig.chainId]: ... } });
-//   <ZamaProvider relayer={relayer} signer={signer}
-//     storage={indexedDBStorage} sessionStorage={sessionDBStorage}>
+//   const config = createConfig({ chains, provider, signer, relayers, storage, permitStorage });
+//   <ZamaProvider config={config}>
 //
-// SepoliaConfig (from @zama-fhe/sdk) provides the contract addresses and chain parameters.
+// The Sepolia FHE chain preset provides the contract addresses and chain parameters.
 // Relayer requests are routed through the local /api/relayer proxy (Next.js API route)
 // so that RELAYER_API_KEY stays server-side. The proxy defaults to the public Sepolia
 // testnet relayer when RELAYER_URL is not set — no API key required for testnet.
 //
-// ViemSigner is constructed with two clients:
-// - publicClient: for read operations (balances, metadata, receipts) — always available
-// - walletClient: for write operations (send tx, sign) — only when a wallet is installed
+// SDK reads use ViemProvider + publicClient and are always available. Wallet writes and
+// EIP-712 signing use an optional ViemSigner, created only when an EIP-1193 wallet exists.
 //
-// When no wallet is installed, ViemSigner is constructed with publicClient only (read-only).
-// useConfidentialBalance catches getAddress() rejections gracefully; all write operations
-// are gated behind address/isSepolia checks in page.tsx and are never called.
+// When no wallet is installed, the config omits signer. Read-only registry queries still
+// work; signer-required operations are gated behind address/isSepolia checks in page.tsx.
 //
 // Two extra layers handle wallet reactivity:
 //
-// 1. Separate IndexedDB instances for storage and sessionStorage — both use the
-//    same internal key; sharing one DB instance causes the session entry to
-//    overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+// 1. Separate IndexedDB instances for storage and permitStorage — both use the
+//    same internal key; sharing one DB instance can overwrite credential data,
+//    forcing re-signing on every balance decrypt.
 //
 // 2. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
 //    fresh ViemSigner bound to the new account, while ignoring spurious
@@ -61,7 +58,7 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Separate DB from indexedDBStorage — see block comment above for the reason.
-const sessionDBStorage = new IndexedDBStorage("SessionStore");
+const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 export function Providers({ children }: { children: ReactNode }) {
   // Created once per Providers mount — avoids sharing the QueryClient across
@@ -117,10 +114,9 @@ export function Providers({ children }: { children: ReactNode }) {
     };
     // Remount ZamaProvider on network change so the ViemSigner gets a fresh walletClient
     // bound to the new chain. Also invalidate all cached queries — any data fetched on the
-    // previous network is stale (different contracts / balances). The ZamaProvider's internal
-    // signerLifecycleCallbacks.onChainChange already calls invalidateWalletLifecycleQueries,
-    // but that path can hang if the SDK's initial setup (getAddress via eth_requestAccounts)
-    // is still pending. The explicit invalidation here acts as a safety net.
+    // previous network is stale (different contracts / balances). The ZamaProvider also
+    // invalidates wallet-scoped queries through sdk.onIdentityChange, but this explicit
+    // invalidation remains a safety net around the forced remount.
     const handleChainChanged = () => {
       setWalletKey((k) => k + 1);
       queryClient.invalidateQueries();
@@ -133,52 +129,24 @@ export function Providers({ children }: { children: ReactNode }) {
     };
   }, [queryClient]);
 
-  // RelayerWeb routes through the local /api/relayer proxy so RELAYER_API_KEY stays
-  // server-side. SepoliaConfig supplies the contract addresses and chain parameters;
-  // only relayerUrl is overridden to point at the proxy.
+  // Build the SDK config. The chain preset supplies contract addresses; only relayerUrl
+  // and network are overridden for this app's proxy and RPC endpoint.
   // SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
-  // getChainId reads window.ethereum directly (not via walletClient, which would be a
-  // stale closure after walletKey remounts).
-  const relayer = useMemo(
-    () =>
-      new RelayerWeb({
-        getChainId: async () => {
-          const ethereum = getEthereumProvider();
-          if (!ethereum) return SepoliaConfig.chainId;
-          try {
-            const hex = (await ethereum.request({ method: "eth_chainId" })) as string;
-            return parseInt(hex, 16);
-          } catch (err) {
-            console.error("[RelayerWeb] getChainId failed, falling back to Sepolia:", err);
-            return SepoliaConfig.chainId;
-          }
-        },
-        transports: {
-          [SepoliaConfig.chainId]: {
-            ...SepoliaConfig,
-            relayerUrl: `${window.location.origin}/api/relayer`,
-            network: SEPOLIA_RPC_URL,
-          },
-        },
-      }),
-    [],
-  );
-
-  // Recreated on wallet switch so the new ViemSigner is bound to the new account address.
-  // publicClient is always created (needed for reads even without a wallet).
-  // walletClient is only created when window.ethereum is available.
-  const signer = useMemo(() => {
+  const zamaConfig = useMemo(() => {
     const ethereum = getEthereumProvider();
     const publicClient = createPublicClient({
       chain: sepolia,
       transport: http(SEPOLIA_RPC_URL),
     });
-    if (!ethereum) {
-      // No wallet installed — read-only signer. ViemSigner handles getAddress() rejections
-      // gracefully: useConfidentialBalance catches the error; write operations are gated
-      // behind address/isSepolia checks in page.tsx and will never be called.
-      return new ViemSigner({ publicClient });
-    }
+    const provider = new ViemProvider({ publicClient });
+    const zamaSepolia = {
+      ...fheSepolia,
+      relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+      network: SEPOLIA_RPC_URL,
+    } as const;
+
+    let signer: ViemSigner | undefined;
+
     // ViemSigner.writeContract calls walletClient.account to get the signer address —
     // it does NOT fall back to eth_requestAccounts at call time. The account must be
     // set on the walletClient itself. liveAccountsRef is always up-to-date here because
@@ -188,41 +156,46 @@ export function Providers({ children }: { children: ReactNode }) {
     // getAddress() normalizes to EIP-55 checksummed format. Lowercase addresses
     // returned by eth_accounts can cause relayer address validation failures —
     // normalization prevents this.
-    const rawAddress = liveAccountsRef.current[0];
-    const account = rawAddress ? (getAddress(rawAddress) as Address) : undefined;
-    const walletClient = createWalletClient({
-      ...(account ? { account } : {}),
-      chain: sepolia,
-      transport: custom(ethereum),
+    if (ethereum) {
+      const rawAddress = liveAccountsRef.current[0];
+      const account = rawAddress ? (getAddress(rawAddress) as Address) : undefined;
+      const walletClient = createWalletClient({
+        ...(account ? { account } : {}),
+        chain: sepolia,
+        transport: custom(ethereum),
+      });
+      signer = new ViemSigner({ walletClient, ethereum });
+    }
+
+    return createConfig({
+      chains: [zamaSepolia],
+      provider,
+      signer,
+      storage: indexedDBStorage,
+      permitStorage: permitDBStorage,
+      relayers: { [zamaSepolia.id]: web() },
+      onEvent: (event) => {
+        // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
+        // awaits the receipt before emitting). Saving here ensures the pending state
+        // survives a tab close between Phase 1 completion and Phase 2 completion.
+        // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
+        // NOTE: indexedDBStorage must be the same instance as the `storage` field above.
+        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
+          const wrapperAddress = getActiveUnshieldToken();
+          if (wrapperAddress) {
+            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
+              console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
+            );
+            setActiveUnshieldToken(null);
+          }
+        }
+      },
     });
-    return new ViemSigner({ walletClient, publicClient });
   }, [walletKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ZamaProvider
-        key={walletKey}
-        relayer={relayer}
-        storage={indexedDBStorage}
-        sessionStorage={sessionDBStorage}
-        signer={signer}
-        onEvent={(event) => {
-          // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
-          // awaits the receipt before emitting). Saving here ensures the pending state
-          // survives a tab close between Phase 1 completion and Phase 2 completion.
-          // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-          // NOTE: indexedDBStorage must be the same instance as the `storage` prop above.
-          if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-            const wrapperAddress = getActiveUnshieldToken();
-            if (wrapperAddress) {
-              savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-                console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-              );
-              setActiveUnshieldToken(null);
-            }
-          }
-        }}
-      >
+      <ZamaProvider key={walletKey} config={zamaConfig}>
         {children}
       </ZamaProvider>
     </QueryClientProvider>

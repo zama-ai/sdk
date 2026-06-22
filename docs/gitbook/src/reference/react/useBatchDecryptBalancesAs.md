@@ -5,7 +5,7 @@ description: Mutation hook that decrypts confidential balances across multiple t
 
 # useBatchDecryptBalancesAs
 
-Mutation hook that decrypts a delegator's confidential balances across multiple tokens in a single call. Uses `ReadonlyToken.batchDecryptBalancesAs` under the hood with caching, concurrency control, and per-token error handling.
+Mutation hook that decrypts a delegator's confidential balances across multiple tokens in a single call. Uses `Token.batchDecryptBalancesAs` under the hood with caching, concurrency control, and per-token error handling.
 
 ## Import
 
@@ -29,10 +29,10 @@ function PortfolioBalance({
   tokenAddresses: `0x${string}`[];
   delegatorAddress: `0x${string}`;
 }) {
-  // Build ReadonlyToken instances using the SDK factory (not hooks — hooks cannot be called in a loop)
+  // Build Token instances using the SDK factory (not hooks — hooks cannot be called in a loop)
   const sdk = useZamaSDK();
   const tokens = useMemo(
-    () => tokenAddresses.map((addr) => sdk.createReadonlyToken(addr)),
+    () => tokenAddresses.map((addr) => sdk.createToken(addr)),
     [sdk, tokenAddresses],
   );
 
@@ -69,9 +69,9 @@ function PortfolioBalance({
 
 ### tokens
 
-`ReadonlyToken[]`
+`Token[]`
 
-Array of `ReadonlyToken` instances to decrypt balances for. Passed as the first argument to `useBatchDecryptBalancesAs`.
+Array of `Token` instances to decrypt balances for. Passed as the first argument to `useBatchDecryptBalancesAs`.
 
 ```ts
 const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
@@ -95,17 +95,17 @@ import { type BatchDecryptAsOptions } from "@zama-fhe/sdk";
 
 The address that delegated decryption rights.
 
-### handles
+### encryptedValues
 
-`Handle[] | undefined`
+`EncryptedValue[] | undefined`
 
-Pre-fetched encrypted handles. When omitted, handles are fetched from the chain.
+Pre-fetched encrypted values. When omitted, they are fetched from the chain.
 
-### owner
+### accountAddress
 
 `Address | undefined`
 
-Balance owner address. Defaults to `delegatorAddress`.
+The address whose on-chain balance to read. Defaults to `delegatorAddress`.
 
 ### maxConcurrency
 
@@ -115,7 +115,7 @@ Maximum number of concurrent decrypt calls. Default: `Infinity`.
 
 ### onError
 
-`(error: Error, address: Address) => bigint | undefined`
+`(error: Error, address: Address) => bigint`
 
 Called when decryption fails for a single token. Return a fallback value.
 

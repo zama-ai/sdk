@@ -1,21 +1,11 @@
 import type { Address, Hex } from "viem";
-import type { ClearValueType, Handle } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ShieldPath } from "../types/token";
 
 /**
  * All SDK event keys, accessible as `ZamaSDKEvents.EncryptStart` etc.
  */
 export const ZamaSDKEvents = {
-  // Credentials lifecycle
-  CredentialsLoading: "credentials:loading",
-  CredentialsCached: "credentials:cached",
-  CredentialsExpired: "credentials:expired",
-  CredentialsCreating: "credentials:creating",
-  CredentialsCreated: "credentials:created",
-  CredentialsRevoked: "credentials:revoked",
-  CredentialsPersistFailed: "credentials:persist_failed",
-  CredentialsAllowed: "credentials:allowed",
-  CredentialsCorrupted: "credentials:corrupted",
-  SessionExpired: "session:expired",
   // FHE operations
   EncryptStart: "encrypt:start",
   EncryptEnd: "encrypt:end",
@@ -28,7 +18,7 @@ export const ZamaSDKEvents = {
   ShieldSubmitted: "shield:submitted",
   TransferSubmitted: "transfer:submitted",
   TransferFromSubmitted: "transferFrom:submitted",
-  ApproveSubmitted: "approve:submitted",
+  SetOperatorSubmitted: "setOperator:submitted",
   ApproveUnderlyingSubmitted: "approveUnderlying:submitted",
   UnwrapSubmitted: "unwrap:submitted",
   FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted",
@@ -55,65 +45,6 @@ export interface BaseEvent {
 
 // -- Per-event typed payloads --
 
-export interface CredentialsLoadingEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsLoading;
-  /** Contract addresses being requested. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCachedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCached;
-  /** Contract addresses covered by the cached credentials. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsExpiredEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsExpired;
-  /** Contract addresses that need re-authorization. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCreatingEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCreating;
-  /** Contract addresses being authorized. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCreatedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCreated;
-  /** Contract addresses covered by the new credentials. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsRevokedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsRevoked;
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsPersistFailedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsPersistFailed;
-  /** The error that caused the persist failure. */
-  error: Error;
-}
-
-export interface CredentialsAllowedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsAllowed;
-  /** Contract addresses covered by the authorized credentials. */
-  contractAddresses?: Address[];
-}
-
-export interface CredentialsCorruptedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.CredentialsCorrupted;
-  /** The error that revealed storage corruption. */
-  error: Error;
-}
-
-export interface SessionExpiredEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.SessionExpired;
-  /** Why the session expired. Currently always `"ttl"`, extensible for future inactivity timeout. */
-  reason: "ttl";
-}
-
 export interface EncryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.EncryptStart;
 }
@@ -132,17 +63,17 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 export interface DecryptStartEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptStart;
-  /** Handles being decrypted — correlate with matching DecryptEnd/DecryptError. */
-  handles: Handle[];
+  /** Encrypted values being decrypted — correlate with matching DecryptEnd/DecryptError. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface DecryptEndEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptEnd;
   durationMs: number;
-  /** Handles that were decrypted. */
-  handles: Handle[];
-  /** Decrypted values keyed by handle — use this to correlate events to specific handles. */
-  result: Record<Handle, ClearValueType>;
+  /** Encrypted values that were decrypted. */
+  encryptedValues: EncryptedValue[];
+  /** Decrypted values keyed by encrypted value — use this to correlate events to specific entries. */
+  result: Record<EncryptedValue, ClearValue>;
 }
 
 export interface DecryptErrorEvent extends BaseEvent {
@@ -150,14 +81,14 @@ export interface DecryptErrorEvent extends BaseEvent {
   /** The error that caused the decryption to fail. */
   error: Error;
   durationMs: number;
-  /** Handles that were being decrypted when the error occurred. */
-  handles: Handle[];
+  /** Encrypted values that were being decrypted when the error occurred. */
+  encryptedValues: EncryptedValue[];
 }
 
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
-  /** Which write operation failed. */
-  operation: string;
+  /** Which SDK operation failed. */
+  operation: TransactionOperation;
   /** The error that caused the transaction to fail. */
   error: Error;
 }
@@ -165,6 +96,8 @@ export interface TransactionErrorEvent extends BaseEvent {
 export interface ShieldSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ShieldSubmitted;
   txHash: Hex;
+  /** Which execution path was used: single-tx `transferAndCall` or two-tx `approveAndWrap`. */
+  shieldPath: ShieldPath;
 }
 
 export interface TransferSubmittedEvent extends BaseEvent {
@@ -177,14 +110,16 @@ export interface TransferFromSubmittedEvent extends BaseEvent {
   txHash: Hex;
 }
 
-export interface ApproveSubmittedEvent extends BaseEvent {
-  type: typeof ZamaSDKEvents.ApproveSubmitted;
+export interface SetOperatorSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.SetOperatorSubmitted;
   txHash: Hex;
 }
 
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
   txHash: Hex;
+  /** Which approval transaction was submitted. */
+  step: "reset" | "approve";
 }
 
 export interface UnwrapSubmittedEvent extends BaseEvent {
@@ -224,21 +159,11 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 /**
  * Discriminated union of all SDK events.
  *
- * Decrypt events carry handles and decrypted clear-text values so event
+ * Decrypt events carry encrypted values and decrypted clear-text values so event
  * subscribers can correlate and bind them in UI layers. Events never carry
- * private keys, session signatures, or ZK proofs.
+ * private keys, permit signatures, or ZK proofs.
  */
 export type ZamaSDKEvent =
-  | CredentialsLoadingEvent
-  | CredentialsCachedEvent
-  | CredentialsExpiredEvent
-  | CredentialsCreatingEvent
-  | CredentialsCreatedEvent
-  | CredentialsRevokedEvent
-  | CredentialsPersistFailedEvent
-  | CredentialsAllowedEvent
-  | CredentialsCorruptedEvent
-  | SessionExpiredEvent
   | EncryptStartEvent
   | EncryptEndEvent
   | EncryptErrorEvent
@@ -249,7 +174,7 @@ export type ZamaSDKEvent =
   | ShieldSubmittedEvent
   | TransferSubmittedEvent
   | TransferFromSubmittedEvent
-  | ApproveSubmittedEvent
+  | SetOperatorSubmittedEvent
   | ApproveUnderlyingSubmittedEvent
   | UnwrapSubmittedEvent
   | FinalizeUnwrapSubmittedEvent
@@ -267,3 +192,77 @@ export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
     ? Omit<E, "timestamp" | "tokenAddress">
     : never
   : never;
+
+/**
+ * Single source of truth for each transaction operation's submitted-event payload.
+ *
+ * Adding a write op = adding one entry here. `TransactionOperation` is then
+ * `keyof typeof transactionOperationMetadata`, so the dispatch table and the
+ * operation union cannot drift.
+ *
+ * The `satisfies` check enforces that every entry produces a valid
+ * {@link ZamaSDKEventInput}.
+ */
+export const transactionOperationMetadata = {
+  approveUnderlying: {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "approve" as const,
+    }),
+  },
+  "approveUnderlying:reset": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      txHash,
+      step: "reset" as const,
+    }),
+  },
+  delegateDecryption: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
+  },
+  finalizeUnwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
+  },
+  revokeDelegation: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
+  },
+  setOperator: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
+  },
+  "shield:transferAndCall": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "transferAndCall" as const,
+    }),
+  },
+  "shield:approveAndWrap": {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "approveAndWrap" as const,
+    }),
+  },
+  transfer: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
+  },
+  transferFrom: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
+  },
+  unwrap: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+  unwrapAll: {
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }),
+  },
+} satisfies Record<string, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;
+
+/**
+ * SDK transaction operations that emit submitted/error lifecycle events.
+ *
+ * Operation strings encode the execution-path discriminator for flows that have
+ * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
+ * and success events on a single field — see {@link transactionOperationMetadata}.
+ */
+export type TransactionOperation = keyof typeof transactionOperationMetadata;
