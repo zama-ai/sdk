@@ -44,8 +44,10 @@ const docFiles = [
   join(repoRoot, "packages/react-sdk/README.md"),
 ];
 
-const wrongBranchUrl = new RegExp(`raw\\.githubusercontent\\.com/zama-ai/sdk/${otherBranch}/`);
-const wrongSpaceUrl = new RegExp(`docs\\.zama\\.org/protocol/sdk/${otherSpace}/`);
+// Literal substrings, matched with String.includes — never RegExp built from
+// input, so there's nothing to escape and no regex-injection surface.
+const wrongBranchUrl = `raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`;
+const wrongSpaceUrl = `docs.zama.org/protocol/sdk/${otherSpace}/`;
 const rel = (p) => p.replace(`${repoRoot}/`, "");
 
 const problems = [];
@@ -57,17 +59,17 @@ for (const file of docFiles) {
   } catch {
     continue;
   }
-  if (wrongBranchUrl.test(content)) {
+  if (content.includes(wrongBranchUrl)) {
     problems.push(`${rel(file)}: links to the "${otherBranch}" branch (expected "${expected}")`);
   }
-  if (wrongSpaceUrl.test(content)) {
+  if (content.includes(wrongSpaceUrl)) {
     problems.push(`${rel(file)}: links to the "${otherSpace}" GitBook space (expected "${space}")`);
   }
 }
 
 const configPath = join(repoRoot, "docs/llm/corpus.config.json");
 const { rawGithubBaseUrl } = JSON.parse(readFileSync(configPath, "utf8"));
-if (!new RegExp(`/zama-ai/sdk/${expected}/?$`).test(rawGithubBaseUrl)) {
+if (!rawGithubBaseUrl.replace(/\/+$/u, "").endsWith(`/zama-ai/sdk/${expected}`)) {
   problems.push(
     `docs/llm/corpus.config.json: rawGithubBaseUrl is "${rawGithubBaseUrl}" (expected branch "${expected}")`,
   );
