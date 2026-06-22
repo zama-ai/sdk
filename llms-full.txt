@@ -1374,11 +1374,24 @@ Prefer docs over examples when the docs already answer the question, and prefer 
 
 Adapt these for your own app:
 
-> Use the official Zama SDK docs and the approved `react-wagmi` example to add confidential balances and transfers to this Next.js app.
 
-> Use the official Zama SDK docs and the approved `node-viem` example to build a Node.js backend with the `node()` transport and per-request isolation.
+### Tab: React (wagmi)
 
-> Debug this Zama SDK integration with the official error guide first, then compare against the closest approved example.
+```text
+Use the official Zama SDK docs and the approved react-wagmi example to add confidential balances and transfers to this Next.js app.
+```
+
+### Tab: Node.js
+
+```text
+Use the official Zama SDK docs and the approved node-viem example to build a Node.js backend with the node() transport and per-request isolation.
+```
+
+### Tab: Debugging
+
+```text
+Debug this Zama SDK integration with the official error guide first, then compare against the closest approved example.
+```
 
 ## Migrate from v2 to v3
 
