@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.1.0...v3.1.1-alpha.1) (2026-06-22)
+
+### Bug Fixes
+
+- **sdk:** stop workers logging console.error on handled failures [SDK-230] ([#449](https://github.com/zama-ai/sdk/issues/449)) ([08e80b7]())
+
 ## [3.1.0](https://github.com/zama-ai/sdk/compare/v3.0.1...v3.1.0) (2026-06-22)
 
 ### ⚠ BREAKING CHANGES
