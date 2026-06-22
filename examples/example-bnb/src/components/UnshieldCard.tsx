@@ -30,21 +30,17 @@ export function UnshieldCard({
 
   const { storage } = useZamaSDK();
 
-  const unshield = useUnshield(
-    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
-    { tokenAddress, wrapperAddress: tokenAddress },
-    {
-      onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress).catch((err) =>
-          console.error("[UnshieldCard] Failed to clear pending unshield:", err),
-        );
-        onSuccess?.();
-      },
-      // Clear the active token ref on failure so a stale address is never used by the
-      // onEvent handler in ZamaProvider if a subsequent UnshieldPhase1Submitted fires.
-      onError: () => setActiveUnshieldToken(null),
+  const unshield = useUnshield(tokenAddress, {
+    onSuccess: () => {
+      clearPendingUnshield(storage, tokenAddress).catch((err) =>
+        console.error("[UnshieldCard] Failed to clear pending unshield:", err),
+      );
+      onSuccess?.();
     },
-  );
+    // Clear the active token ref on failure so a stale address is never used by the
+    // onEvent handler in ZamaProvider if a subsequent UnshieldPhase1Submitted fires.
+    onError: () => setActiveUnshieldToken(null),
+  });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Unshielding… (2/2)" : "Unshielding… (1/2)";
