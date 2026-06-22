@@ -19,7 +19,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: sign } = useSign();
- * const signedTx = await sign({ prepared });
+ * const signedTx = await sign({ preparedTx });
  * ```
  */
 export function useSign<TContext = unknown>(

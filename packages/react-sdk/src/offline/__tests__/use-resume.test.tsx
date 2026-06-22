@@ -44,7 +44,7 @@ describe("useResume", () => {
     let value: unknown;
     await act(async () => {
       value = await result.current.mutation.mutateAsync({
-        prepared: PREPARED,
+        preparedTx: PREPARED,
         txHash: "0xtxhash",
       });
     });

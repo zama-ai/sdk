@@ -12,7 +12,7 @@ import { useZamaSDK } from "../provider";
 /**
  * Persist an externally-signed decryption permit. Pair with
  * `usePrepare({ kind: "DecryptionPermit", ... })` and an external
- * `signTypedData` call over `prepared.typedData`.
+ * `signTypedData` call over `preparedPermit.typedData`.
  *
  * Signer-optional: works without a configured signer (canonical
  * cross-process custody shape).
@@ -20,7 +20,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: registerPermit } = useRegisterPermit();
- * await registerPermit({ prepared, signature });
+ * await registerPermit({ preparedPermit, signature });
  * ```
  */
 export function useRegisterPermit<TContext = unknown>(

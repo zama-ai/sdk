@@ -255,17 +255,17 @@ export class OfflineSigningService {
    *   request (HTTP error, policy denial, timeout). Already-typed
    *   {@link ZamaError} causes are re-thrown unchanged.
    */
-  async sign(prepared: PreparedTransaction): Promise<Hex> {
-    const signer = this.#requireSigner(`sign(${prepared.kind})`);
-    assertSignTransaction(signer, `sign(${prepared.kind})`);
+  async sign(preparedTx: PreparedTransaction): Promise<Hex> {
+    const signer = this.#requireSigner(`sign(${preparedTx.kind})`);
+    assertSignTransaction(signer, `sign(${preparedTx.kind})`);
     try {
-      return await signer.signTransaction(prepared.unsignedTx);
+      return await signer.signTransaction(preparedTx.unsignedTx);
     } catch (error) {
-      this.#emitTransactionError(prepared, error);
+      this.#emitTransactionError(preparedTx, error);
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new SigningFailedError(`Sign failed for ${prepared.kind}`, {
+      throw new SigningFailedError(`Sign failed for ${preparedTx.kind}`, {
         cause: error,
       });
     }
@@ -277,7 +277,7 @@ export class OfflineSigningService {
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
    *
-   * Re-checks chain alignment between `prepared.chainId` and the configured
+   * Re-checks chain alignment between `preparedTx.chainId` and the configured
    * provider before sending — the gap between prepare and broadcast is the
    * whole point of offline signing, and the user may have switched chains
    * meanwhile.
@@ -288,20 +288,22 @@ export class OfflineSigningService {
    * failure (receipt wait timeout or revert) preserves `txHash` in the
    * message so the caller can recover via {@link resume}.
    */
-  async broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
-    await this.#assertSameChainAsPrepared(prepared, "broadcast");
+  async broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(preparedTx, "broadcast");
     let txHash: Hex;
     try {
       txHash = await this.#provider.sendRawTransaction(signedTx);
     } catch (error) {
-      this.#emitTransactionError(prepared, error);
+      this.#emitTransactionError(preparedTx, error);
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError(`Broadcast failed for ${prepared.kind}`, { cause: error });
+      throw new TransactionRevertedError(`Broadcast failed for ${preparedTx.kind}`, {
+        cause: error,
+      });
     }
-    this.#emitSubmitted(prepared, txHash);
-    return this.#awaitReceipt(prepared, txHash);
+    this.#emitSubmitted(preparedTx, txHash);
+    return this.#awaitReceipt(preparedTx, txHash);
   }
 
   // ── resume ─────────────────────────────────────────────────────────────
@@ -310,19 +312,19 @@ export class OfflineSigningService {
    * Resume the SDK lifecycle for an externally-broadcast transaction:
    * re-check chain alignment, emit the matching `*Submitted` event, and wait
    * for the receipt — without holding the signed bytes. Use when an external
-   * process submitted `prepared.unsignedTx` directly via
+   * process submitted `preparedTx.unsignedTx` directly via
    * `eth_sendRawTransaction` and this process needs to refresh its caches.
    *
    * **Trust model:** the SDK takes the caller's word that `txHash`
-   * corresponds to `prepared.unsignedTx`. No on-chain check confirms that
+   * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
    * the broadcaster signed *this* payload rather than a different one from
    * the same `from`. Callers who need a stronger guarantee can refetch the
    * tx via the provider and compare its serialized form.
    */
-  async resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    await this.#assertSameChainAsPrepared(prepared, "resume");
-    this.#emitSubmitted(prepared, txHash);
-    return this.#awaitReceipt(prepared, txHash);
+  async resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    await this.#assertSameChainAsPrepared(preparedTx, "resume");
+    this.#emitSubmitted(preparedTx, txHash);
+    return this.#awaitReceipt(preparedTx, txHash);
   }
 
   // ── refreshPrepared ────────────────────────────────────────────────────
@@ -340,15 +342,15 @@ export class OfflineSigningService {
    * submission and discard any pending approval against the prior one.
    *
    * Signer-optional: works without a configured signer. The original
-   * `prepared` is left untouched (immutable); the returned value is a fresh
+   * `preparedTx` is left untouched (immutable); the returned value is a fresh
    * `PreparedFor<K>` built from the original `request`.
    */
   refresh<K extends TransactionKind>(
-    prepared: PreparedFor<K>,
+    preparedTx: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
     return this.#prepareTransaction(
-      prepared.request as Extract<TransactionPrepareRequest, { kind: K }>,
+      preparedTx.request as Extract<TransactionPrepareRequest, { kind: K }>,
       options,
     );
   }
@@ -358,7 +360,7 @@ export class OfflineSigningService {
   /**
    * Register an externally-signed {@link PreparedPermitFor} into the
    * credential cache. Pair with `prepare({ kind: "DecryptionPermit", ... })`
-   * and an external `signTypedData` call over `prepared.typedData`.
+   * and an external `signTypedData` call over `preparedPermit.typedData`.
    *
    * Signer-optional: works without a configured signer (canonical
    * cross-process custody shape).
@@ -367,28 +369,28 @@ export class OfflineSigningService {
    *   hex string.
    */
   async registerPermit<K extends PermitKind>(
-    prepared: PreparedPermitFor<K>,
+    preparedPermit: PreparedPermitFor<K>,
     signature: Hex,
   ): Promise<DecryptionPermitResult> {
     assertHex(signature, "registerPermit: signature");
-    if (prepared.typedData === null) {
+    if (preparedPermit.typedData === null) {
       // Already covered — nothing to register.
       return {
-        contracts: prepared.context.chunk,
+        contracts: preparedPermit.context.chunk,
         durationDays: 0,
-        startTimestamp: prepared.context.startTimestamp,
+        startTimestamp: preparedPermit.context.startTimestamp,
       };
     }
     const permit = await this.#credentials.registerSignedPermit({
       signature,
-      keypair: { publicKey: prepared.context.keypairPublicKey },
+      keypair: { publicKey: preparedPermit.context.keypairPublicKey },
       scope: {
-        signerAddress: checksum(prepared.context.signerAddress),
-        chainId: prepared.context.chainId,
-        delegatorAddress: checksum(prepared.context.delegatorAddress),
+        signerAddress: checksum(preparedPermit.context.signerAddress),
+        chainId: preparedPermit.context.chainId,
+        delegatorAddress: checksum(preparedPermit.context.delegatorAddress),
       },
-      chunk: prepared.context.chunk.map(checksum),
-      startTimestamp: prepared.context.startTimestamp,
+      chunk: preparedPermit.context.chunk.map(checksum),
+      startTimestamp: preparedPermit.context.startTimestamp,
     });
     return {
       contracts: permit.signedContractAddresses,

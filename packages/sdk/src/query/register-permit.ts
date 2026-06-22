@@ -5,7 +5,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link registerPermitMutationOptions}. */
 export interface RegisterPermitParams {
-  readonly prepared: PreparedPermitFor<PermitKind>;
+  readonly preparedPermit: PreparedPermitFor<PermitKind>;
   readonly signature: Hex;
 }
 
@@ -22,6 +22,7 @@ export function registerPermitMutationOptions(
 > {
   return {
     mutationKey: ["zama.registerPermit"] as const,
-    mutationFn: ({ prepared, signature }) => sdk.offlineSigning.registerPermit(prepared, signature),
+    mutationFn: ({ preparedPermit, signature }) =>
+      sdk.offlineSigning.registerPermit(preparedPermit, signature),
   };
 }

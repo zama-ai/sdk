@@ -5,14 +5,14 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link refreshPreparedMutationOptions}. */
 export interface RefreshPreparedParams {
-  readonly prepared: PreparedFor<TransactionKind>;
+  readonly preparedTx: PreparedFor<TransactionKind>;
   readonly options?: OfflineSigningOptions;
 }
 
 /**
  * Mutation options for `sdk.offlineSigning.refresh` — re-stamps a prepared
  * transaction with the current chain state (nonce, fees, gas limit).
- * The original `prepared` is left untouched (immutable).
+ * The original `preparedTx` is left untouched (immutable).
  */
 export function refreshPreparedMutationOptions(
   sdk: ZamaSDK,
@@ -23,6 +23,6 @@ export function refreshPreparedMutationOptions(
 > {
   return {
     mutationKey: ["zama.refreshPrepared"] as const,
-    mutationFn: ({ prepared, options }) => sdk.offlineSigning.refresh(prepared, options),
+    mutationFn: ({ preparedTx, options }) => sdk.offlineSigning.refresh(preparedTx, options),
   };
 }

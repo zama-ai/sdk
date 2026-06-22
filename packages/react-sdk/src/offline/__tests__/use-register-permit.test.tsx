@@ -50,7 +50,7 @@ describe("useRegisterPermit", () => {
     let value: unknown;
     await act(async () => {
       value = await result.current.mutation.mutateAsync({
-        prepared: PREPARED,
+        preparedPermit: PREPARED,
         signature: "0xsig",
       });
     });

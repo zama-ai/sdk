@@ -20,7 +20,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: broadcast } = useBroadcast();
- * const result = await broadcast({ prepared, signedTx });
+ * const result = await broadcast({ preparedTx, signedTx });
  * ```
  */
 export function useBroadcast<TContext = unknown>(

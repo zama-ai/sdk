@@ -11798,16 +11798,16 @@ export class NoCiphertextError extends ZamaError {
 // @public
 export class Offline {
     constructor(offlineSigningService: OfflineSigningService);
-    broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
+    broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     prepare<K extends TransactionKind>(request: Extract<TransactionPrepareRequest, {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
     // (undocumented)
     prepare<K extends PermitKind>(request: DecryptionPermitRequest, options?: OfflineSigningOptions): Promise<PreparedPermitFor<K>>;
-    refresh<K extends TransactionKind>(prepared: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    registerPermit<K extends PermitKind>(prepared: PreparedPermitFor<K>, signature: Hex): Promise<DecryptionPermitResult>;
-    resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
-    sign(prepared: PreparedTransaction): Promise<Hex>;
+    refresh<K extends TransactionKind>(preparedTx: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    registerPermit<K extends PermitKind>(preparedPermit: PreparedPermitFor<K>, signature: Hex): Promise<DecryptionPermitResult>;
+    resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
+    sign(preparedTx: PreparedTransaction): Promise<Hex>;
 }
 
 // @public

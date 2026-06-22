@@ -53,32 +53,32 @@ const config = createConfig({
 const zama = new ZamaSDK(config);
 
 // 1. PREPARE — SDK builds an RLP-encoded unsigned EIP-1559 transaction.
-const prepared = await zama.offlineSigning.prepare({
+const preparedTx = await zama.offlineSigning.prepare({
   kind: "ConfidentialTransfer",
   from: dfnsWalletAddress,
   token,
   to,
   amount: 1_000000n,
 });
-// prepared.unsignedTx : 0x… (RLP, EIP-1559 / type-2)
+// preparedTx.unsignedTx : 0x… (RLP, EIP-1559 / type-2)
 
 // 2. SIGN — handed to DFNS; policy approval happens out-of-band here.
 const { signedData } = await dfns.wallets.generateSignature({
   walletId,
-  body: { kind: "Transaction", transaction: prepared.unsignedTx },
+  body: { kind: "Transaction", transaction: preparedTx.unsignedTx },
 });
 // …poll dfns.wallets.getSignature until status === "Signed"…
 
 // 3. BROADCAST — SDK submits, awaits the receipt, syncs its caches.
-const result = await zama.offlineSigning.broadcast(prepared, signedData as Hex);
+const result = await zama.offlineSigning.broadcast(preparedTx, signedData as Hex);
 ```
 
 There are **two flows**, distinguished by what `prepare` returns:
 
-| Flow                                                                              | `prepare` returns                                               | DFNS signs with       | Finalize with                                            |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
-| **Transaction** (transfers, operator approvals, shield/unshield legs, delegation) | `PreparedTransaction` with `unsignedTx` (RLP, EIP-1559)         | `kind: "Transaction"` | `sdk.offlineSigning.broadcast(prepared, signedTx)`       |
-| **Decryption permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedDecryptionPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `sdk.offlineSigning.registerPermit(prepared, signature)` |
+| Flow                                                                              | `prepare` returns                                               | DFNS signs with       | Finalize with                                                   |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | --------------------------------------------------------------- |
+| **Transaction** (transfers, operator approvals, shield/unshield legs, delegation) | `PreparedTransaction` with `unsignedTx` (RLP, EIP-1559)         | `kind: "Transaction"` | `zama.offlineSigning.broadcast(preparedTx, signedTx)`           |
+| **Decryption permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedDecryptionPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `zama.offlineSigning.registerPermit(preparedPermit, signature)` |
 
 The transaction kinds we support today (`TransactionKind`): `ConfidentialTransfer`,
 `ConfidentialTransferFrom`, `SetOperator`, `Unwrap`, `UnwrapAll`, `FinalizeUnwrap`,
@@ -108,10 +108,10 @@ EIP-1559 transaction** and a **standard EIP-712 typed-data envelope** — and co
 back either **signed bytes**, a **broadcast tx hash**, or a **signature**. DFNS
 handles both through `wallets.generateSignature`:
 
-| SDK emits                   | DFNS signs with       | SDK finalizes with                                              |
-| --------------------------- | --------------------- | --------------------------------------------------------------- |
-| unsigned type-2 tx (RLP)    | `kind: "Transaction"` | `broadcast(prepared, signedTx)` _or_ `resume(prepared, txHash)` |
-| EIP-712 typed-data envelope | `kind: "Eip712"`      | `registerPermit(prepared, signature)`                           |
+| SDK emits                   | DFNS signs with       | SDK finalizes with                                                  |
+| --------------------------- | --------------------- | ------------------------------------------------------------------- |
+| unsigned type-2 tx (RLP)    | `kind: "Transaction"` | `broadcast(preparedTx, signedTx)` _or_ `resume(preparedTx, txHash)` |
+| EIP-712 typed-data envelope | `kind: "Eip712"`      | `registerPermit(preparedPermit, signature)`                         |
 
 Our working integration uses the **signed-bytes** path for transactions and the
 **typed-data** path for permits (§6). The trust boundary that path implies is in §3.

@@ -40,7 +40,7 @@ export function prepareMutationOptions(
 
 /** Variables for {@link signMutationOptions}. */
 export interface SignParams {
-  readonly prepared: PreparedTransaction;
+  readonly preparedTx: PreparedTransaction;
 }
 
 /** Mutation options for `sdk.offlineSigning.sign` — signs prepared bytes, returns hex. */
@@ -49,6 +49,6 @@ export function signMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex> {
   return {
     mutationKey: ["zama.sign"] as const,
-    mutationFn: ({ prepared }) => sdk.offlineSigning.sign(prepared),
+    mutationFn: ({ preparedTx }) => sdk.offlineSigning.sign(preparedTx),
   };
 }

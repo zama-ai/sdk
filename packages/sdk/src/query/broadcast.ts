@@ -6,7 +6,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link broadcastMutationOptions}. */
 export interface BroadcastParams {
-  readonly prepared: PreparedTransaction;
+  readonly preparedTx: PreparedTransaction;
   readonly signedTx: Hex;
 }
 
@@ -20,13 +20,13 @@ export function broadcastMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult> {
   return {
     mutationKey: ["zama.broadcast"] as const,
-    mutationFn: ({ prepared, signedTx }) => sdk.offlineSigning.broadcast(prepared, signedTx),
+    mutationFn: ({ preparedTx, signedTx }) => sdk.offlineSigning.broadcast(preparedTx, signedTx),
   };
 }
 
 /** Variables for {@link resumeMutationOptions}. */
 export interface ResumeParams {
-  readonly prepared: PreparedTransaction;
+  readonly preparedTx: PreparedTransaction;
   readonly txHash: Hex;
 }
 
@@ -40,6 +40,6 @@ export function resumeMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.resume"], ResumeParams, TransactionResult> {
   return {
     mutationKey: ["zama.resume"] as const,
-    mutationFn: ({ prepared, txHash }) => sdk.offlineSigning.resume(prepared, txHash),
+    mutationFn: ({ preparedTx, txHash }) => sdk.offlineSigning.resume(preparedTx, txHash),
   };
 }

@@ -21,7 +21,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const { mutateAsync: resume } = useResume();
- * const result = await resume({ prepared, txHash });
+ * const result = await resume({ preparedTx, txHash });
  * ```
  */
 export function useResume<TContext = unknown>(

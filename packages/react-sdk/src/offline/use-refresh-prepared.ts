@@ -15,12 +15,12 @@ import { useZamaSDK } from "../provider";
  * when the gap since {@link usePrepare} was long enough for values to
  * drift (custodian approval ceremonies, multi-party signing, etc.).
  *
- * Signer-optional. The original `prepared` is left untouched (immutable).
+ * Signer-optional. The original `preparedTx` is left untouched (immutable).
  *
  * @example
  * ```tsx
  * const { mutateAsync: refresh } = useRefreshPrepared();
- * const fresh = await refresh({ prepared });
+ * const fresh = await refresh({ preparedTx });
  * ```
  */
 export function useRefreshPrepared<TContext = unknown>(

@@ -85,7 +85,7 @@ export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<r
 // @public
 export interface BroadcastParams {
     // (undocumented)
-    readonly prepared: PreparedTransaction;
+    readonly preparedTx: PreparedTransaction;
     // (undocumented)
     readonly signedTx: Hex;
 }
@@ -607,7 +607,7 @@ export interface RefreshPreparedParams {
     // (undocumented)
     readonly options?: OfflineSigningOptions;
     // (undocumented)
-    readonly prepared: PreparedFor<TransactionKind>;
+    readonly preparedTx: PreparedFor<TransactionKind>;
 }
 
 // @public
@@ -616,7 +616,7 @@ export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOpti
 // @public
 export interface RegisterPermitParams {
     // (undocumented)
-    readonly prepared: PreparedPermitFor<PermitKind>;
+    readonly preparedPermit: PreparedPermitFor<PermitKind>;
     // (undocumented)
     readonly signature: Hex;
 }
@@ -633,7 +633,7 @@ export function resumeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<read
 // @public
 export interface ResumeParams {
     // (undocumented)
-    readonly prepared: PreparedTransaction;
+    readonly preparedTx: PreparedTransaction;
     // (undocumented)
     readonly txHash: Hex;
 }
@@ -714,7 +714,7 @@ export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readon
 // @public
 export interface SignParams {
     // (undocumented)
-    readonly prepared: PreparedTransaction;
+    readonly preparedTx: PreparedTransaction;
 }
 
 // @public (undocumented)

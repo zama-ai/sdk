@@ -82,7 +82,7 @@ export class OfflineSigning {
 
   /**
    * **In-process convenience** that delegates to
-   * `this.signer.signTransaction(prepared.unsignedTx)` with capability checks
+   * `this.signer.signTransaction(preparedTx.unsignedTx)` with capability checks
    * and event/error integration. The SDK never takes custody of signing
    * material — this method runs in your process, against the signer object
    * you passed to `createConfig`; keys stay where they are.
@@ -107,30 +107,30 @@ export class OfflineSigning {
    * @throws if signer rejected (HSM denial, policy refusal, timeout, …).
    *   {@link SigningFailedError}
    */
-  sign(prepared: PreparedTransaction): Promise<Hex> {
-    return this.#offlineSigningService.sign(prepared);
+  sign(preparedTx: PreparedTransaction): Promise<Hex> {
+    return this.#offlineSigningService.sign(preparedTx);
   }
 
   /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
    */
-  broadcast(prepared: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.broadcast(prepared, signedTx);
+  broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.broadcast(preparedTx, signedTx);
   }
 
   /**
    * Persist an externally-signed decryption permit. Pair with
    * `sdk.offlineSigning.prepare({ kind: "DecryptionPermit", from, contracts })` and an
-   * external `signTypedData` call over `prepared.typedData`.
+   * external `signTypedData` call over `preparedPermit.typedData`.
    *
    * Signer-optional: works without a configured signer.
    */
   registerPermit<K extends PermitKind>(
-    prepared: PreparedPermitFor<K>,
+    preparedPermit: PreparedPermitFor<K>,
     signature: Hex,
   ): Promise<DecryptionPermitResult> {
-    return this.#offlineSigningService.registerPermit(prepared, signature);
+    return this.#offlineSigningService.registerPermit(preparedPermit, signature);
   }
 
   /**
@@ -141,13 +141,13 @@ export class OfflineSigning {
    * `eth_sendRawTransaction` outside this process.
    *
    * **Trust model:** the SDK takes the caller's word that `txHash`
-   * corresponds to `prepared.unsignedTx`. No on-chain check confirms that
+   * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
    * the broadcaster signed *this* payload rather than a different one from
    * the same `from`. Callers who need a stronger guarantee can refetch the
    * tx via the provider and compare its serialized form.
    */
-  resume(prepared: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.resume(prepared, txHash);
+  resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
+    return this.#offlineSigningService.resume(preparedTx, txHash);
   }
 
   /**
@@ -155,7 +155,7 @@ export class OfflineSigning {
    * nonce, fee parameters, and gas limit. Call this before {@link sign}
    * when the gap since {@link prepare} was long enough for values to drift
    * (custodian approval ceremonies, multi-party signing, etc.). The
-   * original `prepared` is left untouched (immutable).
+   * original `preparedTx` is left untouched (immutable).
    *
    * **Identity is not stable across refresh** — the returned `unsignedTx`
    * bytes (and therefore the eventual tx hash) differ from the input's.
@@ -166,9 +166,9 @@ export class OfflineSigning {
    * Signer-optional: works without a configured signer.
    */
   refresh<K extends TransactionKind>(
-    prepared: PreparedFor<K>,
+    preparedTx: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
-    return this.#offlineSigningService.refresh(prepared, options);
+    return this.#offlineSigningService.refresh(preparedTx, options);
   }
 }

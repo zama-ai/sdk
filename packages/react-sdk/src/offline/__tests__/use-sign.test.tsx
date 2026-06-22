@@ -43,7 +43,7 @@ describe("useSign", () => {
 
     let value: unknown;
     await act(async () => {
-      value = await result.current.mutation.mutateAsync({ prepared: PREPARED });
+      value = await result.current.mutation.mutateAsync({ preparedTx: PREPARED });
     });
 
     expect(spy).toHaveBeenCalledOnce();

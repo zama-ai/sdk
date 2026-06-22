@@ -48,7 +48,7 @@ describe("useRefreshPrepared", () => {
 
     let value: unknown;
     await act(async () => {
-      value = await result.current.mutation.mutateAsync({ prepared: STALE });
+      value = await result.current.mutation.mutateAsync({ preparedTx: STALE });
     });
 
     expect(spy).toHaveBeenCalledOnce();

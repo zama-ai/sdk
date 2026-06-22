@@ -48,7 +48,7 @@ describe("useBroadcast", () => {
     let value: unknown;
     await act(async () => {
       value = await result.current.mutation.mutateAsync({
-        prepared: PREPARED,
+        preparedTx: PREPARED,
         signedTx: "0xsigned",
       });
     });
