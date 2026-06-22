@@ -1,11 +1,11 @@
 ---
 title: useDecryptValues
-description: Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.
+description: Query hook for FHE user decryption. Disabled by default — enable it to fire, and gate on a cached permit to avoid an unexpected wallet prompt.
 ---
 
 # useDecryptValues
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](./useGrantPermit.md)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
+Query hook for user decryption. **Disabled by default** — pass `enabled` to run it, and gate on a cached permit (via [`useHasPermit`](./useHasPermit.md)) to avoid an unexpected wallet prompt. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 {% hint style="info" %}
 Renamed from `useUserDecrypt` to align with the Zama glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
@@ -75,11 +75,14 @@ import { type EncryptedInput } from "@zama-fhe/sdk";
 Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useDecryptValues([
-  { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
-]);
+const { data } = useDecryptValues(
+  [
+    { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
+  ],
+  { enabled: true },
+);
 
 // data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```

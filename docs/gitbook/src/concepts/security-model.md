@@ -9,7 +9,9 @@ This page describes what the SDK protects, what it exposes, and the trust assump
 
 ## What is encrypted
 
-Confidential tokens encrypt **balances** and **transfer amounts**. When a user shields 1,000 tokens, the plaintext amount is FHE-encrypted client-side before the transaction reaches the blockchain. When a user transfers 500 tokens privately, the amount is encrypted before submission.
+Confidential tokens encrypt **balances** and **confidential transfer amounts**. When a user transfers 500 tokens privately, the plaintext amount is FHE-encrypted client-side before the transaction reaches the blockchain, and the on-chain contract only ever sees the ciphertext.
+
+Shielding and unshielding are the public boundary: they convert tokens between a public ERC-20 and its confidential form, so the **shield/unshield amount is visible on-chain** — it is an ordinary public ERC-20 movement. Privacy begins once tokens are in confidential form: the resulting balance is encrypted, and later confidential transfers hide their amounts.
 
 The on-chain contract stores FHE ciphertexts instead of `uint256` values. Only the balance owner (via their FHE private key and the relayer KMS) can decrypt their own balance.
 
@@ -21,6 +23,7 @@ FHE protects values, not metadata. The following remain publicly observable on-c
 - **Participant addresses** — sender and receiver addresses are part of the transaction.
 - **Token contract address** — which confidential token is involved.
 - **Transaction type** — whether the call is a shield, transfer, unshield, or approval.
+- **Shield and unshield amounts** — converting between public ERC-20 and confidential form is a public ERC-20 transfer, so the converted amount is visible. Only confidential transfers hide their amounts.
 - **Gas costs** — standard Ethereum gas accounting.
 - **Timing** — when transactions occur.
 

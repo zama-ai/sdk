@@ -74,7 +74,7 @@ Callbacks are safe to use -- if one throws, the unshield still completes. The ty
 
 ### 3. Unshield your entire balance
 
-If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance, decrypts it, and unshields the full amount.
+If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance and unshields the full amount directly, without decrypting it first.
 
 {% tabs %}
 {% tab title="SDK" %}

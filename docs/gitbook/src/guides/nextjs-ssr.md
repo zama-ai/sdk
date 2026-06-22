@@ -31,7 +31,7 @@ import { useAccount } from "wagmi";
 export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
   const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 
@@ -158,7 +158,7 @@ import { useAccount } from "wagmi";
 export function TokenBalance({ tokenAddress }: { tokenAddress: string }) {
   const { address } = useAccount();
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
     account: address,
   });
 

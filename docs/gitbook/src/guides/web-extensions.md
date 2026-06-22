@@ -11,7 +11,7 @@ MV3 Chrome extensions present a unique challenge: the background service worker 
 
 ### 1. Understand the problem
 
-By default, the SDK stores signed permits (used to authorize FHE decryption) in an in-memory JavaScript object. In a normal web page, that memory lives for the duration of the tab. In an MV3 extension, the service worker can shut down after 30 seconds of inactivity.
+In a normal web page, the SDK defaults to persistent IndexedDB storage for signed permits. But an MV3 service worker has no `window`, so the SDK falls back to an in-memory store — and the service worker can shut down after 30 seconds of inactivity, taking those permits with it.
 
 When the service worker restarts, the in-memory permits are gone. The user would need to re-sign with their wallet on every interaction -- a broken experience.
 
@@ -84,7 +84,7 @@ When the user closes Chrome entirely:
 2. `indexedDB` persists -- the transport key pair survives
 3. On next launch, the user re-signs once to create fresh permits for their existing transport key pair
 
-This mirrors the default browser SDK behavior (in-memory permits lost on tab close) but extends the permit lifetime to cover service worker restarts within the same browser session.
+Unlike a normal web page (which defaults to persistent IndexedDB), a service worker would otherwise fall back to in-memory permits lost on restart; `chromeSessionStorage` keeps them alive across service worker restarts within the same browser session.
 
 ## Next steps
 
