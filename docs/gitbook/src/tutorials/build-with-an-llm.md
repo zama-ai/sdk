@@ -72,22 +72,28 @@ Prefer docs over examples when the docs already answer the question, and prefer 
 
 ## Example prompts
 
-Adapt these for your own app. Each starts by grounding the agent in the Zama SDK (the skills, or `llms.txt`) so it doesn't guess:
+If you installed the skills (`zama-ai/skills`) above, paste a task below — `zama-typescript` loads automatically. Otherwise ground the agent first, then give it a task.
+
+**Ground the agent** (skip if the skills are installed):
+
+> Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
+
+**Pick a task:**
 
 {% tabs %}
 {% tab title="React (wagmi)" %}
 
-> Using the Zama SDK skills (or its `llms.txt`), add confidential balances and transfers to this Next.js app — follow the approved `react-wagmi` example.
+> Add confidential balances and transfers to this Next.js app, following the approved `react-wagmi` example.
 
 {% endtab %}
 {% tab title="Node.js" %}
 
-> Using the Zama SDK skills (or its `llms.txt`), build a Node.js backend with the `node()` transport and per-request isolation — follow the approved `node-viem` example.
+> Build a Node.js backend with the `node()` transport and per-request isolation, following the approved `node-viem` example.
 
 {% endtab %}
 {% tab title="Debugging" %}
 
-> Using the Zama SDK skills (or its `llms.txt`), debug this integration: start with the official error guide, then compare against the closest approved example.
+> Debug this Zama SDK integration: check the official error guide first, then compare against the closest approved example.
 
 {% endtab %}
 {% endtabs %}
