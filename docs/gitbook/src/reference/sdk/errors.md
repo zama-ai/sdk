@@ -37,6 +37,10 @@ import {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   SignerRequiredError,
+  SignerNotConfiguredError,
+  WalletNotConnectedError,
+  WalletAccountNotReadyError,
+  ChainMismatchError,
   AclPausedError,
 } from "@zama-fhe/sdk";
 ```
@@ -53,8 +57,8 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Insufficient balance: ${e.available} available`,
-  INSUFFICIENT_ERC20_BALANCE: (e) => `Not enough tokens: ${e.available} available`,
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: () => "Insufficient confidential balance",
+  INSUFFICIENT_ERC20_BALANCE: () => "Not enough tokens to shield",
   BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
   ERC20_READ_FAILED: () => "Could not read token balance -- check your connection",
   _: (e) => `Unexpected error: ${e}`,
@@ -66,7 +70,7 @@ const message = matchZamaError(error, {
 | `error`    | `unknown`                                                            | The caught error                        |
 | `handlers` | `Record<ErrorCode, (e: ZamaError) => T> & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
-The `_` wildcard catches any `ZamaError` not explicitly handled.
+The `_` wildcard catches any `ZamaError` not explicitly handled. Handlers receive the error typed as the base `ZamaError` (`.code`, `.message`); to read subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode`, narrow with `instanceof` (see the detail sections below).
 
 ## Error summary
 
@@ -98,6 +102,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled.
 | `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured                            |
 | `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account                              |
 | `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet                          |
+| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                    |
 | `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                                         |
 
 ## Error details
@@ -129,6 +134,20 @@ try {
 Thrown when a signer adapter is configured but does not currently have a connected wallet account.
 
 **How to handle:** Prompt the user to connect or unlock their wallet.
+
+### ChainMismatchError
+
+**Code:** `CHAIN_MISMATCH`
+
+Thrown when the signer and provider resolve to different chains during an operation. The error carries `operation`, `signerChainId`, and `providerChainId`.
+
+```ts
+matchZamaError(error, {
+  CHAIN_MISMATCH: () => showError("Wallet is on the wrong network — switch and retry"),
+});
+```
+
+**How to handle:** Prompt the user to switch their wallet to the chain the operation targets, then retry.
 
 ### SigningRejectedError
 
@@ -225,7 +244,7 @@ matchZamaError(error, {
 
 **Code:** `KEYPAIR_EXPIRED`
 
-The transport key pair exceeded its TTL (default: 24 hours). The user needs to sign again to generate a new one.
+The transport key pair exceeded its TTL (default: 30 days). The user needs to sign again to generate a new one.
 
 ```ts
 matchZamaError(error, {

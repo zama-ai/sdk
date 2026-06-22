@@ -76,7 +76,8 @@ app.post("/api/transfer", (req, res) => {
     // Everything inside this callback has its own isolated storage
     const config = createConfig({
       chains: [mySepolia],
-      signer: wallet,
+      publicClient,
+      walletClient,
       storage: asyncLocalStorage,
       relayers: {
         [mySepolia.id]: node(),

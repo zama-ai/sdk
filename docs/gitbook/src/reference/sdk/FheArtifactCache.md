@@ -16,9 +16,7 @@ Persistent cache for the FHE encryption key and public parameters (CRS). Stores 
 
 ## Import
 
-```ts
-import { FheArtifactCache } from "@zama-fhe/sdk";
-```
+`FheArtifactCache` is an **internal class** — it is not exported from `@zama-fhe/sdk`, and you do not import or instantiate it directly. Configure artifact caching through the `web()` / `node()` transport factories (below); the constructor and methods are documented here only as internal reference.
 
 ## Usage
 
@@ -89,38 +87,6 @@ const config = createConfig({
 {% hint style="info" %}
 The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
 {% endhint %}
-
-{% endtab %}
-{% tab title="Direct instantiation" %}
-
-```ts
-import { FheArtifactCache } from "@zama-fhe/sdk";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-const cache = new FheArtifactCache({
-  storage: myStorage,
-  chainId: sepolia.id,
-  relayerUrl: sepolia.relayerUrl,
-  ttl: 86_400,
-});
-
-// Fetch FHE encryption key bytes (with cache-through)
-const pk = await cache.fetchFheEncryptionKeyBytes(async () => {
-  // Your network fetcher — called only on cache miss
-  return { publicKeyId: "abc", publicKey: new Uint8Array([...]) };
-});
-
-// Fetch public parameters for a specific bit size
-const params = await cache.getPublicParams(2048, async () => {
-  return { publicParamsId: "def", publicParams: new Uint8Array([...]) };
-});
-
-// Check if cached artifacts are still fresh
-const invalidated = await cache.revalidateIfDue();
-if (invalidated) {
-  // Re-fetch artifacts — cache was cleared
-}
-```
 
 {% endtab %}
 {% endtabs %}

@@ -96,7 +96,7 @@ const { mutateAsync: shield, isPending } = useShield({
   address: "0xWrapperAddress",
 });
 
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}
@@ -154,7 +154,7 @@ This sends only the shield transaction. If the allowance is insufficient, the tr
 
 ### 5. Track the transaction
 
-Both the core SDK and React hooks return the transaction hash. You can use it to wait for confirmation or show progress in your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to wait for confirmation or show progress in your UI:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -182,7 +182,7 @@ const {
 // isPending is true while the transaction is in flight
 // isSuccess flips to true when the mutation completes
 // Balance caches are automatically invalidated on success
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}
