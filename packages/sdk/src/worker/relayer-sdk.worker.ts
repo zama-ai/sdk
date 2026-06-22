@@ -323,7 +323,6 @@ async function handleInit(request: InitRequest): Promise<void> {
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] Init error:", message);
     sendError(id, type, message);
   }
 }
@@ -404,7 +403,6 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] Encrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -440,7 +438,6 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] UserDecrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -490,7 +487,6 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] PublicDecrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -514,7 +510,6 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] GenerateKeypair error:", message);
     sendError(id, type, message);
   }
 }
@@ -538,7 +533,6 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
     sendSuccess(id, type, eip712);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] CreateEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -563,7 +557,6 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
     sendSuccess(id, type, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[Worker] CreateDelegatedEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -600,7 +593,6 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] DelegatedUserDecrypt error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -628,7 +620,6 @@ async function handleRequestZKProofVerification(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] RequestZKProofVerification error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -650,7 +641,6 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] GetPublicKey error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -675,7 +665,6 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    console.error("[Worker] GetPublicParams error:", message);
     sendError(id, type, message, statusCode);
   }
 }
@@ -734,7 +723,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         await handleGetPublicParams(request);
         break;
       default:
-        console.error("[Worker] Unknown request type:", (request as WorkerRequest).type);
+        throw new Error(`Unknown request type: ${(request as WorkerRequest).type}`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
