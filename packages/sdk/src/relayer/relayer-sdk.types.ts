@@ -7,7 +7,7 @@ import type {
   PublicDecryptResults,
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { Address, Hex } from "viem";
-import type { GenericLogger } from "../worker/worker.types";
+import type { LoggerService } from "../services/logger-service";
 import type { GenericStorage } from "../types";
 import type { FheChain } from "../chains/types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
@@ -43,8 +43,8 @@ export interface RelayerWebConfig {
   worker: RelayerWorkerClient;
   /** Security options (CSRF, CDN integrity). */
   security?: RelayerWebSecurityConfig;
-  /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for observing worker lifecycle and request timing. */
+  logger: LoggerService;
   /**
    * Number of WASM threads for parallel FHE operations inside the Web Worker.
    * Uses `wasm-bindgen-rayon` under the hood via `SharedArrayBuffer`.

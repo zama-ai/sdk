@@ -2,7 +2,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type React from "react";
-import type { ZamaConfig } from "@zama-fhe/sdk";
+import { LoggerService, type ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
@@ -51,6 +51,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
+        logger: new LoggerService(),
         ...overrides,
       } as unknown as ZamaConfig;
 

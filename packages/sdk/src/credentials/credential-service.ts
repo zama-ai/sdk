@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
+import type { LoggerService } from "../services/logger-service";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -32,6 +33,8 @@ export interface CredentialServiceConfig {
   storage: GenericStorage;
   /** Optional dedicated storage for permits; defaults to `storage`. */
   permitStorage?: GenericStorage;
+  /** SDK-wide logger for credential-path diagnostics. */
+  logger: LoggerService;
 }
 
 /**
@@ -46,19 +49,23 @@ export class CredentialService {
   readonly #relayer: RelayerDispatcher;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
+  readonly #logger: LoggerService;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
       generator: () => config.relayer.generateTransportKeyPair(),
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
+      logger: config.logger,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
+      logger: config.logger,
     });
     this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
+    this.#logger = config.logger;
   }
 
   /**
@@ -100,15 +107,21 @@ export class CredentialService {
           keypair,
           scope,
         });
-        await swallow("replace permit", () =>
-          this.#store.replace(scope, candidate.signature, widened),
+        await swallow(
+          "replace permit",
+          () => this.#store.replace(scope, candidate.signature, widened),
+          this.#logger,
         );
         permits[permits.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
           const permission = await this.#signPermit({ chunk, keypair, scope });
           permits.push(permission);
-          await swallow("persist permit", () => this.#store.append(scope, [permission]));
+          await swallow(
+            "persist permit",
+            () => this.#store.append(scope, [permission]),
+            this.#logger,
+          );
         }
       }
     }

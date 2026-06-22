@@ -1,4 +1,5 @@
 import { describe, test, expect, vi, afterEach } from "../../test-fixtures";
+import { LoggerService } from "../../services/logger-service";
 import { BaseWorkerClient, DEFAULT_TIMEOUT_MS } from "../worker.base-client";
 import type {
   GenericLogger,
@@ -21,7 +22,7 @@ interface TestWorker {
 
 interface TestConfig {
   initType: WorkerRequestType;
-  logger?: GenericLogger;
+  logger?: LoggerService;
 }
 
 let requestIdCounter = 0;
@@ -33,7 +34,7 @@ class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
 
   constructor(config?: Partial<TestConfig>) {
     const cfg: TestConfig = { initType: "INIT", ...config };
-    super(cfg, cfg.logger);
+    super(cfg, cfg.logger ?? new LoggerService());
   }
 
   protected createWorker(): TestWorker {
@@ -175,6 +176,27 @@ describe("BaseWorkerClient", () => {
     await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("decrypt failed");
   });
 
+  test("logs a handled request failure at debug, never error", async () => {
+    const sink: GenericLogger = {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const client = await initClient({ logger: new LoggerService(sink) });
+    autoRejectPostMessage(client, "decrypt failed");
+
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("decrypt failed");
+
+    // The failure is surfaced via the rejected promise; logging it at `error`
+    // would duplicate a handled failure into the consumer's monitoring.
+    expect(sink.error).not.toHaveBeenCalled();
+    expect(sink.debug).toHaveBeenCalledWith(
+      expect.stringContaining("FAILED"),
+      expect.objectContaining({ error: "decrypt failed" }),
+    );
+  });
+
   test("rejects with timeout when no response arrives", async () => {
     vi.useFakeTimers();
 
@@ -208,7 +230,7 @@ describe("BaseWorkerClient", () => {
       warn,
       error: vi.fn(),
     };
-    const client = new TestWorkerClient({ logger: mockLogger });
+    const client = new TestWorkerClient({ logger: new LoggerService(mockLogger) });
 
     client.simulateResponse({
       id: "unknown-id",
@@ -217,9 +239,10 @@ describe("BaseWorkerClient", () => {
       data: {},
     });
 
-    expect(warn).toHaveBeenCalledWith("[WorkerClient] Received response for unknown request", {
-      id: "unknown-id",
-    });
+    expect(warn).toHaveBeenCalledWith(
+      "[zama-sdk] [WorkerClient] Received response for unknown request",
+      { id: "unknown-id" },
+    );
   });
 
   test("worker error rejects all pending and terminates worker", async () => {

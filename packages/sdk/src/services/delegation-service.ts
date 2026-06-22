@@ -24,6 +24,7 @@ import type {
   WriteContractConfig,
 } from "../types";
 import { submitTransaction } from "../utils/submit-transaction";
+import type { LoggerService } from "./logger-service";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
@@ -34,18 +35,22 @@ export class DelegationService {
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  readonly #logger: LoggerService;
 
   constructor({
     provider,
     relayer,
     emitEvent = () => {},
+    logger,
   }: {
     provider: GenericProvider;
     relayer: RelayerDispatcher;
+    logger: LoggerService;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
     this.#relayer = relayer;
+    this.#logger = logger;
     this.#emitEvent = emitEvent;
   }
 
@@ -98,7 +103,9 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      console.warn("[zama-sdk] delegateDecryption: pre-flight expiry check failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("delegateDecryption: pre-flight expiry check failed", {
+        error,
+      });
       currentExpiry = -1n;
     }
     if (currentExpiry === expDate) {
@@ -145,7 +152,7 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      console.warn("[zama-sdk] revokeDelegation: pre-flight expiry check failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("revokeDelegation: pre-flight expiry check failed", { error });
       currentExpiry = 1n;
     }
     if (currentExpiry === 0n) {

@@ -4,6 +4,7 @@ import { transportKeyPairStorageKey } from "./storage-keys";
 import { StoredTransportKeyPairSchema } from "./schemas";
 import type { TransportKeyPair, StoredTransportKeyPair } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
+import type { LoggerService } from "../services/logger-service";
 import { nowSeconds } from "./utils";
 
 interface TransportKeyPairVaultConfig {
@@ -11,6 +12,8 @@ interface TransportKeyPairVaultConfig {
   storage: GenericStorage;
   /** Transport key pair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
+  /** SDK-wide logger for best-effort storage diagnostics. */
+  logger: LoggerService;
 }
 
 /**
@@ -23,12 +26,14 @@ export class TransportKeyPairVault {
   readonly #generator: () => Promise<TransportKeyPair>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
+  readonly #logger: LoggerService;
   readonly #pending = new Map<ChecksummedAddress, Promise<StoredTransportKeyPair>>();
 
   constructor(config: TransportKeyPairVaultConfig) {
     this.#generator = config.generator;
     this.#storage = config.storage;
     this.#ttl = config.ttl;
+    this.#logger = config.logger;
   }
 
   async readStored(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair | null> {
@@ -39,12 +44,20 @@ export class TransportKeyPairVault {
     }
     const parsed = StoredTransportKeyPairSchema.safeParse(raw);
     if (!parsed.success) {
-      await swallow("delete transport key pair entry", () => this.#storage.delete(key));
+      await swallow(
+        "delete transport key pair entry",
+        () => this.#storage.delete(key),
+        this.#logger,
+      );
       return null;
     }
     const stored = parsed.data;
     if (nowSeconds() >= stored.expiresAt) {
-      await swallow("delete transport key pair entry", () => this.#storage.delete(key));
+      await swallow(
+        "delete transport key pair entry",
+        () => this.#storage.delete(key),
+        this.#logger,
+      );
       return null;
     }
     return stored;
@@ -75,7 +88,11 @@ export class TransportKeyPairVault {
         expiresAt: createdAt + this.#ttl,
       };
       const key = transportKeyPairStorageKey(signerAddress);
-      await swallow("persist transport key pair", () => this.#storage.set(key, stored));
+      await swallow(
+        "persist transport key pair",
+        () => this.#storage.set(key, stored),
+        this.#logger,
+      );
       return stored;
     })().finally(() => {
       this.#pending.delete(signerAddress);

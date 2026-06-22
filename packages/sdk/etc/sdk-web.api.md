@@ -43,7 +43,7 @@ export interface RelayerWebConfig {
     chain: FheChain;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
+    logger: LoggerService;
     security?: RelayerWebSecurityConfig;
     threads?: number;
     worker: RelayerWorkerClient;
@@ -61,15 +61,15 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig;
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient, logger: LoggerService) => RelayerWeb;
     // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+    readonly createWorker: (chains: FheChain[], logger: LoggerService) => RelayerWorkerClient;
     // (undocumented)
     readonly type: "web";
 }
 
 // @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
 
 // (No @packageDocumentation comment for this package)
 

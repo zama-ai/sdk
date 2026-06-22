@@ -1,19 +1,14 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
 import type { FheChain } from "../chains/types";
-import type {
-  GenericLogger,
-  WorkerEnv,
-  WorkerRequest,
-  WorkerRequestType,
-  WorkerResponse,
-} from "./worker.types";
+import type { WorkerEnv, WorkerRequest, WorkerRequestType, WorkerResponse } from "./worker.types";
+import type { LoggerService } from "../services/logger-service";
 import { BaseWorkerClient } from "./worker.base-client";
 
 export interface NodeWorkerClientConfig {
   chains: FheChain[];
-  /** Optional logger for tracing worker request lifecycle. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for tracing worker request lifecycle. */
+  logger: LoggerService;
 }
 
 /**

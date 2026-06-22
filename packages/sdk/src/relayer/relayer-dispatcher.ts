@@ -10,6 +10,7 @@ import { resolveChainRelayers } from "../config/resolve";
 import type { TransportKeyPair } from "../credentials/types";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
+import type { LoggerService } from "../services/logger-service";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
@@ -50,6 +51,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   constructor(
     chains: readonly [FheChain, ...FheChain[]],
     configs: Readonly<Record<number, RelayerConfig>>,
+    logger: LoggerService,
   ) {
     if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");
@@ -77,12 +79,12 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     try {
       for (const [relayerCfg, groupChains] of groups) {
         const allChainConfigs = groupChains.map(([, chain]) => chain);
-        const worker = relayerCfg.createWorker?.(allChainConfigs);
+        const worker = relayerCfg.createWorker?.(allChainConfigs, logger);
         if (worker) {
           workers.push(worker);
         }
         for (const [chainId, chain] of groupChains) {
-          relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
+          relayers.set(chainId, relayerCfg.createRelayer(chain, worker, logger));
         }
       }
     } catch (error) {

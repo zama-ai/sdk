@@ -314,7 +314,31 @@ const config = createConfig({
 
 When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
 
-### 6. (Optional) Choose a storage backend
+### 6. (Optional) Supply a logger
+
+The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  logger: console, // or a pino / winston / OpenTelemetry DiagLogger instance
+});
+```
+
+The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `debug` — that `console` and common logging libraries satisfy directly, so no adapter is needed. The SDK never bundles a logging library or imposes a format; level filtering is left to your logger. Levels follow these conventions:
+
+| Level   | What the SDK emits                                                                           |
+| ------- | -------------------------------------------------------------------------------------------- |
+| `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
+| `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
+| `info`  | Coarse lifecycle milestones, used sparingly                                                  |
+| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+
+The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+
+### 7. (Optional) Choose a storage backend
 
 The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
 
@@ -339,7 +363,7 @@ When multiple chains use the same relayer, create it once and reference that sin
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedWeb = web({ threads: 8, logger: console });
+const sharedWeb = web({ threads: 8 });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;

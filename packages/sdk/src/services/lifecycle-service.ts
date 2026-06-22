@@ -3,12 +3,14 @@ import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import { swallow } from "../utils";
 import type { CachingService } from "./caching-service";
+import type { LoggerService } from "./logger-service";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
   relayer: RelayerDispatcher;
   cachingService: CachingService;
   credentialService?: CredentialService;
+  logger: LoggerService;
 };
 
 /**
@@ -24,6 +26,7 @@ export class LifecycleService {
   readonly #relayer: RelayerDispatcher;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
+  readonly #logger: LoggerService;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
 
@@ -32,11 +35,11 @@ export class LifecycleService {
     this.#relayer = opts.relayer;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
+    this.#logger = opts.logger;
     if (this.#signer) {
       this.#unsubscribeSigner = this.#signer.walletAccount.subscribe((change) => {
         this.#handleWalletAccountChange(change).catch((error) => {
-          // oxlint-disable-next-line no-console
-          console.warn("[zama-sdk] wallet account handler failed:", error);
+          this.#logger.warn("wallet account handler failed", { error });
         });
       });
     }
@@ -66,22 +69,30 @@ export class LifecycleService {
     // RelayerDispatcher.switchChain is synchronous.
     const nextChainId = next?.chainId;
     if (nextChainId !== undefined) {
-      await swallow("switch relayer chain", () => this.#relayer.switchChain(nextChainId));
+      await swallow(
+        "switch relayer chain",
+        () => this.#relayer.switchChain(nextChainId),
+        this.#logger,
+      );
     }
     const credentialService = this.#credentialService;
     if (credentialService) {
-      await swallow("credential wallet account change", () =>
-        credentialService.handleWalletAccountChange(prev, next),
+      await swallow(
+        "credential wallet account change",
+        () => credentialService.handleWalletAccountChange(prev, next),
+        this.#logger,
       );
     }
     if (prev) {
-      await swallow("clear decrypt cache", () =>
-        this.#cachingService.clearForRequester(prev.address),
+      await swallow(
+        "clear decrypt cache",
+        () => this.#cachingService.clearForRequester(prev.address),
+        this.#logger,
       );
     }
     await Promise.all(
       Array.from(this.#walletAccountListeners, (listener) =>
-        swallow("wallet account listener", () => listener(change)),
+        swallow("wallet account listener", () => listener(change), this.#logger),
       ),
     );
   }

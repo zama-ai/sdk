@@ -1,6 +1,6 @@
 "use client";
 
-import { ZamaSDK, type ZamaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, type LoggerService, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,14 +20,14 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmTransportKeyPair(sdk: ZamaSDK): void {
+function warmTransportKeyPair(sdk: ZamaSDK, logger: LoggerService): void {
   void sdk.permits.warmTransportKeyPair().catch((error: unknown) => {
     // Warmup is a latency optimization — the first real permit/decrypt call
     // will lazily retry transport-key-pair generation and surface actionable
-    // errors. We still log so persistent failures (storage corruption, relayer
-    // 4xx during generation) leave a breadcrumb during debugging.
-    // oxlint-disable-next-line no-console
-    console.warn("[zama-sdk] warm transport key pair failed:", error);
+    // errors. We route this through the configured logger (silent by default)
+    // so persistent failures (storage corruption, relayer 4xx during
+    // generation) leave a breadcrumb during debugging.
+    logger.warn("[zama-sdk] warm transport key pair failed", { error });
   });
 }
 
@@ -60,14 +60,15 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
   // call `sdk.permits.warmTransportKeyPair()` on mount and on every
   // `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
-    warmTransportKeyPair(sdk);
+    const logger = config.logger;
+    warmTransportKeyPair(sdk, logger);
     return sdk.onWalletAccountChange(({ previous }) => {
       if (previous) {
         invalidateWalletLifecycleQueries(queryClient);
       }
-      warmTransportKeyPair(sdk);
+      warmTransportKeyPair(sdk, logger);
     });
-  }, [sdk, queryClient]);
+  }, [sdk, queryClient, config.logger]);
 
   // Clean up SDK-owned signer subscriptions on unmount without terminating
   // the caller-owned relayer. dispose() is idempotent.

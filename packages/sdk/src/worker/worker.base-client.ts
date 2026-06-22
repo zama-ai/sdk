@@ -1,3 +1,4 @@
+import type { LoggerService } from "../services/logger-service";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -20,7 +21,6 @@ import type {
   RequestZKProofVerificationResponseData,
   UserDecryptPayload,
   UserDecryptResponseData,
-  GenericLogger,
   WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
@@ -52,9 +52,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
   #initPromise: Promise<TWorker> | null = null;
   protected readonly config: TConfig;
-  protected readonly logger: GenericLogger | undefined;
+  protected readonly logger: LoggerService;
 
-  constructor(config: TConfig, logger: GenericLogger | undefined) {
+  constructor(config: TConfig, logger: LoggerService) {
     this.config = config;
     this.logger = logger;
   }
@@ -147,7 +147,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      this.logger?.warn("[WorkerClient] Received response for unknown request", {
+      this.logger.warn("[WorkerClient] Received response for unknown request", {
         id: response.id,
       });
       return;
@@ -159,13 +159,17 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     this.#pendingRequests.delete(response.id);
 
     if (response.success) {
-      this.logger?.debug(`[WorkerClient] ← ${pending.type} OK`, {
+      this.logger.debug(`[WorkerClient] ← ${pending.type} OK`, {
         id: response.id,
         elapsed,
       });
       pending.resolve(response.data);
     } else {
-      this.logger?.error(`[WorkerClient] ← ${pending.type} FAILED`, {
+      // A failed worker response is a handled operation failure: it is
+      // propagated to the caller via `pending.reject(err)` below. Logging it at
+      // `error` would duplicate a handled failure into the consumer's
+      // monitoring (the regression Dfns hit), so it stays at `debug`.
+      this.logger.debug(`[WorkerClient] ← ${pending.type} FAILED`, {
         id: response.id,
         elapsed,
         error: response.error,
@@ -179,7 +183,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   protected handleWorkerError(message: string): void {
-    this.logger?.error("[WorkerClient] Worker error", { error: message });
+    this.logger.error("[WorkerClient] Worker error", { error: message });
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending(`Worker error: ${message}`);
@@ -189,7 +193,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   }
 
   protected handleWorkerMessageError(): void {
-    this.logger?.error("[WorkerClient] Message deserialization failed");
+    this.logger.error("[WorkerClient] Message deserialization failed");
     const worker = this.#worker;
     this.#worker = null;
     this.#rejectAllPending("Worker message deserialization failed");
@@ -211,12 +215,14 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     return new Promise<T>((resolve, reject) => {
       const id = this.generateRequestId();
       const startTime = performance.now();
-      this.logger?.debug(`[WorkerClient] → ${type}`, { id });
+      this.logger.debug(`[WorkerClient] → ${type}`, { id });
 
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
         const elapsed = Math.round(performance.now() - startTime);
-        this.logger?.error(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
+        // A timeout is surfaced via the rejected promise below, so it is a
+        // handled failure and stays at `debug` rather than `error`.
+        this.logger.debug(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
           id,
           elapsed,
         });
