@@ -60,6 +60,14 @@ jobs:
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm llm:check
 
+      # Doc URLs are branch-specific (raw.githubusercontent .../main|prerelease, and
+      # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
+      # on — reliable here even though the PR is checked out detached. If the committed
+      # URLs target the wrong branch (e.g. a promotion that forgot `pnpm llm:retarget`),
+      # this fails. `ref_name` covers the workflow_call (release) path.
+      - name: Verify doc URLs target the right branch
+        run: pnpm llm:check-target "${{ github.base_ref || github.ref_name }}"
+
   # External link liveness for the published docs + READMEs. Internal links and
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
   # targets. PR-only — skipped on the release `workflow_call` so external flakiness
