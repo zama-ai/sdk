@@ -21,7 +21,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/quick-start.md): Get from zero to a working confidential transfer in under 5 minutes.
 - [Build your first confidential dApp](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/first-confidential-dapp.md): End-to-end tutorial building a token dashboard with React, wagmi, and the Zama React SDK.
 - [Wallet & exchange integration](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/wallet-exchange-integration.md): How wallets and exchanges support ERC-7984 confidential tokens with the Zama SDK — display balances, build transfers, manage operators, and wrap/unwrap between ERC-20 and confidential form.
-- [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md): How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.
+- [Build with an LLM](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/tutorials/build-with-an-llm.md): Give coding agents grounded Zama SDK context — install the Zama skills, or point agents without skill support at the SDK's llms.txt files.
 
 ### Guides
 
