@@ -50,10 +50,10 @@ const config = createConfig({
   provider, // RPC only — used for nonce/fees/gas + broadcast + receipts
   storage: new MemoryStorage(),
 });
-const sdk = new ZamaSDK(config);
+const zama = new ZamaSDK(config);
 
 // 1. PREPARE — SDK builds an RLP-encoded unsigned EIP-1559 transaction.
-const prepared = await sdk.offlineSigning.prepare({
+const prepared = await zama.offlineSigning.prepare({
   kind: "ConfidentialTransfer",
   from: dfnsWalletAddress,
   token,
@@ -70,7 +70,7 @@ const { signedData } = await dfns.wallets.generateSignature({
 // …poll dfns.wallets.getSignature until status === "Signed"…
 
 // 3. BROADCAST — SDK submits, awaits the receipt, syncs its caches.
-const result = await sdk.offlineSigning.broadcast(prepared, signedData as Hex);
+const result = await zama.offlineSigning.broadcast(prepared, signedData as Hex);
 ```
 
 There are **two flows**, distinguished by what `prepare` returns:
