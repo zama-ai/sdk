@@ -28,7 +28,7 @@ export function TransferCard({
   const [recipient, setRecipient] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
-  const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
+  const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
