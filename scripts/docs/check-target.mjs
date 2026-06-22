@@ -1,12 +1,12 @@
 // Assert the committed doc URLs target the expected publish branch.
 //
-//   pnpm llm:check-target <main|prerelease>
+//   pnpm docs:check-target <main|prerelease>
 //
 // Runs in CI with the PR's base branch (github.base_ref) — which, unlike a local
 // git branch name, is reliable in CI's detached-HEAD PR checkout and is exactly
 // where the PR will land. If the committed URLs point at the other branch/space
 // (e.g. a prerelease→main promotion that forgot to flip them), this fails and
-// tells you to run `pnpm llm:retarget <branch>`. Idempotent partner to retarget.mjs.
+// tells you to run `pnpm docs:retarget <branch>`. Idempotent partner to retarget.mjs.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -18,7 +18,7 @@ const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
 const expected = process.argv[2];
 if (!Object.hasOwn(BRANCH_TO_SPACE, expected)) {
   // Not a publish branch (e.g. a feature→feature PR) — nothing to assert.
-  console.log(`llm:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`);
+  console.log(`docs:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`);
   process.exit(0);
 }
 const space = BRANCH_TO_SPACE[expected];
@@ -79,7 +79,7 @@ if (problems.length > 0) {
   console.error(
     `✖ Doc URLs do not target "${expected}":\n${problems.map((p) => `  - ${p}`).join("\n")}`,
   );
-  console.error(`\nFix: pnpm llm:retarget ${expected}`);
+  console.error(`\nFix: pnpm docs:retarget ${expected}`);
   process.exit(1);
 }
 
