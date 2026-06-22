@@ -32,13 +32,13 @@ export function ShieldCard({
         ? "Shielding… (submitting)"
         : "Shielding…";
 
-  const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+  const shield = useShield({ address: tokenAddress }, { onSuccess });
 
   function handleShield() {
     setPhase("shield");
     shield.mutate({
       amount: parsedAmount,
-      approvalStrategy: "max",
+      approvalStrategy: "exact",
       onApprovalSubmitted: () => setPhase("approve"),
       onShieldSubmitted: () => setPhase("submit"),
     });
