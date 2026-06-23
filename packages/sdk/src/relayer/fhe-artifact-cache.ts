@@ -1,5 +1,5 @@
 import { z } from "zod/mini";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
 import { assertNonNullable, toError } from "../utils";
 import type { FheEncryptionKey, PublicParamsData } from "./relayer-sdk.types";
@@ -130,7 +130,7 @@ export class FheArtifactCache {
   readonly #chainId: number;
   readonly #relayerUrl: string;
   readonly #ttlMs: number;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
   #publicKeyMem: FheEncryptionKeyResult | undefined;
   #publicParamsMem = new Map<number, PublicParamsResult>();
   #publicKeyInflight: Promise<FheEncryptionKeyResult> | null = null;
@@ -145,7 +145,7 @@ export class FheArtifactCache {
     relayerUrl: string;
     /** Cache TTL in seconds. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
     ttl?: number;
-    logger: LoggerService;
+    logger: GenericLogger;
   }) {
     this.#storage = opts.storage;
     this.#chainId = opts.chainId;

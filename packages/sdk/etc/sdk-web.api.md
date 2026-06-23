@@ -43,7 +43,7 @@ export interface RelayerWebConfig {
     chain: FheChain;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    logger: LoggerService;
+    logger: GenericLogger;
     security?: RelayerWebSecurityConfig;
     threads?: number;
     worker: RelayerWorkerClient;
@@ -61,9 +61,9 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig;
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient, logger: LoggerService) => RelayerWeb;
+    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient, logger: GenericLogger) => RelayerWeb;
     // (undocumented)
-    readonly createWorker: (chains: FheChain[], logger: LoggerService) => RelayerWorkerClient;
+    readonly createWorker: (chains: FheChain[], logger: GenericLogger) => RelayerWorkerClient;
     // (undocumented)
     readonly type: "web";
 }

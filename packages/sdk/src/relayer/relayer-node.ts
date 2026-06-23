@@ -8,7 +8,7 @@ import type { Address, Hex } from "viem";
 import { MemoryStorage } from "../storage/memory-storage";
 import type { GenericStorage } from "../types";
 import type { NodeWorkerPool } from "../worker/worker.node-pool";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import type { FheChain } from "../chains/types";
 import type { TransportKeyPair } from "../credentials/types";
 import { BaseRelayer } from "./base-relayer";
@@ -34,7 +34,7 @@ export interface RelayerNodeConfig {
   /** Worker thread pool — handles WASM operations off the main thread. */
   pool: NodeWorkerPool;
   /** SDK-wide logger for observing worker lifecycle and request timing. */
-  logger: LoggerService;
+  logger: GenericLogger;
   /**
    * Persistent storage for caching FHE public key and params across sessions.
    * Defaults to `new MemoryStorage()` (in-process, lost on restart).

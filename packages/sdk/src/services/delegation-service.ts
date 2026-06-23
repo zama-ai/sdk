@@ -24,7 +24,7 @@ import type {
   WriteContractConfig,
 } from "../types";
 import { submitTransaction } from "../utils/submit-transaction";
-import type { LoggerService } from "./logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
@@ -35,7 +35,7 @@ export class DelegationService {
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerDispatcher;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
 
   constructor({
     provider,
@@ -45,7 +45,7 @@ export class DelegationService {
   }: {
     provider: GenericProvider;
     relayer: RelayerDispatcher;
-    logger: LoggerService;
+    logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;

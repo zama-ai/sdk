@@ -6,14 +6,14 @@ import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./sche
 import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type { Permission } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 
 export type { PermissionScope };
 
 interface PermissionStoreConfig {
   storage: GenericStorage;
   /** SDK-wide logger for best-effort storage diagnostics. */
-  logger: LoggerService;
+  logger: GenericLogger;
 }
 
 /**
@@ -26,7 +26,7 @@ interface PermissionStoreConfig {
  */
 export class PermissionStore {
   readonly #storage: GenericStorage;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
 
   constructor(config: PermissionStoreConfig) {
     this.#storage = config.storage;

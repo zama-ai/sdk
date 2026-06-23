@@ -10,7 +10,7 @@ import { resolveChainRelayers } from "../config/resolve";
 import type { TransportKeyPair } from "../credentials/types";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
@@ -51,7 +51,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   constructor(
     chains: readonly [FheChain, ...FheChain[]],
     configs: Readonly<Record<number, RelayerConfig>>,
-    logger: LoggerService,
+    logger: GenericLogger,
   ) {
     if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");

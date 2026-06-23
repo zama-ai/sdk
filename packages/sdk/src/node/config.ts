@@ -1,6 +1,6 @@
 import { z } from "zod/mini";
 import type { RelayerConfig } from "../config/types";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
@@ -23,11 +23,11 @@ export interface NodePoolOptions {
 /** Node transport — narrows worker type to `NodeWorkerPool`. */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
-  readonly createWorker: (chains: FheChain[], logger: LoggerService) => NodeWorkerPool;
+  readonly createWorker: (chains: FheChain[], logger: GenericLogger) => NodeWorkerPool;
   readonly createRelayer: (
     chain: FheChain,
     worker: NodeWorkerPool,
-    logger: LoggerService,
+    logger: GenericLogger,
   ) => RelayerNode;
 }
 

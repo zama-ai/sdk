@@ -1,6 +1,6 @@
 "use client";
 
-import { ZamaSDK, type LoggerService, type ZamaConfig } from "@zama-fhe/sdk";
+import { ZamaSDK, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,14 +20,14 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmTransportKeyPair(sdk: ZamaSDK, logger: LoggerService): void {
+function warmTransportKeyPair(sdk: ZamaSDK, logger: GenericLogger): void {
   void sdk.permits.warmTransportKeyPair().catch((error: unknown) => {
     // Warmup is a latency optimization — the first real permit/decrypt call
     // will lazily retry transport-key-pair generation and surface actionable
     // errors. We route this through the configured logger (silent by default)
     // so persistent failures (storage corruption, relayer 4xx during
     // generation) leave a breadcrumb during debugging.
-    logger.warn("[zama-sdk] warm transport key pair failed", { error });
+    logger.warn("warm transport key pair failed", { error });
   });
 }
 

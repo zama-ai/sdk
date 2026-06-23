@@ -2,7 +2,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type React from "react";
-import { LoggerService, type ZamaConfig } from "@zama-fhe/sdk";
+import type { GenericLogger, ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
@@ -10,6 +10,14 @@ import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
 import type { QueryClientFixtures } from "./query-client";
 import { Providers } from "./providers";
+
+/** Silent logger standing in for the SDK's resolved no-op `LoggerService`. */
+const noopLogger: GenericLogger = {
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+  debug: () => {},
+};
 
 export interface WrapperFixtures {
   createWrapper: (overrides?: Partial<ZamaConfig>) => {
@@ -51,7 +59,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
-        logger: new LoggerService(),
+        logger: noopLogger,
         ...overrides,
       } as unknown as ZamaConfig;
 

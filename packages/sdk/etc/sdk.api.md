@@ -636,7 +636,7 @@ export function cleartext(): CleartextRelayerConfig;
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: unknown, logger: LoggerService) => RelayerCleartext;
+    readonly createRelayer: (chain: FheChain, worker: unknown, logger: GenericLogger) => RelayerCleartext;
     // (undocumented)
     readonly type: "cleartext";
 }
@@ -11231,19 +11231,6 @@ export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Add
 export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
 
 // @public
-export class LoggerService implements GenericLogger {
-    constructor(logger?: GenericLogger);
-    // (undocumented)
-    debug(message: string, data?: Record<string, unknown>): void;
-    // (undocumented)
-    error(message: string, data?: Record<string, unknown>): void;
-    // (undocumented)
-    info(message: string, data?: Record<string, unknown>): void;
-    // (undocumented)
-    warn(message: string, data?: Record<string, unknown>): void;
-}
-
-// @public
 export const mainnet: {
     readonly id: 1;
     readonly gatewayChainId: 261131;
@@ -11468,6 +11455,7 @@ export class Permits {
         provider: GenericProvider;
         cachingService: CachingService;
         credentialService: CredentialService | undefined;
+        logger: GenericLogger;
     });
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -12642,8 +12630,8 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain, worker: any, logger: LoggerService) => RelayerSDK;
-    readonly createWorker?: (chains: FheChain[], logger: LoggerService) => any;
+    readonly createRelayer: (chain: FheChain, worker: any, logger: GenericLogger) => RelayerSDK;
+    readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
     // (undocumented)
     readonly type: string;
 }
@@ -12652,7 +12640,7 @@ export interface RelayerConfig {
 export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     [Symbol.dispose](): void;
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>, logger: LoggerService);
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>, logger: GenericLogger);
     // (undocumented)
     get chain(): FheChain;
     // (undocumented)
@@ -19489,7 +19477,7 @@ export type ZamaConfig = {
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
-    readonly logger: LoggerService;
+    readonly logger: GenericLogger;
 } & {
     readonly [zamaConfigBrand]: true;
 };

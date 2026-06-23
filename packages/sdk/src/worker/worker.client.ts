@@ -1,12 +1,12 @@
 import type { FheChain } from "../chains/types";
 import type {
+  GenericLogger,
   UpdateCsrfResponseData,
   WorkerEnv,
   WorkerRequest,
   WorkerRequestType,
   WorkerResponse,
 } from "./worker.types";
-import type { LoggerService } from "../services/logger-service";
 import { BaseWorkerClient } from "./worker.base-client";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
@@ -19,7 +19,7 @@ export interface WorkerClientConfig {
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
   /** SDK-wide logger for tracing worker request lifecycle. */
-  logger: LoggerService;
+  logger: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
   thread?: number;
 }

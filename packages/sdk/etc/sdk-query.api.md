@@ -962,7 +962,7 @@ export type ZamaConfig = {
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
-    readonly logger: LoggerService;
+    readonly logger: GenericLogger;
 } & {
     readonly [zamaConfigBrand]: true;
 };

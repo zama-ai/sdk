@@ -197,6 +197,30 @@ describe("BaseWorkerClient", () => {
     );
   });
 
+  test("logs a genuine worker fault at error", async () => {
+    const sink: GenericLogger = {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const client = await initClient({ logger: new LoggerService(sink) });
+
+    const pending = client.generateKeypair({ chainId: 1 });
+    await flush();
+
+    // A worker-level crash is an unexpected internal fault — the other half of
+    // the SDK-230 invariant: it MUST surface at `error`, unlike a handled
+    // per-request rejection (which stays at `debug`).
+    client.simulateWorkerError("crash!");
+    await expect(pending).rejects.toThrow("Worker error: crash!");
+
+    expect(sink.error).toHaveBeenCalledWith(
+      expect.stringContaining("Worker error"),
+      expect.objectContaining({ error: "crash!" }),
+    );
+  });
+
   test("rejects with timeout when no response arrives", async () => {
     vi.useFakeTimers();
 

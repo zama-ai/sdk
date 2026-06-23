@@ -3,14 +3,14 @@ import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericSigner, WalletAccountChange, WalletAccountListener } from "../types";
 import { swallow } from "../utils";
 import type { CachingService } from "./caching-service";
-import type { LoggerService } from "./logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
   relayer: RelayerDispatcher;
   cachingService: CachingService;
   credentialService?: CredentialService;
-  logger: LoggerService;
+  logger: GenericLogger;
 };
 
 /**
@@ -26,7 +26,7 @@ export class LifecycleService {
   readonly #relayer: RelayerDispatcher;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
   #unsubscribeSigner?: () => void;
 

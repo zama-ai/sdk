@@ -7,7 +7,6 @@ import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import type { RelayerWeb } from "../relayer/relayer-web";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import type { GenericLogger } from "../worker/worker.types";
-import type { LoggerService } from "../services/logger-service";
 import type { RelayerWorkerClient } from "../worker/worker.client";
 
 export type { AtLeastOneChain };
@@ -41,7 +40,7 @@ export interface RelayerConfig {
    * worker diagnostics route through the consumer's logger.
    */
   // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: FheChain[], logger: LoggerService) => any;
+  readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
   /**
    * Create a single-chain relayer. `worker` is the return value of
    * `createWorker`; `logger` is the SDK-wide logger from `createConfig`.
@@ -50,18 +49,18 @@ export interface RelayerConfig {
     chain: FheChain,
     // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
     worker: any,
-    logger: LoggerService,
+    logger: GenericLogger,
   ) => RelayerSDK;
 }
 
 /** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
 export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
-  readonly createWorker: (chains: FheChain[], logger: LoggerService) => RelayerWorkerClient;
+  readonly createWorker: (chains: FheChain[], logger: GenericLogger) => RelayerWorkerClient;
   readonly createRelayer: (
     chain: FheChain,
     worker: RelayerWorkerClient,
-    logger: LoggerService,
+    logger: GenericLogger,
   ) => RelayerWeb;
 }
 
@@ -71,7 +70,7 @@ export interface CleartextRelayerConfig extends RelayerConfig {
   readonly createRelayer: (
     chain: FheChain,
     worker: unknown,
-    logger: LoggerService,
+    logger: GenericLogger,
   ) => RelayerCleartext;
 }
 
@@ -137,5 +136,5 @@ export type ZamaConfig = {
    * The SDK-wide logger, always present. Wraps the optional consumer-supplied
    * {@link GenericLogger}; silent when none was configured.
    */
-  readonly logger: LoggerService;
+  readonly logger: GenericLogger;
 } & { readonly [zamaConfigBrand]: true };

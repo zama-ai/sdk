@@ -125,6 +125,28 @@ describe("ZamaProvider & useZamaSDK", () => {
     });
   });
 
+  test("logs a single-prefixed warning when transport-key-pair warmup fails", async ({
+    renderWithProviders,
+    relayer,
+  }) => {
+    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    vi.mocked(relayer.generateTransportKeyPair).mockRejectedValue(new Error("warmup boom"));
+
+    renderWithProviders(() => useZamaSDK(), { relayer, logger: sink });
+
+    await waitFor(() => {
+      expect(sink.warn).toHaveBeenCalled();
+    });
+
+    // The provider passes a bare message; the `[zama-sdk]` prefix is owned
+    // solely by LoggerService. A literal prefix here would double up in
+    // production (the regression this test guards against). Assert it for every
+    // warmup-failure log (mount + each wallet-account change re-warm).
+    for (const [message] of vi.mocked(sink.warn).mock.calls) {
+      expect(message).toBe("warm transport key pair failed");
+    }
+  });
+
   test("passes transportKeyPairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 

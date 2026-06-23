@@ -3,7 +3,7 @@ import { z } from "zod/mini";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { checksummedAddress } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
-import type { LoggerService } from "./logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 
 const CacheValueSchema = z.union([z.bigint(), z.boolean(), checksummedAddress]);
 const CacheIndexSchema = z.array(z.string());
@@ -16,12 +16,12 @@ const CacheIndexSchema = z.array(z.string());
  */
 export class CachingService {
   readonly #storage: GenericStorage;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
   readonly #decryptNamespace = "zama:decrypt";
   readonly #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
-  constructor(storage: GenericStorage, logger: LoggerService) {
+  constructor(storage: GenericStorage, logger: GenericLogger) {
     this.#storage = storage;
     this.#logger = logger;
   }

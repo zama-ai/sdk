@@ -15,7 +15,7 @@ import type {
 } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -34,7 +34,7 @@ export interface CredentialServiceConfig {
   /** Optional dedicated storage for permits; defaults to `storage`. */
   permitStorage?: GenericStorage;
   /** SDK-wide logger for credential-path diagnostics. */
-  logger: LoggerService;
+  logger: GenericLogger;
 }
 
 /**
@@ -49,7 +49,7 @@ export class CredentialService {
   readonly #relayer: RelayerDispatcher;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({

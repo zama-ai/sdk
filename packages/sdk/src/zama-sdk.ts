@@ -20,7 +20,7 @@ import type {
   GenericStorage,
   WalletAccountListener,
 } from "./types";
-import type { LoggerService } from "./services/logger-service";
+import type { GenericLogger } from "./worker/worker.types";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -49,7 +49,7 @@ export class ZamaSDK {
   readonly decryption: Decryption;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
   readonly #cachingService: CachingService;
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
@@ -120,6 +120,7 @@ export class ZamaSDK {
       provider: this.provider,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      logger: this.#logger,
     });
     this.delegations = new Delegations({
       signer: this.signer,
@@ -167,7 +168,9 @@ export class ZamaSDK {
         timestamp: Date.now(),
       } as ZamaSDKEvent);
     } catch (error) {
-      this.#logger.warn(`${input.type} event listener silently failed`, { error });
+      this.#logger.warn(`${input.type} event listener silently failed`, {
+        error,
+      });
     }
   }
 

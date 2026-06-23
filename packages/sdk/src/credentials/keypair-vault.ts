@@ -4,7 +4,7 @@ import { transportKeyPairStorageKey } from "./storage-keys";
 import { StoredTransportKeyPairSchema } from "./schemas";
 import type { TransportKeyPair, StoredTransportKeyPair } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
-import type { LoggerService } from "../services/logger-service";
+import type { GenericLogger } from "../worker/worker.types";
 import { nowSeconds } from "./utils";
 
 interface TransportKeyPairVaultConfig {
@@ -13,7 +13,7 @@ interface TransportKeyPairVaultConfig {
   /** Transport key pair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
   /** SDK-wide logger for best-effort storage diagnostics. */
-  logger: LoggerService;
+  logger: GenericLogger;
 }
 
 /**
@@ -26,7 +26,7 @@ export class TransportKeyPairVault {
   readonly #generator: () => Promise<TransportKeyPair>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
-  readonly #logger: LoggerService;
+  readonly #logger: GenericLogger;
   readonly #pending = new Map<ChecksummedAddress, Promise<StoredTransportKeyPair>>();
 
   constructor(config: TransportKeyPairVaultConfig) {
@@ -105,6 +105,6 @@ export class TransportKeyPairVault {
   /** Delete the stored transport key pair for the given address. */
   async clear(signerAddress: ChecksummedAddress): Promise<void> {
     const key = transportKeyPairStorageKey(signerAddress);
-    await swallow("delete transport key pair entry", () => this.#storage.delete(key));
+    await swallow("delete transport key pair entry", () => this.#storage.delete(key), this.#logger);
   }
 }

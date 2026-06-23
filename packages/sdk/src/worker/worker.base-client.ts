@@ -1,4 +1,3 @@
-import type { LoggerService } from "../services/logger-service";
 import type {
   CreateDelegatedEIP712Payload,
   CreateDelegatedEIP712ResponseData,
@@ -19,6 +18,7 @@ import type {
   PublicDecryptResponseData,
   RequestZKProofVerificationRequest,
   RequestZKProofVerificationResponseData,
+  GenericLogger,
   UserDecryptPayload,
   UserDecryptResponseData,
   WorkerEnv,
@@ -52,9 +52,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
   #initPromise: Promise<TWorker> | null = null;
   protected readonly config: TConfig;
-  protected readonly logger: LoggerService;
+  protected readonly logger: GenericLogger;
 
-  constructor(config: TConfig, logger: LoggerService) {
+  constructor(config: TConfig, logger: GenericLogger) {
     this.config = config;
     this.logger = logger;
   }

@@ -60,7 +60,7 @@ export interface BaseRequest {
 
 // @public
 export abstract class BaseWorkerClient<TWorker, TConfig> {
-    constructor(config: TConfig, logger: LoggerService);
+    constructor(config: TConfig, logger: GenericLogger);
     // (undocumented)
     protected readonly config: TConfig;
     // (undocumented)
@@ -93,7 +93,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     // (undocumented)
     initWorker(): Promise<TWorker>;
     // (undocumented)
-    protected readonly logger: LoggerService;
+    protected readonly logger: GenericLogger;
     protected onWorkerReady?(_worker: TWorker): void;
     protected abstract postMessage(worker: TWorker, request: WorkerRequest): void;
     // (undocumented)
@@ -456,9 +456,9 @@ export interface NodePoolOptions {
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool, logger: LoggerService) => RelayerNode;
+    readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool, logger: GenericLogger) => RelayerNode;
     // (undocumented)
-    readonly createWorker: (chains: FheChain[], logger: LoggerService) => NodeWorkerPool;
+    readonly createWorker: (chains: FheChain[], logger: GenericLogger) => NodeWorkerPool;
     // (undocumented)
     readonly type: "node";
 }
@@ -467,7 +467,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 export interface NodeWorkerClientConfig {
     // (undocumented)
     chains: FheChain[];
-    logger: LoggerService;
+    logger: GenericLogger;
 }
 
 // @public (undocumented)
@@ -499,8 +499,8 @@ export interface PublicDecryptResponseData {
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain, worker: any, logger: LoggerService) => RelayerSDK;
-    readonly createWorker?: (chains: FheChain[], logger: LoggerService) => any;
+    readonly createRelayer: (chain: FheChain, worker: any, logger: GenericLogger) => RelayerSDK;
+    readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
     // (undocumented)
     readonly type: string;
 }
@@ -510,7 +510,7 @@ export interface RelayerNodeConfig {
     chain: FheChain;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    logger: LoggerService;
+    logger: GenericLogger;
     pool: NodeWorkerPool;
 }
 

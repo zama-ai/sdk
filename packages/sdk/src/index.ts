@@ -52,7 +52,6 @@ export type {
 } from "./relayer/relayer-sdk.types";
 export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
 export type { GenericLogger } from "./worker/worker.types";
-export { LoggerService } from "./services/logger-service";
 
 // Chain presets and types
 export {

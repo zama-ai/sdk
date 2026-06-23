@@ -2449,7 +2449,25 @@ const config = createConfig({
 
 When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
 
-### 6. (Optional) Supply a logger
+### 6. (Optional) Choose a storage backend
+
+The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
+
+| Storage             | When to use                                               |
+| ------------------- | --------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                        |
+| `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
+
+```ts
+import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
+// Node.js per-request isolation:
+// import { asyncLocalStorage } from "@zama-fhe/sdk/node";
+```
+
+For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
+
+### 7. (Optional) Supply a logger
 
 The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
 
@@ -2472,24 +2490,6 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
 
 The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
-
-### 7. (Optional) Choose a storage backend
-
-The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
-
-| Storage             | When to use                                               |
-| ------------------- | --------------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across reloads and sessions       |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                        |
-| `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
-
-```ts
-import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
-// Node.js per-request isolation:
-// import { asyncLocalStorage } from "@zama-fhe/sdk/node";
-```
-
-For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
 
 ## Shared relayer options
 
