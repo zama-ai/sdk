@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isAddress, formatUnits } from "ethers";
 import { useDelegationStatus, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 
 // Matches the SDK's internal sentinel value for permanent (no-expiry) delegations.
