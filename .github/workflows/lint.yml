@@ -14,8 +14,9 @@ permissions:
 
 env:
   # Safe-chain enforces its own minimum-package-age check independently of
-  # pnpm-workspace.yaml#minimumReleaseAgeExclude — mirror the exemption here.
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk"
+  # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
 
 jobs:
   lint:
