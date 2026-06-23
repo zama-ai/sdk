@@ -84,11 +84,12 @@ codemod.yaml                 # package manifest (publishable to the Codemod regi
 workflow.yaml                # the workflow: ast-grep + js-ast-grep steps
 rules/<id>.yml               # ast-grep rules (renames / config-key changes)
 scripts/<id>.ts              # JSSG transforms (structural rewrites)
-test.sh                      # runs the JSSG harness + the rule runner + the e2e runner
-test-rules.mjs               # applies each rules/<id>.yml to its fixtures (+ idempotency)
+sgconfig.yml                 # ast-grep config: ruleDirs + testConfigs (for `ast-grep test`)
+test.sh                      # runs the JSSG harness + `ast-grep test` + the e2e runner
 test-e2e.mjs                 # runs the whole chain (workflow order) on a multi-file target
 tests/<script>/<case>/       # JSSG fixtures: input.tsx + expected.tsx, one dir per scripts/<script>.ts
-tests/<rule>/                # ast-grep rule fixtures: input.tsx + expected.tsx, one dir per rules/<rule>.yml
+rule-tests/<id>-test.yml     # ast-grep rule tests: valid/invalid samples, one per rules/<id>
+rule-tests/__snapshots__/    # ast-grep snapshots: each rule's matched node + fixed output
 tests/_e2e/{input,expected}/ # multi-file fixtures for the end-to-end chain
 ```
 
@@ -123,13 +124,14 @@ codemod jssg test -l tsx --strictness ast --filter alias-preserved \
   tests/core-rename-createzamaconfig-to-createconfig
 ```
 
-`test.sh` also runs two sibling runners so the whole package is covered, not just
-the JSSG scripts:
+`test.sh` also runs the declarative rules and the whole chain, so the package is
+covered end to end — not just the JSSG scripts:
 
-- **`test-rules.mjs`** — applies each `rules/*.yml` to its `tests/<rule>/` fixtures
-  (whitespace-normalised, since codemods don't format) and checks idempotency. The
-  native JSSG harness doesn't cover the declarative rules, so these would otherwise
-  go untested.
+- **`ast-grep test`** — the JSSG harness doesn't cover the declarative `rules/*.yml`, so
+  they're tested with ast-grep's own harness: `rule-tests/<id>-test.yml` holds `valid` /
+  `invalid` samples per rule id, and `rule-tests/__snapshots__/` captures each rule's
+  matched node and fixed output. `sgconfig.yml` wires `ruleDirs` + `testConfigs`. Update
+  snapshots with `ast-grep test -U` from the package dir.
 - **`test-e2e.mjs`** — applies the **whole chain in workflow order** to the
   multi-file `tests/_e2e/` fixture and asserts it converges to the expected tree,
   then re-applies it and asserts a no-op (chain-level idempotency). Catches

@@ -1,0 +1,5 @@
+id: rename-delegated-user-decrypt-params-type-position
+valid:
+  - 'let p: DelegatedDecryptMutationParams;'
+invalid:
+  - 'let p: DelegatedUserDecryptMutationParams;'

@@ -14,9 +14,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-# Make the workspace's `codemod` binary resolvable when run directly (pnpm already
-# adds this to PATH for `pnpm test`).
-PATH="$PWD/node_modules/.bin:$PATH"
+# Make the `codemod` (package-local) and `ast-grep` (workspace root) binaries resolvable
+# when run directly (pnpm already adds both to PATH for `pnpm test`).
+PATH="$PWD/node_modules/.bin:$PWD/../../node_modules/.bin:$PATH"
 
 rc=0
 for f in scripts/*.ts; do
@@ -27,10 +27,12 @@ for f in scripts/*.ts; do
   fi
 done
 
-# The native harness only covers scripts/ (JSSG). The declarative rules/*.yml are
-# exercised by a sibling runner against the same tests/<rule>/ fixtures.
-echo "==> ast-grep rules (rules/*.yml)"
-if ! node test-rules.mjs; then
+# The codemod JSSG harness only covers scripts/. The declarative rules/*.yml are tested
+# with ast-grep's own harness (sgconfig.yml -> rule-tests/<id>-test.yml valid/invalid
+# samples + rule-tests/__snapshots__/ capturing each rule's match and fix). Update the
+# snapshots with `ast-grep test -U` from this directory.
+echo "==> ast-grep rules (ast-grep test)"
+if ! ast-grep test; then
   rc=1
 fi
 

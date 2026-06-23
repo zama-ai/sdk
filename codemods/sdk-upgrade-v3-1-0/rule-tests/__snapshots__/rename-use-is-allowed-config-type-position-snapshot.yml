@@ -1,0 +1,9 @@
+id: rename-use-is-allowed-config-type-position
+snapshots:
+  'let c: UseIsAllowedConfig;':
+    fixed: 'let c: UseHasPermitConfig;'
+    labels:
+    - source: UseIsAllowedConfig
+      style: primary
+      start: 7
+      end: 25

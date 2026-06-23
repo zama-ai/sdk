@@ -17,6 +17,7 @@
     "docs/gitbook/build",
     "packages/sdk/etc",
     "packages/react-sdk/etc",
-    "contracts/lib"
+    "contracts/lib",
+    "codemods/sdk-upgrade-v3-1-0/rule-tests"
   ]
 }

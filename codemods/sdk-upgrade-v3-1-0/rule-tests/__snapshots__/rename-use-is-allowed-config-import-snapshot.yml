@@ -1,0 +1,9 @@
+id: rename-use-is-allowed-config-import
+snapshots:
+  import type { UseIsAllowedConfig } from "@zama-fhe/react-sdk";:
+    fixed: import type { UseHasPermitConfig } from "@zama-fhe/react-sdk";
+    labels:
+    - source: UseIsAllowedConfig
+      style: primary
+      start: 14
+      end: 32

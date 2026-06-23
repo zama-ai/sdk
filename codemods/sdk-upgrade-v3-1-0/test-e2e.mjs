@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // End-to-end convergence test for the whole codemod chain.
 //
-// The per-transform harnesses (codemod jssg test, test-rules.mjs) check each
+// The per-transform harnesses (codemod jssg test, ast-grep test) check each
 // change in isolation. This applies the FULL chain — in workflow.yaml order —
 // to a multi-file target and asserts it converges to the expected migrated tree,
 // then re-applies the whole chain and asserts a no-op (chain-level idempotency).
