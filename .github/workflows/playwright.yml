@@ -52,6 +52,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
+      - name: Install dependencies
+        run: pnpm ci
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -87,12 +93,6 @@ jobs:
             contracts/lib/fhevm/sdk/js-sdk/contracts/out
             contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
-
-      - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-
-      - name: Install dependencies
-        run: pnpm ci
 
       - name: Restore Playwright browsers cache
         id: playwright-cache
@@ -181,6 +181,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
+      - name: Install dependencies
+        run: pnpm ci
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -216,12 +222,6 @@ jobs:
             contracts/lib/fhevm/sdk/js-sdk/contracts/out
             contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
-
-      - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-
-      - name: Install dependencies
-        run: pnpm ci
 
       - name: Restore Playwright browsers cache
         id: playwright-cache
@@ -294,6 +294,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Aikido Safe Chain
+        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
+      - name: Install dependencies
+        run: pnpm ci
+
       - name: Restore Forge build cache
         id: forge-build-cache
         uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -329,12 +335,6 @@ jobs:
             contracts/lib/fhevm/sdk/js-sdk/contracts/out
             contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
           key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
-
-      - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-
-      - name: Install dependencies
-        run: pnpm ci
 
       - name: Run Node e2e tests
         run: pnpm e2e:test:node
