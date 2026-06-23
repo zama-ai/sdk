@@ -1,3 +1,4 @@
+import type { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -114,3 +115,38 @@ export interface DelegatedUserDecryptParams {
 
 /** SDK status */
 export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
+
+// ============================================================================
+// `@fhevm/sdk`-derived types
+//
+// Shapes inferred from the underlying `@fhevm/sdk` engine. Kept here (rather
+// than inlined in `FhevmRelayer`) so the relayer layer shares one source of
+// truth for the engine's client, options, and serialized boundary types.
+// ============================================================================
+
+/** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
+export type FhevmSdkClient = ReturnType<typeof createFhevmClient>;
+
+/** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+/**
+ * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
+ * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
+ * is one-shot and idempotent; conflicting configs across chains will throw).
+ */
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
+
+/** Serialized transport key pair as it crosses the signer / worker boundary. */
+export type SerializedTransportKeyPair = ReturnType<FhevmSdkClient["serializeTransportKeyPair"]>;
+
+/** Serialized signed decryption permit as it crosses the signer / worker boundary. */
+export type SerializedSignedPermit = Parameters<
+  FhevmSdkClient["parseSignedDecryptionPermit"]
+>[0]["serializedPermit"];
+
+/** A handle/contract pair to user-decrypt. */
+export interface DecryptPair {
+  readonly encryptedValue: EncryptedValue;
+  readonly contractAddress: Address;
+}

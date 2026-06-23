@@ -35,6 +35,7 @@ import type { TransportKeyPair } from "../credentials/types";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
+  DecryptPair,
   DelegatedUserDecryptParams,
   EIP712TypedData,
   EncryptInput,
@@ -42,36 +43,14 @@ import type {
   EncryptResult,
   EncryptedValue,
   FheEncryptionKey,
+  FhevmClientOptions,
+  FhevmRuntimeConfig,
+  FhevmSdkClient,
   PublicDecryptResult,
+  SerializedSignedPermit,
+  SerializedTransportKeyPair,
   UserDecryptParams,
 } from "./relayer-sdk.types";
-
-/** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
-type FhevmClient = ReturnType<typeof createFhevmClient>;
-
-/** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
-export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
-
-/**
- * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
- * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
- * is one-shot and idempotent; conflicting configs across chains will throw).
- */
-export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
-
-/** Serialized transport key pair as it crosses the signer / worker boundary. */
-type SerializedTransportKeyPair = ReturnType<FhevmClient["serializeTransportKeyPair"]>;
-
-/** Serialized signed decryption permit as it crosses the signer / worker boundary. */
-type SerializedSignedPermit = Parameters<
-  FhevmClient["parseSignedDecryptionPermit"]
->[0]["serializedPermit"];
-
-/** A handle/contract pair to user-decrypt. */
-interface DecryptPair {
-  readonly encryptedValue: EncryptedValue;
-  readonly contractAddress: Address;
-}
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -106,7 +85,7 @@ function toSolidityType(type: EncryptInput["type"]): string {
  */
 export class FhevmRelayer implements RelayerSDK, Disposable {
   readonly #config: FhevmRelayerConfig;
-  #client: FhevmClient | null = null;
+  #client: FhevmSdkClient | null = null;
   #initPromise: Promise<void> | null = null;
 
   constructor(config: FhevmRelayerConfig) {
@@ -160,7 +139,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     this.#client = client;
   }
 
-  get #fhevm(): FhevmClient {
+  get #fhevm(): FhevmSdkClient {
     if (!this.#client) {
       throw new Error("FhevmRelayer not initialized.");
     }
