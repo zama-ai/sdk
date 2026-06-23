@@ -7,7 +7,7 @@
 // then re-applies the whole chain and asserts a no-op (chain-level idempotency).
 // Catches step-ordering and cross-transform interaction regressions.
 //
-// NOTE: the step list below must mirror codemods/sdk-upgrade-v3-1-0/workflow.yaml.
+// NOTE: the step list below must mirror codemods/sdk-migration-v3/workflow.yaml.
 // Fixtures are .tsx — type-position renames in plain .ts files are a known rule
 // limitation (tsx-language rules under-cover .ts); see README "Known limitations".
 

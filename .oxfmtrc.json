@@ -18,6 +18,6 @@
     "packages/sdk/etc",
     "packages/react-sdk/etc",
     "contracts/lib",
-    "codemods/sdk-upgrade-v3-1-0/rule-tests"
+    "codemods/sdk-migration-v3/rule-tests"
   ]
 }

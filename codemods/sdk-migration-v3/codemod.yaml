@@ -1,8 +1,8 @@
 schema_version: "1.0"
 
-name: "@zama-fhe/sdk-upgrade-v3-1-0"
+name: "@zama-fhe/sdk-migration-v3"
 version: "0.1.0"
-description: "Mechanical codemods for the breaking changes introduced in @zama-fhe/sdk + @zama-fhe/react-sdk 3.1.0 (renames, config-key changes, structural removals). Assumes a 3.0.x floor (run earlier release codemods first if further behind); idempotent. Provisional until 3.1.0 ships; derived from the v3.0.1 -> v3.1.0-alpha.14 api-report diff."
+description: "Mechanical codemods for the breaking changes across the @zama-fhe/sdk + @zama-fhe/react-sdk v3.x line (renames, config-key changes, structural removals). Assumes a 3.0.x floor and brings code up to the latest v3.x; transforms accrue per breaking minor (currently 3.0 -> 3.1). Idempotent, so re-running from any 3.x floor is safe. Provisional until 3.1.0 ships; the 3.0 -> 3.1 set is derived from the v3.0.1 -> v3.1.0-alpha.14 api-report diff."
 author: "Zama"
 license: "BSD-3-Clause-Clear"
 repository: "https://github.com/zama-ai/sdk"

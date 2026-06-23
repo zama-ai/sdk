@@ -19,7 +19,7 @@ Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) and `npx code
 Each codemod is a self-contained flat package directory:
 
 ```text
-codemods/<slug>/   # e.g. codemods/sdk-upgrade-v3-1-0/
+codemods/<slug>/   # e.g. codemods/sdk-migration-v3/
   workflow.yaml
   codemod.yaml
   scripts/
@@ -29,26 +29,26 @@ codemods/<slug>/   # e.g. codemods/sdk-upgrade-v3-1-0/
 
 Keep each codemod self-contained so maintainers can validate and publish packages independently.
 
-### Naming convention: one package per breaking release
+### Naming convention: one package per major line
 
-Key each package to the **release that introduced the breaking changes** (the
-target), not to a `from`→`to` couple. One package covers the whole SDK surface for
-that release — both `@zama-fhe/sdk` and `@zama-fhe/react-sdk`, which ship in lockstep —
-so a release's breaking changes (spanning both packages) live in a single codemod.
+Key each package to a **major SDK line** (`sdk-migration-v<major>`), not to a single
+`from`→`to` couple or to every minor. One package covers the whole SDK surface for that
+line — both `@zama-fhe/sdk` and `@zama-fhe/react-sdk`, which ship in lockstep — and its
+single workflow **accrues the transforms of each breaking minor** (3.0→3.1, 3.1→3.2, …),
+bringing code up to the latest release in the line. A new breaking minor **adds its
+transforms to the existing package and bumps the codemod version**, rather than spawning a
+new package — so this stays bounded to ~one package per major (not one per minor).
 
-The slug follows `sdk-upgrade-v<release>`, published as `@zama-fhe/sdk-upgrade-v<release>`
-— e.g. `codemods/sdk-upgrade-v3-1-0` → `@zama-fhe/sdk-upgrade-v3-1-0`. Note the
-dot-free version: Codemod package names must match `/^[a-z0-9-_/]+$/`, so `3.1.0`
-becomes `v3-1-0` (see https://docs.codemod.com/package-structure). This stays O(N) in
-releases (vs O(N²) for couples),
-and matches `ng update` / `@next/codemod`. A new package is added only when a
-release actually ships breaking changes (most patch/minor releases ship none).
+The slug follows `sdk-migration-v<major>`, published as `@zama-fhe/sdk-migration-v<major>`
+— e.g. `codemods/sdk-migration-v3` → `@zama-fhe/sdk-migration-v3`. (Codemod package names
+must match `/^[a-z0-9-_/]+$/`; see https://docs.codemod.com/package-structure.) Same model
+as `ng update` / `@next/codemod` — one package, run it to reach the latest in the line.
 
-Each package documents an assumed version floor (e.g. "assumes 3.0.x"). A consumer
-several releases behind runs the relevant release packages **in order**; codemods
-are idempotent, so over-applying on already-migrated code is a safe no-op. (Codemod
-has no built-in cross-package "upgrade to X" chaining — the consumer picks the
-packages, or we add a thin orchestrator later.)
+Each package documents an assumed floor (e.g. "assumes 3.0.x") and is idempotent, so
+running it from any point in the line is a safe no-op for already-applied steps. A new
+**major** (v4) gets its own `sdk-migration-v4` package. (Codemod has no built-in
+cross-major "upgrade to X" chaining — a consumer crossing a major runs the relevant
+major-line packages in order, or we add a thin orchestrator later.)
 
 ## Creating codemods
 

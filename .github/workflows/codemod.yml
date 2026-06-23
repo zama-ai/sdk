@@ -56,4 +56,4 @@ jobs:
       # The codemod transforms are syntactic (ast-grep / JSSG on fixtures), so no
       # SDK build is needed — just the codemod + ast-grep binaries from devDependencies.
       - name: Test codemods (JSSG + ast-grep rules + end-to-end chain)
-        run: pnpm --filter @zama-fhe/sdk-upgrade-v3-1-0 test
+        run: pnpm --filter @zama-fhe/sdk-migration-v3 test

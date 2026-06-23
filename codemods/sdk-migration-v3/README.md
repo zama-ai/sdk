@@ -1,25 +1,26 @@
-# @zama-fhe/sdk-upgrade-v3-1-0
+# @zama-fhe/sdk-migration-v3
 
-Codemods for the breaking changes introduced in `@zama-fhe/sdk` / `@zama-fhe/react-sdk`
-**3.1.0**, built on the [Codemod](https://codemod.com) workflow engine. They apply
+Codemods for the breaking changes across the `@zama-fhe/sdk` / `@zama-fhe/react-sdk`
+**v3.x line**, built on the [Codemod](https://codemod.com) workflow engine. They apply
 the **mechanical** breaking changes (symbol/type renames, config-key changes,
 structural removals) so the upgrade doesn't have to be done by hand.
 
-This package is keyed to the **release that introduced the breaks** (3.1.0), not a
-specific `from`→`to` couple — see the workspace [README](../README.md) for the
-package-per-breaking-release convention. It assumes a **3.0.x floor**; a consumer
-further behind runs earlier release packages first (codemods are idempotent, so
-order/overlap is safe).
+This is the **single codemod for the v3 major line**: it assumes a **3.0.x floor** and
+brings code up to the latest v3.x. Transforms **accrue per breaking minor** (currently
+**3.0 → 3.1**); each future minor with breaks adds its transforms here and bumps the
+codemod version, rather than spawning a new package. Codemods are idempotent, so running
+it from any 3.x floor is safe — already-applied steps are no-ops. (A future v4 major would
+get its own `sdk-migration-v4` package.)
 
 ## Run
 
 ```sh
 # from the SDK repo root (the codemod CLI is a devDependency there)
-pnpm codemod:sdk-upgrade-v3-1-0 -t /path/to/app/src
-pnpm codemod:sdk-upgrade-v3-1-0 -t /path/to/app/src --dry-run
+pnpm codemod:sdk-migration-v3 -t /path/to/app/src
+pnpm codemod:sdk-migration-v3 -t /path/to/app/src --dry-run
 
 # or, published, with no repo access:
-npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src
+npx codemod @zama-fhe/sdk-migration-v3 -t ./src
 ```
 
 It **edits your source files in place** (no report file). Practical flow for an app
@@ -27,8 +28,8 @@ developer upgrading:
 
 ```sh
 git status                 # start from a clean tree (codemod edits tracked files)
-npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src --dry-run   # preview
-npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src             # apply in place
+npx codemod @zama-fhe/sdk-migration-v3 -t ./src --dry-run   # preview
+npx codemod @zama-fhe/sdk-migration-v3 -t ./src             # apply in place
 git diff                   # review the changes
 # then: run your formatter, bump @zama-fhe/* in package.json, handle the
 # non-mechanical tail (see "Optional AI tail") and any // TODO(sdk-3.1.0) markers
@@ -141,7 +142,7 @@ covered end to end — not just the JSSG scripts:
   step-ordering and cross-transform regressions.
 
 CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
-@zama-fhe/sdk-upgrade-v3-1-0 test`).
+@zama-fhe/sdk-migration-v3 test`).
 
 ## Known limitations
 
