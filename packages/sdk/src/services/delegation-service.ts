@@ -223,6 +223,7 @@ export class DelegationService {
         provider: this.#provider,
         config,
         emit: (input) => this.#emitEvent(input, contractAddress),
+        logger: this.#logger,
       });
     } catch (error) {
       this.#throwAclRevertIfMatched(error);

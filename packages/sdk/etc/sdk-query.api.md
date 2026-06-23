@@ -1168,6 +1168,8 @@ export class ZamaSDK {
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     // @internal
+    get logger(): GenericLogger;
+    // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;
     // (undocumented)

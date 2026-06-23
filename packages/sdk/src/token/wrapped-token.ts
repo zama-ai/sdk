@@ -294,7 +294,11 @@ export class WrappedToken extends Token {
     };
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrap(amount);
-    void swallow("unshield: onUnwrapSubmitted", () => onUnwrapSubmitted?.(unwrapResult.txHash));
+    void swallow(
+      "unshield: onUnwrapSubmitted",
+      () => onUnwrapSubmitted?.(unwrapResult.txHash),
+      this.sdk.logger,
+    );
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
 
@@ -314,8 +318,10 @@ export class WrappedToken extends Token {
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrapAll();
-    void swallow("unshieldAll: onUnwrapSubmitted", () =>
-      callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
+    void swallow(
+      "unshieldAll: onUnwrapSubmitted",
+      () => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
+      this.sdk.logger,
     );
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
@@ -488,7 +494,7 @@ export class WrappedToken extends Token {
       throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
-    void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.());
+    void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
     const finalizeResult = await this.finalizeUnwrap(
       event.unwrapRequestId ?? event.encryptedAmount,
     );
@@ -497,8 +503,10 @@ export class WrappedToken extends Token {
       txHash: finalizeResult.txHash,
       operationId,
     });
-    void swallow("unshield: onFinalizeSubmitted", () =>
-      callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash),
+    void swallow(
+      "unshield: onFinalizeSubmitted",
+      () => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash),
+      this.sdk.logger,
     );
     return finalizeResult;
   }

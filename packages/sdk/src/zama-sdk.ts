@@ -150,6 +150,17 @@ export class ZamaSDK {
   }
 
   /**
+   * The SDK-wide logger, exposed so contract abstractions ({@link Token},
+   * {@link WrappedToken}) can route their best-effort failures through the
+   * same sink. Silent by default.
+   *
+   * @internal
+   */
+  get logger(): GenericLogger {
+    return this.#logger;
+  }
+
+  /**
    * Emit a structured SDK event into the unified SDK event stream.
    *
    * Listener exceptions are caught and logged so that a misbehaving subscriber
