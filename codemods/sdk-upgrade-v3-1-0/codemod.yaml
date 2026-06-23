@@ -11,7 +11,26 @@ targets:
   # Keep this aligned with the files matched in workflow.yaml.
   languages: ["typescript", "tsx"]
 
-keywords: ["zama", "fhe", "sdk", "migration", "upgrade"]
+# Mirror the @zama-fhe/sdk + @zama-fhe/react-sdk package.json keywords (so the codemod is
+# discoverable by the same domain terms as the SDK it migrates) plus the codemod-specific ones.
+keywords:
+  [
+    "fhe",
+    "zama",
+    "fhevm",
+    "confidential",
+    "erc20",
+    "privacy",
+    "homomorphic-encryption",
+    "token",
+    "ethereum",
+    "blockchain",
+    "react",
+    "hooks",
+    "migration",
+    "upgrade",
+    "codemod",
+  ]
 
 registry:
   access: "public"
