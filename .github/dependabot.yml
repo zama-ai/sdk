@@ -27,14 +27,16 @@ updates:
   - package-ecosystem: npm
     target-branch: prerelease
     directories:
-      - /packages/test-nextjs
-      - /packages/test-vite
+      - /test/test-nextjs
+      - /test/test-vite
     schedule:
       interval: weekly
     cooldown:
       default-days: 3
       exclude:
-        - "@zama-fhe/relayer-sdk"
+        - "@zama-fhe/sdk"
+        - "@zama-fhe/react-sdk"
+        - "@zama-fhe/test-components"
     groups:
       test-apps:
         update-types:
@@ -63,7 +65,8 @@ updates:
     cooldown:
       default-days: 3
       exclude:
-        - "@zama-fhe/relayer-sdk"
+        - "@zama-fhe/sdk"
+        - "@zama-fhe/react-sdk"
     groups:
       example-apps:
         update-types:
