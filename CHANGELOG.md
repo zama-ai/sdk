@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.1-alpha.2](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.1...v3.1.1-alpha.2) (2026-06-23)
+
+### Code Refactoring
+
+- **examples:** upgrade example apps to @zama-fhe/sdk 3.1.0 ([#451](https://github.com/zama-ai/sdk/issues/451)) ([f9d233f]()), closes [#447]()
+
 ## [3.1.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.1.0...v3.1.1-alpha.1) (2026-06-22)
 
 ### Bug Fixes
