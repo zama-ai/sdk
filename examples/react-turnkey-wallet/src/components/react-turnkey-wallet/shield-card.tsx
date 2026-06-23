@@ -9,35 +9,28 @@ export function ShieldCard({
   decimals,
   symbol,
   onSuccess,
-  preApprove,
 }: {
   tokenAddress: Address;
   decimals: number;
   symbol: string;
   onSuccess: () => void;
-  preApprove: (amount: bigint) => Promise<void>;
 }) {
   const shield = useShield({ address: tokenAddress });
   const [amount, setAmount] = useState("");
-  const [isApproving, setIsApproving] = useState(false);
-  const [approveError, setApproveError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"prepare" | "approve" | "wrap">("prepare");
 
-  async function handleShield() {
+  function handleShield() {
     const parsed = parseAmountSafe(amount, decimals);
     if (!parsed) return;
-    setApproveError(null);
-    setIsApproving(true);
-    try {
-      await preApprove(parsed);
-    } catch (error: unknown) {
-      setApproveError(error instanceof Error ? error.message : "Approval failed");
-      return;
-    } finally {
-      setIsApproving(false);
-    }
-
+    setPhase("prepare");
     shield.mutate(
-      { amount: parsed, approvalStrategy: "skip" },
+      {
+        amount: parsed,
+        // The SDK handles the allowance read, USDT-style reset, approval, and shield submission.
+        approvalStrategy: "exact",
+        onApprovalSubmitted: () => setPhase("approve"),
+        onShieldSubmitted: () => setPhase("wrap"),
+      },
       {
         onSuccess: () => {
           setAmount("");
@@ -47,8 +40,11 @@ export function ShieldCard({
     );
   }
 
-  const isPending = isApproving || shield.isPending;
-  const buttonLabel = isApproving ? "Approving…" : shield.isPending ? "Shielding…" : "Shield";
+  const buttonLabel = shield.isPending
+    ? phase === "approve"
+      ? "Approving…"
+      : "Shielding…"
+    : "Shield";
 
   return (
     <div className="card">
@@ -66,14 +62,11 @@ export function ShieldCard({
       </div>
       <button
         onClick={handleShield}
-        disabled={isPending || !parseAmountSafe(amount, decimals)}
+        disabled={shield.isPending || !parseAmountSafe(amount, decimals)}
         className="btn btn-primary w-full"
       >
         {buttonLabel}
       </button>
-      {approveError && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400 break-all">{approveError}</p>
-      )}
       <MutationStatus mutation={shield} />
     </div>
   );

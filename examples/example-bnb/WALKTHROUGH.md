@@ -17,7 +17,7 @@
 
 ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createToken().shield()`).
+The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`).
 
 This example uses the **cleartext stack** (`cleartext()`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including BNB). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
 
@@ -40,7 +40,7 @@ Specifically:
 | Operation                    | SDK API                                                      | Source file                                            | Transactions          |
 | ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
 | Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                                 | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Shield (ERC-20 → cToken)     | `useShield`                                                  | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
 | Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
 | Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
@@ -90,7 +90,7 @@ web() → external HTTP service           cleartext() → on-chain executor
 User (browser wallet)
   │
   ▼
-page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
+page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidentialBalance
   │
   ▼
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
@@ -231,18 +231,15 @@ If you have never shielded any tokens, the confidential balance shows **—** af
 
 Enter a human-readable amount (e.g., `1.5`) and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
 
-The app manages ERC-20 allowances automatically. The spend cap is set to your **full ERC-20 balance** (not the exact shield amount), so once approved, subsequent shields within the remaining cap need only the wrap transaction — no re-approval. The number of wallet confirmations depends on the current allowance:
+The app delegates the entire approve + wrap flow to `useShield` — it does not read ERC-20 allowances, submit approvals, or call wrapper contracts directly. With `approvalStrategy: "exact"` the SDK approves exactly the shielded amount, performing a USDT-style allowance reset first when an existing non-zero allowance would block the approval. The number of wallet confirmations depends on the underlying token and current allowance:
 
-| Situation                                          | Transactions                                       | Confirmations |
-| -------------------------------------------------- | -------------------------------------------------- | ------------- |
-| Allowance already covers the amount                | `wrap` only                                        | 1             |
-| No existing allowance (or zero)                    | `approve(fullBalance)` → `wrap`                    | 2             |
-| Non-zero allowance insufficient — standard token   | `approve(fullBalance)` → `wrap` (direct overwrite) | 2             |
-| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(fullBalance)` → `wrap`     | 3 _(rare)_    |
+| Situation                                          | Transactions                              | Confirmations |
+| -------------------------------------------------- | ----------------------------------------- | ------------- |
+| Allowance already covers the amount                | `wrap` only                               | 1             |
+| No existing allowance (or zero)                    | `approve(amount)` → `wrap`                | 2             |
+| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(amount)` → `wrap` | 3 _(rare)_    |
 
-When re-approving (non-zero insufficient allowance), the app optimistically tries `approve(fullBalance)` directly. `writeContract` goes through the signer, so `eth_estimateGas` is called with `from = userAddress` — correctly simulating the allowance check. For standard ERC-20 tokens, gas estimation succeeds and the wallet is prompted once. For USDT-style tokens (which revert when `approve(nonZero)` is called with a non-zero existing allowance), gas estimation fails **before the wallet is prompted** — the app silently falls back to the reset path. User rejections are re-thrown immediately and never misidentified as USDT-style.
-
-The button shows **Shielding… (1/2 approve)** during approval and **Shielding… (2/2 wrap)** once the approval is confirmed. Gas fees on BNB are effectively zero. The ERC-20 balance refreshes automatically on success.
+The button shows **Shielding… (approving)** during approval and **Shielding… (wrapping)** once the approval is confirmed. Gas fees on BNB are effectively zero. The ERC-20 balance refreshes automatically on success.
 
 ### Step 6 — Confidential transfer
 
@@ -350,18 +347,15 @@ const config = createConfig({
 ### Hook usage
 
 ```tsx
-import { parseUnits, isError } from "ethers";
+import { parseUnits } from "ethers";
 import {
-  useZamaSDK,
+  useShield,
   useListPairs,
   useHasPermit,
   useGrantPermit,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
 } from "@zama-fhe/react-sdk";
 
 // Fetch all valid token pairs from the on-chain WrappersRegistry.
@@ -391,74 +385,28 @@ function handleDecrypt() {
   if (addresses.length > 0) grantPermits.mutate(addresses);
 }
 
-const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
-const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
+const transfer = useConfidentialTransfer({ address: cTokenAddress });
+const unshield = useUnshield(cTokenAddress);
 
 // Pass enabled: false until the user has authorized decrypt (hasPermit).
 // This prevents the hook from firing an EIP-712 prompt on mount.
 const balance = useConfidentialBalance(
-  { tokenAddress: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
+  { address: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
   { enabled: !!hasPermit && !!cTokenAddress },
 );
 
-// Shield: manual approval + wrap.
-// Spend cap strategy: approve for the user's full ERC-20 balance (not the exact shield amount).
-// This avoids re-approval on every shield — subsequent shields within the remaining cap
-// need only the wrap transaction. Re-approval is only triggered when the cap is exceeded.
-//
-// USDT-style detection (non-zero insufficient allowance): writeContract uses the signer,
-// so eth_estimateGas runs with from=userAddress. For USDT-style tokens, gas estimation
-// reverts before the wallet is prompted. We catch this and fall back to reset(0) + approve.
-// User rejections (ACTION_REJECTED) are re-thrown immediately.
-//
-// The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
-const sdk = useZamaSDK();
-const shieldAmount = parseUnits("10", erc20Decimals);
-const token = sdk.createToken(cTokenAddress);
-const userAddress = await sdk.signer.getAddress();
-
-const currentAllowance = (await sdk.signer.readContract(
-  allowanceContract(erc20Address, userAddress, cTokenAddress),
-)) as bigint;
-
-if (currentAllowance < shieldAmount) {
-  const erc20Balance = (await sdk.signer.readContract(
-    balanceOfContract(erc20Address, userAddress),
-  )) as bigint;
-
-  if (currentAllowance > 0n) {
-    // Try direct overwrite — works for standard ERC-20s (2 txs total: approve + wrap).
-    // USDT-style: gas estimation fails pre-wallet → fall back to reset + approve (3 txs).
-    let needsReset = false;
-    try {
-      const approveHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, erc20Balance),
-      );
-      await sdk.signer.waitForTransactionReceipt(approveHash);
-    } catch (err) {
-      if (isError(err, "ACTION_REJECTED")) throw err; // user rejected — stop here
-      needsReset = true; // gas estimation reverted → USDT-style token
-    }
-    if (needsReset) {
-      const resetHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, 0n),
-      );
-      await sdk.signer.waitForTransactionReceipt(resetHash);
-      const approveHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, erc20Balance),
-      );
-      await sdk.signer.waitForTransactionReceipt(approveHash);
-    }
-  } else {
-    // Zero allowance: direct approve — no reset needed for any token.
-    const approveHash = await sdk.signer.writeContract(
-      approveContract(erc20Address, cTokenAddress, erc20Balance),
-    );
-    await sdk.signer.waitForTransactionReceipt(approveHash);
-  }
-}
-// approvalStrategy: 'skip' — allowance is confirmed above (or was already sufficient).
-await token.shield(shieldAmount, { approvalStrategy: "skip" });
+// Shield: useShield owns the entire approve + wrap flow — the app does not read ERC-20
+// allowances, submit approvals, or call wrapper contracts. approvalStrategy "exact" approves
+// exactly the shielded amount; the SDK performs the USDT-style allowance reset when an
+// existing non-zero allowance would otherwise block the approval, and routes through ERC-1363
+// transferAndCall when the underlying ERC-20 supports it.
+const shield = useShield({ address: cTokenAddress });
+shield.mutate({
+  amount: parseUnits("10", erc20Decimals),
+  approvalStrategy: "exact",
+  onApprovalSubmitted: () => setPhase("approve"),
+  onShieldSubmitted: () => setPhase("wrap"),
+});
 
 // Transfer: FHE encryption (local) + 1 transaction.
 // Amount is in confidential token units — use cTokenDecimals.
@@ -491,21 +439,21 @@ import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 
 // Grant decryption access — 1 transaction.
 // expirationDate: undefined → SDK sends MAX_UINT64 on-chain (permanent delegation).
-const delegate = useDelegateDecryption({ tokenAddress: cTokenAddress });
+const delegate = useDelegateDecryption(cTokenAddress);
 // Permanent delegation (no expiry):
 delegate.mutate({ delegateAddress: "0xDelegate" });
 // With expiry (must be at least 1 hour in the future):
 delegate.mutate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-01-01") });
 
 // Revoke decryption access — 1 transaction.
-const revoke = useRevokeDelegation({ tokenAddress: cTokenAddress });
+const revoke = useRevokeDelegation(cTokenAddress);
 revoke.mutate({ delegateAddress: "0xDelegate" });
 
 // Query delegation status — fires automatically when both addresses are valid.
 // Pass undefined for either address to disable the query (useful before the user
 // has entered an address).
 const { data: status } = useDelegationStatus({
-  tokenAddress: cTokenAddress,
+  contractAddress: cTokenAddress,
   delegatorAddress: "0xOwner", // the wallet that granted the delegation
   delegateAddress: "0xDelegate", // the wallet that received it (usually the connected wallet)
 });
@@ -514,8 +462,8 @@ const { data: status } = useDelegationStatus({
 
 // Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
 // Throws DelegationNotFoundError / DelegationExpiredError if the ACL check fails.
-// Note: useDecryptBalanceAs takes a positional tokenAddress argument (unlike
-// useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }).
+// Note: useDecryptBalanceAs, useDelegateDecryption, and useRevokeDelegation all take a
+// positional tokenAddress as their first argument.
 const decryptAs = useDecryptBalanceAs(cTokenAddress);
 decryptAs.mutate({ delegatorAddress: "0xOwner" });
 // decryptAs.data → bigint (raw balance)
