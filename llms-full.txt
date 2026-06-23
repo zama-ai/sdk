@@ -2486,7 +2486,7 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | ------- | -------------------------------------------------------------------------------------------- |
 | `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
 | `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
-| `info`  | Coarse lifecycle milestones, used sparingly                                                  |
+| `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
 | `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
 
 The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
@@ -6323,12 +6323,6 @@ Security options for the WASM bundle and relayer requests.
 | `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
 | `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
-
 ### threads
 
 `number | undefined`
@@ -6408,12 +6402,6 @@ const sdk = new ZamaSDK(config);
 `number | undefined`
 
 Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
-
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
 
 ### fheArtifactStorage
 
@@ -8191,13 +8179,13 @@ const config = createConfig({
 new FheArtifactCache(opts);
 ```
 
-| Field        | Type                         | Description                                                                                     |
-| ------------ | ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `storage`    | `GenericStorage`             | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                        |
-| `chainId`    | `number`                     | Chain ID to scope cache keys.                                                                   |
-| `relayerUrl` | `string`                     | Relayer URL used to fetch the manifest during revalidation.                                     |
-| `ttl`        | `number \| undefined`        | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. |
-| `logger`     | `GenericLogger \| undefined` | Logger instance. Default: `console`.                                                            |
+| Field        | Type                  | Description                                                                                                                                |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `storage`    | `GenericStorage`      | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                                                                   |
+| `chainId`    | `number`              | Chain ID to scope cache keys.                                                                                                              |
+| `relayerUrl` | `string`              | Relayer URL used to fetch the manifest during revalidation.                                                                                |
+| `ttl`        | `number \| undefined` | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation.                                            |
+| `logger`     | `GenericLogger`       | Logger for cache diagnostics (revalidation, storage degradation). Silent by default — the SDK threads its `createConfig({ logger })` here. |
 
 ## Methods
 
