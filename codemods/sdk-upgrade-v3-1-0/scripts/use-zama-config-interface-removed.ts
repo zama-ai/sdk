@@ -25,22 +25,44 @@ const codemod: Codemod<Tsx> = async (root) => {
   const rootNode = root.root();
   const edits: Edit[] = [];
 
-  // (1) Rebuild any named-import group that includes UseZamaConfig.
+  // (1) Rebuild any named-import group that includes UseZamaConfig. When it was the
+  // group's only specifier, drop the whole import statement rather than leave a dead
+  // `import {} from "..."` (unless a default/namespace import shares the statement).
   for (const imports of rootNode.findAll({ rule: { kind: "named_imports" } })) {
     const specifiers = imports.children().filter((c) => c.kind() === "import_specifier");
     const kept = specifiers.filter((s) => !s.text().includes(NAME));
     if (kept.length === specifiers.length) {
       continue;
     }
-    edits.push(imports.replace(`{ ${kept.map((s) => s.text()).join(", ")} }`));
-  }
-
-  // (2) Remove `extends UseZamaConfig` heritage clauses.
-  for (const clause of rootNode.findAll({ rule: { kind: "extends_type_clause" } })) {
-    if (!clause.text().includes(NAME)) {
+    if (kept.length > 0) {
+      edits.push(imports.replace(`{ ${kept.map((s) => s.text()).join(", ")} }`));
       continue;
     }
-    edits.push(clause.replace(""));
+    let stmt = imports.parent();
+    while (stmt && stmt.kind() !== "import_statement") {
+      stmt = stmt.parent();
+    }
+    const hasOtherBinding =
+      stmt
+        ?.children()
+        .find((c) => c.kind() === "import_clause")
+        ?.children()
+        .some((c) => c.isNamed() && c.kind() !== "named_imports") ?? false;
+    edits.push(stmt && !hasOtherBinding ? stmt.replace("") : imports.replace("{}"));
+  }
+
+  // (2) Drop `UseZamaConfig` from interface heritage. Remove only the reference and
+  // keep any sibling bases (`extends UseZamaConfig, Bar` -> `extends Bar`); replace
+  // the whole clause only when UseZamaConfig was the sole base.
+  for (const clause of rootNode.findAll({ rule: { kind: "extends_type_clause" } })) {
+    const bases = clause.children().filter((c) => c.isNamed());
+    const kept = bases.filter((b) => b.text() !== NAME);
+    if (kept.length === bases.length) {
+      continue;
+    }
+    edits.push(
+      clause.replace(kept.length === 0 ? "" : `extends ${kept.map((b) => b.text()).join(", ")}`),
+    );
   }
 
   // (3) Inline `: UseZamaConfig` type annotations (not the heritage reference above).

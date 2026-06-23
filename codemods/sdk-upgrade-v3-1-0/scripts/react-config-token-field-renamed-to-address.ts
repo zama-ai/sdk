@@ -49,7 +49,11 @@ const codemod: Codemod<Tsx> = async (root) => {
       continue;
     }
 
-    const members = firstArg.children().filter((c) => c.isNamed());
+    // Exclude comments: tree-sitter treats them as named children, so a comment
+    // inside the object would be reassembled into the `, `-joined rebuild and break
+    // the output (a line comment swallows the rest). The object is rebuilt onto one
+    // line anyway, so dropping an inner comment is consistent with that reformat.
+    const members = firstArg.children().filter((c) => c.isNamed() && c.kind() !== "comment");
 
     // First pass: capture the tokenAddress value so a redundant
     // `wrapperAddress: <same value>` can be dropped.
