@@ -1343,7 +1343,7 @@ For Codex, Cursor, or manual setup, see the [skills README](https://github.com/z
 > No skill support? Point your agent at the [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) files below instead.
 
 
-## Use llms.txt
+## Give guidance to AI agents / LLMs
 
 Point your agent at the SDK's LLM-ready files when it can't use skills — or to pull a specific doc on demand. They give a grounded map of the public docs, approved examples, and SDK reference without cloning the repo.
 
@@ -1354,6 +1354,8 @@ Point your agent at the SDK's LLM-ready files when it can't use skills — or to
 
 Start with [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt) for normal coding tasks; reach for [`llms-full.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms-full.txt) only when you want everything loaded at once. The `source_path` values such as `docs/gitbook/src/...` are provenance metadata, not local paths — if you haven't cloned the repo, use the raw GitHub URLs.
 
+### Example prompts
+
 To ground an agent, paste:
 
 > Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
@@ -1363,14 +1365,20 @@ Then give it a task. (With the skills installed your agent is already grounded �
 
 ### Tab: React (wagmi)
 
+> Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
+>
 > Add confidential balances and transfers to this Next.js app, following the approved `react-wagmi` example.
 
 ### Tab: Node.js
 
+> Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
+>
 > Build a Node.js backend with the `node()` transport and per-request isolation, following the approved `node-viem` example.
 
 ### Tab: Debugging
 
+> Read https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links to the relevant Zama SDK guides and approved examples before writing any code.
+>
 > Debug this Zama SDK integration: check the official error guide first, then compare against the closest approved example.
 
 
@@ -1381,7 +1389,7 @@ Then give it a task. (With the skills installed your agent is already grounded �
 Whichever path you use, agent guidance follows one source order:
 
 1. **Official documentation** — published through GitBook from `docs/gitbook/src`.
-2. **Approved official examples** — listed in the `Official Examples` section of [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt).
+2. **Approved official examples** — listed in the **Official Examples** section of [`llms.txt`](https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt).
 3. **API reports** — fallback only, for exported-API details.
 
 Prefer docs over examples when the docs already answer the question, and prefer the approved examples in this repo over ad hoc implementations.
