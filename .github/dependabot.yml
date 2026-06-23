@@ -1,15 +1,74 @@
 version: 2
 updates:
+  # SDK core packages and workspace tooling
   - package-ecosystem: npm
     target-branch: prerelease
     directories:
       - /
       - /packages/sdk
       - /packages/react-sdk
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+      exclude:
+        - "@zama-fhe/relayer-sdk"
+    groups:
+      sdk:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
+  # Test apps
+  - package-ecosystem: npm
+    target-branch: prerelease
+    directories:
       - /packages/test-nextjs
       - /packages/test-vite
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3
+      exclude:
+        - "@zama-fhe/relayer-sdk"
+    groups:
+      test-apps:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-patch
+
+  # Example apps
+  - package-ecosystem: npm
+    target-branch: prerelease
+    directories:
+      - /examples/example-bnb
+      - /examples/example-hoodi
+      - /examples/example-ingen
+      - /examples/node-ethers
+      - /examples/node-viem
+      - /examples/react-ethers
+      - /examples/react-turnkey-wallet
+      - /examples/react-viem
+      - /examples/react-wagmi
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+      exclude:
+        - "@zama-fhe/relayer-sdk"
+    groups:
+      example-apps:
+        update-types:
+          - minor
+          - patch
     ignore:
       - dependency-name: "*"
         update-types:
@@ -20,6 +79,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3
     ignore:
       - dependency-name: "*"
         update-types:
