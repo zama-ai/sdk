@@ -151,6 +151,16 @@ CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
   (`DelegatedUserDecryptMutationParams`). Fix is to add `language: typescript`
   rule variants (or map `.ts`→tsx in engine config). The typecheck of the consumer
   app surfaces any dangling reference. The e2e fixtures are `.tsx` for this reason.
+- **`createToken` → `createWrappedToken` is not auto-migrated** (data-flow dependent).
+  In 3.1.x the wrapper methods (`shield` / `unshield` / `unshieldAll` / `allowance` /
+  `approveUnderlying`) moved from `Token` to `WrappedToken` (`sdk.createWrappedToken`), but
+  `createToken` still exists for non-wrapper token ops (balance, transfer, delegation).
+  Whether a given `createToken(addr)` must become `createWrappedToken` depends on how its
+  result is later used (often via an intermediate variable) — a syntactic rule can't tell,
+  and a blanket rename would wrongly upgrade plain-`Token` call sites (and could fail at
+  runtime on a token with no underlying to wrap). Migrate by hand where the typecheck flags a
+  missing wrapper method on a `Token`; since `WrappedToken extends Token`, switching a
+  shielding call site to `createWrappedToken` keeps its `Token` methods working.
 - **The optional `ai` node is not formally gated** by `--param ai=true`; it is a
   no-op only because no LLM is configured by default. Consider an explicit node
   condition so the intent is enforced, not incidental.
