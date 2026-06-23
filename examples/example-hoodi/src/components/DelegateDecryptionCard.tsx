@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
@@ -17,16 +17,13 @@ export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecry
   const [noExpiry, setNoExpiry] = useState(true);
   const [expirationInput, setExpirationInput] = useState("");
 
-  const delegate = useDelegateDecryption(
-    { tokenAddress },
-    {
-      onSuccess: () => {
-        setDelegateAddress("");
-        setNoExpiry(true);
-        setExpirationInput("");
-      },
+  const delegate = useDelegateDecryption(tokenAddress, {
+    onSuccess: () => {
+      setDelegateAddress("");
+      setNoExpiry(true);
+      setExpirationInput("");
     },
-  );
+  });
 
   const isExpiryValid = noExpiry || (!!expirationInput && new Date(expirationInput) > new Date());
   const canSubmit = isAddress(delegateAddress) && isExpiryValid;

@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.1-alpha.4](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.3...v3.1.1-alpha.4) (2026-06-23)
+
+### Code Refactoring
+
+- **examples:** upgrade example-hoodi to @zama-fhe/sdk 3.1.0 ([#475](https://github.com/zama-ai/sdk/issues/475)) ([a74666d]())
+
 ## [3.1.1-alpha.3](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.2...v3.1.1-alpha.3) (2026-06-23)
 
 ### Code Refactoring
