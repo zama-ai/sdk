@@ -20,16 +20,13 @@ export function DelegateDecryptionCard({
   const [noExpiry, setNoExpiry] = useState(true);
   const [expirationInput, setExpirationInput] = useState("");
 
-  const delegate = useDelegateDecryption(
-    { tokenAddress },
-    {
-      onSuccess: () => {
-        setDelegateAddress("");
-        setNoExpiry(true);
-        setExpirationInput("");
-      },
+  const delegate = useDelegateDecryption(tokenAddress, {
+    onSuccess: () => {
+      setDelegateAddress("");
+      setNoExpiry(true);
+      setExpirationInput("");
     },
-  );
+  });
 
   // ACL contract enforces a minimum of 1 hour — reject anything shorter at the UI level.
   const isExpiryValid =

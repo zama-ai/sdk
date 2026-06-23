@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -60,6 +60,14 @@ jobs:
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm llm:check
 
+      # Doc URLs are branch-specific (raw.githubusercontent .../main|prerelease, and
+      # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
+      # on — reliable here even though the PR is checked out detached. If the committed
+      # URLs target the wrong branch (e.g. a promotion that forgot `pnpm docs:retarget`),
+      # this fails. `ref_name` covers the workflow_call (release) path.
+      - name: Verify doc URLs target the right branch
+        run: pnpm docs:check-target "${{ github.base_ref || github.ref_name }}"
+
   # External link liveness for the published docs + READMEs. Internal links and
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
   # targets. PR-only — skipped on the release `workflow_call` so external flakiness
@@ -69,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 

@@ -14,9 +14,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.61.0",
     "@zama-fhe/sdk": "workspace:*",
-    "ethers": "^6.16.0",
+    "ethers": "^6.17.0",
     "viem": "^2.52.2"
   },
   "devDependencies": {
