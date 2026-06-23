@@ -18,27 +18,14 @@ import type {
   UserDecryptParams,
 } from "./relayer-sdk.types";
 
-/** Anything with a synchronous `terminate()` method (workers, pools). */
-export interface WorkerLike {
-  terminate(): void;
-}
-
 /**
  * Owns chain management (chains / activeChain / switchChain) and delegates
  * every {@link RelayerSDK} operation to the relayer for the currently active
- * chain.
- *
- * Groups chains by relayer config reference identity, calls `createWorker`
- * once per group with all chain configs, then calls `createRelayer`
- * per chain with the shared worker.
- *
- * Workers/pools are held separately from relayers so the dispatcher can
- * terminate them directly — relayers never own worker lifecycle.
+ * chain. Builds one relayer per chain from its {@link RelayerConfig}.
  */
 export class RelayerDispatcher implements RelayerSDK, Disposable {
   readonly #chains: Map<number, FheChain>;
   readonly #relayers: Map<number, RelayerSDK>;
-  readonly #workers: readonly WorkerLike[];
   #chainId: number;
 
   constructor(
@@ -51,47 +38,13 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     this.#chains = new Map(chains.map((c) => [c.id, c]));
     this.#chainId = chains[0].id;
 
-    const chainRelayers = resolveChainRelayers(chains, configs);
-
-    // Group chains by relayer config reference — same object = same group = shared worker.
-    const groups = new Map<RelayerConfig, Array<[number, FheChain]>>();
-    for (const [chainId, config] of chainRelayers) {
-      const key = config.relayer;
-      let group = groups.get(key);
-      if (!group) {
-        group = [];
-        groups.set(key, group);
-      }
-      group.push([chainId, config.chain]);
-    }
-
-    // For each group: create shared worker once, then create per-chain relayers.
+    // One relayer per chain. A shared config object can yield the same relayer
+    // instance for several chains (createRelayer decides); terminate() dedupes.
     const relayers = new Map<number, RelayerSDK>();
-    const workers: WorkerLike[] = [];
-    try {
-      for (const [relayerCfg, groupChains] of groups) {
-        const allChainConfigs = groupChains.map(([, chain]) => chain);
-        const worker = relayerCfg.createWorker?.(allChainConfigs);
-        if (worker) {
-          workers.push(worker);
-        }
-        for (const [chainId, chain] of groupChains) {
-          relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
-        }
-      }
-    } catch (error) {
-      for (const w of workers) {
-        try {
-          w.terminate();
-        } catch {
-          /* best-effort cleanup */
-        }
-      }
-      throw error;
+    for (const [chainId, { relayer, chain }] of resolveChainRelayers(chains, configs)) {
+      relayers.set(chainId, relayer.createRelayer(chain));
     }
-
     this.#relayers = relayers;
-    this.#workers = workers;
   }
 
   get chains(): readonly FheChain[] {
@@ -177,19 +130,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   terminate(): void {
     const errors: Error[] = [];
 
-    // Clean up relayer-owned caches (no worker termination).
+    // Clean up relayer-owned caches (deduped: a shared config can yield one
+    // relayer instance across chains).
     for (const r of new Set(this.#relayers.values())) {
       try {
         r.terminate();
-      } catch (e) {
-        errors.push(toError(e));
-      }
-    }
-
-    // Terminate the actual workers/pools (deduplicated).
-    for (const w of new Set(this.#workers)) {
-      try {
-        w.terminate();
       } catch (e) {
         errors.push(toError(e));
       }

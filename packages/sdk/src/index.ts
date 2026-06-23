@@ -22,7 +22,7 @@ export type {
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
+export type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 export type { RelayerSDK } from "./relayer/relayer-sdk.types";
 export type {
   RelayerSDKStatus,

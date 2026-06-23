@@ -17,35 +17,23 @@ export interface WebRelayerOptions {
 // ── Relayer config types ─────────────────────────────────────────────────────
 
 /**
- * Base relayer config.
- *
- * Groups chains by config reference identity, calls `createWorker`
- * once per group with all chain configs, then calls `createRelayer`
- * per chain with the shared worker.
+ * Base relayer config. `createRelayer` builds one single-chain relayer; the
+ * dispatcher calls it once per chain.
  */
 export interface RelayerConfig {
   readonly type: string;
-  /** Create a shared worker/pool for all chains in this relayer group. */
-  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: FheChain[]) => any;
-  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
-  readonly createRelayer: (
-    chain: FheChain,
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-    worker: any,
-  ) => RelayerSDK;
+  /** Create a single-chain relayer. */
+  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
-/** Web relayer config — drives the FHE backend directly (no worker). */
+/** Web relayer config — drives the FHE backend directly. */
 export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
-  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
 /** Cleartext relayer config — drives the FHE backend in cleartext mode. */
 export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
-  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
 /** Shared options across all adapter paths. */

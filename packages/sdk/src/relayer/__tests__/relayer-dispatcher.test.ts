@@ -1,13 +1,9 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { RelayerDispatcher, type WorkerLike } from "../relayer-dispatcher";
+import { RelayerDispatcher } from "../relayer-dispatcher";
 import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../relayer-sdk.types";
-
-function makeMockWorker(): WorkerLike {
-  return { terminate: vi.fn<() => void>() };
-}
 
 describe("RelayerDispatcher", () => {
   describe("constructor", () => {
@@ -156,48 +152,6 @@ describe("RelayerDispatcher", () => {
   });
 
   describe("terminate()", () => {
-    test("terminates workers created by relayer configs", ({
-      createMockChain,
-      createMockRelayer,
-    }) => {
-      const chainA = createMockChain({ id: 1 });
-      const worker = makeMockWorker();
-      const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: {
-          type: "web",
-          createWorker: () => worker,
-          createRelayer: () => createMockRelayer(),
-        },
-      });
-      dispatcher.terminate();
-      expect(worker.terminate).toHaveBeenCalledTimes(1);
-    });
-
-    test("terminates all workers from multiple groups", ({
-      createMockChain,
-      createMockRelayer,
-    }) => {
-      const chainA = createMockChain({ id: 1 });
-      const chainB = createMockChain({ id: 2 });
-      const w1 = makeMockWorker();
-      const w2 = makeMockWorker();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: {
-          type: "web",
-          createWorker: () => w1,
-          createRelayer: () => createMockRelayer(),
-        },
-        [2]: {
-          type: "web",
-          createWorker: () => w2,
-          createRelayer: () => createMockRelayer(),
-        },
-      });
-      dispatcher.terminate();
-      expect(w1.terminate).toHaveBeenCalledTimes(1);
-      expect(w2.terminate).toHaveBeenCalledTimes(1);
-    });
-
     test("cleans up relayer caches (deduped)", ({ createMockChain, createMockRelayer }) => {
       const chainA = createMockChain({ id: 1 });
       const chainB = createMockChain({ id: 2 });
@@ -235,15 +189,9 @@ describe("RelayerDispatcher", () => {
       createMockRelayer,
     }) => {
       const chainA = createMockChain({ id: 1 });
-      const failWorker: WorkerLike = {
-        terminate: vi.fn(() => {
-          throw new Error("worker fail");
-        }),
-      };
       const dispatcher = new RelayerDispatcher([chainA], {
         [1]: {
           type: "web",
-          createWorker: () => failWorker,
           createRelayer: () =>
             createMockRelayer({
               terminate: vi.fn(() => {
@@ -268,17 +216,14 @@ describe("RelayerDispatcher", () => {
   describe("[Symbol.dispose]", () => {
     test("terminates workers and cleans up relayers", ({ createMockChain, createMockRelayer }) => {
       const chainA = createMockChain({ id: 1 });
-      const worker = makeMockWorker();
       const relayer = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA], {
         [1]: {
           type: "web",
-          createWorker: () => worker,
           createRelayer: () => relayer,
         },
       });
       dispatcher[Symbol.dispose]();
-      expect(worker.terminate).toHaveBeenCalledTimes(1);
       expect(relayer.terminate).toHaveBeenCalledTimes(1);
     });
   });
