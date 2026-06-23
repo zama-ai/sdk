@@ -18,18 +18,6 @@ import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
 import { swallow } from "../utils";
-import type { GenericLogger } from "../worker/worker.types";
-
-// The signer is constructed before `createConfig`, so it cannot reach the
-// SDK-wide logger (which is the single source of truth). Its one best-effort
-// swallow therefore stays silent — `createConfig({ logger })` deliberately
-// remains the only logger injection point.
-const silentLogger: GenericLogger = {
-  error: () => {},
-  warn: () => {},
-  info: () => {},
-  debug: () => {},
-};
 
 /**
  * Configuration for {@link EthersSigner}.
@@ -78,13 +66,12 @@ export class EthersSigner extends BaseSigner {
     } else {
       this.#directSigner = config.signer;
       this.#unsubscribeProvider = () => {};
-      void swallow(
-        "refresh wallet account",
-        async () => {
-          await this.refreshWalletAccount();
-        },
-        silentLogger,
-      );
+      // The signer is constructed before `createConfig`, so it cannot reach the
+      // SDK-wide logger; this best-effort refresh stays silent. A failed refresh
+      // still surfaces via the typed WalletAccountNotReadyError on next use.
+      void swallow("refresh wallet account", async () => {
+        await this.refreshWalletAccount();
+      });
     }
   }
 

@@ -3,39 +3,27 @@ import { LoggerService } from "../../services/logger-service";
 import { swallow } from "../swallow";
 
 describe("swallow", () => {
-  // The SDK-wide logger is always supplied; a LoggerService with no inner
-  // sink is the silent-by-default case.
-  const silent = new LoggerService();
-
   test("runs the function and resolves when it succeeds", async () => {
     const fn = vi.fn(() => Promise.resolve());
-    await swallow("op", fn, silent);
+    await swallow("op", fn);
     expect(fn).toHaveBeenCalledOnce();
   });
 
   test("swallows a thrown error without rejecting", async () => {
     await expect(
-      swallow(
-        "op",
-        () => {
-          throw new Error("boom");
-        },
-        silent,
-      ),
+      swallow("op", () => {
+        throw new Error("boom");
+      }),
     ).resolves.toBeUndefined();
   });
 
-  test("emits no console output with a silent logger", async () => {
+  test("emits no console output when no logger is supplied", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      await swallow(
-        "op",
-        () => {
-          throw new Error("boom");
-        },
-        silent,
-      );
+      await swallow("op", () => {
+        throw new Error("boom");
+      });
       expect(warn).not.toHaveBeenCalled();
       expect(error).not.toHaveBeenCalled();
     } finally {
