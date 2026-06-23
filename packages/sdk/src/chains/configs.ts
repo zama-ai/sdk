@@ -2,12 +2,6 @@ import type { FheChain } from "./types";
 
 /**
  * Mainnet network configuration (chainId 1).
- *
- * Contract addresses mirror `MainnetConfigV2` from `@zama-fhe/relayer-sdk`.
- * They are duplicated here because the `/bundle` export path only exposes
- * types at build time (runtime values require `/web` or `/node` which pull
- * in WASM). `satisfies FheChain` ensures structural drift is caught at
- * compile time.
  */
 export const mainnet = {
   id: 1,
@@ -24,6 +18,9 @@ export const mainnet = {
 
 /**
  * Sepolia testnet network configuration (chainId 11155111).
+ *
+ * Contract addresses and `gatewayChainId` mirror the `sepolia` definition
+ * exported from `@fhevm/sdk/chains`, flattened and extended like {@link mainnet}.
  */
 export const sepolia = {
   id: 11155111,
