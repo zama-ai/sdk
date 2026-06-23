@@ -87,7 +87,7 @@ importers:
         specifier: 0.4.3
         version: 0.4.3
       codemod:
-        specifier: ^1.12.3
+        specifier: 1.12.3
         version: 1.12.3
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.1
