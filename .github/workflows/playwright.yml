@@ -43,8 +43,14 @@ jobs:
         with:
           version: v1.5.1
 
-      - name: Install soldeer dependencies
-        run: cd contracts/lib/forge-fhevm && forge soldeer install
+      - name: Setup pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Restore Forge build cache
         id: forge-build-cache
@@ -56,21 +62,17 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
-      - name: Install Soldeer dependencies
+      - name: Install contract dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-
-      - name: Build forge-fhevm contracts
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts/lib/forge-fhevm && forge build
+        run: pnpm contracts:install
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts && forge build
+        run: pnpm contracts:build
 
       - name: Save Forge build cache
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -82,16 +84,9 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
       - name: Install Aikido Safe Chain
         run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
@@ -177,8 +172,14 @@ jobs:
         with:
           version: v1.5.1
 
-      - name: Install soldeer dependencies
-        run: cd contracts/lib/forge-fhevm && forge soldeer install
+      - name: Setup pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Restore Forge build cache
         id: forge-build-cache
@@ -190,21 +191,17 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
-      - name: Install Soldeer dependencies
+      - name: Install contract dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-
-      - name: Build forge-fhevm contracts
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts/lib/forge-fhevm && forge build
+        run: pnpm contracts:install
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts && forge build
+        run: pnpm contracts:build
 
       - name: Save Forge build cache
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -216,16 +213,9 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
       - name: Install Aikido Safe Chain
         run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
@@ -295,8 +285,14 @@ jobs:
         with:
           version: v1.5.1
 
-      - name: Install soldeer dependencies
-        run: cd contracts/lib/forge-fhevm && forge soldeer install
+      - name: Setup pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Restore Forge build cache
         id: forge-build-cache
@@ -308,21 +304,17 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
-      - name: Install Soldeer dependencies
+      - name: Install contract dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-
-      - name: Build forge-fhevm contracts
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts/lib/forge-fhevm && forge build
+        run: pnpm contracts:install
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts && forge build
+        run: pnpm contracts:build
 
       - name: Save Forge build cache
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -334,16 +326,9 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml') }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/src/**/*.sol', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml') }}
 
       - name: Install Aikido Safe Chain
         run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci

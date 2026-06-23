@@ -26,7 +26,8 @@ import {
   createKmsDelegatedUserDecryptEip712,
   createKmsUserDecryptEip712,
 } from "@fhevm/sdk/actions/chain";
-import { createPublicClient, custom, http, toHex } from "viem";
+import { readKmsSignersContext } from "@fhevm/sdk/actions/base";
+import { createPublicClient, custom, http } from "viem";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
@@ -180,12 +181,12 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     await this.#ensureInit();
-    return this.#userDecryptEip712(
+    return (await this.#userDecryptEip712(
       publicKey,
       contractAddresses,
       startTimestamp,
       durationDays,
-    ) as unknown as EIP712TypedData;
+    )) as unknown as EIP712TypedData;
   }
 
   /** Encrypt typed plaintext inputs into ciphertext handles + a shared input proof. */
@@ -199,9 +200,13 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       contractAddress: params.contractAddress,
       userAddress: params.userAddress,
     });
+    // `@fhevm/sdk` already returns hex strings (bytes32 handles + the input
+    // proof); they pass straight through. Do NOT re-`toHex` them — that would
+    // UTF-8-encode the "0x…" string into a double-length blob and the on-chain
+    // `fromExternal`/`verifyInput` would reject it.
     return {
-      encryptedValues: result.encryptedValues.map((h) => toHex(h)),
-      inputProof: toHex(result.inputProof),
+      encryptedValues: result.encryptedValues.map((value) => value as Hex),
+      inputProof: result.inputProof as Hex,
     };
   }
 
@@ -209,7 +214,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     params: UserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#ensureInit();
-    const eip712 = this.#userDecryptEip712(
+    const eip712 = await this.#userDecryptEip712(
       params.publicKey,
       params.signedContractAddresses,
       params.startTimestamp,
@@ -254,20 +259,20 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     await this.#ensureInit();
-    return this.#delegatedUserDecryptEip712(
+    return (await this.#delegatedUserDecryptEip712(
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
-    ) as unknown as EIP712TypedData;
+    )) as unknown as EIP712TypedData;
   }
 
   async delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#ensureInit();
-    const eip712 = this.#delegatedUserDecryptEip712(
+    const eip712 = await this.#delegatedUserDecryptEip712(
       params.publicKey,
       params.signedContractAddresses,
       params.delegatorAddress,
@@ -329,8 +334,25 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     return out;
   }
 
+  /**
+   * `extraData` binding the permit to the current on-chain KMS signers context.
+   *
+   * The KMS verifier embeds its active context (`0x01` + 32-byte context id, or
+   * `0x00` when unset) in every decryption result and rejects permits whose
+   * `extraData` doesn't match. We read the live context so the EIP-712 the user
+   * signs carries the same bytes the verifier will check. The read is TTL-cached
+   * inside `@fhevm/sdk`, so repeated decrypts don't re-hit the chain.
+   */
+  async #currentKmsExtraData(): Promise<Hex> {
+    const context = await readKmsSignersContext(this.#fhevm);
+    if (context.id === 0n) {
+      return "0x00";
+    }
+    return `0x01${context.id.toString(16).padStart(64, "0")}`;
+  }
+
   /** Build EIP-712 typed data for a (self) user-decrypt permit. */
-  #userDecryptEip712(
+  async #userDecryptEip712(
     publicKey: Hex,
     contractAddresses: Address[],
     startTimestamp: number,
@@ -341,12 +363,12 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       contractAddresses,
       startTimestamp,
       durationDays,
-      extraData: "0x",
+      extraData: await this.#currentKmsExtraData(),
     });
   }
 
   /** Build EIP-712 typed data for a delegated user-decrypt permit. */
-  #delegatedUserDecryptEip712(
+  async #delegatedUserDecryptEip712(
     publicKey: Hex,
     contractAddresses: Address[],
     delegatorAddress: Address,
@@ -359,7 +381,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       delegatorAddress,
       startTimestamp,
       durationDays,
-      extraData: "0x",
+      extraData: await this.#currentKmsExtraData(),
     });
   }
 
