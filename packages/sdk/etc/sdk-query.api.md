@@ -9,6 +9,8 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
+import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { MutationFunctionContext } from '@tanstack/query-core';
@@ -330,19 +332,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export interface EIP712TypedData {
-    // (undocumented)
-    domain: Record<string, unknown>;
-    // (undocumented)
-    message: Record<string, unknown>;
-    // (undocumented)
-    primaryType: string;
-    // (undocumented)
-    types: Record<string, ReadonlyArray<{
-        name: string;
-        type: string;
-    }>>;
-}
+export type EIP712TypedData = CreateKmsUserDecryptEip712ReturnType | CreateKmsDelegatedUserDecryptEip712ReturnType;
 
 // @public
 export type EncryptedValue = Hex;
@@ -562,9 +552,17 @@ export interface RawLog {
 }
 
 // @public
-export interface RelayerSDK extends FheOperations {
+export interface RelayerSDK {
+    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
+    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
+    generateTransportKeyPair(): Promise<TransportKeyPair>;
     getAclAddress(): Promise<Address>;
+    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
     terminate(): void;
+    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public (undocumented)

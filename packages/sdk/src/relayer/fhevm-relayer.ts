@@ -160,12 +160,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     await this.#ensureInit();
-    return (await this.#userDecryptEip712(
-      publicKey,
-      contractAddresses,
-      startTimestamp,
-      durationDays,
-    )) as unknown as EIP712TypedData;
+    return this.#userDecryptEip712(publicKey, contractAddresses, startTimestamp, durationDays);
   }
 
   /** Encrypt typed plaintext inputs into ciphertext handles + a shared input proof. */
@@ -238,13 +233,13 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     durationDays = 7,
   ): Promise<EIP712TypedData> {
     await this.#ensureInit();
-    return (await this.#delegatedUserDecryptEip712(
+    return this.#delegatedUserDecryptEip712(
       publicKey,
       contractAddresses,
       delegatorAddress,
       startTimestamp,
       durationDays,
-    )) as unknown as EIP712TypedData;
+    );
   }
 
   async delegatedUserDecrypt(

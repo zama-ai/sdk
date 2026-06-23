@@ -1,4 +1,6 @@
 import type {
+  CreateKmsDelegatedUserDecryptEip712ReturnType,
+  CreateKmsUserDecryptEip712ReturnType,
   ParseSignedDecryptionPermitParameters,
   SerializeTransportKeyPairReturnType,
 } from "@fhevm/sdk/actions/chain";
@@ -85,15 +87,13 @@ export interface PublicDecryptResult {
 }
 
 /**
- * EIP-712 typed data for a (delegated) user-decrypt permit. Built by the FHE
- * backend and signed by the signer layer (`GenericSigner.signTypedData`).
+ * EIP-712 typed data for a (delegated) user-decrypt permit — the discriminated
+ * union `@fhevm/sdk` produces, keyed by `primaryType`. Built by the FHE backend
+ * and signed by the signer layer (`GenericSigner.signTypedData`).
  */
-export interface EIP712TypedData {
-  domain: Record<string, unknown>;
-  types: Record<string, ReadonlyArray<{ name: string; type: string }>>;
-  primaryType: string;
-  message: Record<string, unknown>;
-}
+export type EIP712TypedData =
+  | CreateKmsUserDecryptEip712ReturnType
+  | CreateKmsDelegatedUserDecryptEip712ReturnType;
 
 /** FHE encryption key — the network's TFHE public key used to encrypt inputs for confidential contracts. */
 export interface FheEncryptionKey {

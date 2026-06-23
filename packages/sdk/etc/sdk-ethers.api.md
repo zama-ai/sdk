@@ -9,6 +9,8 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
+import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193EventMap } from 'viem';
 import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
