@@ -13,9 +13,14 @@ import type { Address, Hex } from "viem";
 // ============================================================================
 
 /**
- * Optional logger for worker client observability.
- * Pass to `WorkerClientConfig` or `NodeWorkerClientConfig` to observe
- * request lifecycle (start, success, error, timeout).
+ * Minimal four-level logger the SDK logs through.
+ *
+ * Supplied optionally by the consumer via `createConfig({ logger })` and
+ * threaded SDK-wide; `console`, pino, winston, and OpenTelemetry's `DiagLogger`
+ * satisfy it directly, so no adapter is needed. Levels: `error` (unexpected
+ * internal failures only — never failures already surfaced via a rejection),
+ * `warn` (recoverable/degraded conditions), `info` (reserved for coarse
+ * lifecycle milestones; not currently emitted), `debug` (verbose diagnostics).
  */
 export interface GenericLogger {
   info: (message: string, data?: Record<string, unknown>) => void;

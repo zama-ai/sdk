@@ -351,7 +351,7 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | ------- | -------------------------------------------------------------------------------------------- |
 | `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
 | `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
-| `info`  | Coarse lifecycle milestones, used sparingly                                                  |
+| `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
 | `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
 
 The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
