@@ -50,11 +50,12 @@ nodes:
           include: ["**/*.{ts,tsx}"]
 
   # --- optional AI assisted upgrade: the non-mechanical changes the codemods can't express ---
-  # Opt-in (`--param ai=true`) and runs only after the deterministic steps above,
-  # so the default upgrade stays deterministic. Needs an LLM configured via env.
+  # `type: manual` keeps this opt-in: `codemod workflow run` does NOT trigger it, so the
+  # default upgrade (and the test suite) stays deterministic. Trigger it explicitly, with an
+  # LLM configured via env, to draft the non-mechanical tail after the deterministic steps.
   - id: ai-upgrade
     name: "AI-assisted: apply the non-mechanical 3.1.0 changes"
-    type: automatic
+    type: manual
     depends_on: [upgrade]
     steps:
       - name: "Apply the remaining (non-codemoddable) 3.1.0 breaking changes"

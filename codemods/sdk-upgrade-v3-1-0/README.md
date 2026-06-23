@@ -15,8 +15,8 @@ order/overlap is safe).
 
 ```sh
 # from the SDK repo root (the codemod CLI is a devDependency there)
-pnpm codemod -t /path/to/app/src
-pnpm codemod -t /path/to/app/src --dry-run
+pnpm codemod:sdk-upgrade-v3-1-0 -t /path/to/app/src
+pnpm codemod:sdk-upgrade-v3-1-0 -t /path/to/app/src --dry-run
 
 # or, published, with no repo access:
 npx codemod @zama-fhe/sdk-upgrade-v3-1-0 -t ./src
@@ -56,17 +56,20 @@ The deterministic codemods cover the mechanical subset only. The **non-mechanica
 `useEncrypt`, the removed EIP-712/keypair hooks, the `ZamaSDK` capability refactor)
 can be handled by an **opt-in `ai` step** that runs _after_ the deterministic ones:
 
+The `ai-upgrade` node is **`type: manual`**, so `codemod workflow run` (and the test
+suite) never triggers it — the standard run stays fully deterministic. Configure an
+LLM and trigger it explicitly to draft the tail:
+
 ```sh
-# configure an LLM, then opt in
 export LLM_API_KEY=...        # plus LLM_PROVIDER=anthropic, LLM_MODEL=<model>
-pnpm codemod -t ./src --param ai=true
+# trigger the manual `ai-upgrade` node explicitly (see the codemod CLI docs for
+# triggering manual nodes); the deterministic `upgrade` node it depends on runs first.
 ```
 
-It's **off by default** (`params.ai` defaults to `"false"`), so the standard run
-and the test suite stay fully deterministic — the AI only ever touches the tail the
-codemods leave behind, and is prompted to make minimal edits and leave
-`// TODO(sdk-3.1.0)` markers where there's no drop-in replacement (never to invent
-APIs). Treat its output as a reviewed draft, not a finished migration.
+The AI only ever touches the tail the codemods leave behind, and is prompted to make
+minimal edits and leave `// TODO(sdk-3.1.0)` markers where there's no drop-in
+replacement (never to invent APIs). Treat its output as a reviewed draft, not a
+finished migration.
 
 ## Scope
 
@@ -161,6 +164,7 @@ CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
   runtime on a token with no underlying to wrap). Migrate by hand where the typecheck flags a
   missing wrapper method on a `Token`; since `WrappedToken extends Token`, switching a
   shielding call site to `createWrappedToken` keeps its `Token` methods working.
-- **The optional `ai` node is not formally gated** by `--param ai=true`; it is a
-  no-op only because no LLM is configured by default. Consider an explicit node
-  condition so the intent is enforced, not incidental.
+- **The non-mechanical 3.1.0 tail is left to the optional `ai` node** (`type: manual`),
+  which `codemod workflow run` never auto-triggers — so the default run is deterministic.
+  It only drafts the residual changes (with `// TODO(sdk-3.1.0)` markers) when explicitly
+  triggered with an LLM configured.
