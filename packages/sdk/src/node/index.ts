@@ -12,7 +12,7 @@ export { node } from "./config";
 export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
-export type { RelayerSDK } from "../relayer/relayer-sdk";
+export type { RelayerSDK } from "../relayer/relayer-sdk.types";
 export type { GenericLogger } from "../types/logger";
 
 // Relayer types used in RelayerNode's public API

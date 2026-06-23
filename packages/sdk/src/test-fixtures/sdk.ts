@@ -2,7 +2,7 @@
 import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerSDK } from "../relayer/relayer-sdk.types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { ZamaSDK } from "../zama-sdk";
 import type { ChainFixtures } from "./chain";

@@ -1,7 +1,7 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerSDK } from "../relayer/relayer-sdk.types";
 import type { FixturesOf } from "./types";
 import {
   ACL,

@@ -136,7 +136,7 @@ export type {
   PublicDecryptResult as DecryptPublicValuesResult,
   DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
 } from "../relayer/relayer-sdk.types";
-export type { RelayerSDK } from "../relayer/relayer-sdk";
+export type { RelayerSDK } from "../relayer/relayer-sdk.types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";

@@ -1,7 +1,6 @@
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { FhevmRuntimeConfig } from "../relayer/relayer-sdk.types";
+import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
 
 /** Node transport — drives the FHE backend directly (no worker pool). */

@@ -5,7 +5,6 @@ import { resolveChainRelayers } from "../config/resolve";
 import type { TransportKeyPair } from "../credentials/types";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
-import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
   DelegatedUserDecryptParams,
@@ -15,6 +14,7 @@ import type {
   EncryptedValue,
   FheEncryptionKey,
   PublicDecryptResult,
+  RelayerSDK,
   UserDecryptParams,
 } from "./relayer-sdk.types";
 

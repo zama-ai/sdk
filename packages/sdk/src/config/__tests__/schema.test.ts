@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
+import type { RelayerSDK } from "../../relayer/relayer-sdk.types";
 import { createConfig } from "../create";
 import type { RelayerConfig } from "../types";
 

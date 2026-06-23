@@ -32,7 +32,6 @@ import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { TransportKeyPair } from "../credentials/types";
-import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
   DecryptPair,
@@ -47,6 +46,7 @@ import type {
   FhevmRuntimeConfig,
   FhevmSdkClient,
   PublicDecryptResult,
+  RelayerSDK,
   SerializedSignedPermit,
   SerializedTransportKeyPair,
   UserDecryptParams,
@@ -299,10 +299,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       transportKeyPair,
     });
     const typed = await this.#fhevm.decryptValuesFromPairs({
-      pairs: params.pairs.map((p) => ({
-        encryptedValue: p.encryptedValue,
-        contractAddress: p.contractAddress,
-      })),
+      pairs: params.pairs,
       transportKeyPair,
       signedPermit,
     });

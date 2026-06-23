@@ -1,7 +1,7 @@
 import type { FheChain, AtLeastOneChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerSDK } from "../relayer/relayer-sdk.types";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };

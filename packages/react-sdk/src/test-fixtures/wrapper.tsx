@@ -5,7 +5,7 @@ import type React from "react";
 import type { ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
-import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
+import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk.types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
 import type { QueryClientFixtures } from "./query-client";

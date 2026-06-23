@@ -23,7 +23,7 @@ export type {
   ResolvedChainRelayer,
 } from "./config";
 export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
-export type { RelayerSDK } from "./relayer/relayer-sdk";
+export type { RelayerSDK } from "./relayer/relayer-sdk.types";
 export type {
   RelayerSDKStatus,
   EncryptResult,
@@ -34,7 +34,6 @@ export type {
   EIP712TypedData,
   NetworkType,
   FheEncryptionKey,
-  PublicParamsData,
   FheTypeName,
 } from "./relayer/relayer-sdk.types";
 

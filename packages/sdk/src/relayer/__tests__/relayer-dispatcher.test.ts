@@ -3,7 +3,7 @@ import { RelayerDispatcher, type WorkerLike } from "../relayer-dispatcher";
 import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
-import type { RelayerSDK } from "../relayer-sdk";
+import type { RelayerSDK } from "../relayer-sdk.types";
 
 function makeMockWorker(): WorkerLike {
   return { terminate: vi.fn<() => void>() };
