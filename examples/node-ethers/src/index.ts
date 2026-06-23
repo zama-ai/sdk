@@ -99,9 +99,10 @@ async function main() {
   console.log("ERC-20 token:        ", TOKEN_ADDRESS);
   console.log("Confidential wrapper:", confidentialTokenAddress);
 
-  // createToken() takes the confidential token address. The SDK resolves the
-  // underlying ERC-20 automatically via underlyingContract(this.wrapper).
-  const tokenA = sdkA.createToken(confidentialTokenAddress);
+  // tokenA shields/unshields, so it needs a WrappedToken (createWrappedToken) — the
+  // SDK resolves the underlying ERC-20 automatically. tokenB only reads and decrypts
+  // balances, so a plain Token (createToken) is enough.
+  const tokenA = sdkA.createWrappedToken(confidentialTokenAddress);
   const tokenB = sdkB.createToken(confidentialTokenAddress);
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -191,9 +192,13 @@ async function main() {
 
   // 4a. Grant: A delegates decrypt rights to B
   console.log("── 4a. Grant delegation: A → B ──");
-  await tokenA.delegateDecryption({ delegateAddress: walletB.address as Address });
+  await sdkA.delegations.delegateDecryption({
+    contractAddress: confidentialTokenAddress,
+    delegateAddress: walletB.address as Address,
+  });
 
-  const isDelegated = await tokenA.isDelegated({
+  const isDelegated = await sdkA.delegations.isActive({
+    contractAddress: confidentialTokenAddress,
     delegatorAddress: walletA.address as Address,
     delegateAddress: walletB.address as Address,
   });
@@ -234,9 +239,13 @@ async function main() {
 
   // 4c. Revoke: A removes B's decrypt rights
   console.log("\n── 4c. Revoke delegation ──");
-  await tokenA.revokeDelegation({ delegateAddress: walletB.address as Address });
+  await sdkA.delegations.revokeDelegation({
+    contractAddress: confidentialTokenAddress,
+    delegateAddress: walletB.address as Address,
+  });
 
-  const isDelegatedAfter = await tokenA.isDelegated({
+  const isDelegatedAfter = await sdkA.delegations.isActive({
+    contractAddress: confidentialTokenAddress,
     delegatorAddress: walletA.address as Address,
     delegateAddress: walletB.address as Address,
   });
