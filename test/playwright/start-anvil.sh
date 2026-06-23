@@ -53,7 +53,10 @@ stop_anvil() {
 start_anvil() {
   free_port
 
-  anvil --port "$PORT" --chain-id 31337 --silent &
+  # --disable-code-size-limit: the @fhevm/sdk cleartext implementations (v0.13)
+  # exceed EIP-170's 24KB limit, so they only deploy on an anvil with the check
+  # off. Matches fhevm's own cleartext anvil runner.
+  anvil --port "$PORT" --chain-id 31337 --disable-code-size-limit --silent &
   ANVIL_PID=$!
 
   # Poll a real RPC call, not a bare TCP accept: the port can open before anvil

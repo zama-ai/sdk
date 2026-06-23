@@ -18,9 +18,10 @@
 # signers.ts (FHEVM_TEST_MNEMONIC, coprocessor path 0'/2/, kms path 0'/3/) so
 # the signatures the SDK produces verify on-chain.
 #
-# v0.12.0 is pinned because its compiled-in FHEVMHostAddresses match the
-# `hardhat` chain preset (acl/executor/kms/inputVerifier), so the stack lands at
-# the addresses the SDK is configured with.
+# v0.13.0 is the latest host-contracts profile (the fhevm `latest` alias). Its
+# compiled-in FHEVMHostAddresses match the `hardhat` chain preset
+# (acl/executor/kms/inputVerifier) — same addresses as v0.12.0 — so the stack
+# lands at the addresses the SDK is configured with.
 set -euo pipefail
 
 RPC_URL="${1:?Usage: deploy-cleartext-host.sh <rpc-url>}"
@@ -35,7 +36,7 @@ FHEVM_TEST_MNEMONIC="test test test test test test test future home engine virtu
 FHEVM_HOST_MNEMONIC="adapt mosquito move limb mobile illegal tree voyage juice mosquito burger raise father hope layer"
 
 FORGE_ENV=(
-  "FOUNDRY_PROFILE=v12"
+  "FOUNDRY_PROFILE=v13"
   "DEPLOYER_MNEMONIC=${FHEVM_HOST_MNEMONIC}"
   "DEPLOYER_MNEMONIC_INDEX=5"
   "EMPTY_UUPS_MNEMONIC=${FHEVM_HOST_MNEMONIC}"
@@ -64,7 +65,7 @@ FORGE_ENV=(
   "INPUT_VERIFICATION_ADDRESS=0x6189F6c0c3E40B4a3c72ec86262295D78d845297"
 )
 
-DEPLOY_SCRIPT="script/v0.12.0/DeployCleartextFHEVMHost.s.sol"
+DEPLOY_SCRIPT="script/v0.13.0/DeployCleartextFHEVMHost.s.sol"
 
 cd "$FHEVM_CONTRACTS_DIR"
 
