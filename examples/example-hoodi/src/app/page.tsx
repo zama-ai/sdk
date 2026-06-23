@@ -5,15 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useListPairs,
   useZamaSDK,
-  balanceOfContract,
 } from "@zama-fhe/react-sdk";
+import { balanceOfContract } from "@zama-fhe/sdk";
 import type { TokenWrapperPair, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -149,10 +149,10 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // Check whether cached credentials cover the currently selected confidential token.
-  const { data: isAllowed } = useIsAllowed({
-    contractAddresses: token ? [token.confidentialTokenAddress] : [],
-    query: { enabled: Boolean(token) },
-  });
+  const { data: isAllowed } = useHasPermit(
+    { contractAddresses: token ? [token.confidentialTokenAddress] : [] },
+    { enabled: Boolean(token) },
+  );
 
   // Metadata for the selected token pair — sourced directly from the registry response
   // (useListPairs with metadata: true). Defaults to safe zero values until the pair loads.
@@ -164,7 +164,7 @@ export default function Home() {
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
   // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useAllow();
+  const allowTokens = useGrantPermit();
   function handleDecrypt() {
     if (validPairs.length === 0) return;
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -282,7 +282,7 @@ export default function Home() {
   const { data: erc20Balance } = useQuery({
     queryKey: erc20BalanceKey,
     queryFn: async () =>
-      sdk.signer.readContract(
+      sdk.provider.readContract(
         balanceOfContract(token!.tokenAddress, address as Address),
       ) as Promise<bigint>,
     enabled: !!address && isHoodi && !!token,
@@ -295,7 +295,7 @@ export default function Home() {
     // any operation that changes the confidential balance (shield, unshield, transfer).
     if (token) {
       queryClient.invalidateQueries({
-        queryKey: zamaQueryKeys.confidentialHandle.token(token.confidentialTokenAddress),
+        queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
       });
     }
   };
@@ -305,20 +305,27 @@ export default function Home() {
   // ZERO_ADDRESS is used as a stable placeholder while no token pair is selected —
   // the query is disabled (enabled: false) so no actual RPC call is made.
   const balance = useConfidentialBalance(
-    { tokenAddress: token?.confidentialTokenAddress ?? ZERO_ADDRESS },
+    {
+      address: token?.confidentialTokenAddress ?? ZERO_ADDRESS,
+      account: (address ?? ZERO_ADDRESS) as Address,
+    },
     { enabled: !!address && isHoodi && !!isAllowed && !!token },
   );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
     mutationFn: async () => {
-      const txHash = await sdk.signer.writeContract({
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before minting tokens.");
+      }
+      const txHash = await signer.writeContract({
         address: token!.tokenAddress,
         abi: MINT_ABI,
         functionName: "mint",
         args: [address as Address, parseUnits("10", erc20Decimals)],
       });
-      await sdk.signer.waitForTransactionReceipt(txHash);
+      await sdk.provider.waitForTransactionReceipt(txHash);
       return txHash;
     },
     onSuccess: refreshBalances,
@@ -452,9 +459,9 @@ export default function Home() {
       <BalancesCard
         formattedErc20={formattedErc20}
         formattedConfidential={formattedConfidential}
-        // handleQuery.isLoading: fetching the encrypted handle from chain (Phase 1).
-        // balance.isLoading: decrypting it via RelayerCleartext (Phase 2).
-        isLoadingConfidential={balance.handleQuery.isLoading || balance.isLoading}
+        // balance.isLoading: decrypting via the cleartext relayer; balance.isFetching:
+        // re-reading the encrypted handle from chain after a balance-changing operation.
+        isLoadingConfidential={balance.isLoading || balance.isFetching}
         erc20Symbol={erc20Symbol}
         onMint={() => mint.mutate()}
         isMinting={mint.isPending}
@@ -485,7 +492,6 @@ export default function Home() {
       <ShieldCard
         key={`shield-${address}-${selectedTokenAddress}`}
         tokenAddress={token?.confidentialTokenAddress ?? ZERO_ADDRESS}
-        underlyingAddress={token?.tokenAddress ?? ZERO_ADDRESS}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}

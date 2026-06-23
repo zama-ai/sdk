@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
@@ -102,7 +102,7 @@ function SelectedTokenPanel({
   const sdk = useZamaSDK();
 
   // Check whether cached credentials cover the selected confidential token.
-  const { data: isAllowed } = useIsAllowed({
+  const { data: isAllowed } = useHasPermit({
     contractAddresses: [token.confidentialTokenAddress],
   });
 
@@ -114,7 +114,7 @@ function SelectedTokenPanel({
   // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
   // All registry pairs are passed at once — a single signature covers all tokens,
   // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useAllow();
+  const allowTokens = useGrantPermit();
   function handleDecrypt() {
     if (validPairs.length === 0) return;
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -146,14 +146,17 @@ function SelectedTokenPanel({
   // Only run once the user has explicitly authorized decrypt for the selected token.
   // Prevents the hook from firing an EIP-712 prompt on mount.
   const balance = useConfidentialBalance(
-    { tokenAddress: token.confidentialTokenAddress, account: address },
+    { address: token.confidentialTokenAddress, account: address },
     { enabled: isSepolia && !!isAllowed },
   );
 
   // Mint 10 whole tokens on the underlying ERC-20 contract.
   const mint = useMutation({
     mutationFn: async () => {
-      const signer = sdk.requireSigner("mint");
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before minting tokens.");
+      }
       const txHash = await signer.writeContract({
         address: token.tokenAddress,
         abi: MINT_ABI,

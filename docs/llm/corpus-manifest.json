@@ -68,7 +68,7 @@
       "source_type": "official-doc",
       "category": "tutorials",
       "logical_path": "tutorials/build-with-an-llm",
-      "description": "How to give coding agents high-quality Zama SDK context through llms files and the external Zama Protocol Claude Code skill.",
+      "description": "Give coding agents grounded Zama SDK context — install the Zama skills, or point agents without skill support at the SDK's llms.txt files.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
