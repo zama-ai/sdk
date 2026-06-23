@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
+import { LoggerService } from "../../services/logger-service";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Hoisted mocks — vi.mock factories are hoisted above imports, so any
@@ -118,12 +119,14 @@ function defaultWebConfig() {
     cdnUrl: "https://cdn.example.com/relayer.js",
     chains: [{ chainId: 1 } as never],
     csrfToken: "csrf-token-123",
+    logger: new LoggerService(),
   };
 }
 
 function defaultNodeConfig() {
   return {
     chains: [{ chainId: 1 } as never],
+    logger: new LoggerService(),
   };
 }
 
@@ -298,21 +301,22 @@ describe("RelayerWorkerClient", () => {
     const client = new RelayerWorkerClient(config);
     await client.initWorker();
 
+    const { logger: _logger, ...payloadConfig } = config;
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual({ env: "web", ...config });
+    expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
   });
 
   test("getInitPayload() excludes logger from the payload sent to the worker", async () => {
     setupAutoResolvingWebWorker();
-    const logger = {
+    const logger = new LoggerService({
       info: vi.fn(),
       debug: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
+    });
     const config = {
       ...defaultWebConfig(),
       logger,
@@ -344,9 +348,10 @@ describe("RelayerWorkerClient", () => {
     const worker = await client.initWorker();
     expect(worker).toBeDefined();
 
+    const { logger: _logger, ...payloadConfig } = config;
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual({ env: "web", ...config });
+    expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
   });

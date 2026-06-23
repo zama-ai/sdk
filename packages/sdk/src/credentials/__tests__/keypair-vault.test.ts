@@ -58,6 +58,26 @@ describe("TransportKeyPairVault", () => {
     expect(after).not.toEqual(before);
   });
 
+  test("clear() routes a storage-delete failure to the logger", async () => {
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+    });
+
+    // clear() is best-effort: it must not reject, but the swallowed delete
+    // failure should leave a breadcrumb when a logger is configured.
+    await expect(vault.clear(USER)).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "delete transport key pair entry failed",
+      expect.objectContaining({ error: expect.any(Error) }),
+    );
+  });
+
   test("treats malformed stored data as a cache miss and regenerates", async () => {
     const storage = new MemoryStorage();
     const vault = new TransportKeyPairVault({

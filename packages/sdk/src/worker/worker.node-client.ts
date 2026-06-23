@@ -12,8 +12,8 @@ import { BaseWorkerClient } from "./worker.base-client";
 
 export interface NodeWorkerClientConfig {
   chains: FheChain[];
-  /** Optional logger for tracing worker request lifecycle. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for tracing worker request lifecycle. */
+  logger: GenericLogger;
 }
 
 /**

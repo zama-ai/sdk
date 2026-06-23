@@ -2467,6 +2467,30 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 
 For full storage options see the [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) reference.
 
+### 7. (Optional) Supply a logger
+
+The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  logger: console, // or a pino / winston / OpenTelemetry DiagLogger instance
+});
+```
+
+The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `debug` — that `console` and common logging libraries satisfy directly, so no adapter is needed. The SDK never bundles a logging library or imposes a format; level filtering is left to your logger. Levels follow these conventions:
+
+| Level   | What the SDK emits                                                                           |
+| ------- | -------------------------------------------------------------------------------------------- |
+| `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
+| `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
+| `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
+| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+
+The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+
 ## Shared relayer options
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
@@ -2474,7 +2498,7 @@ When multiple chains use the same relayer, create it once and reference that sin
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedWeb = web({ threads: 8, logger: console });
+const sharedWeb = web({ threads: 8 });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
@@ -6299,12 +6323,6 @@ Security options for the WASM bundle and relayer requests.
 | `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
 | `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
-
 ### threads
 
 `number | undefined`
@@ -6384,12 +6402,6 @@ const sdk = new ZamaSDK(config);
 `number | undefined`
 
 Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
-
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
 
 ### fheArtifactStorage
 
@@ -8167,13 +8179,13 @@ const config = createConfig({
 new FheArtifactCache(opts);
 ```
 
-| Field        | Type                         | Description                                                                                     |
-| ------------ | ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `storage`    | `GenericStorage`             | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                        |
-| `chainId`    | `number`                     | Chain ID to scope cache keys.                                                                   |
-| `relayerUrl` | `string`                     | Relayer URL used to fetch the manifest during revalidation.                                     |
-| `ttl`        | `number \| undefined`        | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. |
-| `logger`     | `GenericLogger \| undefined` | Logger instance. Default: `console`.                                                            |
+| Field        | Type                  | Description                                                                                                                                |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `storage`    | `GenericStorage`      | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                                                                   |
+| `chainId`    | `number`              | Chain ID to scope cache keys.                                                                                                              |
+| `relayerUrl` | `string`              | Relayer URL used to fetch the manifest during revalidation.                                                                                |
+| `ttl`        | `number \| undefined` | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation.                                            |
+| `logger`     | `GenericLogger`       | Logger for cache diagnostics (revalidation, storage degradation). Silent by default — the SDK threads its `createConfig({ logger })` here. |
 
 ## Methods
 

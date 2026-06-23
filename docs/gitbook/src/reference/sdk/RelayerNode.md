@@ -39,12 +39,6 @@ const sdk = new ZamaSDK(config);
 
 Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
 
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
-
 ### fheArtifactStorage
 
 `GenericStorage | undefined`
