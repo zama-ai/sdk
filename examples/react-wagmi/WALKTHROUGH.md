@@ -197,11 +197,11 @@ gas-spending operations.
 
 Three balances are shown:
 
-| Balance      | Source                  | Hook / method                                                                   |
-| ------------ | ----------------------- | ------------------------------------------------------------------------------- |
-| ETH          | wagmi `useBalance`      | `refetchEth` from `useBalance({ address })`                                     |
-| ERC-20       | wagmi `useReadContract` | `useReadContract({ address: token.tokenAddress, ... })`                         |
-| Confidential | Relayer decryption      | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, ... })` |
+| Balance      | Source                  | Hook / method                                                              |
+| ------------ | ----------------------- | -------------------------------------------------------------------------- |
+| ETH          | wagmi `useBalance`      | `refetchEth` from `useBalance({ address })`                                |
+| ERC-20       | wagmi `useReadContract` | `useReadContract({ address: token.tokenAddress, ... })`                    |
+| Confidential | Relayer decryption      | `useConfidentialBalance({ address: token.confidentialTokenAddress, ... })` |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
 authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`
@@ -234,17 +234,17 @@ Shielding uses `useShield`; the app does not read ERC-20 allowance, submit appro
 call wrapper contracts directly:
 
 ```ts
-const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const shield = useShield({ address: tokenAddress }, { onSuccess });
 
 shield.mutate({
   amount: parsedAmount,
-  approvalStrategy: "max",
+  approvalStrategy: "exact",
   onApprovalSubmitted: () => setPhase("approve"),
   onShieldSubmitted: () => setPhase("wrap"),
 });
 ```
 
-`approvalStrategy: "max"` delegates the spend-cap choice to the SDK. The SDK performs the
+`approvalStrategy: "exact"` approves exactly the shielded amount. The SDK still performs the
 ERC-20 balance check, allowance read, USDT-style allowance reset when needed, approval
 transaction(s), shield transaction, and cache invalidation.
 
