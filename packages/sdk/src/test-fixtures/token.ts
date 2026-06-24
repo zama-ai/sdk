@@ -113,6 +113,8 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         ...base,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferFromAndCall: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     };
@@ -135,6 +137,8 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         ...base,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferFromAndCall: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
         underlying: vi.fn().mockResolvedValue(addr),
         allowance: vi.fn().mockResolvedValue(0n),

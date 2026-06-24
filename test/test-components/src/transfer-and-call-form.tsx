@@ -21,6 +21,10 @@ export function TransferAndCallForm({ tokenAddress }: { tokenAddress: Address })
           to: formData.get("recipient") as Address,
           amount: BigInt(formData.get("amount") as string),
           data: formData.get("data") as Hex,
+          // Test-harness convention (matches transfer-form / unshield-form): skip the SDK's
+          // decrypt-and-compare so the E2E flow drives only the on-chain tx. Real integrators
+          // should leave this at its `false` default — the balance check raises a clean
+          // InsufficientConfidentialBalanceError before spending gas on a doomed transfer.
           skipBalanceCheck: true,
         });
       }}

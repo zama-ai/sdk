@@ -243,6 +243,8 @@ describe("Token", () => {
       userAddress,
       token,
       tokenAddress,
+      handle,
+      inputProof,
     }) => {
       const result = await token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, {
         skipBalanceCheck: true,
@@ -253,10 +255,11 @@ describe("Token", () => {
         contractAddress: tokenAddress,
         userAddress,
       });
+      // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "confidentialTransferAndCall",
-          args: expect.arrayContaining([DATA]),
+          args: [getAddress(RECIPIENT), handle, inputProof, DATA],
         }),
       );
       expect(result.txHash).toBe("0xtxhash");
@@ -321,6 +324,8 @@ describe("Token", () => {
       signer,
       token,
       tokenAddress,
+      handle,
+      inputProof,
     }) => {
       const result = await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA);
 
@@ -329,10 +334,11 @@ describe("Token", () => {
         contractAddress: tokenAddress,
         userAddress: getAddress(FROM),
       });
+      // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "confidentialTransferFromAndCall",
-          args: expect.arrayContaining([DATA]),
+          args: [getAddress(FROM), getAddress(TO), handle, inputProof, DATA],
         }),
       );
       expect(result.txHash).toBe("0xtxhash");
