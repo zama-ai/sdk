@@ -517,7 +517,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -908,10 +908,11 @@ export interface WalletAccountChange {
 export type WalletAccountListener = (change: WalletAccountChange) => void;
 
 // @public
-export interface WrappedEvent {
-    readonly amountIn: bigint;
+export interface WrapEvent {
+    readonly encryptedWrappedAmount: EncryptedValue;
     // (undocumented)
-    readonly eventName: "Wrapped";
+    readonly eventName: "Wrap";
+    readonly roundedAmount: bigint;
     readonly to: Address;
 }
 
