@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.2.0-alpha.2...v3.2.0-alpha.3) (2026-06-24)
+
+### Bug Fixes
+
+- **sdk:** decode 3-field Wrap event, not legacy 2-field Wrapped [SDK-240] ([#481](https://github.com/zama-ai/sdk/issues/481)) ([239015e]())
+
 ## [3.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.2.0-alpha.1...v3.2.0-alpha.2) (2026-06-24)
 
 ### Features
