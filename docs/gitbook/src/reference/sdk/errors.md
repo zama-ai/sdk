@@ -22,6 +22,8 @@ import {
   TransportKeyPairExpiredError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -85,6 +87,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Handlers receiv
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                 |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                          |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                    |
+| `NotEntitledError`                      | `NOT_ENTITLED`                        | Signer/account lacks ACL permission to decrypt this handle (don't retry)        |
+| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry) |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                   |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                          |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                              |
@@ -289,6 +293,49 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Check `relayerUrl` in your transport config. If using API key authentication, verify the `auth` option. Check relayer service health.
+
+### NotEntitledError
+
+**Code:** `NOT_ENTITLED`
+
+The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the handle: an ACL `persistAllowed` pre-check returned `false`. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+
+The error carries `handle`, `contractAddress`, and `account`.
+
+```ts
+import { NotEntitledError } from "@zama-fhe/sdk";
+
+try {
+  await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
+} catch (error) {
+  if (error instanceof NotEntitledError) {
+    // Don't retry — wait for an ACL grant / backfill, then re-attempt.
+    markPendingGrant(error.handle, error.contractAddress);
+  }
+}
+```
+
+**How to handle:** Do not retry the same request. Wait until the handle is granted to the account on-chain (e.g. a later block / backfill), then decrypt again.
+
+### RpcRateLimitError
+
+**Code:** `RPC_RATE_LIMITED`
+
+The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (milliseconds) when the provider supplies a hint.
+
+```ts
+import { RpcRateLimitError } from "@zama-fhe/sdk";
+
+try {
+  await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
+} catch (error) {
+  if (error instanceof RpcRateLimitError) {
+    await backoff(error.retryAfter); // then retry
+  }
+}
+```
+
+**How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
 
 ## "No balance" vs "zero balance"
 
@@ -559,6 +606,8 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
+| `NotEntitledError` on decrypt             | Account lacks ACL grant for the handle       | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.        |
+| `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.         |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
 | `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |

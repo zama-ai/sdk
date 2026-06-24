@@ -1,5 +1,13 @@
 import { describe, test, expect } from "../../test-fixtures";
-import { toError, isContractCallError, extractHttpStatus } from "../error";
+import {
+  toError,
+  isContractCallError,
+  extractHttpStatus,
+  isRpcRateLimitError,
+  extractRetryAfterMs,
+  classifyWorkerError,
+} from "../error";
+import { ZamaErrorCode } from "../../errors/base";
 
 describe("toError", () => {
   test("returns the same Error instance", () => {
@@ -138,5 +146,77 @@ describe("extractHttpStatus", () => {
     expect(extractHttpStatus(null)).toBeUndefined();
     expect(extractHttpStatus(undefined)).toBeUndefined();
     expect(extractHttpStatus(403)).toBeUndefined();
+  });
+});
+
+describe("isRpcRateLimitError", () => {
+  test("detects JSON-RPC -32005 at the top level", () => {
+    expect(isRpcRateLimitError(Object.assign(new Error("limit"), { code: -32005 }))).toBe(true);
+  });
+
+  test("detects -32005 nested in an ethers-style info.error chain", () => {
+    const err = Object.assign(new Error("could not coalesce error"), {
+      code: "SERVER_ERROR",
+      info: { error: { code: -32005, message: "Too Many Requests" } },
+    });
+    expect(isRpcRateLimitError(err)).toBe(true);
+  });
+
+  test("detects HTTP 429 on a nested cause", () => {
+    const err = Object.assign(new Error("rpc failed"), { cause: { status: 429 } });
+    expect(isRpcRateLimitError(err)).toBe(true);
+  });
+
+  test("detects a 'Too Many Requests' message", () => {
+    expect(isRpcRateLimitError(new Error("HTTP request failed: Too Many Requests"))).toBe(true);
+  });
+
+  test("excludes the relayer's own rate-limit (RELAYER_FETCH_ERROR)", () => {
+    const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
+      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
+    });
+    expect(isRpcRateLimitError(relayerError)).toBe(false);
+  });
+
+  test("returns false for unrelated errors and non-objects", () => {
+    expect(isRpcRateLimitError(new Error("network down"))).toBe(false);
+    expect(isRpcRateLimitError(Object.assign(new Error("boom"), { status: 500 }))).toBe(false);
+    expect(isRpcRateLimitError(null)).toBe(false);
+    expect(isRpcRateLimitError("429")).toBe(false);
+  });
+});
+
+describe("extractRetryAfterMs", () => {
+  test("reads a seconds-based retryAfter and converts to ms", () => {
+    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 3 }))).toBe(3000);
+  });
+
+  test("reads a millisecond retryAfterMs as-is from a nested cause", () => {
+    expect(extractRetryAfterMs({ cause: { retryAfterMs: 1500 } })).toBe(1500);
+  });
+
+  test("returns undefined when absent", () => {
+    expect(extractRetryAfterMs(new Error("x"))).toBeUndefined();
+  });
+});
+
+describe("classifyWorkerError", () => {
+  test("classifies a consumer RPC rate-limit as RPC_RATE_LIMITED", () => {
+    const err = Object.assign(new Error("Too Many Requests"), { code: -32005, retryAfter: 2 });
+    expect(classifyWorkerError(err)).toEqual({
+      errorCode: ZamaErrorCode.RpcRateLimited,
+      retryAfter: 2000,
+    });
+  });
+
+  test("classifies a relayer HTTP error as a statusCode (not rate-limit)", () => {
+    const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
+      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
+    });
+    expect(classifyWorkerError(relayerError)).toEqual({ statusCode: 429 });
+  });
+
+  test("returns an empty classification for a plain error", () => {
+    expect(classifyWorkerError(new Error("network down"))).toEqual({});
   });
 });

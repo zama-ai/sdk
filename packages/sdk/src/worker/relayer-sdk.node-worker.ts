@@ -29,7 +29,8 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { prefixHex, unprefixHex } from "../utils";
+import { classifyWorkerError, prefixHex, unprefixHex } from "../utils";
+import type { WorkerErrorClassification } from "../utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -96,8 +97,22 @@ function sendSuccess<T>(
   port.postMessage(response, transfer);
 }
 
-function sendError(id: string, type: WorkerRequest["type"], error: string): void {
+function sendError(
+  id: string,
+  type: WorkerRequest["type"],
+  error: string,
+  extra?: WorkerErrorClassification,
+): void {
   const response: ErrorResponse = { id, type, success: false, error };
+  if (extra?.statusCode !== undefined) {
+    response.statusCode = extra.statusCode;
+  }
+  if (extra?.errorCode !== undefined) {
+    response.errorCode = extra.errorCode;
+  }
+  if (extra?.retryAfter !== undefined) {
+    response.retryAfter = extra.retryAfter;
+  }
   port.postMessage(response);
 }
 
@@ -213,7 +228,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, classifyWorkerError(error));
   }
 }
 
@@ -230,7 +245,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, classifyWorkerError(error));
   }
 }
 
@@ -323,7 +338,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, classifyWorkerError(error));
   }
 }
 

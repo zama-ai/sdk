@@ -73,6 +73,30 @@ export function getDelegationExpiryContract(
 }
 
 /**
+ * Returns the contract config to check whether an account is allowed (ACL)
+ * to user-decrypt a specific handle.
+ *
+ * @example
+ * ```ts
+ * const allowed = await provider.readContract(
+ *   persistAllowedContract(aclAddress, handle, accountAddress),
+ * );
+ * ```
+ */
+export function persistAllowedContract(
+  aclAddress: Address,
+  handle: `0x${string}`,
+  account: Address,
+) {
+  return {
+    address: aclAddress,
+    abi: aclAbi,
+    functionName: "persistAllowed",
+    args: [handle, account],
+  } as const;
+}
+
+/**
  * Returns the contract config to check if a specific handle is delegated.
  *
  * @example

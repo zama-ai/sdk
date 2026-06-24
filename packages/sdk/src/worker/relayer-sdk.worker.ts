@@ -6,7 +6,8 @@
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { FheChain } from "../chains/types";
-import { prefixHex, unprefixHex } from "../utils";
+import { classifyWorkerError, extractHttpStatus, prefixHex, unprefixHex } from "../utils";
+import type { WorkerErrorClassification } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
@@ -147,7 +148,7 @@ function sendError(
   id: string,
   type: WorkerRequest["type"],
   error: string,
-  statusCode?: number,
+  extra?: WorkerErrorClassification,
 ): void {
   const response: ErrorResponse = {
     id,
@@ -155,8 +156,14 @@ function sendError(
     success: false,
     error,
   };
-  if (statusCode !== undefined) {
-    response.statusCode = statusCode;
+  if (extra?.statusCode !== undefined) {
+    response.statusCode = extra.statusCode;
+  }
+  if (extra?.errorCode !== undefined) {
+    response.errorCode = extra.errorCode;
+  }
+  if (extra?.retryAfter !== undefined) {
+    response.retryAfter = extra.retryAfter;
   }
   self.postMessage(response);
 }
@@ -402,8 +409,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
     sendSuccess(id, type, response, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
   }
 }
 
@@ -437,37 +443,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, classifyWorkerError(error));
   }
-}
-
-/**
- * Extract an HTTP status code from an error, if present.
- * Relayer SDK errors may carry a `status` or `statusCode` property.
- */
-function extractHttpStatus(error: unknown): number | undefined {
-  if (error === null || error === undefined || typeof error !== "object") {
-    return undefined;
-  }
-  const e = error as Record<string, unknown>;
-  if (typeof e.statusCode === "number") {
-    return e.statusCode;
-  }
-  if (typeof e.status === "number") {
-    return e.status;
-  }
-  // Check nested cause
-  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
-    const cause = e.cause as Record<string, unknown>;
-    if (typeof cause.statusCode === "number") {
-      return cause.statusCode;
-    }
-    if (typeof cause.status === "number") {
-      return cause.status;
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -486,8 +463,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, classifyWorkerError(error));
   }
 }
 
@@ -592,8 +568,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, classifyWorkerError(error));
   }
 }
 
@@ -619,8 +594,7 @@ async function handleRequestZKProofVerification(
     sendSuccess(id, type, result, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
   }
 }
 
@@ -640,8 +614,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
   }
 }
 
@@ -664,8 +637,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
   }
 }
 

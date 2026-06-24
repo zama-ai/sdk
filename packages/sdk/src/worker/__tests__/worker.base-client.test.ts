@@ -409,6 +409,33 @@ describe("BaseWorkerClient", () => {
     }
   });
 
+  test("error response re-attaches errorCode and retryAfter when present", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "Too Many Requests",
+          errorCode: "RPC_RATE_LIMITED",
+          retryAfter: 1500,
+        } as WorkerResponse<unknown> & { errorCode: string; retryAfter: number });
+      });
+    });
+
+    try {
+      await client.generateKeypair({ chainId: 1 });
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      const e = error as Error & { zamaErrorCode?: string; retryAfter?: number };
+      expect(e.message).toBe("Too Many Requests");
+      expect(e.zamaErrorCode).toBe("RPC_RATE_LIMITED");
+      expect(e.retryAfter).toBe(1500);
+    }
+  });
+
   test("terminate is a no-op when no worker exists", () => {
     const client = new TestWorkerClient();
     client.terminate();

@@ -174,9 +174,22 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         elapsed,
         error: response.error,
       });
-      const err = new Error(response.error);
+      const err = new Error(response.error) as Error & {
+        statusCode?: number;
+        zamaErrorCode?: string;
+        retryAfter?: number;
+      };
+      // Re-attach the fields the worker classified at the source — structured
+      // clone across the worker boundary strips codes/causes, leaving only the
+      // message — so the main thread can rebuild the correct typed error.
       if ("statusCode" in response && typeof response.statusCode === "number") {
-        (err as Error & { statusCode?: number }).statusCode = response.statusCode;
+        err.statusCode = response.statusCode;
+      }
+      if ("errorCode" in response && typeof response.errorCode === "string") {
+        err.zamaErrorCode = response.errorCode;
+      }
+      if ("retryAfter" in response && typeof response.retryAfter === "number") {
+        err.retryAfter = response.retryAfter;
       }
       pending.reject(err);
     }

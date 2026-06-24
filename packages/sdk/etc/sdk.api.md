@@ -11424,6 +11424,18 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
+export class NotEntitledError extends ZamaError {
+    constructor(args: {
+        handle: string;
+        contractAddress: string;
+        account: string;
+    }, options?: ErrorOptions);
+    readonly account: string;
+    readonly contractAddress: string;
+    readonly handle: string;
+}
+
+// @public
 export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
@@ -12932,6 +12944,14 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
+}
+
+// @public
+export class RpcRateLimitError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions & {
+        retryAfter?: number;
+    });
+    readonly retryAfter: number | undefined;
 }
 
 // @public
@@ -19543,7 +19563,9 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected transport key pair (stale, expired, or malformed). */
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
-    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
+    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** The configured signer/account is not entitled (ACL) to decrypt this handle. Don't retry — wait for a grant. */
+    readonly NotEntitled: "NOT_ENTITLED"; /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
+    readonly RpcRateLimited: "RPC_RATE_LIMITED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */

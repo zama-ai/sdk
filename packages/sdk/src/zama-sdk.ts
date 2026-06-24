@@ -100,6 +100,7 @@ export class ZamaSDK {
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
+        provider: this.provider,
         emitEvent: this.emitEvent.bind(this),
       });
     }

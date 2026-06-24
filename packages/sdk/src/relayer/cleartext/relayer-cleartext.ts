@@ -52,7 +52,12 @@ import {
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { FheChain } from "../../chains/types";
-import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  EncryptionFailedError,
+  NotEntitledError,
+} from "../../errors";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -426,9 +431,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       const actorAllowed = results[i * 2];
       const contractAllowed = results[i * 2 + 1];
       if (!actorAllowed) {
-        throw new DecryptionFailedError(
-          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of encrypted value ${normalizedEncryptedValues[i]!}`,
-        );
+        throw new NotEntitledError({
+          handle: normalizedEncryptedValues[i]!,
+          contractAddress,
+          account: actorAddress,
+        });
       }
       if (!contractAllowed) {
         throw new DecryptionFailedError(

@@ -1,10 +1,30 @@
-import type { ZamaError } from "./base";
+import { ZamaErrorCode, type ZamaError } from "./base";
 import { DecryptionFailedError } from "./encryption";
 import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
+import { NotEntitledError } from "./entitlement";
+import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
-import { extractHttpStatus } from "../utils/error";
+import { extractHttpStatus, extractRetryAfterMs, isRpcRateLimitError } from "../utils/error";
+
+/** Read the `zamaErrorCode` the worker client attaches to cross-thread errors. */
+function readZamaErrorCode(error: unknown): string | undefined {
+  if (typeof error === "object" && error !== null && "zamaErrorCode" in error) {
+    const code = (error as { zamaErrorCode?: unknown }).zamaErrorCode;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+
+/** Read a numeric `retryAfter` the worker client attaches to cross-thread errors. */
+function readRetryAfter(error: unknown): number | undefined {
+  if (typeof error === "object" && error !== null && "retryAfter" in error) {
+    const v = (error as { retryAfter?: unknown }).retryAfter;
+    return typeof v === "number" ? v : undefined;
+  }
+  return undefined;
+}
 
 /**
  * Inspect a caught error for an HTTP status code and return the appropriate
@@ -30,12 +50,34 @@ export function wrapDecryptError(
     error instanceof RelayerRequestFailedError ||
     error instanceof DelegationNotPropagatedError ||
     error instanceof SigningRejectedError ||
-    error instanceof SigningFailedError
+    error instanceof SigningFailedError ||
+    error instanceof NotEntitledError ||
+    error instanceof RpcRateLimitError
   ) {
     return error;
   }
 
+  // Provider RPC rate-limit classified at the worker source (`zamaErrorCode`),
+  // where the full error object was still available. Authoritative.
+  if (readZamaErrorCode(error) === ZamaErrorCode.RpcRateLimited) {
+    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
+      cause: error,
+      retryAfter: readRetryAfter(error) ?? extractRetryAfterMs(error),
+    });
+  }
+
   const statusCode = extractHttpStatus(error);
+
+  // Direct detection for main-thread paths (e.g. the cleartext relayer's ACL
+  // reads) where the raw provider error is still intact. Guarded on the absence
+  // of an HTTP status so relayer HTTP errors (incl. the relayer's own 429
+  // back-pressure) keep flowing to RelayerRequestFailedError below.
+  if (statusCode === undefined && isRpcRateLimitError(error)) {
+    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
+      cause: error,
+      retryAfter: extractRetryAfterMs(error),
+    });
+  }
 
   if (statusCode === 400) {
     return new NoCiphertextError(

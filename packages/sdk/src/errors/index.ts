@@ -8,6 +8,8 @@ export {
   NoCiphertextError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
+export { NotEntitledError } from "./entitlement";
+export { RpcRateLimitError } from "./rpc";
 export { ChainMismatchError } from "./chain";
 export {
   SignerRequiredError,

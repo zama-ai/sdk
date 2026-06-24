@@ -228,6 +228,15 @@ export interface ErrorResponse extends BaseResponse {
   error: string;
   /** HTTP status code from the relayer, when available. */
   statusCode?: number;
+  /**
+   * A {@link ZamaErrorCode} classified at the worker source (where the full
+   * error object is still available), so the main thread can rebuild the
+   * correct typed error after structured-clone strips codes/causes. Currently
+   * used for `RPC_RATE_LIMITED`.
+   */
+  errorCode?: string;
+  /** Suggested retry delay in milliseconds, when the provider supplied one. */
+  retryAfter?: number;
 }
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;

@@ -1,4 +1,12 @@
-export { toError, isContractCallError } from "./error";
+export {
+  toError,
+  isContractCallError,
+  isRpcRateLimitError,
+  extractRetryAfterMs,
+  extractHttpStatus,
+  classifyWorkerError,
+  type WorkerErrorClassification,
+} from "./error";
 export { prefixHex, unprefixHex } from "./hex";
 export {
   assertObject,

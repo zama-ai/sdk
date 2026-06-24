@@ -3,10 +3,13 @@ import {
   DecryptionFailedError,
   DelegationNotPropagatedError,
   NoCiphertextError,
+  NotEntitledError,
   RelayerRequestFailedError,
+  RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
   ZamaError,
+  ZamaErrorCode,
   wrapDecryptError,
 } from "../index";
 
@@ -145,6 +148,47 @@ describe("wrapDecryptError", () => {
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(401);
       expect(wrapped.message).toMatch(/zama api key/i);
+    });
+  });
+
+  describe("not-entitled and RPC rate-limit causes (SDK-239)", () => {
+    test("returns the same NotEntitledError unchanged", () => {
+      const original = new NotEntitledError({
+        handle: `0x${"12".repeat(32)}`,
+        contractAddress: `0x${"20".repeat(20)}`,
+        account: `0x${"10".repeat(20)}`,
+      });
+      expect(wrapDecryptError(original, "fallback")).toBe(original);
+    });
+
+    test("returns the same RpcRateLimitError unchanged", () => {
+      const original = new RpcRateLimitError("throttled");
+      expect(wrapDecryptError(original, "fallback")).toBe(original);
+    });
+
+    test("maps a worker-classified RPC_RATE_LIMITED error to RpcRateLimitError", () => {
+      // The worker boundary strips the cause, leaving only message + zamaErrorCode + retryAfter.
+      const workerError = Object.assign(new Error("Too Many Requests"), {
+        zamaErrorCode: ZamaErrorCode.RpcRateLimited,
+        retryAfter: 2000,
+      });
+      const wrapped = wrapDecryptError(workerError, "fallback");
+      expect(wrapped).toBeInstanceOf(RpcRateLimitError);
+      expect((wrapped as RpcRateLimitError).retryAfter).toBe(2000);
+    });
+
+    test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {
+      const rpcError = Object.assign(new Error("limit exceeded"), { code: -32005 });
+      expect(wrapDecryptError(rpcError, "fallback")).toBeInstanceOf(RpcRateLimitError);
+    });
+
+    test("keeps the relayer's own 429 (HTTP status present) as RelayerRequestFailedError", () => {
+      const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
+        cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
+      });
+      const wrapped = wrapDecryptError(relayerError, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
   });
 });

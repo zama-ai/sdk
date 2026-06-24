@@ -16,6 +16,7 @@ import { hardhat } from "../../../chains";
 import type { EncryptedValue } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { RelayerCleartext } from "../relayer-cleartext";
+import { NotEntitledError } from "../../../errors";
 
 const hardhatCleartextConfig = hardhat;
 
@@ -416,7 +417,7 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/must be 0, 1, true, or false/i);
   });
 
-  test("userDecrypt throws when ACL.persistAllowed returns false", async () => {
+  test("userDecrypt throws NotEntitledError when ACL.persistAllowed returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const { fhevm } = createInstance({
       persistAllowed: () => false,
@@ -428,7 +429,7 @@ describe("RelayerCleartext", () => {
           encryptedValues: [handle],
         }),
       ),
-    ).rejects.toThrow(/not authorized/i);
+    ).rejects.toBeInstanceOf(NotEntitledError);
   });
 
   test("userDecrypt returns cleartext values when ACL allows access", async () => {
