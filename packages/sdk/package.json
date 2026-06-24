@@ -145,7 +145,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fhevm/sdk": "1.1.0-alpha.4",
+    "@fhevm/sdk": "1.1.0-alpha.5",
     "viem": ">=2",
     "zod": ">=4"
   },

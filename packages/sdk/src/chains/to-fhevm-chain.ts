@@ -18,6 +18,7 @@ export function toFhevmChain(chain: FheChain): FhevmChain {
         acl: { address: chain.aclContractAddress },
         inputVerifier: { address: chain.inputVerifierContractAddress },
         kmsVerifier: { address: chain.kmsContractAddress },
+        protocolConfig: undefined,
       },
       relayerUrl: chain.relayerUrl,
       gateway: {
@@ -30,5 +31,5 @@ export function toFhevmChain(chain: FheChain): FhevmChain {
         },
       },
     },
-  };
+  } satisfies FhevmChain;
 }
