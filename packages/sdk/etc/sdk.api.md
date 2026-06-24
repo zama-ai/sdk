@@ -5369,7 +5369,7 @@ export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null;
 export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 
 // @public
-export function decodeWrapped(log: RawLog): WrappedEvent | null;
+export function decodeWrap(log: RawLog): WrapEvent | null;
 
 // @public (undocumented)
 export interface DecryptEndEvent extends BaseEvent {
@@ -7064,7 +7064,7 @@ export function findRevokedDelegationForUserDecryption(logs: readonly RawLog[]):
 export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEvent | null;
 
 // @public
-export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null;
+export function findWrap(logs: readonly RawLog[]): WrapEvent | null;
 
 // @public
 export interface GenericLogger {
@@ -11414,7 +11414,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
 export interface PaginatedResult<T> {
@@ -11445,6 +11445,7 @@ export class Permits {
         provider: GenericProvider;
         cachingService: CachingService;
         credentialService: CredentialService | undefined;
+        logger: GenericLogger;
     });
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -14346,8 +14347,8 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 
 // @public
 export const Topics: {
-    readonly ConfidentialTransfer: `0x${string}`; /** `Wrapped(address indexed to, uint256 amountIn)` */
-    readonly Wrapped: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+    readonly ConfidentialTransfer: `0x${string}`; /** `Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)` */
+    readonly Wrap: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
     readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
     readonly UnwrapFinalized: `0x${string}`;
 };
@@ -19351,10 +19352,11 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
 };
 
 // @public
-export interface WrappedEvent {
-    readonly amountIn: bigint;
+export interface WrapEvent {
+    readonly encryptedWrappedAmount: EncryptedValue;
     // (undocumented)
-    readonly eventName: "Wrapped";
+    readonly eventName: "Wrap";
+    readonly roundedAmount: bigint;
     readonly to: Address;
 }
 
@@ -19439,6 +19441,7 @@ export type ZamaConfig = {
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
+    readonly logger: GenericLogger;
 } & {
     readonly [zamaConfigBrand]: true;
 };
@@ -19446,6 +19449,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
     permitTTL?: number;
@@ -19541,6 +19545,8 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // @internal
+    get logger(): GenericLogger;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;

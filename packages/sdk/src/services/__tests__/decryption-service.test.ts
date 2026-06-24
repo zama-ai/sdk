@@ -3,6 +3,7 @@ import { MAX_UINT64 } from "../../contracts";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
+import { LoggerService } from "../logger-service";
 
 const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 import { CachingService } from "../caching-service";
@@ -259,7 +260,7 @@ describe("DecryptionService", () => {
       throw new Error("cache unavailable");
     };
     const service = createDecryptionService({
-      cache: new CachingService(storage),
+      cache: new CachingService(storage, new LoggerService()),
     });
     vi.mocked(relayer.decryptValues).mockResolvedValue({ [HANDLE_A]: 10n });
 

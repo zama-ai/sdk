@@ -1,15 +1,24 @@
 import { describe, test, expect } from "../test-fixtures";
-import { getAddress, keccak256, toHex, toBytes, type Address, type Hex } from "viem";
+import {
+  encodeEventTopics,
+  getAddress,
+  keccak256,
+  toHex,
+  toBytes,
+  type Address,
+  type Hex,
+} from "viem";
+import { confidentialWrapperAbi } from "../abi/confidential-wrapper.abi";
 import {
   Topics,
   decodeConfidentialTransfer,
-  decodeWrapped,
+  decodeWrap,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
-  findWrapped,
+  findWrap,
   AclTopics,
   decodeDelegatedForUserDecryption,
   decodeRevokedDelegationForUserDecryption,
@@ -29,7 +38,7 @@ const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
-    ["Wrapped(address,uint256)", Topics.Wrapped],
+    ["Wrap(address,uint256,bytes32)", Topics.Wrap],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
   ];
@@ -37,6 +46,33 @@ describe("Topic constants match keccak256", () => {
   for (const [sig, expected] of cases) {
     test(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
+    });
+  }
+
+  // Pin the deployed Wrap topic0 to a literal so a regression to a
+  // wrong-but-self-consistent signature (the SDK-240 root cause) can't stay green.
+  test("Topics.Wrap matches the deployed wrapper topic0", () => {
+    expect(Topics.Wrap).toBe("0xcda691c81d2fd787d8c209adb4ae8b138f857d7575adf7669195ed05482e701b");
+  });
+});
+
+// Cross-check each token topic0 against the bundled wrapper ABI (the single source
+// of truth). A one-sided ABI⇄decoder drift — the SDK-240 root cause, where SDK-216
+// updated the ABI without the hand-written decoder — fails here loudly. Stronger than
+// the keccak test above, which recomputes from the same hand-written signature string.
+describe("Token topics stay in sync with the bundled wrapper ABI", () => {
+  const eventNames = [
+    "ConfidentialTransfer",
+    "Wrap",
+    "UnwrapRequested",
+    "UnwrapFinalized",
+  ] as const;
+
+  for (const eventName of eventNames) {
+    test(eventName, () => {
+      expect(Topics[eventName]).toBe(
+        encodeEventTopics({ abi: confidentialWrapperAbi, eventName })[0],
+      );
     });
   }
 });
@@ -65,7 +101,7 @@ describe("decodeConfidentialTransfer", () => {
     expect(
       decodeConfidentialTransfer({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -80,27 +116,29 @@ describe("decodeConfidentialTransfer", () => {
   });
 });
 
-describe("decodeWrapped", () => {
+describe("decodeWrap", () => {
   const to = addr("dead");
-  const amountIn = 2000n;
+  const roundedAmount = 2000n;
+  const encryptedWrappedAmount = bytes32("ab".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.Wrapped, topic("dead")],
-    data: `0x${word(amountIn.toString(16))}`,
+    topics: [Topics.Wrap, topic("dead")],
+    data: `0x${word(roundedAmount.toString(16))}${word(encryptedWrappedAmount.slice(2))}`,
   };
 
   test("decodes valid log", () => {
-    const event = decodeWrapped(log);
+    const event = decodeWrap(log);
     expect(event).toEqual({
-      eventName: "Wrapped",
+      eventName: "Wrap",
       to,
-      amountIn,
+      roundedAmount,
+      encryptedWrappedAmount,
     });
   });
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeWrapped({
+      decodeWrap({
         ...log,
         topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
       }),
@@ -132,7 +170,7 @@ describe("decodeUnwrapRequested", () => {
     expect(
       decodeUnwrapRequested({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -164,7 +202,7 @@ describe("decodeUnwrapFinalized", () => {
     expect(
       decodeUnwrapFinalized({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -257,21 +295,21 @@ describe("findUnwrapRequested", () => {
   });
 });
 
-describe("findWrapped", () => {
-  test("finds first Wrapped in mixed logs", () => {
+describe("findWrap", () => {
+  test("finds first Wrap in mixed logs", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.Wrapped, topic("dead")],
-        data: `0x${word(2000n.toString(16))}`,
+        topics: [Topics.Wrap, topic("dead")],
+        data: `0x${word(2000n.toString(16))}${word("ab".repeat(32))}`,
       },
     ];
-    const event = findWrapped(logs);
-    expect(event?.eventName).toBe("Wrapped");
-    expect(event?.amountIn).toBe(2000n);
+    const event = findWrap(logs);
+    expect(event?.eventName).toBe("Wrap");
+    expect(event?.roundedAmount).toBe(2000n);
   });
 
   test("returns null when none found", () => {
-    expect(findWrapped([])).toBeNull();
+    expect(findWrap([])).toBeNull();
   });
 });
 
@@ -325,7 +363,7 @@ describe("decodeDelegatedForUserDecryption", () => {
     expect(
       decodeDelegatedForUserDecryption({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -366,7 +404,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
     expect(
       decodeRevokedDelegationForUserDecryption({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });

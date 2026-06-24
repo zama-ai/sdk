@@ -3,6 +3,7 @@ import { TransactionRevertedError, ZamaError } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   TransactionResult,
@@ -29,14 +30,15 @@ export async function submitTransaction(params: {
   config: WriteContractConfig;
   emit: (input: ZamaSDKEventInput) => void;
   onSubmitted?: (txHash: Hex) => void;
+  logger: GenericLogger;
 }): Promise<TransactionResult> {
-  const { operation, signer, provider, config, emit, onSubmitted } = params;
+  const { operation, signer, provider, config, emit, onSubmitted, logger } = params;
   const metadata = transactionOperationMetadata[operation];
 
   try {
     const txHash = await signer.writeContract(config);
     emit(metadata.submittedEvent(txHash));
-    void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash));
+    void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash), logger);
     const receipt = await provider.waitForTransactionReceipt(txHash);
     return { txHash, receipt };
   } catch (error) {

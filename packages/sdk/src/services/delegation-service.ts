@@ -18,6 +18,7 @@ import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/types";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   TransactionResult,
@@ -34,18 +35,22 @@ export class DelegationService {
   readonly #provider: GenericProvider;
   readonly #relayer: RelayerSDK;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+  readonly #logger: GenericLogger;
 
   constructor({
     provider,
     relayer,
     emitEvent = () => {},
+    logger,
   }: {
     provider: GenericProvider;
     relayer: RelayerSDK;
+    logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
     this.#relayer = relayer;
+    this.#logger = logger;
     this.#emitEvent = emitEvent;
   }
 
@@ -98,7 +103,9 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      console.warn("[zama-sdk] delegateDecryption: pre-flight expiry check failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("delegateDecryption: pre-flight expiry check failed", {
+        error,
+      });
       currentExpiry = -1n;
     }
     if (currentExpiry === expDate) {
@@ -145,7 +152,7 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      console.warn("[zama-sdk] revokeDelegation: pre-flight expiry check failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("revokeDelegation: pre-flight expiry check failed", { error });
       currentExpiry = 1n;
     }
     if (currentExpiry === 0n) {
@@ -216,6 +223,7 @@ export class DelegationService {
         provider: this.#provider,
         config,
         emit: (input) => this.#emitEvent(input, contractAddress),
+        logger: this.#logger,
       });
     } catch (error) {
       this.#throwAclRevertIfMatched(error);

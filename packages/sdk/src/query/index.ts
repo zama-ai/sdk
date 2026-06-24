@@ -118,7 +118,7 @@ export {
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
-  WrappedEvent,
+  WrapEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
 } from "../events/onchain-events";

@@ -1,7 +1,7 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { ZamaConfig } from "@zama-fhe/sdk";
+import type { GenericLogger, ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
@@ -9,6 +9,14 @@ import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/s
 import type React from "react";
 import { Providers } from "./providers";
 import type { QueryClientFixtures } from "./query-client";
+
+/** Silent logger standing in for the SDK's resolved no-op `LoggerService`. */
+const noopLogger: GenericLogger = {
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+  debug: () => {},
+};
 
 export interface WrapperFixtures {
   createWrapper: (overrides?: Partial<ZamaConfig>) => {
@@ -41,7 +49,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
       const config = {
         chains: [chain],
-        router: { relayer } as ZamaConfig["router"],
+        router: { relayer, switchChain: () => {} } as unknown as ZamaConfig["router"],
         provider,
         signer,
         storage,
@@ -50,6 +58,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
+        logger: noopLogger,
         ...overrides,
       } as unknown as ZamaConfig;
 

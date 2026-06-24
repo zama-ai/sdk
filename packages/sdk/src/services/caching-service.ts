@@ -2,7 +2,7 @@ import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
 import type { ClearValue, EncryptedValue } from "../relayer/types";
 import { checksummedAddress } from "../schemas/primitives";
-import type { GenericStorage } from "../types";
+import type { GenericLogger, GenericStorage } from "../types";
 
 const CacheValueSchema = z.union([z.bigint(), z.boolean(), checksummedAddress]);
 const CacheIndexSchema = z.array(z.string());
@@ -15,12 +15,14 @@ const CacheIndexSchema = z.array(z.string());
  */
 export class CachingService {
   readonly #storage: GenericStorage;
+  readonly #logger: GenericLogger;
   readonly #decryptNamespace = "zama:decrypt";
   readonly #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
-  constructor(storage: GenericStorage) {
+  constructor(storage: GenericStorage, logger: GenericLogger) {
     this.#storage = storage;
+    this.#logger = logger;
   }
 
   async get(
@@ -41,7 +43,7 @@ export class CachingService {
       }
       return parsed.data;
     } catch (error) {
-      console.warn("[zama-sdk] CachingService.get failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("CachingService.get failed", { error });
       return null;
     }
   }
@@ -57,12 +59,12 @@ export class CachingService {
       await this.#storage.set<ClearValue>(key, value);
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
-          console.warn("[zama-sdk] CachingService index write failed:", error); // eslint-disable-line no-console
+          this.#logger.warn("CachingService index write failed", { error });
         }),
       );
       await this.#indexWriteQueue;
     } catch (error) {
-      console.warn("[zama-sdk] CachingService.set failed:", error); // eslint-disable-line no-console
+      this.#logger.warn("CachingService.set failed", { error });
     }
   }
 
@@ -74,7 +76,7 @@ export class CachingService {
     const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doDelete(key).catch((error) => {
-        console.warn("[zama-sdk] CachingService.delete failed:", error); // eslint-disable-line no-console
+        this.#logger.warn("CachingService.delete failed", { error });
       }),
     );
     await this.#indexWriteQueue;
@@ -83,7 +85,7 @@ export class CachingService {
   async clearForRequester(requester: Address): Promise<void> {
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doClearForRequester(requester).catch((error) => {
-        console.warn("[zama-sdk] CachingService.clearForRequester failed:", error); // eslint-disable-line no-console
+        this.#logger.warn("CachingService.clearForRequester failed", { error });
       }),
     );
     await this.#indexWriteQueue;
@@ -92,7 +94,7 @@ export class CachingService {
   async clearAll(): Promise<void> {
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doClearAll().catch((error) => {
-        console.warn("[zama-sdk] CachingService.clearAll failed:", error); // eslint-disable-line no-console
+        this.#logger.warn("CachingService.clearAll failed", { error });
       }),
     );
     await this.#indexWriteQueue;

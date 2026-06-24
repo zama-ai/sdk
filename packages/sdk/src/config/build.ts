@@ -4,6 +4,7 @@ import {
 } from "../credentials/credential-service";
 import { TransportKeyPairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
 import { RelayerRouter } from "../relayer/relayer-router";
+import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { parseConfiguration } from "../validation";
@@ -22,11 +23,12 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
-  const relayer = new RelayerRouter(params.chains, params.relayers);
+  const logger = new LoggerService(params.logger);
+  const router = new RelayerRouter(params.chains, params.relayers);
 
   return {
     chains: params.chains,
-    relayer,
+    router,
     provider,
     signer,
     storage,
@@ -43,6 +45,7 @@ export function buildZamaConfig(
       RegistryTTLSchema,
       params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS,
     ),
+    logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
 }

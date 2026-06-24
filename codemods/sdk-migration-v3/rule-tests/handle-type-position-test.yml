@@ -1,0 +1,5 @@
+id: handle-type-position
+valid:
+  - 'let h: EncryptedValue;'
+invalid:
+  - 'let h: Handle;'

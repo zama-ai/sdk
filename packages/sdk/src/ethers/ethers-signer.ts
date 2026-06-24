@@ -66,6 +66,9 @@ export class EthersSigner extends BaseSigner {
     } else {
       this.#directSigner = config.signer;
       this.#unsubscribeProvider = () => {};
+      // The signer is constructed before `createConfig`, so it cannot reach the
+      // SDK-wide logger; this best-effort refresh stays silent. A failed refresh
+      // still surfaces via the typed WalletAccountNotReadyError on next use.
       void swallow("refresh wallet account", async () => {
         await this.refreshWalletAccount();
       });

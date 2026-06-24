@@ -1,0 +1,5 @@
+id: rename-use-is-allowed-config-type-position
+valid:
+  - 'let c: UseHasPermitConfig;'
+invalid:
+  - 'let c: UseIsAllowedConfig;'

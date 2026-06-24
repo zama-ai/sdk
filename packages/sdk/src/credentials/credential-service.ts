@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { GenericSigner, GenericStorage } from "../types";
+import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
@@ -32,6 +32,8 @@ export interface CredentialServiceConfig {
   storage: GenericStorage;
   /** Optional dedicated storage for permits; defaults to `storage`. */
   permitStorage?: GenericStorage;
+  /** SDK-wide logger for credential-path diagnostics. */
+  logger: GenericLogger;
 }
 
 /**
@@ -46,19 +48,23 @@ export class CredentialService {
   readonly #relayer: RelayerSDK;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
+  readonly #logger: GenericLogger;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
       generator: () => config.relayer.generateTransportKeyPair(),
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
+      logger: config.logger,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
+      logger: config.logger,
     });
     this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
+    this.#logger = config.logger;
   }
 
   /**
@@ -100,15 +106,21 @@ export class CredentialService {
           keypair,
           scope,
         });
-        await swallow("replace permit", () =>
-          this.#store.replace(scope, candidate.signature, widened),
+        await swallow(
+          "replace permit",
+          () => this.#store.replace(scope, candidate.signature, widened),
+          this.#logger,
         );
         permits[permits.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
           const permission = await this.#signPermit({ chunk, keypair, scope });
           permits.push(permission);
-          await swallow("persist permit", () => this.#store.append(scope, [permission]));
+          await swallow(
+            "persist permit",
+            () => this.#store.append(scope, [permission]),
+            this.#logger,
+          );
         }
       }
     }

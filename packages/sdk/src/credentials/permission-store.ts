@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { GenericStorage } from "../types";
+import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
 import { pruneUnusable, withoutPermitsTouching } from "./permissions";
 import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
@@ -11,6 +11,8 @@ export type { PermissionScope };
 
 interface PermissionStoreConfig {
   storage: GenericStorage;
+  /** SDK-wide logger for best-effort storage diagnostics. */
+  logger: GenericLogger;
 }
 
 /**
@@ -23,9 +25,11 @@ interface PermissionStoreConfig {
  */
 export class PermissionStore {
   readonly #storage: GenericStorage;
+  readonly #logger: GenericLogger;
 
   constructor(config: PermissionStoreConfig) {
     this.#storage = config.storage;
+    this.#logger = config.logger;
   }
 
   /** Read all stored permissions for the given scope. Returns `[]` if none. */
@@ -58,7 +62,7 @@ export class PermissionStore {
         await this.#deleteScope(key);
         await this.#untrackScope(scope);
       } else {
-        await swallow("update permit entry", () => this.#storage.set(key, usable));
+        await swallow("update permit entry", () => this.#storage.set(key, usable), this.#logger);
       }
     }
     return usable;
@@ -132,7 +136,7 @@ export class PermissionStore {
     const indexKey = permissionIndexKey(signerAddress);
     const scopeKeys = await this.#readIndex(indexKey);
     await Promise.all(scopeKeys.map((k) => this.#deleteScope(k)));
-    await swallow("delete permit index", () => this.#storage.delete(indexKey));
+    await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
   }
 
   async #readIndex(indexKey: string): Promise<string[]> {
@@ -142,7 +146,7 @@ export class PermissionStore {
     }
     const parsed = ScopeIndexSchema.safeParse(raw);
     if (!parsed.success) {
-      await swallow("delete permit index", () => this.#storage.delete(indexKey));
+      await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
       return [];
     }
     return parsed.data;
@@ -167,13 +171,13 @@ export class PermissionStore {
       return;
     }
     if (next.length === 0) {
-      await swallow("delete permit index", () => this.#storage.delete(indexKey));
+      await swallow("delete permit index", () => this.#storage.delete(indexKey), this.#logger);
     } else {
-      await swallow("update permit index", () => this.#storage.set(indexKey, next));
+      await swallow("update permit index", () => this.#storage.set(indexKey, next), this.#logger);
     }
   }
 
   async #deleteScope(scopeKey: string): Promise<void> {
-    await swallow("delete permit entry", () => this.#storage.delete(scopeKey));
+    await swallow("delete permit entry", () => this.#storage.delete(scopeKey), this.#logger);
   }
 }

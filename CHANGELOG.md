@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.2.0-alpha.1...v3.2.0-alpha.2) (2026-06-24)
+
+### Features
+
+- **codemod:** SDK upgrade codemods (Codemod-OSS / JSSG) for 3.1.0 ([#447](https://github.com/zama-ai/sdk/issues/447)) ([2d51aad]())
+
+## [3.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.4...v3.2.0-alpha.1) (2026-06-23)
+
+### Features
+
+- **sdk:** configurable, silent-by-default logging via LoggerService [SDK-232] ([#453](https://github.com/zama-ai/sdk/issues/453)) ([8ce6eed]()), closes [#449]()
+
+## [3.1.1-alpha.4](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.3...v3.1.1-alpha.4) (2026-06-23)
+
+### Code Refactoring
+
+- **examples:** upgrade example-hoodi to @zama-fhe/sdk 3.1.0 ([#475](https://github.com/zama-ai/sdk/issues/475)) ([a74666d]())
+
 ## [3.1.1-alpha.3](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.2...v3.1.1-alpha.3) (2026-06-23)
 
 ### Code Refactoring

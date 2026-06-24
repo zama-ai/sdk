@@ -24,11 +24,8 @@ function eventTopic(signature: string): Hex {
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: eventTopic("ConfidentialTransfer(address,address,bytes32)"),
-  // NOTE: New wrapper contracts no longer emit Wrapped — shields now emit
-  // ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
-  // compatibility with older deployments.
-  /** `Wrapped(address indexed to, uint256 amountIn)` */
-  Wrapped: eventTopic("Wrapped(address,uint256)"),
+  /** `Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)` */
+  Wrap: eventTopic("Wrap(address,uint256,bytes32)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
@@ -50,16 +47,19 @@ export interface ConfidentialTransferEvent {
   readonly encryptedAmount: EncryptedValue;
 }
 
-// NOTE: New wrapper contracts no longer emit this event — shields now emit
-// ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
-// compatibility with older deployments.
-/** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
-export interface WrappedEvent {
-  readonly eventName: "Wrapped";
+/**
+ * Decoded `Wrap` event — an ERC-20 shield (wrap) operation. Emitted alongside a
+ * `ConfidentialTransfer(from=zeroAddress, ...)`; `encryptedWrappedAmount` is the same FHE
+ * handle that lands in `ConfidentialTransfer.encryptedAmount`.
+ */
+export interface WrapEvent {
+  readonly eventName: "Wrap";
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
-  /** Underlying ERC-20 tokens deposited. */
-  readonly amountIn: bigint;
+  /** Cleartext underlying ERC-20 tokens deposited, rounded down to a multiple of the rate. */
+  readonly roundedAmount: bigint;
+  /** FHE encrypted value for the wrapped (minted) amount. */
+  readonly encryptedWrappedAmount: EncryptedValue;
 }
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
@@ -89,7 +89,7 @@ export interface UnwrapFinalizedEvent {
 /** Union of all decoded confidential token event types. */
 export type OnChainEvent =
   | ConfidentialTransferEvent
-  | WrappedEvent
+  | WrapEvent
   | UnwrapRequestedEvent
   | UnwrapFinalizedEvent;
 
@@ -150,15 +150,13 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
   };
 }
 
-// NOTE: New wrapper contracts no longer emit this event. Retained for backward
-// compatibility with older deployments.
 /**
- * Wrapped(address indexed to, uint256 amountIn)
+ * Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)
  * Indexed: to (topics[1])
- * Data: amountIn (uint256)
+ * Data: roundedAmount (uint256), encryptedWrappedAmount (bytes32)
  */
-export function decodeWrapped(log: RawLog): WrappedEvent | null {
-  if (log.topics[0] !== Topics.Wrapped) {
+export function decodeWrap(log: RawLog): WrapEvent | null {
+  if (log.topics[0] !== Topics.Wrap) {
     return null;
   }
   if (log.topics.length < 2) {
@@ -166,9 +164,10 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
   }
 
   return {
-    eventName: "Wrapped",
+    eventName: "Wrap",
     to: topicToAddress(log.topics[1]!),
-    amountIn: wordToBigInt(log.data, 0),
+    roundedAmount: wordToBigInt(log.data, 0),
+    encryptedWrappedAmount: wordToBytes32(log.data, 1),
   };
 }
 
@@ -229,7 +228,7 @@ export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null 
 export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
   return (
     decodeConfidentialTransfer(log) ??
-    decodeWrapped(log) ??
+    decodeWrap(log) ??
     decodeUnwrapRequested(log) ??
     decodeUnwrapFinalized(log)
   );
@@ -273,20 +272,18 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
   return null;
 }
 
-// NOTE: New wrapper contracts no longer emit this event. Retained for backward
-// compatibility with older deployments.
 /**
- * Find the first {@link WrappedEvent} in a logs array.
+ * Find the first {@link WrapEvent} in a logs array.
  *
  * @example
  * ```ts
- * const event = findWrapped(receipt.logs);
- * if (event) console.log(event.to, event.amountIn);
+ * const event = findWrap(receipt.logs);
+ * if (event) console.log(event.to, event.roundedAmount);
  * ```
  */
-export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
+export function findWrap(logs: readonly RawLog[]): WrapEvent | null {
   for (const log of logs) {
-    const event = decodeWrapped(log);
+    const event = decodeWrap(log);
     if (event) {
       return event;
     }
@@ -301,7 +298,7 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
  */
 export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
-  Topics.Wrapped,
+  Topics.Wrap,
   Topics.UnwrapRequested,
   Topics.UnwrapFinalized,
 ] as const;

@@ -54,6 +54,14 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Optional logger for SDK diagnostics. Conforms to the four-level
+   * {@link GenericLogger} interface (`error`/`warn`/`info`/`debug`), which
+   * common loggers (console, pino, winston, OpenTelemetry's `DiagLogger`)
+   * satisfy directly. When omitted, the SDK emits no log output of its own.
+   * The SDK never bundles a logging library or imposes a format.
+   */
+  logger?: GenericLogger;
 }
 
 /** Generic config — pass any {@link GenericSigner} and {@link GenericProvider} directly. */
@@ -86,4 +94,9 @@ export type ZamaConfig = {
   readonly permitTTL: number;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
+  /**
+   * The SDK-wide logger, always present. Wraps the optional consumer-supplied
+   * {@link GenericLogger}; silent when none was configured.
+   */
+  readonly logger: GenericLogger;
 } & { readonly [zamaConfigBrand]: true };

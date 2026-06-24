@@ -1,0 +1,5 @@
+id: rename-use-readonly-token
+language: tsx
+rule:
+  pattern: useReadonlyToken
+fix: useWrappedToken

@@ -2,6 +2,7 @@ import { getAddress, type Address } from "viem";
 import { describe, expect, test } from "../test-fixtures";
 import type { EncryptedValue } from "../relayer/types";
 import { CachingService } from "../services/caching-service";
+import { LoggerService } from "../services/logger-service";
 
 const REQUESTER_A = getAddress("0x1111111111111111111111111111111111111111") as Address;
 const REQUESTER_B = getAddress("0x2222222222222222222222222222222222222222") as Address;
@@ -72,7 +73,7 @@ describe("CachingService", () => {
 
   test("invalid stored values behave as cachingService misses", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cachingService = new CachingService(storage);
+    const cachingService = new CachingService(storage, new LoggerService());
     storage.get = async () => ({ value: 42n });
 
     await expect(cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
@@ -80,7 +81,7 @@ describe("CachingService", () => {
 
   test("storage read failures degrade to cachingService misses", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cachingService = new CachingService(storage);
+    const cachingService = new CachingService(storage, new LoggerService());
 
     storage.get = async () => {
       throw new Error("storage unavailable");
@@ -90,7 +91,7 @@ describe("CachingService", () => {
 
   test("storage write failures degrade to no-ops", async ({ createMockStorage }) => {
     const storage = createMockStorage();
-    const cachingService = new CachingService(storage);
+    const cachingService = new CachingService(storage, new LoggerService());
 
     storage.set = async () => {
       throw new Error("storage full");
