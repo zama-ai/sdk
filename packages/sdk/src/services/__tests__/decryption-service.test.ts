@@ -268,4 +268,163 @@ describe("DecryptionService", () => {
       service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 10n });
   });
+
+  describe("probeDelegationPropagated", () => {
+    function mockEip712(
+      relayer: { createDelegatedUserDecryptEIP712: unknown },
+      delegatorAddress: Address,
+    ) {
+      vi.mocked(relayer.createDelegatedUserDecryptEIP712 as never).mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {
+          publicKey: TEST_PUBLIC_KEY,
+          contractAddresses: [CONTRACT_A],
+          delegatorAddress,
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      } as never);
+    }
+
+    test("returns true when the relayer accepts the delegated decrypt", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      mockEip712(relayer, delegatorAddress);
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [HANDLE_A]: 10n });
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).resolves.toBe(true);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalled();
+    });
+
+    test("returns false when the relayer reports not-propagated (HTTP 500)", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      mockEip712(relayer, delegatorAddress);
+      const err = Object.assign(new Error("server error"), { statusCode: 500 });
+      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(err);
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).resolves.toBe(false);
+    });
+
+    test("rethrows non-propagation relayer errors instead of returning false", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      mockEip712(relayer, delegatorAddress);
+      const err = Object.assign(new Error("bad request"), { statusCode: 400 });
+      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(err);
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).rejects.toMatchObject({ code: "NO_CIPHERTEXT" });
+    });
+
+    test("rethrows (no relayer call) when the host-chain grant is missing", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(0n);
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+
+    test("forces a relayer round-trip even when the value is already cached", async ({
+      cachingService,
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      mockEip712(relayer, delegatorAddress);
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [HANDLE_A]: 42n });
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).resolves.toBe(true);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalled();
+    });
+
+    test("forces a relayer round-trip even for a zero handle (no short-circuit)", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      mockEip712(relayer, delegatorAddress);
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [ZERO_ENCRYPTED_VALUE]: 0n });
+
+      await expect(
+        decryptionService.probeDelegationPropagated(
+          handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+        ),
+      ).resolves.toBe(true);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalled();
+    });
+
+    test("returns true for empty input without touching the relayer", async ({
+      decryptionService,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+    }) => {
+      await expect(
+        decryptionService.probeDelegationPropagated([], delegatorAddress, delegateAddress),
+      ).resolves.toBe(true);
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+  });
 });

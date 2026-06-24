@@ -5,7 +5,13 @@ import {
   resolveUserDecryptPermit,
 } from "../credentials/decrypt-permit";
 import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
-import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
+import {
+  DecryptionFailedError,
+  DelegationNotPropagatedError,
+  isFatalBatchError,
+  wrapDecryptError,
+  ZamaError,
+} from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
@@ -122,6 +128,82 @@ export class DecryptionService {
       errorMessage: "Failed to decrypt delegated encrypted values",
       delegated: true,
     });
+  }
+
+  /**
+   * Probe whether a delegation has propagated to the gateway and is usable.
+   *
+   * Forces a delegated-decrypt round-trip — bypassing the decrypt cache and the
+   * zero-value short-circuit — so the gateway's synced ACL copy is actually
+   * exercised. Host-chain validation runs first; a missing or expired grant
+   * throws rather than returning `false`, because that is a distinct condition
+   * from "granted but not yet synced".
+   *
+   * @param encryptedValues - Encrypted values to probe, each paired with its contract.
+   * @param delegatorAddress - The address that granted delegation rights.
+   * @param delegateAddress - The connected signer acting as delegate.
+   * @returns `true` if the relayer accepts the request (delegation is usable),
+   *   `false` if it rejects with not-propagated.
+   * @throws if no grant exists on the host chain. {@link DelegationNotFoundError}
+   * @throws if the grant has expired on the host chain. {@link DelegationExpiredError}
+   */
+  async probeDelegationPropagated(
+    encryptedValues: EncryptedInput[],
+    delegatorAddress: Address,
+    delegateAddress: Address,
+  ): Promise<boolean> {
+    if (encryptedValues.length === 0) {
+      return true;
+    }
+
+    const normalizedDelegator = getAddress(delegatorAddress);
+    const normalizedDelegate = getAddress(delegateAddress);
+    const normalized = encryptedValues.map((h) => ({
+      encryptedValue: h.encryptedValue,
+      contractAddress: getAddress(h.contractAddress),
+    }));
+    const contracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
+
+    // Host-chain check first: a missing/expired grant is not a propagation
+    // signal, so let it throw rather than collapsing it into `false`.
+    await this.#assertAllDelegationsActive(contracts, {
+      delegatorAddress: normalizedDelegator,
+      delegateAddress: normalizedDelegate,
+    });
+
+    // Force a relayer round-trip — no cache read, no zero-value short-circuit —
+    // so the gateway's synced ACL is the thing actually being tested.
+    const credentials = await this.#credentialService.grantPermit(contracts, normalizedDelegator);
+    const byContract = new Map<Address, EncryptedValue[]>();
+    for (const h of normalized) {
+      const existing = byContract.get(h.contractAddress);
+      if (existing) {
+        existing.push(h.encryptedValue);
+      } else {
+        byContract.set(h.contractAddress, [h.encryptedValue]);
+      }
+    }
+
+    try {
+      await pLimit(
+        [...byContract.entries()].map(([contractAddress, values]) => async () => {
+          await this.#relayer.delegatedUserDecrypt({
+            encryptedValues: values,
+            contractAddress,
+            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
+            delegateAddress: normalizedDelegate,
+          });
+        }),
+        5,
+      );
+      return true;
+    } catch (error) {
+      const wrapped = wrapDecryptError(error, "Failed to probe delegation propagation", true);
+      if (wrapped instanceof DelegationNotPropagatedError) {
+        return false;
+      }
+      throw wrapped;
+    }
   }
 
   async delegatedBatchDecryptHandlesAs({
