@@ -82,4 +82,72 @@ describe("Delegations", () => {
       expect(signer.writeContract).toHaveBeenCalled();
     });
   });
+
+  describe("isPropagated", () => {
+    const HANDLE = `0x${"aa".repeat(32)}` as const;
+
+    test("throws SignerNotConfiguredError without a signer", async ({ createSDK }) => {
+      const sdk = createSDK({ signer: undefined });
+      await expect(
+        sdk.delegations.isPropagated(
+          [{ encryptedValue: HANDLE, contractAddress: TOKEN }],
+          DELEGATOR,
+        ),
+      ).rejects.toBeInstanceOf(SignerNotConfiguredError);
+    });
+
+    test("returns true when the relayer accepts the probe", async ({ sdk, provider, relayer }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {
+          publicKey: `0x${"11".repeat(32)}`,
+          contractAddresses: [TOKEN],
+          delegatorAddress: DELEGATOR,
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      } as never);
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [HANDLE]: 10n });
+
+      await expect(
+        sdk.delegations.isPropagated(
+          [{ encryptedValue: HANDLE, contractAddress: TOKEN }],
+          DELEGATOR,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    test("returns false when the relayer reports not-propagated", async ({
+      sdk,
+      provider,
+      relayer,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {
+          publicKey: `0x${"11".repeat(32)}`,
+          contractAddresses: [TOKEN],
+          delegatorAddress: DELEGATOR,
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      } as never);
+      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
+        Object.assign(new Error("server error"), { statusCode: 500 }),
+      );
+
+      await expect(
+        sdk.delegations.isPropagated(
+          [{ encryptedValue: HANDLE, contractAddress: TOKEN }],
+          DELEGATOR,
+        ),
+      ).resolves.toBe(false);
+    });
+  });
 });

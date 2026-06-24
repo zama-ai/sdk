@@ -126,6 +126,7 @@ export class ZamaSDK {
       signer: this.signer,
       provider: this.provider,
       delegationService: this.#delegationService,
+      decryptionService: this.#decryptionService,
     });
     this.decryption = new Decryption({
       signer: this.signer,

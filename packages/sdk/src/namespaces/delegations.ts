@@ -3,6 +3,8 @@ import type { DelegationService } from "../services/delegation-service";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { requireConfigured } from "../errors";
+import type { DecryptionService } from "../services/decryption-service";
+import type { EncryptedInput } from "../query/user-decrypt";
 
 /**
  * Public namespace for on-chain decryption-delegation management.
@@ -19,20 +21,27 @@ export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #delegationService: DelegationService;
+  readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
     delegationService: DelegationService;
+    decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
     this.#delegationService = opts.delegationService;
+    this.#decryptionService = opts.decryptionService;
   }
 
   #requireSigner(operation: string): GenericSigner {
     return requireConfigured(this.#signer, operation);
+  }
+
+  #requireDecryptionService(operation: string): DecryptionService {
+    return requireConfigured(this.#decryptionService, operation);
   }
 
   /**
@@ -144,5 +153,32 @@ export class Delegations {
     delegateAddress: Address;
   }): Promise<bigint> {
     return this.#delegationService.getDelegationExpiry(params);
+  }
+
+  /**
+   * Check whether a delegation has propagated to the gateway and is usable for
+   * delegated decryption — a proactive alternative to attempting a decrypt and
+   * catching {@link DelegationNotPropagatedError}.
+   *
+   * Unlike {@link isActive} (which reads the host-chain ACL and is `true` the
+   * instant the grant tx mines), this probes the gateway's synced state by
+   * forcing a delegated-decrypt round-trip. Poll it (e.g. every few seconds)
+   * after `delegateDecryption` until it returns `true`.
+   *
+   * @param encryptedInputs - Encrypted values to probe, each paired with its contract.
+   * @param delegatorAddress - The address that granted delegation rights to the connected wallet.
+   * @returns `true` once the delegation is usable on the gateway, `false` while it is still syncing.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if no grant exists on the host chain. {@link DelegationNotFoundError}
+   * @throws if the grant has expired on the host chain. {@link DelegationExpiredError}
+   */
+  async isPropagated(
+    encryptedInputs: EncryptedInput[],
+    delegatorAddress: Address,
+  ): Promise<boolean> {
+    const service = this.#requireDecryptionService("isPropagated");
+    const account = await requireAlignedWalletAccount("isPropagated", this.#signer, this.#provider);
+    return service.probeDelegationPropagated(encryptedInputs, delegatorAddress, account.address);
   }
 }
