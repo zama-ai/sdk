@@ -28,15 +28,15 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig {
   }
   return {
     type: "web",
-    createWorker: (chains) =>
+    createWorker: (chains, logger) =>
       new RelayerWorkerClient({
         cdnUrl: CDN_URL,
         chains,
         csrfToken: options?.security?.getCsrfToken?.() ?? "",
         integrity: options?.security?.integrityCheck === false ? undefined : CDN_INTEGRITY,
-        logger: options?.logger,
+        logger,
         thread: options?.threads,
       }),
-    createRelayer: (chain, worker) => new RelayerWeb({ chain, worker, ...options }),
+    createRelayer: (chain, worker, logger) => new RelayerWeb({ chain, worker, ...options, logger }),
   };
 }

@@ -78,12 +78,6 @@ Security options for the WASM bundle and relayer requests.
 | `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
 | `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
 
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
-
 ### threads
 
 `number | undefined`

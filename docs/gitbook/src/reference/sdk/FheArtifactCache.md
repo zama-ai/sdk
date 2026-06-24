@@ -97,13 +97,13 @@ The default `MemoryStorage` caches artifacts for the lifetime of the process but
 new FheArtifactCache(opts);
 ```
 
-| Field        | Type                         | Description                                                                                     |
-| ------------ | ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `storage`    | `GenericStorage`             | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                        |
-| `chainId`    | `number`                     | Chain ID to scope cache keys.                                                                   |
-| `relayerUrl` | `string`                     | Relayer URL used to fetch the manifest during revalidation.                                     |
-| `ttl`        | `number \| undefined`        | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. |
-| `logger`     | `GenericLogger \| undefined` | Logger instance. Default: `console`.                                                            |
+| Field        | Type                  | Description                                                                                                                                |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `storage`    | `GenericStorage`      | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                                                                   |
+| `chainId`    | `number`              | Chain ID to scope cache keys.                                                                                                              |
+| `relayerUrl` | `string`              | Relayer URL used to fetch the manifest during revalidation.                                                                                |
+| `ttl`        | `number \| undefined` | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation.                                            |
+| `logger`     | `GenericLogger`       | Logger for cache diagnostics (revalidation, storage degradation). Silent by default — the SDK threads its `createConfig({ logger })` here. |
 
 ## Methods
 

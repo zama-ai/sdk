@@ -1,0 +1,15 @@
+# Plain `pattern: Handle` matches identifier-position only (e.g. import specifiers).
+# Type-position needs a contextual pattern that pins the selector to type_identifier.
+id: handle-import
+language: tsx
+rule:
+  pattern: Handle
+fix: EncryptedValue
+---
+id: handle-type-position
+language: tsx
+rule:
+  pattern:
+    context: "let x: Handle"
+    selector: type_identifier
+fix: EncryptedValue

@@ -1,0 +1,5 @@
+id: rename-use-readonly-token
+valid:
+  - 'const t = useWrappedToken(address);'
+invalid:
+  - 'const t = useReadonlyToken(address);'

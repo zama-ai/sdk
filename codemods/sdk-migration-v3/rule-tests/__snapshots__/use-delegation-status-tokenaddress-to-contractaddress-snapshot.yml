@@ -1,0 +1,13 @@
+id: use-delegation-status-tokenaddress-to-contractaddress
+snapshots:
+  'const s = useDelegationStatus({ tokenAddress: addr, delegateAddress: del });':
+    fixed: 'const s = useDelegationStatus({ contractAddress: addr, delegateAddress: del });'
+    labels:
+    - source: 'tokenAddress: addr'
+      style: primary
+      start: 32
+      end: 50
+    - source: 'useDelegationStatus({ tokenAddress: addr, delegateAddress: del })'
+      style: secondary
+      start: 10
+      end: 75

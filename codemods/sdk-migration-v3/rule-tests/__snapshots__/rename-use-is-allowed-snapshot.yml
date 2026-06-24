@@ -1,0 +1,9 @@
+id: rename-use-is-allowed
+snapshots:
+  const a = useIsAllowed();:
+    fixed: const a = useHasPermit();
+    labels:
+    - source: useIsAllowed
+      style: primary
+      start: 10
+      end: 22

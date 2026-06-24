@@ -8,6 +8,7 @@ import type {
   TransactionResult,
   WriteContractConfig,
 } from "../types";
+import type { GenericLogger } from "../worker/worker.types";
 import { swallow } from "./swallow";
 
 /**
@@ -29,14 +30,15 @@ export async function submitTransaction(params: {
   config: WriteContractConfig;
   emit: (input: ZamaSDKEventInput) => void;
   onSubmitted?: (txHash: Hex) => void;
+  logger: GenericLogger;
 }): Promise<TransactionResult> {
-  const { operation, signer, provider, config, emit, onSubmitted } = params;
+  const { operation, signer, provider, config, emit, onSubmitted, logger } = params;
   const metadata = transactionOperationMetadata[operation];
 
   try {
     const txHash = await signer.writeContract(config);
     emit(metadata.submittedEvent(txHash));
-    void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash));
+    void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash), logger);
     const receipt = await provider.waitForTransactionReceipt(txHash);
     return { txHash, receipt };
   } catch (error) {

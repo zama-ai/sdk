@@ -1,0 +1,5 @@
+id: use-delegation-status-tokenaddress-shorthand
+valid:
+  - 'const b = useConfidentialBalance({ tokenAddress });'
+invalid:
+  - 'const s = useDelegationStatus({ tokenAddress });'

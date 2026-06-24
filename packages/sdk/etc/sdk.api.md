@@ -636,7 +636,7 @@ export function cleartext(): CleartextRelayerConfig;
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+    readonly createRelayer: (chain: FheChain, worker: unknown, logger: GenericLogger) => RelayerCleartext;
     // (undocumented)
     readonly type: "cleartext";
 }
@@ -11455,6 +11455,7 @@ export class Permits {
         provider: GenericProvider;
         cachingService: CachingService;
         credentialService: CredentialService | undefined;
+        logger: GenericLogger;
     });
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
@@ -12629,8 +12630,8 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
-    readonly createWorker?: (chains: FheChain[]) => any;
+    readonly createRelayer: (chain: FheChain, worker: any, logger: GenericLogger) => RelayerSDK;
+    readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
     // (undocumented)
     readonly type: string;
 }
@@ -12639,7 +12640,7 @@ export interface RelayerConfig {
 export class RelayerDispatcher implements RelayerSDK, Disposable {
     // (undocumented)
     [Symbol.dispose](): void;
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>, logger: GenericLogger);
     // (undocumented)
     get chain(): FheChain;
     // (undocumented)
@@ -19477,6 +19478,7 @@ export type ZamaConfig = {
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
+    readonly logger: GenericLogger;
 } & {
     readonly [zamaConfigBrand]: true;
 };
@@ -19484,6 +19486,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
     permitTTL?: number;
@@ -19579,6 +19582,8 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // @internal
+    get logger(): GenericLogger;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;
