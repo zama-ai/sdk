@@ -1,7 +1,7 @@
 import { z } from "zod/mini";
+import type { GenericLogger } from "../worker/worker.types";
 import type { GenericStorage } from "../types";
 import { assertNonNullable, toError } from "../utils";
-import type { GenericLogger } from "../worker/worker.types";
 import type { FheEncryptionKey, PublicParamsData } from "./relayer-sdk.types";
 
 // ── Cached data shapes ──────────────────────────────────────
@@ -145,13 +145,13 @@ export class FheArtifactCache {
     relayerUrl: string;
     /** Cache TTL in seconds. Default: 86 400 (24 h). Set to 0 to revalidate on every operation. */
     ttl?: number;
-    logger?: GenericLogger;
+    logger: GenericLogger;
   }) {
     this.#storage = opts.storage;
     this.#chainId = opts.chainId;
     this.#relayerUrl = opts.relayerUrl;
     this.#ttlMs = (opts.ttl ?? 86_400) * 1000;
-    this.#logger = opts.logger ?? console;
+    this.#logger = opts.logger;
   }
 
   // ── fetchFheEncryptionKeyBytes ──────────────────────────

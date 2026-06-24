@@ -33,8 +33,8 @@ export interface RelayerNodeConfig {
   chain: FheChain;
   /** Worker thread pool — handles WASM operations off the main thread. */
   pool: NodeWorkerPool;
-  /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for observing worker lifecycle and request timing. */
+  logger: GenericLogger;
   /**
    * Persistent storage for caching FHE public key and params across sessions.
    * Defaults to `new MemoryStorage()` (in-process, lost on restart).

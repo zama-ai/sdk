@@ -126,9 +126,10 @@ export function eip1193Subscribe({
         observedChainId = account?.chainId;
         onWalletAccountChange({ previous: undefined, next: account });
       })
-      .catch((error) => {
-        // oxlint-disable-next-line no-console
-        console.warn("[zama-sdk] initial identity load failed:", error);
+      .catch(() => {
+        // Best-effort initial identity load. The failure is non-fatal: real
+        // provider events reconcile wallet-account state, so it is swallowed
+        // silently rather than emitted to the console.
       });
   }
 

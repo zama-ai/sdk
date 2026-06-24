@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.4...v3.2.0-alpha.1) (2026-06-23)
+
+### Features
+
+- **sdk:** configurable, silent-by-default logging via LoggerService [SDK-232] ([#453](https://github.com/zama-ai/sdk/issues/453)) ([8ce6eed]()), closes [#449]()
+
 ## [3.1.1-alpha.4](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.3...v3.1.1-alpha.4) (2026-06-23)
 
 ### Code Refactoring

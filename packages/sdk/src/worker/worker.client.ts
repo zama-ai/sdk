@@ -18,8 +18,8 @@ export interface WorkerClientConfig {
   csrfToken: string;
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
-  /** Optional logger for tracing worker request lifecycle. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for tracing worker request lifecycle. */
+  logger: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
   thread?: number;
 }
