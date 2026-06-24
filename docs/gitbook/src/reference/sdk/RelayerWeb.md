@@ -5,7 +5,7 @@ description: Browser relayer that runs FHE operations in a Web Worker via WASM.
 
 # RelayerWeb
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and keypair management for browser applications.
+Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
 
 ## Import
 
@@ -14,7 +14,7 @@ import { RelayerWeb } from "@zama-fhe/sdk/web";
 ```
 
 {% hint style="info" %}
-For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](./network-presets.md) for examples.
 {% endhint %}
 
 ## Usage
@@ -105,7 +105,7 @@ Without these headers, the browser blocks `SharedArrayBuffer` and the relayer fa
 
 `GenericStorage | undefined`
 
-Persistent storage for caching FHE public key and params across sessions.
+Persistent storage for caching the FHE encryption key and params across sessions.
 
 ### fheArtifactCacheTTL
 
@@ -115,6 +115,6 @@ How long cached FHE artifacts remain valid, in seconds.
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the relayer to the SDK constructor
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js variant using worker threads
-- [Configuration guide](/guides/configuration) — authentication and network presets
+- [ZamaSDK](./ZamaSDK.md) — pass the relayer to the SDK constructor
+- [RelayerNode](./RelayerNode.md) — Node.js variant using worker threads
+- [Configuration guide](../../guides/configuration.md) — authentication and network presets

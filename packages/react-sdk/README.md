@@ -91,7 +91,8 @@ function AuthGate({
 
 function Balance() {
   const { data: balance, isLoading } = useConfidentialBalance({
-    tokenAddress,
+    address: tokenAddress,
+    account,
   });
 
   if (isLoading) return <p>Decrypting...</p>;

@@ -185,10 +185,10 @@ resolved internally (during which the query is still disabled).
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const shield = useShield({ address: tokenAddress }, { onSuccess });
 shield.mutate({
   amount: parsedAmount,
-  approvalStrategy: "max",
+  approvalStrategy: "exact",
   onApprovalSubmitted: () => setPhase("approve"),
   onShieldSubmitted: () => setPhase("submit"),
 });
@@ -198,16 +198,16 @@ shield.mutate({
 ERC-1363 and chooses `transferAndCall` or `approve` + `wrap` automatically. The app does not
 read allowances, send approval transactions, or choose a route itself.
 
-`approvalStrategy: "max"` only affects the `approve` + `wrap` path. It lets the SDK request a
-reusable allowance on the first shield; ERC-1363-routed tokens ignore the option because no
-separate approval is required.
+`approvalStrategy: "exact"` only affects the `approve` + `wrap` path. It approves exactly the
+shielded amount; ERC-1363-routed tokens ignore the option because no separate approval is
+required.
 
 ---
 
 ## 5. Confidential Transfer (`TransferCard.tsx`)
 
 ```ts
-const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
+const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
 transfer.mutate({
   to: recipient,
   amount: parsedAmount,
@@ -222,7 +222,7 @@ Two phases: encrypting the amount locally (step 1), then submitting the transact
 ## 6. Unshield (`UnshieldCard.tsx`)
 
 ```ts
-const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const unshield = useUnshield(tokenAddress, { onSuccess });
 ```
 
 For ERC-7984 tokens the wrapper IS the token, so `tokenAddress === wrapperAddress`.
@@ -243,7 +243,7 @@ If the user closes the tab between Phase 1 and Phase 2, the pending state is per
 ```ts
 const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
 // → non-null: show a "Finalize" button
-const resume = useResumeUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
@@ -263,7 +263,7 @@ Three cards cover the full delegation lifecycle.
 ### Grant access (`DelegateDecryptionCard.tsx`)
 
 ```ts
-const delegate = useDelegateDecryption({ tokenAddress }, { onSuccess });
+const delegate = useDelegateDecryption(tokenAddress, { onSuccess });
 delegate.mutate({
   delegateAddress,
   expirationDate: noExpiry ? undefined : new Date(expirationInput),
@@ -276,7 +276,7 @@ The ACL contract enforces a minimum expiry of **1 hour** from now. Anything shor
 ### Revoke access (`RevokeDelegationCard.tsx`)
 
 ```ts
-const revoke = useRevokeDelegation({ tokenAddress }, { onSuccess });
+const revoke = useRevokeDelegation(tokenAddress, { onSuccess });
 revoke.mutate({ delegateAddress });
 ```
 
@@ -286,7 +286,7 @@ Shows a live delegation status indicator as the user types the owner address:
 
 ```ts
 const delegationStatus = useDelegationStatus({
-  tokenAddress,
+  contractAddress: tokenAddress,
   delegatorAddress: ownerAddress, // the owner who granted access
   delegateAddress: connectedAddress, // us
 });
@@ -299,7 +299,7 @@ const decryptAs = useDecryptBalanceAs(tokenAddress);
 decryptAs.mutate({ delegatorAddress: ownerAddress });
 ```
 
-Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelegateDecryption` / `useRevokeDelegation` which use a config object). `DelegationNotFoundError` and `DelegationExpiredError` from `@zama-fhe/sdk` are used to show user-friendly error messages.
+Note: `useDecryptBalanceAs`, `useDelegateDecryption`, and `useRevokeDelegation` all take a positional `tokenAddress` as their first argument. `DelegationNotFoundError` and `DelegationExpiredError` from `@zama-fhe/sdk` are used to show user-friendly error messages.
 
 ---
 
@@ -307,11 +307,11 @@ Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelega
 
 Three balances are shown:
 
-| Balance      | Source                            | Hook / method                                                                                |
-| ------------ | --------------------------------- | -------------------------------------------------------------------------------------------- |
-| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                             |
-| ERC-20       | SDK read provider                 | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, address))`     |
-| Confidential | Relayer decryption                | `useConfidentialBalance({ tokenAddress: token.confidentialTokenAddress, account: address })` |
+| Balance      | Source                            | Hook / method                                                                            |
+| ------------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
+| ETH          | Direct RPC (`createPublicClient`) | `useQuery` → `rpcClient.getBalance({ address })`                                         |
+| ERC-20       | SDK read provider                 | `useQuery` → `sdk.provider.readContract(balanceOfContract(token.tokenAddress, address))` |
+| Confidential | Relayer decryption                | `useConfidentialBalance({ address: token.confidentialTokenAddress, account: address })`  |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has
 authorized FHE decryption via an EIP-712 wallet signature. `useHasPermit({ contractAddresses })`

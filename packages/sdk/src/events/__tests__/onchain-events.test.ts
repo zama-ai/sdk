@@ -8,7 +8,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
@@ -32,11 +31,6 @@ function uint256(n: bigint): string {
 /** Encode an address as a topic (0x + 24 zeros + 40 hex chars). */
 function addressTopic(addr: string): Hex {
   return `0x${addr.replace("0x", "").toLowerCase().padStart(64, "0")}` as Hex;
-}
-
-/** Encode an address as a data word (64 hex chars, no 0x). */
-function addressWord(addr: string): string {
-  return addr.replace("0x", "").toLowerCase().padStart(64, "0");
 }
 
 // ---------------------------------------------------------------------------
@@ -161,38 +155,6 @@ describe("decodeUnwrapFinalized", () => {
 });
 
 // ---------------------------------------------------------------------------
-// decodeUnwrappedStarted
-// ---------------------------------------------------------------------------
-
-describe("decodeUnwrappedStarted", () => {
-  test("decodes a valid UnwrappedStarted log", () => {
-    const data = `0x${uint256(1n)}${addressWord(BOB)}${HANDLE.slice(2)}${HANDLE.slice(2)}` as Hex;
-    const log = makeLog(
-      Topics.UnwrappedStarted,
-      [`0x${uint256(1n)}` as Hex, `0x${uint256(2n)}` as Hex, addressTopic(ALICE)],
-      data,
-    );
-    const event = decodeUnwrappedStarted(log);
-    expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("UnwrappedStarted");
-    expect(event!.requestId).toBe(1n);
-    expect(event!.txId).toBe(2n);
-    expect(event!.to.toLowerCase()).toBe(ALICE.toLowerCase());
-    expect(event!.returnVal).toBe(true);
-    expect(event!.refund.toLowerCase()).toBe(BOB.toLowerCase());
-  });
-
-  test("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [
-      `0x${uint256(1n)}` as Hex,
-      `0x${uint256(2n)}` as Hex,
-      addressTopic(ALICE),
-    ]);
-    expect(decodeUnwrappedStarted(log)).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // decodeOnChainEvent / decodeOnChainEvents
 // ---------------------------------------------------------------------------
 
@@ -298,12 +260,11 @@ describe("findWrapped", () => {
 
 describe("TOKEN_TOPICS", () => {
   test("contains all token event topic hashes", () => {
-    expect(TOKEN_TOPICS).toHaveLength(5);
+    expect(TOKEN_TOPICS).toHaveLength(4);
     expect(TOKEN_TOPICS).toContain(Topics.ConfidentialTransfer);
     expect(TOKEN_TOPICS).toContain(Topics.Wrapped);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequested);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalized);
-    expect(TOKEN_TOPICS).toContain(Topics.UnwrappedStarted);
   });
 
   test("all topic hashes are 0x-prefixed 66-char hex strings", () => {

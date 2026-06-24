@@ -1,2 +1,7 @@
-export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./types";
+export type {
+  StoredTransportKeyPairWithPermits,
+  TransportKeyPair,
+  StoredTransportKeyPair,
+  Permission,
+} from "./types";
 export type { ChecksummedAddress } from "../schemas/primitives";

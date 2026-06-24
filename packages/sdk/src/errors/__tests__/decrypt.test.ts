@@ -112,4 +112,39 @@ describe("wrapDecryptError", () => {
       }
     });
   });
+
+  describe("relayer auth errors surface the relayer/Cloudflare/Kong message", () => {
+    test("403 without a numeric statusCode surfaces the body via cause", () => {
+      const relayerError = new Error(
+        "HTTP error! status: 403 Unauthorized. Missing or invalid Zama API Key",
+      );
+      const wrapped = wrapDecryptError(relayerError, "Public decryption failed");
+      expect(wrapped).toBeInstanceOf(DecryptionFailedError);
+      const cause = (wrapped as DecryptionFailedError).cause as Error;
+      expect(cause.message).toMatch(/zama api key/i);
+      expect(cause.message).not.toMatch(/unexpected response status/i);
+    });
+
+    test("403 with a numeric statusCode preserves the code and the body message", () => {
+      const relayerError = Object.assign(
+        new Error("This server requires a valid Zama API Key in the x-api-key header"),
+        { statusCode: 403 },
+      );
+      const wrapped = wrapDecryptError(relayerError, "Public decryption failed");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBe(403);
+      expect(wrapped.message).toContain("x-api-key");
+    });
+
+    test("401 preserves the code and the body message", () => {
+      const relayerError = Object.assign(
+        new Error("Unauthorized, missing or invalid Zama API Key."),
+        { statusCode: 401 },
+      );
+      const wrapped = wrapDecryptError(relayerError, "Public decryption failed");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBe(401);
+      expect(wrapped.message).toMatch(/zama api key/i);
+    });
+  });
 });

@@ -20,14 +20,14 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmKeypair(sdk: ZamaSDK): void {
-  void sdk.permits.warmKeypair().catch((error: unknown) => {
+function warmTransportKeyPair(sdk: ZamaSDK): void {
+  void sdk.permits.warmTransportKeyPair().catch((error: unknown) => {
     // Warmup is a latency optimization — the first real permit/decrypt call
-    // will lazily retry keypair generation and surface actionable errors.
-    // We still log so persistent failures (storage corruption, relayer 4xx
-    // during keypair generation) leave a breadcrumb during debugging.
+    // will lazily retry transport-key-pair generation and surface actionable
+    // errors. We still log so persistent failures (storage corruption, relayer
+    // 4xx during generation) leave a breadcrumb during debugging.
     // oxlint-disable-next-line no-console
-    console.warn("[zama-sdk] warm keypair failed:", error);
+    console.warn("[zama-sdk] warm transport key pair failed:", error);
   });
 }
 
@@ -53,19 +53,19 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
 
   const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
-  // Keypair warming may touch `new Worker(...)` (web() relayer), which is
-  // undefined during SSR. Driving warmup from a client-only useEffect rather
+  // Transport-key-pair warming may touch `new Worker(...)` (web() relayer), which
+  // is undefined during SSR. Driving warmup from a client-only useEffect rather
   // than the SDK constructor keeps server-rendered trees free of browser-only
   // infrastructure. Non-React framework adapters need to mirror this contract:
-  // call `sdk.permits.warmKeypair()` on mount and on every
+  // call `sdk.permits.warmTransportKeyPair()` on mount and on every
   // `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
-    warmKeypair(sdk);
+    warmTransportKeyPair(sdk);
     return sdk.onWalletAccountChange(({ previous }) => {
       if (previous) {
         invalidateWalletLifecycleQueries(queryClient);
       }
-      warmKeypair(sdk);
+      warmTransportKeyPair(sdk);
     });
   }, [sdk, queryClient]);
 

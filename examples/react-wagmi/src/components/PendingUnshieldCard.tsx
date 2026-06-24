@@ -25,19 +25,15 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
       });
   }, [storage, tokenAddress]);
 
-  const resume = useResumeUnshield(
-    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
-    { tokenAddress, wrapperAddress: tokenAddress },
-    {
-      onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress).catch((err) =>
-          console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
-        );
-        setPendingTxHash(null);
-        onSuccess?.();
-      },
+  const resume = useResumeUnshield(tokenAddress, {
+    onSuccess: () => {
+      clearPendingUnshield(storage, tokenAddress).catch((err) =>
+        console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
+      );
+      setPendingTxHash(null);
+      onSuccess?.();
     },
-  );
+  });
 
   if (loadError) {
     return (

@@ -7,7 +7,7 @@ description: Mutation hook that signs an EIP-712 message authorizing decryption 
 
 Mutation hook that signs an EIP-712 message authorizing decryption of confidential encrypted values for a list of contract addresses. This is **not token-specific** — any contract that uses FHE-encrypted values (confidential tokens, DeFi vaults, games, etc.) can be authorized in a single wallet signature.
 
-Call this early (e.g. after wallet connect) so that [`useDecryptValues`](/reference/react/useDecryptValues) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](/reference/react/useHasPermit) queries on success.
+Call this early (e.g. after wallet connect) so that [`useDecryptValues`](./useDecryptValues.md) queries fire automatically without wallet popups. Automatically invalidates [`useHasPermit`](./useHasPermit.md) queries on success.
 
 {% hint style="warning" %}
 **Include all contracts you plan to decrypt.** `useDecryptValues` checks that stored permits cover every contract address in its `inputs` before firing the query. If any contract is missing, the query stays disabled.
@@ -90,7 +90,7 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, Address[]>`.
 
 ## Related
 
-- [`useHasPermit`](/reference/react/useHasPermit) -- check whether stored permits cover contracts
-- [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits for specific contracts
-- [`useClearCredentials`](/reference/react/useClearCredentials) -- wipe the keypair and all permits
-- [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration
+- [`useHasPermit`](./useHasPermit.md) -- check whether stored permits cover contracts
+- [`useRevokePermits`](./useRevokePermits.md) -- revoke permits for specific contracts
+- [`useClearCredentials`](./useClearCredentials.md) -- wipe the transport key pair and all permits
+- [Permit Model](../../concepts/permit-model.md) -- permit lifecycle and TTL configuration

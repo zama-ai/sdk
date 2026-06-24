@@ -1,4 +1,4 @@
-name: LLM Docs
+name: Docs
 
 on:
   pull_request:
@@ -11,6 +11,7 @@ on:
       - "packages/*/README.md"
       - "packages/*/etc/**"
       - "scripts/llm/**"
+      - "scripts/docs/**"
       - "llms.txt"
       - "llms-full.txt"
       - "package.json"
@@ -18,18 +19,24 @@ on:
   workflow_call:
 
 concurrency:
-  group: llm-docs-${{ github.ref }}
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+
+env:
+  # Safe-chain enforces its own minimum-package-age check independently of
+  # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
 
 jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -48,8 +55,38 @@ jobs:
       - name: Install dependencies
         run: pnpm ci
 
-      - name: Build GitBook documentation
-        run: pnpm docs:build
+      - name: Check internal doc links
+        run: pnpm docs:check-links
 
       - name: Verify LLM corpus artifacts are up to date
         run: pnpm llm:check
+
+      # Doc URLs are branch-specific (raw.githubusercontent .../main|prerelease, and
+      # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
+      # on — reliable here even though the PR is checked out detached. If the committed
+      # URLs target the wrong branch (e.g. a promotion that forgot `pnpm docs:retarget`),
+      # this fails. `ref_name` covers the workflow_call (release) path.
+      - name: Verify doc URLs target the right branch
+        run: pnpm docs:check-target "${{ github.base_ref || github.ref_name }}"
+
+  # External link liveness for the published docs + READMEs. Internal links and
+  # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
+  # targets. PR-only — skipped on the release `workflow_call` so external flakiness
+  # can't block a release. If it flakes on PRs, move to a scheduled (cron) workflow.
+  link-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Check external links (lychee)
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        with:
+          # Accept 403/429 so bot-hostile hosts (Discord, Etherscan) don't flake the gate.
+          # Placeholder URLs in code samples are listed in .lycheeignore.
+          args: --no-progress --max-retries 3 --accept 200..=299,403,429 --cache "docs/**/*.md" "README.md" "packages/*/README.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail: true

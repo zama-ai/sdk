@@ -113,7 +113,6 @@ async function handleInit(request: InitRequest): Promise<void> {
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] Init error:", message);
     sendError(id, type, message);
   }
 }
@@ -183,7 +182,6 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
     sendSuccess(id, type, response, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] Encrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -215,7 +213,6 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] UserDecrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -233,7 +230,6 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] PublicDecrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -254,7 +250,6 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] GenerateKeypair error:", message);
     sendError(id, type, message);
   }
 }
@@ -275,7 +270,6 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
     sendSuccess(id, type, eip712);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] CreateEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -297,7 +291,6 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
     sendSuccess(id, type, result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] CreateDelegatedEIP712 error:", message);
     sendError(id, type, message);
   }
 }
@@ -330,7 +323,6 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] DelegatedUserDecrypt error:", message);
     sendError(id, type, message);
   }
 }
@@ -353,7 +345,6 @@ async function handleRequestZKProofVerification(
     sendSuccess(id, type, result, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] RequestZKProofVerification error:", message);
     sendError(id, type, message);
   }
 }
@@ -371,7 +362,6 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] GetPublicKey error:", message);
     sendError(id, type, message);
   }
 }
@@ -392,7 +382,6 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[NodeWorker] GetPublicParams error:", message);
     sendError(id, type, message);
   }
 }
@@ -434,7 +423,7 @@ async function handleMessage(request: WorkerRequest): Promise<void> {
         await handleGetPublicParams(request);
         break;
       default:
-        console.error("[NodeWorker] Unknown request type:", request.type);
+        throw new Error(`Unknown request type: ${(request as WorkerRequest).type}`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

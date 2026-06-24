@@ -106,19 +106,19 @@ Created automatically by adapter-specific `createConfig` (viem, ethers, wagmi). 
 
 `GenericStorage | undefined`
 
-Persists the encrypted FHE keypair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
+Persists the encrypted transport key pair across sessions. Use `indexedDBStorage` (browser), `memoryStorage` (tests), or `asyncLocalStorage` (Node.js servers). Defaults to `indexedDBStorage` in browsers, `memoryStorage` elsewhere.
 
 ### permitStorage
 
 `GenericStorage | undefined`
 
-Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for keypair, memory for permits) for high-security flows.
+Optional dedicated storage for permits. Defaults to `storage`. Use this to keep permits out of long-lived storage (e.g. IndexedDB for transport key pair, memory for permits) for high-security flows.
 
-### keypairTTL
+### transportKeyPairTTL
 
 `number | undefined`
 
-FHE keypair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the keypair.
+Transport key pair validity duration in seconds. Default: `2592000` (30 days). Must be a positive integer. After expiry, the next decrypt prompts a wallet signature to regenerate the key pair.
 
 ### permitTTL
 
@@ -362,7 +362,7 @@ emitter.on(
 {% endtabs %}
 
 {% hint style="info" %}
-This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](/reference/react/useDecryptValues) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
+This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](../react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
 
 ### onWalletAccountChange
@@ -382,7 +382,7 @@ const unsubscribe = sdk.onWalletAccountChange(({ previous, next }) => {
 
 `(contracts?: Address[]) => Promise<void>`
 
-Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The keypair is not affected.
+Remove signed permits for the current signer. With a contract list, removes permits on the current chain whose payload touches any listed address. Without arguments, removes all permits across all chains and delegators. The transport key pair is not affected.
 
 ```ts
 await sdk.permits.revokePermits(["0xTokenA"]); // current chain only
@@ -393,7 +393,7 @@ await sdk.permits.revokePermits(); // all permits, all chains
 
 `() => Promise<void>`
 
-Wipe the keypair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
+Wipe the transport key pair **and** cascade-delete every permit for the current signer. Use for "log out" flows.
 
 ```ts
 await sdk.permits.clear();
@@ -408,7 +408,7 @@ await sdk.permits.clear();
 - `isActive({ contractAddress, delegatorAddress, delegateAddress })`
 - `getExpiry({ contractAddress, delegatorAddress, delegateAddress })`
 
-See the [Delegations reference](/reference/sdk/delegation) for the full API and propagation notes.
+See the [Delegations reference](./delegation.md) for the full API and propagation notes.
 
 ### dispose
 
@@ -432,7 +432,7 @@ sdk.terminate();
 
 ## Related
 
-- [Token](/reference/sdk/Token) — read/write token operations
-- [WrappedToken](/reference/sdk/WrappedToken) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) — on-chain token wrappers registry
-- [Configuration guide](/guides/configuration) — relayer, signer, and storage setup
+- [Token](./Token.md) — read/write token operations
+- [WrappedToken](./WrappedToken.md) — ERC-7984 ERC-20 wrapper operations (shield, unshield, allowance)
+- [WrappersRegistry](./WrappersRegistry.md) — on-chain token wrappers registry
+- [Configuration guide](../../guides/configuration.md) — relayer, signer, and storage setup

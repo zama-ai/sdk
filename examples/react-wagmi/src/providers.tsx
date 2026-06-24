@@ -53,7 +53,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
   onEvent: (event) => {
     // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
     // awaits the receipt before emitting). Saving here ensures the pending state

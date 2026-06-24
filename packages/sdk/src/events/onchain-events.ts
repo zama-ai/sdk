@@ -33,10 +33,6 @@ export const Topics = {
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
   UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
-  /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-  UnwrappedStarted: eventTopic(
-    "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-  ),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -90,32 +86,12 @@ export interface UnwrapFinalizedEvent {
   readonly unwrapRequestId?: EncryptedValue;
 }
 
-/** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
-export interface UnwrappedStartedEvent {
-  readonly eventName: "UnwrappedStarted";
-  /** Whether the unwrap start succeeded. */
-  readonly returnVal: boolean;
-  /** On-chain request ID. */
-  readonly requestId: bigint;
-  /** On-chain transaction ID. */
-  readonly txId: bigint;
-  /** Receiver address. */
-  readonly to: Address;
-  /** Refund address (if applicable). */
-  readonly refund: Address;
-  /** FHE encrypted value of the requested amount. */
-  readonly requestedAmount: EncryptedValue;
-  /** FHE encrypted value of the burn amount. */
-  readonly burnAmount: EncryptedValue;
-}
-
 /** Union of all decoded confidential token event types. */
 export type OnChainEvent =
   | ConfidentialTransferEvent
   | WrappedEvent
   | UnwrapRequestedEvent
-  | UnwrapFinalizedEvent
-  | UnwrappedStartedEvent;
+  | UnwrapFinalizedEvent;
 
 // ---------------------------------------------------------------------------
 // ABI decoding helpers (no external deps)
@@ -123,10 +99,6 @@ export type OnChainEvent =
 
 function topicToAddress(topic: Hex): Address {
   return getAddress(prefixHex(topic.slice(-40)));
-}
-
-function topicToBigInt(topic: Hex): bigint {
-  return BigInt(topic);
 }
 
 function topicToBytes32(topic: Hex): EncryptedValue {
@@ -147,10 +119,6 @@ function wordToAddress(data: Hex, index: number): Address {
 
 function wordToBigInt(data: Hex, index: number): bigint {
   return BigInt("0x" + wordAt(data, index));
-}
-
-function wordToBool(data: Hex, index: number): boolean {
-  return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
 function wordToBytes32(data: Hex, index: number): EncryptedValue {
@@ -243,32 +211,6 @@ export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null 
   };
 }
 
-/**
- * UnwrappedStarted(bool returnVal, uint256 indexed requestId, uint256 indexed txId, address indexed to,
- *                  address refund, bytes32 requestedAmount, bytes32 burnAmount)
- * Indexed: requestId (topics[1]), txId (topics[2]), to (topics[3])
- * Data: returnVal, refund, requestedAmount, burnAmount
- */
-export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedStarted) {
-    return null;
-  }
-  if (log.topics.length < 4) {
-    return null;
-  }
-
-  return {
-    eventName: "UnwrappedStarted",
-    requestId: topicToBigInt(log.topics[1]!),
-    txId: topicToBigInt(log.topics[2]!),
-    to: topicToAddress(log.topics[3]!),
-    returnVal: wordToBool(log.data, 0),
-    refund: wordToAddress(log.data, 1),
-    requestedAmount: wordToBytes32(log.data, 2),
-    burnAmount: wordToBytes32(log.data, 3),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Convenience helpers
 // ---------------------------------------------------------------------------
@@ -289,8 +231,7 @@ export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
     decodeConfidentialTransfer(log) ??
     decodeWrapped(log) ??
     decodeUnwrapRequested(log) ??
-    decodeUnwrapFinalized(log) ??
-    decodeUnwrappedStarted(log)
+    decodeUnwrapFinalized(log)
   );
 }
 
@@ -363,7 +304,6 @@ export const TOKEN_TOPICS = [
   Topics.Wrapped,
   Topics.UnwrapRequested,
   Topics.UnwrapFinalized,
-  Topics.UnwrappedStarted,
 ] as const;
 
 // ---------------------------------------------------------------------------

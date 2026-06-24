@@ -6,7 +6,8 @@ export interface PermissionScope {
   delegatorAddress: ChecksummedAddress;
 }
 
-export function keypairStorageKey(signerAddress: ChecksummedAddress): string {
+export function transportKeyPairStorageKey(signerAddress: ChecksummedAddress): string {
+  // The "keypair:" prefix is intentionally preserved for back-compat with already-persisted entries.
   return `keypair:${signerAddress}`;
 }
 

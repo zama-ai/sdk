@@ -2,7 +2,11 @@ export { ZamaError, ZamaErrorCode, matchZamaError } from "./base";
 export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { TransactionRevertedError } from "./transaction";
-export { KeypairExpiredError, InvalidKeypairError, NoCiphertextError } from "./credential";
+export {
+  TransportKeyPairExpiredError,
+  InvalidTransportKeyPairError,
+  NoCiphertextError,
+} from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { ChainMismatchError } from "./chain";
 export {
@@ -32,4 +36,5 @@ export {
   type BalanceErrorDetails,
 } from "./balance";
 export { wrapDecryptError } from "./decrypt";
+export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";

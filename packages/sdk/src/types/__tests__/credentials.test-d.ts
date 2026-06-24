@@ -1,13 +1,13 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Address, Hex } from "viem";
-import type { Permission, StoredKeypair } from "../../credentials/types";
+import type { Permission, StoredTransportKeyPair } from "../../credentials/types";
 
-describe("StoredKeypair", () => {
+describe("StoredTransportKeyPair", () => {
   test("has all required fields with correct types", () => {
-    expectTypeOf<StoredKeypair["publicKey"]>().toEqualTypeOf<Hex>();
-    expectTypeOf<StoredKeypair["privateKey"]>().toEqualTypeOf<Hex>();
-    expectTypeOf<StoredKeypair["createdAt"]>().toEqualTypeOf<number>();
-    expectTypeOf<StoredKeypair["expiresAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<StoredTransportKeyPair["publicKey"]>().toEqualTypeOf<Hex>();
+    expectTypeOf<StoredTransportKeyPair["privateKey"]>().toEqualTypeOf<Hex>();
+    expectTypeOf<StoredTransportKeyPair["createdAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<StoredTransportKeyPair["expiresAt"]>().toEqualTypeOf<number>();
   });
 });
 

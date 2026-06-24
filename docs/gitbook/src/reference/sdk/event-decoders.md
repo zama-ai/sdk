@@ -17,7 +17,6 @@ import {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   findWrapped,
   findUnwrapRequested,
   // ACL delegation events
@@ -33,7 +32,7 @@ import {
 
 ## decodeOnChainEvents
 
-`(logs: Log[]) => DecodedEvent[]`
+`(logs: RawLog[]) => OnChainEvent[]`
 
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
@@ -51,7 +50,7 @@ for (const event of events) {
       console.log(event.from, event.to, event.encryptedAmount);
       break;
     case "Wrapped":
-      console.log(event.account, event.amount);
+      console.log(event.to, event.amountIn);
       break;
     case "UnwrapRequested":
       console.log(event.receiver, event.unwrapRequestId);
@@ -63,11 +62,11 @@ for (const event of events) {
 }
 ```
 
-| Parameter | Type    | Description                                                 |
-| --------- | ------- | ----------------------------------------------------------- |
-| `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
+| Parameter | Type       | Description                                                 |
+| --------- | ---------- | ----------------------------------------------------------- |
+| `logs`    | `RawLog[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `OnChainEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, or `"UnwrapFinalized"`.
 
 ## TOKEN_TOPICS
 
@@ -94,7 +93,6 @@ Each decoder takes a single log entry and returns a typed event object, or `null
 | `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
 | `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
 | `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";
@@ -113,7 +111,7 @@ Search a log array and return the first matching event.
 
 ### findWrapped
 
-`(logs: Log[]) => WrappedEvent | undefined`
+`(logs: RawLog[]) => WrappedEvent | null`
 
 Finds the first `Wrapped` event in a set of logs. Useful after a shield transaction.
 
@@ -123,13 +121,13 @@ import { findWrapped } from "@zama-fhe/sdk";
 const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
 const wrappedEvent = findWrapped(receipt.logs);
 if (wrappedEvent) {
-  console.log(`Wrapped ${wrappedEvent.amount} tokens`);
+  console.log(`Wrapped ${wrappedEvent.amountIn} tokens`);
 }
 ```
 
 ### findUnwrapRequested
 
-`(logs: Log[]) => UnwrapRequestedEvent | undefined`
+`(logs: RawLog[]) => UnwrapRequestedEvent | null`
 
 Finds the first `UnwrapRequested` event in a set of logs. Useful after an unshield initiation.
 
@@ -226,5 +224,5 @@ ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEv
 
 ## Related
 
-- [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
-- [Token](/reference/sdk/Token) — high-level API for token operations
+- [Delegated Decryption](./delegation.md) — delegation API with on-chain event examples
+- [Token](./Token.md) — high-level API for token operations

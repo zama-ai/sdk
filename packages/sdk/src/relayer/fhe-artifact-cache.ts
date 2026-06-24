@@ -2,7 +2,7 @@ import { z } from "zod/mini";
 import type { GenericStorage } from "../types";
 import { assertNonNullable, toError } from "../utils";
 import type { GenericLogger } from "../worker/worker.types";
-import type { PublicKeyData, PublicParamsData } from "./relayer-sdk.types";
+import type { FheEncryptionKey, PublicParamsData } from "./relayer-sdk.types";
 
 // ── Cached data shapes ──────────────────────────────────────
 
@@ -60,8 +60,8 @@ const ManifestSchema = z.object({
 
 // ── Return types ────────────────────────────────────────────
 
-/** Return type of the public key fetcher. */
-type PublicKeyResult = PublicKeyData | null;
+/** Return type of the FHE encryption key fetcher. */
+type FheEncryptionKeyResult = FheEncryptionKey | null;
 
 /** Return type of the public params fetcher. */
 type PublicParamsResult = PublicParamsData | null;
@@ -131,9 +131,9 @@ export class FheArtifactCache {
   readonly #relayerUrl: string;
   readonly #ttlMs: number;
   readonly #logger: GenericLogger;
-  #publicKeyMem: PublicKeyResult | undefined;
+  #publicKeyMem: FheEncryptionKeyResult | undefined;
   #publicParamsMem = new Map<number, PublicParamsResult>();
-  #publicKeyInflight: Promise<PublicKeyResult> | null = null;
+  #publicKeyInflight: Promise<FheEncryptionKeyResult> | null = null;
   #publicParamsInflight = new Map<number, Promise<PublicParamsResult>>();
   #revalidationInflight: Promise<boolean> | null = null;
   /** In-memory guard to skip storage reads when revalidation isn't due. */
@@ -154,9 +154,11 @@ export class FheArtifactCache {
     this.#logger = opts.logger ?? console;
   }
 
-  // ── getPublicKey ────────────────────────────────────────
+  // ── fetchFheEncryptionKeyBytes ──────────────────────────
 
-  async getPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
+  async fetchFheEncryptionKeyBytes(
+    fetcher: () => Promise<FheEncryptionKeyResult>,
+  ): Promise<FheEncryptionKeyResult> {
     if (this.#publicKeyMem !== undefined) {
       return this.#publicKeyMem;
     }
@@ -166,7 +168,7 @@ export class FheArtifactCache {
       return this.#publicKeyInflight;
     }
 
-    this.#publicKeyInflight = this.#loadPublicKey(fetcher);
+    this.#publicKeyInflight = this.#loadFheEncryptionKey(fetcher);
     try {
       return await this.#publicKeyInflight;
     } finally {
@@ -174,7 +176,9 @@ export class FheArtifactCache {
     }
   }
 
-  async #loadPublicKey(fetcher: () => Promise<PublicKeyResult>): Promise<PublicKeyResult> {
+  async #loadFheEncryptionKey(
+    fetcher: () => Promise<FheEncryptionKeyResult>,
+  ): Promise<FheEncryptionKeyResult> {
     const key = pubkeyStorageKey(this.#chainId);
 
     const stored = await this.#readCachedEntry(
@@ -185,7 +189,7 @@ export class FheArtifactCache {
     );
     if (stored) {
       try {
-        const result: PublicKeyResult = {
+        const result: FheEncryptionKeyResult = {
           publicKeyId: stored.publicKeyId,
           publicKey: fromBase64(stored.publicKey),
         };

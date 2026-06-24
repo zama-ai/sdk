@@ -13,19 +13,19 @@
     "@zama-fhe/react-sdk": "workspace:*",
     "@zama-fhe/sdk": "workspace:*",
     "@zama-fhe/test-components": "workspace:*",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-router": "^7.17.0",
-    "tailwindcss": "^4.3.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router": "^7.18.0",
+    "tailwindcss": "^4.3.1",
     "viem": "^2.52.2",
-    "wagmi": "^3.6.1"
+    "wagmi": "^3.6.17"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/react": "^19.2.14",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.8"
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
   }
 }

@@ -54,7 +54,7 @@ const config = createConfig({
 const sdk = new ZamaSDK(config);
 const token = sdk.createToken("0xYourConfidentialToken");
 
-const balance = await token.balanceOf();
+const balance = await token.balanceOf("0xYourAddress");
 await token.confidentialTransfer("0xRecipient", 100n);
 ```
 

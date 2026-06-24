@@ -12,8 +12,6 @@ import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
 import { InputProofBytesType as InputProofBytesType_2 } from '@zama-fhe/relayer-sdk/node';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType as KeypairType_2 } from '@zama-fhe/relayer-sdk/node';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedUserDecryptEIP712Type_2 } from '@zama-fhe/relayer-sdk/node';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
@@ -113,6 +111,21 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     userDecrypt(params: UserDecryptPayload): Promise<UserDecryptResponseData>;
     protected abstract wireEvents(worker: TWorker): void;
 }
+
+// @public
+export const bscTestnet: {
+    readonly id: 97;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
+    readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
+    readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC";
+    readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
+};
 
 // @public
 export const chains: Record<number, FheChain>;
@@ -385,6 +398,21 @@ export const hoodi: {
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
     readonly executorAddress: "0xC316692627de536368d82e9121F1D44a550894E6";
+};
+
+// @public
+export const ingenTestnet: {
+    readonly id: 364301;
+    readonly gatewayChainId: 10901;
+    readonly relayerUrl: "";
+    readonly network: "https://rpc.ingen.t-rex.network";
+    readonly aclContractAddress: "0x09a4710BfBe7B557cD5CFE88BB31e9b5b85C419b";
+    readonly kmsContractAddress: "0xd885DEa6a924785fCcdf9CE993FEe27EA11832e6";
+    readonly inputVerifierContractAddress: "0x90f05B10db153365D8cB143EA17f5E5714D0bCD5";
+    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
+    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
+    readonly registryAddress: "0x7FC3D79EF9d01fA318CF2Aa5D91dDC492383Be0F";
+    readonly executorAddress: "0x1B05DE5b67b8f8363DC04E3a5996a616f11f8C7B";
 };
 
 // @public (undocumented)

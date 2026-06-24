@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isAddress } from "ethers";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
@@ -28,7 +28,7 @@ export function TransferCard({
   const [recipient, setRecipient] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
-  const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
+  const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
@@ -38,7 +38,7 @@ export function TransferCard({
     transfer.mutate({
       to: recipient as Address,
       amount: parsedAmount,
-      callbacks: { onEncryptComplete: () => setStep(2) },
+      onEncryptComplete: () => setStep(2),
     });
   }
 

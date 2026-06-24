@@ -33,12 +33,11 @@ export type {
   ClearValue,
   EIP712TypedData,
   NetworkType,
-  PublicKeyData,
+  FheEncryptionKey,
   PublicParamsData,
 } from "./relayer/relayer-sdk.types";
 export type {
   FheTypeName,
-  KeypairType,
   ZKProofLike,
   InputProofBytesType,
   FhevmInstanceConfig,
@@ -55,7 +54,16 @@ export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type
 export type { GenericLogger } from "./worker/worker.types";
 
 // Chain presets and types
-export { mainnet, sepolia, hoodi, hardhat, anvil, chains } from "./chains";
+export {
+  mainnet,
+  sepolia,
+  hoodi,
+  ingenTestnet,
+  bscTestnet,
+  hardhat,
+  anvil,
+  chains,
+} from "./chains";
 export type { FheChain } from "./chains/types";
 
 // ERC-165 interface IDs
@@ -92,7 +100,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { CredentialBundle, Keypair, Permission, StoredKeypair } from "./credentials";
+export type { TransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
@@ -157,8 +165,8 @@ export {
   EncryptionFailedError,
   DecryptionFailedError,
   TransactionRevertedError,
-  KeypairExpiredError,
-  InvalidKeypairError,
+  TransportKeyPairExpiredError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   ConfigurationError,
@@ -194,7 +202,6 @@ export type {
   WrappedEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
-  UnwrappedStartedEvent,
   OnChainEvent,
   DelegatedForUserDecryptionEvent,
   RevokedDelegationForUserDecryptionEvent,
@@ -215,7 +222,6 @@ export {
   decodeWrapped,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,

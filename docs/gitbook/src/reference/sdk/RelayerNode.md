@@ -49,7 +49,7 @@ Optional logger for observing worker lifecycle and request timing.
 
 `GenericStorage | undefined`
 
-Persistent storage for caching FHE public key and params.
+Persistent storage for caching the FHE encryption key and params.
 
 ### fheArtifactCacheTTL
 
@@ -59,6 +59,6 @@ How long cached FHE artifacts remain valid, in seconds. Must be a non-negative i
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the config to the SDK constructor
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser variant using Web Workers and WASM
-- [Configuration guide](/guides/configuration) — authentication and network presets
+- [ZamaSDK](./ZamaSDK.md) — pass the config to the SDK constructor
+- [RelayerWeb](./RelayerWeb.md) — browser variant using Web Workers and WASM
+- [Configuration guide](../../guides/configuration.md) — authentication and network presets

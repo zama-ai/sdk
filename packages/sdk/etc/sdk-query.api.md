@@ -15,7 +15,6 @@ import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
@@ -426,20 +425,8 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` event. Preferred. */{
+export type FinalizeUnwrapParams = {
     unwrapRequestId: EncryptedValue;
-    burnAmount?: never;
-}
-/**
-* Encrypted burn amount. Direct-call escape hatch for resuming an
-* unshield persisted by an older SDK version that did not record
-* `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
-* always rediscovers `unwrapRequestId` from the receipt and never reaches
-* this branch.
-*/
-| {
-    unwrapRequestId?: never;
-    burnAmount: EncryptedValue;
 };
 
 // @public (undocumented)
@@ -530,14 +517,6 @@ export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsCon
 // @public (undocumented)
 export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
-// @public
-export interface Keypair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
-
 // @public (undocumented)
 export interface ListPairsQueryConfig {
     // (undocumented)
@@ -565,7 +544,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -831,6 +810,14 @@ export interface TransferSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
 
+// @public
+export interface TransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
+
 // @public (undocumented)
 export interface UnderlyingAllowanceQueryConfig {
     // (undocumented)
@@ -914,19 +901,6 @@ export interface UnwrapParams {
 }
 
 // @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: EncryptedValue;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
-}
-
-// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     // (undocumented)
@@ -974,7 +948,7 @@ export interface WrappedEvent {
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
@@ -1013,7 +987,7 @@ export type ZamaConfig = {
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
     readonly permitStorage: GenericStorage;
-    readonly keypairTTL: number;
+    readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;

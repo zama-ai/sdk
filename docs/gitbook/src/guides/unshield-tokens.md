@@ -74,7 +74,7 @@ Callbacks are safe to use -- if one throws, the unshield still completes. The ty
 
 ### 3. Unshield your entire balance
 
-If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance, decrypts it, and unshields the full amount.
+If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance and unshields the full amount directly, without decrypting it first.
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -175,6 +175,6 @@ All mutation hooks automatically invalidate balance queries on success, so your 
 
 ## Next steps
 
-- See [WrappedToken](/reference/sdk/WrappedToken) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
-- See [Hooks](/reference/react/query-keys) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- See [WrappedToken](../reference/sdk/WrappedToken.md) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
+- See [Hooks](../reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
 - If your unshield fails, see [Handle Errors](handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.

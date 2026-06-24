@@ -1,9 +1,9 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import type { TransportKeyPair } from "../credentials/types";
 import type {
   ClearValue,
   DelegatedUserDecryptParams,
@@ -11,8 +11,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
@@ -23,8 +23,8 @@ import type { Address, Hex } from "viem";
  * encryption, decryption, key generation, and proof verification.
  */
 export interface FheOperations {
-  /** Generate an FHE keypair (public + private key). */
-  generateKeypair(): Promise<KeypairType<Hex>>;
+  /** Generate a transport key pair (ML-KEM public + private key) used for user-decryption. */
+  generateTransportKeyPair(): Promise<TransportKeyPair>;
 
   /** Create EIP-712 typed data for signing an FHE decrypt credential. */
   createEIP712(
@@ -60,8 +60,8 @@ export interface FheOperations {
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
 
-  /** Fetch the FHE network public key. Returns `null` if not available. */
-  getPublicKey(): Promise<PublicKeyData | null>;
+  /** Fetch the network's FHE encryption key. Returns `null` if not available. */
+  fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
 
   /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
   getPublicParams(bits: number): Promise<PublicParamsData | null>;

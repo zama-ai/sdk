@@ -10,14 +10,11 @@ export {
   unwrapFromBalanceContract,
   confidentialTotalSupplyContract,
   rateContract,
-} from "./encrypted";
-
-export {
   finalizeUnwrapContract,
   underlyingContract,
   inferredTotalSupplyContract,
   wrapContract,
-} from "./wrapper";
+} from "./confidential-wrapper";
 
 export {
   nameContract,

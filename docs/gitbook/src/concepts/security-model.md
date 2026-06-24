@@ -9,7 +9,9 @@ This page describes what the SDK protects, what it exposes, and the trust assump
 
 ## What is encrypted
 
-Confidential tokens encrypt **balances** and **transfer amounts**. When a user shields 1,000 tokens, the plaintext amount is FHE-encrypted client-side before the transaction reaches the blockchain. When a user transfers 500 tokens privately, the amount is encrypted before submission.
+Confidential tokens encrypt **balances** and **confidential transfer amounts**. When a user transfers 500 tokens privately, the plaintext amount is FHE-encrypted client-side before the transaction reaches the blockchain, and the on-chain contract only ever sees the ciphertext.
+
+Shielding and unshielding are the public boundary: they convert tokens between a public ERC-20 and its confidential form, so the **shield/unshield amount is visible on-chain** — it is an ordinary public ERC-20 movement. Privacy begins once tokens are in confidential form: the resulting balance is encrypted, and later confidential transfers hide their amounts.
 
 The on-chain contract stores FHE ciphertexts instead of `uint256` values. Only the balance owner (via their FHE private key and the relayer KMS) can decrypt their own balance.
 
@@ -21,6 +23,7 @@ FHE protects values, not metadata. The following remain publicly observable on-c
 - **Participant addresses** — sender and receiver addresses are part of the transaction.
 - **Token contract address** — which confidential token is involved.
 - **Transaction type** — whether the call is a shield, transfer, unshield, or approval.
+- **Shield and unshield amounts** — converting between public ERC-20 and confidential form is a public ERC-20 transfer, so the converted amount is visible. Only confidential transfers hide their amounts.
 - **Gas costs** — standard Ethereum gas accounting.
 - **Timing** — when transactions occur.
 
@@ -34,7 +37,7 @@ This is a value-privacy model, not a full-privacy model. It protects amounts whi
 
 ### The relayer and KMS
 
-The relayer provides the FHE infrastructure: encryption, decryption coordination, and keypair generation. The Key Management Service (KMS) holds the network's FHE master key and performs re-encryption.
+The relayer provides the FHE infrastructure: encryption, decryption coordination, and transport key pair generation. The Key Management Service (KMS) holds the network's FHE master key and performs re-encryption.
 
 The critical trust property: **the KMS re-encrypts ciphertexts without learning plaintext values.** When a user requests their balance, the KMS transforms the on-chain ciphertext from the network key to the user's public key. The KMS sees ciphertexts in and ciphertexts out — never plaintext.
 
@@ -54,24 +57,24 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 ## Credential storage
 
-### Keypair storage
+### Transport key pair storage
 
-The FHE private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
+The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
 | Parameter  | Value                                                            |
 | ---------- | ---------------------------------------------------------------- |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM keypair                                         |
-| Scope      | One keypair per signer address (chain-independent)               |
+| Key format | Plaintext ML-KEM key pair                                        |
+| Scope      | One transport key pair per signer address (chain-independent)    |
 
-The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](/concepts/permit-model) for the full lifecycle.
+The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
 
 ### Limitations
 
 <details>
 <summary>What same-origin isolation does NOT protect against</summary>
 
-- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the FHE private key directly. Reducing XSS surface is essential.
+- **Same-origin scripts** — any JavaScript running on the same origin can read IndexedDB. A cross-site scripting (XSS) vulnerability could access the transport private key directly. Reducing XSS surface is essential.
 - **Physical device access** — someone with access to the device's file system can read the IndexedDB contents.
 - **Malicious browser extensions** — extensions with broad permissions can access IndexedDB. Users should audit their installed extensions.
 
@@ -99,7 +102,7 @@ const config = createConfig({
 ```
 
 {% hint style="warning" %}
-Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate FHE private keys or manipulate encrypted values.
+Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
 {% endhint %}
 
 ## Browser security headers
@@ -150,7 +153,7 @@ EIP-712 permit signatures include a start timestamp and duration (in days). The 
 
 Two TTL controls are available:
 
-- `keypairTTL` — how long the FHE keypair remains valid (default: 30 days).
+- `transportKeyPairTTL` — how long the transport key pair remains valid (default: 30 days).
 - `permitTTL` — how long signed permits remain valid, in days (default: 30).
 
 ### Address-scoped authorization
@@ -161,7 +164,7 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 
 Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
-After revoking permits, the FHE keypair remains in storage. Use `sdk.permits.clear()` to also wipe the keypair.
+After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
 
 ## CSRF protection
 

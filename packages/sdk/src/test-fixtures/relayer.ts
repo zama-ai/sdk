@@ -17,7 +17,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     chains: [{ id: 31337 }],
     activeChain: { id: 31337 },
     switchChain: vi.fn(),
-    generateKeypair: vi.fn().mockResolvedValue({
+    generateTransportKeyPair: vi.fn().mockResolvedValue({
       publicKey: TEST_PUBLIC_KEY,
       privateKey: TEST_PRIVATE_KEY,
     }),
@@ -70,7 +70,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
-    getPublicKey: vi.fn().mockResolvedValue({
+    fetchFheEncryptionKeyBytes: vi.fn().mockResolvedValue({
       publicKeyId: "pk-1",
       publicKey: new Uint8Array([1]),
     }),
