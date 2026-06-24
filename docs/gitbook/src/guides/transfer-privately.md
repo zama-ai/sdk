@@ -194,7 +194,7 @@ The `matchZamaError` helper maps SDK error codes to user-friendly messages. See 
 
 ## Transfer into a contract (receiver hook)
 
-Sometimes the recipient is a contract that needs to *react* to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook in a single transaction, so the deposit can never land without the contract being told about it.
+Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook in a single transaction, so the deposit can never land without the contract being told about it.
 
 Use `token.confidentialTransferAndCall()` (or the `useConfidentialTransferAndCall` hook). The third argument, `data`, is an opaque payload forwarded verbatim to the receiver's hook. The SDK never encodes, validates, or inspects it — its layout is defined by the receiving contract's ABI, not the token's. Encode it with viem's `encodeAbiParameters` to match what the contract expects.
 
