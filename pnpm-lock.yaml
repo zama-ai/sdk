@@ -165,10 +165,10 @@ importers:
         specifier: '>=6'
         version: 6.17.0
       viem:
-        specifier: ^2.53.1
+        specifier: '>=2'
         version: 2.53.1(typescript@6.0.3)(zod@4.4.3)
       zod:
-        specifier: ^4.4.3
+        specifier: '>=4'
         version: 4.4.3
     devDependencies:
       '@tanstack/query-core':
