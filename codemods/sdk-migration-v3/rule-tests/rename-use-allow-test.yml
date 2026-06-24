@@ -1,0 +1,5 @@
+id: rename-use-allow
+valid:
+  - 'const a = useGrantPermit();'
+invalid:
+  - 'const a = useAllow();'

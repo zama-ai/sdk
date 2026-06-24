@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
+import { LoggerService } from "../../services/logger-service";
 
 const DUMMY_RELAYER_URL = "https://relayer.example.com";
 
@@ -19,6 +20,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1, 2, 3]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
@@ -43,6 +45,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       await cache1.fetchFheEncryptionKeyBytes(fetcher);
       expect(fetcher).toHaveBeenCalledOnce();
@@ -52,6 +55,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(null);
       const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
@@ -68,6 +72,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       await cache1.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk1));
 
@@ -75,6 +80,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 1,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
       const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
@@ -89,6 +95,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockResolvedValue(null);
 
@@ -112,6 +119,7 @@ describe("FheArtifactCache", () => {
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
@@ -132,6 +140,7 @@ describe("FheArtifactCache", () => {
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
@@ -157,7 +166,7 @@ describe("FheArtifactCache", () => {
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
-        logger,
+        logger: new LoggerService(logger),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
@@ -173,6 +182,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockRejectedValue(new Error("network down"));
 
@@ -187,6 +197,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
       const result = await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
@@ -208,6 +219,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp = {
         publicParamsId: "pp1",
@@ -235,6 +247,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       await cache1.getPublicParams(2048, fetcher);
 
@@ -242,6 +255,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(null);
       const result = await cache2.getPublicParams(2048, fetcher2);
@@ -255,6 +269,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp2048 = {
         publicParamsId: "pp-2048",
@@ -278,6 +293,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockResolvedValue(null);
 
@@ -294,6 +310,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp));
@@ -461,6 +478,7 @@ describe("FheArtifactCache", () => {
         storage: st,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
       // Prime the in-memory params map so revalidation discovers bits=2048
@@ -650,6 +668,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: 0,
       });
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
@@ -682,7 +701,7 @@ describe("FheArtifactCache", () => {
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
         ttl: CACHE_TTL,
-        logger,
+        logger: new LoggerService(logger),
       });
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
@@ -755,6 +774,7 @@ describe("FheArtifactCache", () => {
         storage: failDeleteStorage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
@@ -784,6 +804,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
       // Prime only PK (not params) — simulates a cold start where
@@ -809,6 +830,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
 
@@ -933,6 +955,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pk) => void;
@@ -959,6 +982,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pp) => void;
@@ -996,6 +1020,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
         ttl: 60,
       });
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));

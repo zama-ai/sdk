@@ -199,7 +199,7 @@ export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wa
 export type {
   RawLog,
   ConfidentialTransferEvent,
-  WrappedEvent,
+  WrapEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
   OnChainEvent,
@@ -219,13 +219,13 @@ export {
   findDelegatedForUserDecryption,
   findRevokedDelegationForUserDecryption,
   decodeConfidentialTransfer,
-  decodeWrapped,
+  decodeWrap,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
-  findWrapped,
+  findWrap,
 } from "./events";
 
 // Contract call builders

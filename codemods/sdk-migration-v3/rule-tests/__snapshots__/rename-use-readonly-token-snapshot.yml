@@ -1,0 +1,9 @@
+id: rename-use-readonly-token
+snapshots:
+  const t = useReadonlyToken(address);:
+    fixed: const t = useWrappedToken(address);
+    labels:
+    - source: useReadonlyToken
+      style: primary
+      start: 10
+      end: 26

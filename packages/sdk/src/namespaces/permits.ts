@@ -5,6 +5,7 @@ import type { CachingService } from "../services/caching-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import type { GenericLogger } from "../worker/worker.types";
 
 /**
  * Public namespace for permit and transport-key-pair management.
@@ -24,6 +25,7 @@ export class Permits {
   readonly #provider: GenericProvider;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
+  readonly #logger: GenericLogger;
 
   /** @internal */
   constructor(opts: {
@@ -31,11 +33,13 @@ export class Permits {
     provider: GenericProvider;
     cachingService: CachingService;
     credentialService: CredentialService | undefined;
+    logger: GenericLogger;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
     this.#cachingService = opts.cachingService;
     this.#credentialService = opts.credentialService;
+    this.#logger = opts.logger;
   }
 
   #requireCredentialService(operation: string): CredentialService {
@@ -153,8 +157,10 @@ export class Permits {
     try {
       await service.revokePermits(contracts);
     } finally {
-      await swallow("clear decrypt cache", () =>
-        this.#cachingService.clearForRequester(signerAddress),
+      await swallow(
+        "clear decrypt cache",
+        () => this.#cachingService.clearForRequester(signerAddress),
+        this.#logger,
       );
     }
   }
@@ -172,8 +178,10 @@ export class Permits {
     try {
       await service.clearCredentials();
     } finally {
-      await swallow("clear decrypt cache", () =>
-        this.#cachingService.clearForRequester(signerAddress),
+      await swallow(
+        "clear decrypt cache",
+        () => this.#cachingService.clearForRequester(signerAddress),
+        this.#logger,
       );
     }
   }

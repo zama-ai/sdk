@@ -547,7 +547,7 @@ export class Token {
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
-    void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.());
+    void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.(), this.sdk.logger);
 
     if (encryptedValues.length === 0) {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
@@ -599,7 +599,11 @@ export class Token {
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });
-    void swallow("transferFrom: onEncryptComplete", () => callbacks?.onEncryptComplete?.());
+    void swallow(
+      "transferFrom: onEncryptComplete",
+      () => callbacks?.onEncryptComplete?.(),
+      this.sdk.logger,
+    );
 
     if (encryptedValues.length === 0) {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
@@ -878,6 +882,7 @@ export class Token {
       config,
       emit: (input) => this.emit(input),
       onSubmitted,
+      logger: this.sdk.logger,
     });
   }
 
