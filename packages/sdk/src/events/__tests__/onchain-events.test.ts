@@ -5,13 +5,13 @@ import {
   Topics,
   TOKEN_TOPICS,
   decodeConfidentialTransfer,
-  decodeWrapped,
+  decodeWrap,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
-  findWrapped,
+  findWrap,
 } from "../onchain-events";
 
 // ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ describe("decodeConfidentialTransfer", () => {
   });
 
   test("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), addressTopic(BOB), HANDLE]);
+    const log = makeLog(Topics.Wrap, [addressTopic(ALICE), addressTopic(BOB), HANDLE]);
     expect(decodeConfidentialTransfer(log)).toBeNull();
   });
 
@@ -74,28 +74,29 @@ describe("decodeConfidentialTransfer", () => {
 });
 
 // ---------------------------------------------------------------------------
-// decodeWrapped
+// decodeWrap
 // ---------------------------------------------------------------------------
 
-describe("decodeWrapped", () => {
-  test("decodes a valid Wrapped log", () => {
-    const data = `0x${uint256(500n)}` as Hex;
-    const log = makeLog(Topics.Wrapped, [addressTopic(BOB)], data);
-    const event = decodeWrapped(log);
+describe("decodeWrap", () => {
+  test("decodes a valid Wrap log", () => {
+    const data = `0x${uint256(500n)}${HANDLE.slice(2)}` as Hex;
+    const log = makeLog(Topics.Wrap, [addressTopic(BOB)], data);
+    const event = decodeWrap(log);
     expect(event).not.toBeNull();
-    expect(event!.eventName).toBe("Wrapped");
+    expect(event!.eventName).toBe("Wrap");
     expect(event!.to.toLowerCase()).toBe(BOB.toLowerCase());
-    expect(event!.amountIn).toBe(500n);
+    expect(event!.roundedAmount).toBe(500n);
+    expect(event!.encryptedWrappedAmount).toBe(HANDLE);
   });
 
   test("returns null for wrong topic0", () => {
     const log = makeLog(Topics.ConfidentialTransfer, [addressTopic(BOB)]);
-    expect(decodeWrapped(log)).toBeNull();
+    expect(decodeWrap(log)).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
-    const log = makeLog(Topics.Wrapped, []);
-    expect(decodeWrapped(log)).toBeNull();
+    const log = makeLog(Topics.Wrap, []);
+    expect(decodeWrap(log)).toBeNull();
   });
 });
 
@@ -116,7 +117,7 @@ describe("decodeUnwrapRequested", () => {
   });
 
   test("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
+    const log = makeLog(Topics.Wrap, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrapRequested(log)).toBeNull();
   });
 
@@ -144,7 +145,7 @@ describe("decodeUnwrapFinalized", () => {
   });
 
   test("returns null for wrong topic0", () => {
-    const log = makeLog(Topics.Wrapped, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
+    const log = makeLog(Topics.Wrap, [addressTopic(ALICE), UNWRAP_REQUEST_ID]);
     expect(decodeUnwrapFinalized(log)).toBeNull();
   });
 
@@ -214,7 +215,7 @@ describe("decodeOnChainEvents", () => {
 });
 
 // ---------------------------------------------------------------------------
-// findUnwrapRequested / findWrapped
+// findUnwrapRequested / findWrap
 // ---------------------------------------------------------------------------
 
 describe("findUnwrapRequested", () => {
@@ -240,17 +241,18 @@ describe("findUnwrapRequested", () => {
   });
 });
 
-describe("findWrapped", () => {
-  test("finds the first Wrapped event in logs", () => {
-    const data = `0x${uint256(50n)}` as Hex;
-    const logs: RawLog[] = [makeLog(Topics.Wrapped, [addressTopic(ALICE)], data)];
-    const event = findWrapped(logs);
+describe("findWrap", () => {
+  test("finds the first Wrap event in logs", () => {
+    const data = `0x${uint256(50n)}${HANDLE.slice(2)}` as Hex;
+    const logs: RawLog[] = [makeLog(Topics.Wrap, [addressTopic(ALICE)], data)];
+    const event = findWrap(logs);
     expect(event).not.toBeNull();
-    expect(event!.amountIn).toBe(50n);
+    expect(event!.roundedAmount).toBe(50n);
+    expect(event!.encryptedWrappedAmount).toBe(HANDLE);
   });
 
-  test("returns null when no Wrapped exists", () => {
-    expect(findWrapped([])).toBeNull();
+  test("returns null when no Wrap exists", () => {
+    expect(findWrap([])).toBeNull();
   });
 });
 
@@ -262,7 +264,7 @@ describe("TOKEN_TOPICS", () => {
   test("contains all token event topic hashes", () => {
     expect(TOKEN_TOPICS).toHaveLength(4);
     expect(TOKEN_TOPICS).toContain(Topics.ConfidentialTransfer);
-    expect(TOKEN_TOPICS).toContain(Topics.Wrapped);
+    expect(TOKEN_TOPICS).toContain(Topics.Wrap);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapRequested);
     expect(TOKEN_TOPICS).toContain(Topics.UnwrapFinalized);
   });
