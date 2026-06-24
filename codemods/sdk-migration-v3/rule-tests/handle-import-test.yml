@@ -1,0 +1,5 @@
+id: handle-import
+valid:
+  - 'import { EncryptedValue } from "@zama-fhe/sdk";'
+invalid:
+  - 'import { Handle } from "@zama-fhe/sdk";'

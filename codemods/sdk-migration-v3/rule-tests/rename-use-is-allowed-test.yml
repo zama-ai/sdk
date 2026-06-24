@@ -1,0 +1,5 @@
+id: rename-use-is-allowed
+valid:
+  - 'const a = useHasPermit();'
+invalid:
+  - 'const a = useIsAllowed();'

@@ -1,0 +1,6 @@
+id: use-delegation-status-tokenaddress-to-contractaddress
+valid:
+  # tokenAddress outside useDelegationStatus must NOT be touched
+  - 'const b = useConfidentialBalance({ tokenAddress: addr });'
+invalid:
+  - 'const s = useDelegationStatus({ tokenAddress: addr, delegateAddress: del });'

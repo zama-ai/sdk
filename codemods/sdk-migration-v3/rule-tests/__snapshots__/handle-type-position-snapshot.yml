@@ -1,0 +1,9 @@
+id: handle-type-position
+snapshots:
+  'let h: Handle;':
+    fixed: 'let h: EncryptedValue;'
+    labels:
+    - source: Handle
+      style: primary
+      start: 7
+      end: 13

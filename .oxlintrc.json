@@ -157,6 +157,7 @@
     {
       "files": [
         "scripts/**",
+        "codemods/**",
         "**/*.config.ts",
         "**/*.config.mts",
         "**/*.config.cts",

@@ -1,0 +1,13 @@
+id: use-delegation-status-tokenaddress-shorthand
+snapshots:
+  const s = useDelegationStatus({ tokenAddress });:
+    fixed: 'const s = useDelegationStatus({ contractAddress: tokenAddress });'
+    labels:
+    - source: tokenAddress
+      style: primary
+      start: 32
+      end: 44
+    - source: useDelegationStatus({ tokenAddress })
+      style: secondary
+      start: 10
+      end: 47

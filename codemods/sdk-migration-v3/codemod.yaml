@@ -1,0 +1,44 @@
+schema_version: "1.0"
+
+name: "@zama-fhe/sdk-migration-v3"
+version: "0.1.0"
+description: "Mechanical codemods for the breaking changes across the @zama-fhe/sdk + @zama-fhe/react-sdk v3.x line (renames, config-key changes, structural removals). Assumes a 3.0.x floor and brings code up to the latest v3.x; transforms accrue per breaking minor (currently 3.0 -> 3.1). Idempotent, so re-running from any 3.x floor is safe. Provisional until 3.1.0 ships; the 3.0 -> 3.1 set is derived from the v3.0.1 -> v3.1.0-alpha.14 api-report diff."
+author: "Zama"
+license: "BSD-3-Clause-Clear"
+repository: "https://github.com/zama-ai/sdk"
+
+targets:
+  # Keep this aligned with the files matched in workflow.yaml.
+  languages: ["typescript", "tsx"]
+
+# Mirror the @zama-fhe/sdk + @zama-fhe/react-sdk package.json keywords (so the codemod is
+# discoverable by the same domain terms as the SDK it migrates) plus the codemod-specific ones.
+keywords:
+  [
+    "fhe",
+    "zama",
+    "fhevm",
+    "confidential",
+    "erc20",
+    "privacy",
+    "homomorphic-encryption",
+    "token",
+    "ethereum",
+    "blockchain",
+    "react",
+    "hooks",
+    "migration",
+    "upgrade",
+    "codemod",
+  ]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []
+
+workflows:
+  - name: main
+    default: true
+    path: workflow.yaml

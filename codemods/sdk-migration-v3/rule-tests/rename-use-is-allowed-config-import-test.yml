@@ -1,0 +1,5 @@
+id: rename-use-is-allowed-config-import
+valid:
+  - 'import type { UseHasPermitConfig } from "@zama-fhe/react-sdk";'
+invalid:
+  - 'import type { UseIsAllowedConfig } from "@zama-fhe/react-sdk";'

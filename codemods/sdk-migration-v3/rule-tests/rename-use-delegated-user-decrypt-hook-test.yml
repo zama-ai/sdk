@@ -1,0 +1,5 @@
+id: rename-use-delegated-user-decrypt-hook
+valid:
+  - 'const d = useDelegatedDecrypt();'
+invalid:
+  - 'const d = useDelegatedUserDecrypt();'
