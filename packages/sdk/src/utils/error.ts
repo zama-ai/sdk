@@ -164,8 +164,14 @@ export function classifyWorkerError(error: unknown): WorkerErrorClassification {
  * user decrypt handle <h>!`. Matching it here, once, against the pinned
  * `@zama-fhe/relayer-sdk`, is what lets us surface a typed NotEntitledError
  * (the "dapp contract … is not authorized" variant is a dapp misconfig and is
- * intentionally left to DecryptionFailedError). See the guard test in
- * `error.test.ts` if the relayer message ever changes.
+ * intentionally left to DecryptionFailedError).
+ *
+ * This is a deliberate bridge, not a destination: `@zama-fhe/relayer-sdk` ships
+ * a typed `ACLUserDecryptionError`, but its active `userDecrypt` path still
+ * throws a plain Error. TODO(SDK-239 follow-up): once the relayer surfaces the
+ * typed/coded ACL error from that path, key off the code instead of the message
+ * and drop this matcher. The `error.test.ts` guard reads the installed relayer
+ * source and fails loudly if the message drifts before then.
  */
 function isNotEntitledMessage(message: string): boolean {
   const m = message.toLowerCase();

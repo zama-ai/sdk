@@ -7614,6 +7614,8 @@ The configured signer (for user decrypt) or delegator (for delegated decrypt) is
 
 The SDK derives this typed error from the relayer's own authoritative ACL check — it adds no extra on-chain reads.
 
+> **Scope:** `NotEntitledError` covers the **actor** (signer/delegator) not being entitled. The rarer "the dapp contract itself is not authorized for this handle" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
+
 The error carries `handle`, `contractAddress`, and `account`.
 
 ```ts

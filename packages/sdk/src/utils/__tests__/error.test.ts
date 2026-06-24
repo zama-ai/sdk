@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { describe, test, expect } from "../../test-fixtures";
 import {
   toError,
@@ -286,5 +288,16 @@ describe("classifyDecryptWorkerError", () => {
       errorCode: ZamaErrorCode.RpcRateLimited,
       retryAfter: undefined,
     });
+  });
+
+  // Drift guard wired to the REAL dependency (not a hand-copied constant): if a
+  // @zama-fhe/relayer-sdk bump reworffds its not-entitled message, the substrings
+  // isNotEntitledMessage keys on disappear here and this fails loudly — otherwise
+  // NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED (the SDK-239 bug).
+  test("the installed @zama-fhe/relayer-sdk still emits the message our matcher keys on", () => {
+    const require = createRequire(import.meta.url);
+    const source = readFileSync(require.resolve("@zama-fhe/relayer-sdk/node"), "utf8");
+    expect(source).toContain("is not authorized to user decrypt");
+    expect(source.toLowerCase()).toContain("user address");
   });
 });
