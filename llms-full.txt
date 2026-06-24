@@ -4938,6 +4938,11 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
+
+> [!INFO]
+> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — ephemeral keypair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.userDecrypt`, which makes you build the credential bundle by hand, is an escape hatch — reach for it only when you genuinely need that control.
+
+
 Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:

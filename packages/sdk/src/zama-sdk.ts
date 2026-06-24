@@ -32,6 +32,18 @@ import { WrappersRegistry } from "./wrappers-registry";
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
+  /**
+   * Low-level FHE backend (chain management plus raw relayer operations).
+   *
+   * This is an escape hatch for callers that must assemble decryption
+   * credentials by hand. Prefer the high-level namespaces instead — they
+   * manage the ephemeral keypair and EIP-712 permit for you:
+   *
+   * - decrypt → {@link Decryption | `sdk.decryption.decryptValues` / `delegatedDecryptValues` / `decryptPublicValues`}
+   * - encrypt → {@link ZamaSDK.encrypt | `sdk.encrypt`}
+   *
+   * @internal
+   */
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;

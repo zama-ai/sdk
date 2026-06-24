@@ -19590,7 +19590,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // (undocumented)
+    // @internal
     readonly relayer: RelayerDispatcher;
     // (undocumented)
     readonly signer: GenericSigner | undefined;

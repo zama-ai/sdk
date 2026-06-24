@@ -37,10 +37,22 @@ export interface FheOperations {
   /** Encrypt plaintext values into FHE ciphertexts. */
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
-  /** Decrypt FHE encrypted values using the user's own credentials. */
+  /**
+   * Decrypt FHE encrypted values using the user's own credentials.
+   *
+   * Low-level: the caller assembles the credential bundle (transport keypair,
+   * EIP-712 permit) and passes it in {@link UserDecryptParams}. Prefer the
+   * high-level {@link Decryption.decryptValues | `sdk.decryption.decryptValues`},
+   * which manages credentials, caching, and error wrapping for you.
+   */
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
-  /** Decrypt encrypted values using the network public key (no credential needed). */
+  /**
+   * Decrypt encrypted values using the network public key (no credential needed).
+   *
+   * Low-level. Prefer the high-level
+   * {@link Decryption.decryptPublicValues | `sdk.decryption.decryptPublicValues`}.
+   */
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
@@ -52,7 +64,13 @@ export interface FheOperations {
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  /** Decrypt FHE encrypted values using delegated user credentials. */
+  /**
+   * Decrypt FHE encrypted values using delegated user credentials.
+   *
+   * Low-level: the caller assembles the delegated credential bundle in
+   * {@link DelegatedUserDecryptParams}. Prefer the high-level
+   * {@link Decryption.delegatedDecryptValues | `sdk.decryption.delegatedDecryptValues`}.
+   */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
