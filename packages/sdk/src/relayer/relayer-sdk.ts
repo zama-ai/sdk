@@ -41,17 +41,17 @@ export interface FheOperations {
    * Decrypt FHE encrypted values using the user's own credentials.
    *
    * Low-level: the caller assembles the credential bundle (transport keypair,
-   * EIP-712 permit) and passes it in {@link UserDecryptParams}. Prefer the
-   * high-level {@link Decryption.decryptValues | `sdk.decryption.decryptValues`},
-   * which manages credentials, caching, and error wrapping for you.
+   * EIP-712 permit) in {@link UserDecryptParams}. Prefer the high-level
+   * `sdk.decryption.decryptValues` ({@link Decryption.decryptValues}), which
+   * manages credentials, caching, and error wrapping.
    */
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /**
    * Decrypt encrypted values using the network public key (no credential needed).
    *
-   * Low-level. Prefer the high-level
-   * {@link Decryption.decryptPublicValues | `sdk.decryption.decryptPublicValues`}.
+   * Low-level. Prefer the high-level `sdk.decryption.decryptPublicValues`
+   * ({@link Decryption.decryptPublicValues}).
    */
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
@@ -69,7 +69,7 @@ export interface FheOperations {
    *
    * Low-level: the caller assembles the delegated credential bundle in
    * {@link DelegatedUserDecryptParams}. Prefer the high-level
-   * {@link Decryption.delegatedDecryptValues | `sdk.decryption.delegatedDecryptValues`}.
+   * `sdk.decryption.delegatedDecryptValues` ({@link Decryption.delegatedDecryptValues}).
    */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
