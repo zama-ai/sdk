@@ -39,6 +39,12 @@ describe("Topic constants match keccak256", () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
     });
   }
+
+  // Pin the deployed Wrap topic0 to a literal so a regression to a
+  // wrong-but-self-consistent signature (the SDK-240 root cause) can't stay green.
+  test("Topics.Wrap matches the deployed wrapper topic0", () => {
+    expect(Topics.Wrap).toBe("0xcda691c81d2fd787d8c209adb4ae8b138f857d7575adf7669195ed05482e701b");
+  });
 });
 
 describe("decodeConfidentialTransfer", () => {
