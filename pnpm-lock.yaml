@@ -85,6 +85,9 @@ importers:
       '@zama-fhe/relayer-sdk':
         specifier: 0.4.3
         version: 0.4.3
+      codemod:
+        specifier: 1.12.3
+        version: 1.12.3
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.1
         version: 9.3.1
@@ -142,6 +145,18 @@ importers:
       vitest:
         specifier: ^4.1.9
         version: 4.1.9(@types/node@22.19.21)(@vitest/coverage-v8@4.1.9)(@vitest/ui@4.1.9)(happy-dom@20.10.6)(vite@8.0.16(@types/node@22.19.21)(jiti@2.7.0)(yaml@2.9.0))
+
+  codemods/sdk-migration-v3:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      codemod:
+        specifier: 1.12.3
+        version: 1.12.3
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/react-sdk:
     dependencies:
@@ -453,6 +468,38 @@ packages:
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
+
+  '@codemod.com/cli-darwin-arm64@1.12.3':
+    resolution: {integrity: sha512-AN6NmKl0QHTKDIrINXQr8s9kepjULhUThsZbviQZ3RTLs35OtGeJDh+L/4jkavNrhGIDLyN8KNdhTsGBBVb53A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@codemod.com/cli-darwin-x64@1.12.3':
+    resolution: {integrity: sha512-Ag5VQZc6vnoPwpQq3JEqaDtjc5vnXM339p5bAiJFF6/gq25W6pl0qsgr5OOL4s8Ct49t1BbQzbMxf1Y2z7LduQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@codemod.com/cli-linux-arm64-gnu@1.12.3':
+    resolution: {integrity: sha512-/p+oqY9bqBg899G9FZHFlOQ80371lq9QKw2uQWha55Ln+Ozc5Ebz3M4VGn7vO9Y8+7RFOnDMpeJHzatP+l13yg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@codemod.com/cli-linux-x64-gnu@1.12.3':
+    resolution: {integrity: sha512-9nobWgnAqlFF9gAQLeiNsiGJGiQ+G+ZJ7DlDmplLJTUFdQRElTNZV/lNa1fb9eLgW1q6QCQFErM25EKOurRn3w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@codemod.com/cli-win32-x64-msvc@1.12.3':
+    resolution: {integrity: sha512-Z8tMg3/SxcKwQSbIc3GxofJt/70ygC31Qxv5i4/+S6Kw8CWRpUGS6LLhkbgjZJfex/bLE5nQD328kv6fEYXXnQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -1570,6 +1617,9 @@ packages:
   '@types/jsesc@2.5.1':
     resolution: {integrity: sha512-9VN+6yxLOPLOav+7PwjZbxiID2bVaeq0ED4qSQmdQTdjnXJSaCVKTR58t15oqH1H5t8Ng2ZX1SabJVoN9Q34bw==}
 
+  '@types/node@20.19.43':
+    resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
+
   '@types/node@22.19.21':
     resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
 
@@ -1912,6 +1962,11 @@ packages:
   cliui@9.0.1:
     resolution: {integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==}
     engines: {node: '>=20'}
+
+  codemod@1.12.3:
+    resolution: {integrity: sha512-/LMLkf2UDU3uHjUg+6PgIn0a4+scG2IvOPU/myhzg+tB7zlJouJIf6vj8LRYlsWlbFgC8iuBTT88FR464puE0A==}
+    engines: {node: '>= 16.0.0'}
+    hasBin: true
 
   color-convert@1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
@@ -3877,6 +3932,21 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
+  '@codemod.com/cli-darwin-arm64@1.12.3':
+    optional: true
+
+  '@codemod.com/cli-darwin-x64@1.12.3':
+    optional: true
+
+  '@codemod.com/cli-linux-arm64-gnu@1.12.3':
+    optional: true
+
+  '@codemod.com/cli-linux-x64-gnu@1.12.3':
+    optional: true
+
+  '@codemod.com/cli-win32-x64-msvc@1.12.3':
+    optional: true
+
   '@colors/colors@1.5.0':
     optional: true
 
@@ -4763,6 +4833,10 @@ snapshots:
 
   '@types/jsesc@2.5.1': {}
 
+  '@types/node@20.19.43':
+    dependencies:
+      undici-types: 6.19.2
+
   '@types/node@22.19.21':
     dependencies:
       undici-types: 6.19.2
@@ -5090,6 +5164,16 @@ snapshots:
       string-width: 7.2.0
       strip-ansi: 7.2.0
       wrap-ansi: 9.0.2
+
+  codemod@1.12.3:
+    dependencies:
+      detect-libc: 2.1.2
+    optionalDependencies:
+      '@codemod.com/cli-darwin-arm64': 1.12.3
+      '@codemod.com/cli-darwin-x64': 1.12.3
+      '@codemod.com/cli-linux-arm64-gnu': 1.12.3
+      '@codemod.com/cli-linux-x64-gnu': 1.12.3
+      '@codemod.com/cli-win32-x64-msvc': 1.12.3
 
   color-convert@1.9.3:
     dependencies:

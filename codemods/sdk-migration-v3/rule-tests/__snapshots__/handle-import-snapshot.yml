@@ -1,0 +1,9 @@
+id: handle-import
+snapshots:
+  import { Handle } from "@zama-fhe/sdk";:
+    fixed: import { EncryptedValue } from "@zama-fhe/sdk";
+    labels:
+    - source: Handle
+      style: primary
+      start: 9
+      end: 15
