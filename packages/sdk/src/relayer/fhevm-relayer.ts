@@ -20,17 +20,17 @@
  *
  * @see {@link toFhevmChain} for the chain projection.
  */
-import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
-import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
+import { readKmsSignersContext } from "@fhevm/sdk/actions/base";
 import {
   createKmsDelegatedUserDecryptEip712,
   createKmsUserDecryptEip712,
 } from "@fhevm/sdk/actions/chain";
-import { readKmsSignersContext } from "@fhevm/sdk/actions/base";
-import { createPublicClient, custom, http } from "viem";
+import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
 import type { Address, Hex } from "viem";
-import type { FheChain } from "../chains/types";
+import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
+import type { FheChain } from "../chains/types";
 import type { TransportKeyPair } from "../credentials/types";
 import type {
   ClearValue,
@@ -94,7 +94,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
   constructor(config: FhevmRelayerConfig) {
     this.chain = config.chain;
     this.#cleartext = config.cleartext;
-    this.#runtime = config.runtime;
+    this.#runtime = { moduleVersions: "auto", ...config.runtime };
     this.#options = config.options;
   }
 
