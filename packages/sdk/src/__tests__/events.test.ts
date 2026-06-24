@@ -1,5 +1,14 @@
 import { describe, test, expect } from "../test-fixtures";
-import { getAddress, keccak256, toHex, toBytes, type Address, type Hex } from "viem";
+import {
+  encodeEventTopics,
+  getAddress,
+  keccak256,
+  toHex,
+  toBytes,
+  type Address,
+  type Hex,
+} from "viem";
+import { confidentialWrapperAbi } from "../abi/confidential-wrapper.abi";
 import {
   Topics,
   decodeConfidentialTransfer,
@@ -45,6 +54,27 @@ describe("Topic constants match keccak256", () => {
   test("Topics.Wrap matches the deployed wrapper topic0", () => {
     expect(Topics.Wrap).toBe("0xcda691c81d2fd787d8c209adb4ae8b138f857d7575adf7669195ed05482e701b");
   });
+});
+
+// Cross-check each token topic0 against the bundled wrapper ABI (the single source
+// of truth). A one-sided ABI⇄decoder drift — the SDK-240 root cause, where SDK-216
+// updated the ABI without the hand-written decoder — fails here loudly. Stronger than
+// the keccak test above, which recomputes from the same hand-written signature string.
+describe("Token topics stay in sync with the bundled wrapper ABI", () => {
+  const eventNames = [
+    "ConfidentialTransfer",
+    "Wrap",
+    "UnwrapRequested",
+    "UnwrapFinalized",
+  ] as const;
+
+  for (const eventName of eventNames) {
+    test(eventName, () => {
+      expect(Topics[eventName]).toBe(
+        encodeEventTopics({ abi: confidentialWrapperAbi, eventName })[0],
+      );
+    });
+  }
 });
 
 describe("decodeConfidentialTransfer", () => {
