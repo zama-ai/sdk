@@ -10,20 +10,40 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const repoRoot = process.cwd();
+export const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
 
-const BRANCH_TO_SPACE = { main: "stable", prerelease: "alpha" };
+// `stable` is GitBook's default space and is omitted from docs.zama.org URLs, so a
+// stale stable-form URL on the prerelease branch has *no* space segment at all — we
+// can't catch it by looking for a literal wrong segment (the old approach silently
+// missed it). Instead read the actual space — the segment after /protocol/sdk/, or
+// the implicit `stable` when none is present — and compare it to what's expected.
+const SPACE_URL_RE = /docs\.zama\.org\/protocol\/sdk\/(?:(alpha|stable)\/)?/g;
 
-const expected = process.argv[2];
-if (!Object.hasOwn(BRANCH_TO_SPACE, expected)) {
-  // Not a publish branch (e.g. a feature→feature PR) — nothing to assert.
-  console.log(`docs:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`);
-  process.exit(0);
+/**
+ * Human-readable problems with the branch/space URLs in `content` for a PR
+ * landing on `expected` (`main` or `prerelease`). Empty array means clean.
+ */
+export function findUrlProblems(content, expected) {
+  const space = BRANCH_TO_SPACE[expected];
+  const otherBranch = expected === "main" ? "prerelease" : "main";
+  const problems = [];
+
+  if (content.includes(`raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`)) {
+    problems.push(`links to the "${otherBranch}" branch (expected "${expected}")`);
+  }
+
+  for (const match of content.matchAll(SPACE_URL_RE)) {
+    const actualSpace = match[1] ?? "stable";
+    if (actualSpace !== space) {
+      problems.push(`links to the "${actualSpace}" GitBook space (expected "${space}")`);
+      break; // one space mismatch per file is enough to flag it
+    }
+  }
+
+  return problems;
 }
-const space = BRANCH_TO_SPACE[expected];
-const otherBranch = expected === "main" ? "prerelease" : "main";
-const otherSpace = space === "stable" ? "alpha" : "stable";
 
 function walkMarkdown(dir, acc = []) {
   for (const name of readdirSync(dir)) {
@@ -37,50 +57,60 @@ function walkMarkdown(dir, acc = []) {
   return acc;
 }
 
-const docFiles = [
-  ...walkMarkdown(join(repoRoot, "docs/gitbook/src")),
-  join(repoRoot, "README.md"),
-  join(repoRoot, "packages/sdk/README.md"),
-  join(repoRoot, "packages/react-sdk/README.md"),
-];
+function main() {
+  const repoRoot = process.cwd();
 
-// Literal substrings, matched with String.includes — never RegExp built from
-// input, so there's nothing to escape and no regex-injection surface.
-const wrongBranchUrl = `raw.githubusercontent.com/zama-ai/sdk/${otherBranch}/`;
-const wrongSpaceUrl = `docs.zama.org/protocol/sdk/${otherSpace}/`;
-const rel = (p) => p.replace(`${repoRoot}/`, "");
+  const expected = process.argv[2];
+  if (!Object.hasOwn(BRANCH_TO_SPACE, expected)) {
+    // Not a publish branch (e.g. a feature→feature PR) — nothing to assert.
+    console.log(
+      `docs:check-target: "${expected ?? "(nothing)"}" is not main/prerelease; skipping.`,
+    );
+    process.exit(0);
+  }
+  const space = BRANCH_TO_SPACE[expected];
 
-const problems = [];
+  const docFiles = [
+    ...walkMarkdown(join(repoRoot, "docs/gitbook/src")),
+    join(repoRoot, "README.md"),
+    join(repoRoot, "packages/sdk/README.md"),
+    join(repoRoot, "packages/react-sdk/README.md"),
+  ];
 
-for (const file of docFiles) {
-  let content;
-  try {
-    content = readFileSync(file, "utf8");
-  } catch {
-    continue;
+  const rel = (p) => p.replace(`${repoRoot}/`, "");
+  const problems = [];
+
+  for (const file of docFiles) {
+    let content;
+    try {
+      content = readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    for (const problem of findUrlProblems(content, expected)) {
+      problems.push(`${rel(file)}: ${problem}`);
+    }
   }
-  if (content.includes(wrongBranchUrl)) {
-    problems.push(`${rel(file)}: links to the "${otherBranch}" branch (expected "${expected}")`);
+
+  const configPath = join(repoRoot, "docs/llm/corpus.config.json");
+  const { rawGithubBaseUrl } = JSON.parse(readFileSync(configPath, "utf8"));
+  if (!rawGithubBaseUrl.replace(/\/+$/u, "").endsWith(`/zama-ai/sdk/${expected}`)) {
+    problems.push(
+      `docs/llm/corpus.config.json: rawGithubBaseUrl is "${rawGithubBaseUrl}" (expected branch "${expected}")`,
+    );
   }
-  if (content.includes(wrongSpaceUrl)) {
-    problems.push(`${rel(file)}: links to the "${otherSpace}" GitBook space (expected "${space}")`);
+
+  if (problems.length > 0) {
+    console.error(
+      `✖ Doc URLs do not target "${expected}":\n${problems.map((p) => `  - ${p}`).join("\n")}`,
+    );
+    console.error(`\nFix: pnpm docs:retarget ${expected}`);
+    process.exit(1);
   }
+
+  console.log(`✓ Doc URLs target the "${expected}" branch / "${space}" GitBook space.`);
 }
 
-const configPath = join(repoRoot, "docs/llm/corpus.config.json");
-const { rawGithubBaseUrl } = JSON.parse(readFileSync(configPath, "utf8"));
-if (!rawGithubBaseUrl.replace(/\/+$/u, "").endsWith(`/zama-ai/sdk/${expected}`)) {
-  problems.push(
-    `docs/llm/corpus.config.json: rawGithubBaseUrl is "${rawGithubBaseUrl}" (expected branch "${expected}")`,
-  );
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
 }
-
-if (problems.length > 0) {
-  console.error(
-    `✖ Doc URLs do not target "${expected}":\n${problems.map((p) => `  - ${p}`).join("\n")}`,
-  );
-  console.error(`\nFix: pnpm docs:retarget ${expected}`);
-  process.exit(1);
-}
-
-console.log(`✓ Doc URLs target the "${expected}" branch / "${space}" GitBook space.`);
