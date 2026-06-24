@@ -178,6 +178,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         statusCode?: number;
         zamaErrorCode?: string;
         retryAfter?: number;
+        handle?: string;
+        contractAddress?: string;
+        account?: string;
       };
       // Re-attach the fields the worker classified at the source — structured
       // clone across the worker boundary strips codes/causes, leaving only the
@@ -190,6 +193,15 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
       }
       if ("retryAfter" in response && typeof response.retryAfter === "number") {
         err.retryAfter = response.retryAfter;
+      }
+      if ("handle" in response && typeof response.handle === "string") {
+        err.handle = response.handle;
+      }
+      if ("contractAddress" in response && typeof response.contractAddress === "string") {
+        err.contractAddress = response.contractAddress;
+      }
+      if ("account" in response && typeof response.account === "string") {
+        err.account = response.account;
       }
       pending.reject(err);
     }

@@ -166,6 +166,21 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 
+    test("maps a worker-classified NOT_ENTITLED error to NotEntitledError with its fields", () => {
+      // After the worker boundary, only message + attached fields survive.
+      const workerError = Object.assign(new Error("not authorized"), {
+        zamaErrorCode: ZamaErrorCode.NotEntitled,
+        handle: `0x${"12".repeat(32)}`,
+        contractAddress: "0xContract",
+        account: "0xActor",
+      });
+      const wrapped = wrapDecryptError(workerError, "fallback");
+      expect(wrapped).toBeInstanceOf(NotEntitledError);
+      expect((wrapped as NotEntitledError).handle).toBe(`0x${"12".repeat(32)}`);
+      expect((wrapped as NotEntitledError).contractAddress).toBe("0xContract");
+      expect((wrapped as NotEntitledError).account).toBe("0xActor");
+    });
+
     test("maps a worker-classified RPC_RATE_LIMITED error to RpcRateLimitError", () => {
       // The worker boundary strips the cause, leaving only message + zamaErrorCode + retryAfter.
       const workerError = Object.assign(new Error("Too Many Requests"), {

@@ -8,18 +8,15 @@ import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
 import {
   DecryptionFailedError,
   isFatalBatchError,
-  NotEntitledError,
   RpcRateLimitError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
-import { persistAllowedContract } from "../contracts";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
-import type { GenericProvider } from "../types";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
 import { extractRetryAfterMs, isRpcRateLimitError, toError } from "../utils";
@@ -28,12 +25,6 @@ import type { DelegationService } from "./delegation-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  /**
-   * Account whose ACL entitlement is pre-checked (`persistAllowed`) before the
-   * relayer round-trip — the signer for user decrypt, the delegator for
-   * delegated decrypt. A definitive `false` yields {@link NotEntitledError}.
-   */
-  entitlementAddress: Address;
   resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
@@ -61,7 +52,6 @@ export class DecryptionService {
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
   readonly #relayer: RelayerDispatcher;
-  readonly #provider: GenericProvider;
   readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
   constructor({
@@ -69,21 +59,18 @@ export class DecryptionService {
     credentialService,
     delegationService,
     relayer,
-    provider,
     emitEvent,
   }: {
     cache: CachingService;
     credentialService: CredentialService;
     delegationService: DelegationService;
     relayer: RelayerDispatcher;
-    provider: GenericProvider;
     emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
     this.#cache = cache;
     this.#credentialService = credentialService;
     this.#delegationService = delegationService;
     this.#relayer = relayer;
-    this.#provider = provider;
     this.#emitEvent = emitEvent;
   }
 
@@ -94,7 +81,6 @@ export class DecryptionService {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
-      entitlementAddress: normalizedSigner,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
@@ -119,7 +105,6 @@ export class DecryptionService {
     const normalizedDelegate = getAddress(delegateAddress);
     return this.#decrypt(encryptedValues, {
       requesterAddress: getAddress(accountAddress),
-      entitlementAddress: normalizedDelegator,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
       validate: (contractAddresses) =>
@@ -284,12 +269,6 @@ export class DecryptionService {
       return result;
     }
 
-    // Pre-check ACL entitlement before resolving credentials (which may prompt a
-    // wallet signature) and before the relayer round-trip, so a not-entitled
-    // actor surfaces as a typed NotEntitledError instead of a generic
-    // DecryptionFailedError, and an RPC throttle surfaces as RpcRateLimitError.
-    await this.#assertEntitled(uncached, strategy.entitlementAddress);
-
     const credentials = await strategy.resolveCredentials(allContracts);
 
     const byContract = new Map<Address, EncryptedValue[]>();
@@ -362,52 +341,6 @@ export class DecryptionService {
       cause: error,
       retryAfter: extractRetryAfterMs(error),
     });
-  }
-
-  /**
-   * Best-effort ACL pre-check. For each handle, reads `persistAllowed(handle,
-   * actor)` via the provider:
-   * - a definitive `false` throws {@link NotEntitledError} (terminal, don't retry);
-   * - an RPC rate-limit throws {@link RpcRateLimitError} (transient, retry);
-   * - any other read failure is swallowed so the relayer still decides — the
-   *   pre-check never turns an otherwise-working decryption into a failure.
-   */
-  async #assertEntitled(handles: readonly EncryptedInput[], actor: Address): Promise<void> {
-    let acl: Address;
-    try {
-      acl = await this.#relayer.getAclAddress();
-    } catch {
-      return; // Can't resolve ACL address — let the relayer perform its own check.
-    }
-
-    await Promise.all(
-      handles.map(async ({ encryptedValue, contractAddress }) => {
-        // Typed as possibly-undefined: a non-conforming provider/mock may not
-        // return a boolean, and we must only treat an explicit on-chain `false`
-        // as not-entitled (never a missing/garbled read).
-        // Possibly-undefined: a non-conforming provider/mock may not return a
-        // boolean, and only an explicit on-chain `false` should mean not-entitled.
-        let allowed: boolean | undefined;
-        try {
-          allowed = await this.#provider.readContract(
-            persistAllowedContract(acl, encryptedValue as `0x${string}`, actor),
-          );
-        } catch (error) {
-          if (isRpcRateLimitError(error)) {
-            throw this.#rpcRateLimitError(error, `the ACL check for handle ${encryptedValue}`);
-          }
-          return; // Best-effort: couldn't determine entitlement, defer to relayer.
-        }
-        // oxlint-disable-next-line no-unnecessary-boolean-literal-compare
-        if (allowed === false) {
-          throw new NotEntitledError({
-            handle: encryptedValue,
-            contractAddress,
-            account: actor,
-          });
-        }
-      }),
-    );
   }
 
   #setHandleResult(item: BatchDecryptItem, decrypted: Record<EncryptedValue, ClearValue>): void {

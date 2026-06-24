@@ -31,6 +31,15 @@ function readRetryAfter(error: unknown): number | undefined {
   return undefined;
 }
 
+/** Read a string field the worker client attaches to cross-thread errors. */
+function readStringField(error: unknown, key: string): string {
+  if (typeof error === "object" && error !== null && key in error) {
+    const v = (error as Record<string, unknown>)[key];
+    return typeof v === "string" ? v : "";
+  }
+  return "";
+}
+
 /**
  * Inspect a caught error for an HTTP status code and return the appropriate
  * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
@@ -60,6 +69,19 @@ export function wrapDecryptError(
     error instanceof RpcRateLimitError
   ) {
     return error;
+  }
+
+  // Not-entitled, classified at the worker source from the relayer's own ACL
+  // check (`zamaErrorCode`) — no extra on-chain reads. Terminal/non-retryable.
+  if (readZamaErrorCode(error) === ZamaErrorCode.NotEntitled) {
+    return new NotEntitledError(
+      {
+        handle: readStringField(error, "handle"),
+        contractAddress: readStringField(error, "contractAddress"),
+        account: readStringField(error, "account"),
+      },
+      { cause: error },
+    );
   }
 
   // Provider RPC rate-limit, in priority order:

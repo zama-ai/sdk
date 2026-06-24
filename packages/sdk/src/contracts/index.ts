@@ -41,7 +41,6 @@ export {
   revokeDelegationContract,
   getDelegationExpiryContract,
   isHandleDelegatedContract,
-  persistAllowedContract,
 } from "./acl";
 
 export {

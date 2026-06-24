@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
-import { NotEntitledError, RpcRateLimitError } from "../../errors";
+import { RpcRateLimitError } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -270,59 +270,7 @@ describe("DecryptionService", () => {
     ).resolves.toEqual({ [HANDLE_A]: 10n });
   });
 
-  describe("ACL entitlement pre-check (SDK-239)", () => {
-    test("userDecrypt throws NotEntitledError when persistAllowed is false (no relayer call)", async ({
-      createDecryptionService,
-      createMockProvider,
-      relayer,
-      userAddress,
-    }) => {
-      const provider = createMockProvider({ readContract: vi.fn().mockResolvedValue(false) });
-      const service = createDecryptionService({ provider });
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_A]: 10n });
-
-      const error = await service
-        .userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress)
-        .catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(NotEntitledError);
-      expect((error as NotEntitledError).account).toBe(userAddress);
-      expect((error as NotEntitledError).handle).toBe(HANDLE_A);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
-    });
-
-    test("userDecrypt throws RpcRateLimitError when the pre-check read is rate-limited (-32005)", async ({
-      createDecryptionService,
-      createMockProvider,
-      relayer,
-      userAddress,
-    }) => {
-      const rpcError = Object.assign(new Error("Too Many Requests"), { code: -32005 });
-      const provider = createMockProvider({ readContract: vi.fn().mockRejectedValue(rpcError) });
-      const service = createDecryptionService({ provider });
-
-      await expect(
-        service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
-      ).rejects.toBeInstanceOf(RpcRateLimitError);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
-    });
-
-    test("userDecrypt proceeds to the relayer when persistAllowed returns true", async ({
-      createDecryptionService,
-      createMockProvider,
-      relayer,
-      userAddress,
-    }) => {
-      const provider = createMockProvider({ readContract: vi.fn().mockResolvedValue(true) });
-      const service = createDecryptionService({ provider });
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_A]: 7n });
-
-      await expect(
-        service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
-      ).resolves.toEqual({ [HANDLE_A]: 7n });
-      expect(relayer.userDecrypt).toHaveBeenCalled();
-    });
-
+  describe("RPC rate-limit classification (SDK-239)", () => {
     test("delegatedUserDecrypt throws RpcRateLimitError when a delegation pre-check read is rate-limited", async ({
       decryptionService,
       provider,
@@ -343,24 +291,6 @@ describe("DecryptionService", () => {
         ),
       ).rejects.toBeInstanceOf(RpcRateLimitError);
       expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
-    });
-
-    test("userDecrypt defers to the relayer when the pre-check read fails for a non-rate-limit reason", async ({
-      createDecryptionService,
-      createMockProvider,
-      relayer,
-      userAddress,
-    }) => {
-      const provider = createMockProvider({
-        readContract: vi.fn().mockRejectedValue(new Error("network blip")),
-      });
-      const service = createDecryptionService({ provider });
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_A]: 9n });
-
-      await expect(
-        service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
-      ).resolves.toEqual({ [HANDLE_A]: 9n });
-      expect(relayer.userDecrypt).toHaveBeenCalled();
     });
 
     test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({

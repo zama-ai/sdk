@@ -33,7 +33,6 @@ export type CreateDecryptionServiceFn = (overrides?: {
   credentialService?: CredentialService;
   delegationService?: DelegationService;
   relayer?: RelayerDispatcher;
-  provider?: GenericProvider;
   emitEvent?: (input: ZamaSDKEventInput) => void;
 }) => DecryptionService;
 
@@ -98,7 +97,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     await use(createDelegationService());
   },
   createDecryptionService: async (
-    { cachingService, credentialService, delegationService, relayer, provider },
+    { cachingService, credentialService, delegationService, relayer },
     use,
   ) => {
     const factory: CreateDecryptionServiceFn = (overrides = {}) =>
@@ -107,7 +106,6 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
-        provider: overrides.provider ?? provider,
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);

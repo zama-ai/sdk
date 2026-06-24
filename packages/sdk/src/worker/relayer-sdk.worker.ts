@@ -6,7 +6,13 @@
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { FheChain } from "../chains/types";
-import { classifyWorkerError, extractHttpStatus, prefixHex, unprefixHex } from "../utils";
+import {
+  classifyDecryptWorkerError,
+  classifyWorkerError,
+  extractHttpStatus,
+  prefixHex,
+  unprefixHex,
+} from "../utils";
 import type { WorkerErrorClassification } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
@@ -164,6 +170,15 @@ function sendError(
   }
   if (extra?.retryAfter !== undefined) {
     response.retryAfter = extra.retryAfter;
+  }
+  if (extra?.handle !== undefined) {
+    response.handle = extra.handle;
+  }
+  if (extra?.contractAddress !== undefined) {
+    response.contractAddress = extra.contractAddress;
+  }
+  if (extra?.account !== undefined) {
+    response.account = extra.account;
   }
   self.postMessage(response);
 }
@@ -443,7 +458,15 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, classifyWorkerError(error));
+    sendError(
+      id,
+      type,
+      message,
+      classifyDecryptWorkerError(error, {
+        contractAddress: payload.contractAddress,
+        account: payload.signerAddress,
+      }),
+    );
   }
 }
 
@@ -568,7 +591,15 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, classifyWorkerError(error));
+    sendError(
+      id,
+      type,
+      message,
+      classifyDecryptWorkerError(error, {
+        contractAddress: payload.contractAddress,
+        account: payload.delegatorAddress,
+      }),
+    );
   }
 }
 

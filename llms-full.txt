@@ -7610,7 +7610,9 @@ matchZamaError(error, {
 
 **Code:** `NOT_ENTITLED`
 
-The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the handle: an ACL `persistAllowed` pre-check returned `false`. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the handle: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+
+The SDK derives this typed error from the relayer's own authoritative ACL check — it adds no extra on-chain reads.
 
 The error carries `handle`, `contractAddress`, and `account`.
 
@@ -7628,8 +7630,6 @@ try {
 ```
 
 **How to handle:** Do not retry the same request. Wait until the handle is granted to the account on-chain (e.g. a later block / backfill), then decrypt again.
-
-> **Cost:** the entitlement pre-check issues one `persistAllowed` read per uncached handle on the consumer's RPC provider, in addition to the relayer's own internal ACL check. This is the deliberate trade-off for a typed, version-independent error (vs. fragile message-matching); factor it into your RPC rate budget.
 
 ### RpcRateLimitError
 

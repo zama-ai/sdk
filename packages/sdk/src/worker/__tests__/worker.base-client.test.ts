@@ -436,6 +436,46 @@ describe("BaseWorkerClient", () => {
     }
   });
 
+  test("error response re-attaches not-entitled fields (handle/contract/account)", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "not authorized",
+          errorCode: "NOT_ENTITLED",
+          handle: "0xhandle",
+          contractAddress: "0xcontract",
+          account: "0xactor",
+        } as WorkerResponse<unknown> & {
+          errorCode: string;
+          handle: string;
+          contractAddress: string;
+          account: string;
+        });
+      });
+    });
+
+    try {
+      await client.generateKeypair({ chainId: 1 });
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      const e = error as Error & {
+        zamaErrorCode?: string;
+        handle?: string;
+        contractAddress?: string;
+        account?: string;
+      };
+      expect(e.zamaErrorCode).toBe("NOT_ENTITLED");
+      expect(e.handle).toBe("0xhandle");
+      expect(e.contractAddress).toBe("0xcontract");
+      expect(e.account).toBe("0xactor");
+    }
+  });
+
   test("terminate is a no-op when no worker exists", () => {
     const client = new TestWorkerClient();
     client.terminate();

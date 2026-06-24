@@ -231,12 +231,16 @@ export interface ErrorResponse extends BaseResponse {
   /**
    * A {@link ZamaErrorCode} classified at the worker source (where the full
    * error object is still available), so the main thread can rebuild the
-   * correct typed error after structured-clone strips codes/causes. Currently
-   * used for `RPC_RATE_LIMITED`.
+   * correct typed error after structured-clone strips codes/causes. Used for
+   * `RPC_RATE_LIMITED` and `NOT_ENTITLED`.
    */
   errorCode?: string;
   /** Suggested retry delay in milliseconds, when the provider supplied one. */
   retryAfter?: number;
+  /** For `NOT_ENTITLED`: fields used to rebuild the typed error on the main thread. */
+  handle?: string;
+  contractAddress?: string;
+  account?: string;
 }
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;

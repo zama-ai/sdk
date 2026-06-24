@@ -295,8 +295,13 @@ export type EncryptResult = {
 // @public (undocumented)
 export interface ErrorResponse extends BaseResponse {
     // (undocumented)
+    account?: string;
+    // (undocumented)
+    contractAddress?: string;
+    // (undocumented)
     error: string;
     errorCode?: string;
+    handle?: string;
     retryAfter?: number;
     statusCode?: number;
     // (undocumented)

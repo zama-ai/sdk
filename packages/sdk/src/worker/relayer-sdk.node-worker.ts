@@ -29,7 +29,7 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { classifyWorkerError, prefixHex, unprefixHex } from "../utils";
+import { classifyDecryptWorkerError, classifyWorkerError, prefixHex, unprefixHex } from "../utils";
 import type { WorkerErrorClassification } from "../utils";
 
 if (!parentPort) {
@@ -112,6 +112,15 @@ function sendError(
   }
   if (extra?.retryAfter !== undefined) {
     response.retryAfter = extra.retryAfter;
+  }
+  if (extra?.handle !== undefined) {
+    response.handle = extra.handle;
+  }
+  if (extra?.contractAddress !== undefined) {
+    response.contractAddress = extra.contractAddress;
+  }
+  if (extra?.account !== undefined) {
+    response.account = extra.account;
   }
   port.postMessage(response);
 }
@@ -228,7 +237,15 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, classifyWorkerError(error));
+    sendError(
+      id,
+      type,
+      message,
+      classifyDecryptWorkerError(error, {
+        contractAddress: payload.contractAddress,
+        account: payload.signerAddress,
+      }),
+    );
   }
 }
 
@@ -338,7 +355,15 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, classifyWorkerError(error));
+    sendError(
+      id,
+      type,
+      message,
+      classifyDecryptWorkerError(error, {
+        contractAddress: payload.contractAddress,
+        account: payload.delegatorAddress,
+      }),
+    );
   }
 }
 

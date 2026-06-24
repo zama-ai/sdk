@@ -138,6 +138,10 @@ export interface WorkerErrorClassification {
   errorCode?: string;
   /** Suggested retry delay in milliseconds, when known. */
   retryAfter?: number;
+  /** For `NOT_ENTITLED`: the handle/contract/account the rebuilt error carries. */
+  handle?: string;
+  contractAddress?: string;
+  account?: string;
 }
 
 /**
@@ -152,6 +156,46 @@ export function classifyWorkerError(error: unknown): WorkerErrorClassification {
   }
   const statusCode = extractHttpStatus(error);
   return statusCode !== undefined ? { statusCode } : {};
+}
+
+/**
+ * The relayer SDK's ACL gate (`validateAclPermissions`) throws a message-only
+ * Error when the actor isn't allowed: `User address <a> is not authorized to
+ * user decrypt handle <h>!`. Matching it here, once, against the pinned
+ * `@zama-fhe/relayer-sdk`, is what lets us surface a typed NotEntitledError
+ * (the "dapp contract … is not authorized" variant is a dapp misconfig and is
+ * intentionally left to DecryptionFailedError). See the guard test in
+ * `error.test.ts` if the relayer message ever changes.
+ */
+function isNotEntitledMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return m.includes("user address") && m.includes("is not authorized to user decrypt");
+}
+
+function parseHandleFromMessage(message: string): string | undefined {
+  return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];
+}
+
+/**
+ * Classify a decrypt-path worker error. Recognizes the relayer's not-entitled
+ * failure (reusing its own authoritative ACL check — no extra on-chain reads)
+ * and otherwise falls back to {@link classifyWorkerError} (rate-limit / status).
+ * `ctx` supplies the contract/account for the rebuilt {@link NotEntitledError},
+ * since the relayer message only carries the handle.
+ */
+export function classifyDecryptWorkerError(
+  error: unknown,
+  ctx: { contractAddress: string; account: string },
+): WorkerErrorClassification {
+  if (error instanceof Error && isNotEntitledMessage(error.message)) {
+    return {
+      errorCode: ZamaErrorCode.NotEntitled,
+      handle: parseHandleFromMessage(error.message),
+      contractAddress: ctx.contractAddress,
+      account: ctx.account,
+    };
+  }
+  return classifyWorkerError(error);
 }
 
 /**

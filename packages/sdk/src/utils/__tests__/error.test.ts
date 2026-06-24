@@ -7,6 +7,7 @@ import {
   hasStructuredRpcRateLimitSignal,
   extractRetryAfterMs,
   classifyWorkerError,
+  classifyDecryptWorkerError,
 } from "../error";
 import { ZamaErrorCode } from "../../errors/base";
 
@@ -254,5 +255,36 @@ describe("classifyWorkerError", () => {
 
   test("returns an empty classification for a plain error", () => {
     expect(classifyWorkerError(new Error("network down"))).toEqual({});
+  });
+});
+
+describe("classifyDecryptWorkerError", () => {
+  const ctx = { contractAddress: "0xContract", account: "0xActor" };
+
+  // Guard: this must stay in sync with @zama-fhe/relayer-sdk's validateAclPermissions
+  // ("User address <a> is not authorized to user decrypt handle <h>!"). If a relayer
+  // bump changes the wording, this test fails loudly and NOT_ENTITLED must be re-mapped.
+  const RELAYER_NOT_ENTITLED_MSG = `User address 0x1000000000000000000000000000000000000001 is not authorized to user decrypt handle 0x${"12".repeat(32)}!`;
+
+  test("maps the relayer's not-entitled message to NOT_ENTITLED with parsed handle + ctx", () => {
+    expect(classifyDecryptWorkerError(new Error(RELAYER_NOT_ENTITLED_MSG), ctx)).toEqual({
+      errorCode: ZamaErrorCode.NotEntitled,
+      handle: `0x${"12".repeat(32)}`,
+      contractAddress: "0xContract",
+      account: "0xActor",
+    });
+  });
+
+  test("does NOT map the 'dapp contract is not authorized' variant (stays a generic failure)", () => {
+    const contractMsg = `dapp contract 0xabc is not authorized to user decrypt handle 0x${"34".repeat(32)}!`;
+    expect(classifyDecryptWorkerError(new Error(contractMsg), ctx)).toEqual({});
+  });
+
+  test("falls back to rate-limit classification for a throttled read", () => {
+    const rpc = Object.assign(new Error("Too Many Requests"), { code: -32005 });
+    expect(classifyDecryptWorkerError(rpc, ctx)).toEqual({
+      errorCode: ZamaErrorCode.RpcRateLimited,
+      retryAfter: undefined,
+    });
   });
 });
