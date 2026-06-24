@@ -10,7 +10,7 @@ import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useDecryptValues", () => {
   test("decrypts encrypted values", async ({ relayer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
 
     const { result } = renderWithProviders(() =>
       useDecryptValues(
@@ -33,7 +33,7 @@ describe("useDecryptValues", () => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
-    vi.mocked(relayer.userDecrypt)
+    vi.mocked(relayer.decryptValues)
       .mockResolvedValueOnce({ "0xh1": 10n })
       .mockResolvedValueOnce({ "0xh2": 20n });
 
@@ -51,7 +51,7 @@ describe("useDecryptValues", () => {
       timeout: 5_000,
     });
 
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
   });
 
@@ -115,7 +115,7 @@ describe("useDecryptValues", () => {
     // SDK-80 row 17: when credentials are already authorized for the contract,
     // useHasPermit resolves to true and useDecryptValues fires automatically —
     // no extra signature prompt should be triggered by the decrypt itself.
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ "0xh": 42n });
 
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();

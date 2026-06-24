@@ -25,7 +25,7 @@ describe("useConfidentialBalances", () => {
         throw new Error(`Unexpected readContract address ${address}`);
       },
     );
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({
@@ -61,7 +61,7 @@ describe("useConfidentialBalances", () => {
     const handle = `0x${"dd".repeat(32)}`;
 
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 33n });
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({ addresses: [mixedCaseToken], account: userAddress }),
@@ -101,7 +101,7 @@ describe("useConfidentialBalances", () => {
   }) => {
     const handle = `0x${"ef".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 77n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 77n });
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
@@ -139,7 +139,7 @@ describe("useConfidentialBalances", () => {
           throw new Error(`Unexpected readContract address ${address}`);
         },
       );
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
 
       const tokens = [tokenAddress, otherTokenAddress];
       const { result } = renderWithProviders(() =>

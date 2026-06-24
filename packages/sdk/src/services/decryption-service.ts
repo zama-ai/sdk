@@ -68,7 +68,7 @@ export class DecryptionService {
     this.#emitEvent = emitEvent;
   }
 
-  async userDecrypt(
+  async decryptValues(
     handles: EncryptedInput[],
     signerAddress: Address,
   ): Promise<Record<EncryptedValue, ClearValue>> {
@@ -78,7 +78,7 @@ export class DecryptionService {
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
-        return this.#relayer.userDecrypt({
+        return this.#relayer.decryptValues({
           encryptedValues,
           contractAddress,
           ...resolveUserDecryptPermit(credentials, contractAddress),
@@ -89,7 +89,7 @@ export class DecryptionService {
     });
   }
 
-  async delegatedUserDecrypt(
+  async delegatedDecryptValues(
     encryptedValues: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
@@ -112,7 +112,7 @@ export class DecryptionService {
         // oxlint-disable-next-line no-shadow
         encryptedValues,
       }) => {
-        return this.#relayer.delegatedUserDecrypt({
+        return this.#relayer.delegatedDecryptValues({
           encryptedValues: encryptedValues,
           contractAddress,
           ...resolveDelegatedDecryptPermit(credentials, contractAddress),
@@ -147,7 +147,7 @@ export class DecryptionService {
     const normalizedAccount = getAddress(accountAddress);
 
     try {
-      const decrypted = await this.delegatedUserDecrypt(
+      const decrypted = await this.delegatedDecryptValues(
         items.map(({ encryptedValue, contractAddress }) => ({
           encryptedValue,
           contractAddress,
@@ -174,7 +174,7 @@ export class DecryptionService {
     await pLimit(
       items.map((item) => async () => {
         try {
-          const decrypted = await this.delegatedUserDecrypt(
+          const decrypted = await this.delegatedDecryptValues(
             [
               {
                 encryptedValue: item.encryptedValue,

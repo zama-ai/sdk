@@ -20,7 +20,7 @@ describe("Decryption", () => {
       handle,
     }) => {
       await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
     });
   });
 
@@ -41,7 +41,7 @@ describe("Decryption", () => {
       const sdk = createSDK({ signer: undefined });
       const result = await sdk.decryption.decryptPublicValues([handle]);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([handle]);
       expect(result.clearValues[handle]).toBe(500n);
     });
 
@@ -55,11 +55,11 @@ describe("Decryption", () => {
         decryptionProof: "0x",
         abiEncodedClearValues: "0x",
       });
-      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptPublicValues).not.toHaveBeenCalled();
     });
 
     test("wraps relayer errors through wrapDecryptError", async ({ sdk, relayer, handle }) => {
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+      vi.mocked(relayer.decryptPublicValues).mockRejectedValueOnce(new Error("relayer down"));
       await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBeInstanceOf(
         DecryptionFailedError,
       );
@@ -67,7 +67,7 @@ describe("Decryption", () => {
 
     test("re-throws typed SDK errors as-is (no double-wrap)", async ({ sdk, relayer, handle }) => {
       const original = new DecryptionFailedError("already typed");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+      vi.mocked(relayer.decryptPublicValues).mockRejectedValueOnce(original);
       await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBe(original);
     });
   });

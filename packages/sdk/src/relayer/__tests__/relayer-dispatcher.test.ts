@@ -131,10 +131,10 @@ describe("RelayerDispatcher", () => {
       ["generateTransportKeyPair", []],
       ["createEIP712", ["0xpubkey", ["0xcontract"], 1000]],
       ["encrypt", [{ values: [] }]],
-      ["userDecrypt", [{ encryptedValues: [] }]],
-      ["publicDecrypt", [["0xhandle"]]],
+      ["decryptValues", [{ encryptedValues: [] }]],
+      ["decryptPublicValues", [["0xhandle"]]],
       ["createDelegatedUserDecryptEIP712", ["0xpubkey", ["0xcontract"], "0xdelegator", 1000]],
-      ["delegatedUserDecrypt", [{ encryptedValues: [] }]],
+      ["delegatedDecryptValues", [{ encryptedValues: [] }]],
       ["fetchFheEncryptionKeyBytes", []],
       ["getAclAddress", []],
     ] as [keyof RelayerSDK, unknown[]][])(

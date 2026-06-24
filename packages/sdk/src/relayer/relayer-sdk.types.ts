@@ -175,10 +175,10 @@ export interface RelayerSDK {
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
   /** Decrypt FHE encrypted values using the user's own credentials. */
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+  decryptValues(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
   /** Decrypt encrypted values using the network public key (no credential needed). */
-  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
+  decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
   /** Create EIP-712 typed data for a delegated user decrypt credential. */
   createDelegatedUserDecryptEIP712(
@@ -190,7 +190,7 @@ export interface RelayerSDK {
   ): Promise<EIP712TypedData>;
 
   /** Decrypt FHE encrypted values using delegated user credentials. */
-  delegatedUserDecrypt(
+  delegatedDecryptValues(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
@@ -198,7 +198,7 @@ export interface RelayerSDK {
   fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
 
   /** Return the ACL contract address for the current chain. */
-  getAclAddress(): Promise<Address>;
+  getAclAddress(): Address;
 
   /** Terminate the relayer backend and release resources. */
   terminate(): void;

@@ -21,7 +21,7 @@ describe("Token", () => {
       const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(0n);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
 
     test("decrypts non-zero handle and returns balance", async ({
@@ -39,7 +39,7 @@ describe("Token", () => {
       expect(balance).toBe(1000n);
       expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalled();
-      expect(relayer.userDecrypt).toHaveBeenCalled();
+      expect(relayer.decryptValues).toHaveBeenCalled();
     });
 
     test("passes the caller-supplied owner address to the contract read", async ({
@@ -73,7 +73,7 @@ describe("Token", () => {
       const result = await token.confidentialBalanceOf(userAddress);
 
       expect(result).toBe(handle);
-      expect(relayer.userDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
   });
 
@@ -308,7 +308,7 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 50n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce({ [handle]: 50n });
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -323,7 +323,7 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 200n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce({ [handle]: 200n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -336,7 +336,7 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce({ [handle]: 100n });
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -373,7 +373,7 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(new TypeError("network failure"));
+      vi.mocked(relayer.decryptValues).mockRejectedValueOnce(new TypeError("network failure"));
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,
@@ -443,10 +443,10 @@ describe("Token", () => {
       });
 
       expect(balance).toBe(0n);
-      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+      expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
     });
 
-    test("decrypts via sdk.delegatedUserDecrypt on happy path", async ({
+    test("decrypts via sdk.delegatedDecryptValues on happy path", async ({
       relayer,
       token,
       handle,
@@ -455,7 +455,7 @@ describe("Token", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle) // confidentialBalanceOf
         .mockResolvedValueOnce(2n ** 64n - 1n); // getDelegationExpiry → permanent
-      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({
+      vi.mocked(relayer.delegatedDecryptValues).mockResolvedValueOnce({
         [handle]: 1234n,
       });
 
@@ -464,7 +464,7 @@ describe("Token", () => {
       });
 
       expect(balance).toBe(1234n);
-      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.delegatedDecryptValues).toHaveBeenCalledOnce();
     });
 
     test("throws DecryptionFailedError when relayer returns no value for handle", async ({
@@ -476,7 +476,7 @@ describe("Token", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle)
         .mockResolvedValueOnce(2n ** 64n - 1n);
-      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({});
+      vi.mocked(relayer.delegatedDecryptValues).mockResolvedValueOnce({});
 
       await expect(token.decryptBalanceAs({ delegatorAddress: DELEGATOR })).rejects.toMatchObject({
         code: ZamaErrorCode.DecryptionFailed,

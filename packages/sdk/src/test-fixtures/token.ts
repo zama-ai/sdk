@@ -36,7 +36,7 @@ export type CreateMockWrappedTokenFn = (
 function createMockTokenInternal(address: Address, signer: GenericSigner): Token {
   const mockSdk = {
     signer,
-    userDecrypt: vi.fn().mockResolvedValue({}),
+    decryptValues: vi.fn().mockResolvedValue({}),
     allow: vi.fn().mockResolvedValue(undefined),
     isAllowed: vi.fn().mockResolvedValue(true),
     revokePermits: vi.fn().mockResolvedValue(undefined),

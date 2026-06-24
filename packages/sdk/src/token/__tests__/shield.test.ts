@@ -124,7 +124,7 @@ describe("WrappedToken.shield", () => {
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
+    vi.mocked(relayer.decryptValues).mockResolvedValue({
       [fixtureHandle]: 1000n,
     });
 
@@ -149,7 +149,7 @@ describe("WrappedToken.shield", () => {
 
     const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [fixtureHandle] }),
     );
   });

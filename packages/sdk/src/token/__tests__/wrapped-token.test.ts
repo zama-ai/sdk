@@ -324,7 +324,7 @@ describe("WrappedToken", () => {
   });
 
   describe("finalizeUnwrap", () => {
-    test("calls publicDecrypt and finalizes on-chain", async ({
+    test("calls decryptPublicValues and finalizes on-chain", async ({
       relayer,
       signer,
       wrappedToken,
@@ -332,19 +332,19 @@ describe("WrappedToken", () => {
       const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
       const result = await wrappedToken.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([unwrapRequestId]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
+    test("re-throws DecryptionFailedError from decryptPublicValues as-is", async ({
       relayer,
       wrappedToken,
     }) => {
       const original = new DecryptionFailedError("already wrapped");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+      vi.mocked(relayer.decryptPublicValues).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
@@ -393,7 +393,7 @@ describe("WrappedToken", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -423,7 +423,7 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshieldAll();
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
     });
 
@@ -462,7 +462,7 @@ describe("WrappedToken", () => {
       const result = await wrappedToken.resumeUnshield("0xprevioustx" as `0x${string}`);
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
       expect(result.txHash).toBe("0xtxhash");
     });
   });
@@ -487,7 +487,7 @@ describe("WrappedToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce({ [handle]: 100n });
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [

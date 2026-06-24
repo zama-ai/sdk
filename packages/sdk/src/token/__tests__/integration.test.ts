@@ -56,7 +56,7 @@ describe("Integration: multi-step workflows", () => {
         },
       ]);
       expect(decryptResult[balanceHandle]).toBe(1000n);
-      expect(relayer.userDecrypt).toHaveBeenCalledWith(
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
         expect.objectContaining({ encryptedValues: [handle] }),
       );
     });
@@ -149,8 +149,8 @@ describe("Integration: multi-step workflows", () => {
       const finalizeResult = await wrappedToken.finalizeUnwrap(UNWRAP_AMOUNT);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
-      // Verify publicDecrypt was called with the burn handle
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
+      // Verify decryptPublicValues was called with the burn handle
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
 
       // Verify finalizeUnwrap contract call
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -191,13 +191,13 @@ describe("Integration: multi-step workflows", () => {
       });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
-      // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap
+      // Verify full pipeline: encrypt → unwrap → waitForReceipt → decryptPublicValues → finalizeUnwrap
       expect(relayer.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalled();
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
+      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );

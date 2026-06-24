@@ -89,12 +89,12 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.encrypt(params);
   }
 
-  userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
-    return this.#active.userDecrypt(params);
+  decryptValues(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
+    return this.#active.decryptValues(params);
   }
 
-  publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
-    return this.#active.publicDecrypt(encryptedValues);
+  decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+    return this.#active.decryptPublicValues(encryptedValues);
   }
 
   createDelegatedUserDecryptEIP712(
@@ -113,17 +113,17 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     );
   }
 
-  delegatedUserDecrypt(
+  delegatedDecryptValues(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
-    return this.#active.delegatedUserDecrypt(params);
+    return this.#active.delegatedDecryptValues(params);
   }
 
   fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     return this.#active.fetchFheEncryptionKeyBytes();
   }
 
-  getAclAddress(): Promise<Address> {
+  getAclAddress(): Address {
     return this.#active.getAclAddress();
   }
 

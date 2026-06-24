@@ -6,8 +6,8 @@
  * lazily on first operation) and implements the
  * {@link RelayerSDK} domain interface by translating between zama-sdk's domain
  * shapes and the new SDK's API. Each public method maps onto the underlying
- * `@fhevm/sdk` call(s) it reflects — `encrypt` → `encryptValues`, `publicDecrypt`
- * → `decryptPublicValuesWithSignatures`, `userDecrypt` → `parseTransportKeyPair`
+ * `@fhevm/sdk` call(s) it reflects — `encrypt` → `encryptValues`, `decryptPublicValues`
+ * → `decryptPublicValuesWithSignatures`, `decryptValues` → `parseTransportKeyPair`
  * + `parseSignedDecryptionPermit` + `decryptValuesFromPairs`.
  *
  * Uses the `@fhevm/sdk/viem` adapter with a read-only viem public client built
@@ -58,7 +58,7 @@ export interface FhevmRelayerConfig {
   chain: FheChain;
   /**
    * Cleartext mode for local dev/test chains without FHE infrastructure — reads
-   * mock plaintexts from the on-chain executor (discovered automatically)
+   * mock cleartexts from the on-chain executor (discovered automatically)
    * instead of calling the relayer.
    */
   cleartext?: boolean;
@@ -84,21 +84,23 @@ function toSolidityType(type: EncryptInput["type"]): string {
  * interface's params + the previously returned signature.
  */
 export class FhevmRelayer implements RelayerSDK, Disposable {
-  readonly #config: FhevmRelayerConfig;
+  readonly chain: FheChain;
+  readonly #cleartext: boolean | undefined;
+  readonly #runtime: FhevmRuntimeConfig | undefined;
+  readonly #options: FhevmClientOptions | undefined;
   #client: FhevmSdkClient | null = null;
   #initPromise: Promise<void> | null = null;
 
   constructor(config: FhevmRelayerConfig) {
-    this.#config = config;
-  }
-
-  get #chain(): FheChain {
-    return this.#config.chain;
+    this.chain = config.chain;
+    this.#cleartext = config.cleartext;
+    this.#runtime = config.runtime;
+    this.#options = config.options;
   }
 
   /** Return the ACL contract address for the current chain. */
-  async getAclAddress(): Promise<Address> {
-    return this.#chain.aclContractAddress;
+  getAclAddress(): Address {
+    return this.chain.aclContractAddress;
   }
 
   /**
@@ -120,21 +122,19 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     // Default load mode embeds WASM as base64 (no runtime fetch). Tracked
     // follow-up: switch to a hosted `locateFile` once CDN assets exist.
     // Per-chain `auth` is the default; an explicit `runtime.auth` overrides it.
-    setFhevmRuntimeConfig({ auth: this.#chain.auth, ...this.#config.runtime });
+    setFhevmRuntimeConfig({ auth: this.chain.auth, ...this.#runtime });
 
     const params = {
       publicClient: createPublicClient({
         transport:
-          typeof this.#chain.network === "string"
-            ? http(this.#chain.network)
-            : custom(this.#chain.network),
+          typeof this.chain.network === "string"
+            ? http(this.chain.network)
+            : custom(this.chain.network),
       }),
-      chain: toFhevmChain(this.#chain),
-      options: this.#config.options,
+      chain: toFhevmChain(this.chain),
+      options: this.#options,
     };
-    const client = this.#config.cleartext
-      ? createFhevmCleartextClient(params)
-      : createFhevmClient(params);
+    const client = this.#cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
     await client.init();
     this.#client = client;
   }
@@ -163,7 +163,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     return this.#userDecryptEip712(publicKey, contractAddresses, startTimestamp, durationDays);
   }
 
-  /** Encrypt typed plaintext inputs into ciphertext handles + a shared input proof. */
+  /** Encrypt typed plaintext inputs into encrypted values + a shared input proof. */
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     await this.#ensureInit();
     const result = await this.#fhevm.encryptValues({
@@ -174,8 +174,8 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       contractAddress: params.contractAddress,
       userAddress: params.userAddress,
     });
-    // `@fhevm/sdk` already returns hex strings (bytes32 handles + the input
-    // proof); they pass straight through. Do NOT re-`toHex` them — that would
+    // `@fhevm/sdk` already returns hex strings (bytes32 encrypted values + the
+    // input proof); they pass straight through. Do NOT re-`toHex` them — that would
     // UTF-8-encode the "0x…" string into a double-length blob and the on-chain
     // `fromExternal`/`verifyInput` would reject it.
     return {
@@ -184,7 +184,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     };
   }
 
-  async userDecrypt(
+  async decryptValues(
     params: UserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#ensureInit();
@@ -208,15 +208,15 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     });
   }
 
-  /** Public-decrypt handles (no permit needed) with the KMS signature material. */
-  async publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+  /** Public-decrypt encrypted values (no permit needed) with the KMS signature material. */
+  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     await this.#ensureInit();
     const result = await this.#fhevm.decryptPublicValuesWithSignatures({
       encryptedValues,
     });
     const clearValues: Record<EncryptedValue, ClearValue> = {};
-    result.checkSignaturesArgs.handlesList.forEach((handle: Hex, i: number) => {
-      clearValues[handle] = result.clearValues[i]?.value as ClearValue;
+    result.checkSignaturesArgs.handlesList.forEach((encryptedValue: Hex, i: number) => {
+      clearValues[encryptedValue] = result.clearValues[i]?.value as ClearValue;
     });
     return {
       clearValues,
@@ -242,7 +242,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     );
   }
 
-  async delegatedUserDecrypt(
+  async delegatedDecryptValues(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>> {
     await this.#ensureInit();
@@ -278,9 +278,9 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
   }
 
   /**
-   * User-decrypt handle/contract pairs: parse the serialized transport key pair
+   * Decrypt encrypted-value/contract pairs: parse the serialized transport key pair
    * and signed permit (built + signed in the signer layer), then decrypt and map
-   * back to a `handle → clear value` record. Delegated decryption uses the same
+   * back to an `encrypted value → clear value` record. Delegated decryption uses the same
    * path — the delegation is encoded in the permit.
    */
   async #decryptValuesFromPairs(params: {

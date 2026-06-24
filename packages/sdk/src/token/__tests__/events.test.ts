@@ -62,7 +62,7 @@ describe("ZamaSDKEvents constants", () => {
 });
 
 describe("Token.balanceOf event emissions", () => {
-  // balanceOf delegates to sdk.userDecrypt, so decrypt events come from the SDK's
+  // balanceOf delegates to sdk.decryptValues, so decrypt events come from the SDK's
   // unified pipeline. They carry `handles` and `durationMs`, but not `tokenAddress`
   // (the pipeline is token-agnostic — callers correlate by handle).
 
@@ -130,7 +130,7 @@ describe("Token.balanceOf event emissions", () => {
     expect("encryptedValues" in endEvent! && endEvent.encryptedValues).toContain(handle);
   });
 
-  test("emits DecryptError when relayer.userDecrypt fails", async ({
+  test("emits DecryptError when relayer.decryptValues fails", async ({
     createSDK,
     relayer,
     tokenAddress,
@@ -138,7 +138,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
+    relayer.decryptValues = vi.fn().mockRejectedValue(new Error("decrypt boom"));
     const { readonlyToken, events } = setupSdkWithEvents({
       createSDK,
       tokenAddress,
@@ -207,7 +207,7 @@ describe("Token.decryptBalanceAs event emissions", () => {
         extraData: "0x",
       },
     });
-    relayer.delegatedUserDecrypt = vi.fn().mockResolvedValue({ [handle]: 42n });
+    relayer.delegatedDecryptValues = vi.fn().mockResolvedValue({ [handle]: 42n });
 
     await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
@@ -216,7 +216,7 @@ describe("Token.decryptBalanceAs event emissions", () => {
     );
     expect(decryptEvents.length).toBeGreaterThan(0);
     for (const event of decryptEvents) {
-      // SDK-level delegatedUserDecrypt does not scope events to a token address
+      // SDK-level delegatedDecryptValues does not scope events to a token address
       expect(event.tokenAddress).toBeUndefined();
       expect(event.timestamp).toBeGreaterThan(0);
       expect(typeof event.timestamp).toBe("number");

@@ -7,7 +7,7 @@ describe("useConfidentialBalance", () => {
   test("default", async ({ renderWithProviders, relayer, provider, tokenAddress, userAddress }) => {
     const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 123n });
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -60,7 +60,7 @@ describe("useConfidentialBalance", () => {
   }) => {
     const handle = `0x${"cd".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 456n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 456n });
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
@@ -86,7 +86,7 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 123n });
 
       const { result } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -141,7 +141,7 @@ describe("useConfidentialBalance", () => {
       const handleB = `0x${"bc".repeat(32)}`;
       let currentHandle: string = handleA;
       vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-      vi.mocked(relayer.userDecrypt).mockImplementation(
+      vi.mocked(relayer.decryptValues).mockImplementation(
         async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
           const value = encryptedValues[0] === handleA ? 111n : 222n;
           return { [encryptedValues[0]]: value };
@@ -165,11 +165,11 @@ describe("useConfidentialBalance", () => {
       await waitFor(() => expect(result.current.data).toBe(222n), {
         timeout: 5_000,
       });
-      expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+      expect(relayer.decryptValues).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ encryptedValues: [handleA] }),
       );
-      expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
+      expect(relayer.decryptValues).toHaveBeenLastCalledWith(
         expect.objectContaining({ encryptedValues: [handleB] }),
       );
     });
@@ -183,7 +183,7 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"ad".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 999n });
 
       const { result, rerender } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),

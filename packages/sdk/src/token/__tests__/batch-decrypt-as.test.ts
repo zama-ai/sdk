@@ -63,14 +63,14 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
-    vi.mocked(relayer.delegatedUserDecrypt)
+    vi.mocked(relayer.delegatedDecryptValues)
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
       .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
     const tokenA = new Token(delegateSdk, TOKEN_A);
     const tokenB = new Token(delegateSdk, TOKEN_B);
 
-    vi.mocked(relayer.delegatedUserDecrypt)
+    vi.mocked(relayer.delegatedDecryptValues)
       .mockResolvedValueOnce({ [HANDLE_A]: 100n })
       .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
@@ -112,7 +112,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     });
 
     expect(balances.get(TOKEN_A)).toBe(0n);
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
     // Pre-flight is skipped only when every handle is zero — zero balances
     // need no authorization — so getDelegationExpiry never calls readContract.
     expect(delegateProvider.readContract).toHaveBeenCalledTimes(1);
@@ -147,7 +147,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     // Delegation check now fires even when the cache resolves everything, so
     // revoked delegations can't leak stale cached values.
     expect(delegateProvider.readContract).toHaveBeenCalledTimes(2);
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
 
@@ -181,7 +181,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
   });
 
   test("calls onError callback when decryption fails for a token", async ({
@@ -241,7 +241,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
   });
 
   test("throws aggregated DecryptionFailedError when delegation has expired", async ({
@@ -273,7 +273,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_EXPIRED" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
   });
 
   test("batch succeeds when delegation is permanently active", async ({

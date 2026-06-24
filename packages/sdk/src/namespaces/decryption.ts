@@ -73,7 +73,7 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.userDecrypt(encryptedInput, account.address);
+    return service.decryptValues(encryptedInput, account.address);
   }
 
   /**
@@ -111,7 +111,7 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.delegatedUserDecrypt(
+    return service.delegatedDecryptValues(
       encryptedInputs,
       delegatorAddress,
       account.address,
@@ -145,7 +145,7 @@ export class Decryption {
     }
 
     try {
-      return await this.#relayer.publicDecrypt(encryptedValues);
+      return await this.#relayer.decryptPublicValues(encryptedValues);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }

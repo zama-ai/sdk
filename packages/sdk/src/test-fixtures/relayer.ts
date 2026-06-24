@@ -41,10 +41,10 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       encryptedValues: [VALID_ENCRYPTED_VALUE],
       inputProof: VALID_INPUT_PROOF,
     }),
-    userDecrypt: vi.fn().mockResolvedValue({
+    decryptValues: vi.fn().mockResolvedValue({
       [VALID_ENCRYPTED_VALUE as string]: 1000n,
     }),
-    publicDecrypt: vi.fn().mockImplementation((handles: string[]) => {
+    decryptPublicValues: vi.fn().mockImplementation((handles: string[]) => {
       const clearValues: Record<string, bigint> = {};
       for (const h of handles) {
         clearValues[h] = 500n;
@@ -65,10 +65,10 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {},
     }),
-    delegatedUserDecrypt: vi.fn().mockResolvedValue({
+    delegatedDecryptValues: vi.fn().mockResolvedValue({
       [VALID_ENCRYPTED_VALUE as string]: 1000n,
     }),
-    getAclAddress: vi.fn().mockResolvedValue(ACL),
+    getAclAddress: vi.fn().mockReturnValue(ACL),
     fetchFheEncryptionKeyBytes: vi.fn().mockResolvedValue({
       publicKeyId: "pk-1",
       publicKey: new Uint8Array([1]),
