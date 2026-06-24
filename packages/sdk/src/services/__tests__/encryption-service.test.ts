@@ -5,7 +5,7 @@ import {
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
-import type { EncryptParams } from "../../relayer/relayer-sdk.types";
+import type { EncryptParams } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const ENCRYPT_PARAMS: EncryptParams = {

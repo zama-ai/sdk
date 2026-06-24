@@ -1,6 +1,5 @@
 import type { Address } from "viem";
 import type { GenericSigner, GenericStorage } from "../types";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
@@ -16,13 +15,14 @@ import type {
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
+import type { RelayerSDK } from "../relayer/types";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  relayer: RelayerDispatcher;
+  relayer: RelayerSDK;
   signer: GenericSigner;
   /** Transport key pair lifetime in seconds. Pre-validated. */
   transportKeyPairTTL: number;
@@ -43,7 +43,7 @@ export interface CredentialServiceConfig {
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
-  readonly #relayer: RelayerDispatcher;
+  readonly #relayer: RelayerSDK;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
 

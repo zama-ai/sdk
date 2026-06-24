@@ -1,15 +1,14 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type React from "react";
 import type { ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
-import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
-import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk.types";
+import type { RelayerSDK } from "@zama-fhe/sdk/relayer/types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
-import type { QueryClientFixtures } from "./query-client";
+import type React from "react";
 import { Providers } from "./providers";
+import type { QueryClientFixtures } from "./query-client";
 
 export interface WrapperFixtures {
   createWrapper: (overrides?: Partial<ZamaConfig>) => {
@@ -17,7 +16,7 @@ export interface WrapperFixtures {
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    relayer: RelayerSDK;
     storage: GenericStorage;
   };
   renderWithProviders: <TResult>(
@@ -42,7 +41,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
       const config = {
         chains: [chain],
-        relayer,
+        router: { relayer } as ZamaConfig["router"],
         provider,
         signer,
         storage,
@@ -67,7 +66,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         queryClient,
         signer: config.signer,
         provider: config.provider,
-        relayer: config.relayer,
+        relayer: config.router.relayer,
         storage: config.storage,
       };
     }

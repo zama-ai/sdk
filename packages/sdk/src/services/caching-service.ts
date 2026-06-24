@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/types";
 import { checksummedAddress } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
 

@@ -2,7 +2,7 @@ import type { Address, Hex } from "viem";
 import { z } from "zod/mini";
 import { checksum, hex } from "../schemas/primitives";
 import type { GenericStorage } from "../types";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 
 const STORAGE_PREFIX = "zama:pending-unshield:";
 const CURRENT_VERSION = 1;

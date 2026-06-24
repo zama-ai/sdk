@@ -23,7 +23,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
@@ -366,7 +366,10 @@ export class Token {
       options.encryptedValues ??
       (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
 
-    const decryptRequests: Array<{ token: Token; encryptedValue: EncryptedValue }> = [];
+    const decryptRequests: Array<{
+      token: Token;
+      encryptedValue: EncryptedValue;
+    }> = [];
     for (const [index, token] of tokens.entries()) {
       const encryptedValue = resolvedEncryptedValues[index];
       if (!encryptedValue || errors.has(token.address)) {

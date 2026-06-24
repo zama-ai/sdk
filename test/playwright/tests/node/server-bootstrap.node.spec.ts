@@ -24,7 +24,7 @@ test("backend bootstraps SDK, verifies FHE infra, and shuts down cleanly", async
   const sdk = new ZamaSDK(config);
 
   // 2. Verify ACL contract is reachable
-  const aclAddress = await sdk.relayer.getAclAddress();
+  const aclAddress = sdk.relayer.getAclAddress();
   expect(aclAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
 
   // 3. Verify the FHE backend initializes — generate a keypair

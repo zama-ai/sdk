@@ -6,7 +6,7 @@
 import { nodeTest as test, expect } from "../../fixtures/node-test";
 
 test("FhevmRelayer resolves correct ACL address from chain config", async ({ sdk, contracts }) => {
-  expect(await sdk.relayer.getAclAddress()).toBe(contracts.acl);
+  expect(sdk.relayer.getAclAddress()).toBe(contracts.acl);
 });
 
 test("FhevmRelayer generates a valid keypair", async ({ sdk }) => {

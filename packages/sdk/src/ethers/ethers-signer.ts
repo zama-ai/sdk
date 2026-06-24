@@ -13,7 +13,7 @@ import {
   WalletAccountNotReadyError,
   WalletNotConnectedError,
 } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";

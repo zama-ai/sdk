@@ -17,8 +17,6 @@ export function web(runtime?: FhevmRuntimeConfig): WebRelayerConfig;
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
-    // (undocumented)
     readonly type: "web";
 }
 

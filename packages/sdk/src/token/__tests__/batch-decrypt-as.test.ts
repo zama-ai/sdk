@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
-import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/types";
 import type { ZamaSDK } from "../../zama-sdk";
 
 const TOKEN_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;

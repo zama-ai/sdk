@@ -1,12 +1,11 @@
 import type { Address } from "viem";
-import { Decryption } from "./namespaces/decryption";
-import { Delegations } from "./namespaces/delegations";
-import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
-import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
+import { Decryption } from "./namespaces/decryption";
+import { Delegations } from "./namespaces/delegations";
+import { Permits } from "./namespaces/permits";
+import type { RelayerSDK, EncryptParams, EncryptResult } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -31,7 +30,8 @@ import { WrappersRegistry } from "./wrappers-registry";
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
-  readonly relayer: RelayerDispatcher;
+  /** @internal */
+  readonly relayer: RelayerSDK;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
@@ -56,7 +56,7 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
 
   constructor(config: ZamaConfig) {
-    this.relayer = config.relayer;
+    this.relayer = config.router.relayer;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
@@ -104,7 +104,7 @@ export class ZamaSDK {
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
-      relayer: this.relayer,
+      router: config.router,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
     });

@@ -1,4 +1,4 @@
-import type { EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+import type { EncryptParams, EncryptResult } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 

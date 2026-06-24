@@ -626,8 +626,6 @@ export function cleartext(runtime?: FhevmRuntimeConfig): CleartextRelayerConfig;
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
-    // (undocumented)
     readonly type: "cleartext";
 }
 
@@ -5407,7 +5405,7 @@ export class Decryption {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        relayer: RelayerDispatcher;
+        relayer: RelayerSDK;
         decryptionService: DecryptionService | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
@@ -12618,43 +12616,9 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
-    readonly createWorker?: (chains: FheChain[]) => any;
+    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: string;
-}
-
-// @public
-export class RelayerDispatcher implements RelayerSDK, Disposable {
-    // (undocumented)
-    [Symbol.dispose](): void;
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    // (undocumented)
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    // (undocumented)
-    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    // (undocumented)
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    // (undocumented)
-    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-    // (undocumented)
-    generateTransportKeyPair(): Promise<TransportKeyPair>;
-    // (undocumented)
-    getAclAddress(): Promise<Address>;
-    // (undocumented)
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    // (undocumented)
-    switchChain(chainId: number): void;
-    // (undocumented)
-    terminate(): void;
-    // (undocumented)
-    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -12664,17 +12628,29 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
+export class RelayerRouter {
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
+    // (undocumented)
+    get chain(): FheChain;
+    // (undocumented)
+    get chains(): readonly FheChain[];
+    get relayer(): RelayerSDK;
+    // (undocumented)
+    switchChain(chainId: number): void;
+}
+
+// @public
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
     generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Promise<Address>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    getAclAddress(): Address;
     terminate(): void;
-    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public
@@ -18239,12 +18215,6 @@ export class WalletNotConnectedError extends SignerRequiredError {
 }
 
 // @public
-export interface WorkerLike {
-    // (undocumented)
-    terminate(): void;
-}
-
-// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19460,7 +19430,7 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly relayer: RelayerDispatcher;
+    readonly router: RelayerRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -19577,8 +19547,8 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // (undocumented)
-    readonly relayer: RelayerDispatcher;
+    // @internal (undocumented)
+    readonly relayer: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

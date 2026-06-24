@@ -50,7 +50,7 @@ import type {
   SerializedSignedPermit,
   SerializedTransportKeyPair,
   UserDecryptParams,
-} from "./relayer-sdk.types";
+} from "./types";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {

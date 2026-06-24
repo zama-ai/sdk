@@ -1,6 +1,6 @@
 /* eslint-disable no-empty-pattern */
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
-import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../../relayer/types";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 
 import {

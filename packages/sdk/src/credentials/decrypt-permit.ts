@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { DecryptionFailedError } from "../errors";
-import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/relayer-sdk.types";
+import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/types";
 import type { StoredTransportKeyPairWithPermits, Permission } from "./types";
 import { checksum } from "../schemas/primitives";
 

@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { describe, expect, test } from "../test-fixtures";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { CachingService } from "../services/caching-service";
 
 const REQUESTER_A = getAddress("0x1111111111111111111111111111111111111111") as Address;

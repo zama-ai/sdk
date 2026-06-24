@@ -1,7 +1,7 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
 import type { EncryptedInput } from "../../query/user-decrypt";
-import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 
 const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;

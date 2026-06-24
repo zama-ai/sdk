@@ -222,8 +222,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain, worker: any) => RelayerSDK;
-    readonly createWorker?: (chains: FheChain[]) => any;
+    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: string;
 }
@@ -232,14 +231,14 @@ export interface RelayerConfig {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
     generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Promise<Address>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    getAclAddress(): Address;
     terminate(): void;
-    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public

@@ -22,8 +22,8 @@ export type {
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-export type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-export type { RelayerSDK } from "./relayer/relayer-sdk.types";
+export type { RelayerRouter } from "./relayer/relayer-router";
+export type { RelayerSDK } from "./relayer/types";
 export type {
   RelayerSDKStatus,
   EncryptResult,
@@ -35,7 +35,7 @@ export type {
   NetworkType,
   FheEncryptionKey,
   FheTypeName,
-} from "./relayer/relayer-sdk.types";
+} from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
@@ -43,7 +43,7 @@ export type {
   UserDecryptParams as DecryptValuesParams,
   PublicDecryptResult as DecryptPublicValuesResult,
   DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "./relayer/relayer-sdk.types";
+} from "./relayer/types";
 export type { GenericLogger } from "./types/logger";
 
 // Chain presets and types

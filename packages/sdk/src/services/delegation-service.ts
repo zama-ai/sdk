@@ -16,7 +16,7 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { RelayerSDK } from "../relayer/types";
 import type {
   GenericProvider,
   GenericSigner,
@@ -32,7 +32,7 @@ type AclTransactionOperation = Extract<
 
 export class DelegationService {
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
+  readonly #relayer: RelayerSDK;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 
   constructor({
@@ -41,7 +41,7 @@ export class DelegationService {
     emitEvent = () => {},
   }: {
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    relayer: RelayerSDK;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;

@@ -2,7 +2,7 @@
 import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/relayer-sdk.types";
+import type { RelayerSDK } from "../relayer/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { ZamaSDK } from "../zama-sdk";
 import type { ChainFixtures } from "./chain";
@@ -30,7 +30,7 @@ function buildSDK(
 ): ZamaSDK {
   return new ZamaSDK({
     chains: [chain],
-    relayer: relayer as unknown as ZamaConfig["relayer"],
+    router: { relayer },
     provider,
     signer,
     storage,

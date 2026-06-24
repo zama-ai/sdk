@@ -1,4 +1,4 @@
-import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";

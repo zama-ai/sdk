@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { resolveChainRelayers, resolveStorage } from "../resolve";
 import { sepolia, mainnet, hardhat, anvil, type FheChain } from "../../chains";
 import type { RelayerConfig } from "../types";
-import type { RelayerSDK } from "../../relayer/relayer-sdk.types";
+import type { RelayerSDK } from "../../relayer/types";
 
 /** Stub the public RelayerConfig seam — no internal-module mocking. */
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {

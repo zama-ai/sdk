@@ -1,5 +1,5 @@
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmRuntimeConfig } from "../relayer/relayer-sdk.types";
+import type { FhevmRuntimeConfig } from "../relayer/types";
 import type { WebRelayerConfig } from "./types";
 
 /**

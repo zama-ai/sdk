@@ -9,11 +9,10 @@ import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError }
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { RelayerSDK, ClearValue, EncryptedValue } from "../relayer/types";
+import { toError } from "../utils";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
-import { toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -45,7 +44,7 @@ export class DecryptionService {
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
-  readonly #relayer: RelayerDispatcher;
+  readonly #relayer: RelayerSDK;
   readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
   constructor({
@@ -58,7 +57,7 @@ export class DecryptionService {
     cache: CachingService;
     credentialService: CredentialService;
     delegationService: DelegationService;
-    relayer: RelayerDispatcher;
+    relayer: RelayerSDK;
     emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
     this.#cache = cache;

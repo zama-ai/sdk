@@ -4,7 +4,7 @@ import type { Address } from "viem";
 import type { CredentialServiceConfig } from "../credentials/credential-service";
 import { CredentialService } from "../credentials/credential-service";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { RelayerRouter } from "../relayer/relayer-router";
 import { CachingService } from "../services/caching-service";
 import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
@@ -16,6 +16,7 @@ import type { RelayerFixtures } from "./relayer";
 import type { SignerFixtures } from "./signer";
 import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
+import type { RelayerSDK } from "..";
 
 export type CreateCredentialServiceFn = (
   config?: Partial<CredentialServiceConfig>,
@@ -23,7 +24,7 @@ export type CreateCredentialServiceFn = (
 
 export type CreateDelegationServiceFn = (overrides?: {
   provider?: GenericProvider;
-  relayer?: RelayerDispatcher;
+  relayer?: RelayerSDK;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => DelegationService;
 
@@ -31,19 +32,19 @@ export type CreateDecryptionServiceFn = (overrides?: {
   cache?: CachingService;
   credentialService?: CredentialService;
   delegationService?: DelegationService;
-  relayer?: RelayerDispatcher;
+  relayer?: RelayerSDK;
   emitEvent?: (input: ZamaSDKEventInput) => void;
 }) => DecryptionService;
 
 export type CreateEncryptionServiceFn = (overrides?: {
-  relayer?: RelayerDispatcher;
+  relayer?: RelayerSDK;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => EncryptionService;
 
 export type CreateLifecycleServiceFn = (overrides?: {
   signer?: GenericSigner;
   cachingService?: CachingService;
-  relayer?: RelayerDispatcher;
+  relayer?: RelayerRouter;
   credentialService?: CredentialService;
 }) => LifecycleService;
 
@@ -85,7 +86,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     const factory: CreateDelegationServiceFn = (overrides = {}) =>
       new DelegationService({
         provider: overrides.provider ?? provider,
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
         emitEvent: overrides.emitEvent,
       });
     await use(factory);
@@ -102,7 +103,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cache: overrides.cache ?? cachingService,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -113,7 +114,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createEncryptionService: async ({ relayer }, use) => {
     const factory: CreateEncryptionServiceFn = (overrides = {}) =>
       new EncryptionService({
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -126,7 +127,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
         cachingService: overrides.cachingService ?? cachingService,
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
+        router: (overrides.relayer ?? relayer) as unknown as RelayerRouter,
         credentialService: overrides.credentialService,
       });
     await use(factory);

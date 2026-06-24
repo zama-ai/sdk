@@ -10,7 +10,7 @@ import type {
 import { getAddress } from "viem";
 import type { writeContract } from "viem/actions";
 import { WalletNotConnectedError } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
@@ -53,11 +53,17 @@ export class ViemSigner extends BaseSigner {
     this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
-  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
+  #requireAccount(operation: string): {
+    walletClient: WalletClient;
+    account: Account;
+  } {
     if (!this.#walletClient.account) {
       throw new WalletNotConnectedError(operation);
     }
-    return { walletClient: this.#walletClient, account: this.#walletClient.account };
+    return {
+      walletClient: this.#walletClient,
+      account: this.#walletClient.account,
+    };
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {

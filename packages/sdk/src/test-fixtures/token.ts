@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import type { Address, Hex } from "viem";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import type { GenericSigner, TransactionResult } from "../types";

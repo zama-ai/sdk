@@ -555,14 +555,14 @@ export interface RawLog {
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    delegatedUserDecrypt(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
+    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
     fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
     generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Promise<Address>;
-    publicDecrypt(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
+    getAclAddress(): Address;
     terminate(): void;
-    userDecrypt(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 }
 
 // @public (undocumented)
@@ -960,7 +960,7 @@ export interface WrappersRegistryQueryConfig {
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly relayer: RelayerDispatcher;
+    readonly router: RelayerRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -1179,8 +1179,8 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // (undocumented)
-    readonly relayer: RelayerDispatcher;
+    // @internal (undocumented)
+    readonly relayer: RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

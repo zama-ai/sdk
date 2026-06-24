@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from "../test-fixtures";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
 import type { Address } from "viem";
-import type { EncryptParams } from "../relayer/relayer-sdk.types";
+import type { EncryptParams } from "../relayer/types";
 
 describe("ZamaSDK", () => {
   test("exposes signer and storage", ({ sdk, signer, storage }) => {
