@@ -6,7 +6,12 @@ import { DelegationNotPropagatedError } from "./delegation";
 import { NotEntitledError } from "./entitlement";
 import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
-import { extractHttpStatus, extractRetryAfterMs, isRpcRateLimitError } from "../utils/error";
+import {
+  extractHttpStatus,
+  extractRetryAfterMs,
+  hasStructuredRpcRateLimitSignal,
+  isRpcRateLimitError,
+} from "../utils/error";
 
 /** Read the `zamaErrorCode` the worker client attaches to cross-thread errors. */
 function readZamaErrorCode(error: unknown): string | undefined {
@@ -57,9 +62,16 @@ export function wrapDecryptError(
     return error;
   }
 
-  // Provider RPC rate-limit classified at the worker source (`zamaErrorCode`),
-  // where the full error object was still available. Authoritative.
-  if (readZamaErrorCode(error) === ZamaErrorCode.RpcRateLimited) {
+  // Provider RPC rate-limit, in priority order:
+  // 1. classified at the worker source (`zamaErrorCode`) — authoritative;
+  // 2. an unambiguous structured signal (-32005 / `status: 429`) on a raw
+  //    main-thread error, promoted regardless of any HTTP status it carries.
+  // Worker-origin relayer 429s carry a top-level `statusCode` (not `status`) and
+  // are intentionally excluded here, staying RelayerRequestFailedError below.
+  if (
+    readZamaErrorCode(error) === ZamaErrorCode.RpcRateLimited ||
+    hasStructuredRpcRateLimitSignal(error)
+  ) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,
       retryAfter: readRetryAfter(error) ?? extractRetryAfterMs(error),
@@ -68,10 +80,8 @@ export function wrapDecryptError(
 
   const statusCode = extractHttpStatus(error);
 
-  // Direct detection for main-thread paths (e.g. the cleartext relayer's ACL
-  // reads) where the raw provider error is still intact. Guarded on the absence
-  // of an HTTP status so relayer HTTP errors (incl. the relayer's own 429
-  // back-pressure) keep flowing to RelayerRequestFailedError below.
+  // Message-only RPC throttle (no structured signal, no HTTP status) on a raw
+  // main-thread error, e.g. the cleartext relayer's ACL reads.
   if (statusCode === undefined && isRpcRateLimitError(error)) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,

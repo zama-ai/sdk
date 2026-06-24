@@ -1,18 +1,10 @@
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /**
- * The configured signer/account is not entitled to decrypt a handle.
- *
- * Thrown when an ACL (`persistAllowed`) pre-check shows the actor lacks
- * permission to user-decrypt the handle. This is a terminal, **non-retryable**
- * condition for the current actor: retrying will not help. The fix is an
- * on-chain grant (`FHE.allow`) or, for indexers, to wait for a later block /
- * backfill once the grant lands.
- *
- * Distinguishing this from a transient infrastructure failure
- * (e.g. {@link RpcRateLimitError}, {@link DecryptionFailedError}) lets
- * entitlement-aware consumers branch deterministically instead of pre-checking
- * on-chain out of band or string-matching error messages.
+ * The signer (or delegator) lacks ACL permission to decrypt the handle —
+ * `persistAllowed` returned `false`. Terminal and **non-retryable**: the fix is
+ * an on-chain grant (`FHE.allow`), or for indexers, to wait for a backfill once
+ * the grant lands. Distinct from transient failures like {@link RpcRateLimitError}.
  *
  * @example
  * ```ts

@@ -254,7 +254,16 @@ export class DecryptionService {
     const allContracts = Array.from(new Set(normalized.map((h) => h.contractAddress)));
     const nonZeroContracts = Array.from(new Set(nonZero.map((h) => h.contractAddress)));
     if (strategy.validate) {
-      await strategy.validate(nonZeroContracts);
+      try {
+        await strategy.validate(nonZeroContracts);
+      } catch (error) {
+        // The delegation pre-check makes on-chain reads too; classify a throttled
+        // RPC here as well so delegated decrypt branches deterministically.
+        if (isRpcRateLimitError(error)) {
+          throw this.#rpcRateLimitError(error, "the delegation pre-check");
+        }
+        throw error;
+      }
     }
 
     const uncached: EncryptedInput[] = [];
@@ -347,6 +356,14 @@ export class DecryptionService {
     }
   }
 
+  /** Build an `RpcRateLimitError` for a throttled on-chain read. */
+  #rpcRateLimitError(error: unknown, context: string): RpcRateLimitError {
+    return new RpcRateLimitError(`RPC provider rate-limited ${context}; retry with backoff.`, {
+      cause: error,
+      retryAfter: extractRetryAfterMs(error),
+    });
+  }
+
   /**
    * Best-effort ACL pre-check. For each handle, reads `persistAllowed(handle,
    * actor)` via the provider:
@@ -368,6 +385,8 @@ export class DecryptionService {
         // Typed as possibly-undefined: a non-conforming provider/mock may not
         // return a boolean, and we must only treat an explicit on-chain `false`
         // as not-entitled (never a missing/garbled read).
+        // Possibly-undefined: a non-conforming provider/mock may not return a
+        // boolean, and only an explicit on-chain `false` should mean not-entitled.
         let allowed: boolean | undefined;
         try {
           allowed = await this.#provider.readContract(
@@ -375,16 +394,10 @@ export class DecryptionService {
           );
         } catch (error) {
           if (isRpcRateLimitError(error)) {
-            throw new RpcRateLimitError(
-              `RPC provider rate-limited the ACL entitlement check for handle ${encryptedValue}. ` +
-                `This is an RPC-endpoint problem, not a decryption failure — retry with backoff.`,
-              { cause: error, retryAfter: extractRetryAfterMs(error) },
-            );
+            throw this.#rpcRateLimitError(error, `the ACL check for handle ${encryptedValue}`);
           }
           return; // Best-effort: couldn't determine entitlement, defer to relayer.
         }
-        // Only an explicit on-chain `false` means not-entitled; `undefined`
-        // (non-conforming provider/mock) defers to the relayer.
         // oxlint-disable-next-line no-unnecessary-boolean-literal-compare
         if (allowed === false) {
           throw new NotEntitledError({

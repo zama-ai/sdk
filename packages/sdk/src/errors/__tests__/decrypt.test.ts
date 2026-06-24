@@ -182,6 +182,24 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(rpcError, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
+    test("maps a status-bearing consumer 429 (viem `status`) to RpcRateLimitError", () => {
+      // viem HttpRequestError carries `status: 429`; must not fall through to
+      // RelayerRequestFailedError just because a status is present.
+      const consumer429 = Object.assign(new Error("Too Many Requests"), { status: 429 });
+      expect(wrapDecryptError(consumer429, "fallback")).toBeInstanceOf(RpcRateLimitError);
+    });
+
+    test("keeps a worker-origin relayer 429 (`statusCode`, no RELAYER tag) as RelayerRequestFailedError", () => {
+      // After the worker boundary strips the cause, the relayer's 429 is a bare
+      // Error with `statusCode` (not `status`) — it must stay a relayer error.
+      const workerRelayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+        statusCode: 429,
+      });
+      const wrapped = wrapDecryptError(workerRelayer429, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
+    });
+
     test("keeps the relayer's own 429 (HTTP status present) as RelayerRequestFailedError", () => {
       const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
         cause: { code: "RELAYER_FETCH_ERROR", status: 429 },

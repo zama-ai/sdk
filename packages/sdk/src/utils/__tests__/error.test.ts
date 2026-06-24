@@ -4,6 +4,7 @@ import {
   isContractCallError,
   extractHttpStatus,
   isRpcRateLimitError,
+  hasStructuredRpcRateLimitSignal,
   extractRetryAfterMs,
   classifyWorkerError,
 } from "../error";
@@ -171,6 +172,10 @@ describe("isRpcRateLimitError", () => {
     expect(isRpcRateLimitError(new Error("HTTP request failed: Too Many Requests"))).toBe(true);
   });
 
+  test("does not match a bare '429' substring in an unrelated message", () => {
+    expect(isRpcRateLimitError(new Error("transferred 4290 wei (id 429001)"))).toBe(false);
+  });
+
   test("excludes the relayer's own rate-limit (RELAYER_FETCH_ERROR)", () => {
     const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
       cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
@@ -183,6 +188,37 @@ describe("isRpcRateLimitError", () => {
     expect(isRpcRateLimitError(Object.assign(new Error("boom"), { status: 500 }))).toBe(false);
     expect(isRpcRateLimitError(null)).toBe(false);
     expect(isRpcRateLimitError("429")).toBe(false);
+  });
+});
+
+describe("hasStructuredRpcRateLimitSignal", () => {
+  test("matches -32005 and a viem-style `status: 429`", () => {
+    expect(hasStructuredRpcRateLimitSignal(Object.assign(new Error("x"), { code: -32005 }))).toBe(
+      true,
+    );
+    expect(hasStructuredRpcRateLimitSignal(Object.assign(new Error("x"), { status: 429 }))).toBe(
+      true,
+    );
+  });
+
+  test("does NOT match a top-level `statusCode: 429` (worker-origin relayer shape)", () => {
+    expect(
+      hasStructuredRpcRateLimitSignal(
+        Object.assign(new Error("Relayer rate limit"), { statusCode: 429 }),
+      ),
+    ).toBe(false);
+  });
+
+  test("does NOT match a message-only throttle (no structured signal)", () => {
+    expect(hasStructuredRpcRateLimitSignal(new Error("Too Many Requests"))).toBe(false);
+  });
+
+  test("excludes relayer-tagged errors even with status 429", () => {
+    expect(
+      hasStructuredRpcRateLimitSignal(
+        Object.assign(new Error("x"), { cause: { code: "RELAYER_FETCH_ERROR", status: 429 } }),
+      ),
+    ).toBe(false);
   });
 });
 

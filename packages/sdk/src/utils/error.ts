@@ -72,55 +72,62 @@ function findInErrorChain(
   return undefined;
 }
 
+/** Structured (unambiguous) rate-limit signal: JSON-RPC -32005 or a numeric HTTP 429. */
+function nodeHasStructuredRateLimit(node: Record<string, unknown>): boolean {
+  return node.code === JSON_RPC_LIMIT_EXCEEDED || node.status === 429 || node.statusCode === 429;
+}
+
 function nodeIsRpcRateLimit(node: Record<string, unknown>): boolean {
-  // JSON-RPC "limit exceeded" code (Alchemy / Infura / others use -32005).
-  if (node.code === JSON_RPC_LIMIT_EXCEEDED) {
+  if (nodeHasStructuredRateLimit(node)) {
     return true;
   }
-  // HTTP 429 surfaced as a numeric status (viem HttpRequestError, relayer SDK cause).
-  if (node.status === 429 || node.statusCode === 429) {
-    return true;
-  }
-  // Message-based fallback for providers that don't expose a structured code.
+  // Message fallback for providers without a structured code. Deliberately
+  // narrow (specific throttling phrases, no bare "429") to avoid false positives
+  // that would turn a terminal error into a retryable one.
   if (typeof node.message === "string") {
     const msg = node.message.toLowerCase();
-    if (
-      msg.includes("too many requests") ||
-      msg.includes("rate limit") ||
-      msg.includes("rate-limit") ||
-      msg.includes("429")
-    ) {
-      return true;
-    }
+    return (
+      msg.includes("too many requests") || msg.includes("rate limit") || msg.includes("rate-limit")
+    );
   }
   return false;
 }
 
 /**
- * Returns true if the error (or any nested cause) originates from the relayer's
- * HTTP layer (the relayer SDK tags these with `code: "RELAYER_FETCH_ERROR"`).
- * Such errors — including the relayer's own 429 back-pressure — are the
- * relayer's domain ({@link RelayerRequestFailedError}), not the consumer's RPC
- * provider, so they must not be reclassified as {@link RpcRateLimitError}.
+ * The relayer SDK tags its HTTP errors with `code: "RELAYER_FETCH_ERROR"`. These
+ * stay the relayer's domain ({@link RelayerRequestFailedError} / SDK-236), never
+ * {@link RpcRateLimitError}, even on a 429.
  */
 function isRelayerFetchError(error: unknown): boolean {
   return findInErrorChain(error, (node) => node.code === "RELAYER_FETCH_ERROR") !== undefined;
 }
 
 /**
- * Returns true if the error (or any nested cause) is the **consumer's RPC
- * provider** rate-limiting / throttling an on-chain read — HTTP 429 or JSON-RPC
- * `-32005`. Relayer-originated rate-limits are excluded (see
- * {@link isRelayerFetchError}).
- *
- * Used to distinguish a transient RPC-endpoint problem from a genuine
- * decryption or entitlement failure. See {@link RpcRateLimitError}.
+ * True if the error is the consumer's RPC provider throttling an on-chain read
+ * (HTTP 429 / JSON-RPC -32005). Relayer-originated 429s are excluded.
  */
 export function isRpcRateLimitError(error: unknown): boolean {
   if (isRelayerFetchError(error)) {
     return false;
   }
   return findInErrorChain(error, nodeIsRpcRateLimit) !== undefined;
+}
+
+/**
+ * Like {@link isRpcRateLimitError} but only matches an unambiguous structured
+ * signal (`-32005` or a numeric `status: 429`), ignoring message text. Used by
+ * `wrapDecryptError` to promote a raw consumer 429 regardless of any HTTP status
+ * it carries, while leaving worker-origin relayer errors (which carry a
+ * top-level `statusCode`, not `status`) to the relayer branch.
+ */
+export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
+  if (isRelayerFetchError(error)) {
+    return false;
+  }
+  return (
+    findInErrorChain(error, (n) => n.code === JSON_RPC_LIMIT_EXCEEDED || n.status === 429) !==
+    undefined
+  );
 }
 
 /** Structured classification of a worker-side error for the cross-thread protocol. */

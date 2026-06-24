@@ -2,17 +2,10 @@ import { ZamaError, ZamaErrorCode } from "./base";
 
 /**
  * The consumer's RPC provider rate-limited an on-chain read the SDK performs
- * during decryption (e.g. the ACL `persistAllowed` check).
- *
- * Surfaced when a provider returns HTTP 429 ("Too Many Requests") or the
- * JSON-RPC `-32005` ("limit exceeded") code. This is an **infrastructure**
- * problem with the consumer's RPC endpoint, **not** a decryption or
- * entitlement failure: the correct fix is a higher rate limit / different RPC
- * endpoint, and the operation is safe to **retry** (ideally with backoff).
- *
- * Without this distinct error the failure collapses into
- * {@link DecryptionFailedError}, which misleads integrators into re-checking
- * rights or re-delegating when the real cause is the RPC provider.
+ * during decryption (e.g. the ACL check) — HTTP 429 or JSON-RPC `-32005`. An
+ * RPC-endpoint problem, **not** a decryption/entitlement failure, and safe to
+ * **retry** with backoff. Kept distinct from the relayer's own back-pressure
+ * ({@link RelayerRequestFailedError}).
  *
  * @example
  * ```ts

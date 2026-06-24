@@ -323,6 +323,28 @@ describe("DecryptionService", () => {
       expect(relayer.userDecrypt).toHaveBeenCalled();
     });
 
+    test("delegatedUserDecrypt throws RpcRateLimitError when a delegation pre-check read is rate-limited", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      const rpcError = Object.assign(new Error("Too Many Requests"), { code: -32005 });
+      vi.mocked(provider.readContract).mockRejectedValue(rpcError);
+
+      await expect(
+        decryptionService.delegatedUserDecrypt(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+        ),
+      ).rejects.toBeInstanceOf(RpcRateLimitError);
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    });
+
     test("userDecrypt defers to the relayer when the pre-check read fails for a non-rate-limit reason", async ({
       createDecryptionService,
       createMockProvider,
@@ -339,6 +361,33 @@ describe("DecryptionService", () => {
         service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
       ).resolves.toEqual({ [HANDLE_A]: 9n });
       expect(relayer.userDecrypt).toHaveBeenCalled();
+    });
+
+    test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockRejectedValue(
+        Object.assign(new Error("Too Many Requests"), { code: -32005 }),
+      );
+
+      await expect(
+        decryptionService.delegatedBatchDecryptHandlesAs({
+          encryptedInputs: handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          delegatorAddress,
+          delegateAddress,
+          accountAddress: userAddress,
+          maxConcurrency: 1,
+        }),
+      ).rejects.toBeInstanceOf(RpcRateLimitError);
+      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     });
   });
 });
