@@ -1,4 +1,4 @@
-import type { Address, EIP1193Provider, Hex } from "viem";
+import type { Address, EIP1193Provider } from "viem";
 import type { FhevmRuntimeConfig } from "../relayer/types";
 
 /**
@@ -36,10 +36,6 @@ export interface FheChain<TId extends number = number> {
    * or `{ type: "BearerToken", token: "your-token" }` for bearer auth.
    */
   readonly auth?: FhevmRuntimeConfig["auth"];
-  /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
-  readonly kmsSignerPrivateKey?: Hex;
-  /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */
-  readonly inputSignerPrivateKey?: Hex;
 }
 
 /** At least one chain is required. */
