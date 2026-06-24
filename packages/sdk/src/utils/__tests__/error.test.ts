@@ -10,6 +10,7 @@ import {
   extractRetryAfterMs,
   classifyWorkerError,
   classifyDecryptWorkerError,
+  readWorkerClassification,
 } from "../error";
 import { ZamaErrorCode } from "../../errors/base";
 
@@ -257,6 +258,44 @@ describe("classifyWorkerError", () => {
 
   test("returns an empty classification for a plain error", () => {
     expect(classifyWorkerError(new Error("network down"))).toEqual({});
+  });
+});
+
+describe("readWorkerClassification", () => {
+  test("rebuilds NOT_ENTITLED from the re-attached fields", () => {
+    const err = Object.assign(new Error("x"), {
+      zamaErrorCode: ZamaErrorCode.NotEntitled,
+      handle: "0xhandle",
+      contractAddress: "0xcontract",
+      account: "0xactor",
+    });
+    expect(readWorkerClassification(err)).toEqual({
+      errorCode: ZamaErrorCode.NotEntitled,
+      handle: "0xhandle",
+      contractAddress: "0xcontract",
+      account: "0xactor",
+    });
+  });
+
+  test("rebuilds RPC_RATE_LIMITED with retryAfter", () => {
+    const err = Object.assign(new Error("x"), {
+      zamaErrorCode: ZamaErrorCode.RpcRateLimited,
+      retryAfter: 1500,
+    });
+    expect(readWorkerClassification(err)).toEqual({
+      errorCode: ZamaErrorCode.RpcRateLimited,
+      retryAfter: 1500,
+    });
+  });
+
+  test("rebuilds a plain statusCode classification", () => {
+    const err = Object.assign(new Error("x"), { statusCode: 500 });
+    expect(readWorkerClassification(err)).toEqual({ statusCode: 500 });
+  });
+
+  test("returns undefined for an unclassified / non-object error", () => {
+    expect(readWorkerClassification(new Error("raw"))).toBeUndefined();
+    expect(readWorkerClassification("nope")).toBeUndefined();
   });
 });
 

@@ -22,7 +22,6 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptRequest,
   EncryptResponseData,
-  ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
   GetPublicKeyRequest,
@@ -154,33 +153,11 @@ function sendError(
   id: string,
   type: WorkerRequest["type"],
   error: string,
-  extra?: WorkerErrorClassification,
+  classification?: WorkerErrorClassification,
 ): void {
-  const response: ErrorResponse = {
-    id,
-    type,
-    success: false,
-    error,
-  };
-  if (extra?.statusCode !== undefined) {
-    response.statusCode = extra.statusCode;
-  }
-  if (extra?.errorCode !== undefined) {
-    response.errorCode = extra.errorCode;
-  }
-  if (extra?.retryAfter !== undefined) {
-    response.retryAfter = extra.retryAfter;
-  }
-  if (extra?.handle !== undefined) {
-    response.handle = extra.handle;
-  }
-  if (extra?.contractAddress !== undefined) {
-    response.contractAddress = extra.contractAddress;
-  }
-  if (extra?.account !== undefined) {
-    response.account = extra.account;
-  }
-  self.postMessage(response);
+  // Structured clone flattens this; the typed ErrorResponse union is the
+  // consumer-side contract (worker.base-client rebuilds the typed error).
+  self.postMessage({ id, type, success: false, error, ...classification });
 }
 
 // Store original fetch for use in SDK loading

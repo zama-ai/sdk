@@ -11,34 +11,8 @@ import {
   extractRetryAfterMs,
   hasStructuredRpcRateLimitSignal,
   isRpcRateLimitError,
+  readWorkerClassification,
 } from "../utils/error";
-
-/** Read the `zamaErrorCode` the worker client attaches to cross-thread errors. */
-function readZamaErrorCode(error: unknown): string | undefined {
-  if (typeof error === "object" && error !== null && "zamaErrorCode" in error) {
-    const code = (error as { zamaErrorCode?: unknown }).zamaErrorCode;
-    return typeof code === "string" ? code : undefined;
-  }
-  return undefined;
-}
-
-/** Read a numeric `retryAfter` the worker client attaches to cross-thread errors. */
-function readRetryAfter(error: unknown): number | undefined {
-  if (typeof error === "object" && error !== null && "retryAfter" in error) {
-    const v = (error as { retryAfter?: unknown }).retryAfter;
-    return typeof v === "number" ? v : undefined;
-  }
-  return undefined;
-}
-
-/** Read a string field the worker client attaches to cross-thread errors. */
-function readStringField(error: unknown, key: string): string {
-  if (typeof error === "object" && error !== null && key in error) {
-    const v = (error as Record<string, unknown>)[key];
-    return typeof v === "string" ? v : "";
-  }
-  return "";
-}
 
 /**
  * Inspect a caught error for an HTTP status code and return the appropriate
@@ -71,36 +45,39 @@ export function wrapDecryptError(
     return error;
   }
 
-  // Not-entitled, classified at the worker source from the relayer's own ACL
-  // check (`zamaErrorCode`) — no extra on-chain reads. Terminal/non-retryable.
-  if (readZamaErrorCode(error) === ZamaErrorCode.NotEntitled) {
+  // Causes classified at the worker source and threaded across the boundary
+  // (structured clone otherwise leaves only the message). Discriminated on
+  // `errorCode`, so each branch gets exactly its own typed payload.
+  const classification = readWorkerClassification(error);
+  if (classification?.errorCode === ZamaErrorCode.NotEntitled) {
     return new NotEntitledError(
       {
-        handle: readStringField(error, "handle"),
-        contractAddress: readStringField(error, "contractAddress"),
-        account: readStringField(error, "account"),
+        handle: classification.handle,
+        contractAddress: classification.contractAddress,
+        account: classification.account,
       },
       { cause: error },
     );
   }
-
-  // Provider RPC rate-limit, in priority order:
-  // 1. classified at the worker source (`zamaErrorCode`) — authoritative;
-  // 2. an unambiguous structured signal (-32005 / `status: 429`) on a raw
-  //    main-thread error, promoted regardless of any HTTP status it carries.
-  // Worker-origin relayer 429s carry a top-level `statusCode` (not `status`) and
-  // are intentionally excluded here, staying RelayerRequestFailedError below.
-  if (
-    readZamaErrorCode(error) === ZamaErrorCode.RpcRateLimited ||
-    hasStructuredRpcRateLimitSignal(error)
-  ) {
+  if (classification?.errorCode === ZamaErrorCode.RpcRateLimited) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,
-      retryAfter: readRetryAfter(error) ?? extractRetryAfterMs(error),
+      retryAfter: classification.retryAfter ?? extractRetryAfterMs(error),
     });
   }
 
-  const statusCode = extractHttpStatus(error);
+  // Raw main-thread provider error (e.g. the cleartext relayer's ACL reads):
+  // promote an unambiguous structured rate-limit signal (-32005 / `status: 429`)
+  // regardless of any HTTP status. Worker-origin relayer 429s carry a top-level
+  // `statusCode` (not `status`) and fall through to RelayerRequestFailedError.
+  if (hasStructuredRpcRateLimitSignal(error)) {
+    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
+      cause: error,
+      retryAfter: extractRetryAfterMs(error),
+    });
+  }
+
+  const statusCode = classification?.statusCode ?? extractHttpStatus(error);
 
   // Message-only RPC throttle (no structured signal, no HTTP status) on a raw
   // main-thread error, e.g. the cleartext relayer's ACL reads.

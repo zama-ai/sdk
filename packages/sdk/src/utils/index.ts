@@ -6,6 +6,7 @@ export {
   extractHttpStatus,
   classifyWorkerError,
   classifyDecryptWorkerError,
+  readWorkerClassification,
   type WorkerErrorClassification,
 } from "./error";
 export { prefixHex, unprefixHex } from "./hex";

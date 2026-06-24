@@ -130,19 +130,22 @@ export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
   );
 }
 
-/** Structured classification of a worker-side error for the cross-thread protocol. */
-export interface WorkerErrorClassification {
-  /** HTTP status code, when available (e.g. relayer 4xx/5xx). */
-  statusCode?: number;
-  /** A {@link ZamaErrorCode} the main thread should rebuild into a typed error. */
-  errorCode?: string;
-  /** Suggested retry delay in milliseconds, when known. */
-  retryAfter?: number;
-  /** For `NOT_ENTITLED`: the handle/contract/account the rebuilt error carries. */
-  handle?: string;
-  contractAddress?: string;
-  account?: string;
-}
+/**
+ * Structured classification of a worker-side error for the cross-thread protocol,
+ * discriminated on `errorCode` so each cause carries exactly its own payload
+ * (e.g. a `NOT_ENTITLED` always has handle/contract/account, a `RPC_RATE_LIMITED`
+ * only `retryAfter`). Only these fields survive a structured-clone across the
+ * worker boundary; the main thread rebuilds the typed error from them.
+ */
+export type WorkerErrorClassification =
+  | {
+      errorCode: typeof ZamaErrorCode.NotEntitled;
+      handle: string;
+      contractAddress: string;
+      account: string;
+    }
+  | { errorCode: typeof ZamaErrorCode.RpcRateLimited; retryAfter?: number }
+  | { errorCode?: undefined; statusCode?: number };
 
 /**
  * Classify an error at the worker source — where the full error object (codes,
@@ -156,6 +159,37 @@ export function classifyWorkerError(error: unknown): WorkerErrorClassification {
   }
   const statusCode = extractHttpStatus(error);
   return statusCode !== undefined ? { statusCode } : {};
+}
+
+/**
+ * Rebuild a {@link WorkerErrorClassification} from the fields the worker client
+ * re-attached to a cross-thread error (`zamaErrorCode` + payload). Returns
+ * `undefined` for errors that weren't classified at the worker source (e.g. raw
+ * main-thread provider errors), so callers fall back to direct detection.
+ */
+export function readWorkerClassification(error: unknown): WorkerErrorClassification | undefined {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+  const e = error as Record<string, unknown>;
+  if (e.zamaErrorCode === ZamaErrorCode.NotEntitled) {
+    return {
+      errorCode: ZamaErrorCode.NotEntitled,
+      handle: typeof e.handle === "string" ? e.handle : "",
+      contractAddress: typeof e.contractAddress === "string" ? e.contractAddress : "",
+      account: typeof e.account === "string" ? e.account : "",
+    };
+  }
+  if (e.zamaErrorCode === ZamaErrorCode.RpcRateLimited) {
+    return {
+      errorCode: ZamaErrorCode.RpcRateLimited,
+      retryAfter: typeof e.retryAfter === "number" ? e.retryAfter : undefined,
+    };
+  }
+  if (typeof e.statusCode === "number") {
+    return { statusCode: e.statusCode };
+  }
+  return undefined;
 }
 
 /**
@@ -196,7 +230,7 @@ export function classifyDecryptWorkerError(
   if (error instanceof Error && isNotEntitledMessage(error.message)) {
     return {
       errorCode: ZamaErrorCode.NotEntitled,
-      handle: parseHandleFromMessage(error.message),
+      handle: parseHandleFromMessage(error.message) ?? "",
       contractAddress: ctx.contractAddress,
       account: ctx.account,
     };

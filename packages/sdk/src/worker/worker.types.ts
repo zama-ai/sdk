@@ -6,6 +6,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValue, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
+import type { WorkerErrorClassification } from "../utils/error";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -223,25 +224,16 @@ export interface SuccessResponse<T> extends BaseResponse {
   data: T;
 }
 
-export interface ErrorResponse extends BaseResponse {
+/**
+ * A failed worker response. The cause is classified at the worker source into a
+ * {@link WorkerErrorClassification} (discriminated on `errorCode`) and carried
+ * alongside the message, so the main thread can rebuild the correct typed error
+ * after structured-clone strips prototypes/codes/causes across the boundary.
+ */
+export type ErrorResponse = BaseResponse & {
   success: false;
   error: string;
-  /** HTTP status code from the relayer, when available. */
-  statusCode?: number;
-  /**
-   * A {@link ZamaErrorCode} classified at the worker source (where the full
-   * error object is still available), so the main thread can rebuild the
-   * correct typed error after structured-clone strips codes/causes. Used for
-   * `RPC_RATE_LIMITED` and `NOT_ENTITLED`.
-   */
-  errorCode?: string;
-  /** Suggested retry delay in milliseconds, when the provider supplied one. */
-  retryAfter?: number;
-  /** For `NOT_ENTITLED`: fields used to rebuild the typed error on the main thread. */
-  handle?: string;
-  contractAddress?: string;
-  account?: string;
-}
+} & WorkerErrorClassification;
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 
