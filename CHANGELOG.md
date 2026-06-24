@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.2.0-alpha.1...v3.2.0-alpha.2) (2026-06-24)
+
+### Features
+
+- **codemod:** SDK upgrade codemods (Codemod-OSS / JSSG) for 3.1.0 ([#447](https://github.com/zama-ai/sdk/issues/447)) ([2d51aad]())
+
 ## [3.2.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.1.1-alpha.4...v3.2.0-alpha.1) (2026-06-23)
 
 ### Features
