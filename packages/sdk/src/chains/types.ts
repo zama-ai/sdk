@@ -1,15 +1,5 @@
 import type { Address, EIP1193Provider, Hex } from "viem";
-
-/**
- * Authentication for the relayer endpoint.
- *
- * Mirrors `@fhevm/sdk`'s runtime `auth` option (which is not publicly exported
- * as a type). Passed through to the underlying FHE client unchanged.
- */
-export type Auth =
-  | { type: "BearerToken"; token: string }
-  | { type: "ApiKeyHeader"; header?: string; value: string }
-  | { type: "ApiKeyCookie"; cookie?: string; value: string };
+import type { FhevmRuntimeConfig } from "../relayer/types";
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -45,7 +35,7 @@ export interface FheChain<TId extends number = number> {
    * Use `{ type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
    * or `{ type: "BearerToken", token: "your-token" }` for bearer auth.
    */
-  readonly auth?: Auth;
+  readonly auth?: FhevmRuntimeConfig["auth"];
   /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
   readonly kmsSignerPrivateKey?: Hex;
   /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */
