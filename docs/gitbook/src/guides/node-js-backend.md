@@ -7,6 +7,10 @@ description: How to use the SDK in a Node.js server environment with worker thre
 
 The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 
+{% hint style="info" %}
+The `auth` / `RELAYER_API_KEY` shown below is for the Zama-hosted **mainnet** relayer. The **Sepolia testnet** relayer needs no key — omit `auth` on testnet.
+{% endhint %}
+
 ## Steps
 
 ### 1. Install packages
