@@ -12,7 +12,7 @@ import { Hex } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public
-export function web(runtime?: FhevmRuntimeConfig): WebRelayerConfig;
+export function web(): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {

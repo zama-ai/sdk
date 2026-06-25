@@ -991,7 +991,7 @@ export interface WrappersRegistryQueryConfig {
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly router: RelayerRouter;
+    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;

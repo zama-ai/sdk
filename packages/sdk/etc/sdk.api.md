@@ -602,6 +602,18 @@ export class ChainMismatchError extends ZamaError {
 }
 
 // @public
+export class ChainRouter {
+    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
+    // (undocumented)
+    get chain(): FheChain;
+    // (undocumented)
+    get chains(): readonly FheChain[];
+    get relayer(): RelayerSDK;
+    // (undocumented)
+    switchChain(chainId: number): void;
+}
+
+// @public
 export const chains: Record<number, FheChain>;
 
 // @public
@@ -621,7 +633,7 @@ export const chromeSessionStorage: ChromeSessionStorage;
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
-export function cleartext(runtime?: FhevmRuntimeConfig): CleartextRelayerConfig;
+export function cleartext(): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
@@ -5405,7 +5417,7 @@ export class Decryption {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        relayer: RelayerSDK;
+        router: ChainRouter;
         decryptionService: DecryptionService | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
@@ -12627,18 +12639,6 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export class RelayerRouter {
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    get relayer(): RelayerSDK;
-    // (undocumented)
-    switchChain(chainId: number): void;
-}
-
-// @public
 export interface RelayerSDK {
     createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
@@ -19432,7 +19432,7 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly router: RelayerRouter;
+    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -19455,6 +19455,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitTTL?: number;
     registryTTL?: number;
     relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+    runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairTTL?: number;
 }
