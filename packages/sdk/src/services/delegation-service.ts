@@ -16,7 +16,7 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/types";
+import type { RelayerRouter } from "../relayer/relayer-router";
 import type {
   GenericLogger,
   GenericProvider,
@@ -32,24 +32,24 @@ type AclTransactionOperation = Extract<
 >;
 
 export class DelegationService {
+  readonly #router: RelayerRouter;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerSDK;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   readonly #logger: GenericLogger;
 
   constructor({
     provider,
-    relayer,
+    router,
     emitEvent = () => {},
     logger,
   }: {
     provider: GenericProvider;
-    relayer: RelayerSDK;
+    router: RelayerRouter;
     logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#logger = logger;
     this.#emitEvent = emitEvent;
   }
@@ -90,7 +90,7 @@ export class DelegationService {
       );
     }
 
-    const acl = this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.getAclAddress();
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
@@ -142,7 +142,7 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
-    const acl = this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.getAclAddress();
 
     let currentExpiry: bigint;
     try {
@@ -152,7 +152,9 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      this.#logger.warn("revokeDelegation: pre-flight expiry check failed", { error });
+      this.#logger.warn("revokeDelegation: pre-flight expiry check failed", {
+        error,
+      });
       currentExpiry = 1n;
     }
     if (currentExpiry === 0n) {
@@ -194,7 +196,7 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.getAclAddress();
     return this.#provider.readContract(
       getDelegationExpiryContract(
         acl,

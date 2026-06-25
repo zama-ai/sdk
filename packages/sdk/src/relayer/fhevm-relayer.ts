@@ -84,23 +84,30 @@ function toSolidityType(type: EncryptInput["type"]): string {
  * interface's params + the previously returned signature.
  */
 export class FhevmRelayer implements RelayerSDK, Disposable {
-  readonly chain: FheChain;
-  readonly #cleartext: boolean | undefined;
-  readonly #runtime: FhevmRuntimeConfig | undefined;
-  readonly #options: FhevmClientOptions | undefined;
-  #client: FhevmSdkClient | null = null;
+  readonly #chain: FheChain;
+  readonly #runtime: FhevmRuntimeConfig;
+  readonly #fhevm: FhevmSdkClient;
   #initPromise: Promise<void> | null = null;
 
   constructor(config: FhevmRelayerConfig) {
-    this.chain = config.chain;
-    this.#cleartext = config.cleartext;
+    this.#chain = config.chain;
     this.#runtime = { moduleVersions: "auto", ...config.runtime };
-    this.#options = config.options;
+    const params = {
+      publicClient: createPublicClient({
+        transport:
+          typeof this.#chain.network === "string"
+            ? http(this.#chain.network)
+            : custom(this.#chain.network),
+      }),
+      chain: toFhevmChain(this.#chain),
+      options: config.options,
+    };
+    this.#fhevm = config.cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
   }
 
   /** Return the ACL contract address for the current chain. */
   getAclAddress(): Address {
-    return this.chain.aclContractAddress;
+    return this.#chain.aclContractAddress;
   }
 
   /**
@@ -122,28 +129,9 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     // Default load mode embeds WASM as base64 (no runtime fetch). Tracked
     // follow-up: switch to a hosted `locateFile` once CDN assets exist.
     // Per-chain `auth` is the default; an explicit `runtime.auth` overrides it.
-    setFhevmRuntimeConfig({ auth: this.chain.auth, ...this.#runtime });
-
-    const params = {
-      publicClient: createPublicClient({
-        transport:
-          typeof this.chain.network === "string"
-            ? http(this.chain.network)
-            : custom(this.chain.network),
-      }),
-      chain: toFhevmChain(this.chain),
-      options: this.#options,
-    };
-    const client = this.#cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
-    await client.init();
-    this.#client = client;
-  }
-
-  get #fhevm(): FhevmSdkClient {
-    if (!this.#client) {
-      throw new Error("FhevmRelayer not initialized.");
-    }
-    return this.#client;
+    setFhevmRuntimeConfig({ auth: this.#chain.auth, ...this.#runtime });
+    await this.#fhevm.init();
+    await this.#fhevm.ready;
   }
 
   /** Generate a transport key pair, serialized to hex for the signer layer / storage. */
@@ -361,7 +349,6 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
   }
 
   terminate(): void {
-    this.#client = null;
     this.#initPromise = null;
   }
 

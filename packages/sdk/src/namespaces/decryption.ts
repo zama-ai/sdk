@@ -1,7 +1,8 @@
 import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerSDK, ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
+import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
 import type { BatchDecryptResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
@@ -22,19 +23,19 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerSDK;
+  readonly #router: RelayerRouter;
   readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerSDK;
+    router: RelayerRouter;
     decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
-    this.#relayer = opts.relayer;
+    this.#router = opts.router;
     this.#decryptionService = opts.decryptionService;
   }
 
@@ -144,7 +145,7 @@ export class Decryption {
     }
 
     try {
-      return await this.#relayer.decryptPublicValues(encryptedValues);
+      return await this.#router.relayer.decryptPublicValues(encryptedValues);
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }

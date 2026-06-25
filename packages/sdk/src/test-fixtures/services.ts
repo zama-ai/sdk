@@ -19,6 +19,12 @@ import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
 import type { RelayerSDK } from "..";
 
+/**
+ * Wrap a single-chain mock relayer as the minimal {@link RelayerRouter} the
+ * services consume — they only read `router.relayer`.
+ */
+const asRouter = (relayer: RelayerSDK): RelayerRouter => ({ relayer }) as unknown as RelayerRouter;
+
 export type CreateCredentialServiceFn = (
   config?: Partial<CredentialServiceConfig>,
 ) => CredentialService;
@@ -71,7 +77,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
       new CredentialService({
-        relayer: (config.relayer ?? relayer) as CredentialServiceConfig["relayer"],
+        router: config.router ?? asRouter(relayer),
         signer: config.signer ?? signer,
         transportKeyPairTTL: config.transportKeyPairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,
@@ -88,7 +94,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     const factory: CreateDelegationServiceFn = (overrides = {}) =>
       new DelegationService({
         provider: overrides.provider ?? provider,
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
+        router: asRouter(overrides.relayer ?? relayer),
         emitEvent: overrides.emitEvent,
         logger: new LoggerService(),
       });
@@ -106,7 +112,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cache: overrides.cache ?? cachingService,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
+        router: asRouter(overrides.relayer ?? relayer),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -117,7 +123,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createEncryptionService: async ({ relayer }, use) => {
     const factory: CreateEncryptionServiceFn = (overrides = {}) =>
       new EncryptionService({
-        relayer: (overrides.relayer ?? relayer) as unknown as RelayerSDK,
+        router: asRouter(overrides.relayer ?? relayer),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);

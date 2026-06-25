@@ -5,7 +5,7 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./ev
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
-import type { RelayerSDK, EncryptParams, EncryptResult } from "./relayer/types";
+import type { EncryptParams, EncryptResult, RelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -67,7 +67,7 @@ export class ZamaSDK {
     this.#cachingService = new CachingService(config.storage, this.#logger);
     this.#delegationService = new DelegationService({
       provider: this.provider,
-      relayer: this.relayer,
+      router: config.router,
       emitEvent: this.emitEvent.bind(this),
       logger: this.#logger,
     });
@@ -87,7 +87,7 @@ export class ZamaSDK {
 
     if (config.signer) {
       this.#credentialService = new CredentialService({
-        relayer: this.relayer,
+        router: config.router,
         signer: config.signer,
         transportKeyPairTTL: config.transportKeyPairTTL,
         permitTTL: config.permitTTL,
@@ -99,12 +99,12 @@ export class ZamaSDK {
         cache: this.#cachingService,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
-        relayer: this.relayer,
+        router: config.router,
         emitEvent: this.emitEvent.bind(this),
       });
     }
     this.#encryptionService = new EncryptionService({
-      relayer: this.relayer,
+      router: config.router,
       emitEvent: this.emitEvent.bind(this),
     });
     this.#lifecycleService = new LifecycleService({
@@ -130,7 +130,7 @@ export class ZamaSDK {
     this.decryption = new Decryption({
       signer: this.signer,
       provider: this.provider,
-      relayer: this.relayer,
+      router: config.router,
       decryptionService: this.#decryptionService,
     });
   }

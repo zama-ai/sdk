@@ -16,13 +16,14 @@ import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 import type { RelayerSDK } from "../relayer/types";
+import type { RelayerRouter } from "../relayer/relayer-router";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  relayer: RelayerSDK;
+  router: RelayerRouter;
   signer: GenericSigner;
   /** Transport key pair lifetime in seconds. Pre-validated. */
   transportKeyPairTTL: number;
@@ -52,7 +53,7 @@ export class CredentialService {
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
-      generator: () => config.relayer.generateTransportKeyPair(),
+      generator: () => config.router.relayer.generateTransportKeyPair(),
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
       logger: config.logger,
@@ -61,7 +62,7 @@ export class CredentialService {
       storage: config.permitStorage ?? config.storage,
       logger: config.logger,
     });
-    this.#relayer = config.relayer;
+    this.#relayer = config.router.relayer;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
