@@ -14,6 +14,7 @@ const entryPoints = {
   "chains/index": "src/chains/index.ts",
   "query/index": "src/query/index.ts",
   "web/index": "src/web/index.ts",
+  "node/index": "src/node/index.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
 };
@@ -21,10 +22,7 @@ const entryPoints = {
 export default defineConfig([
   // ESM build (primary)
   {
-    input: {
-      ...entryPoints,
-      "node/index": "src/node/index.ts",
-    },
+    input: entryPoints,
     output: {
       dir: "dist/esm",
       format: "esm",

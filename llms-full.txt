@@ -18846,8 +18846,6 @@ pnpm add @zama-fhe/sdk viem
 
 Other optional peers depend on the adapter you use: `ethers` for `@zama-fhe/sdk/ethers` and `@tanstack/query-core` for `@zama-fhe/sdk/query`.
 
-`@zama-fhe/sdk/node` is ESM-only because it relies on `node:worker_threads`.
-
 ## Minimal example
 
 ```ts
