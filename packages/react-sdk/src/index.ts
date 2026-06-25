@@ -76,6 +76,11 @@ export {
 } from "./delegations/use-delegation-status";
 export { useDecryptBalanceAs } from "./delegations/use-decrypt-balance-as";
 export { useBatchDecryptBalancesAs } from "./delegations/use-batch-decrypt-balances-as";
+export {
+  useIsDelegationPropagated,
+  type UseIsDelegationPropagatedConfig,
+  type UseIsDelegationPropagatedResult,
+} from "./delegations/use-is-delegation-propagated";
 export { useApproveUnderlying } from "./shield/use-approve-underlying";
 export {
   useIsConfidential,
