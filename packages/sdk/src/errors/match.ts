@@ -34,7 +34,11 @@ import type {
 import type { SigningFailedError, SigningRejectedError } from "./signing";
 import type { TransactionRevertedError } from "./transaction";
 
-/** Identity type that fails to instantiate unless `T` maps every code to a `ZamaError`. */
+/**
+ * Identity type that fails to instantiate unless `T` maps every code to a `ZamaError`.
+ * Guards presence + value type only: a wrong-but-valid mapping (a code pointing at a
+ * structurally identical sibling class) still compiles — `errors.test-d.ts` backstops that.
+ */
 type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
 
 /**
