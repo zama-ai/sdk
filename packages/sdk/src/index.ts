@@ -22,7 +22,7 @@ export type {
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-export type { RelayerRouter } from "./relayer/relayer-router";
+export type { ChainRouter } from "./chains/router";
 export type { RelayerSDK } from "./relayer/types";
 export type {
   RelayerSDKStatus,

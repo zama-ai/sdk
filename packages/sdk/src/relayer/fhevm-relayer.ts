@@ -85,13 +85,17 @@ function toSolidityType(type: EncryptInput["type"]): string {
  */
 export class FhevmRelayer implements RelayerSDK, Disposable {
   readonly #chain: FheChain;
-  readonly #runtime: FhevmRuntimeConfig;
   readonly #fhevm: FhevmSdkClient;
   #initPromise: Promise<void> | null = null;
 
   constructor(config: FhevmRelayerConfig) {
     this.#chain = config.chain;
-    this.#runtime = { moduleVersions: "auto", ...config.runtime };
+    setFhevmRuntimeConfig({
+      moduleVersions: "auto",
+      wasmAssetLoadMode: "auto",
+      auth: this.#chain.auth,
+      ...config.runtime,
+    });
     const params = {
       publicClient: createPublicClient({
         transport:
@@ -129,7 +133,6 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     // Default load mode embeds WASM as base64 (no runtime fetch). Tracked
     // follow-up: switch to a hosted `locateFile` once CDN assets exist.
     // Per-chain `auth` is the default; an explicit `runtime.auth` overrides it.
-    setFhevmRuntimeConfig({ auth: this.#chain.auth, ...this.#runtime });
     await this.#fhevm.init();
     await this.#fhevm.ready;
   }

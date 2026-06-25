@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
 import type { BatchDecryptResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
@@ -23,14 +23,14 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #router: RelayerRouter;
+  readonly #router: ChainRouter;
   readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    router: RelayerRouter;
+    router: ChainRouter;
     decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;

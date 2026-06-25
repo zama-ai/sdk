@@ -3,7 +3,7 @@ import {
   DEFAULT_PERMIT_DURATION_DAYS,
 } from "../credentials/credential-service";
 import { TransportKeyPairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
-import { RelayerRouter } from "../relayer/relayer-router";
+import { ChainRouter } from "../chains/router";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
@@ -24,7 +24,7 @@ export function buildZamaConfig(
 ): ZamaConfig {
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
   const logger = new LoggerService(params.logger);
-  const router = new RelayerRouter(params.chains, params.relayers);
+  const router = new ChainRouter(params.chains, params.relayers);
 
   return {
     chains: params.chains,

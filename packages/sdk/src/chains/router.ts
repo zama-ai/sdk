@@ -1,17 +1,17 @@
-import type { FheChain } from "../chains/types";
+import type { FheChain } from "./types";
 import { resolveChainRelayers } from "../config/resolve";
 import type { RelayerConfig } from "../config/types";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable } from "../utils";
-import type { RelayerSDK } from "./types";
+import type { RelayerSDK } from "../relayer/types";
 
 /**
  * Multichain router. Owns chain management (chains / chain / switchChain) and
  * hands out the single-chain {@link RelayerSDK} backend for the currently active
- * chain via {@link RelayerRouter.relayer}. Builds one backend per chain from its
+ * chain via {@link ChainRouter['relayer']}. Builds one backend per chain from its
  * {@link RelayerConfig}.
  */
-export class RelayerRouter {
+export class ChainRouter {
   readonly #chains: Map<number, FheChain>;
   readonly #relayers: Map<number, RelayerSDK>;
   #chainId: number;

@@ -16,14 +16,14 @@ import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 import type { RelayerSDK } from "../relayer/types";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  router: RelayerRouter;
+  router: ChainRouter;
   signer: GenericSigner;
   /** Transport key pair lifetime in seconds. Pre-validated. */
   transportKeyPairTTL: number;

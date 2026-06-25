@@ -16,7 +16,7 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 import type {
   GenericLogger,
   GenericProvider,
@@ -32,7 +32,7 @@ type AclTransactionOperation = Extract<
 >;
 
 export class DelegationService {
-  readonly #router: RelayerRouter;
+  readonly #router: ChainRouter;
   readonly #provider: GenericProvider;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   readonly #logger: GenericLogger;
@@ -44,7 +44,7 @@ export class DelegationService {
     logger,
   }: {
     provider: GenericProvider;
-    router: RelayerRouter;
+    router: ChainRouter;
     logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {

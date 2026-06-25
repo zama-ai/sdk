@@ -62,7 +62,7 @@ describe("LifecycleService", () => {
     test("switches relayer before cleanup and listeners", async ({
       createLifecycleService,
       createMockSigner,
-      createMockRelayer,
+      createMockRouter,
     }) => {
       const calls: string[] = [];
       const handleWalletAccountChange = vi.fn(async () => {
@@ -79,7 +79,7 @@ describe("LifecycleService", () => {
       const switchChain = vi.fn(() => {
         calls.push("relayer");
       });
-      const relayer = createMockRelayer({ switchChain });
+      const router = createMockRouter({ switchChain });
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
         walletAccount: {
@@ -94,7 +94,7 @@ describe("LifecycleService", () => {
       const service = createLifecycleService({
         signer,
         cachingService: cache,
-        relayer,
+        router,
         credentialService,
       });
       service.onWalletAccountChange(() => {
@@ -122,7 +122,7 @@ describe("LifecycleService", () => {
     test("synchronous re-emit at construct time switches chain before credential cleanup", async ({
       createLifecycleService,
       createMockSigner,
-      createMockRelayer,
+      createMockRouter,
     }) => {
       // SDK-189 regression guard: real signer stores re-emit the current
       // snapshot synchronously on subscribe, which happens inside the SDK
@@ -137,7 +137,7 @@ describe("LifecycleService", () => {
       const switchChain = vi.fn(() => {
         calls.push("relayer");
       });
-      const relayer = createMockRelayer({ switchChain });
+      const router = createMockRouter({ switchChain });
       const initial = {
         address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         chainId: 7,
@@ -153,7 +153,7 @@ describe("LifecycleService", () => {
         },
       });
 
-      createLifecycleService({ signer, relayer, credentialService });
+      createLifecycleService({ signer, router, credentialService });
 
       await vi.waitFor(() => {
         expect(calls).toEqual(["relayer", "credential"]);
@@ -178,7 +178,7 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cache });
+      const service = createLifecycleService({ signer, cachingService: cache });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -197,10 +197,10 @@ describe("LifecycleService", () => {
     test("skips relayer switch when next account is undefined", async ({
       createLifecycleService,
       createMockSigner,
-      createMockRelayer,
+      createMockRouter,
     }) => {
       const switchChain = vi.fn();
-      const relayer = createMockRelayer({ switchChain });
+      const router = createMockRouter({ switchChain });
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
         walletAccount: {
@@ -212,7 +212,7 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, relayer });
+      const service = createLifecycleService({ signer, router });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -231,7 +231,7 @@ describe("LifecycleService", () => {
     test("errors in cleanup steps are swallowed and listeners still run", async ({
       createLifecycleService,
       createMockSigner,
-      createMockRelayer,
+      createMockRouter,
     }) => {
       const credentialService = {
         handleWalletAccountChange: vi.fn().mockRejectedValue(new Error("credential boom")),
@@ -239,7 +239,7 @@ describe("LifecycleService", () => {
       const cache = {
         clearForRequester: vi.fn().mockRejectedValue(new Error("cache boom")),
       } as unknown as CachingService;
-      const relayer = createMockRelayer({
+      const router = createMockRouter({
         switchChain: vi.fn(() => {
           throw new Error("relayer boom");
         }),
@@ -258,7 +258,7 @@ describe("LifecycleService", () => {
       const service = createLifecycleService({
         signer,
         cachingService: cache,
-        relayer,
+        router,
         credentialService,
       });
       const listener = vi.fn();

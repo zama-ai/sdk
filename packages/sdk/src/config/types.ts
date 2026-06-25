@@ -1,6 +1,6 @@
 import type { AtLeastOneChain, FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 import type { RelayerSDK } from "../relayer/types";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
@@ -85,7 +85,7 @@ declare const zamaConfigBrand: unique symbol;
  */
 export type ZamaConfig = {
   readonly chains: readonly FheChain[];
-  readonly router: RelayerRouter;
+  readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;

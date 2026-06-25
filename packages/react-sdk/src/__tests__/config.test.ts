@@ -31,6 +31,18 @@ vi.mock(import("../../../sdk/src/ethers/ethers-signer"), async (importOriginal) 
   };
 });
 
+// These tests only assert config wiring (router/storage/options), never relayer
+// behaviour. Stub the backend so `web().createRelayer` doesn't construct a real
+// `@fhevm/sdk` client — that would touch the SDK's global runtime config, which
+// flakes when these tests share a worker with others that set it.
+vi.mock(import("../../../sdk/src/relayer/fhevm-relayer"), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    FhevmRelayer: vi.fn(),
+  };
+});
+
 const MockWagmiSigner = vi.mocked(WagmiSigner);
 const MockViemSigner = vi.mocked(ViemSigner);
 const MockEthersSigner = vi.mocked(EthersSigner);

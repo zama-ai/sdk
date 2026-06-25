@@ -1,5 +1,5 @@
 import type { CredentialService } from "../credentials/credential-service";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 import type {
   GenericLogger,
   GenericSigner,
@@ -11,7 +11,7 @@ import type { CachingService } from "./caching-service";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
-  router: RelayerRouter;
+  router: ChainRouter;
   cachingService: CachingService;
   credentialService?: CredentialService;
   logger: GenericLogger;
@@ -27,7 +27,7 @@ export type LifecycleServiceOptions = {
  */
 export class LifecycleService {
   readonly #signer: GenericSigner | undefined;
-  readonly #router: RelayerRouter;
+  readonly #router: ChainRouter;
   readonly #cachingService: CachingService;
   readonly #credentialService: CredentialService | undefined;
   readonly #logger: GenericLogger;

@@ -4,7 +4,7 @@ import type { Address } from "viem";
 import type { CredentialServiceConfig } from "../credentials/credential-service";
 import { CredentialService } from "../credentials/credential-service";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerRouter } from "../relayer/relayer-router";
+import type { ChainRouter } from "../chains/router";
 import { CachingService } from "../services/caching-service";
 import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
@@ -14,16 +14,11 @@ import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import type { ProviderFixtures } from "./provider";
 import type { RelayerFixtures } from "./relayer";
+import { createMockRouter } from "./router";
 import type { SignerFixtures } from "./signer";
 import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
 import type { RelayerSDK } from "..";
-
-/**
- * Wrap a single-chain mock relayer as the minimal {@link RelayerRouter} the
- * services consume — they only read `router.relayer`.
- */
-const asRouter = (relayer: RelayerSDK): RelayerRouter => ({ relayer }) as unknown as RelayerRouter;
 
 export type CreateCredentialServiceFn = (
   config?: Partial<CredentialServiceConfig>,
@@ -51,7 +46,7 @@ export type CreateEncryptionServiceFn = (overrides?: {
 export type CreateLifecycleServiceFn = (overrides?: {
   signer?: GenericSigner;
   cachingService?: CachingService;
-  relayer?: RelayerRouter;
+  router?: ChainRouter;
   credentialService?: CredentialService;
 }) => LifecycleService;
 
@@ -77,7 +72,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
       new CredentialService({
-        router: config.router ?? asRouter(relayer),
+        router: config.router ?? createMockRouter({ relayer }),
         signer: config.signer ?? signer,
         transportKeyPairTTL: config.transportKeyPairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,
@@ -94,7 +89,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     const factory: CreateDelegationServiceFn = (overrides = {}) =>
       new DelegationService({
         provider: overrides.provider ?? provider,
-        router: asRouter(overrides.relayer ?? relayer),
+        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
         emitEvent: overrides.emitEvent,
         logger: new LoggerService(),
       });
@@ -112,7 +107,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cache: overrides.cache ?? cachingService,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
-        router: asRouter(overrides.relayer ?? relayer),
+        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -123,7 +118,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createEncryptionService: async ({ relayer }, use) => {
     const factory: CreateEncryptionServiceFn = (overrides = {}) =>
       new EncryptionService({
-        router: asRouter(overrides.relayer ?? relayer),
+        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -136,7 +131,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
         cachingService: overrides.cachingService ?? cachingService,
-        router: (overrides.relayer ?? relayer) as unknown as RelayerRouter,
+        router: overrides.router ?? createMockRouter({ relayer }),
         credentialService: overrides.credentialService,
         logger: new LoggerService(),
       });
