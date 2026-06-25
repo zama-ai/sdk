@@ -1,7 +1,7 @@
 import type { AtLeastOneChain, FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { ChainRouter } from "../chains/router";
-import type { RelayerSDK } from "../relayer/types";
+import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
@@ -54,6 +54,11 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
+   * module versions.`auth` defaults to the first chain's `auth` when omitted here.
+   */
+  runtime?: FhevmRuntimeConfig;
   /**
    * Optional logger for SDK diagnostics. Conforms to the four-level
    * {@link GenericLogger} interface (`error`/`warn`/`info`/`debug`), which

@@ -2,8 +2,8 @@
  * `FhevmRelayer` — single-chain FHE backend that drives `@fhevm/sdk` directly on
  * the calling thread.
  *
- * Owns the `@fhevm/sdk` client lifecycle (runtime config + creation + WASM init,
- * lazily on first operation) and implements the
+ * Owns the `@fhevm/sdk` client lifecycle (creation + WASM init, lazily on first
+ * operation) and implements the
  * {@link RelayerSDK} domain interface by translating between zama-sdk's domain
  * shapes and the new SDK's API. Each public method maps onto the underlying
  * `@fhevm/sdk` call(s) it reflects — `encrypt` → `encryptValues`, `decryptPublicValues`
@@ -25,7 +25,7 @@ import {
   createKmsDelegatedUserDecryptEip712,
   createKmsUserDecryptEip712,
 } from "@fhevm/sdk/actions/chain";
-import { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import { createFhevmClient } from "@fhevm/sdk/viem";
 import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
 import type { Address, Hex } from "viem";
 import { createPublicClient, custom, http } from "viem";
@@ -43,8 +43,7 @@ import type {
   EncryptedValue,
   FheEncryptionKey,
   FhevmClientOptions,
-  FhevmRuntimeConfig,
-  FhevmSdkClient,
+  FhevmClient,
   PublicDecryptResult,
   RelayerSDK,
   SerializedSignedPermit,
@@ -64,8 +63,6 @@ export interface FhevmRelayerConfig {
   cleartext?: boolean;
   /** Per-client `@fhevm/sdk` options forwarded to `createFhevmClient`. */
   options?: FhevmClientOptions;
-  /** Global `@fhevm/sdk` runtime config forwarded to `setFhevmRuntimeConfig`. */
-  runtime?: FhevmRuntimeConfig;
 }
 
 /**
@@ -85,17 +82,11 @@ function toSolidityType(type: EncryptInput["type"]): string {
  */
 export class FhevmRelayer implements RelayerSDK, Disposable {
   readonly #chain: FheChain;
-  readonly #fhevm: FhevmSdkClient;
+  readonly #fhevm: FhevmClient;
   #initPromise: Promise<void> | null = null;
 
   constructor(config: FhevmRelayerConfig) {
     this.#chain = config.chain;
-    setFhevmRuntimeConfig({
-      moduleVersions: "auto",
-      wasmAssetLoadMode: "auto",
-      auth: this.#chain.auth,
-      ...config.runtime,
-    });
     const params = {
       publicClient: createPublicClient({
         transport:
@@ -128,11 +119,8 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     return this.#initPromise;
   }
 
-  /** Configure the `@fhevm/sdk` runtime (once per process) and build + init the client. */
+  /** Build + init the `@fhevm/sdk` client. Runtime config is applied earlier by {@link configureFhevmRuntime}. */
   async #init(): Promise<void> {
-    // Default load mode embeds WASM as base64 (no runtime fetch). Tracked
-    // follow-up: switch to a hosted `locateFile` once CDN assets exist.
-    // Per-chain `auth` is the default; an explicit `runtime.auth` overrides it.
     await this.#fhevm.init();
     await this.#fhevm.ready;
   }
@@ -164,6 +152,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       })),
       contractAddress: params.contractAddress,
       userAddress: params.userAddress,
+      options: { auth: this.#chain.auth },
     });
     // `@fhevm/sdk` already returns hex strings (bytes32 encrypted values + the
     // input proof); they pass straight through. Do NOT re-`toHex` them — that would
@@ -204,6 +193,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
     await this.#ensureInit();
     const result = await this.#fhevm.decryptPublicValuesWithSignatures({
       encryptedValues,
+      options: { auth: this.#chain.auth },
     });
     const clearValues: Record<EncryptedValue, ClearValue> = {};
     result.checkSignaturesArgs.handlesList.forEach((encryptedValue: Hex, i: number) => {
@@ -261,7 +251,9 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
   /** Fetch the network's FHE encryption key, mapped to zama-sdk's shape. */
   async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     await this.#ensureInit();
-    const result = await this.#fhevm.fetchFheEncryptionKeyBytes();
+    const result = await this.#fhevm.fetchFheEncryptionKeyBytes({
+      options: { auth: this.#chain.auth },
+    });
     return {
       publicKeyId: result.publicKeyBytes.id,
       publicKey: result.publicKeyBytes.bytes as Uint8Array,
@@ -288,6 +280,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
       pairs: params.pairs,
       transportKeyPair,
       signedPermit,
+      options: { auth: this.#chain.auth },
     });
     const out: Record<EncryptedValue, ClearValue> = {};
     params.pairs.forEach((pair, i) => {

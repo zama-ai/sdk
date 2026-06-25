@@ -1,6 +1,5 @@
 import { ConfigurationError } from "../errors";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmRuntimeConfig } from "../relayer/types";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
@@ -9,17 +8,13 @@ import type { CleartextRelayerConfig } from "./types";
  * When `executorAddress` is set on the chain definition (e.g. `hardhat`, `hoodi`),
  * it is picked up automatically.
  *
- * @param runtime - Global `@fhevm/sdk` runtime config (WASM load mode, threads,
- *   logger, auth). Applied once per process when the client first initializes.
- *   Per-chain `auth` from the chain definition is merged in by {@link FhevmRelayer}.
- *
  * @example
  * ```ts
  * // executorAddress comes from the chain preset:
  * relayers: { [hardhat.id]: cleartext() }
  * ```
  */
-export function cleartext(runtime: FhevmRuntimeConfig = {}): CleartextRelayerConfig {
+export function cleartext(): CleartextRelayerConfig {
   return {
     type: "cleartext",
     createRelayer: (chain) => {
@@ -30,7 +25,7 @@ export function cleartext(runtime: FhevmRuntimeConfig = {}): CleartextRelayerCon
             `or set it on the chain definition.`,
         );
       }
-      return new FhevmRelayer({ chain, runtime, cleartext: true });
+      return new FhevmRelayer({ chain, cleartext: true });
     },
   };
 }

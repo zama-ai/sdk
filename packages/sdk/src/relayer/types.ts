@@ -127,7 +127,7 @@ export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 // ============================================================================
 
 /** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
-export type FhevmSdkClient = ReturnType<typeof createFhevmClient>;
+export type FhevmClient = ReturnType<typeof createFhevmClient>;
 
 /** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;

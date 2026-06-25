@@ -1,7 +1,7 @@
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
+import type { RelayerSDK } from "../relayer/types";
 
 /** Node transport — drives the FHE backend directly (no worker pool). */
 export interface NodeRelayerConfig extends RelayerConfig {
@@ -12,10 +12,6 @@ export interface NodeRelayerConfig extends RelayerConfig {
 /**
  * Node.js transport — drives `@fhevm/sdk` via {@link RelayerSDK} on the calling thread.
  *
- * @param runtime - Global `@fhevm/sdk` runtime config (WASM load mode, threads,
- *   logger, auth). Applied once per process when the client first initializes.
- *   Per-chain `auth` from the chain definition is merged in by {@link FhevmRelayer}.
- *
  * @example
  * ```ts
  * relayers: {
@@ -24,9 +20,9 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * }
  * ```
  */
-export function node(runtime: FhevmRuntimeConfig = {}): NodeRelayerConfig {
+export function node(): NodeRelayerConfig {
   return {
     type: "node",
-    createRelayer: (chain) => new FhevmRelayer({ chain, runtime }),
+    createRelayer: (chain) => new FhevmRelayer({ chain }),
   };
 }

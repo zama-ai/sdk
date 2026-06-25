@@ -1,13 +1,14 @@
-import {
-  DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
-  DEFAULT_PERMIT_DURATION_DAYS,
-} from "../credentials/credential-service";
-import { TransportKeyPairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
+import { hasFhevmRuntimeConfig, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { ChainRouter } from "../chains/router";
+import {
+  DEFAULT_PERMIT_DURATION_DAYS,
+  DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
+} from "../credentials/credential-service";
+import { PermitTTLSchema, TransportKeyPairTTLSchema } from "../credentials/schemas";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
-import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { parseConfiguration } from "../validation";
+import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
@@ -22,6 +23,19 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
+  if (!hasFhevmRuntimeConfig()) {
+    setFhevmRuntimeConfig({
+      wasmAssetLoadMode: "auto",
+      moduleVersions: "auto",
+      logger: {
+        error: (message, cause) => params.logger?.error(message, { cause }),
+        warn: (message) => params.logger?.warn(message),
+        debug: (message) => params.logger?.debug(message),
+      },
+      ...params.runtime,
+    });
+  }
+
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
   const logger = new LoggerService(params.logger);
   const router = new ChainRouter(params.chains, params.relayers);
