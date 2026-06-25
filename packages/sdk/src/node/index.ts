@@ -2,8 +2,7 @@
  * Node.js backend for `@zama-fhe/sdk` — provides the `node()` transport
  * factory for server-side FHE operations.
  *
- * The `node()` transport factory self-registers its handler on first call,
- * keeping `node:worker_threads` out of browser bundles.
+ * The `node()` transport drives `@fhevm/sdk` directly on the calling thread.
  *
  * @packageDocumentation
  */

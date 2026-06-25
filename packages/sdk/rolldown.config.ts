@@ -1,6 +1,5 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { iife } from "./iife-plugin";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@fhevm\/sdk/, /^@tanstack\/query-core/, /^node:/, /^zod($|\/)/],
@@ -33,7 +32,7 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
   },
   // CJS build (for moduleResolution: "node" / CommonJS consumers)
   {
@@ -47,6 +46,5 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [iife({ tsconfig: "tsconfig.build.json" })],
   },
 ]);

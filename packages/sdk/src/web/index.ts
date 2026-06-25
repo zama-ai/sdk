@@ -1,9 +1,9 @@
 /**
  * Browser transport for `@zama-fhe/sdk` — provides the {@link web} factory
- * that creates {@link RelayerWeb} instances backed by a Web Worker + WASM.
+ * that drives `@fhevm/sdk` on the calling thread.
  *
- * Import from `@zama-fhe/sdk/web` to keep browser-only dependencies
- * (`self`, Web Worker, `?iife` bundle) out of Node.js entry points.
+ * Import from `@zama-fhe/sdk/web` to keep browser-only dependencies out of
+ * Node.js entry points.
  *
  * @packageDocumentation
  */
