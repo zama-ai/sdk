@@ -5,10 +5,10 @@ description: How to authenticate with the relayer using a backend proxy or a dir
 
 # Authentication
 
-The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
+The Zama-hosted **mainnet** relayer requires an API key on every request. The **Sepolia testnet** relayer is open — it needs no key, so on testnet you can leave `auth` unset and skip this guide. This page covers the two strategies for the mainnet relayer (or any keyed endpoint): proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
 {% hint style="info" %}
-Don't have an API key yet? See [Relayer API keys](relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+Building on Sepolia testnet? You don't need an API key — the `sepolia` preset works out of the box. API keys apply only to the Zama-hosted **mainnet** relayer; see [Relayer API keys](relayer-api-keys.md) to apply for one (or self-host instead).
 {% endhint %}
 
 ## Steps
