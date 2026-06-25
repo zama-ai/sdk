@@ -52,7 +52,7 @@ export function wrapDecryptError(
   if (classification?.errorCode === ZamaErrorCode.NotEntitled) {
     return new NotEntitledError(
       {
-        handle: classification.handle,
+        encryptedValue: classification.handle,
         contractAddress: classification.contractAddress,
         account: classification.account,
       },

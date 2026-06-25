@@ -432,7 +432,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       const contractAllowed = results[i * 2 + 1];
       if (!actorAllowed) {
         throw new NotEntitledError({
-          handle: normalizedEncryptedValues[i]!,
+          encryptedValue: normalizedEncryptedValues[i]!,
           contractAddress,
           account: actorAddress,
         });

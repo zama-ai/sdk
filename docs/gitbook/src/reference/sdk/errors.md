@@ -76,38 +76,38 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Handlers receiv
 
 ## Error summary
 
-| Error class                             | Code                                  | Description                                                                      |
-| --------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------- |
-| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                               |
-| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                 |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                          |
-| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                            |
-| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)   |
-| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                         |
-| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                   |
-| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                            |
-| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                      |
-| `NotEntitledError`                      | `NOT_ENTITLED`                        | Signer/account lacks ACL permission to decrypt this handle (don't retry)         |
-| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry) |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                     |
-| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                            |
-| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                |
-| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                |
-| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                            |
-| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                 |
-| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                                                 |
-| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                             |
-| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                                                      |
-| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                                                           |
-| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                                           |
-| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                                                   |
-| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                   |
-| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet                         |
-| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured                              |
-| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account                                |
-| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet                            |
-| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                      |
-| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                                           |
+| Error class                             | Code                                  | Description                                                                       |
+| --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
+| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                |
+| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                  |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                           |
+| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                             |
+| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)    |
+| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                          |
+| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                    |
+| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                             |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                       |
+| `NotEntitledError`                      | `NOT_ENTITLED`                        | Signer/account lacks ACL permission to decrypt this encrypted value (don't retry) |
+| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)  |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                      |
+| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                             |
+| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                 |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                 |
+| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                             |
+| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                  |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address                                                  |
+| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                              |
+| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation exists                                                       |
+| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | Delegation has expired                                                            |
+| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                                            |
+| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                                                    |
+| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                    |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet                          |
+| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured                               |
+| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account                                 |
+| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet                             |
+| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                       |
+| `AclPausedError`                        | `ACL_PAUSED`                          | ACL contract is paused                                                            |
 
 ## Error details
 
@@ -298,13 +298,13 @@ matchZamaError(error, {
 
 **Code:** `NOT_ENTITLED`
 
-The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the handle: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the encrypted value: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
 
 The SDK derives this typed error from the relayer's own authoritative ACL check — it adds no extra on-chain reads.
 
-> **Scope:** `NotEntitledError` covers the **actor** (signer/delegator) not being entitled. The rarer "the dapp contract itself is not authorized for this handle" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
+> **Scope:** `NotEntitledError` covers the **actor** (signer/delegator) not being entitled. The rarer "the dapp contract itself is not authorized for this encrypted value" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
 
-The error carries `handle`, `contractAddress`, and `account`.
+The error carries `encryptedValue`, `contractAddress`, and `account`.
 
 ```ts
 import { NotEntitledError } from "@zama-fhe/sdk";
@@ -314,12 +314,12 @@ try {
 } catch (error) {
   if (error instanceof NotEntitledError) {
     // Don't retry — wait for an ACL grant / backfill, then re-attempt.
-    markPendingGrant(error.handle, error.contractAddress);
+    markPendingGrant(error.encryptedValue, error.contractAddress);
   }
 }
 ```
 
-**How to handle:** Do not retry the same request. Wait until the handle is granted to the account on-chain (e.g. a later block / backfill), then decrypt again.
+**How to handle:** Do not retry the same request. Wait until the encrypted value is granted to the account on-chain (e.g. a later block / backfill), then decrypt again.
 
 ### RpcRateLimitError
 
@@ -610,7 +610,7 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
-| `NotEntitledError` on decrypt             | Account lacks ACL grant for the handle       | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.        |
+| `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.        |
 | `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.         |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                |

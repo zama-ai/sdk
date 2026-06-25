@@ -154,7 +154,7 @@ describe("wrapDecryptError", () => {
   describe("not-entitled and RPC rate-limit causes (SDK-239)", () => {
     test("returns the same NotEntitledError unchanged", () => {
       const original = new NotEntitledError({
-        handle: `0x${"12".repeat(32)}`,
+        encryptedValue: `0x${"12".repeat(32)}`,
         contractAddress: `0x${"20".repeat(20)}`,
         account: `0x${"10".repeat(20)}`,
       });
@@ -176,7 +176,7 @@ describe("wrapDecryptError", () => {
       });
       const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(NotEntitledError);
-      expect((wrapped as NotEntitledError).handle).toBe(`0x${"12".repeat(32)}`);
+      expect((wrapped as NotEntitledError).encryptedValue).toBe(`0x${"12".repeat(32)}`);
       expect((wrapped as NotEntitledError).contractAddress).toBe("0xContract");
       expect((wrapped as NotEntitledError).account).toBe("0xActor");
     });

@@ -11426,13 +11426,13 @@ export class NoCiphertextError extends ZamaError {
 // @public
 export class NotEntitledError extends ZamaError {
     constructor(args: {
-        handle: string;
+        encryptedValue: string;
         contractAddress: string;
         account: string;
     }, options?: ErrorOptions);
     readonly account: string;
     readonly contractAddress: string;
-    readonly handle: string;
+    readonly encryptedValue: string;
 }
 
 // @public

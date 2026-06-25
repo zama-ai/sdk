@@ -245,7 +245,10 @@ export function classifyDecryptWorkerError(
 export function extractRetryAfterMs(error: unknown): number | undefined {
   const node = findInErrorChain(error, (n) => {
     const v = n.retryAfter ?? n.retryAfterMs;
-    return typeof v === "number" && Number.isFinite(v);
+    // A non-positive hint (e.g. `retryAfter: 0` / `-1`) is meaningless as a
+    // back-off delay and would make a consumer's `setTimeout(retry, …)` fire
+    // immediately, so treat it as "no hint" (`undefined`) instead.
+    return typeof v === "number" && Number.isFinite(v) && v > 0;
   });
   if (!node) {
     return undefined;

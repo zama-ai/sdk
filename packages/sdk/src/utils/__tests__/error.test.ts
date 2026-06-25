@@ -238,6 +238,14 @@ describe("extractRetryAfterMs", () => {
   test("returns undefined when absent", () => {
     expect(extractRetryAfterMs(new Error("x"))).toBeUndefined();
   });
+
+  test("ignores a non-positive retryAfter hint", () => {
+    // `0` / negative is meaningless as a back-off delay (a consumer's
+    // `setTimeout(retry, …)` would fire immediately), so treat it as "no hint".
+    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 0 }))).toBeUndefined();
+    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: -1 }))).toBeUndefined();
+    expect(extractRetryAfterMs({ cause: { retryAfterMs: -500 } })).toBeUndefined();
+  });
 });
 
 describe("classifyWorkerError", () => {
