@@ -115,6 +115,10 @@ export {
   type DelegationStatusData,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
+export {
+  isDelegationPropagatedQueryOptions,
+  type IsDelegationPropagatedQueryConfig,
+} from "./is-delegation-propagated";
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,

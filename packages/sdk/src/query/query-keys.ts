@@ -162,6 +162,31 @@ export const zamaQueryKeys = {
     },
   },
 
+  delegationPropagation: {
+    all: ["zama.delegationPropagation"] as const,
+    scope: (
+      encryptedInputs: readonly { encryptedValue: string; contractAddress: Address }[],
+      delegator?: Address,
+      delegate?: Address,
+    ) => {
+      const dr = normalizeAddress(delegator);
+      const de = normalizeAddress(delegate);
+      return [
+        "zama.delegationPropagation",
+        {
+          ...(dr ? { delegatorAddress: dr } : {}),
+          ...(de ? { delegateAddress: de } : {}),
+          encryptedInputs: [...encryptedInputs]
+            .toSorted((a, b) => a.encryptedValue.localeCompare(b.encryptedValue))
+            .map((h) => ({
+              encryptedValue: h.encryptedValue as Hex,
+              contractAddress: getAddress(h.contractAddress),
+            })),
+        },
+      ] as const;
+    },
+  },
+
   decryption: {
     all: ["zama.decryption"] as const,
     encryptedValue: (encryptedValue: string, contractAddress?: Address) =>
