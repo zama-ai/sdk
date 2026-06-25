@@ -65,9 +65,9 @@ const message = matchZamaError(error, {
 });
 ```
 
-| Parameter  | Type                                                                              | Description                             |
-| ---------- | --------------------------------------------------------------------------------- | --------------------------------------- |
-| `error`    | `unknown`                                                                         | The caught error                        |
+| Parameter  | Type                                                                           | Description                             |
+| ---------- | ------------------------------------------------------------------------------ | --------------------------------------- |
+| `error`    | `unknown`                                                                      | The caught error                        |
 | `handlers` | `{ [K in ErrorCode]?: (e: ErrorForCode[K]) => T } & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler receives the error class for its code, so subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode` are available without a cast.
