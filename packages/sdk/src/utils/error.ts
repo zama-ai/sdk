@@ -1,5 +1,3 @@
-import { ZamaErrorCode } from "../errors/base";
-
 /** Coerce an unknown caught value to an Error instance. */
 export function toError(error: unknown): Error {
   if (error instanceof Error) {
@@ -72,9 +70,124 @@ function findInErrorChain(
   return undefined;
 }
 
-/** Structured (unambiguous) rate-limit signal: JSON-RPC -32005 or a numeric HTTP 429. */
+// ============================================================================
+// Cross-thread serialization
+// ============================================================================
+
+/**
+ * A plain, structured-clone-safe snapshot of an error and its cause chain.
+ *
+ * The worker boundary (`postMessage`) strips prototypes, `code`/`status`, and —
+ * critically — the `cause` chain, leaving only the message. Decryption errors
+ * are classified on the **main thread** ({@link wrapDecryptError}), so the worker
+ * only needs to faithfully hand the error across the boundary, not understand it.
+ * `serializeError` is that mechanical, taxonomy-agnostic envelope: it copies the
+ * scalar signal fields the classifier keys on and flattens the nested cause chain
+ * into a single `cause` link. {@link deserializeError} rebuilds an `Error` whose
+ * `.cause` chain mirrors the original, so the existing chain-walking detectors
+ * work on it unchanged.
+ */
+export interface SerializedError {
+  name: string;
+  message: string;
+  /** e.g. JSON-RPC -32005, "RELAYER_FETCH_ERROR", ethers "CALL_EXCEPTION". */
+  code?: string | number;
+  /** viem-style HTTP status. */
+  status?: number;
+  /** relayer / node-fetch-style HTTP status. */
+  statusCode?: number;
+  retryAfter?: number;
+  retryAfterMs?: number;
+  cause?: SerializedError;
+}
+
+/** Scalar signal fields carried verbatim across the boundary, in both directions. */
+const SERIALIZED_SCALAR_KEYS = [
+  "code",
+  "status",
+  "statusCode",
+  "retryAfter",
+  "retryAfterMs",
+] as const;
+
+/**
+ * Flatten an error (and its `cause` / `error` / `info` chain) into a
+ * structured-clone-safe {@link SerializedError}. Depth-bounded to mirror
+ * {@link findInErrorChain} and guard against cyclic structures.
+ */
+export function serializeError(error: unknown, depth = 6): SerializedError {
+  const coerced = toError(error);
+  const node =
+    typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : (coerced as unknown as Record<string, unknown>);
+
+  const serialized: SerializedError = { name: coerced.name, message: coerced.message };
+
+  if (typeof node.code === "string" || typeof node.code === "number") {
+    serialized.code = node.code;
+  }
+  if (typeof node.status === "number") {
+    serialized.status = node.status;
+  }
+  if (typeof node.statusCode === "number") {
+    serialized.statusCode = node.statusCode;
+  }
+  if (typeof node.retryAfter === "number") {
+    serialized.retryAfter = node.retryAfter;
+  }
+  if (typeof node.retryAfterMs === "number") {
+    serialized.retryAfterMs = node.retryAfterMs;
+  }
+
+  if (depth > 0) {
+    for (const key of NESTED_ERROR_KEYS) {
+      const next = node[key];
+      if (next !== undefined && next !== null && typeof next === "object") {
+        serialized.cause = serializeError(next, depth - 1);
+        break;
+      }
+    }
+  }
+
+  return serialized;
+}
+
+/**
+ * Rebuild a real {@link Error} from a {@link SerializedError}, re-attaching the
+ * scalar signal fields and reconstructing the `.cause` chain so chain-walking
+ * detectors ({@link findInErrorChain}, {@link extractHttpStatus},
+ * {@link isRpcRateLimitError}) operate on it exactly as on the original.
+ */
+export function deserializeError(serialized: SerializedError): Error {
+  const error = new Error(serialized.message) as Error & Record<string, unknown>;
+  if (serialized.name) {
+    error.name = serialized.name;
+  }
+  for (const key of SERIALIZED_SCALAR_KEYS) {
+    const value = serialized[key];
+    if (value !== undefined) {
+      error[key] = value;
+    }
+  }
+  if (serialized.cause) {
+    error.cause = deserializeError(serialized.cause);
+  }
+  return error;
+}
+
+// ============================================================================
+// Classification detectors (main-thread)
+// ============================================================================
+
+/**
+ * Structured (unambiguous) consumer rate-limit signal: JSON-RPC -32005 or a
+ * viem-style numeric `status: 429`. Deliberately NOT `statusCode: 429` — that is
+ * the relayer / node-fetch HTTP shape, which stays {@link RelayerRequestFailedError}
+ * (SDK-236), so a relayer 429 is never mistaken for a consumer-RPC throttle.
+ */
 function nodeHasStructuredRateLimit(node: Record<string, unknown>): boolean {
-  return node.code === JSON_RPC_LIMIT_EXCEEDED || node.status === 429 || node.statusCode === 429;
+  return node.code === JSON_RPC_LIMIT_EXCEEDED || node.status === 429;
 }
 
 function nodeIsRpcRateLimit(node: Record<string, unknown>): boolean {
@@ -114,91 +227,26 @@ export function isRpcRateLimitError(error: unknown): boolean {
 }
 
 /**
- * Like {@link isRpcRateLimitError} but only matches an unambiguous structured
- * signal (`-32005` or a numeric `status: 429`), ignoring message text. Used by
- * `wrapDecryptError` to promote a raw consumer 429 regardless of any HTTP status
- * it carries, while leaving worker-origin relayer errors (which carry a
- * top-level `statusCode`, not `status`) to the relayer branch.
+ * Like {@link isRpcRateLimitError} but only matches an unambiguous **structured**
+ * signal (`-32005` or a viem `status: 429`), ignoring message text. The classifier
+ * promotes this ahead of any HTTP status, while a message-only throttle is only
+ * trusted when no status is present — so a relayer HTTP error whose body happens
+ * to say "rate limit" still maps to {@link RelayerRequestFailedError}.
  */
 export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
   if (isRelayerFetchError(error)) {
     return false;
   }
-  return (
-    findInErrorChain(error, (n) => n.code === JSON_RPC_LIMIT_EXCEEDED || n.status === 429) !==
-    undefined
-  );
-}
-
-/**
- * Structured classification of a worker-side error for the cross-thread protocol,
- * discriminated on `errorCode` so each cause carries exactly its own payload
- * (e.g. a `NOT_ENTITLED` always has handle/contract/account, a `RPC_RATE_LIMITED`
- * only `retryAfter`). Only these fields survive a structured-clone across the
- * worker boundary; the main thread rebuilds the typed error from them.
- */
-export type WorkerErrorClassification =
-  | {
-      errorCode: typeof ZamaErrorCode.NotEntitled;
-      handle: string;
-      contractAddress: string;
-      account: string;
-    }
-  | { errorCode: typeof ZamaErrorCode.RpcRateLimited; retryAfter?: number }
-  | { errorCode?: undefined; statusCode?: number };
-
-/**
- * Classify an error at the worker source — where the full error object (codes,
- * causes) still exists — into the small set of fields that survive a
- * structured-clone across the worker boundary. The main thread uses these to
- * rebuild the correct typed error instead of only seeing a message string.
- */
-export function classifyWorkerError(error: unknown): WorkerErrorClassification {
-  if (isRpcRateLimitError(error)) {
-    return { errorCode: ZamaErrorCode.RpcRateLimited, retryAfter: extractRetryAfterMs(error) };
-  }
-  const statusCode = extractHttpStatus(error);
-  return statusCode !== undefined ? { statusCode } : {};
-}
-
-/**
- * Rebuild a {@link WorkerErrorClassification} from the fields the worker client
- * re-attached to a cross-thread error (`zamaErrorCode` + payload). Returns
- * `undefined` for errors that weren't classified at the worker source (e.g. raw
- * main-thread provider errors), so callers fall back to direct detection.
- */
-export function readWorkerClassification(error: unknown): WorkerErrorClassification | undefined {
-  if (typeof error !== "object" || error === null) {
-    return undefined;
-  }
-  const e = error as Record<string, unknown>;
-  if (e.zamaErrorCode === ZamaErrorCode.NotEntitled) {
-    return {
-      errorCode: ZamaErrorCode.NotEntitled,
-      handle: typeof e.handle === "string" ? e.handle : "",
-      contractAddress: typeof e.contractAddress === "string" ? e.contractAddress : "",
-      account: typeof e.account === "string" ? e.account : "",
-    };
-  }
-  if (e.zamaErrorCode === ZamaErrorCode.RpcRateLimited) {
-    return {
-      errorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: typeof e.retryAfter === "number" ? e.retryAfter : undefined,
-    };
-  }
-  if (typeof e.statusCode === "number") {
-    return { statusCode: e.statusCode };
-  }
-  return undefined;
+  return findInErrorChain(error, nodeHasStructuredRateLimit) !== undefined;
 }
 
 /**
  * The relayer SDK's ACL gate (`validateAclPermissions`) throws a message-only
  * Error when the actor isn't allowed: `User address <a> is not authorized to
  * user decrypt handle <h>!`. Matching it here, once, against the pinned
- * `@zama-fhe/relayer-sdk`, is what lets us surface a typed NotEntitledError
- * (the "dapp contract … is not authorized" variant is a dapp misconfig and is
- * intentionally left to DecryptionFailedError).
+ * `@zama-fhe/relayer-sdk`, is what lets {@link wrapDecryptError} surface a typed
+ * NotEntitledError (the "dapp contract … is not authorized" variant is a dapp
+ * misconfig and is intentionally left to DecryptionFailedError).
  *
  * This is a deliberate bridge, not a destination: `@zama-fhe/relayer-sdk` ships
  * a typed `ACLUserDecryptionError`, but its active `userDecrypt` path still
@@ -207,35 +255,14 @@ export function readWorkerClassification(error: unknown): WorkerErrorClassificat
  * and drop this matcher. The `error.test.ts` guard reads the installed relayer
  * source and fails loudly if the message drifts before then.
  */
-function isNotEntitledMessage(message: string): boolean {
+export function isNotEntitledMessage(message: string): boolean {
   const m = message.toLowerCase();
   return m.includes("user address") && m.includes("is not authorized to user decrypt");
 }
 
-function parseHandleFromMessage(message: string): string | undefined {
+/** Parse the on-chain handle out of the relayer's not-entitled message. */
+export function parseHandleFromMessage(message: string): string | undefined {
   return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];
-}
-
-/**
- * Classify a decrypt-path worker error. Recognizes the relayer's not-entitled
- * failure (reusing its own authoritative ACL check — no extra on-chain reads)
- * and otherwise falls back to {@link classifyWorkerError} (rate-limit / status).
- * `ctx` supplies the contract/account for the rebuilt {@link NotEntitledError},
- * since the relayer message only carries the handle.
- */
-export function classifyDecryptWorkerError(
-  error: unknown,
-  ctx: { contractAddress: string; account: string },
-): WorkerErrorClassification {
-  if (error instanceof Error && isNotEntitledMessage(error.message)) {
-    return {
-      errorCode: ZamaErrorCode.NotEntitled,
-      handle: parseHandleFromMessage(error.message) ?? "",
-      contractAddress: ctx.contractAddress,
-      account: ctx.account,
-    };
-  }
-  return classifyWorkerError(error);
 }
 
 /**
@@ -259,29 +286,18 @@ export function extractRetryAfterMs(error: unknown): number | undefined {
 }
 
 /**
- * Extract an HTTP status code from an error, if present.
- * Relayer SDK errors may carry a `status` or `statusCode` property.
+ * Extract an HTTP status code from an error or anywhere in its cause chain.
+ * Relayer SDK errors may carry a `status` or `statusCode` property; walking the
+ * full chain (rather than just depth-1) keeps this in step with the other
+ * chain-walking detectors and avoids a depth asymmetry between them.
  */
 export function extractHttpStatus(error: unknown): number | undefined {
-  if (error === null || error === undefined || typeof error !== "object") {
+  const node = findInErrorChain(
+    error,
+    (n) => typeof n.statusCode === "number" || typeof n.status === "number",
+  );
+  if (!node) {
     return undefined;
   }
-  const e = error as Record<string, unknown>;
-  if (typeof e.statusCode === "number") {
-    return e.statusCode;
-  }
-  if (typeof e.status === "number") {
-    return e.status;
-  }
-  // Check nested cause
-  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
-    const cause = e.cause as Record<string, unknown>;
-    if (typeof cause.statusCode === "number") {
-      return cause.statusCode;
-    }
-    if (typeof cause.status === "number") {
-      return cause.status;
-    }
-  }
-  return undefined;
+  return (typeof node.statusCode === "number" ? node.statusCode : node.status) as number;
 }

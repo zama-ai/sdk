@@ -6,6 +6,7 @@ import {
 } from "../credentials/decrypt-permit";
 import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
 import {
+  type DecryptErrorContext,
   DecryptionFailedError,
   isFatalBatchError,
   RpcRateLimitError,
@@ -25,6 +26,8 @@ import type { DelegationService } from "./delegation-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
+  /** The ACL actor whose entitlement is checked (signer, or delegator when delegated). */
+  aclActorAddress: Address;
   resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
@@ -81,6 +84,7 @@ export class DecryptionService {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(handles, {
       requesterAddress: normalizedSigner,
+      aclActorAddress: normalizedSigner,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
       decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
@@ -105,6 +109,7 @@ export class DecryptionService {
     const normalizedDelegate = getAddress(delegateAddress);
     return this.#decrypt(encryptedValues, {
       requesterAddress: getAddress(accountAddress),
+      aclActorAddress: normalizedDelegator,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
       validate: (contractAddresses) =>
@@ -172,7 +177,11 @@ export class DecryptionService {
       }
       if (items.length === 1) {
         const [item = this.#missingBatchItem()] = items;
-        item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", true);
+        item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", {
+          isDelegated: true,
+          contractAddress: item.contractAddress,
+          account: getAddress(delegatorAddress),
+        });
         return { items };
       }
     }
@@ -205,11 +214,11 @@ export class DecryptionService {
             aborted = true;
             throw error;
           }
-          item.error = this.#toZamaError(
-            error,
-            "Failed to decrypt delegated encrypted values",
-            true,
-          );
+          item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", {
+            isDelegated: true,
+            contractAddress: item.contractAddress,
+            account: getAddress(delegatorAddress),
+          });
         }
       }),
       maxConcurrency,
@@ -300,11 +309,23 @@ export class DecryptionService {
 
       await pLimit(
         [...byContract.entries()].map(([contractAddress, encryptedValues]) => async () => {
-          const decrypted = await strategy.decryptContract({
-            credentials,
-            contractAddress,
-            encryptedValues,
-          });
+          // Classify per contract so a not-entitled / relayer failure carries the
+          // exact contract + ACL actor (the request context the worker no longer
+          // threads). Already-typed errors pass straight through.
+          let decrypted: Record<EncryptedValue, ClearValue>;
+          try {
+            decrypted = await strategy.decryptContract({
+              credentials,
+              contractAddress,
+              encryptedValues,
+            });
+          } catch (error) {
+            throw wrapDecryptError(error, strategy.errorMessage, {
+              isDelegated: strategy.delegated,
+              contractAddress,
+              account: strategy.aclActorAddress,
+            });
+          }
 
           for (const [encryptedValue, value] of Object.entries(decrypted)) {
             result[encryptedValue as EncryptedValue] = value;
@@ -334,13 +355,20 @@ export class DecryptionService {
       });
       return result;
     } catch (error) {
+      // Per-contract failures are already classified into a typed ZamaError whose
+      // `cause` is the original failure; surface that original in the observability
+      // event so monitoring keeps the root-cause message.
+      const original =
+        error instanceof ZamaError && error.cause instanceof Error ? error.cause : error;
       this.#emitEvent({
         type: ZamaSDKEvents.DecryptError,
-        error: toError(error),
+        error: toError(original),
         durationMs: Date.now() - t0,
         encryptedValues: uncachedEncryptedValues,
       });
-      throw wrapDecryptError(error, strategy.errorMessage, strategy.delegated);
+      // The per-contract wrap above already classified these; this is a passthrough
+      // for them plus a fallback for any non-contract failure (e.g. caching).
+      throw wrapDecryptError(error, strategy.errorMessage, { isDelegated: strategy.delegated });
     }
   }
 
@@ -363,8 +391,8 @@ export class DecryptionService {
     item.value = value;
   }
 
-  #toZamaError(error: unknown, fallbackMessage: string, delegated = false): ZamaError {
-    return error instanceof ZamaError ? error : wrapDecryptError(error, fallbackMessage, delegated);
+  #toZamaError(error: unknown, fallbackMessage: string, ctx?: DecryptErrorContext): ZamaError {
+    return error instanceof ZamaError ? error : wrapDecryptError(error, fallbackMessage, ctx);
   }
 
   #missingBatchItem(): never {

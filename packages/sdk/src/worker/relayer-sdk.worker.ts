@@ -6,14 +6,7 @@
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { FheChain } from "../chains/types";
-import {
-  classifyDecryptWorkerError,
-  classifyWorkerError,
-  extractHttpStatus,
-  prefixHex,
-  unprefixHex,
-} from "../utils";
-import type { WorkerErrorClassification } from "../utils";
+import { prefixHex, serializeError, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
@@ -149,15 +142,17 @@ function sendSuccess<T>(
 /**
  * Send an error response back to the main thread.
  */
-function sendError(
-  id: string,
-  type: WorkerRequest["type"],
-  error: string,
-  classification?: WorkerErrorClassification,
-): void {
-  // Structured clone flattens this; the typed ErrorResponse union is the
-  // consumer-side contract (worker.base-client rebuilds the typed error).
-  self.postMessage({ id, type, success: false, error, ...classification });
+function sendError(id: string, type: WorkerRequest["type"], error: unknown): void {
+  // The error and its cause chain are serialized into a structured-clone-safe
+  // envelope; the main thread rebuilds it and classifies it once in
+  // `wrapDecryptError`. The worker stays taxonomy-agnostic.
+  self.postMessage({
+    id,
+    type,
+    success: false,
+    error: error instanceof Error ? error.message : String(error),
+    serialized: serializeError(error),
+  });
 }
 
 // Store original fetch for use in SDK loading
@@ -321,8 +316,7 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -400,8 +394,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     sendSuccess(id, type, response, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
+    sendError(id, type, error);
   }
 }
 
@@ -434,16 +427,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(
-      id,
-      type,
-      message,
-      classifyDecryptWorkerError(error, {
-        contractAddress: payload.contractAddress,
-        account: payload.signerAddress,
-      }),
-    );
+    sendError(id, type, error);
   }
 }
 
@@ -462,8 +446,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, classifyWorkerError(error));
+    sendError(id, type, error);
   }
 }
 
@@ -485,8 +468,7 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -508,8 +490,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
     sendSuccess(id, type, eip712);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -532,8 +513,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
     sendSuccess(id, type, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -567,16 +547,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(
-      id,
-      type,
-      message,
-      classifyDecryptWorkerError(error, {
-        contractAddress: payload.contractAddress,
-        account: payload.delegatorAddress,
-      }),
-    );
+    sendError(id, type, error);
   }
 }
 
@@ -601,8 +572,7 @@ async function handleRequestZKProofVerification(
 
     sendSuccess(id, type, result, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
+    sendError(id, type, error);
   }
 }
 
@@ -621,8 +591,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
+    sendError(id, type, error);
   }
 }
 
@@ -644,8 +613,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message, { statusCode: extractHttpStatus(error) });
+    sendError(id, type, error);
   }
 }
 
@@ -706,11 +674,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         throw new Error(`Unknown request type: ${(request as WorkerRequest).type}`);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     sendError(
       request?.id ?? "unknown",
       request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
-      message,
+      error,
     );
   }
 };

@@ -385,7 +385,7 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  test("error response includes statusCode when present", async () => {
+  test("rebuilds the error and its scalar signal fields from the serialized envelope", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -395,8 +395,8 @@ describe("BaseWorkerClient", () => {
           type: req.type,
           success: false,
           error: "rate limited",
-          statusCode: 429,
-        } as WorkerResponse<unknown> & { statusCode: number });
+          serialized: { name: "Error", message: "rate limited", statusCode: 429, retryAfter: 3 },
+        } as WorkerResponse<unknown>);
       });
     });
 
@@ -404,12 +404,14 @@ describe("BaseWorkerClient", () => {
       await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as Error).message).toBe("rate limited");
-      expect((error as Error & { statusCode?: number }).statusCode).toBe(429);
+      const e = error as Error & { statusCode?: number; retryAfter?: number };
+      expect(e.message).toBe("rate limited");
+      expect(e.statusCode).toBe(429);
+      expect(e.retryAfter).toBe(3);
     }
   });
 
-  test("error response re-attaches errorCode and retryAfter when present", async () => {
+  test("rebuilds the cause chain so chain-walking classification keeps working", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -418,10 +420,14 @@ describe("BaseWorkerClient", () => {
           id: req.id,
           type: req.type,
           success: false,
-          error: "Too Many Requests",
-          errorCode: "RPC_RATE_LIMITED",
-          retryAfter: 1500,
-        } as WorkerResponse<unknown> & { errorCode: string; retryAfter: number });
+          error: "could not coalesce error",
+          serialized: {
+            name: "Error",
+            message: "could not coalesce error",
+            code: "SERVER_ERROR",
+            cause: { name: "Error", message: "Too Many Requests", code: -32005 },
+          },
+        } as WorkerResponse<unknown>);
       });
     });
 
@@ -429,14 +435,12 @@ describe("BaseWorkerClient", () => {
       await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
-      const e = error as Error & { zamaErrorCode?: string; retryAfter?: number };
-      expect(e.message).toBe("Too Many Requests");
-      expect(e.zamaErrorCode).toBe("RPC_RATE_LIMITED");
-      expect(e.retryAfter).toBe(1500);
+      const cause = (error as Error & { cause?: { code?: number } }).cause;
+      expect(cause?.code).toBe(-32005);
     }
   });
 
-  test("error response re-attaches not-entitled fields (handle/contract/account)", async () => {
+  test("falls back to a plain Error when the serialized envelope is absent", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -445,35 +449,12 @@ describe("BaseWorkerClient", () => {
           id: req.id,
           type: req.type,
           success: false,
-          error: "not authorized",
-          errorCode: "NOT_ENTITLED",
-          handle: "0xhandle",
-          contractAddress: "0xcontract",
-          account: "0xactor",
-        } as WorkerResponse<unknown> & {
-          errorCode: string;
-          handle: string;
-          contractAddress: string;
-          account: string;
-        });
+          error: "legacy error",
+        } as WorkerResponse<unknown>);
       });
     });
 
-    try {
-      await client.generateKeypair({ chainId: 1 });
-      expect.unreachable("should have thrown");
-    } catch (error) {
-      const e = error as Error & {
-        zamaErrorCode?: string;
-        handle?: string;
-        contractAddress?: string;
-        account?: string;
-      };
-      expect(e.zamaErrorCode).toBe("NOT_ENTITLED");
-      expect(e.handle).toBe("0xhandle");
-      expect(e.contractAddress).toBe("0xcontract");
-      expect(e.account).toBe("0xactor");
-    }
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("legacy error");
   });
 
   test("terminate is a no-op when no worker exists", () => {

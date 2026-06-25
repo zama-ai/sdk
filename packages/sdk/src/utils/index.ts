@@ -2,12 +2,13 @@ export {
   toError,
   isContractCallError,
   isRpcRateLimitError,
+  isNotEntitledMessage,
+  parseHandleFromMessage,
   extractRetryAfterMs,
   extractHttpStatus,
-  classifyWorkerError,
-  classifyDecryptWorkerError,
-  readWorkerClassification,
-  type WorkerErrorClassification,
+  serializeError,
+  deserializeError,
+  type SerializedError,
 } from "./error";
 export { prefixHex, unprefixHex } from "./hex";
 export {

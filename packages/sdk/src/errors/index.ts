@@ -37,6 +37,6 @@ export {
   ERC20ReadFailedError,
   type BalanceErrorDetails,
 } from "./balance";
-export { wrapDecryptError } from "./decrypt";
+export { wrapDecryptError, type DecryptErrorContext } from "./decrypt";
 export { wrapEncryptError } from "./encrypt";
 export { isFatalBatchError } from "./fatal-batch";

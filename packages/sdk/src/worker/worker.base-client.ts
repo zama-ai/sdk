@@ -26,6 +26,7 @@ import type {
   WorkerRequestType,
   WorkerResponse,
 } from "./worker.types";
+import { deserializeError } from "../utils/error";
 
 /** Pending request tracker */
 interface PendingRequest<T> {
@@ -174,35 +175,12 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         elapsed,
         error: response.error,
       });
-      const err = new Error(response.error) as Error & {
-        statusCode?: number;
-        zamaErrorCode?: string;
-        retryAfter?: number;
-        handle?: string;
-        contractAddress?: string;
-        account?: string;
-      };
-      // Re-attach the fields the worker classified at the source — structured
-      // clone across the worker boundary strips codes/causes, leaving only the
-      // message — so the main thread can rebuild the correct typed error.
-      if ("statusCode" in response && typeof response.statusCode === "number") {
-        err.statusCode = response.statusCode;
-      }
-      if ("errorCode" in response && typeof response.errorCode === "string") {
-        err.zamaErrorCode = response.errorCode;
-      }
-      if ("retryAfter" in response && typeof response.retryAfter === "number") {
-        err.retryAfter = response.retryAfter;
-      }
-      if ("handle" in response && typeof response.handle === "string") {
-        err.handle = response.handle;
-      }
-      if ("contractAddress" in response && typeof response.contractAddress === "string") {
-        err.contractAddress = response.contractAddress;
-      }
-      if ("account" in response && typeof response.account === "string") {
-        err.account = response.account;
-      }
+      // Rebuild the error (and its cause chain) from the structured-clone-safe
+      // envelope the worker serialized. Classification happens once on the main
+      // thread (`wrapDecryptError`) — the worker stays taxonomy-agnostic.
+      const err = response.serialized
+        ? deserializeError(response.serialized)
+        : new Error(response.error);
       pending.reject(err);
     }
   }

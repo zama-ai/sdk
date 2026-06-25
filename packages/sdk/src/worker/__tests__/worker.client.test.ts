@@ -466,7 +466,7 @@ describe("RelayerWorkerClient", () => {
       type: req.type,
       success: false,
       error: "relayer returned 400",
-      statusCode: 400,
+      serialized: { name: "Error", message: "relayer returned 400", statusCode: 400 },
     };
     worker.onmessage?.(new MessageEvent("message", { data: errorResponse }));
 

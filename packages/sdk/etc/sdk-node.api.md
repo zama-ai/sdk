@@ -296,7 +296,8 @@ export type EncryptResult = {
 export type ErrorResponse = BaseResponse & {
     success: false;
     error: string;
-} & WorkerErrorClassification;
+    serialized?: SerializedError;
+};
 
 // @public (undocumented)
 export interface GenerateKeypairRequest extends BaseRequest {

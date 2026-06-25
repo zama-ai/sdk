@@ -9,7 +9,6 @@ import {
   SigningFailedError,
   SigningRejectedError,
   ZamaError,
-  ZamaErrorCode,
   wrapDecryptError,
 } from "../index";
 
@@ -33,7 +32,7 @@ describe("wrapDecryptError", () => {
 
     test("returns the same DelegationNotPropagatedError unchanged", () => {
       const original = new DelegationNotPropagatedError("propagating");
-      expect(wrapDecryptError(original, "fallback", true)).toBe(original);
+      expect(wrapDecryptError(original, "fallback", { isDelegated: true })).toBe(original);
     });
 
     test("returns the same SigningRejectedError unchanged", () => {
@@ -62,7 +61,7 @@ describe("wrapDecryptError", () => {
       const error = Object.assign(new Error("internal error"), {
         statusCode: 500,
       });
-      const wrapped = wrapDecryptError(error, "fallback", true);
+      const wrapped = wrapDecryptError(error, "fallback", { isDelegated: true });
       expect(wrapped).toBeInstanceOf(DelegationNotPropagatedError);
       expect((wrapped as { cause?: unknown }).cause).toBe(error);
     });
@@ -71,7 +70,7 @@ describe("wrapDecryptError", () => {
       const error = Object.assign(new Error("server error"), {
         statusCode: 500,
       });
-      const wrapped = wrapDecryptError(error, "fallback", false);
+      const wrapped = wrapDecryptError(error, "fallback", { isDelegated: false });
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(500);
     });
@@ -166,26 +165,29 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 
-    test("maps a worker-classified NOT_ENTITLED error to NotEntitledError with its fields", () => {
-      // After the worker boundary, only message + attached fields survive.
-      const workerError = Object.assign(new Error("not authorized"), {
-        zamaErrorCode: ZamaErrorCode.NotEntitled,
-        handle: `0x${"12".repeat(32)}`,
+    test("maps the relayer's not-entitled message to NotEntitledError, injecting ctx", () => {
+      // The relayer throws a message-only Error; the message survives the worker
+      // boundary, the handle is parsed from it, and contract/account are injected
+      // from the request context the caller (decryption-service) holds.
+      const relayerError = new Error(
+        `User address 0xActor is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+      );
+      const wrapped = wrapDecryptError(relayerError, "fallback", {
         contractAddress: "0xContract",
         account: "0xActor",
       });
-      const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(NotEntitledError);
       expect((wrapped as NotEntitledError).encryptedValue).toBe(`0x${"12".repeat(32)}`);
       expect((wrapped as NotEntitledError).contractAddress).toBe("0xContract");
       expect((wrapped as NotEntitledError).account).toBe("0xActor");
     });
 
-    test("maps a worker-classified RPC_RATE_LIMITED error to RpcRateLimitError", () => {
-      // The worker boundary strips the cause, leaving only message + zamaErrorCode + retryAfter.
+    test("maps a rebuilt worker rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
+      // After deserializeError rebuilds the worker error, the structured signal
+      // (-32005) and retryAfter are read directly — no separate worker taxonomy.
       const workerError = Object.assign(new Error("Too Many Requests"), {
-        zamaErrorCode: ZamaErrorCode.RpcRateLimited,
-        retryAfter: 2000,
+        code: -32005,
+        retryAfter: 2,
       });
       const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
@@ -204,18 +206,20 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(consumer429, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
-    test("keeps a worker-origin relayer 429 (`statusCode`, no RELAYER tag) as RelayerRequestFailedError", () => {
-      // After the worker boundary strips the cause, the relayer's 429 is a bare
-      // Error with `statusCode` (not `status`) — it must stay a relayer error.
-      const workerRelayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+    test("keeps a bare `statusCode: 429` (relayer/node-fetch shape) as RelayerRequestFailedError", () => {
+      // `statusCode` (not viem's `status`) is the relayer HTTP shape and is
+      // deliberately excluded from the consumer rate-limit signal.
+      const relayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
         statusCode: 429,
       });
-      const wrapped = wrapDecryptError(workerRelayer429, "fallback");
+      const wrapped = wrapDecryptError(relayer429, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
-    test("keeps the relayer's own 429 (HTTP status present) as RelayerRequestFailedError", () => {
+    test("keeps the relayer's own 429 (RELAYER_FETCH_ERROR cause) as RelayerRequestFailedError", () => {
+      // The cause chain (and its RELAYER_FETCH_ERROR tag) now survives the worker
+      // boundary via serializeError, so this is the realistic worker-origin shape.
       const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
         cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
       });

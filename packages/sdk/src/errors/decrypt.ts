@@ -1,4 +1,4 @@
-import { ZamaErrorCode, type ZamaError } from "./base";
+import type { ZamaError } from "./base";
 import { DecryptionFailedError } from "./encryption";
 import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
@@ -10,27 +10,41 @@ import {
   extractHttpStatus,
   extractRetryAfterMs,
   hasStructuredRpcRateLimitSignal,
+  isNotEntitledMessage,
   isRpcRateLimitError,
-  readWorkerClassification,
+  parseHandleFromMessage,
 } from "../utils/error";
 
 /**
- * Inspect a caught error for an HTTP status code and return the appropriate
- * typed SDK error (NoCiphertextError for 400, RelayerRequestFailedError for
- * other HTTP errors, or the generic DecryptionFailedError as fallback).
+ * Context the caller supplies so a not-entitled / delegation failure can be
+ * mapped precisely. The classifier runs on both worker-origin errors (rebuilt
+ * from the serialized envelope) and main-thread-origin ones (cleartext relayer,
+ * delegation pre-check) — the request context (`contractAddress` / `account`)
+ * only exists on the main thread, so it is injected here rather than threaded
+ * across the worker boundary.
+ */
+export interface DecryptErrorContext {
+  isDelegated?: boolean;
+  contractAddress?: string;
+  /** The ACL actor (signer, or delegator for delegated decrypt). */
+  account?: string;
+}
+
+/**
+ * The single decryption-error classifier. Maps a caught error to the right typed
+ * SDK error: not-entitled (ACL), consumer RPC rate-limit, NoCiphertext (400),
+ * DelegationNotPropagated (delegated 500), RelayerRequestFailed (other HTTP), or
+ * the generic DecryptionFailed fallback.
  *
- * Errors that are already typed SDK errors (e.g. {@link SigningRejectedError},
- * {@link DecryptionFailedError}) are returned as-is so callers can still match
- * the original cause.
- *
- * When `isDelegated` is true and the relayer returns a 500, the error is
- * wrapped as {@link DelegationNotPropagatedError} because the most likely
- * cause is that the gateway hasn't synced the delegation from L1 yet.
+ * Errors that are already typed SDK errors are returned as-is so callers can
+ * still match the original cause. All structured signals (codes, status, cause
+ * chain) are read from the error itself — worker-origin errors are first rebuilt
+ * by {@link deserializeError}, so this runs identically regardless of origin.
  */
 export function wrapDecryptError(
   error: unknown,
   fallbackMessage: string,
-  isDelegated = false,
+  ctx: DecryptErrorContext = {},
 ): ZamaError {
   if (
     error instanceof DecryptionFailedError ||
@@ -45,44 +59,40 @@ export function wrapDecryptError(
     return error;
   }
 
-  // Causes classified at the worker source and threaded across the boundary
-  // (structured clone otherwise leaves only the message). Discriminated on
-  // `errorCode`, so each branch gets exactly its own typed payload.
-  const classification = readWorkerClassification(error);
-  if (classification?.errorCode === ZamaErrorCode.NotEntitled) {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+
+  // Actor not entitled (ACL). The relayer throws a message-only Error whose text
+  // survives the worker boundary; the handle is parseable from it and the
+  // contract/account come from the request context the caller holds.
+  if (error instanceof Error && isNotEntitledMessage(error.message)) {
     return new NotEntitledError(
       {
-        encryptedValue: classification.handle,
-        contractAddress: classification.contractAddress,
-        account: classification.account,
+        encryptedValue: parseHandleFromMessage(error.message) ?? "",
+        contractAddress: ctx.contractAddress ?? "",
+        account: ctx.account ?? "",
       },
       { cause: error },
     );
   }
-  if (classification?.errorCode === ZamaErrorCode.RpcRateLimited) {
-    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
-      cause: error,
-      retryAfter: classification.retryAfter ?? extractRetryAfterMs(error),
-    });
-  }
 
-  // Raw main-thread provider error (e.g. the cleartext relayer's ACL reads):
-  // promote an unambiguous structured rate-limit signal (-32005 / `status: 429`)
-  // regardless of any HTTP status. Worker-origin relayer 429s carry a top-level
-  // `statusCode` (not `status`) and fall through to RelayerRequestFailedError.
+  // Consumer's RPC provider throttling an on-chain read. An unambiguous
+  // structured signal (-32005 / viem `status: 429`) wins over any HTTP status;
+  // relayer-origin 429s carry `code: "RELAYER_FETCH_ERROR"` and are excluded,
+  // staying RelayerRequestFailedError below.
   if (hasStructuredRpcRateLimitSignal(error)) {
-    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
+    return new RpcRateLimitError(message, {
       cause: error,
       retryAfter: extractRetryAfterMs(error),
     });
   }
 
-  const statusCode = classification?.statusCode ?? extractHttpStatus(error);
+  const statusCode = extractHttpStatus(error);
 
-  // Message-only RPC throttle (no structured signal, no HTTP status) on a raw
-  // main-thread error, e.g. the cleartext relayer's ACL reads.
+  // A message-only throttle ("Too Many Requests" / "rate limit") is trusted only
+  // when no HTTP status is present — otherwise the status classification (e.g. a
+  // relayer error whose body mentions a rate limit) takes precedence.
   if (statusCode === undefined && isRpcRateLimitError(error)) {
-    return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
+    return new RpcRateLimitError(message, {
       cause: error,
       retryAfter: extractRetryAfterMs(error),
     });
@@ -95,7 +105,7 @@ export function wrapDecryptError(
     );
   }
 
-  if (isDelegated && statusCode === 500) {
+  if (ctx.isDelegated && statusCode === 500) {
     return new DelegationNotPropagatedError(
       "Delegated decryption failed with a server error. " +
         "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
@@ -106,11 +116,7 @@ export function wrapDecryptError(
   }
 
   if (statusCode !== undefined) {
-    return new RelayerRequestFailedError(
-      error instanceof Error ? error.message : fallbackMessage,
-      statusCode,
-      { cause: error },
-    );
+    return new RelayerRequestFailedError(message, statusCode, { cause: error });
   }
 
   return new DecryptionFailedError(fallbackMessage, {

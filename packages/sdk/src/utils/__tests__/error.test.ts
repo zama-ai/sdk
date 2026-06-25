@@ -7,12 +7,12 @@ import {
   extractHttpStatus,
   isRpcRateLimitError,
   hasStructuredRpcRateLimitSignal,
+  isNotEntitledMessage,
+  parseHandleFromMessage,
   extractRetryAfterMs,
-  classifyWorkerError,
-  classifyDecryptWorkerError,
-  readWorkerClassification,
+  serializeError,
+  deserializeError,
 } from "../error";
-import { ZamaErrorCode } from "../../errors/base";
 
 describe("toError", () => {
   test("returns the same Error instance", () => {
@@ -205,7 +205,7 @@ describe("hasStructuredRpcRateLimitSignal", () => {
     );
   });
 
-  test("does NOT match a top-level `statusCode: 429` (worker-origin relayer shape)", () => {
+  test("does NOT match a bare `statusCode: 429` (relayer / node-fetch shape)", () => {
     expect(
       hasStructuredRpcRateLimitSignal(
         Object.assign(new Error("Relayer rate limit"), { statusCode: 429 }),
@@ -248,97 +248,75 @@ describe("extractRetryAfterMs", () => {
   });
 });
 
-describe("classifyWorkerError", () => {
-  test("classifies a consumer RPC rate-limit as RPC_RATE_LIMITED", () => {
-    const err = Object.assign(new Error("Too Many Requests"), { code: -32005, retryAfter: 2 });
-    expect(classifyWorkerError(err)).toEqual({
-      errorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: 2000,
+describe("serializeError / deserializeError", () => {
+  test("round-trips message, name, and the scalar signal fields", () => {
+    const err = Object.assign(new Error("boom"), {
+      name: "WeirdError",
+      code: -32005,
+      status: 429,
+      statusCode: 503,
+      retryAfter: 2,
     });
+    const rebuilt = deserializeError(serializeError(err)) as Error & Record<string, unknown>;
+    expect(rebuilt).toBeInstanceOf(Error);
+    expect(rebuilt.message).toBe("boom");
+    expect(rebuilt.name).toBe("WeirdError");
+    expect(rebuilt.code).toBe(-32005);
+    expect(rebuilt.status).toBe(429);
+    expect(rebuilt.statusCode).toBe(503);
+    expect(rebuilt.retryAfter).toBe(2);
   });
 
-  test("classifies a relayer HTTP error as a statusCode (not rate-limit)", () => {
-    const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
+  test("preserves the cause chain so chain-walking detectors keep working", () => {
+    // ethers-style nested provider error: structured clone would drop the chain.
+    const err = Object.assign(new Error("could not coalesce error"), {
+      code: "SERVER_ERROR",
+      info: { error: { code: -32005, message: "Too Many Requests" } },
+    });
+    const rebuilt = deserializeError(serializeError(err));
+    // `info` is normalized to `cause`, but the signal is still reachable.
+    expect(isRpcRateLimitError(rebuilt)).toBe(true);
+  });
+
+  test("preserves a relayer RELAYER_FETCH_ERROR cause (stays excluded from rate-limit)", () => {
+    const relayerError = Object.assign(new Error("relayer responded with HTTP 429"), {
       cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
     });
-    expect(classifyWorkerError(relayerError)).toEqual({ statusCode: 429 });
+    const rebuilt = deserializeError(serializeError(relayerError));
+    expect(isRpcRateLimitError(rebuilt)).toBe(false);
+    expect(extractHttpStatus(rebuilt)).toBe(429);
   });
 
-  test("returns an empty classification for a plain error", () => {
-    expect(classifyWorkerError(new Error("network down"))).toEqual({});
-  });
-});
-
-describe("readWorkerClassification", () => {
-  test("rebuilds NOT_ENTITLED from the re-attached fields", () => {
-    const err = Object.assign(new Error("x"), {
-      zamaErrorCode: ZamaErrorCode.NotEntitled,
-      handle: "0xhandle",
-      contractAddress: "0xcontract",
-      account: "0xactor",
-    });
-    expect(readWorkerClassification(err)).toEqual({
-      errorCode: ZamaErrorCode.NotEntitled,
-      handle: "0xhandle",
-      contractAddress: "0xcontract",
-      account: "0xactor",
-    });
+  test("is depth-bounded and does not throw on deep/cyclic chains", () => {
+    const cyclic = new Error("loop") as Error & { cause?: unknown };
+    cyclic.cause = cyclic;
+    expect(() => serializeError(cyclic)).not.toThrow();
   });
 
-  test("rebuilds RPC_RATE_LIMITED with retryAfter", () => {
-    const err = Object.assign(new Error("x"), {
-      zamaErrorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: 1500,
-    });
-    expect(readWorkerClassification(err)).toEqual({
-      errorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: 1500,
-    });
-  });
-
-  test("rebuilds a plain statusCode classification", () => {
-    const err = Object.assign(new Error("x"), { statusCode: 500 });
-    expect(readWorkerClassification(err)).toEqual({ statusCode: 500 });
-  });
-
-  test("returns undefined for an unclassified / non-object error", () => {
-    expect(readWorkerClassification(new Error("raw"))).toBeUndefined();
-    expect(readWorkerClassification("nope")).toBeUndefined();
+  test("coerces a non-Error value", () => {
+    const serialized = serializeError("plain string");
+    expect(serialized.message).toBe("plain string");
+    expect(deserializeError(serialized).message).toBe("plain string");
   });
 });
 
-describe("classifyDecryptWorkerError", () => {
-  const ctx = { contractAddress: "0xContract", account: "0xActor" };
-
-  // Guard: this must stay in sync with @zama-fhe/relayer-sdk's validateAclPermissions
-  // ("User address <a> is not authorized to user decrypt handle <h>!"). If a relayer
-  // bump changes the wording, this test fails loudly and NOT_ENTITLED must be re-mapped.
+describe("isNotEntitledMessage / parseHandleFromMessage", () => {
+  // Must stay in sync with @zama-fhe/relayer-sdk's validateAclPermissions
+  // ("User address <a> is not authorized to user decrypt handle <h>!").
   const RELAYER_NOT_ENTITLED_MSG = `User address 0x1000000000000000000000000000000000000001 is not authorized to user decrypt handle 0x${"12".repeat(32)}!`;
 
-  test("maps the relayer's not-entitled message to NOT_ENTITLED with parsed handle + ctx", () => {
-    expect(classifyDecryptWorkerError(new Error(RELAYER_NOT_ENTITLED_MSG), ctx)).toEqual({
-      errorCode: ZamaErrorCode.NotEntitled,
-      handle: `0x${"12".repeat(32)}`,
-      contractAddress: "0xContract",
-      account: "0xActor",
-    });
+  test("matches the relayer's actor-not-entitled message and parses the handle", () => {
+    expect(isNotEntitledMessage(RELAYER_NOT_ENTITLED_MSG)).toBe(true);
+    expect(parseHandleFromMessage(RELAYER_NOT_ENTITLED_MSG)).toBe(`0x${"12".repeat(32)}`);
   });
 
-  test("does NOT map the 'dapp contract is not authorized' variant (stays a generic failure)", () => {
+  test("does NOT match the 'dapp contract is not authorized' variant", () => {
     const contractMsg = `dapp contract 0xabc is not authorized to user decrypt handle 0x${"34".repeat(32)}!`;
-    expect(classifyDecryptWorkerError(new Error(contractMsg), ctx)).toEqual({});
-  });
-
-  test("falls back to rate-limit classification for a throttled read", () => {
-    const rpc = Object.assign(new Error("Too Many Requests"), { code: -32005 });
-    expect(classifyDecryptWorkerError(rpc, ctx)).toEqual({
-      errorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: undefined,
-    });
+    expect(isNotEntitledMessage(contractMsg)).toBe(false);
   });
 
   // Drift guard wired to the REAL dependency (not a hand-copied constant): if a
-  // @zama-fhe/relayer-sdk bump reworffds its not-entitled message, the substrings
+  // @zama-fhe/relayer-sdk bump reworks its not-entitled message, the substrings
   // isNotEntitledMessage keys on disappear here and this fails loudly — otherwise
   // NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED (the SDK-239 bug).
   test("the installed @zama-fhe/relayer-sdk still emits the message our matcher keys on", () => {
