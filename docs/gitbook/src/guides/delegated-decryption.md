@@ -86,6 +86,36 @@ Each call grants delegation for a single `(contractAddress, delegateAddress)` pa
 After the delegation transaction is mined, wait **1–2 minutes** before calling `decryptBalanceAs`. The delegation is recorded on L1 immediately, but the gateway (on Arbitrum) must sync the ACL state via cross-chain event propagation. Attempting delegated decryption before propagation completes throws `DelegationNotPropagatedError`.
 {% endhint %}
 
+### Waiting for a delegation to become usable
+
+The grant is recorded on the host chain immediately, but delegated decryption
+only works once the gateway syncs it cross-chain. To wait proactively instead of
+catching `DelegationNotPropagatedError`, poll the readiness query:
+
+```ts
+// Core SDK
+let ready = false;
+while (!ready) {
+  ready = await sdk.delegations.isPropagated(
+    [{ encryptedValue, contractAddress }],
+    delegatorAddress,
+  );
+  if (!ready) await new Promise((r) => setTimeout(r, 2000));
+}
+```
+
+```tsx
+// React
+const { data: ready } = useIsDelegationPropagated(
+  { encryptedInputs: [{ encryptedValue, contractAddress }], delegatorAddress },
+  { enabled: true, refetchInterval: 2000 },
+);
+```
+
+`isPropagated` returns `false` while the grant is still syncing and `true` once
+it is usable. A missing or expired grant throws instead — propagation readiness
+assumes the grant already exists on the host chain.
+
 ### 3. Decrypt as delegate
 
 The delegate calls `token.decryptBalanceAs` to read the delegator's balance. The delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
