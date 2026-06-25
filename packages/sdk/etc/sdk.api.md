@@ -5767,6 +5767,7 @@ export class Delegations {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
         delegationService: DelegationService;
+        decryptionService: DecryptionService | undefined;
     });
     delegateDecryption(input: {
         contractAddress: Address;
@@ -5783,6 +5784,7 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<boolean>;
+    isPropagated(encryptedInputs: DecryptInput[], delegatorAddress: Address): Promise<boolean>;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;

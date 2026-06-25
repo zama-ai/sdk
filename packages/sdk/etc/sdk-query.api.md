@@ -488,6 +488,18 @@ export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQue
 export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsConfidentialTokenValidQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.wrappersRegistry.isConfidentialTokenValid>>;
 
 // @public (undocumented)
+export interface IsDelegationPropagatedQueryConfig {
+    delegateAddress?: Address;
+    delegatorAddress?: Address;
+    encryptedInputs: DecryptInput[];
+    // (undocumented)
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function isDelegationPropagatedQueryOptions(sdk: ZamaSDK, config: IsDelegationPropagatedQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.delegationPropagation.scope>>;
+
+// @public (undocumented)
 export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
 // @public (undocumented)
@@ -1079,6 +1091,20 @@ export const zamaQueryKeys: {
             readonly delegateAddress?: `0x${string}` | undefined;
             readonly delegatorAddress?: `0x${string}` | undefined;
             readonly contractAddress?: `0x${string}` | undefined;
+        }];
+    };
+    readonly delegationPropagation: {
+        readonly all: readonly ["zama.delegationPropagation"];
+        readonly scope: (encryptedInputs: readonly {
+            encryptedValue: string;
+            contractAddress: Address;
+        }[], delegator?: Address, delegate?: Address) => readonly ["zama.delegationPropagation", {
+            readonly encryptedInputs: {
+                encryptedValue: Hex;
+                contractAddress: `0x${string}`;
+            }[];
+            readonly delegateAddress?: `0x${string}` | undefined;
+            readonly delegatorAddress?: `0x${string}` | undefined;
         }];
     };
     readonly decryption: {
