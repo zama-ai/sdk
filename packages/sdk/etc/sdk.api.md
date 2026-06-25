@@ -5876,18 +5876,16 @@ export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
-    readonly auth?: Auth;
+    readonly auth?: FhevmRuntimeConfig["auth"];
     readonly executorAddress?: Address | undefined;
     // (undocumented)
     readonly gatewayChainId: number;
     // (undocumented)
     readonly id: TId;
-    readonly inputSignerPrivateKey?: Hex;
     // (undocumented)
     readonly inputVerifierContractAddress: Address;
     // (undocumented)
     readonly kmsContractAddress: Address;
-    readonly kmsSignerPrivateKey?: Hex;
     // (undocumented)
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;

@@ -12,6 +12,9 @@ overrides:
   lodash-es: '>=4.18.0'
   undici-types: 6.19.2
 
+patchedDependencies:
+  '@fhevm/sdk@1.1.0-alpha.5': 4996e70437730ba7030d414c458f67281c3140a7c80d541219a5e9ebb5611bd7
+
 importers:
 
   .:
@@ -178,7 +181,7 @@ importers:
     dependencies:
       '@fhevm/sdk':
         specifier: 1.1.0-alpha.5
-        version: 1.1.0-alpha.5(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
+        version: 1.1.0-alpha.5(patch_hash=4996e70437730ba7030d414c458f67281c3140a7c80d541219a5e9ebb5611bd7)(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -3988,7 +3991,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@fhevm/sdk@1.1.0-alpha.5(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))':
+  '@fhevm/sdk@1.1.0-alpha.5(patch_hash=4996e70437730ba7030d414c458f67281c3140a7c80d541219a5e9ebb5611bd7)(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1

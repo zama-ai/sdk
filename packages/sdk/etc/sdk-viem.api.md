@@ -14,6 +14,7 @@ import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { PublicClient } from 'viem';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { WalletClient } from 'viem';
 
 // @public

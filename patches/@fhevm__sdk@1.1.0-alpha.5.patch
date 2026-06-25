@@ -1,0 +1,73 @@
+diff --git a/_cjs/core/kms/createKmsUserDecryptEip712.js b/_cjs/core/kms/createKmsUserDecryptEip712.js
+index b208dc35ea0b428910162435ac2ba40cd1027df0..dc8d834bc8e01790abae75230678802fa7ac00d5 100644
+--- a/_cjs/core/kms/createKmsUserDecryptEip712.js
++++ b/_cjs/core/kms/createKmsUserDecryptEip712.js
+@@ -11,6 +11,7 @@ const string_js_1 = require("../base/string.js");
+ const uint_js_1 = require("../base/uint.js");
+ const kmsExtraData_js_1 = require("./kmsExtraData.js");
+ const kmsUserDecryptEip712Types_js_1 = require("./kmsUserDecryptEip712Types.js");
++const kmsDelegatedUserDecryptEip712Types_js_1 = require("./kmsDelegatedUserDecryptEip712Types.js");
+ const object_js_1 = require("../base/object.js");
+ function createKmsUserDecryptEip712(parameters) {
+     const { verifyingContractAddressDecryption, chainId, publicKey, contractAddresses, startTimestamp, durationDays, extraData, } = parameters;
+@@ -56,7 +57,10 @@ function _assertIsKmsUserDecryptEip712Base(value, name, primaryType, options) {
+     (0, record_js_1.assertRecordNonNullableProperty)(value, 'domain', name, options);
+     (0, createKmsEip712Domain_js_1.assertIsKmsEip712Domain)(value.domain, `${name}.domain`, options);
+     (0, record_js_1.assertRecordNonNullableProperty)(value, 'types', name, options);
+-    if (!(0, object_js_1.isDeepEqual)(value.types, kmsUserDecryptEip712Types_js_1.kmsUserDecryptEip712Types)) {
++    const expectedTypes = primaryType === 'DelegatedUserDecryptRequestVerification'
++        ? kmsDelegatedUserDecryptEip712Types_js_1.kmsDelegatedUserDecryptEip712Types
++        : kmsUserDecryptEip712Types_js_1.kmsUserDecryptEip712Types;
++    if (!(0, object_js_1.isDeepEqual)(value.types, expectedTypes)) {
+         throw new Error('Unexpected KmsUserDecryptEip712Types');
+     }
+     (0, string_js_1.assertRecordStringProperty)(value, 'primaryType', name, {
+diff --git a/_esm/core/kms/createKmsUserDecryptEip712.js b/_esm/core/kms/createKmsUserDecryptEip712.js
+index 38bcf691ef501fd2d8ac151aeef8af0221a31184..32aa5a584046ccade7f10be3051e2e2a7e932bc8 100644
+--- a/_esm/core/kms/createKmsUserDecryptEip712.js
++++ b/_esm/core/kms/createKmsUserDecryptEip712.js
+@@ -6,6 +6,7 @@ import { assertRecordStringProperty, ensure0x } from '../base/string.js';
+ import { assertIsUint64, assertIsUintNumber } from '../base/uint.js';
+ import { assertIsKmsExtraData } from './kmsExtraData.js';
+ import { kmsUserDecryptEip712Types } from './kmsUserDecryptEip712Types.js';
++import { kmsDelegatedUserDecryptEip712Types } from './kmsDelegatedUserDecryptEip712Types.js';
+ import { isDeepEqual } from '../base/object.js';
+ ////////////////////////////////////////////////////////////////////////////////
+ // createKmsUserDecryptEip712
+@@ -60,7 +61,10 @@ export function _assertIsKmsUserDecryptEip712Base(value, name, primaryType, opti
+     assertRecordNonNullableProperty(value, 'domain', name, options);
+     assertIsKmsEip712Domain(value.domain, `${name}.domain`, options);
+     assertRecordNonNullableProperty(value, 'types', name, options);
+-    if (!isDeepEqual(value.types, kmsUserDecryptEip712Types)) {
++    const expectedTypes = primaryType === 'DelegatedUserDecryptRequestVerification'
++        ? kmsDelegatedUserDecryptEip712Types
++        : kmsUserDecryptEip712Types;
++    if (!isDeepEqual(value.types, expectedTypes)) {
+         throw new Error('Unexpected KmsUserDecryptEip712Types');
+     }
+     assertRecordStringProperty(value, 'primaryType', name, {
+diff --git a/core/kms/createKmsUserDecryptEip712.ts b/core/kms/createKmsUserDecryptEip712.ts
+index 3ee94df223f917b0b9d71fef7e9d937bddf09f8f..b69195a58016f08e33de3ea6da51d5f7e03ec8e9 100644
+--- a/core/kms/createKmsUserDecryptEip712.ts
++++ b/core/kms/createKmsUserDecryptEip712.ts
+@@ -15,6 +15,7 @@ import { assertRecordStringProperty, ensure0x } from '../base/string.js';
+ import { assertIsUint64, assertIsUintNumber } from '../base/uint.js';
+ import { assertIsKmsExtraData } from './kmsExtraData.js';
+ import { kmsUserDecryptEip712Types } from './kmsUserDecryptEip712Types.js';
++import { kmsDelegatedUserDecryptEip712Types } from './kmsDelegatedUserDecryptEip712Types.js';
+ import { isDeepEqual } from '../base/object.js';
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -121,7 +122,11 @@ export function _assertIsKmsUserDecryptEip712Base(
+   assertIsKmsEip712Domain((value as Record<string, unknown>).domain, `${name}.domain`, options);
+ 
+   assertRecordNonNullableProperty(value, 'types', name, options);
+-  if (!isDeepEqual(value.types, kmsUserDecryptEip712Types)) {
++  const expectedTypes =
++    primaryType === 'DelegatedUserDecryptRequestVerification'
++      ? kmsDelegatedUserDecryptEip712Types
++      : kmsUserDecryptEip712Types;
++  if (!isDeepEqual(value.types, expectedTypes)) {
+     throw new Error('Unexpected KmsUserDecryptEip712Types');
+   }
+ 

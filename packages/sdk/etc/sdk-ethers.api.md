@@ -20,6 +20,7 @@ import { Provider } from 'ethers';
 import { ProviderConnectInfo } from 'viem';
 import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
 
 // @public

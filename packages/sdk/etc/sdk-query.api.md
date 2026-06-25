@@ -16,6 +16,7 @@ import { Hex } from 'viem';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { skipToken } from '@tanstack/query-core';
 import { z } from 'zod/mini';
 
