@@ -30,6 +30,7 @@ const contracts = {
   USDC: deployments.erc20 as Address,
   cUSDC: deployments.cToken as Address,
   wrappersRegistry: deployments.wrappersRegistry as Address,
+  confidentialReceiver: deployments.confidentialReceiver as Address,
   acl: hardhat.aclContractAddress as Address,
 } as const;
 

@@ -28,6 +28,10 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
+{% hint style="info" %}
+The Sepolia testnet relayer needs **no API key** — presets like `sepolia` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](authentication.md).
+{% endhint %}
+
 ### 2. Pick a relayer
 
 Relayers tell the SDK how to run FHE operations on each chain.

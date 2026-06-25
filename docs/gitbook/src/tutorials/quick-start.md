@@ -19,19 +19,7 @@ In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `
 
 ## Authentication
 
-The relayer requires an API key. In browser apps, proxy requests through your backend so the key stays server-side. Override `relayerUrl` in the chain definition to point at your proxy:
-
-```ts
-import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
-
-// Browser apps: proxy through your backend (recommended)
-const mySepolia = {
-  ...sepolia,
-  relayerUrl: "https://your-app.com/api/relayer/11155111",
-} as const satisfies FheChain;
-```
-
-See [Authentication](../guides/authentication.md) for a backend proxy example.
+The `sepolia` testnet relayer needs **no API key** — the preset works as-is, so leave `auth` unset and move on. You only need a key for the Zama-hosted **mainnet** relayer; when you deploy there, see [Authentication](../guides/authentication.md) for the backend-proxy (browser) and direct-key (server) patterns.
 
 ## Install
 
