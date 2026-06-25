@@ -7,6 +7,10 @@ description: How to obtain, configure, and securely manage your Zama Relayer API
 
 The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
 
+{% hint style="info" %}
+Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet** the relayer is open — the `sepolia` preset works with no key, so you can build and test the full flow before requesting one.
+{% endhint %}
+
 ## Overview
 
 There are two options to access the FHEVM Relayer for mainnet deployment:
