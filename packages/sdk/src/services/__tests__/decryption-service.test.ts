@@ -269,7 +269,7 @@ describe("DecryptionService", () => {
     ).resolves.toEqual({ [HANDLE_A]: 10n });
   });
 
-  describe("probeDelegationPropagated", () => {
+  describe("isDelegationPropagated", () => {
     function mockEip712(
       relayer: { createDelegatedUserDecryptEIP712: unknown },
       delegatorAddress: Address,
@@ -300,7 +300,7 @@ describe("DecryptionService", () => {
       vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [HANDLE_A]: 10n });
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -322,7 +322,7 @@ describe("DecryptionService", () => {
       vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(err);
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -343,7 +343,7 @@ describe("DecryptionService", () => {
       vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(err);
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -361,7 +361,7 @@ describe("DecryptionService", () => {
       vi.mocked(provider.readContract).mockResolvedValue(0n);
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -385,7 +385,7 @@ describe("DecryptionService", () => {
       vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [HANDLE_A]: 42n });
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -406,7 +406,7 @@ describe("DecryptionService", () => {
       vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({ [ZERO_ENCRYPTED_VALUE]: 0n });
 
       await expect(
-        decryptionService.probeDelegationPropagated(
+        decryptionService.isDelegationPropagated(
           handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -422,7 +422,7 @@ describe("DecryptionService", () => {
       delegateAddress,
     }) => {
       await expect(
-        decryptionService.probeDelegationPropagated([], delegatorAddress, delegateAddress),
+        decryptionService.isDelegationPropagated([], delegatorAddress, delegateAddress),
       ).resolves.toBe(true);
       expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     });

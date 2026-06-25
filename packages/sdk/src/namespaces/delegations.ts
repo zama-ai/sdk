@@ -179,6 +179,6 @@ export class Delegations {
   ): Promise<boolean> {
     const service = this.#requireDecryptionService("isPropagated");
     const account = await requireAlignedWalletAccount("isPropagated", this.#signer, this.#provider);
-    return service.probeDelegationPropagated(encryptedInputs, delegatorAddress, account.address);
+    return service.isDelegationPropagated(encryptedInputs, delegatorAddress, account.address);
   }
 }

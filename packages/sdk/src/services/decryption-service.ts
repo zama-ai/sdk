@@ -147,7 +147,7 @@ export class DecryptionService {
    * @throws if no grant exists on the host chain. {@link DelegationNotFoundError}
    * @throws if the grant has expired on the host chain. {@link DelegationExpiredError}
    */
-  async probeDelegationPropagated(
+  async isDelegationPropagated(
     encryptedValues: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
