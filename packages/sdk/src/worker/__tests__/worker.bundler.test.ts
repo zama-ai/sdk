@@ -8,11 +8,13 @@
  * Run `pnpm build` before running these tests.
  */
 import { describe, test, expect } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const DIST = resolve(__dirname, "../../../dist");
 const hasBuild = existsSync(resolve(DIST, "relayer-sdk.worker.js"));
+const ESM_DIR = resolve(DIST, "esm");
+const hasEsmBuild = existsSync(ESM_DIR);
 
 describe.skipIf(!hasBuild)("worker build smoke tests", () => {
   const workerPath = resolve(DIST, "relayer-sdk.worker.js");
@@ -41,5 +43,22 @@ describe.skipIf(!hasBuild)("worker build smoke tests", () => {
   test("standalone worker file exports filename alongside code", () => {
     const content = readFileSync(indexPath, "utf-8");
     expect(content).toContain("relayer-sdk.worker.js");
+  });
+});
+
+describe.skipIf(!hasEsmBuild)("node worker resolution is SSR-bundler safe (SDK-235)", () => {
+  // `import.meta.resolve` is rewritten to `__vite_ssr_import_meta__.resolve` by
+  // Vite's SSR transform (used by Ponder and other server-side bundlers), where
+  // it is undefined at runtime — so the Node worker factory throws and can never
+  // spawn its worker. No shipped ESM chunk may reference it, regardless of which
+  // rolldown chunk the node worker client lands in.
+  test("no shipped ESM chunk uses import.meta.resolve", () => {
+    const files = readdirSync(ESM_DIR, { recursive: true }) as string[];
+    const offenders = files
+      .filter((file) => file.endsWith(".js"))
+      .filter((file) =>
+        readFileSync(resolve(ESM_DIR, file), "utf-8").includes("import.meta.resolve"),
+      );
+    expect(offenders).toEqual([]);
   });
 });
