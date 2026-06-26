@@ -297,6 +297,8 @@ matchZamaError(error, {
 
 **How to handle:** For a 429, wait `.retryAfterMs` (when present) before retrying instead of inventing a backoff. Otherwise, check `relayerUrl` in your transport config, verify the `auth` option if using API key authentication, and check relayer service health.
 
+> **Browser note:** back-pressure is reliable server-side. In the browser, the relayer's 429 is served cross-origin without CORS headers, so `.retryAfterMs` (and sometimes `.statusCode`) may be unavailable — fall back to your own backoff.
+
 ## "No balance" vs "zero balance"
 
 These are distinct states:
