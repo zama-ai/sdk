@@ -1,7 +1,7 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type { GenericLogger, ZamaConfig } from "@zama-fhe/sdk";
+import { createConfig, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
@@ -47,9 +47,17 @@ type WrapperDeps = QueryClientFixtures & {
 export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
   createWrapper: async ({ chain, relayer, provider, signer, storage, queryClient }, use) => {
     function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config = {
+      const config = createConfig({
+        //@ts-expect-error
         chains: [chain],
-        router: { relayer, switchChain: () => {} } as unknown as ZamaConfig["router"],
+        relayers: {
+          [chain.id]: {
+            type: "cleartext",
+            createRelayer() {
+              return relayer;
+            },
+          },
+        },
         provider,
         signer,
         storage,
@@ -60,7 +68,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         onEvent: undefined,
         logger: noopLogger,
         ...overrides,
-      } as unknown as ZamaConfig;
+      });
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (
