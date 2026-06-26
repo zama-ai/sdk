@@ -105,8 +105,13 @@ describe("wrapDecryptError", () => {
       expect(wrapped.retryable).toBe(true);
     });
 
-    test("a non-429 status is not retryable and has no retry delay", () => {
-      const error = Object.assign(new Error("server error"), { statusCode: 503 });
+    test("a non-429 status is not retryable and drops any Retry-After delay", () => {
+      // Even though the 503 carries a Retry-After header, it is not surfaced:
+      // retryAfterMs stays consistent with retryable (429-only).
+      const error = Object.assign(new Error("server error"), {
+        statusCode: 503,
+        cause: { response: new Response(null, { headers: { "Retry-After": "10" } }) },
+      });
       const wrapped = wrapDecryptError(error, "fallback") as RelayerRequestFailedError;
       expect(wrapped.retryable).toBe(false);
       expect(wrapped.retryAfterMs).toBeUndefined();

@@ -7,8 +7,8 @@ export class RelayerRequestFailedError extends ZamaError {
 
   /**
    * Server-driven retry delay in milliseconds, from the relayer's `Retry-After`
-   * header. Present on rate-limited (429) responses that carry the header;
-   * `undefined` otherwise.
+   * header. Set only on back-pressure (HTTP 429) responses that carry the
+   * header; `undefined` otherwise. Implies {@link retryable}.
    */
   readonly retryAfterMs: number | undefined;
 
@@ -26,8 +26,9 @@ export class RelayerRequestFailedError extends ZamaError {
     super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
     this.statusCode = statusCode;
-    this.retryAfterMs = options?.retryAfterMs;
     this.retryable = statusCode === 429;
+    // Keep the two fields consistent: a delay only makes sense when retryable.
+    this.retryAfterMs = this.retryable ? options?.retryAfterMs : undefined;
   }
 }
 

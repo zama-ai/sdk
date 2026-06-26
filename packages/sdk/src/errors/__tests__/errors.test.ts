@@ -88,10 +88,13 @@ describe("RelayerRequestFailedError", () => {
     expect(err.retryable).toBe(true);
   });
 
-  test("retryable is false and retryAfterMs undefined for non-429 statuses", () => {
+  test("retryable is false for non-429 statuses, and a delay is dropped to stay consistent", () => {
     expect(new RelayerRequestFailedError("server error", 503).retryable).toBe(false);
-    expect(new RelayerRequestFailedError("server error", 503).retryAfterMs).toBeUndefined();
     expect(new RelayerRequestFailedError("no status").retryable).toBe(false);
+    // retryAfterMs only makes sense when retryable: a 503 with a delay drops it.
+    expect(
+      new RelayerRequestFailedError("server error", 503, { retryAfterMs: 5000 }).retryAfterMs,
+    ).toBeUndefined();
   });
 });
 
