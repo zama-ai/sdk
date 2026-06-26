@@ -26,22 +26,22 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                        | Description                                                                                              |
-| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain identifier                                                                                         |
-| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                  |
-| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                |
-| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                    |
-| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                     |
-| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                     |
-| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                          |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                        |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
-| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
-| `auth`                                      | `Auth \| undefined`         | Authentication for the relayer endpoint                                                                  |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                       |
+| Field                                       | Type                        | Description                                                                                                                               |
+| ------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                                                          |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                   |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                 |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                     |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                      |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                      |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                           |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                         |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                         |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                  |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                        |
+| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer; leave unset on the Sepolia testnet relayer, which needs no key. |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                          |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                        |
 
 ### Usage with `createConfig`
 
@@ -67,7 +67,7 @@ Per-chain overrides (e.g. `relayerUrl`, `network`) are set by spreading the chai
 
 ### Browser apps
 
-In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the chain definition:
+When using the keyed **mainnet** relayer, proxy requests through your backend so the API key never reaches the client (the Sepolia testnet relayer needs no key, so this is mainnet-only). Override `relayerUrl` in the chain definition:
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
