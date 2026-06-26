@@ -228,6 +228,8 @@ export interface ErrorResponse extends BaseResponse {
   error: string;
   /** HTTP status code from the relayer, when available. */
   statusCode?: number;
+  /** Server-driven retry delay (ms) from the relayer's `Retry-After` header, when available. */
+  retryAfterMs?: number;
 }
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;

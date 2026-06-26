@@ -148,6 +148,7 @@ function sendError(
   type: WorkerRequest["type"],
   error: string,
   statusCode?: number,
+  retryAfterMs?: number,
 ): void {
   const response: ErrorResponse = {
     id,
@@ -157,6 +158,9 @@ function sendError(
   };
   if (statusCode !== undefined) {
     response.statusCode = statusCode;
+  }
+  if (retryAfterMs !== undefined) {
+    response.retryAfterMs = retryAfterMs;
   }
   self.postMessage(response);
 }
@@ -403,7 +407,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -438,7 +442,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -471,6 +475,46 @@ function extractHttpStatus(error: unknown): number | undefined {
 }
 
 /**
+ * Extract the relayer's server-driven retry delay (ms) from the `Retry-After`
+ * header on a thrown relayer error's `cause.response`. The raw `Response` is not
+ * serializable across the worker boundary, so the delay is read here and
+ * forwarded as a number. Parses delta-seconds or an HTTP-date (past dates → 0).
+ */
+function extractRetryAfterMs(error: unknown): number | undefined {
+  if (error === null || error === undefined || typeof error !== "object") {
+    return undefined;
+  }
+  const cause = (error as { cause?: unknown }).cause;
+  if (cause === null || cause === undefined || typeof cause !== "object") {
+    return undefined;
+  }
+  const response = (cause as { response?: { headers?: { get?: (name: string) => string | null } } })
+    .response;
+  if (!response?.headers || typeof response.headers.get !== "function") {
+    return undefined;
+  }
+  const value = response.headers.get("Retry-After");
+  if (value === null) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return undefined;
+  }
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed) * 1000;
+  }
+  // HTTP-date — require alphabetic day/month names before the lenient Date.parse.
+  if (/[a-zA-Z]/.test(trimmed)) {
+    const dateMs = Date.parse(trimmed);
+    if (!Number.isNaN(dateMs)) {
+      return Math.max(0, dateMs - Date.now());
+    }
+  }
+  return undefined;
+}
+
+/**
  * Handle PUBLIC_DECRYPT request.
  */
 async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void> {
@@ -487,7 +531,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -593,7 +637,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -620,7 +664,7 @@ async function handleRequestZKProofVerification(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -641,7 +685,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 
@@ -665,7 +709,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, message, statusCode, extractRetryAfterMs(error));
   }
 }
 

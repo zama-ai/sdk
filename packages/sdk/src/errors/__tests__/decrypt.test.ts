@@ -83,6 +83,36 @@ describe("wrapDecryptError", () => {
     });
   });
 
+  describe("relayer back-pressure (429)", () => {
+    test("surfaces retryAfterMs and marks a 429 retryable", () => {
+      const error = Object.assign(new Error("rate limited"), {
+        statusCode: 429,
+        retryAfterMs: 2500,
+      });
+      const wrapped = wrapDecryptError(error, "fallback") as RelayerRequestFailedError;
+      expect(wrapped.statusCode).toBe(429);
+      expect(wrapped.retryAfterMs).toBe(2500);
+      expect(wrapped.retryable).toBe(true);
+    });
+
+    test("parses Retry-After from a raw relayer error's response headers", () => {
+      const error = Object.assign(new Error("rate limited"), {
+        statusCode: 429,
+        cause: { response: new Response(null, { headers: { "Retry-After": "5" } }) },
+      });
+      const wrapped = wrapDecryptError(error, "fallback") as RelayerRequestFailedError;
+      expect(wrapped.retryAfterMs).toBe(5000);
+      expect(wrapped.retryable).toBe(true);
+    });
+
+    test("a non-429 status is not retryable and has no retry delay", () => {
+      const error = Object.assign(new Error("server error"), { statusCode: 503 });
+      const wrapped = wrapDecryptError(error, "fallback") as RelayerRequestFailedError;
+      expect(wrapped.retryable).toBe(false);
+      expect(wrapped.retryAfterMs).toBeUndefined();
+    });
+  });
+
   describe("fallback to DecryptionFailedError", () => {
     test("wraps an Error without statusCode as DecryptionFailedError", () => {
       const error = new Error("network down");

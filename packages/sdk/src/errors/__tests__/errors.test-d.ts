@@ -67,6 +67,11 @@ describe("RelayerRequestFailedError", () => {
   test("has optional statusCode", () => {
     expectTypeOf<RelayerRequestFailedError["statusCode"]>().toEqualTypeOf<number | undefined>();
   });
+
+  test("exposes back-pressure: retryAfterMs and retryable", () => {
+    expectTypeOf<RelayerRequestFailedError["retryAfterMs"]>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RelayerRequestFailedError["retryable"]>().toEqualTypeOf<boolean>();
+  });
 });
 
 describe("matchZamaError", () => {

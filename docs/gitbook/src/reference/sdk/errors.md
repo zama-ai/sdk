@@ -277,18 +277,25 @@ try {
 
 **Code:** `RELAYER_REQUEST_FAILED`
 
-The HTTP request to the relayer failed. The error exposes `.statusCode` for further diagnosis.
+The HTTP request to the relayer failed. The error exposes `.statusCode` for further diagnosis. On rate-limited responses (HTTP 429) it also surfaces the relayer's back-pressure: `.retryable` is `true`, and `.retryAfterMs` carries the server's suggested delay when the response included a `Retry-After` header (otherwise `undefined`).
 
 ```ts
 matchZamaError(error, {
-  RELAYER_REQUEST_FAILED: (e) => {
-    if (e.statusCode === 401) showError("Authentication failed");
-    else showError("Relayer unavailable — try again later");
+  RELAYER_REQUEST_FAILED: async (e) => {
+    if (e.statusCode === 401) {
+      showError("Authentication failed");
+    } else if (e.retryable) {
+      // Honour the server's delay when provided; fall back to your own backoff.
+      await sleep(e.retryAfterMs ?? 1000);
+      retry();
+    } else {
+      showError("Relayer unavailable — try again later");
+    }
   },
 });
 ```
 
-**How to handle:** Check `relayerUrl` in your transport config. If using API key authentication, verify the `auth` option. Check relayer service health.
+**How to handle:** For a 429, wait `.retryAfterMs` (when present) before retrying instead of inventing a backoff. Otherwise, check `relayerUrl` in your transport config, verify the `auth` option if using API key authentication, and check relayer service health.
 
 ## "No balance" vs "zero balance"
 

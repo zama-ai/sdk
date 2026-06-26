@@ -12675,7 +12675,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
 
 // @public
 export class RelayerRequestFailedError extends ZamaError {
-    constructor(message: string, statusCode?: number, options?: ErrorOptions);
+    constructor(message: string, statusCode?: number, options?: ErrorOptions & {
+        retryAfterMs?: number;
+    });
+    readonly retryable: boolean;
+    readonly retryAfterMs: number | undefined;
     readonly statusCode: number | undefined;
 }
 

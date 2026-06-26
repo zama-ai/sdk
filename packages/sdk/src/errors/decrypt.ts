@@ -4,7 +4,7 @@ import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
 import { SigningRejectedError, SigningFailedError } from "./signing";
-import { extractHttpStatus } from "../utils/error";
+import { extractHttpStatus, extractRetryAfterMs } from "../utils/error";
 
 /**
  * Inspect a caught error for an HTTP status code and return the appropriate
@@ -58,7 +58,7 @@ export function wrapDecryptError(
     return new RelayerRequestFailedError(
       error instanceof Error ? error.message : fallbackMessage,
       statusCode,
-      { cause: error },
+      { cause: error, retryAfterMs: extractRetryAfterMs(error) },
     );
   }
 

@@ -178,6 +178,9 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
       if ("statusCode" in response && typeof response.statusCode === "number") {
         (err as Error & { statusCode?: number }).statusCode = response.statusCode;
       }
+      if ("retryAfterMs" in response && typeof response.retryAfterMs === "number") {
+        (err as Error & { retryAfterMs?: number }).retryAfterMs = response.retryAfterMs;
+      }
       pending.reject(err);
     }
   }

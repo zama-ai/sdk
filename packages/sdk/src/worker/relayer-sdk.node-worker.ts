@@ -30,6 +30,7 @@ import type {
   WorkerRequest,
 } from "./worker.types";
 import { prefixHex, unprefixHex } from "../utils";
+import { extractHttpStatus, extractRetryAfterMs } from "../utils/error";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -96,8 +97,20 @@ function sendSuccess<T>(
   port.postMessage(response, transfer);
 }
 
-function sendError(id: string, type: WorkerRequest["type"], error: string): void {
+function sendError(
+  id: string,
+  type: WorkerRequest["type"],
+  error: string,
+  statusCode?: number,
+  retryAfterMs?: number,
+): void {
   const response: ErrorResponse = { id, type, success: false, error };
+  if (statusCode !== undefined) {
+    response.statusCode = statusCode;
+  }
+  if (retryAfterMs !== undefined) {
+    response.retryAfterMs = retryAfterMs;
+  }
   port.postMessage(response);
 }
 
@@ -182,7 +195,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
     sendSuccess(id, type, response, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -213,7 +226,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -230,7 +243,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -323,7 +336,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -345,7 +358,7 @@ async function handleRequestZKProofVerification(
     sendSuccess(id, type, result, transferList);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -362,7 +375,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 
@@ -382,7 +395,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
     sendSuccess(id, type, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, message, extractHttpStatus(error), extractRetryAfterMs(error));
   }
 }
 

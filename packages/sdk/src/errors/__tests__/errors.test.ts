@@ -81,6 +81,18 @@ describe("RelayerRequestFailedError", () => {
     const err = new RelayerRequestFailedError("request failed", 500, { cause });
     expect(err.cause).toBe(cause);
   });
+
+  test("surfaces relayer back-pressure: retryAfterMs and retryable for a 429", () => {
+    const err = new RelayerRequestFailedError("rate limited", 429, { retryAfterMs: 2500 });
+    expect(err.retryAfterMs).toBe(2500);
+    expect(err.retryable).toBe(true);
+  });
+
+  test("retryable is false and retryAfterMs undefined for non-429 statuses", () => {
+    expect(new RelayerRequestFailedError("server error", 503).retryable).toBe(false);
+    expect(new RelayerRequestFailedError("server error", 503).retryAfterMs).toBeUndefined();
+    expect(new RelayerRequestFailedError("no status").retryable).toBe(false);
+  });
 });
 
 describe("matchZamaError", () => {

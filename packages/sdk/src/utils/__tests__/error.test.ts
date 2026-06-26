@@ -1,5 +1,11 @@
 import { describe, test, expect } from "../../test-fixtures";
-import { toError, isContractCallError, extractHttpStatus } from "../error";
+import {
+  toError,
+  isContractCallError,
+  extractHttpStatus,
+  extractRetryAfterMs,
+  parseRetryAfterHeader,
+} from "../error";
 
 describe("toError", () => {
   test("returns the same Error instance", () => {
@@ -138,5 +144,83 @@ describe("extractHttpStatus", () => {
     expect(extractHttpStatus(null)).toBeUndefined();
     expect(extractHttpStatus(undefined)).toBeUndefined();
     expect(extractHttpStatus(403)).toBeUndefined();
+  });
+});
+
+describe("parseRetryAfterHeader", () => {
+  test("parses delta-seconds into milliseconds", () => {
+    expect(parseRetryAfterHeader("120")).toBe(120_000);
+  });
+
+  test("treats 0 seconds as 0 ms (retry immediately)", () => {
+    expect(parseRetryAfterHeader("0")).toBe(0);
+  });
+
+  test("parses a future HTTP-date as a positive delay", () => {
+    const future = new Date(Date.now() + 10_000).toUTCString();
+    const ms = parseRetryAfterHeader(future);
+    expect(ms).toBeGreaterThan(0);
+    expect(ms).toBeLessThanOrEqual(10_000);
+  });
+
+  test("floors a past HTTP-date to 0", () => {
+    expect(parseRetryAfterHeader(new Date(Date.now() - 60_000).toUTCString())).toBe(0);
+  });
+
+  test("returns undefined for absent or unparseable values", () => {
+    expect(parseRetryAfterHeader(null)).toBeUndefined();
+    expect(parseRetryAfterHeader(undefined)).toBeUndefined();
+    expect(parseRetryAfterHeader("")).toBeUndefined();
+    expect(parseRetryAfterHeader("   ")).toBeUndefined();
+    expect(parseRetryAfterHeader("soon")).toBeUndefined();
+    expect(parseRetryAfterHeader("12.5")).toBeUndefined();
+  });
+});
+
+describe("extractRetryAfterMs", () => {
+  test("reads a numeric retryAfterMs normalized onto the error", () => {
+    expect(extractRetryAfterMs(Object.assign(new Error("429"), { retryAfterMs: 2500 }))).toBe(2500);
+  });
+
+  test("reads retryAfterMs from the cause", () => {
+    expect(extractRetryAfterMs(new Error("boom", { cause: { retryAfterMs: 1000 } }))).toBe(1000);
+  });
+
+  test("parses the Retry-After header on a raw relayer error (cause.response)", () => {
+    // relayer-sdk throws `new Error(msg, { cause: { ..., response } })`
+    const relayerError = new Error("Relayer rate limit exceeded", {
+      cause: {
+        code: "RELAYER_FETCH_ERROR",
+        status: 429,
+        response: new Response(null, {
+          status: 429,
+          headers: { "Retry-After": "30" },
+        }),
+      },
+    });
+    expect(extractRetryAfterMs(relayerError)).toBe(30_000);
+  });
+
+  test("prefers a normalized retryAfterMs over the cause's response header", () => {
+    const error = Object.assign(
+      new Error("boom", {
+        cause: { response: new Response(null, { headers: { "Retry-After": "99" } }) },
+      }),
+      { retryAfterMs: 1500 },
+    );
+    expect(extractRetryAfterMs(error)).toBe(1500);
+  });
+
+  test("returns undefined when no retry signal is present", () => {
+    expect(extractRetryAfterMs(new Error("plain"))).toBeUndefined();
+    expect(
+      extractRetryAfterMs(new Error("429 no header", { cause: { status: 429 } })),
+    ).toBeUndefined();
+  });
+
+  test("returns undefined for non-object values", () => {
+    expect(extractRetryAfterMs("string")).toBeUndefined();
+    expect(extractRetryAfterMs(null)).toBeUndefined();
+    expect(extractRetryAfterMs(undefined)).toBeUndefined();
   });
 });

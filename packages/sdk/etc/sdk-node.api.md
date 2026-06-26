@@ -296,6 +296,7 @@ export type EncryptResult = {
 export interface ErrorResponse extends BaseResponse {
     // (undocumented)
     error: string;
+    retryAfterMs?: number;
     statusCode?: number;
     // (undocumented)
     success: false;
