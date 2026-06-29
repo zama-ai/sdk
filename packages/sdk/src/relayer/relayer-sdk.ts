@@ -26,7 +26,13 @@ export interface FheOperations {
   /** Generate a transport key pair (ML-KEM public + private key) used for user-decryption. */
   generateTransportKeyPair(): Promise<TransportKeyPair>;
 
-  /** Create EIP-712 typed data for signing an FHE decrypt credential. */
+  /**
+   * Create EIP-712 typed data for signing an FHE decrypt credential.
+   *
+   * Low-level credential builder. Prefer the high-level
+   * `sdk.decryption.decryptValues` ({@link Decryption.decryptValues}), which
+   * assembles and caches this credential for you.
+   */
   createEIP712(
     publicKey: Hex,
     contractAddresses: Address[],
@@ -40,7 +46,7 @@ export interface FheOperations {
   /**
    * Decrypt FHE encrypted values using the user's own credentials.
    *
-   * Low-level: the caller assembles the credential bundle (transport keypair,
+   * Low-level: the caller assembles the credential bundle (transport key pair,
    * EIP-712 permit) in {@link UserDecryptParams}. Prefer the high-level
    * `sdk.decryption.decryptValues` ({@link Decryption.decryptValues}), which
    * manages credentials, caching, and error wrapping.
@@ -55,7 +61,13 @@ export interface FheOperations {
    */
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
-  /** Create EIP-712 typed data for a delegated user decrypt credential. */
+  /**
+   * Create EIP-712 typed data for a delegated user decrypt credential.
+   *
+   * Low-level credential builder. Prefer the high-level
+   * `sdk.decryption.delegatedDecryptValues` ({@link Decryption.delegatedDecryptValues}),
+   * which assembles and caches this credential for you.
+   */
   createDelegatedUserDecryptEIP712(
     publicKey: Hex,
     contractAddresses: Address[],

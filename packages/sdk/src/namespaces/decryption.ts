@@ -12,7 +12,7 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
  *
  * Exposed as `sdk.decryption`. Prefer these methods over the low-level
  * `sdk.relayer.userDecrypt` / `delegatedUserDecrypt` / `publicDecrypt`: they
- * assemble the credential bundle (ephemeral keypair, EIP-712 permit) for you,
+ * assemble the credential bundle (transport key pair, EIP-712 permit) for you,
  * cache results, and wrap relayer errors. Reach for `sdk.relayer.*` only when
  * you must control credential assembly by hand.
  *
