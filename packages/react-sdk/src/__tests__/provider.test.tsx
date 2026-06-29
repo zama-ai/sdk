@@ -71,14 +71,8 @@ describe("ZamaProvider & useZamaSDK", () => {
     queryClient.setQueryData(wagmiBalanceKey, 2n);
 
     listener({
-      previous: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 31337,
-      },
-      next: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 1,
-      },
+      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
+      next: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 1 },
     });
 
     return waitFor(() => {
@@ -111,14 +105,8 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
     listener({
-      previous: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 31337,
-      },
-      next: {
-        address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
-        chainId: 1,
-      },
+      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
+      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 1 },
     });
 
     await waitFor(() => {
@@ -130,12 +118,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders,
     relayer,
   }) => {
-    const sink = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      info: vi.fn(),
-      debug: vi.fn(),
-    };
+    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
     vi.mocked(relayer.generateTransportKeyPair).mockRejectedValue(new Error("warmup boom"));
 
     renderWithProviders(() => useZamaSDK(), { relayer, logger: sink });
@@ -179,11 +162,7 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     // onEvent is stabilized via ref — verify it delegates correctly
     const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;
-    wrappedOnEvent({
-      type: "credentials:loading",
-      timestamp: 1,
-      contractAddresses: [],
-    } as never);
+    wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
   });
 });

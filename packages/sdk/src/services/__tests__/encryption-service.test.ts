@@ -35,10 +35,7 @@ describe("EncryptionService", () => {
       ENCRYPT_PARAMS.contractAddress,
     );
     expect(emitEvent).toHaveBeenCalledWith(
-      {
-        type: events.EncryptEnd,
-        durationMs: expect.any(Number),
-      },
+      { type: events.EncryptEnd, durationMs: expect.any(Number) },
       ENCRYPT_PARAMS.contractAddress,
     );
   });
@@ -94,11 +91,7 @@ describe("EncryptionService", () => {
 
     await expect(service.encrypt(ENCRYPT_PARAMS)).rejects.toBe(original);
     expect(emitEvent).toHaveBeenCalledWith(
-      {
-        type: events.EncryptError,
-        error: original,
-        durationMs: expect.any(Number),
-      },
+      { type: events.EncryptError, error: original, durationMs: expect.any(Number) },
       ENCRYPT_PARAMS.contractAddress,
     );
   });

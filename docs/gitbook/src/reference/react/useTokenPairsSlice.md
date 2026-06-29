@@ -22,14 +22,7 @@ import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 
 function PairSlice() {
-  const {
-    data: pairs,
-    isLoading,
-    error,
-  } = useTokenPairsSlice({
-    fromIndex: 0n,
-    toIndex: 10n,
-  });
+  const { data: pairs, isLoading, error } = useTokenPairsSlice({ fromIndex: 0n, toIndex: 10n });
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;

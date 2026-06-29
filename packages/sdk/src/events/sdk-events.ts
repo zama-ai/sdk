@@ -219,28 +219,16 @@ export const transactionOperationMetadata = {
     }),
   },
   delegateDecryption: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.DelegationSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.DelegationSubmitted, txHash }),
   },
   finalizeUnwrap: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.FinalizeUnwrapSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.FinalizeUnwrapSubmitted, txHash }),
   },
   revokeDelegation: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.RevokeDelegationSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.RevokeDelegationSubmitted, txHash }),
   },
   setOperator: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.SetOperatorSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash }),
   },
   "shield:transferAndCall": {
     submittedEvent: (txHash: Hex) => ({
@@ -257,35 +245,19 @@ export const transactionOperationMetadata = {
     }),
   },
   transfer: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.TransferSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
   },
   transferAndCall: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
   },
   transferFrom: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.TransferFromSubmitted,
-      txHash,
-    }),
+    submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
   },
   transferFromAndCall: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferFromSubmitted, txHash }),
   },
-  unwrap: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.UnwrapSubmitted,
-      txHash,
-    }),
-  },
-  unwrapAll: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.UnwrapSubmitted,
-      txHash,
-    }),
-  },
+  unwrap: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
+  unwrapAll: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
 } satisfies Record<string, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;
 
 /**

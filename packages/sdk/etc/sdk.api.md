@@ -11245,7 +11245,7 @@ export const mainnet: {
 };
 
 // @public
-export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
+export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R } & {
     _?: (error: unknown) => R;
 }): R | undefined;
 

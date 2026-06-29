@@ -7,10 +7,7 @@ import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
 
 function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
-  return {
-    type: "test",
-    createRelayer: vi.fn(() => relayer),
-  };
+  return { type: "test", createRelayer: vi.fn(() => relayer) };
 }
 
 describe("createConfig validation", () => {

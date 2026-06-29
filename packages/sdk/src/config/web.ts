@@ -13,8 +13,5 @@ import type { WebRelayerConfig } from "./types";
  * ```
  */
 export function web(): WebRelayerConfig {
-  return {
-    type: "web",
-    createRelayer: (chain) => new FhevmRelayer({ chain }),
-  };
+  return { type: "web", createRelayer: (chain) => new FhevmRelayer({ chain }) };
 }

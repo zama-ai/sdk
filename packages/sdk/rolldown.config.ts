@@ -3,9 +3,7 @@ import { dts } from "rolldown-plugin-dts";
 
 const shared = {
   external: [/^viem/, /^ethers/, /^@fhevm\/sdk/, /^@tanstack\/query-core/, /^node:/, /^zod($|\/)/],
-  resolve: {
-    tsconfigFilename: "tsconfig.build.json",
-  },
+  resolve: { tsconfigFilename: "tsconfig.build.json" },
   treeshake: true,
 };
 
@@ -23,12 +21,7 @@ export default defineConfig([
   // ESM build (primary)
   {
     input: entryPoints,
-    output: {
-      dir: "dist/esm",
-      format: "esm",
-      sourcemap: true,
-      minify: true,
-    },
+    output: { dir: "dist/esm", format: "esm", sourcemap: true, minify: true },
     ...shared,
     plugins: [dts({ tsconfig: "tsconfig.build.json" })],
   },

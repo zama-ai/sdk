@@ -1,11 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "paths": {
       "@zama-fhe/sdk": ["../../packages/sdk/src/index.ts"],
       "@zama-fhe/sdk/cleartext": ["../../packages/sdk/src/relayer/cleartext/index.ts"],

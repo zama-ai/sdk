@@ -79,9 +79,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected()],
-  transports: {
-    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
-  },
+  transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
 const mySepolia = {
@@ -125,10 +123,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const mySepolia = {
   ...sepoliaFhe,
@@ -139,9 +134,7 @@ const config = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -164,9 +157,7 @@ const mySepolia = {
 const config = createConfig({
   chains: [mySepolia],
   ethereum: window.ethereum!,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -202,9 +193,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -229,9 +218,7 @@ const config = createConfig({
   chains: [mySepolia],
   signer: wallet,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -271,9 +258,7 @@ function MyTokenPage() {
     address: WRAPPER,
     account: address,
   });
-  const { mutateAsync: shield, isPending: isShielding } = useShield({
-    address: WRAPPER,
-  });
+  const { mutateAsync: shield, isPending: isShielding } = useShield({ address: WRAPPER });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
     address: WRAPPER,
   });

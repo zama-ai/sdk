@@ -8,25 +8,16 @@ import { expect, nodeTest as test } from "../../fixtures/node-test";
 test("matchZamaError routes to the correct handler", async () => {
   const decErr = new DecryptionFailedError("test decryption failure");
   expect(
-    matchZamaError(decErr, {
-      DECRYPTION_FAILED: () => "decryption_failed",
-      _: () => "other",
-    }),
+    matchZamaError(decErr, { DECRYPTION_FAILED: () => "decryption_failed", _: () => "other" }),
   ).toBe("decryption_failed");
 
   const noCipherErr = new NoCiphertextError("no ciphertext");
   expect(
-    matchZamaError(noCipherErr, {
-      NO_CIPHERTEXT: () => "no_ciphertext",
-      _: () => "other",
-    }),
+    matchZamaError(noCipherErr, { NO_CIPHERTEXT: () => "no_ciphertext", _: () => "other" }),
   ).toBe("no_ciphertext");
 
   expect(
-    matchZamaError(decErr, {
-      NO_CIPHERTEXT: () => "no_ciphertext",
-      _: () => "fallback",
-    }),
+    matchZamaError(decErr, { NO_CIPHERTEXT: () => "no_ciphertext", _: () => "fallback" }),
   ).toBe("fallback");
 });
 

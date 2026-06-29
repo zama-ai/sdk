@@ -20,10 +20,7 @@ describe("ChainRouter", () => {
       expect(
         () =>
           new ChainRouter([chainA, chainB], {
-            [1]: {
-              type: "web",
-              createRelayer: () => createMockRelayer(),
-            },
+            [1]: { type: "web", createRelayer: () => createMockRelayer() },
           }),
       ).toThrow("Chain 2 has no relayer configured");
     });
@@ -120,13 +117,5 @@ function relayerConfigs(
   chains: FheChain[],
   createRelayer: () => RelayerSDK,
 ): Record<number, RelayerConfig> {
-  return Object.fromEntries(
-    chains.map((c) => [
-      c.id,
-      {
-        type: "web",
-        createRelayer,
-      },
-    ]),
-  );
+  return Object.fromEntries(chains.map((c) => [c.id, { type: "web", createRelayer }]));
 }

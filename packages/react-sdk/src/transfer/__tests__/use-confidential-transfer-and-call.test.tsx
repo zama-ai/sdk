@@ -93,9 +93,7 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-success-raw",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-success-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSuccess = vi.fn();
 
@@ -126,9 +124,7 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
-    const expectedContext = {
-      requestId: "transfer-and-call-error-raw",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-error-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onError = vi.fn();
 
@@ -161,9 +157,7 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-settled-raw",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-settled-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSettled = vi.fn();
 
@@ -194,19 +188,14 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-success-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransferAndCall(
         { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSuccess,
-        },
+        { onMutate, onSuccess },
       ),
     );
 
@@ -233,9 +222,7 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
-    const expectedContext = {
-      requestId: "transfer-and-call-error-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-error-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onError = vi.fn();
 
@@ -271,19 +258,14 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-settled-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransferAndCall(
         { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSettled,
-        },
+        { onMutate, onSettled },
       ),
     );
 
@@ -332,10 +314,7 @@ describe("useConfidentialTransferAndCall", () => {
     const { Wrapper } = createWrapper({ signer, relayer });
     const { result } = renderHook(
       () => ({
-        balance: useConfidentialBalance({
-          address: tokenAddress,
-          account: userAddress,
-        }),
+        balance: useConfidentialBalance({ address: tokenAddress, account: userAddress }),
         transfer: useConfidentialTransferAndCall({ address: tokenAddress }),
       }),
       { wrapper: Wrapper },
@@ -382,10 +361,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
     );
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferAndCall({
-        address: tokenAddress,
-        optimistic: true,
-      }),
+      useConfidentialTransferAndCall({ address: tokenAddress, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -406,9 +382,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
       expect(queryClient.getQueryData(balanceKey)).toBe(3800n);
     });
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -431,10 +405,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferAndCall({
-        address: tokenAddress,
-        optimistic: true,
-      }),
+      useConfidentialTransferAndCall({ address: tokenAddress, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -461,10 +432,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferAndCall({
-        address: tokenAddress,
-        optimistic: true,
-      }),
+      useConfidentialTransferAndCall({ address: tokenAddress, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -481,9 +449,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
     );
 
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
   });
 
@@ -534,10 +500,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
     vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
 
     const { result, queryClient } = renderWithProviders(() =>
-      useConfidentialTransferAndCall({
-        address: tokenAddress,
-        optimistic: true,
-      }),
+      useConfidentialTransferAndCall({ address: tokenAddress, optimistic: true }),
     );
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -558,9 +521,7 @@ describe("useConfidentialTransferAndCall optimistic updates", () => {
 
     expect(queryClient.getQueryData(balanceKey)).toBe(5000n);
     expect(cancelSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: expect.arrayContaining(["zama.confidentialBalance"]),
-      }),
+      expect.objectContaining({ queryKey: expect.arrayContaining(["zama.confidentialBalance"]) }),
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
@@ -645,18 +606,12 @@ describe("useConfidentialTransferAndCall error propagation", () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(
       () => useMutation(confidentialTransferAndCallMutationOptions(mockWrappedToken)),
-      {
-        wrapper: Wrapper,
-      },
+      { wrapper: Wrapper },
     );
 
     await act(async () => {
       await expect(
-        result.current.mutateAsync({
-          to: "0xto" as Address,
-          amount: 100n,
-          data: DATA,
-        }),
+        result.current.mutateAsync({ to: "0xto" as Address, amount: 100n, data: DATA }),
       ).rejects.toBe(error);
     });
 

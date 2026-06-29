@@ -95,9 +95,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web({ security: { integrityCheck: false } }),
-  },
+  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
 });
 ```
 
@@ -177,9 +175,7 @@ const config = createConfig({
   walletClient,
   relayers: {
     [sepolia.id]: web({
-      security: {
-        getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
-      },
+      security: { getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "" },
     }),
   },
 });

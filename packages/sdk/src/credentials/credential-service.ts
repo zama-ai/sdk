@@ -102,11 +102,7 @@ export class CredentialService {
       const candidate = findPermitToWiden(permits, uncovered, requested);
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
-        const widened = await this.#signPermit({
-          chunk: widenedSet,
-          keypair,
-          scope,
-        });
+        const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
         await swallow(
           "replace permit",
           () => this.#store.replace(scope, candidate.signature, widened),

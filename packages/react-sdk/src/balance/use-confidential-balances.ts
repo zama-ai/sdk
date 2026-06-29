@@ -55,13 +55,7 @@ export function useConfidentialBalances(
 
   const tokens = useMemo(() => addresses.map((addr) => sdk.createToken(addr)), [sdk, addresses]);
 
-  const baseOptions = confidentialBalancesQueryOptions(
-    tokens,
-    {
-      account,
-    },
-    { walletAccount },
-  );
+  const baseOptions = confidentialBalancesQueryOptions(tokens, { account }, { walletAccount });
 
   return useQuery<BatchBalancesResult>({
     ...baseOptions,

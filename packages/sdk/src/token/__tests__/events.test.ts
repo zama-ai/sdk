@@ -73,10 +73,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    const { readonlyToken, events } = setupSdkWithEvents({
-      createSDK,
-      tokenAddress,
-    });
+    const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await readonlyToken.balanceOf(userAddress);
@@ -95,10 +92,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    const { readonlyToken, events } = setupSdkWithEvents({
-      createSDK,
-      tokenAddress,
-    });
+    const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(ZERO_ENCRYPTED_VALUE);
 
     await readonlyToken.balanceOf(userAddress);
@@ -115,10 +109,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    const { readonlyToken, events } = setupSdkWithEvents({
-      createSDK,
-      tokenAddress,
-    });
+    const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await readonlyToken.balanceOf(userAddress);
@@ -139,10 +130,7 @@ describe("Token.balanceOf event emissions", () => {
     provider,
   }) => {
     relayer.decryptValues = vi.fn().mockRejectedValue(new Error("decrypt boom"));
-    const { readonlyToken, events } = setupSdkWithEvents({
-      createSDK,
-      tokenAddress,
-    });
+    const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
     await expect(readonlyToken.balanceOf(userAddress)).rejects.toThrow();
@@ -181,32 +169,26 @@ describe("Token.decryptBalanceAs event emissions", () => {
     delegatorAddress,
     provider,
   }) => {
-    const { readonlyToken, events } = setupSdkWithEvents({
-      createSDK,
-      tokenAddress,
-    });
+    const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     // readConfidentialBalanceOf → non-zero handle; getDelegationExpiry → permanent (skips block-timestamp RPC)
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle)
       .mockResolvedValue(2n ** 64n - 1n);
-    relayer.createDelegatedUserDecryptEIP712 = vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {
-        publicKey: TEST_PUBLIC_KEY,
-        contractAddresses: [tokenAddress],
-        delegatorAddress,
-        delegateAddress: signer.walletAccount.getSnapshot()!.address,
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    });
+    relayer.createDelegatedUserDecryptEIP712 = vi
+      .fn()
+      .mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {
+          publicKey: TEST_PUBLIC_KEY,
+          contractAddresses: [tokenAddress],
+          delegatorAddress,
+          delegateAddress: signer.walletAccount.getSnapshot()!.address,
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      });
     relayer.delegatedDecryptValues = vi.fn().mockResolvedValue({ [handle]: 42n });
 
     await readonlyToken.decryptBalanceAs({ delegatorAddress });

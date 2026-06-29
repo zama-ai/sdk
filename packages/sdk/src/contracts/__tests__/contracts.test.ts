@@ -250,16 +250,8 @@ describe("Wrapper contract builders", () => {
 // unwrapRequestId, unwrapAmount / unwrapRequester are exposed, and both UnwrapRequested
 // and UnwrapFinalized events include the indexed unwrapRequestId topic.
 describe("confidentialWrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
-  type AbiFunction = {
-    type: string;
-    name: string;
-    inputs: { type: string; name: string }[];
-  };
-  type AbiEvent = {
-    type: string;
-    name: string;
-    inputs: { type: string; name: string }[];
-  };
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  type AbiEvent = { type: string; name: string; inputs: { type: string; name: string }[] };
   const fns = (confidentialWrapperAbi as unknown as AbiFunction[]).filter(
     (x) => x.type === "function",
   );

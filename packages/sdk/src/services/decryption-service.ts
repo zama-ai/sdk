@@ -148,10 +148,7 @@ export class DecryptionService {
 
     try {
       const decrypted = await this.delegatedDecryptValues(
-        items.map(({ encryptedValue, contractAddress }) => ({
-          encryptedValue,
-          contractAddress,
-        })),
+        items.map(({ encryptedValue, contractAddress }) => ({ encryptedValue, contractAddress })),
         delegatorAddress,
         delegateAddress,
         normalizedAccount,
@@ -175,12 +172,7 @@ export class DecryptionService {
       items.map((item) => async () => {
         try {
           const decrypted = await this.delegatedDecryptValues(
-            [
-              {
-                encryptedValue: item.encryptedValue,
-                contractAddress: item.contractAddress,
-              },
-            ],
+            [{ encryptedValue: item.encryptedValue, contractAddress: item.contractAddress }],
             delegatorAddress,
             delegateAddress,
             normalizedAccount,
@@ -341,13 +333,7 @@ export class DecryptionService {
 
   async #assertAllDelegationsActive(
     contractAddresses: readonly Address[],
-    {
-      delegatorAddress,
-      delegateAddress,
-    }: {
-      delegatorAddress: Address;
-      delegateAddress: Address;
-    },
+    { delegatorAddress, delegateAddress }: { delegatorAddress: Address; delegateAddress: Address },
   ): Promise<void> {
     const inactive = await this.#delegationService.findInactiveDelegations(
       contractAddresses,

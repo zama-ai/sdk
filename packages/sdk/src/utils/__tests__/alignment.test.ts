@@ -35,9 +35,7 @@ describe("requireAlignedWalletAccount", () => {
     createMockProvider,
   }) => {
     const signer = createMockSigner();
-    const provider = createMockProvider({
-      getChainId: vi.fn().mockResolvedValue(1),
-    });
+    const provider = createMockProvider({ getChainId: vi.fn().mockResolvedValue(1) });
 
     await expect(requireAlignedWalletAccount("op", signer, provider)).rejects.toBeInstanceOf(
       ChainMismatchError,
@@ -59,10 +57,7 @@ describe("requireAlignedWalletAccount", () => {
       })
       .mockReturnValueOnce(account);
     const refreshWalletAccount = vi.fn().mockResolvedValue(account);
-    const signer = createMockSigner(undefined, {
-      requireWalletAccount,
-      refreshWalletAccount,
-    });
+    const signer = createMockSigner(undefined, { requireWalletAccount, refreshWalletAccount });
     const provider = createMockProvider();
 
     const result = await requireAlignedWalletAccount("op", signer, provider);

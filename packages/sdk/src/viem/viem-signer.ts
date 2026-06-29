@@ -53,17 +53,11 @@ export class ViemSigner extends BaseSigner {
     this.#unsubscribeProvider = this.#subscribeToProvider();
   }
 
-  #requireAccount(operation: string): {
-    walletClient: WalletClient;
-    account: Account;
-  } {
+  #requireAccount(operation: string): { walletClient: WalletClient; account: Account } {
     if (!this.#walletClient.account) {
       throw new WalletNotConnectedError(operation);
     }
-    return {
-      walletClient: this.#walletClient,
-      account: this.#walletClient.account,
-    };
+    return { walletClient: this.#walletClient, account: this.#walletClient.account };
   }
 
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {

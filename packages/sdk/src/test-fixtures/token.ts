@@ -16,21 +16,13 @@ export type CreateWrappedTokenFn = (sdk: ZamaSDK, address?: Address) => WrappedT
 export type CreateMockTokenFn = (
   addressOrArgs?:
     | Address
-    | {
-        address?: Address;
-        signer?: GenericSigner;
-        txResult?: TransactionResult;
-      },
+    | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
 ) => Token;
 
 export type CreateMockWrappedTokenFn = (
   addressOrArgs?:
     | Address
-    | {
-        address?: Address;
-        signer?: GenericSigner;
-        txResult?: TransactionResult;
-      },
+    | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
 ) => WrappedToken;
 
 function createMockTokenInternal(address: Address, signer: GenericSigner): Token {

@@ -4,9 +4,7 @@ import type { Metadata } from "next";
 import { SidebarNav } from "./sidebar-nav";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Token SDK Test App",
-};
+export const metadata: Metadata = { title: "Token SDK Test App" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

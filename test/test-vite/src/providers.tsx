@@ -28,9 +28,7 @@ const customHardhat = {
 
 const zamaConfig = createZamaConfig({
   chains: [customHardhat],
-  relayers: {
-    [customHardhat.id]: cleartext(),
-  },
+  relayers: { [customHardhat.id]: cleartext() },
   wagmiConfig,
 });
 

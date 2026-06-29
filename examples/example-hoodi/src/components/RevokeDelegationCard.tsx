@@ -14,9 +14,7 @@ interface RevokeDelegationCardProps {
 export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegationCardProps) {
   const [delegateAddress, setDelegateAddress] = useState("");
 
-  const revoke = useRevokeDelegation(tokenAddress, {
-    onSuccess: () => setDelegateAddress(""),
-  });
+  const revoke = useRevokeDelegation(tokenAddress, { onSuccess: () => setDelegateAddress("") });
 
   function handleRevoke() {
     revoke.mutate({ delegateAddress: delegateAddress as Address });

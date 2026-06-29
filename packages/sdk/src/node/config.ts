@@ -21,8 +21,5 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * ```
  */
 export function node(): NodeRelayerConfig {
-  return {
-    type: "node",
-    createRelayer: (chain) => new FhevmRelayer({ chain }),
-  };
+  return { type: "node", createRelayer: (chain) => new FhevmRelayer({ chain }) };
 }

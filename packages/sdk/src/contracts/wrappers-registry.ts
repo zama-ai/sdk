@@ -8,11 +8,7 @@ export const wrappersRegistryAbi = [
       {
         components: [
           { internalType: "address", name: "tokenAddress", type: "address" },
-          {
-            internalType: "address",
-            name: "confidentialTokenAddress",
-            type: "address",
-          },
+          { internalType: "address", name: "confidentialTokenAddress", type: "address" },
           { internalType: "bool", name: "isValid", type: "bool" },
         ],
         internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]",
@@ -40,11 +36,7 @@ export const wrappersRegistryAbi = [
       {
         components: [
           { internalType: "address", name: "tokenAddress", type: "address" },
-          {
-            internalType: "address",
-            name: "confidentialTokenAddress",
-            type: "address",
-          },
+          { internalType: "address", name: "confidentialTokenAddress", type: "address" },
           { internalType: "bool", name: "isValid", type: "bool" },
         ],
         internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair[]",
@@ -62,11 +54,7 @@ export const wrappersRegistryAbi = [
       {
         components: [
           { internalType: "address", name: "tokenAddress", type: "address" },
-          {
-            internalType: "address",
-            name: "confidentialTokenAddress",
-            type: "address",
-          },
+          { internalType: "address", name: "confidentialTokenAddress", type: "address" },
           { internalType: "bool", name: "isValid", type: "bool" },
         ],
         internalType: "struct ConfidentialTokenWrappersRegistry.TokenWrapperPair",
@@ -88,13 +76,7 @@ export const wrappersRegistryAbi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "confidentialTokenAddress",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "confidentialTokenAddress", type: "address" }],
     name: "getTokenAddress",
     outputs: [
       { internalType: "bool", name: "", type: "bool" },
@@ -104,13 +86,7 @@ export const wrappersRegistryAbi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "confidentialTokenAddress",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "confidentialTokenAddress", type: "address" }],
     name: "isConfidentialTokenValid",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
@@ -134,13 +110,7 @@ export const wrappersRegistryAbi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "confidentialTokenAddress",
-        type: "address",
-      },
-    ],
+    inputs: [{ internalType: "address", name: "confidentialTokenAddress", type: "address" }],
     name: "revokeConfidentialToken",
     outputs: [],
     stateMutability: "nonpayable",

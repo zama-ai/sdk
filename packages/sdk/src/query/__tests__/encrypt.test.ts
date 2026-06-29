@@ -17,9 +17,6 @@ describe("encryptMutationOptions", () => {
     const result = await options.mutationFn(params);
 
     expect(encrypt).toHaveBeenCalledWith(params);
-    expect(result).toEqual({
-      encryptedValues: [handle],
-      inputProof,
-    });
+    expect(result).toEqual({ encryptedValues: [handle], inputProof });
   });
 });

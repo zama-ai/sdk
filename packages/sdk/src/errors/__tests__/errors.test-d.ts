@@ -15,6 +15,9 @@ import type {
   DelegationNotFoundError,
   DelegationExpiredError,
   DelegationNotPropagatedError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  ChainMismatchError,
 } from "..";
 import { ZamaError, ZamaErrorCode, matchZamaError } from "..";
 
@@ -85,5 +88,39 @@ describe("matchZamaError", () => {
       },
     });
     expectTypeOf(result).toEqualTypeOf<"fallback" | undefined>();
+  });
+
+  test("a code-keyed handler receives that code's error subclass", () => {
+    matchZamaError(new Error("any"), {
+      INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientConfidentialBalanceError>();
+        // subclass fields are reachable without a cast
+        expectTypeOf(e.available).toEqualTypeOf<bigint>();
+        expectTypeOf(e.requested).toEqualTypeOf<bigint>();
+      },
+      INSUFFICIENT_ERC20_BALANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientERC20BalanceError>();
+      },
+      RELAYER_REQUEST_FAILED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
+        expectTypeOf(e.statusCode).toEqualTypeOf<number | undefined>();
+      },
+      CHAIN_MISMATCH: (e) => {
+        expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();
+        expectTypeOf(e.signerChainId).toEqualTypeOf<number>();
+        expectTypeOf(e.providerChainId).toEqualTypeOf<number>();
+      },
+    });
+  });
+
+  test("narrowing is additive: base-typed and base-field handlers still compile", () => {
+    // a handler reading only base fields still compiles and infers the return type
+    const fromBaseField = matchZamaError(new Error("any"), { SIGNING_REJECTED: (e) => e.message });
+    expectTypeOf(fromBaseField).toEqualTypeOf<string | undefined>();
+
+    // a handler annotated with the base type stays assignable (params are contravariant)
+    const baseHandler = (e: ZamaError) => e.code;
+    const fromBaseHandler = matchZamaError(new Error("any"), { SIGNING_REJECTED: baseHandler });
+    expectTypeOf(fromBaseHandler).toEqualTypeOf<ZamaErrorCode | undefined>();
   });
 });

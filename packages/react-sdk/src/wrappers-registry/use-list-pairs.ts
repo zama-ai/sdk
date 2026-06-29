@@ -27,22 +27,13 @@ export function useListPairs({
   page = 1,
   pageSize = 100,
   metadata = false,
-}: {
-  page?: number;
-  pageSize?: number;
-  metadata?: boolean;
-} = {}) {
+}: { page?: number; pageSize?: number; metadata?: boolean } = {}) {
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
 
   // Pass sdk.registry (a lazy singleton) so the class-level TTL cache is shared
   // across all queryFn executions — rather than constructing a new instance each time.
   return useQuery<PaginatedResult<TokenWrapperPair | TokenWrapperPairWithMetadata>>(
-    listPairsQueryOptions(sdk.registry, {
-      registryAddress,
-      page,
-      pageSize,
-      metadata,
-    }),
+    listPairsQueryOptions(sdk.registry, { registryAddress, page, pageSize, metadata }),
   );
 }

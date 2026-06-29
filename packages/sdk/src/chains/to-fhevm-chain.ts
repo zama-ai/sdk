@@ -25,9 +25,7 @@ export function toFhevmChain(chain: FheChain): FhevmChain {
         id: chain.gatewayChainId,
         contracts: {
           decryption: { address: chain.verifyingContractAddressDecryption },
-          inputVerification: {
-            address: chain.verifyingContractAddressInputVerification,
-          },
+          inputVerification: { address: chain.verifyingContractAddressInputVerification },
         },
       },
     },

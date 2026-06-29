@@ -14,25 +14,13 @@ export default defineConfig<{}, NodeWorkerFixtures>({
   retries: CI ? 2 : 0,
   workers: 1,
   reporter: CI ? "github" : "list",
-  expect: {
-    timeout: 10000,
-  },
-  projects: [
-    {
-      name: "node",
-      use: {
-        anvilPort: NODE_ANVIL_PORT,
-      },
-      timeout: 60000,
-    },
-  ],
+  expect: { timeout: 10000 },
+  projects: [{ name: "node", use: { anvilPort: NODE_ANVIL_PORT }, timeout: 60000 }],
   webServer: [
     {
       command: `./start-anvil.sh ${NODE_ANVIL_PORT}`,
       name: "anvil-node",
-      wait: {
-        stdout: /Anvil ready on port (\d+)/,
-      },
+      wait: { stdout: /Anvil ready on port (\d+)/ },
       timeout: 90_000,
     },
   ],

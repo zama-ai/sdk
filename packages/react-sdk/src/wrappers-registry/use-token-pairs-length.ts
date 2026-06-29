@@ -12,9 +12,5 @@ export function useTokenPairsLength() {
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
 
-  return useQuery<bigint>(
-    tokenPairsLengthQueryOptions(sdk, {
-      registryAddress,
-    }),
-  );
+  return useQuery<bigint>(tokenPairsLengthQueryOptions(sdk, { registryAddress }));
 }

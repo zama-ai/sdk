@@ -148,10 +148,7 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
 
   if (to === MULTICALL3 && sel === "0x82ad56cb") {
     try {
-      const { args } = decodeFunctionData({
-        abi: MULTICALL3_ABI,
-        data: data as Hex,
-      });
+      const { args } = decodeFunctionData({ abi: MULTICALL3_ABI, data: data as Hex });
       const [calls] = args;
       const results = calls.map((call) => ({
         success: true,

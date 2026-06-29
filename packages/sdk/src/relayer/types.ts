@@ -35,28 +35,16 @@ export type FheTypeName =
 export type EncryptedValue = Hex;
 
 /** Result from encryption — contract-ready hex encrypted values and input proof. */
-export type EncryptResult = {
-  encryptedValues: EncryptedValue[];
-  inputProof: Hex;
-};
+export type EncryptResult = { encryptedValues: EncryptedValue[]; inputProof: Hex };
 
 /** Canonical SDK type for a decrypted clear-text value. */
 export type ClearValue = bigint | boolean | string;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
-  | {
-      value: boolean | bigint;
-      type: "ebool";
-    }
-  | {
-      value: bigint;
-      type: Exclude<FheTypeName, "ebool" | "eaddress">;
-    }
-  | {
-      value: Address;
-      type: "eaddress";
-    };
+  | { value: boolean | bigint; type: "ebool" }
+  | { value: bigint; type: Exclude<FheTypeName, "ebool" | "eaddress"> }
+  | { value: Address; type: "eaddress" };
 
 /** Parameters for encryption */
 export interface EncryptParams {

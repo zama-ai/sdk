@@ -25,10 +25,7 @@ export function useMetadata(
   options?: Omit<UseQueryOptions<TokenMetadata>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
-  return useQuery<TokenMetadata>({
-    ...tokenMetadataQueryOptions(sdk, tokenAddress),
-    ...options,
-  });
+  return useQuery<TokenMetadata>({ ...tokenMetadataQueryOptions(sdk, tokenAddress), ...options });
 }
 
 /**

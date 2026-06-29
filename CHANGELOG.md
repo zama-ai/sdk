@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2026-06-29)
+
+### Code Refactoring
+
+- **sdk:** type matchZamaError handlers by matched error subclass [SDK-231] ([#488](https://github.com/zama-ai/sdk/issues/488)) ([9c98fbc]())
+
 ## [3.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2026-06-26)
 
 ### Bug Fixes

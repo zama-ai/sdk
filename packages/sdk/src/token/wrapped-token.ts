@@ -288,10 +288,7 @@ export class WrappedToken extends Token {
       await this.assertConfidentialBalance(amount);
     }
 
-    const callbacks: UnshieldCallbacks = {
-      onFinalizing,
-      onFinalizeSubmitted,
-    };
+    const callbacks: UnshieldCallbacks = { onFinalizing, onFinalizeSubmitted };
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrap(amount);
     void swallow(
@@ -473,11 +470,7 @@ export class WrappedToken extends Token {
     operationId: string,
     callbacks: UnshieldCallbacks | undefined,
   ): Promise<TransactionResult> {
-    this.emit({
-      type: ZamaSDKEvents.UnshieldPhase1Submitted,
-      txHash: unshieldHash,
-      operationId,
-    });
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
     let receipt;
     try {
       receipt = await this.sdk.provider.waitForTransactionReceipt(unshieldHash);
@@ -485,9 +478,7 @@ export class WrappedToken extends Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Failed to get unshield receipt", {
-        cause: error,
-      });
+      throw new TransactionRevertedError("Failed to get unshield receipt", { cause: error });
     }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {

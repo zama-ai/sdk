@@ -5,8 +5,5 @@ import type { MutationFactoryOptions } from "./factory-types";
 export function encryptMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult> {
-  return {
-    mutationKey: ["zama.encrypt"],
-    mutationFn: async (params) => sdk.encrypt(params),
-  };
+  return { mutationKey: ["zama.encrypt"], mutationFn: async (params) => sdk.encrypt(params) };
 }

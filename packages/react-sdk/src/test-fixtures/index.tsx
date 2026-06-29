@@ -16,9 +16,7 @@ export const test = baseTest.extend<ReactSDKTestFixtures>({
   ...mutationFixtures,
 });
 
-expect.extend({
-  ...mutationAssertions,
-});
+expect.extend({ ...mutationAssertions });
 
 export { expect };
 export type { ReactAddressFixtures } from "./addresses";

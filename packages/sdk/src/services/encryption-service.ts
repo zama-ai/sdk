@@ -29,20 +29,13 @@ export class EncryptionService {
       this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
       const result = await this.#router.relayer.encrypt(params);
       this.#emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptEnd,
-          durationMs: Date.now() - t0,
-        },
+        { type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 },
         params.contractAddress,
       );
       return result;
     } catch (error) {
       this.#emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptError,
-          error: toError(error),
-          durationMs: Date.now() - t0,
-        },
+        { type: ZamaSDKEvents.EncryptError, error: toError(error), durationMs: Date.now() - t0 },
         params.contractAddress,
       );
       throw wrapEncryptError(error, "Encryption failed");

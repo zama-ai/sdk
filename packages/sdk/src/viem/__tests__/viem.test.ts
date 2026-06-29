@@ -187,11 +187,7 @@ describe("ViemSigner", () => {
           primaryType: "UserDecryptRequestVerification",
           types: { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
           domain: typedData.domain,
-          message: {
-            ...typedData.message,
-            startTimestamp: 1000n,
-            durationDays: 1n,
-          },
+          message: { ...typedData.message, startTimestamp: 1000n, durationDays: 1n },
         });
       },
     );
@@ -286,9 +282,7 @@ describe("ViemProvider", () => {
       const viemProvider = new ViemProvider({ publicClient });
       const receipt = await viemProvider.waitForTransactionReceipt(TX_HASH);
       expect(receipt).toEqual({ logs: [] });
-      expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({
-        hash: TX_HASH,
-      });
+      expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({ hash: TX_HASH });
     });
   });
 
@@ -324,10 +318,7 @@ describe("Viem read contract helpers", () => {
     ({ wrapperAddress, publicClient }) => {
       readUnderlyingTokenContract(publicClient, wrapperAddress);
       expect(publicClient.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: wrapperAddress,
-          functionName: "underlying",
-        }),
+        expect.objectContaining({ address: wrapperAddress, functionName: "underlying" }),
       );
     },
   );

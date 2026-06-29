@@ -28,10 +28,7 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-    [mainnet.id]: web(),
-  },
+  relayers: { [sepolia.id]: web(), [mainnet.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);

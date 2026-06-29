@@ -120,11 +120,7 @@ Number of tokens to transfer (in the token's smallest unit). Encrypted before su
 {% tab title="component.tsx" %}
 
 ```tsx
-await transferFrom({
-  from: "0xOwner",
-  to: "0xRecipient",
-  amount: 500n,
-});
+await transferFrom({ from: "0xOwner", to: "0xRecipient", amount: 500n });
 ```
 
 {% endtab %}

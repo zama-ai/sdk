@@ -146,10 +146,7 @@ export class FhevmRelayer implements RelayerSDK, Disposable {
   async encrypt(params: EncryptParams): Promise<EncryptResult> {
     await this.#ensureInit();
     const result = await this.#fhevm.encryptValues({
-      values: params.values.map((v) => ({
-        type: toSolidityType(v.type),
-        value: v.value,
-      })),
+      values: params.values.map((v) => ({ type: toSolidityType(v.type), value: v.value })),
       contractAddress: params.contractAddress,
       userAddress: params.userAddress,
       options: { auth: this.#chain.auth },

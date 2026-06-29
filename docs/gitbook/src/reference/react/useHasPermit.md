@@ -80,9 +80,7 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: ["0xContractA", "0xContractB"],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContractA", "0xContractB"] });
 ```
 
 An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.

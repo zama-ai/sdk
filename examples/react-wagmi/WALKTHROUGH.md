@@ -210,9 +210,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once to useGrantPermit — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();

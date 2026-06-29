@@ -34,10 +34,7 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({
-          functionName: "approve",
-          args: expect.arrayContaining([500n]),
-        }),
+        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
       );
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         2,
@@ -50,10 +47,7 @@ describe("Integration: multi-step workflows", () => {
 
       // Step 4: Decrypt the balance through the SDK-level API
       const decryptResult = await wrappedToken.sdk.decryption.decryptValues([
-        {
-          encryptedValue: balanceHandle,
-          contractAddress: wrappedToken.address,
-        },
+        { encryptedValue: balanceHandle, contractAddress: wrappedToken.address },
       ]);
       expect(decryptResult[balanceHandle]).toBe(1000n);
       expect(relayer.decryptValues).toHaveBeenCalledWith(
@@ -186,9 +180,7 @@ describe("Integration: multi-step workflows", () => {
         .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
         .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
 
-      const unshieldResult = await wrappedToken.unshield(500n, {
-        skipBalanceCheck: true,
-      });
+      const unshieldResult = await wrappedToken.unshield(500n, { skipBalanceCheck: true });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → decryptPublicValues → finalizeUnwrap

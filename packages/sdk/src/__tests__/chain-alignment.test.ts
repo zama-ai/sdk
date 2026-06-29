@@ -51,10 +51,7 @@ describe("chain alignment guards", () => {
   test.for(MISMATCHED_OPS)(
     "%s throws ChainMismatchError before any side-effect",
     async ([operation, run], { sdk, signer, provider, relayer, tokenAddress }) => {
-      const walletAccount = {
-        address: signer.walletAccount.getSnapshot()!.address,
-        chainId: 1,
-      };
+      const walletAccount = { address: signer.walletAccount.getSnapshot()!.address, chainId: 1 };
       vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(walletAccount);
       vi.mocked(signer.requireWalletAccount).mockReturnValue(walletAccount);
       vi.mocked(provider.getChainId).mockResolvedValue(11155111);

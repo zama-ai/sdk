@@ -50,10 +50,7 @@ class MockChainRouter extends ChainRouter {
     const configs = Object.fromEntries(
       chains.map((c) => [
         c.id,
-        {
-          type: "web",
-          createRelayer: (chain: FheChain) => backendFor(chain.id),
-        },
+        { type: "web", createRelayer: (chain: FheChain) => backendFor(chain.id) },
       ]),
     );
     // The base constructor builds one backend per chain; hand it a config that
