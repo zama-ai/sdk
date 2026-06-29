@@ -96,9 +96,7 @@ describe("WrappersRegistry", () => {
 
       expect(result).toBe(5n);
       expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "getTokenConfidentialTokenPairsLength",
-        }),
+        expect.objectContaining({ functionName: "getTokenConfidentialTokenPairsLength" }),
       );
     });
 
@@ -134,10 +132,7 @@ describe("WrappersRegistry", () => {
         isValid: true,
       });
       expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "getTokenConfidentialTokenPair",
-          args: [3n],
-        }),
+        expect.objectContaining({ functionName: "getTokenConfidentialTokenPair", args: [3n] }),
       );
     });
 
@@ -172,9 +167,7 @@ describe("WrappersRegistry", () => {
 
       expect(valid).toBe(true);
       expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({
-          functionName: "isConfidentialTokenValid",
-        }),
+        expect.objectContaining({ functionName: "isConfidentialTokenValid" }),
       );
     });
   });
@@ -212,11 +205,7 @@ describe("WrappersRegistry", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(3n) // getTokenConfidentialTokenPairsLength
         .mockResolvedValueOnce([
-          {
-            tokenAddress: TOKEN,
-            confidentialTokenAddress: C_TOKEN,
-            isValid: true,
-          },
+          { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true },
         ]); // getTokenConfidentialTokenPairsSlice
       const registry = new WrappersRegistry({ provider });
 
@@ -252,11 +241,7 @@ describe("WrappersRegistry", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(1n) // length
         .mockResolvedValueOnce([
-          {
-            tokenAddress: TOKEN,
-            confidentialTokenAddress: C_TOKEN,
-            isValid: true,
-          },
+          { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true },
         ]) // slice
         .mockResolvedValueOnce("USD Coin") // name (underlying)
         .mockResolvedValueOnce("USDC") // symbol (underlying)
@@ -380,10 +365,7 @@ describe("WrappersRegistry", () => {
 
       const result = await registry.getConfidentialToken(TOKEN);
 
-      expect(result).toEqual({
-        confidentialTokenAddress: C_TOKEN,
-        isValid: true,
-      });
+      expect(result).toEqual({ confidentialTokenAddress: C_TOKEN, isValid: true });
     });
 
     test("returns structured result with isValid=false when revoked", async ({ provider }) => {
@@ -393,10 +375,7 @@ describe("WrappersRegistry", () => {
 
       const result = await registry.getConfidentialToken(TOKEN);
 
-      expect(result).toEqual({
-        confidentialTokenAddress: C_TOKEN,
-        isValid: false,
-      });
+      expect(result).toEqual({ confidentialTokenAddress: C_TOKEN, isValid: false });
     });
 
     test("returns null when not registered (zero address)", async ({ provider }) => {

@@ -18,13 +18,8 @@ export default defineConfig<{}, WorkerFixtures>({
   retries: CI ? 2 : 0,
   workers: 2,
   reporter: CI ? "github" : "list",
-  expect: {
-    timeout: CI ? 20000 : 5000,
-  },
-  use: {
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-  },
+  expect: { timeout: CI ? 20000 : 5000 },
+  use: { trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [
     {
       name: "nextjs",
@@ -58,9 +53,7 @@ export default defineConfig<{}, WorkerFixtures>({
     {
       command: `./start-anvil.sh ${NEXTJS_ANVIL_PORT}`,
       name: "anvil-nextjs",
-      wait: {
-        stdout: /Anvil ready on port (\d+)/,
-      },
+      wait: { stdout: /Anvil ready on port (\d+)/ },
       timeout: 90_000,
     },
     {
@@ -73,9 +66,7 @@ export default defineConfig<{}, WorkerFixtures>({
     {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
-      wait: {
-        stdout: /Anvil ready on port (\d+)/,
-      },
+      wait: { stdout: /Anvil ready on port (\d+)/ },
       timeout: 90_000,
     },
     {

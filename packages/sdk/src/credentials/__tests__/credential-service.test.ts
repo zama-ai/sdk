@@ -176,11 +176,7 @@ describe("CredentialService.allow signing-error wrapping", () => {
       reject: () => new Error("network unreachable"),
       expected: SigningFailedError,
     },
-    {
-      label: "non-Error throw",
-      reject: () => "boom",
-      expected: SigningFailedError,
-    },
+    { label: "non-Error throw", reject: () => "boom", expected: SigningFailedError },
   ])(
     "$label is wrapped via SigningError taxonomy",
     async ({ reject, expected }, { credentialService, signer }) => {

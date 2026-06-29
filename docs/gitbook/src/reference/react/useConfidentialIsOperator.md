@@ -95,11 +95,7 @@ function OperatorCheck({
   holder: `0x${string}`;
   spender: `0x${string}`;
 }) {
-  const { data: isOperator } = useConfidentialIsOperatorSuspense({
-    tokenAddress,
-    holder,
-    spender,
-  });
+  const { data: isOperator } = useConfidentialIsOperatorSuspense({ tokenAddress, holder, spender });
 
   // data is always defined — no loading state needed
   return <span>{isOperator ? "Approved" : "Not approved"}</span>;

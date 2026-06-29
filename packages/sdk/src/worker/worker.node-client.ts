@@ -61,14 +61,8 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
     return randomUUID();
   }
 
-  protected getInitPayload(): {
-    type: WorkerRequestType;
-    payload: WorkerRequest["payload"];
-  } {
-    return {
-      type: "INIT",
-      payload: { env: "node" as const, chains: this.config.chains },
-    };
+  protected getInitPayload(): { type: WorkerRequestType; payload: WorkerRequest["payload"] } {
+    return { type: "INIT", payload: { env: "node" as const, chains: this.config.chains } };
   }
 
   protected override onWorkerReady(worker: Worker): void {

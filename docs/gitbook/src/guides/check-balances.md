@@ -194,13 +194,7 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance(
-  {
-    address: "0xToken",
-    account: address,
-  },
-  { refetchInterval: 5_000 },
-);
+} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
 ```
 
 {% endtab %}
@@ -238,14 +232,10 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 const queryClient = useQueryClient();
 
 // Invalidate all balance queries
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.all,
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 {% endtab %}

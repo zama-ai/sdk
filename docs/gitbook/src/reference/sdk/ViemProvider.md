@@ -41,9 +41,7 @@ You rarely need to instantiate `ViemProvider` directly. The viem `createConfig` 
 Viem public client for reading chain data.
 
 ```ts
-const provider = new ViemProvider({
-  publicClient,
-});
+const provider = new ViemProvider({ publicClient });
 ```
 
 ## Methods

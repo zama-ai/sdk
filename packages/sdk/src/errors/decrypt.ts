@@ -62,7 +62,5 @@ export function wrapDecryptError(
     );
   }
 
-  return new DecryptionFailedError(fallbackMessage, {
-    cause: error,
-  });
+  return new DecryptionFailedError(fallbackMessage, { cause: error });
 }

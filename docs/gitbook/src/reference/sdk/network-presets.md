@@ -56,10 +56,7 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-    [mainnet.id]: web(),
-  },
+  relayers: { [sepolia.id]: web(), [mainnet.id]: web() },
 });
 ```
 
@@ -106,9 +103,7 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 ```
 
@@ -127,10 +122,7 @@ const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfie
 const config = createConfig({
   chains: [mySepolia, myMainnet],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 ```
 

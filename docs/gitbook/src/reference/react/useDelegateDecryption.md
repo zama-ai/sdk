@@ -76,10 +76,7 @@ The address to grant decryption rights to.
 When the delegation expires. If omitted, the delegation is permanent.
 
 ```ts
-await delegate({
-  delegateAddress: "0xDelegate",
-  expirationDate: new Date("2025-12-31"),
-});
+await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2025-12-31") });
 ```
 
 ## Return Type

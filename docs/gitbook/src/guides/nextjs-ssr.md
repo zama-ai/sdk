@@ -56,10 +56,7 @@ import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const wagmiConfig = createConfig({
-  chains: [sepolia],
-  transports: { [sepolia.id]: http() },
-});
+const wagmiConfig = createConfig({ chains: [sepolia], transports: { [sepolia.id]: http() } });
 
 const mySepolia = {
   ...sepoliaFhe,

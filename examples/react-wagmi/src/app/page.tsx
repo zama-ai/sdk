@@ -265,9 +265,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
   // Check whether cached credentials cover the selected confidential token.
   // This component only mounts once a token is selected, so no placeholder address is needed.
-  const { data: isAllowed } = useHasPermit({
-    contractAddresses: [token.confidentialTokenAddress],
-  });
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   // Metadata for the selected token pair is sourced directly from the registry response
   // (useListPairs with metadata: true), removing separate metadata queries.

@@ -27,9 +27,7 @@ const queryClient = useQueryClient();
 queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token's balances
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 
 // Invalidate a specific owner's balance
 queryClient.invalidateQueries({
@@ -112,9 +110,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ```tsx
 // After a transfer made outside the SDK
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 ### Prefetch balances on hover

@@ -31,9 +31,7 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 ```
 

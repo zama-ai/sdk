@@ -61,9 +61,7 @@ const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");
 Address of the operator to approve.
 
 ```ts
-await setOperator({
-  operator: "0xDEX",
-});
+await setOperator({ operator: "0xDEX" });
 ```
 
 ---
@@ -77,10 +75,7 @@ Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 ```ts
 const oneDay = Math.floor(Date.now() / 1000) + 86_400;
 
-await setOperator({
-  operator: "0xDEX",
-  until: oneDay,
-});
+await setOperator({ operator: "0xDEX", until: oneDay });
 ```
 
 ## Return Type

@@ -27,10 +27,7 @@ export function useTotalSupply(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery<bigint>({
-    ...totalSupplyQueryOptions(sdk, tokenAddress),
-    ...options,
-  });
+  return useQuery<bigint>({ ...totalSupplyQueryOptions(sdk, tokenAddress), ...options });
 }
 
 /**

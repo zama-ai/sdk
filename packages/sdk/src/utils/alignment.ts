@@ -32,11 +32,7 @@ export async function requireAlignedWalletAccount(
   }
   const providerChainId = await provider.getChainId();
   if (account.chainId !== providerChainId) {
-    throw new ChainMismatchError({
-      operation,
-      signerChainId: account.chainId,
-      providerChainId,
-    });
+    throw new ChainMismatchError({ operation, signerChainId: account.chainId, providerChainId });
   }
   return account;
 }

@@ -89,29 +89,18 @@ describe("decodeConfidentialTransfer", () => {
 
   test("decodes valid log", () => {
     const event = decodeConfidentialTransfer(log);
-    expect(event).toEqual({
-      eventName: "ConfidentialTransfer",
-      from,
-      to,
-      encryptedAmount,
-    });
+    expect(event).toEqual({ eventName: "ConfidentialTransfer", from, to, encryptedAmount });
   });
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeConfidentialTransfer({
-        ...log,
-        topics: [Topics.Wrap, ...log.topics.slice(1)],
-      }),
+      decodeConfidentialTransfer({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
     expect(
-      decodeConfidentialTransfer({
-        ...log,
-        topics: [Topics.ConfidentialTransfer],
-      }),
+      decodeConfidentialTransfer({ ...log, topics: [Topics.ConfidentialTransfer] }),
     ).toBeNull();
   });
 });
@@ -128,20 +117,12 @@ describe("decodeWrap", () => {
 
   test("decodes valid log", () => {
     const event = decodeWrap(log);
-    expect(event).toEqual({
-      eventName: "Wrap",
-      to,
-      roundedAmount,
-      encryptedWrappedAmount,
-    });
+    expect(event).toEqual({ eventName: "Wrap", to, roundedAmount, encryptedWrappedAmount });
   });
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeWrap({
-        ...log,
-        topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
-      }),
+      decodeWrap({ ...log, topics: [Topics.UnwrapRequested, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -168,10 +149,7 @@ describe("decodeUnwrapRequested", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeUnwrapRequested({
-        ...log,
-        topics: [Topics.Wrap, ...log.topics.slice(1)],
-      }),
+      decodeUnwrapRequested({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -200,10 +178,7 @@ describe("decodeUnwrapFinalized", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeUnwrapFinalized({
-        ...log,
-        topics: [Topics.Wrap, ...log.topics.slice(1)],
-      }),
+      decodeUnwrapFinalized({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -229,10 +204,7 @@ describe("decodeOnChainEvent", () => {
   });
 
   test("returns null for unknown event", () => {
-    const log: RawLog = {
-      topics: [topic("00".repeat(32))],
-      data: "0x",
-    };
+    const log: RawLog = { topics: [topic("00".repeat(32))], data: "0x" };
     expect(decodeOnChainEvent(log)).toBeNull();
   });
 });
@@ -361,19 +333,13 @@ describe("decodeDelegatedForUserDecryption", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeDelegatedForUserDecryption({
-        ...log,
-        topics: [Topics.Wrap, ...log.topics.slice(1)],
-      }),
+      decodeDelegatedForUserDecryption({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
     expect(
-      decodeDelegatedForUserDecryption({
-        ...log,
-        topics: [AclTopics.DelegatedForUserDecryption],
-      }),
+      decodeDelegatedForUserDecryption({ ...log, topics: [AclTopics.DelegatedForUserDecryption] }),
     ).toBeNull();
   });
 });
@@ -439,10 +405,7 @@ describe("decodeAclEvent", () => {
   });
 
   test("returns null for unknown event", () => {
-    const log: RawLog = {
-      topics: [topic("00".repeat(32))],
-      data: "0x",
-    };
+    const log: RawLog = { topics: [topic("00".repeat(32))], data: "0x" };
     expect(decodeAclEvent(log)).toBeNull();
   });
 });

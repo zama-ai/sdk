@@ -277,10 +277,7 @@ export class Token {
     const outcomes = await pLimit(
       tokens.map((t) => async () => {
         try {
-          return {
-            status: "fulfilled" as const,
-            value: await t.balanceOf(owner),
-          };
+          return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
         } catch (reason) {
           return { status: "rejected" as const, reason };
         }
@@ -303,9 +300,7 @@ export class Token {
         const error =
           reason instanceof ZamaError
             ? reason
-            : new DecryptionFailedError(toError(reason).message, {
-                cause: reason,
-              });
+            : new DecryptionFailedError(toError(reason).message, { cause: reason });
         errors.set(tokenAddress, error);
       }
     }
@@ -368,10 +363,7 @@ export class Token {
       options.encryptedValues ??
       (await Token.readBalanceHandlesBatch(tokens, normalizedAccount, errors, maxConcurrency));
 
-    const decryptRequests: Array<{
-      token: Token;
-      encryptedValue: EncryptedValue;
-    }> = [];
+    const decryptRequests: Array<{ token: Token; encryptedValue: EncryptedValue }> = [];
     for (const [index, token] of tokens.entries()) {
       const encryptedValue = resolvedEncryptedValues[index];
       if (!encryptedValue || errors.has(token.address)) {
@@ -490,9 +482,7 @@ export class Token {
         token.address,
         outcome.reason instanceof ZamaError
           ? outcome.reason
-          : new DecryptionFailedError(toError(outcome.reason).message, {
-              cause: outcome.reason,
-            }),
+          : new DecryptionFailedError(toError(outcome.reason).message, { cause: outcome.reason }),
       );
     }
     return encryptedValues;

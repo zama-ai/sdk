@@ -12,17 +12,9 @@ const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const OTHER_PUBLIC_KEY = `0x${"22".repeat(32)}` as const;
 const SIGNATURE = `0x${"33".repeat(65)}` as const;
 
-const directScope = {
-  signerAddress: USER,
-  chainId: 31337,
-  delegatorAddress: USER,
-};
+const directScope = { signerAddress: USER, chainId: 31337, delegatorAddress: USER };
 
-const delegatedScope = {
-  signerAddress: USER,
-  chainId: 31337,
-  delegatorAddress: DELEGATOR,
-};
+const delegatedScope = { signerAddress: USER, chainId: 31337, delegatorAddress: DELEGATOR };
 
 function makePermission(
   overrides: Partial<Permission> & {
@@ -75,10 +67,7 @@ describe("PermissionStore", () => {
   }) => {
     await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
     await store.append(delegatedScope, [
-      makePermission({
-        signedContractAddresses: [TOKEN_B],
-        delegatorAddress: DELEGATOR,
-      }),
+      makePermission({ signedContractAddresses: [TOKEN_B], delegatorAddress: DELEGATOR }),
     ]);
 
     expect(await store.list(directScope)).toHaveLength(1);

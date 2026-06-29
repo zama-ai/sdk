@@ -104,10 +104,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     await this.ensureInit();
     const chainId = this.chain.id;
     const result = await this.#pool.generateKeypair({ chainId });
-    return {
-      publicKey: result.publicKey,
-      privateKey: result.privateKey,
-    };
+    return { publicKey: result.publicKey, privateKey: result.privateKey };
   }
 
   async createEIP712(
@@ -188,10 +185,7 @@ export class RelayerNode extends BaseRelayer implements RelayerSDK, Disposable {
     await this.ensureInit();
     const chainId = this.chain.id;
     return withRetry(async () => {
-      const result = await this.#pool.delegatedUserDecrypt({
-        chainId,
-        ...params,
-      });
+      const result = await this.#pool.delegatedUserDecrypt({ chainId, ...params });
       return result.clearValues;
     });
   }

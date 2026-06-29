@@ -42,10 +42,7 @@ const app = express();
 app.use(express.json());
 
 // Map chain IDs to their network config
-const Configs: Record<number, typeof mainnet> = {
-  [mainnet.id]: mainnet,
-  [sepolia.id]: sepolia,
-};
+const Configs: Record<number, typeof mainnet> = { [mainnet.id]: mainnet, [sepolia.id]: sepolia };
 
 app.use("/api/relayer/:chainId", async (req, res) => {
   const config = Configs[Number(req.params.chainId)];
@@ -59,10 +56,7 @@ app.use("/api/relayer/:chainId", async (req, res) => {
 
   const response = await fetch(url, {
     method: req.method,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": process.env.RELAYER_API_KEY!,
-    },
+    headers: { "content-type": "application/json", "x-api-key": process.env.RELAYER_API_KEY! },
     body,
     // @ts-expect-error: required by the relayer
     duplex: "half",
@@ -109,10 +103,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage,
-  relayers: {
-    [myMainnet.id]: web(),
-    [mySepolia.id]: web(),
-  },
+  relayers: { [myMainnet.id]: web(), [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);

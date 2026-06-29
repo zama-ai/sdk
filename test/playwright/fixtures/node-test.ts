@@ -69,10 +69,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
   publicClient: [
     async ({ anvilPort }, use) => {
       await use(
-        createPublicClient({
-          chain: foundry,
-          transport: http(`http://127.0.0.1:${anvilPort}`),
-        }),
+        createPublicClient({ chain: foundry, transport: http(`http://127.0.0.1:${anvilPort}`) }),
       );
     },
     { scope: "worker" },

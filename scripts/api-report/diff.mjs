@@ -43,10 +43,7 @@ for (const name of names) {
   const result = spawnSync(
     "diff",
     ["-u", "--label", `a/${name}`, "--label", `b/${name}`, baseFile, prFile],
-    {
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-    },
+    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
 
   // diff exits 0 when identical, 1 when different, >=2 on error.
