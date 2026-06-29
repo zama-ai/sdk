@@ -338,13 +338,44 @@ describe("classifyDecryptWorkerError", () => {
   });
 
   // Drift guard wired to the REAL dependency (not a hand-copied constant): if a
-  // @zama-fhe/relayer-sdk bump reworffds its not-entitled message, the substrings
-  // isNotEntitledMessage keys on disappear here and this fails loudly — otherwise
+  // @zama-fhe/relayer-sdk bump rewords its not-entitled message, the phrase
+  // isNotEntitledMessage keys on disappears here and this fails loudly — otherwise
   // NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED (the SDK-239 bug).
   test("the installed @zama-fhe/relayer-sdk still emits the message our matcher keys on", () => {
     const require = createRequire(import.meta.url);
     const source = readFileSync(require.resolve("@zama-fhe/relayer-sdk/node"), "utf8");
-    expect(source).toContain("is not authorized to user decrypt");
-    expect(source.toLowerCase()).toContain("user address");
+    // Assert the actor lead-in and the discriminating phrase are ADJACENT (only the
+    // interpolated address between them). Two independent substring checks would
+    // stay green off the relayer's sibling "dapp contract … is not authorized to
+    // user decrypt" message even if the actor message were reworded.
+    expect(source).toMatch(/User address[^\n]{0,160}is not authorized to user decrypt handle/);
+  });
+
+  // RELAYER_FETCH_ERROR is the *sole* discriminator keeping the relayer's own 429
+  // (its message literally contains "rate limit") out of the retryable
+  // RpcRateLimitError. If a relayer bump renames it, the throttle flips to
+  // retryable and consumer retry loops amplify it — guard against that drift.
+  test("the installed @zama-fhe/relayer-sdk still tags its HTTP errors with RELAYER_FETCH_ERROR", () => {
+    const require = createRequire(import.meta.url);
+    const source = readFileSync(require.resolve("@zama-fhe/relayer-sdk/node"), "utf8");
+    expect(source).toContain("RELAYER_FETCH_ERROR");
+  });
+
+  // The drift guards above read the *Node* build, but the browser worker
+  // `importScripts` the CDN UMD bundle pinned by `RELAYER_SDK_VERSION`. Asserting
+  // the pin matches the installed npm version keeps those Node-read guards
+  // meaningful for the browser path; a CDN message reword *within* the same
+  // version still can't be caught offline — gate `RELAYER_SDK_VERSION` bumps on
+  // re-validating the matcher.
+  test("the worker's pinned CDN relayer version matches the installed npm package", () => {
+    const require = createRequire(import.meta.url);
+    const installed = (require("@zama-fhe/relayer-sdk/package.json") as { version: string })
+      .version;
+    const relayerWeb = readFileSync(
+      new URL("../../relayer/relayer-web.ts", import.meta.url),
+      "utf8",
+    );
+    const pinned = /RELAYER_SDK_VERSION = "([^"]+)"/.exec(relayerWeb)?.[1];
+    expect(pinned).toBe(installed);
   });
 });
