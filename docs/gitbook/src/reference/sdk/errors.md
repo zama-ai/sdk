@@ -59,20 +59,20 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: () => "Insufficient confidential balance",
-  INSUFFICIENT_ERC20_BALANCE: () => "Not enough tokens to shield",
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
+  INSUFFICIENT_ERC20_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
   BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
   ERC20_READ_FAILED: () => "Could not read token balance -- check your connection",
   _: (e) => `Unexpected error: ${e}`,
 });
 ```
 
-| Parameter  | Type                                                                 | Description                             |
-| ---------- | -------------------------------------------------------------------- | --------------------------------------- |
-| `error`    | `unknown`                                                            | The caught error                        |
-| `handlers` | `Record<ErrorCode, (e: ZamaError) => T> & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
+| Parameter  | Type                                                                           | Description                             |
+| ---------- | ------------------------------------------------------------------------------ | --------------------------------------- |
+| `error`    | `unknown`                                                                      | The caught error                        |
+| `handlers` | `{ [K in ErrorCode]?: (e: ErrorForCode[K]) => T } & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
-The `_` wildcard catches any `ZamaError` not explicitly handled. Handlers receive the error typed as the base `ZamaError` (`.code`, `.message`); to read subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode`, narrow with `instanceof` (see the detail sections below).
+The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler receives the error class for its code, so subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode` are available without a cast.
 
 ## Error summary
 
