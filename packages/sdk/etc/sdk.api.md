@@ -19570,7 +19570,7 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected transport key pair (stale, expired, or malformed). */
     readonly InvalidTransportKeyPair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
-    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** The configured signer/account is not entitled (ACL) to decrypt this handle. Don't retry — wait for a grant. */
+    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** The configured signer/account is not entitled (ACL) to decrypt this encrypted value. Don't retry — wait for a grant. */
     readonly NotEntitled: "NOT_ENTITLED"; /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
     readonly RpcRateLimited: "RPC_RATE_LIMITED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
