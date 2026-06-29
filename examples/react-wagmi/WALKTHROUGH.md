@@ -276,7 +276,54 @@ The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvi
 
 ---
 
-## 10. Running locally
+## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
+
+The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
+`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
+recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
+value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
+
+The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
+deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
+that token is selected. Configure the addresses via `NEXT_PUBLIC_VAULT_ADDRESS` and
+`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` (see `src/lib/config.ts`); deploy your own with
+[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
+
+**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
+beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
+
+```ts
+const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
+
+// The vault decodes `data` as the beneficiary address to credit.
+const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
+deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
+```
+
+**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
+beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
+permit scoped to the **vault** address — distinct from the confidential-token permits the main
+page grants:
+
+```ts
+const { data: handle } = useReadContract({ address: vaultAddress, abi: VAULT_ABI,
+  functionName: "sharesOf", args: [connectedAddress] });
+
+await grantPermit.mutateAsync([vaultAddress]);               // permit scoped to the vault
+const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
+```
+
+Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
+contract method, not part of the `Token` surface. The vault transfers the caller's full
+confidential balance back via `confidentialTransfer`.
+
+> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
+> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
+> receiver-callback pattern.
+
+---
+
+## 11. Running locally
 
 ```bash
 cd examples/react-wagmi
