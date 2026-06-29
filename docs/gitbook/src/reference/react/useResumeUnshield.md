@@ -19,28 +19,22 @@ import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useEffect } from "react";
-import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const TOKEN = "0xToken" as const;
 
-function ResumeUnshieldGuard() {
-  const wrappedToken = useWrappedToken(TOKEN);
-  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
+function ResumeUnshieldGuard({ children }) {
+  // The SDK persisted the unwrap tx hash during phase 1 and clears it
+  // automatically once the resume finalizes; the query invalidates on success.
+  const { data: unwrapTxHash } = usePendingUnshield(TOKEN);
+  const { mutate: resumeUnshield } = useResumeUnshield(TOKEN);
 
-  useEffect(() => {
-    async function checkPending() {
-      // The SDK persisted the unwrap tx hash during phase 1 and clears it
-      // automatically once the resume finalizes.
-      const pending = await wrappedToken.getPendingUnshield();
-      if (!pending) return;
+  if (unwrapTxHash) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
+  }
 
-      await resumeUnshield({ unwrapTxHash: pending });
-    }
-    checkPending();
-  }, [wrappedToken]);
-
-  return null;
+  return children;
 }
 ```
 
@@ -109,8 +103,8 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **`wrappedToken.getPendingUnshield()`** — returns the stored unwrap tx hash (or `null` if none is pending).
-2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success.
+1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
@@ -128,6 +122,7 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
+- [usePendingUnshield](./usePendingUnshield.md) — detect an interrupted unshield to resume
 - [useUnshield](./useUnshield.md) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](./useUnshieldAll.md) — unshield the entire balance
 - [WrappedToken.resumeUnshield](../sdk/WrappedToken.md#resumeunshield) — imperative equivalent on the `WrappedToken` class

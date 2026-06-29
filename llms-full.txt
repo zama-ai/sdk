@@ -3259,17 +3259,18 @@ await unshieldAll();
 ### Tab: useResumeUnshield
 
 ```tsx
-import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrapper";
-const wrappedToken = useWrappedToken(WRAPPER);
-const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
-// On mount — the SDK persisted the unwrap tx hash during phase 1 and clears
-// it automatically once the resume finalizes.
-const pending = await wrappedToken.getPendingUnshield();
-if (pending) {
-  await resumeUnshield({ unwrapTxHash: pending });
+// The SDK persisted the unwrap tx hash during phase 1 and clears it
+// automatically once the resume finalizes; the query invalidates on success.
+const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
+const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
+
+if (unwrapTxHash) {
+  // Render a "resume" prompt — finalize on user action, not on load.
+  return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
 }
 ```
 
@@ -10573,28 +10574,22 @@ import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
 ### Tab: component.tsx
 
 ```tsx
-import { useEffect } from "react";
-import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const TOKEN = "0xToken" as const;
 
-function ResumeUnshieldGuard() {
-  const wrappedToken = useWrappedToken(TOKEN);
-  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
+function ResumeUnshieldGuard({ children }) {
+  // The SDK persisted the unwrap tx hash during phase 1 and clears it
+  // automatically once the resume finalizes; the query invalidates on success.
+  const { data: unwrapTxHash } = usePendingUnshield(TOKEN);
+  const { mutate: resumeUnshield } = useResumeUnshield(TOKEN);
 
-  useEffect(() => {
-    async function checkPending() {
-      // The SDK persisted the unwrap tx hash during phase 1 and clears it
-      // automatically once the resume finalizes.
-      const pending = await wrappedToken.getPendingUnshield();
-      if (!pending) return;
+  if (unwrapTxHash) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
+  }
 
-      await resumeUnshield({ unwrapTxHash: pending });
-    }
-    checkPending();
-  }, [wrappedToken]);
-
-  return null;
+  return children;
 }
 ```
 
@@ -10683,8 +10678,8 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **`wrappedToken.getPendingUnshield()`** — returns the stored unwrap tx hash (or `null` if none is pending).
-2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success.
+1. **[`usePendingUnshield(tokenAddress)`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
@@ -10750,9 +10745,137 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
+- [usePendingUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md) — detect an interrupted unshield to resume
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire balance
 - [WrappedToken.resumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md#resumeunshield) — imperative equivalent on the `WrappedToken` class
+
+## usePendingUnshield
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/usePendingUnshield.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md
+- logical_path: reference/react/usePendingUnshield
+
+# usePendingUnshield
+
+Read the unwrap transaction hash of an unshield that was interrupted between its two phases (returns `null` if none is pending for the wrapper).
+
+The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
+
+## Import
+
+```ts
+import { usePendingUnshield } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: ResumeUnshieldGuard.tsx
+
+```tsx
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+
+function ResumeUnshieldGuard({ wrapperAddress }: { wrapperAddress: `0x${string}` }) {
+  const { data: pending } = usePendingUnshield(wrapperAddress);
+  const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
+
+  if (!pending) return null;
+
+  // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+  return <button onClick={() => resumeUnshield({ unwrapTxHash: pending })}>Resume unshield</button>;
+}
+```
+
+
+## Parameters
+
+### tokenAddress
+
+`Address`
+
+Address of the confidential wrapper contract. Passed positionally as the first argument.
+
+```ts
+const { data: pending } = usePendingUnshield("0xWrapper");
+```
+
+## Return Type
+
+`data` is `Hex | null` — the unwrap transaction hash of an interrupted unshield, or `null` when none is pending.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Suspense
+
+Use `usePendingUnshieldSuspense` inside a `<Suspense>` boundary. The hook throws a promise while loading, so `data` is always defined (`Hex | null`).
+
+```tsx
+import { usePendingUnshieldSuspense } from "@zama-fhe/react-sdk";
+
+const { data: pending } = usePendingUnshieldSuspense("0xWrapper");
+```
+
+## Related
+
+- [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md) — resume the interrupted unshield from the returned hash
+- [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (persists/clears pending state automatically)
+- [`WrappedToken.getPendingUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md#getpendingunshield) — imperative equivalent on the `WrappedToken` class
+- [`zamaQueryKeys.pendingUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) — cache keys for manual invalidation
 
 ## useUnwrap
 

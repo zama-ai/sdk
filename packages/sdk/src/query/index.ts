@@ -35,6 +35,7 @@ export {
   underlyingAllowanceQueryOptions,
   type UnderlyingAllowanceQueryConfig,
 } from "./underlying-allowance";
+export { pendingUnshieldQueryOptions, type PendingUnshieldQueryConfig } from "./pending-unshield";
 export {
   confidentialIsOperatorQueryOptions,
   type ConfidentialIsOperatorQueryConfig,

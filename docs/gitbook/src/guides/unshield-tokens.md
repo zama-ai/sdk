@@ -152,17 +152,18 @@ await unshieldAll();
 {% tab title="useResumeUnshield" %}
 
 ```tsx
-import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrapper";
-const wrappedToken = useWrappedToken(WRAPPER);
-const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
-// On mount — the SDK persisted the unwrap tx hash during phase 1 and clears
-// it automatically once the resume finalizes.
-const pending = await wrappedToken.getPendingUnshield();
-if (pending) {
-  await resumeUnshield({ unwrapTxHash: pending });
+// The SDK persisted the unwrap tx hash during phase 1 and clears it
+// automatically once the resume finalizes; the query invalidates on success.
+const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
+const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
+
+if (unwrapTxHash) {
+  // Render a "resume" prompt — finalize on user action, not on load.
+  return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
 }
 ```
 

@@ -547,6 +547,15 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public (undocumented)
+export interface PendingUnshieldQueryConfig {
+    // (undocumented)
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: PendingUnshieldQueryConfig): QueryFactoryOptions<Hex | null, Error, Hex | null, ReturnType<typeof zamaQueryKeys.pendingUnshield.token>>;
+
+// @public (undocumented)
 export interface QueryClientLike {
     // (undocumented)
     invalidateQueries(filters: QueryFilterLike): void | Promise<void>;
@@ -1083,6 +1092,12 @@ export const zamaQueryKeys: {
     readonly totalSupply: {
         readonly all: readonly ["zama.totalSupply"];
         readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
+            readonly tokenAddress: `0x${string}`;
+        }];
+    };
+    readonly pendingUnshield: {
+        readonly all: readonly ["zama.pendingUnshield"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.pendingUnshield", {
             readonly tokenAddress: `0x${string}`;
         }];
     };
