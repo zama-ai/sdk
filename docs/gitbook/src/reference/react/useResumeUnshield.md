@@ -20,14 +20,19 @@ import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
-const TOKEN = "0xToken" as const;
-
-function ResumeUnshieldGuard({ children }) {
+function ResumeUnshieldGuard({
+  wrapperAddress,
+  children,
+}: {
+  wrapperAddress: Address;
+  children: React.ReactNode;
+}) {
   // The SDK persisted the unwrap tx hash during phase 1 and clears it
   // automatically once the resume finalizes; the query invalidates on success.
-  const { data: unwrapTxHash } = usePendingUnshield(TOKEN);
-  const { mutate: resumeUnshield } = useResumeUnshield(TOKEN);
+  const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
+  const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
   if (unwrapTxHash) {
     // Finalize on user action, not on load — never trigger a wallet tx unprompted.

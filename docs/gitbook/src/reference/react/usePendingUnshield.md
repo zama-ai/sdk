@@ -22,15 +22,26 @@ import { usePendingUnshield } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
 
-function ResumeUnshieldGuard({ wrapperAddress }: { wrapperAddress: `0x${string}` }) {
+function ResumeUnshieldGuard({
+  wrapperAddress,
+  children,
+}: {
+  wrapperAddress: Address;
+  children: React.ReactNode;
+}) {
   const { data: pending } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
-  if (!pending) return null;
+  if (pending) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return (
+      <button onClick={() => resumeUnshield({ unwrapTxHash: pending })}>Resume unshield</button>
+    );
+  }
 
-  // Finalize on user action, not on load — never trigger a wallet tx unprompted.
-  return <button onClick={() => resumeUnshield({ unwrapTxHash: pending })}>Resume unshield</button>;
+  return children;
 }
 ```
 
