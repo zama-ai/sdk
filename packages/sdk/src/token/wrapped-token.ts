@@ -28,6 +28,7 @@ import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { swallow } from "../utils/swallow";
+import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
 import { Token } from "./token";
 import type {
   GenericSigner,
@@ -344,6 +345,28 @@ export class WrappedToken extends Token {
     return this.#waitAndFinalizeUnshield(unwrapTxHash, crypto.randomUUID(), callbacks);
   }
 
+  /**
+   * Return the unwrap tx hash of an unshield that was interrupted between its
+   * two phases, or `null` if none is pending for this wrapper.
+   *
+   * The SDK persists this automatically when {@link unshield}/{@link unshieldAll}
+   * submit phase 1, and clears it once phase 2 finalizes. Use the returned hash
+   * to surface a "resume" affordance, then pass it to {@link resumeUnshield}.
+   * Resuming is intentionally caller-driven — auto-resuming on load would fire a
+   * wallet transaction unprompted.
+   *
+   * @returns The pending unwrap tx hash, or `null`.
+   *
+   * @example
+   * ```ts
+   * const pending = await wrappedToken.getPendingUnshield();
+   * if (pending) await wrappedToken.resumeUnshield(pending);
+   * ```
+   */
+  async getPendingUnshield(): Promise<Hex | null> {
+    return loadPendingUnshield(this.sdk.storage, this.address);
+  }
+
   // UNSHIELD LOW-LEVEL PRIMITIVES
 
   /**
@@ -471,6 +494,11 @@ export class WrappedToken extends Token {
     callbacks: UnshieldCallbacks | undefined,
   ): Promise<TransactionResult> {
     this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
+    await swallow(
+      "unshield: savePendingUnshield",
+      () => savePendingUnshield(this.sdk.storage, this.address, unshieldHash),
+      this.sdk.logger,
+    );
     let receipt;
     try {
       receipt = await this.sdk.provider.waitForTransactionReceipt(unshieldHash);
@@ -497,6 +525,12 @@ export class WrappedToken extends Token {
     void swallow(
       "unshield: onFinalizeSubmitted",
       () => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash),
+      this.sdk.logger,
+    );
+    // Phase 2 landed: the persisted recovery state is no longer needed.
+    await swallow(
+      "unshield: clearPendingUnshield",
+      () => clearPendingUnshield(this.sdk.storage, this.address),
       this.sdk.logger,
     );
     return finalizeResult;

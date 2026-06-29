@@ -950,6 +950,7 @@ export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
+    getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
