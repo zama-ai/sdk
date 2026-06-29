@@ -1,9 +1,10 @@
-import { describe, expect, test } from "../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type * as ZamaSdkModule from "@zama-fhe/sdk";
-import type { ZamaSDKEventListener, ZamaConfig } from "@zama-fhe/sdk";
+import type { ZamaConfig, ZamaSDKEventListener } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { vi } from "vitest";
 import { useZamaSDK } from "../provider";
+import { describe, expect, test } from "../test-fixtures";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaConfig[] = [];
@@ -129,7 +130,12 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders,
     relayer,
   }) => {
-    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    const sink = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    };
     vi.mocked(relayer.generateTransportKeyPair).mockRejectedValue(new Error("warmup boom"));
 
     renderWithProviders(() => useZamaSDK(), { relayer, logger: sink });
@@ -138,12 +144,14 @@ describe("ZamaProvider & useZamaSDK", () => {
       expect(sink.warn).toHaveBeenCalled();
     });
 
-    // The provider passes a bare message; the `[zama-sdk]` prefix is owned
-    // solely by LoggerService. A literal prefix here would double up in
-    // production (the regression this test guards against). Assert it for every
-    // warmup-failure log (mount + each wallet-account change re-warm).
+    // The provider passes a bare message to its LoggerService, which owns the
+    // `[zama-sdk]` prefix and adds it exactly once before the consumer's sink
+    // sees it. A literal prefix in the provider's call site would double up to
+    // `[zama-sdk] [zama-sdk] …` (the regression this test guards against).
+    // Assert the single-prefixed result for every warmup-failure log
+    // (mount + each wallet-account change re-warm).
     for (const [message] of vi.mocked(sink.warn).mock.calls) {
-      expect(message).toBe("warm transport key pair failed");
+      expect(message).toBe("[zama-sdk] warm transport key pair failed");
     }
   });
 
