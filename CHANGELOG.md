@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2026-06-26)
+
+### Bug Fixes
+
+- **sdk:** resolve node worker without import.meta.resolve for SSR bundlers [SDK-235] ([#490](https://github.com/zama-ai/sdk/issues/490)) ([7ce975b]()), closes [#285]()
+
 ## [3.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0-alpha.1) (2026-06-25)
 
 ### Features
