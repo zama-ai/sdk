@@ -155,12 +155,7 @@ describe("FheArtifactCache", () => {
         set: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn().mockResolvedValue(undefined),
       };
-      const logger = {
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      };
+      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       const cache = new FheArtifactCache({
         storage: badStorage,
@@ -221,10 +216,7 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
         logger: new LoggerService(),
       });
-      const pp = {
-        publicParamsId: "pp1",
-        publicParams: new Uint8Array([4, 5, 6]),
-      };
+      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([4, 5, 6]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const result1 = await cache.getPublicParams(2048, fetcher);
@@ -237,10 +229,7 @@ describe("FheArtifactCache", () => {
     });
 
     test("persists public params to storage and restores from a fresh cache instance", async () => {
-      const pp = {
-        publicParamsId: "pp1",
-        publicParams: new Uint8Array([7, 8]),
-      };
+      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([7, 8]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const cache1 = new FheArtifactCache({
@@ -271,14 +260,8 @@ describe("FheArtifactCache", () => {
         relayerUrl: DUMMY_RELAYER_URL,
         logger: new LoggerService(),
       });
-      const pp2048 = {
-        publicParamsId: "pp-2048",
-        publicParams: new Uint8Array([1]),
-      };
-      const pp4096 = {
-        publicParamsId: "pp-4096",
-        publicParams: new Uint8Array([2]),
-      };
+      const pp2048 = { publicParamsId: "pp-2048", publicParams: new Uint8Array([1]) };
+      const pp4096 = { publicParamsId: "pp-4096", publicParams: new Uint8Array([2]) };
 
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp2048));
       const fetcher4096 = vi.fn().mockResolvedValue(pp4096);
@@ -388,20 +371,8 @@ describe("FheArtifactCache", () => {
     const MANIFEST = {
       status: "succeeded",
       response: {
-        fheKeyInfo: [
-          {
-            fhePublicKey: {
-              dataId: "pk-id-1",
-              urls: [PK_ARTIFACT_URL],
-            },
-          },
-        ],
-        crs: {
-          2048: {
-            dataId: "pp-id-1",
-            urls: [CRS_ARTIFACT_URL],
-          },
-        },
+        fheKeyInfo: [{ fhePublicKey: { dataId: "pk-id-1", urls: [PK_ARTIFACT_URL] } }],
+        crs: { 2048: { dataId: "pp-id-1", urls: [CRS_ARTIFACT_URL] } },
       },
     };
 
@@ -529,10 +500,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK returns 200 = changed
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -551,11 +519,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK fresh (304), CRS changed (200)
-      mockFetch({
-        pkStatus: 304,
-        crsStatus: 200,
-        crsHeaders: { etag: '"pp-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 304, crsStatus: 200, crsHeaders: { etag: '"pp-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -603,11 +567,7 @@ describe("FheArtifactCache", () => {
       );
 
       // 304 with a new etag header (servers may update weak→strong)
-      mockFetch({
-        pkStatus: 304,
-        pkHeaders: { etag: '"refreshed-etag"' },
-        crsStatus: 304,
-      });
+      mockFetch({ pkStatus: 304, pkHeaders: { etag: '"refreshed-etag"' }, crsStatus: 304 });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
@@ -685,12 +645,7 @@ describe("FheArtifactCache", () => {
 
     test("logs warning on network error when logger is provided", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
-      const logger = {
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      };
+      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
@@ -735,10 +690,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK artifact changed (200)
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -781,10 +733,7 @@ describe("FheArtifactCache", () => {
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       // PK artifact changed (200)
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       // Should still report stale even though storage delete failed
@@ -812,11 +761,7 @@ describe("FheArtifactCache", () => {
       await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
 
       // CRS artifact changed (200)
-      mockFetch({
-        pkStatus: 304,
-        crsStatus: 200,
-        crsHeaders: { etag: '"pp-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 304, crsStatus: 200, crsHeaders: { etag: '"pp-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -865,11 +810,7 @@ describe("FheArtifactCache", () => {
       globalThis.fetch = vi.fn().mockImplementation((url: string | URL) => {
         const urlStr = String(url);
         if (urlStr === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve(MANIFEST),
-          });
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(MANIFEST) });
         }
         if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
           return Promise.resolve({
@@ -906,19 +847,11 @@ describe("FheArtifactCache", () => {
       globalThis.fetch = vi.fn().mockImplementation((url: string | URL, opts?: RequestInit) => {
         const urlStr = String(url);
         if (urlStr === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve(MANIFEST),
-          });
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(MANIFEST) });
         }
         if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
           if (opts?.method === "HEAD") {
-            return Promise.resolve({
-              status: 405,
-              ok: false,
-              headers: new Headers(),
-            });
+            return Promise.resolve({ status: 405, ok: false, headers: new Headers() });
           }
           // GET fallback returns 304
           return Promise.resolve({
@@ -1055,13 +988,7 @@ describe("FheArtifactCache", () => {
           Promise.resolve({
             status: "succeeded",
             response: {
-              fheKeyInfo: [
-                {
-                  fhePublicKey: {
-                    urls: ["https://cdn.example.com/pk.bin"],
-                  },
-                },
-              ],
+              fheKeyInfo: [{ fhePublicKey: { urls: ["https://cdn.example.com/pk.bin"] } }],
               crs: {},
             },
           }),

@@ -26,10 +26,7 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     data: wrapperAddress,
     isLoading,
     error,
-  } = useWrapperDiscovery({
-    tokenAddress,
-    erc20Address: "0xUSDC",
-  });
+  } = useWrapperDiscovery({ tokenAddress, erc20Address: "0xUSDC" });
 
   if (isLoading) return <p>Discovering wrapper...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -56,10 +53,7 @@ Address of any confidential token you control. Used to scope the query cache key
 Address of the ERC-20 token to discover the wrapper for. Pass `undefined` to disable the query.
 
 ```ts
-useWrapperDiscovery({
-  tokenAddress: "0xConfidentialToken",
-  erc20Address: "0xUSDC",
-});
+useWrapperDiscovery({ tokenAddress: "0xConfidentialToken", erc20Address: "0xUSDC" });
 ```
 
 ## Return Type

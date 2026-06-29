@@ -9,9 +9,7 @@ import { useMetadata } from "../token/use-metadata";
 
 describe("ZamaProvider with signer={undefined}", () => {
   test("mounts cleanly and exposes signer-free SDK", ({ renderWithProviders }) => {
-    const { result } = renderWithProviders(() => useZamaSDK(), {
-      signer: undefined,
-    });
+    const { result } = renderWithProviders(() => useZamaSDK(), { signer: undefined });
 
     expect(result.current).toBeDefined();
     expect(result.current.signer).toBeUndefined();
@@ -34,9 +32,7 @@ describe("ZamaProvider with signer={undefined}", () => {
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useMetadata(tokenAddress), {
-      signer: undefined,
-    });
+    const { result } = renderWithProviders(() => useMetadata(tokenAddress), { signer: undefined });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });

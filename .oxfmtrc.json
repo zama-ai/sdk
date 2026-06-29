@@ -5,6 +5,7 @@
   "trailingComma": "all",
   "printWidth": 100,
   "tabWidth": 2,
+  "objectWrap": "collapse",
   "sortPackageJson": false,
   "ignorePatterns": [
     "dist",

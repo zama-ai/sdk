@@ -188,19 +188,14 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-success-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransferAndCall(
         { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSuccess,
-        },
+        { onMutate, onSuccess },
       ),
     );
 
@@ -263,19 +258,14 @@ describe("useConfidentialTransferAndCall", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-and-call-settled-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-and-call-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
       useConfidentialTransferAndCall(
         { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSettled,
-        },
+        { onMutate, onSettled },
       ),
     );
 
@@ -616,9 +606,7 @@ describe("useConfidentialTransferAndCall error propagation", () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(
       () => useMutation(confidentialTransferAndCallMutationOptions(mockWrappedToken)),
-      {
-        wrapper: Wrapper,
-      },
+      { wrapper: Wrapper },
     );
 
     await act(async () => {

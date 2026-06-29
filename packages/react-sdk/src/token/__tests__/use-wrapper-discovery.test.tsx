@@ -49,10 +49,7 @@ describe("useWrapperDiscovery", () => {
     const ctx = createWrapper({ signer });
     const { result, rerender } = renderHook(
       ({ erc20Address }) => useWrapperDiscovery({ tokenAddress: tokenAddress, erc20Address }),
-      {
-        wrapper: ctx.Wrapper,
-        initialProps: { erc20Address: undefined as Address | undefined },
-      },
+      { wrapper: ctx.Wrapper, initialProps: { erc20Address: undefined as Address | undefined } },
     );
 
     expect(result.current.isPending).toBe(true);

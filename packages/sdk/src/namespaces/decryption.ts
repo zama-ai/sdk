@@ -137,11 +137,7 @@ export class Decryption {
    */
   async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     if (encryptedValues.length === 0) {
-      return {
-        clearValues: {},
-        decryptionProof: "0x",
-        abiEncodedClearValues: "0x",
-      };
+      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
     try {

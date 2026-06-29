@@ -29,10 +29,7 @@ function makeSdk(auth?: Auth): ZamaSDK {
     chain: viemMainnet,
     transport,
   });
-  const chain = {
-    ...mainnet,
-    ...(auth ? { auth } : {}),
-  } as const satisfies FheChain;
+  const chain = { ...mainnet, ...(auth ? { auth } : {}) } as const satisfies FheChain;
   const config = createConfig({
     chains: [chain],
     publicClient,

@@ -174,9 +174,7 @@ try {
 The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts.
 
 ```ts
-matchZamaError(error, {
-  SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message),
-});
+matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });
 ```
 
 **How to handle:** Check wallet connectivity and firmware version. Retry after the underlying issue is resolved.
@@ -202,9 +200,7 @@ matchZamaError(error, {
 FHE decryption failed. Can occur after an interrupted unshield or when the transport key pair state is corrupted.
 
 ```ts
-matchZamaError(error, {
-  DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing"),
-});
+matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing") });
 ```
 
 **How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
@@ -315,9 +311,7 @@ try {
 Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE worker fails to initialize (e.g. missing WASM support, terminated relayer).
 
 ```ts
-matchZamaError(error, {
-  CONFIGURATION: (e) => console.error("Configuration error:", e.message),
-});
+matchZamaError(error, { CONFIGURATION: (e) => console.error("Configuration error:", e.message) });
 ```
 
 **How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
@@ -438,9 +432,7 @@ matchZamaError(error, {
 No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation, and by `decryptBalanceAs` / `batchDecryptBalancesAs` (including on cache hits) when the delegation is missing or has been revoked.
 
 ```ts
-matchZamaError(error, {
-  DELEGATION_NOT_FOUND: () => showError("No active delegation found"),
-});
+matchZamaError(error, { DELEGATION_NOT_FOUND: () => showError("No active delegation found") });
 ```
 
 **How to handle:** Verify the delegator, delegate, and contract addresses are correct.
@@ -537,9 +529,7 @@ matchZamaError(error, {
 Caught from the on-chain `EnforcedPause` revert. The ACL contract is paused, temporarily disabling all delegation operations.
 
 ```ts
-matchZamaError(error, {
-  ACL_PAUSED: () => showError("Delegation is temporarily disabled"),
-});
+matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily disabled") });
 ```
 
 **How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.

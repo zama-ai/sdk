@@ -15,10 +15,5 @@ export function useTokenPair({ index }: { index: bigint | undefined }) {
   const sdk = useZamaSDK();
   const registryAddress = useWrappersRegistryAddress();
 
-  return useQuery<TokenWrapperPair>(
-    tokenPairQueryOptions(sdk, {
-      registryAddress,
-      index,
-    }),
-  );
+  return useQuery<TokenWrapperPair>(tokenPairQueryOptions(sdk, { registryAddress, index }));
 }

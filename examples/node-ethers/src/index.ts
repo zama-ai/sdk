@@ -55,9 +55,7 @@ async function main() {
   const zamaSepolia = {
     ...sepolia,
     network: SEPOLIA_RPC_URL,
-    ...(RELAYER_API_KEY && {
-      auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-    }),
+    ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
   } as const satisfies FheChain;
 
   // Each SDK instance has its own signer and credential context.
@@ -70,9 +68,7 @@ async function main() {
       chains: [zamaSepolia],
       signer: walletA,
       storage: new MemoryStorage(),
-      relayers: {
-        [zamaSepolia.id]: node(),
-      },
+      relayers: { [zamaSepolia.id]: node() },
     }),
   );
   using sdkB = new ZamaSDK(
@@ -80,9 +76,7 @@ async function main() {
       chains: [zamaSepolia],
       signer: walletB,
       storage: new MemoryStorage(),
-      relayers: {
-        [zamaSepolia.id]: node(),
-      },
+      relayers: { [zamaSepolia.id]: node() },
     }),
   );
 

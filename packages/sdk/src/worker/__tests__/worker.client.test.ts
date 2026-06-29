@@ -73,9 +73,7 @@ let uuidCounter = 0;
 
 vi.stubGlobal(
   "crypto",
-  Object.create(globalThis.crypto, {
-    randomUUID: { value: () => `uuid-${++uuidCounter}` },
-  }),
+  Object.create(globalThis.crypto, { randomUUID: { value: () => `uuid-${++uuidCounter}` } }),
 );
 
 // ---------------------------------------------------------------------------
@@ -124,10 +122,7 @@ function defaultWebConfig() {
 }
 
 function defaultNodeConfig() {
-  return {
-    chains: [{ chainId: 1 } as never],
-    logger: new LoggerService(),
-  };
+  return { chains: [{ chainId: 1 } as never], logger: new LoggerService() };
 }
 
 /** Simulate a successful response for any request posted to a mock browser Worker. */
@@ -136,12 +131,7 @@ function autoResolveWebWorker(worker: MockWorker): void {
     Promise.resolve().then(() => {
       worker.onmessage?.(
         new MessageEvent("message", {
-          data: {
-            id: req.id,
-            type: req.type,
-            success: true,
-            data: { initialized: true },
-          },
+          data: { id: req.id, type: req.type, success: true, data: { initialized: true } },
         }),
       );
     });
@@ -153,12 +143,7 @@ function autoResolveNodeWorker(worker: MockNodeWorker): void {
   worker.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
       const handler = worker.listeners["message"]?.[0];
-      handler?.({
-        id: req.id,
-        type: req.type,
-        success: true,
-        data: { initialized: true },
-      });
+      handler?.({ id: req.id, type: req.type, success: true, data: { initialized: true } });
     });
   });
 }
@@ -317,12 +302,7 @@ describe("RelayerWorkerClient", () => {
       warn: vi.fn(),
       error: vi.fn(),
     });
-    const config = {
-      ...defaultWebConfig(),
-      logger,
-      integrity: "sha384-abc",
-      thread: 4,
-    };
+    const config = { ...defaultWebConfig(), logger, integrity: "sha384-abc", thread: 4 };
     const client = new RelayerWorkerClient(config);
     await client.initWorker();
 
@@ -428,12 +408,7 @@ describe("RelayerWorkerClient", () => {
       Promise.resolve().then(() => {
         worker.onmessage?.(
           new MessageEvent("message", {
-            data: {
-              id: req.id,
-              type: req.type,
-              success: true,
-              data: { updated: true },
-            },
+            data: { id: req.id, type: req.type, success: true, data: { updated: true } },
           }),
         );
       });

@@ -22,9 +22,7 @@ import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
 function LookupWrapper({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { data, isLoading, error } = useConfidentialTokenAddress({
-    tokenAddress,
-  });
+  const { data, isLoading, error } = useConfidentialTokenAddress({ tokenAddress });
 
   if (isLoading) return <p>Looking up...</p>;
   if (error) return <p>Error: {error.message}</p>;

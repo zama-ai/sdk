@@ -45,15 +45,9 @@ import { sepolia } from "viem/chains";
 
 const tokenAddress = "0xYourConfidentialToken" as Address;
 const rpcUrl = "https://sepolia.infura.io/v3/YOUR_KEY";
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(rpcUrl),
-});
+const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) });
 
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const chain = {
   ...sepoliaFhe,
@@ -90,10 +84,7 @@ function AuthGate({
 }
 
 function Balance() {
-  const { data: balance, isLoading } = useConfidentialBalance({
-    address: tokenAddress,
-    account,
-  });
+  const { data: balance, isLoading } = useConfidentialBalance({ address: tokenAddress, account });
 
   if (isLoading) return <p>Decrypting...</p>;
   return <p>Balance: {balance?.toString()}</p>;

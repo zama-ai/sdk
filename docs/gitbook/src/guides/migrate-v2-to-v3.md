@@ -172,9 +172,7 @@ const auth = RELAYER_API_KEY
 
 const relayer = new RelayerNode({
   getChainId: async () => sepolia.id,
-  transports: {
-    [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) },
-  },
+  transports: { [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) } },
 });
 
 using sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
@@ -192,9 +190,7 @@ import { node } from "@zama-fhe/sdk/node";
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 
 using sdk = new ZamaSDK(
@@ -587,12 +583,7 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 const { data: decrypted } = useUserDecrypt({ handles });
 
-const handle = (await sdk.signer.readContract({
-  address,
-  abi,
-  functionName,
-  args,
-})) as string;
+const handle = (await sdk.signer.readContract({ address, abi, functionName, args })) as string;
 setHandles([{ handle, contractAddress }]);
 // read result:
 decrypted?.[handles[0].handle];

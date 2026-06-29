@@ -230,9 +230,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressInputVerification as Address,
       ),
-      types: {
-        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
-      },
+      types: { CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification },
       primaryType: "CiphertextVerification",
       message: {
         ctHandles: handles,
@@ -309,11 +307,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     const decryptionProof = concat([toHex(new Uint8Array([1])), signature]);
 
-    return {
-      clearValues,
-      abiEncodedClearValues,
-      decryptionProof,
-    };
+    return { clearValues, abiEncodedClearValues, decryptionProof };
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -361,17 +355,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
-    return {
-      publicKeyId: "mock-public-key-id",
-      publicKey: new Uint8Array([32]),
-    };
+    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
   }
 
   async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
-    return {
-      publicParams: new Uint8Array([32]),
-      publicParamsId: "mock-public-params-id",
-    };
+    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 
   async getAclAddress(): Promise<Address> {

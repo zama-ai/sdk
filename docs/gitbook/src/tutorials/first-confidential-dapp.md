@@ -52,9 +52,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
-  transports: {
-    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
-  },
+  transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
 export const mySepolia = {
@@ -131,10 +129,7 @@ export function BalanceDisplay() {
     data: balance,
     isLoading,
     error,
-  } = useConfidentialBalance({
-    address: TOKEN_ADDRESS,
-    account: address,
-  });
+  } = useConfidentialBalance({ address: TOKEN_ADDRESS, account: address });
 
   if (error) return <p>Failed to load balance.</p>;
 
@@ -165,9 +160,7 @@ import { useShield } from "@zama-fhe/react-sdk";
 import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
-  const { mutateAsync: shield, isPending } = useShield({
-    address: WRAPPER_ADDRESS,
-  });
+  const { mutateAsync: shield, isPending } = useShield({ address: WRAPPER_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -210,9 +203,7 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    address: TOKEN_ADDRESS,
-  });
+  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: TOKEN_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

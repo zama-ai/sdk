@@ -20,9 +20,7 @@ describe("ViemSigner", () => {
     "%s throws WalletNotConnectedError when no account is configured",
     async (_, call) => {
       const signer = new ViemSigner({
-        walletClient: {
-          getChainId: vi.fn().mockResolvedValue(31337),
-        } as unknown as WalletClient,
+        walletClient: { getChainId: vi.fn().mockResolvedValue(31337) } as unknown as WalletClient,
       });
 
       await expect(

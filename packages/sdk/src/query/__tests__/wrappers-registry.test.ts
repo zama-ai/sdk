@@ -20,9 +20,7 @@ const C_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 
 describe("tokenPairsQueryOptions", () => {
   test("includes registry address in query key", ({ sdk }) => {
-    const options = tokenPairsQueryOptions(sdk, {
-      registryAddress: REGISTRY,
-    });
+    const options = tokenPairsQueryOptions(sdk, { registryAddress: REGISTRY });
     expect(options.queryKey).toEqual([
       "zama.wrappersRegistry",
       { type: "tokenPairs", registryAddress: getAddress(REGISTRY) },
@@ -31,17 +29,13 @@ describe("tokenPairsQueryOptions", () => {
   });
 
   test("disabled when registryAddress is undefined", ({ sdk }) => {
-    const options = tokenPairsQueryOptions(sdk, {
-      registryAddress: undefined,
-    });
+    const options = tokenPairsQueryOptions(sdk, { registryAddress: undefined });
     expect(options.enabled).toBe(false);
   });
 
   test("queryFn calls readContract", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue([]);
-    const options = tokenPairsQueryOptions(sdk, {
-      registryAddress: REGISTRY,
-    });
+    const options = tokenPairsQueryOptions(sdk, { registryAddress: REGISTRY });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toEqual([]);
     expect(provider.readContract).toHaveBeenCalledWith(
@@ -52,9 +46,7 @@ describe("tokenPairsQueryOptions", () => {
 
 describe("tokenPairsLengthQueryOptions", () => {
   test("includes registry address in query key", ({ sdk }) => {
-    const options = tokenPairsLengthQueryOptions(sdk, {
-      registryAddress: REGISTRY,
-    });
+    const options = tokenPairsLengthQueryOptions(sdk, { registryAddress: REGISTRY });
     expect(options.queryKey).toEqual([
       "zama.wrappersRegistry",
       { type: "tokenPairsLength", registryAddress: getAddress(REGISTRY) },
@@ -63,9 +55,7 @@ describe("tokenPairsLengthQueryOptions", () => {
 
   test("queryFn returns bigint", async ({ sdk, provider, mockQueryContext }) => {
     vi.mocked(provider.readContract).mockResolvedValue(5n);
-    const options = tokenPairsLengthQueryOptions(sdk, {
-      registryAddress: REGISTRY,
-    });
+    const options = tokenPairsLengthQueryOptions(sdk, { registryAddress: REGISTRY });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toBe(5n);
   });
@@ -116,20 +106,14 @@ describe("tokenPairsSliceQueryOptions", () => {
 describe("tokenPairQueryOptions", () => {
   test("disabled when index is undefined", ({ sdk }) => {
     expect(
-      tokenPairQueryOptions(sdk, {
-        registryAddress: REGISTRY,
-        index: undefined,
-      }).enabled,
+      tokenPairQueryOptions(sdk, { registryAddress: REGISTRY, index: undefined }).enabled,
     ).toBe(false);
   });
 
   test("queryFn passes bigint index", async ({ sdk, provider, mockQueryContext }) => {
     const pair = { tokenAddress: TOKEN, confidentialTokenAddress: C_TOKEN, isValid: true };
     vi.mocked(provider.readContract).mockResolvedValue(pair);
-    const options = tokenPairQueryOptions(sdk, {
-      registryAddress: REGISTRY,
-      index: 3n,
-    });
+    const options = tokenPairQueryOptions(sdk, { registryAddress: REGISTRY, index: 3n });
     const result = await options.queryFn(mockQueryContext(options.queryKey));
     expect(result).toEqual(pair);
   });
@@ -241,17 +225,13 @@ describe("listPairsQueryOptions", () => {
 
   test("staleTime equals registry.ttlMs", () => {
     const { registry } = makeRegistry(3_600_000);
-    const options = listPairsQueryOptions(registry, {
-      registryAddress: REGISTRY,
-    });
+    const options = listPairsQueryOptions(registry, { registryAddress: REGISTRY });
     expect(options.staleTime).toBe(3_600_000);
   });
 
   test("disabled when registryAddress is undefined", () => {
     const { registry } = makeRegistry();
-    const options = listPairsQueryOptions(registry, {
-      registryAddress: undefined,
-    });
+    const options = listPairsQueryOptions(registry, { registryAddress: undefined });
     expect(options.enabled).toBe(false);
   });
 
@@ -274,9 +254,7 @@ describe("listPairsQueryOptions", () => {
 
   test("uses zeroAddress in query key when registryAddress is undefined", () => {
     const { registry } = makeRegistry();
-    const options = listPairsQueryOptions(registry, {
-      registryAddress: undefined,
-    });
+    const options = listPairsQueryOptions(registry, { registryAddress: undefined });
     expect(options.queryKey[1]).toMatchObject({ registryAddress: zeroAddress });
   });
 });
