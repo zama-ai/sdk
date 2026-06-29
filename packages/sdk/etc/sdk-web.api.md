@@ -20,11 +20,6 @@ export interface WebRelayerConfig extends RelayerConfig {
     readonly type: "web";
 }
 
-// @public
-export interface WebRelayerOptions {
-    logger?: GenericLogger;
-}
-
 // (No @packageDocumentation comment for this package)
 
 ```

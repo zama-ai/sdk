@@ -6,14 +6,6 @@ import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } fr
 
 export type { AtLeastOneChain };
 
-// ── Shared option shapes ─────────────────────────────────────────────────────
-
-/** Options for the web() relayer. */
-export interface WebRelayerOptions {
-  /** Optional logger for observing FHE operation lifecycle and timing. */
-  logger?: GenericLogger;
-}
-
 // ── Relayer config types ─────────────────────────────────────────────────────
 
 /**

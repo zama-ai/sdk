@@ -9,4 +9,4 @@
  */
 
 export { web } from "../config/web";
-export type { WebRelayerConfig, WebRelayerOptions } from "../config/types";
+export type { WebRelayerConfig } from "../config/types";
