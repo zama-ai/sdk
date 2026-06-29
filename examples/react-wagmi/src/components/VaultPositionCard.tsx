@@ -92,11 +92,15 @@ export function VaultPositionCard({
       <div className="card-title">Your Vault Position</div>
 
       {!hasPosition ? (
-        <p className="token-meta">No vault position yet — deposit above to credit a beneficiary.</p>
+        <p className="token-meta" data-testid="vault-no-position">
+          No vault position yet — deposit above to credit a beneficiary.
+        </p>
       ) : (
         <>
           <div className="input-row card-gap">
-            <span className="input-unit">{revealed ? formattedShares : "•••••"}</span>
+            <span className="input-unit" data-testid="vault-position-amount">
+              {revealed ? formattedShares : "•••••"}
+            </span>
           </div>
 
           <button
@@ -104,6 +108,7 @@ export function VaultPositionCard({
             className="btn btn-secondary btn-full card-gap"
             onClick={handleReveal}
             disabled={grantPermit.isPending || decrypt.isFetching || revealed}
+            data-testid="vault-reveal-button"
           >
             {grantPermit.isPending
               ? "Signing…"
@@ -119,6 +124,7 @@ export function VaultPositionCard({
             className="btn btn-primary btn-full"
             onClick={() => withdraw.mutate()}
             disabled={withdraw.isPending}
+            data-testid="vault-withdraw-button"
           >
             {withdraw.isPending ? "Withdrawing…" : "Withdraw all"}
           </button>

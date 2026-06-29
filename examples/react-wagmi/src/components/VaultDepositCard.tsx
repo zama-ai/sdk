@@ -65,6 +65,7 @@ export function VaultDepositCard({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
+          data-testid="vault-amount-input"
         />
         <span className="input-unit">{symbol}</span>
       </div>
@@ -75,11 +76,13 @@ export function VaultDepositCard({
         value={beneficiary}
         onChange={(e) => setBeneficiary(e.target.value)}
         placeholder="0x…"
+        data-testid="vault-beneficiary-input"
       />
       <button
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleDeposit}
+        data-testid="vault-deposit-button"
         disabled={
           disabled ||
           balanceDecryptRequired ||

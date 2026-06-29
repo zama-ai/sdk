@@ -14,7 +14,13 @@ export default defineConfig({
     timeout: 120_000,
     // Force the default RPC URL so mockRpc's intercept pattern always matches.
     // Without this, a dev's .env.local override would bypass the route mock.
-    env: { NEXT_PUBLIC_SEPOLIA_RPC_URL: "" },
+    // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
+    // ConfidentialVault cards render when that token is selected in e2e.
+    env: {
+      NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
+      NEXT_PUBLIC_VAULT_ADDRESS: "0x5555555555555555555555555555555555555555",
+      NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN: "0x2222222222222222222222222222222222222222",
+    },
   },
   projects: [
     {
