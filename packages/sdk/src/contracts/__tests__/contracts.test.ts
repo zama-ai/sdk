@@ -23,7 +23,9 @@ import {
 import {
   confidentialBalanceOfContract,
   confidentialTotalSupplyContract,
+  confidentialTransferAndCallContract,
   confidentialTransferContract,
+  confidentialTransferFromAndCallContract,
   confidentialTransferFromContract,
   finalizeUnwrapContract,
   inferredTotalSupplyContract,
@@ -135,6 +137,40 @@ describe("Encryption contract builders", () => {
     expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd"]);
   });
 
+  test("confidentialTransferAndCallContract forwards hex handle, proof and data", ({
+    tokenAddress,
+    userAddress,
+    handle,
+    inputProof,
+  }) => {
+    const config = confidentialTransferAndCallContract(
+      tokenAddress,
+      userAddress,
+      handle,
+      inputProof,
+      "0xdeadbeef",
+    );
+    expect(config.address).toBe(tokenAddress);
+    expect(config.functionName).toBe("confidentialTransferAndCall");
+    expect(config.args).toEqual([userAddress, handle, inputProof, "0xdeadbeef"]);
+  });
+
+  test("confidentialTransferFromAndCallContract forwards hex handle, proof and data", ({
+    tokenAddress,
+    userAddress,
+  }) => {
+    const config = confidentialTransferFromAndCallContract(
+      tokenAddress,
+      userAddress,
+      SPENDER,
+      "0xab",
+      "0xcd",
+      "0xdeadbeef",
+    );
+    expect(config.functionName).toBe("confidentialTransferFromAndCall");
+    expect(config.args).toEqual([userAddress, SPENDER, "0xab", "0xcd", "0xdeadbeef"]);
+  });
+
   test("isOperatorContract", ({ tokenAddress, userAddress }) => {
     const config = isOperatorContract(tokenAddress, userAddress, SPENDER);
     expect(config.functionName).toBe("isOperator");
@@ -214,16 +250,8 @@ describe("Wrapper contract builders", () => {
 // unwrapRequestId, unwrapAmount / unwrapRequester are exposed, and both UnwrapRequested
 // and UnwrapFinalized events include the indexed unwrapRequestId topic.
 describe("confidentialWrapperAbi version smoke test (protocol-apps@71611c624ddc)", () => {
-  type AbiFunction = {
-    type: string;
-    name: string;
-    inputs: { type: string; name: string }[];
-  };
-  type AbiEvent = {
-    type: string;
-    name: string;
-    inputs: { type: string; name: string }[];
-  };
+  type AbiFunction = { type: string; name: string; inputs: { type: string; name: string }[] };
+  type AbiEvent = { type: string; name: string; inputs: { type: string; name: string }[] };
   const fns = (confidentialWrapperAbi as unknown as AbiFunction[]).filter(
     (x) => x.type === "function",
   );

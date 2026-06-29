@@ -72,9 +72,7 @@ It then derives an FHE Sepolia chain object from the SDK preset:
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 ```
 
@@ -90,9 +88,7 @@ using sdkA = new ZamaSDK(
     publicClient,
     walletClient: walletClientA,
     storage: new MemoryStorage(),
-    relayers: {
-      [zamaSepolia.id]: node(),
-    },
+    relayers: { [zamaSepolia.id]: node() },
   }),
 );
 ```

@@ -55,9 +55,7 @@ Pass exactly one of the two parameters below.
 Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
 
 ```ts
-const signer = new EthersSigner({
-  ethereum: window.ethereum!,
-});
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 ```
 
 ---
@@ -72,9 +70,7 @@ Ethers signer for server-side or scripted use. `subscribe()` is not available in
 const provider = new JsonRpcProvider(rpcUrl);
 const wallet = new Wallet(privateKey, provider);
 
-const signer = new EthersSigner({
-  signer: wallet,
-});
+const signer = new EthersSigner({ signer: wallet });
 ```
 
 ## Methods

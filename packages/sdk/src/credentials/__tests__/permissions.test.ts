@@ -76,14 +76,8 @@ describe("findPermitToWiden", () => {
   });
 
   test("breaks ties by most-recent startTimestamp", () => {
-    const older = makePermission([T1, T2], {
-      signature: SIG_1,
-      startTimestamp: 1_700_000_000,
-    });
-    const newer = makePermission([T1, T2], {
-      signature: SIG_2,
-      startTimestamp: 1_700_000_500,
-    });
+    const older = makePermission([T1, T2], { signature: SIG_1, startTimestamp: 1_700_000_000 });
+    const newer = makePermission([T1, T2], { signature: SIG_2, startTimestamp: 1_700_000_500 });
     // Same overlap with requested. Newer wins.
     const picked = findPermitToWiden([older, newer], [T3], [T1, T2, T3]);
     expect(picked).toBe(newer);

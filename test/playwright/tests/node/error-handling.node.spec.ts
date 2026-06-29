@@ -35,9 +35,7 @@ function createZamaSDK({
       chains: [chainOverrides],
       publicClient,
       walletClient: viemClient,
-      relayers: {
-        [chainOverrides.id]: node(poolOptions),
-      },
+      relayers: { [chainOverrides.id]: node(poolOptions) },
     }),
   );
 }
@@ -53,36 +51,22 @@ test("operations after terminate throw", async ({ sdk }) => {
 test("matchZamaError routes to the correct handler", async () => {
   const decErr = new DecryptionFailedError("test decryption failure");
   expect(
-    matchZamaError(decErr, {
-      DECRYPTION_FAILED: () => "decryption_failed",
-      _: () => "other",
-    }),
+    matchZamaError(decErr, { DECRYPTION_FAILED: () => "decryption_failed", _: () => "other" }),
   ).toBe("decryption_failed");
 
   const noCipherErr = new NoCiphertextError("no ciphertext");
   expect(
-    matchZamaError(noCipherErr, {
-      NO_CIPHERTEXT: () => "no_ciphertext",
-      _: () => "other",
-    }),
+    matchZamaError(noCipherErr, { NO_CIPHERTEXT: () => "no_ciphertext", _: () => "other" }),
   ).toBe("no_ciphertext");
 
   expect(
-    matchZamaError(decErr, {
-      NO_CIPHERTEXT: () => "no_ciphertext",
-      _: () => "fallback",
-    }),
+    matchZamaError(decErr, { NO_CIPHERTEXT: () => "no_ciphertext", _: () => "fallback" }),
   ).toBe("fallback");
 });
 
 test("zero poolSize rejects at config creation", async ({ chain, publicClient, viemClient }) => {
   expect(() =>
-    createZamaSDK({
-      chain,
-      publicClient,
-      viemClient,
-      poolOptions: { poolSize: 0 },
-    }),
+    createZamaSDK({ chain, publicClient, viemClient, poolOptions: { poolSize: 0 } }),
   ).toThrow();
 });
 
@@ -91,10 +75,7 @@ test("init failure resets so next call retries", async ({ chain, publicClient, v
     chain,
     publicClient,
     viemClient,
-    transportOverrides: {
-      relayerUrl: "http://127.0.0.1:1",
-      network: "http://127.0.0.1:1",
-    },
+    transportOverrides: { relayerUrl: "http://127.0.0.1:1", network: "http://127.0.0.1:1" },
   });
 
   await expect(sdk.relayer.generateTransportKeyPair()).rejects.toThrow();

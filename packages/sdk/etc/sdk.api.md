@@ -11245,7 +11245,7 @@ export const mainnet: {
 };
 
 // @public
-export function matchZamaError<R>(error: unknown, handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
+export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R } & {
     _?: (error: unknown) => R;
 }): R | undefined;
 
@@ -14320,7 +14320,9 @@ export class Token {
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
+    confidentialTransferAndCall(to: Address, amount: bigint, data: Hex, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransferFromAndCall(from: Address, to: Address, amount: bigint, data: Hex, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;

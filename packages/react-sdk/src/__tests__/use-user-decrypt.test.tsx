@@ -22,9 +22,7 @@ describe("useDecryptValues", () => {
       ),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.data).toEqual({ "0xhandle1": 100n, "0xhandle2": true });
   });
@@ -47,9 +45,7 @@ describe("useDecryptValues", () => {
       ),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
@@ -68,9 +64,7 @@ describe("useDecryptValues", () => {
       }),
     );
 
-    await waitFor(() => expect(result.current.isError).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5_000 });
     expect(result.current.error?.message).toContain("keygen failed");
   });
 
@@ -123,11 +117,9 @@ describe("useDecryptValues", () => {
       // Prime credentials once on mount so isAllowed flips to true,
       // then invalidate so the cached `false` result is re-fetched.
       useEffect(() => {
-        void sdk.permits.grantPermit([tokenAddress]).then(() =>
-          queryClient.invalidateQueries({
-            queryKey: zamaQueryKeys.hasPermit.all,
-          }),
-        );
+        void sdk.permits
+          .grantPermit([tokenAddress])
+          .then(() => queryClient.invalidateQueries({ queryKey: zamaQueryKeys.hasPermit.all }));
       }, [sdk, queryClient]);
 
       const isAllowed = useHasPermit({ contractAddresses: [tokenAddress] });
@@ -138,9 +130,7 @@ describe("useDecryptValues", () => {
     });
 
     await waitFor(() => expect(result.current.isAllowed.data).toBe(true));
-    await waitFor(() => expect(result.current.decrypt.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.decrypt.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.decrypt.data).toEqual({ "0xh": 42n });
     // Exactly one signature: the credential priming. The decrypt itself must

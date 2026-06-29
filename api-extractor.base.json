@@ -17,20 +17,11 @@
       }
     }
   },
-  "apiReport": {
-    "enabled": true,
-    "reportFolder": "<projectFolder>/etc/"
-  },
-  "docModel": {
-    "enabled": true
-  },
-  "dtsRollup": {
-    "enabled": true
-  },
+  "apiReport": { "enabled": true, "reportFolder": "<projectFolder>/etc/" },
+  "docModel": { "enabled": true },
+  "dtsRollup": { "enabled": true },
   "messages": {
-    "compilerMessageReporting": {
-      "default": { "logLevel": "warning" }
-    },
+    "compilerMessageReporting": { "default": { "logLevel": "warning" } },
     "extractorMessageReporting": {
       "default": { "logLevel": "warning" },
       "ae-forgotten-export": { "logLevel": "none", "addToApiReportFile": false },

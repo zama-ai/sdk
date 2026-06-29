@@ -11,10 +11,7 @@ export const queryClientFixtures: FixturesOf<QueryClientFixtures> = {
   queryClient: async ({}, use) => {
     await use(
       new QueryClient({
-        defaultOptions: {
-          queries: { retry: false },
-          mutations: { retry: false },
-        },
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
       }),
     );
   },

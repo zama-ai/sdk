@@ -1,9 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "lib": ["ESNext", "DOM"],
-    "types": ["node"]
-  },
+  "compilerOptions": { "lib": ["ESNext", "DOM"], "types": ["node"] },
   "include": ["fixtures", "*.ts", "../../iife.d.ts"],
   "exclude": ["node_modules"]
 }

@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2026-06-29)
+
+### Code Refactoring
+
+- **sdk:** type matchZamaError handlers by matched error subclass [SDK-231] ([#488](https://github.com/zama-ai/sdk/issues/488)) ([9c98fbc]())
+
+## [3.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2026-06-26)
+
+### Bug Fixes
+
+- **sdk:** resolve node worker without import.meta.resolve for SSR bundlers [SDK-235] ([#490](https://github.com/zama-ai/sdk/issues/490)) ([7ce975b]()), closes [#285]()
+
+## [3.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0-alpha.1) (2026-06-25)
+
+### Features
+
+- **sdk:** add confidentialTransferAndCall to Token methods [SDK-168] ([#423](https://github.com/zama-ai/sdk/issues/423)) ([7b2b916]())
+
+## [3.2.0](https://github.com/zama-ai/sdk/compare/v3.1.0...v3.2.0) (2026-06-24)
+
+### Features
+
+- **codemod:** SDK upgrade codemods (Codemod-OSS / JSSG) for 3.1.0 ([#447](https://github.com/zama-ai/sdk/issues/447)) ([2d51aad]())
+- **sdk:** configurable, silent-by-default logging via LoggerService [SDK-232] ([#453](https://github.com/zama-ai/sdk/issues/453)) ([8ce6eed]()), closes [#449]()
+
+### Bug Fixes
+
+- **sdk:** decode 3-field Wrap event, not legacy 2-field Wrapped [SDK-240] ([#481](https://github.com/zama-ai/sdk/issues/481)) ([239015e]())
+- **sdk:** stop workers logging console.error on handled failures [SDK-230] ([#449](https://github.com/zama-ai/sdk/issues/449)) ([08e80b7]())
+
+### Code Refactoring
+
+- **examples:** upgrade example apps to @zama-fhe/sdk 3.1.0 ([#451](https://github.com/zama-ai/sdk/issues/451)) ([f9d233f]()), closes [#447]()
+- **examples:** upgrade example-hoodi to @zama-fhe/sdk 3.1.0 ([#475](https://github.com/zama-ai/sdk/issues/475)) ([a74666d]())
+- **examples:** upgrade node-ethers & node-viem to @zama-fhe/sdk 3.1.0 ([#456](https://github.com/zama-ai/sdk/issues/456)) ([4cb6bc2]()), closes [#451]() [#447]()
+
 ## [3.2.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.2.0-alpha.2...v3.2.0-alpha.3) (2026-06-24)
 
 ### Bug Fixes

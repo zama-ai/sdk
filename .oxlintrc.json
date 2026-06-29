@@ -21,17 +21,10 @@
     "restriction": "off",
     "nursery": "off"
   },
-  "options": {
-    "denyWarnings": true,
-    "typeAware": true
-  },
-  "env": {
-    "builtin": true
-  },
+  "options": { "denyWarnings": true, "typeAware": true },
+  "env": { "builtin": true },
   "settings": {
-    "react": {
-      "version": "19.2.4"
-    },
+    "react": { "version": "19.2.4" },
     "next": {
       "rootDir": [
         "packages/test-nextjs",
@@ -164,9 +157,7 @@
         "packages/sdk/src/worker/**",
         "packages/sdk/src/token/token.ts"
       ],
-      "rules": {
-        "no-console": "off"
-      }
+      "rules": { "no-console": "off" }
     },
     {
       "files": [
@@ -180,9 +171,7 @@
         "packages/sdk/src/viem/viem-signer.ts",
         "packages/sdk/src/worker/worker.node-pool.ts"
       ],
-      "rules": {
-        "@typescript-eslint/no-non-null-assertion": "off"
-      }
+      "rules": { "@typescript-eslint/no-non-null-assertion": "off" }
     }
   ]
 }

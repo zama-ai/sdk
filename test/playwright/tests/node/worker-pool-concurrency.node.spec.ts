@@ -31,12 +31,7 @@ test("2-worker pool generates 4 unique keypairs concurrently", async ({
   publicClient,
   viemClient,
 }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient, poolSize: 2 });
   const results = await Promise.all([
     sdk.relayer.generateTransportKeyPair(),
     sdk.relayer.generateTransportKeyPair(),
@@ -54,12 +49,7 @@ test("4-worker pool handles parallel EIP-712 creation", async ({
   viemClient,
   contracts,
 }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 4,
-  });
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient, poolSize: 4 });
   const keypair = await sdk.relayer.generateTransportKeyPair();
   const now = Math.floor(Date.now() / 1000);
 
@@ -76,12 +66,7 @@ test("4-worker pool handles parallel EIP-712 creation", async ({
 });
 
 test("terminate and restart", async ({ chain, publicClient, viemClient }) => {
-  const sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+  const sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient, poolSize: 2 });
   await sdk.relayer.generateTransportKeyPair();
   sdk.terminate();
   // Post-terminate, operations restart the pool
@@ -96,12 +81,7 @@ test("concurrent init requests share pool initialization", async ({
   publicClient,
   viemClient,
 }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    walletClient: viemClient,
-    poolSize: 2,
-  });
+  using sdk = createZamaSDK({ chain, publicClient, walletClient: viemClient, poolSize: 2 });
   const [kp1, kp2] = await Promise.all([
     sdk.relayer.generateTransportKeyPair(),
     sdk.relayer.generateTransportKeyPair(),

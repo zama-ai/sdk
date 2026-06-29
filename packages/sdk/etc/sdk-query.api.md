@@ -141,6 +141,18 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
 // @public (undocumented)
 export function confidentialTokenAddressQueryOptions(sdk: ZamaSDK, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
 
+// @public (undocumented)
+export function confidentialTransferAndCallMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransferAndCall", Address], ConfidentialTransferAndCallParams, TransactionResult>;
+
+// @public
+export interface ConfidentialTransferAndCallParams extends TransferOptions {
+    // (undocumented)
+    amount: bigint;
+    data: Hex;
+    // (undocumented)
+    to: Address;
+}
+
 // @public
 export interface ConfidentialTransferEvent {
     readonly encryptedAmount: EncryptedValue;
@@ -148,6 +160,21 @@ export interface ConfidentialTransferEvent {
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
     readonly to: Address;
+}
+
+// @public (undocumented)
+export function confidentialTransferFromAndCallMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransferFromAndCall", Address], ConfidentialTransferFromAndCallParams, TransactionResult>;
+
+// @public
+export interface ConfidentialTransferFromAndCallParams {
+    // (undocumented)
+    amount: bigint;
+    callbacks?: TransferCallbacks;
+    data: Hex;
+    // (undocumented)
+    from: Address;
+    // (undocumented)
+    to: Address;
 }
 
 // @public (undocumented)
@@ -643,7 +670,9 @@ export class Token {
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
+    confidentialTransferAndCall(to: Address, amount: bigint, data: Hex, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransferFromAndCall(from: Address, to: Address, amount: bigint, data: Hex, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;

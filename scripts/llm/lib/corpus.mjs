@@ -369,12 +369,7 @@ export function renderHints(content) {
   return content.replace(
     /\{%\s*hint\s+style="([^"]+)"\s*%\}([\s\S]*?)\{%\s*endhint\s*%\}/g,
     (_match, style, body) => {
-      const labelMap = {
-        info: "INFO",
-        warning: "WARNING",
-        danger: "DANGER",
-        success: "SUCCESS",
-      };
+      const labelMap = { info: "INFO", warning: "WARNING", danger: "DANGER", success: "SUCCESS" };
       const label = labelMap[style] ?? "NOTE";
       const lines = body
         .trim()

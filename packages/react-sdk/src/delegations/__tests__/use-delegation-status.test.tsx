@@ -34,9 +34,7 @@ describe("useDelegationStatus", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: { isActive: true, expiryTimestamp: 0n },
-    } as never);
+    vi.mocked(useQuery).mockReturnValue({ data: { isActive: true, expiryTimestamp: 0n } } as never);
 
     renderWithProviders(() =>
       useDelegationStatus({

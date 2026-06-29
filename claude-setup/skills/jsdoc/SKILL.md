@@ -243,14 +243,8 @@ export type EncryptInput =
       value: boolean | bigint;
       type: "ebool";
     }
-  | {
-      value: bigint;
-      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
-    }
-  | {
-      value: Address;
-      type: "eaddress";
-    };
+  | { value: bigint; type: Exclude<SDK.FheTypeName, "ebool" | "eaddress"> }
+  | { value: Address; type: "eaddress" };
 
 // BAD — property JSDoc restates the name
 export interface ConfidentialTransferEvent {

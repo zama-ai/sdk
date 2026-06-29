@@ -17,10 +17,7 @@ export default defineConfig({
         find: /^@zama-fhe\/sdk\/(.+)/,
         replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
       },
-      {
-        find: "@zama-fhe/sdk",
-        replacement: path.resolve(__dirname, "./packages/sdk/src"),
-      },
+      { find: "@zama-fhe/sdk", replacement: path.resolve(__dirname, "./packages/sdk/src") },
     ],
   },
 });

@@ -102,9 +102,7 @@ function SelectedTokenPanel({
   const sdk = useZamaSDK();
 
   // Check whether cached credentials cover the selected confidential token.
-  const { data: isAllowed } = useHasPermit({
-    contractAddresses: [token.confidentialTokenAddress],
-  });
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   const decimals = token.confidential.decimals;
   const erc20Decimals = token.underlying.decimals;
@@ -401,9 +399,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      })) as string[];
+      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
 
       // Switch before setting address: both chainId and address are then known
       // when the first non-connect-screen render fires, avoiding a brief flash

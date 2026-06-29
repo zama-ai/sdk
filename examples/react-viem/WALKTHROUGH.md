@@ -37,11 +37,7 @@ const zamaSepolia = {
   network: SEPOLIA_RPC_URL,
 } as const;
 
-const walletClient = createWalletClient({
-  account,
-  chain: sepolia,
-  transport: custom(ethereum),
-});
+const walletClient = createWalletClient({ account, chain: sepolia, transport: custom(ethereum) });
 const signer = ethereum ? new ViemSigner({ walletClient, ethereum }) : undefined;
 
 const zamaConfig = createConfig({
@@ -208,11 +204,7 @@ required.
 
 ```ts
 const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -320,9 +312,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();

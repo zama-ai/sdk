@@ -5,6 +5,7 @@ on:
     branches: [main, prerelease]
     paths:
       - "examples/example-hoodi/**"
+      - ".github/workflows/example-hoodi-e2e.yml"
 
 concurrency:
   group: example-hoodi-e2e-${{ github.ref }}

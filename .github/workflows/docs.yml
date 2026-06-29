@@ -3,7 +3,7 @@ name: Docs
 on:
   pull_request:
     branches: [main, prerelease]
-    paths:
+    paths: &doc-paths
       - "docs/**"
       - "examples/**/README.md"
       - "examples/**/WALKTHROUGH.md"
@@ -16,10 +16,19 @@ on:
       - "llms-full.txt"
       - "package.json"
       - "pnpm-lock.yaml"
+      - ".github/workflows/docs.yml"
+  # semantic-release forces branch-to-branch merges (prerelease→main) with the
+  # docs:retarget fix committed directly on top, so doc changes routinely reach
+  # main/prerelease via direct push, never a PR. Run the checks there too.
+  push:
+    branches: [main, prerelease]
+    paths: *doc-paths
   workflow_call:
 
+# Namespaced by workflow so the standalone Docs run (push/PR) and the docs job
+# reused by release.yml don't share a group on the same ref and cancel each other.
 concurrency:
-  group: docs-${{ github.ref }}
+  group: docs-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -65,16 +74,18 @@ jobs:
       # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands
       # on — reliable here even though the PR is checked out detached. If the committed
       # URLs target the wrong branch (e.g. a promotion that forgot `pnpm docs:retarget`),
-      # this fails. `ref_name` covers the workflow_call (release) path.
+      # this fails. `ref_name` covers the direct-push and workflow_call (release) paths.
       - name: Verify doc URLs target the right branch
         run: pnpm docs:check-target "${{ github.base_ref || github.ref_name }}"
 
   # External link liveness for the published docs + READMEs. Internal links and
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
-  # targets. PR-only — skipped on the release `workflow_call` so external flakiness
-  # can't block a release. If it flakes on PRs, move to a scheduled (cron) workflow.
+  # targets. Runs for PRs and direct pushes to main/prerelease, but NOT when this
+  # workflow is reused by release.yml: there `github.workflow` is the caller's name
+  # ("Release"), so external flakiness still can't block a release. If it flakes on
+  # PRs, move to a scheduled (cron) workflow.
   link-check:
-    if: github.event_name == 'pull_request'
+    if: github.workflow == 'Docs'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

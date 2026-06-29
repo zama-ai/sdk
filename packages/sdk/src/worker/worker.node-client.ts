@@ -1,5 +1,7 @@
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import type { FheChain } from "../chains/types";
 import type {
   GenericLogger,
@@ -30,7 +32,14 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
   protected createWorker(): Worker {
     // Resolve relative to the @zama-fhe/sdk/node entry point so the path is
     // correct regardless of which rolldown chunk this code lands in.
-    const nodeEntry = new URL(import.meta.resolve("@zama-fhe/sdk/node"));
+    //
+    // Use createRequire(...).resolve rather than import.meta.resolve: Vite's
+    // SSR transform (Ponder and other server-side bundlers) rewrites
+    // `import.meta.resolve` to `__vite_ssr_import_meta__.resolve`, which is
+    // undefined at runtime and makes this throw. createRequire only relies on
+    // `import.meta.url`, which those transforms preserve. See SDK-235.
+    const require = createRequire(import.meta.url);
+    const nodeEntry = pathToFileURL(require.resolve("@zama-fhe/sdk/node"));
     return new Worker(new URL("relayer-sdk.node-worker.js", nodeEntry));
   }
 
@@ -52,14 +61,8 @@ export class NodeWorkerClient extends BaseWorkerClient<Worker, NodeWorkerClientC
     return randomUUID();
   }
 
-  protected getInitPayload(): {
-    type: WorkerRequestType;
-    payload: WorkerRequest["payload"];
-  } {
-    return {
-      type: "INIT",
-      payload: { env: "node" as const, chains: this.config.chains },
-    };
+  protected getInitPayload(): { type: WorkerRequestType; payload: WorkerRequest["payload"] } {
+    return { type: "INIT", payload: { env: "node" as const, chains: this.config.chains } };
   }
 
   protected override onWorkerReady(worker: Worker): void {

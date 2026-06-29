@@ -21,9 +21,6 @@ export function useIsConfidentialTokenValid({
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<boolean>(
-    isConfidentialTokenValidQueryOptions(sdk, {
-      registryAddress,
-      confidentialTokenAddress,
-    }),
+    isConfidentialTokenValidQueryOptions(sdk, { registryAddress, confidentialTokenAddress }),
   );
 }
