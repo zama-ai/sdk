@@ -43,6 +43,3 @@ trustPolicyExclude:
 # disagree before running scripts.
 # https://pnpm.io/settings#verifydepsbeforerun
 verifyDepsBeforeRun: error
-
-patchedDependencies:
-  "@fhevm/sdk@1.1.0-alpha.5": patches/@fhevm__sdk@1.1.0-alpha.5.patch
