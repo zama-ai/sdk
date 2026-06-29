@@ -139,6 +139,15 @@ export function serializeError(error: unknown, depth = 6): SerializedError {
   if (typeof node.retryAfterMs === "number") {
     serialized.retryAfterMs = node.retryAfterMs;
   }
+  // The relayer's / viem's back-off lives only on a non-cloneable `Headers`
+  // (the `Retry-After` header), which structured clone destroys. Parse it to a
+  // number here, at the source, so the delay survives the worker boundary.
+  if (serialized.retryAfter === undefined && serialized.retryAfterMs === undefined) {
+    const fromHeader = retryAfterMsFromHeader(node);
+    if (fromHeader !== undefined) {
+      serialized.retryAfterMs = fromHeader;
+    }
+  }
 
   if (depth > 0) {
     for (const key of NESTED_ERROR_KEYS) {
@@ -266,23 +275,97 @@ export function parseHandleFromMessage(message: string): string | undefined {
 }
 
 /**
- * Best-effort extraction of a `Retry-After` delay (in milliseconds) from a
- * provider error, when present. Returns `undefined` when no hint is available.
+ * Parse an HTTP `Retry-After` header value into milliseconds, or `undefined`
+ * when it is absent/unparseable. Per RFC 9110 the value is either a non-negative
+ * number of seconds (`"120"`) or an HTTP-date; a past date floors to `0`.
  */
-export function extractRetryAfterMs(error: unknown): number | undefined {
-  const node = findInErrorChain(error, (n) => {
-    const v = n.retryAfter ?? n.retryAfterMs;
-    // A non-positive hint (e.g. `retryAfter: 0` / `-1`) is meaningless as a
-    // back-off delay and would make a consumer's `setTimeout(retry, …)` fire
-    // immediately, so treat it as "no hint" (`undefined`) instead.
-    return typeof v === "number" && Number.isFinite(v) && v > 0;
-  });
-  if (!node) {
+export function parseRetryAfterHeader(value: string | null | undefined): number | undefined {
+  if (value === null || value === undefined) {
     return undefined;
   }
-  const ms = (node.retryAfterMs ?? node.retryAfter) as number;
-  // Heuristic: bare `retryAfter` is conventionally seconds; `retryAfterMs` is ms.
-  return node.retryAfterMs !== undefined ? ms : ms * 1000;
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return undefined;
+  }
+  // delta-seconds: a non-negative integer.
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed) * 1000;
+  }
+  // HTTP-date — an IMF-fixdate always carries alphabetic day/month names, so
+  // require a letter before deferring to the lenient Date.parse.
+  if (/[a-zA-Z]/.test(trimmed)) {
+    const dateMs = Date.parse(trimmed);
+    if (!Number.isNaN(dateMs)) {
+      return Math.max(0, dateMs - Date.now());
+    }
+  }
+  return undefined;
+}
+
+/** Read a `Retry-After` header (→ ms) off a `Headers`-like object, if present. */
+function readRetryAfterHeader(headers: unknown): number | undefined {
+  if (headers === null || typeof headers !== "object") {
+    return undefined;
+  }
+  const get = (headers as { get?: unknown }).get;
+  if (typeof get !== "function") {
+    return undefined;
+  }
+  return parseRetryAfterHeader(
+    (get as (name: string) => string | null).call(headers, "Retry-After"),
+  );
+}
+
+/**
+ * A node's `Retry-After` header, whether it sits directly on the error (viem's
+ * `HttpRequestError.headers`) or on a wrapped fetch `Response` (the relayer
+ * SDK's `cause.response.headers`).
+ */
+function retryAfterMsFromHeader(node: Record<string, unknown>): number | undefined {
+  const direct = readRetryAfterHeader(node.headers);
+  if (direct !== undefined) {
+    return direct;
+  }
+  const response = node.response;
+  if (response !== null && typeof response === "object") {
+    return readRetryAfterHeader((response as Record<string, unknown>).headers);
+  }
+  return undefined;
+}
+
+/**
+ * A single node's server-driven retry delay (ms), in priority order: a numeric
+ * `retryAfterMs` (already ms), a numeric `retryAfter` (conventionally seconds;
+ * a non-positive synthetic value is ignored), then a `Retry-After` header.
+ */
+function retryAfterMsFromNode(node: Record<string, unknown>): number | undefined {
+  if (
+    typeof node.retryAfterMs === "number" &&
+    Number.isFinite(node.retryAfterMs) &&
+    node.retryAfterMs >= 0
+  ) {
+    return node.retryAfterMs;
+  }
+  if (
+    typeof node.retryAfter === "number" &&
+    Number.isFinite(node.retryAfter) &&
+    node.retryAfter > 0
+  ) {
+    return node.retryAfter * 1000;
+  }
+  return retryAfterMsFromHeader(node);
+}
+
+/**
+ * Best-effort extraction of a server-driven `Retry-After` delay (in
+ * milliseconds) from anywhere in an error's cause chain. Reads numeric
+ * `retryAfter` / `retryAfterMs` properties and the HTTP `Retry-After` header
+ * (viem's `HttpRequestError.headers` and the relayer's `cause.response.headers`,
+ * the only place real edge/Cloudflare 429s carry it). `undefined` when absent.
+ */
+export function extractRetryAfterMs(error: unknown): number | undefined {
+  const node = findInErrorChain(error, (n) => retryAfterMsFromNode(n) !== undefined);
+  return node ? retryAfterMsFromNode(node) : undefined;
 }
 
 /**

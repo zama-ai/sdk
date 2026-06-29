@@ -281,18 +281,27 @@ try {
 
 **Code:** `RELAYER_REQUEST_FAILED`
 
-The HTTP request to the relayer failed. The error exposes `.statusCode` for further diagnosis.
+The HTTP request to the relayer failed. The error exposes `.statusCode` for further diagnosis. On rate-limited responses (HTTP 429) it also surfaces the relayer's back-pressure: `.retryable` is `true`, and `.retryAfterMs` carries the server's suggested delay when the response included a `Retry-After` header (otherwise `undefined`).
 
 ```ts
 matchZamaError(error, {
-  RELAYER_REQUEST_FAILED: (e) => {
-    if (e.statusCode === 401) showError("Authentication failed");
-    else showError("Relayer unavailable — try again later");
+  RELAYER_REQUEST_FAILED: async (e) => {
+    if (e.statusCode === 401) {
+      showError("Authentication failed");
+    } else if (e.retryable) {
+      // Honour the server's delay when provided; fall back to your own backoff.
+      await sleep(e.retryAfterMs ?? 1000);
+      retry();
+    } else {
+      showError("Relayer unavailable — try again later");
+    }
   },
 });
 ```
 
-**How to handle:** Check `relayerUrl` in your transport config. If using API key authentication, verify the `auth` option. Check relayer service health.
+**How to handle:** For a 429, wait `.retryAfterMs` (when present) before retrying instead of inventing a backoff. Otherwise, check `relayerUrl` in your transport config, verify the `auth` option if using API key authentication, and check relayer service health.
+
+> **Browser note:** back-pressure is reliable server-side. In the browser, the relayer's 429 is served cross-origin without CORS headers, so `.retryAfterMs` (and sometimes `.statusCode`) may be unavailable — fall back to your own backoff.
 
 ### NotEntitledError
 
@@ -325,7 +334,7 @@ try {
 
 **Code:** `RPC_RATE_LIMITED`
 
-The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (milliseconds) when the provider supplies a hint.
+The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfterMs` (milliseconds) when the provider supplies a hint — a numeric value or a `Retry-After` header (e.g. viem's `HttpRequestError`).
 
 ```ts
 import { RpcRateLimitError } from "@zama-fhe/sdk";
@@ -334,7 +343,7 @@ try {
   await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
 } catch (error) {
   if (error instanceof RpcRateLimitError) {
-    await backoff(error.retryAfter); // then retry
+    await backoff(error.retryAfterMs); // then retry
   }
 }
 ```

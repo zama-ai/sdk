@@ -20,15 +20,17 @@ import { ZamaError, ZamaErrorCode } from "./base";
  */
 export class RpcRateLimitError extends ZamaError {
   /**
-   * Suggested delay before retrying, in milliseconds, when the provider
-   * supplied one (e.g. a `Retry-After` header). `undefined` when unknown.
+   * Suggested delay before retrying, in milliseconds, when the provider supplied
+   * one — parsed from a numeric `retryAfter`/`retryAfterMs` or the `Retry-After`
+   * header (e.g. viem's `HttpRequestError`). `undefined` when unknown. Named to
+   * match {@link RelayerRequestFailedError.retryAfterMs}.
    */
-  readonly retryAfter: number | undefined;
+  readonly retryAfterMs: number | undefined;
 
-  constructor(message: string, options?: ErrorOptions & { retryAfter?: number }) {
-    const { retryAfter, ...errorOptions } = options ?? {};
+  constructor(message: string, options?: ErrorOptions & { retryAfterMs?: number }) {
+    const { retryAfterMs, ...errorOptions } = options ?? {};
     super(ZamaErrorCode.RpcRateLimited, message, errorOptions);
     this.name = "RpcRateLimitError";
-    this.retryAfter = retryAfter;
+    this.retryAfterMs = retryAfterMs;
   }
 }

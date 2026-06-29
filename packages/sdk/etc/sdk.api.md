@@ -12687,7 +12687,11 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
 
 // @public
 export class RelayerRequestFailedError extends ZamaError {
-    constructor(message: string, statusCode?: number, options?: ErrorOptions);
+    constructor(message: string, statusCode?: number, options?: ErrorOptions & {
+        retryAfterMs?: number;
+    });
+    readonly retryable: boolean;
+    readonly retryAfterMs: number | undefined;
     readonly statusCode: number | undefined;
 }
 
@@ -12949,9 +12953,9 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 // @public
 export class RpcRateLimitError extends ZamaError {
     constructor(message: string, options?: ErrorOptions & {
-        retryAfter?: number;
+        retryAfterMs?: number;
     });
-    readonly retryAfter: number | undefined;
+    readonly retryAfterMs: number | undefined;
 }
 
 // @public

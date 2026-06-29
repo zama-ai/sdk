@@ -1,3 +1,4 @@
+import { HttpRequestError } from "viem";
 import { describe, expect, test } from "../../test-fixtures";
 import {
   DecryptionFailedError,
@@ -191,7 +192,23 @@ describe("wrapDecryptError", () => {
       });
       const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
-      expect((wrapped as RpcRateLimitError).retryAfter).toBe(2000);
+      expect((wrapped as RpcRateLimitError).retryAfterMs).toBe(2000);
+    });
+
+    test("populates retryAfterMs from a real viem HttpRequestError's Retry-After header", () => {
+      // The dominant real provider: a Cloudflare/edge 429 reaches us as a viem
+      // HttpRequestError carrying `status: 429` + a `Retry-After` header (a
+      // `Headers` object, never a numeric prop), nested under a higher cause.
+      const httpError = new HttpRequestError({
+        url: "https://rpc.example/eth",
+        status: 429,
+        headers: new Headers({ "Retry-After": "30" }),
+        body: { error: "rate limited" },
+      });
+      const readError = Object.assign(new Error("eth_call failed"), { cause: httpError });
+      const wrapped = wrapDecryptError(readError, "fallback");
+      expect(wrapped).toBeInstanceOf(RpcRateLimitError);
+      expect((wrapped as RpcRateLimitError).retryAfterMs).toBe(30_000);
     });
 
     test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {
@@ -226,6 +243,21 @@ describe("wrapDecryptError", () => {
       const wrapped = wrapDecryptError(relayerError, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
+    });
+
+    test("surfaces relayer back-pressure: a 429 with Retry-After → retryable + retryAfterMs", () => {
+      // The relayer's Cloudflare 429 carries `Retry-After` on `cause.response`.
+      const relayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+        statusCode: 429,
+        cause: {
+          code: "RELAYER_FETCH_ERROR",
+          response: { headers: new Headers({ "Retry-After": "300" }) },
+        },
+      });
+      const wrapped = wrapDecryptError(relayer429, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
+      expect((wrapped as RelayerRequestFailedError).retryAfterMs).toBe(300_000);
     });
   });
 });

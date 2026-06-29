@@ -82,7 +82,7 @@ export function wrapDecryptError(
   if (hasStructuredRpcRateLimitSignal(error)) {
     return new RpcRateLimitError(message, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfterMs: extractRetryAfterMs(error),
     });
   }
 
@@ -94,7 +94,7 @@ export function wrapDecryptError(
   if (statusCode === undefined && isRpcRateLimitError(error)) {
     return new RpcRateLimitError(message, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfterMs: extractRetryAfterMs(error),
     });
   }
 
@@ -116,7 +116,10 @@ export function wrapDecryptError(
   }
 
   if (statusCode !== undefined) {
-    return new RelayerRequestFailedError(message, statusCode, { cause: error });
+    return new RelayerRequestFailedError(message, statusCode, {
+      cause: error,
+      retryAfterMs: extractRetryAfterMs(error),
+    });
   }
 
   return new DecryptionFailedError(fallbackMessage, {

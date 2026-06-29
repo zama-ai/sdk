@@ -376,7 +376,7 @@ export class DecryptionService {
   #rpcRateLimitError(error: unknown, context: string): RpcRateLimitError {
     return new RpcRateLimitError(`RPC provider rate-limited ${context}; retry with backoff.`, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfterMs: extractRetryAfterMs(error),
     });
   }
 
