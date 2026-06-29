@@ -95,32 +95,3 @@ export class ZamaError extends Error {
     this.code = code;
   }
 }
-
-/**
- * Pattern-match on a {@link ZamaError} by its error code.
- * Falls through to the `_` wildcard handler if no specific handler matches.
- * Returns `undefined` if the error is not a `ZamaError` and no `_` handler is provided.
- *
- * @example
- * ```ts
- * matchZamaError(error, {
- *   SIGNING_REJECTED: () => toast("Please approve in wallet"),
- *   TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
- *   _: () => toast("Unknown error"),
- * });
- * ```
- */
-export function matchZamaError<R>(
-  error: unknown,
-  handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
-    _?: (error: unknown) => R;
-  },
-): R | undefined {
-  if (error instanceof ZamaError) {
-    const handler = handlers[error.code];
-    if (handler) {
-      return handler(error);
-    }
-  }
-  return handlers._?.(error);
-}

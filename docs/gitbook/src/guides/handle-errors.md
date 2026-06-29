@@ -89,8 +89,8 @@ matchZamaError(error, {
   SIGNING_REJECTED: () => toast("Please approve the transaction"),
   ENCRYPTION_FAILED: () => toast("Encryption failed -- please retry"),
   TRANSACTION_REVERTED: (e) => toast(`Transaction failed: ${e.message}`),
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: () => toast("Insufficient confidential balance"),
-  INSUFFICIENT_ERC20_BALANCE: () => toast("Not enough tokens to shield"),
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => toast(`Need ${e.requested}, have ${e.available}`),
+  INSUFFICIENT_ERC20_BALANCE: (e) => toast(`Need ${e.requested}, have ${e.available}`),
   BALANCE_CHECK_UNAVAILABLE: () => toast("Sign to verify your balance first"),
   ERC20_READ_FAILED: () => toast("Could not read token balance -- check your connection"),
   _: () => toast("Something went wrong"),
@@ -102,7 +102,7 @@ matchZamaError(error, {
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is not a `ZamaError` at all (and no `_` is provided), `matchZamaError` returns `undefined`.
 
-Each handler receives the error typed as the base `ZamaError`, so `.code` and `.message` are available but subclass-specific fields are not. To read fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode`, narrow with `instanceof` (step 2) inside the handler.
+Each handler receives the error class for its code, so subclass fields are available without a cast — `INSUFFICIENT_CONFIDENTIAL_BALANCE` hands you an `InsufficientConfidentialBalanceError` with `.available` / `.requested`, `RELAYER_REQUEST_FAILED` an error with `.statusCode`, and so on.
 
 ### 4. Handle specific errors
 
