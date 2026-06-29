@@ -2,7 +2,7 @@ export {
   toError,
   isContractCallError,
   isRpcRateLimitError,
-  extractRetryAfterMs,
+  extractRetryAfter,
   extractHttpStatus,
   classifyWorkerError,
   classifyDecryptWorkerError,

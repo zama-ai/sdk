@@ -8,7 +8,7 @@ import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
 import {
   extractHttpStatus,
-  extractRetryAfterMs,
+  extractRetryAfter,
   hasStructuredRpcRateLimitSignal,
   isRpcRateLimitError,
   readWorkerClassification,
@@ -62,7 +62,7 @@ export function wrapDecryptError(
   if (classification?.errorCode === ZamaErrorCode.RpcRateLimited) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,
-      retryAfter: classification.retryAfter ?? extractRetryAfterMs(error),
+      retryAfter: classification.retryAfter ?? extractRetryAfter(error),
     });
   }
 
@@ -73,7 +73,7 @@ export function wrapDecryptError(
   if (hasStructuredRpcRateLimitSignal(error)) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 
@@ -84,7 +84,7 @@ export function wrapDecryptError(
   if (statusCode === undefined && isRpcRateLimitError(error)) {
     return new RpcRateLimitError(error instanceof Error ? error.message : fallbackMessage, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 

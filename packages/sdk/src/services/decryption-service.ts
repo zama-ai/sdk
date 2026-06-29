@@ -19,7 +19,7 @@ import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
-import { extractRetryAfterMs, isRpcRateLimitError, toError } from "../utils";
+import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -348,7 +348,7 @@ export class DecryptionService {
   #rpcRateLimitError(error: unknown, context: string): RpcRateLimitError {
     return new RpcRateLimitError(`RPC provider rate-limited ${context}; retry with backoff.`, {
       cause: error,
-      retryAfter: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 

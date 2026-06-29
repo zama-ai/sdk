@@ -325,7 +325,7 @@ try {
 
 **Code:** `RPC_RATE_LIMITED`
 
-The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (milliseconds) when the provider supplies a hint.
+The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (seconds) when the provider supplies a hint.
 
 ```ts
 import { RpcRateLimitError } from "@zama-fhe/sdk";

@@ -20,8 +20,9 @@ import { ZamaError, ZamaErrorCode } from "./base";
  */
 export class RpcRateLimitError extends ZamaError {
   /**
-   * Suggested delay before retrying, in milliseconds, when the provider
-   * supplied one (e.g. a `Retry-After` header). `undefined` when unknown.
+   * Suggested delay before retrying, in **seconds** (the SDK's duration unit and
+   * the `Retry-After` header's own unit), when the provider supplied one.
+   * `undefined` when unknown.
    */
   readonly retryAfter: number | undefined;
 

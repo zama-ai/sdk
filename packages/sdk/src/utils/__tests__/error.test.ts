@@ -7,7 +7,7 @@ import {
   extractHttpStatus,
   isRpcRateLimitError,
   hasStructuredRpcRateLimitSignal,
-  extractRetryAfterMs,
+  extractRetryAfter,
   classifyWorkerError,
   classifyDecryptWorkerError,
   readWorkerClassification,
@@ -226,25 +226,25 @@ describe("hasStructuredRpcRateLimitSignal", () => {
   });
 });
 
-describe("extractRetryAfterMs", () => {
-  test("reads a seconds-based retryAfter and converts to ms", () => {
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 3 }))).toBe(3000);
+describe("extractRetryAfter", () => {
+  test("reads retryAfter (seconds) from the error", () => {
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: 3 }))).toBe(3);
   });
 
-  test("reads a millisecond retryAfterMs as-is from a nested cause", () => {
-    expect(extractRetryAfterMs({ cause: { retryAfterMs: 1500 } })).toBe(1500);
+  test("reads retryAfter from a nested cause", () => {
+    expect(extractRetryAfter({ cause: { retryAfter: 30 } })).toBe(30);
   });
 
   test("returns undefined when absent", () => {
-    expect(extractRetryAfterMs(new Error("x"))).toBeUndefined();
+    expect(extractRetryAfter(new Error("x"))).toBeUndefined();
   });
 
   test("ignores a non-positive retryAfter hint", () => {
     // `0` / negative is meaningless as a back-off delay (a consumer's
     // `setTimeout(retry, …)` would fire immediately), so treat it as "no hint".
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 0 }))).toBeUndefined();
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: -1 }))).toBeUndefined();
-    expect(extractRetryAfterMs({ cause: { retryAfterMs: -500 } })).toBeUndefined();
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: 0 }))).toBeUndefined();
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: -1 }))).toBeUndefined();
+    expect(extractRetryAfter({ cause: { retryAfter: -500 } })).toBeUndefined();
   });
 });
 
@@ -253,7 +253,7 @@ describe("classifyWorkerError", () => {
     const err = Object.assign(new Error("Too Many Requests"), { code: -32005, retryAfter: 2 });
     expect(classifyWorkerError(err)).toEqual({
       errorCode: ZamaErrorCode.RpcRateLimited,
-      retryAfter: 2000,
+      retryAfter: 2,
     });
   });
 

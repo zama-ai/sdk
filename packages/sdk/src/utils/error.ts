@@ -155,7 +155,7 @@ export type WorkerErrorClassification =
  */
 export function classifyWorkerError(error: unknown): WorkerErrorClassification {
   if (isRpcRateLimitError(error)) {
-    return { errorCode: ZamaErrorCode.RpcRateLimited, retryAfter: extractRetryAfterMs(error) };
+    return { errorCode: ZamaErrorCode.RpcRateLimited, retryAfter: extractRetryAfter(error) };
   }
   const statusCode = extractHttpStatus(error);
   return statusCode !== undefined ? { statusCode } : {};
@@ -239,23 +239,19 @@ export function classifyDecryptWorkerError(
 }
 
 /**
- * Best-effort extraction of a `Retry-After` delay (in milliseconds) from a
- * provider error, when present. Returns `undefined` when no hint is available.
+ * Best-effort extraction of a server-supplied retry delay, in **seconds** (the
+ * SDK's duration unit, and the `Retry-After` header's own unit). Returns
+ * `undefined` when no positive hint is present.
  */
-export function extractRetryAfterMs(error: unknown): number | undefined {
+export function extractRetryAfter(error: unknown): number | undefined {
   const node = findInErrorChain(error, (n) => {
-    const v = n.retryAfter ?? n.retryAfterMs;
+    const v = n.retryAfter;
     // A non-positive hint (e.g. `retryAfter: 0` / `-1`) is meaningless as a
-    // back-off delay and would make a consumer's `setTimeout(retry, …)` fire
-    // immediately, so treat it as "no hint" (`undefined`) instead.
+    // back-off delay (a consumer's `setTimeout(retry, …)` would fire
+    // immediately), so treat it as "no hint" (`undefined`) instead.
     return typeof v === "number" && Number.isFinite(v) && v > 0;
   });
-  if (!node) {
-    return undefined;
-  }
-  const ms = (node.retryAfterMs ?? node.retryAfter) as number;
-  // Heuristic: bare `retryAfter` is conventionally seconds; `retryAfterMs` is ms.
-  return node.retryAfterMs !== undefined ? ms : ms * 1000;
+  return node ? (node.retryAfter as number) : undefined;
 }
 
 /**

@@ -185,11 +185,11 @@ describe("wrapDecryptError", () => {
       // The worker boundary strips the cause, leaving only message + zamaErrorCode + retryAfter.
       const workerError = Object.assign(new Error("Too Many Requests"), {
         zamaErrorCode: ZamaErrorCode.RpcRateLimited,
-        retryAfter: 2000,
+        retryAfter: 30,
       });
       const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
-      expect((wrapped as RpcRateLimitError).retryAfter).toBe(2000);
+      expect((wrapped as RpcRateLimitError).retryAfter).toBe(30);
     });
 
     test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {
