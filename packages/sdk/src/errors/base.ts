@@ -32,7 +32,7 @@ export const ZamaErrorCode = {
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
-  /** The configured signer/account is not entitled (ACL) to decrypt this handle. Don't retry — wait for a grant. */
+  /** The configured signer/account is not entitled (ACL) to decrypt this encrypted value. Don't retry — wait for a grant. */
   NotEntitled: "NOT_ENTITLED",
   /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
   RpcRateLimited: "RPC_RATE_LIMITED",
