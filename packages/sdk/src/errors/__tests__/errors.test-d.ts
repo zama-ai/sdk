@@ -9,6 +9,8 @@ import type {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -109,6 +111,16 @@ describe("matchZamaError", () => {
       RELAYER_REQUEST_FAILED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
         expectTypeOf(e.statusCode).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryAfterMs).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryable).toEqualTypeOf<boolean>();
+      },
+      NOT_ENTITLED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<NotEntitledError>();
+        expectTypeOf(e.encryptedValue).toEqualTypeOf<string>();
+      },
+      RPC_RATE_LIMITED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
+        expectTypeOf(e.retryAfterMs).toEqualTypeOf<number | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();
