@@ -8,7 +8,7 @@ import type { RelayerSDK } from "../relayer/types";
 /**
  * Multichain router. Owns chain management (chains / chain / switchChain) and
  * hands out the single-chain {@link RelayerSDK} backend for the currently active
- * chain via {@link ChainRouter['relayer']}. Builds one backend per chain from its
+ * chain via {@link ChainRouter.relayer}. Builds one backend per chain from its
  * {@link RelayerConfig}.
  */
 export class ChainRouter {
