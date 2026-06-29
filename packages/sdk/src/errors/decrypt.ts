@@ -8,7 +8,7 @@ import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
 import {
   extractHttpStatus,
-  extractRetryAfterMs,
+  extractRetryAfter,
   hasStructuredRpcRateLimitSignal,
   isNotEntitledMessage,
   isRpcRateLimitError,
@@ -82,7 +82,7 @@ export function wrapDecryptError(
   if (hasStructuredRpcRateLimitSignal(error)) {
     return new RpcRateLimitError(message, {
       cause: error,
-      retryAfterMs: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 
@@ -94,7 +94,7 @@ export function wrapDecryptError(
   if (statusCode === undefined && isRpcRateLimitError(error)) {
     return new RpcRateLimitError(message, {
       cause: error,
-      retryAfterMs: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 
@@ -118,7 +118,7 @@ export function wrapDecryptError(
   if (statusCode !== undefined) {
     return new RelayerRequestFailedError(message, statusCode, {
       cause: error,
-      retryAfterMs: extractRetryAfterMs(error),
+      retryAfter: extractRetryAfter(error),
     });
   }
 

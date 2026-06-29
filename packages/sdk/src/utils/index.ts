@@ -4,7 +4,7 @@ export {
   isRpcRateLimitError,
   isNotEntitledMessage,
   parseHandleFromMessage,
-  extractRetryAfterMs,
+  extractRetryAfter,
   extractHttpStatus,
   serializeError,
   deserializeError,

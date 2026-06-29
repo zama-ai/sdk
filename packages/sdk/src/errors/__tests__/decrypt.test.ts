@@ -192,10 +192,10 @@ describe("wrapDecryptError", () => {
       });
       const wrapped = wrapDecryptError(workerError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
-      expect((wrapped as RpcRateLimitError).retryAfterMs).toBe(2000);
+      expect((wrapped as RpcRateLimitError).retryAfter).toBe(2);
     });
 
-    test("populates retryAfterMs from a real viem HttpRequestError's Retry-After header", () => {
+    test("populates retryAfter (seconds) from a real viem HttpRequestError's Retry-After header", () => {
       // The dominant real provider: a Cloudflare/edge 429 reaches us as a viem
       // HttpRequestError carrying `status: 429` + a `Retry-After` header (a
       // `Headers` object, never a numeric prop), nested under a higher cause.
@@ -208,7 +208,7 @@ describe("wrapDecryptError", () => {
       const readError = Object.assign(new Error("eth_call failed"), { cause: httpError });
       const wrapped = wrapDecryptError(readError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
-      expect((wrapped as RpcRateLimitError).retryAfterMs).toBe(30_000);
+      expect((wrapped as RpcRateLimitError).retryAfter).toBe(30);
     });
 
     test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {
@@ -245,7 +245,7 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
-    test("surfaces relayer back-pressure: a 429 with Retry-After → retryable + retryAfterMs", () => {
+    test("surfaces relayer back-pressure: a 429 with Retry-After → retryable + retryAfter (seconds)", () => {
       // The relayer's Cloudflare 429 carries `Retry-After` on `cause.response`.
       const relayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
         statusCode: 429,
@@ -257,7 +257,7 @@ describe("wrapDecryptError", () => {
       const wrapped = wrapDecryptError(relayer429, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
-      expect((wrapped as RelayerRequestFailedError).retryAfterMs).toBe(300_000);
+      expect((wrapped as RelayerRequestFailedError).retryAfter).toBe(300);
     });
   });
 });

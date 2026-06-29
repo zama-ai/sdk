@@ -9,7 +9,7 @@ import {
   hasStructuredRpcRateLimitSignal,
   isNotEntitledMessage,
   parseHandleFromMessage,
-  extractRetryAfterMs,
+  extractRetryAfter,
   parseRetryAfterHeader,
   serializeError,
   deserializeError,
@@ -227,66 +227,66 @@ describe("hasStructuredRpcRateLimitSignal", () => {
   });
 });
 
-describe("extractRetryAfterMs", () => {
-  test("reads a seconds-based retryAfter and converts to ms", () => {
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 3 }))).toBe(3000);
+describe("extractRetryAfter", () => {
+  test("reads retryAfter (seconds) from the error", () => {
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: 3 }))).toBe(3);
   });
 
-  test("reads a millisecond retryAfterMs as-is from a nested cause", () => {
-    expect(extractRetryAfterMs({ cause: { retryAfterMs: 1500 } })).toBe(1500);
+  test("reads retryAfter from a nested cause", () => {
+    expect(extractRetryAfter({ cause: { retryAfter: 30 } })).toBe(30);
   });
 
   test("returns undefined when absent", () => {
-    expect(extractRetryAfterMs(new Error("x"))).toBeUndefined();
+    expect(extractRetryAfter(new Error("x"))).toBeUndefined();
   });
 
   test("ignores a non-positive retryAfter hint", () => {
     // `0` / negative is meaningless as a back-off delay (a consumer's
     // `setTimeout(retry, …)` would fire immediately), so treat it as "no hint".
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: 0 }))).toBeUndefined();
-    expect(extractRetryAfterMs(Object.assign(new Error("x"), { retryAfter: -1 }))).toBeUndefined();
-    expect(extractRetryAfterMs({ cause: { retryAfterMs: -500 } })).toBeUndefined();
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: 0 }))).toBeUndefined();
+    expect(extractRetryAfter(Object.assign(new Error("x"), { retryAfter: -1 }))).toBeUndefined();
+    expect(extractRetryAfter({ cause: { retryAfter: -500 } })).toBeUndefined();
   });
 
-  test("parses a `Retry-After` header off viem's `HttpRequestError.headers`", () => {
+  test("parses a `Retry-After` header (seconds) off viem's `HttpRequestError.headers`", () => {
     // viem delivers the back-off only on a `Headers` object, never a numeric prop.
     const viemLike = Object.assign(new Error("HTTP 429"), {
       status: 429,
       headers: new Headers({ "Retry-After": "120" }),
     });
-    expect(extractRetryAfterMs(viemLike)).toBe(120_000);
+    expect(extractRetryAfter(viemLike)).toBe(120);
   });
 
   test("parses a `Retry-After` header off a relayer error's `cause.response.headers`", () => {
     const relayerLike = Object.assign(new Error("relayer 429"), {
       cause: { response: { headers: new Headers({ "Retry-After": "5" }) } },
     });
-    expect(extractRetryAfterMs(relayerLike)).toBe(5000);
+    expect(extractRetryAfter(relayerLike)).toBe(5);
   });
 
-  test("prefers a numeric retryAfterMs over a deeper header", () => {
+  test("prefers a numeric retryAfter over a deeper header", () => {
     const err = Object.assign(new Error("x"), {
-      retryAfterMs: 1000,
+      retryAfter: 10,
       cause: { response: { headers: new Headers({ "Retry-After": "120" }) } },
     });
-    expect(extractRetryAfterMs(err)).toBe(1000);
+    expect(extractRetryAfter(err)).toBe(10);
   });
 });
 
 describe("parseRetryAfterHeader", () => {
-  test("parses delta-seconds into milliseconds", () => {
-    expect(parseRetryAfterHeader("120")).toBe(120_000);
+  test("parses delta-seconds (returns seconds)", () => {
+    expect(parseRetryAfterHeader("120")).toBe(120);
   });
 
-  test("treats 0 seconds as 0 ms (retry immediately)", () => {
+  test("treats 0 seconds as 0 (retry immediately)", () => {
     expect(parseRetryAfterHeader("0")).toBe(0);
   });
 
-  test("parses a future HTTP-date as a positive delay", () => {
+  test("parses a future HTTP-date as a positive delay in seconds", () => {
     const future = new Date(Date.now() + 60_000).toUTCString();
-    const ms = parseRetryAfterHeader(future);
-    expect(ms).toBeGreaterThan(0);
-    expect(ms).toBeLessThanOrEqual(60_000);
+    const seconds = parseRetryAfterHeader(future);
+    expect(seconds).toBeGreaterThan(0);
+    expect(seconds).toBeLessThanOrEqual(60);
   });
 
   test("floors a past HTTP-date to 0", () => {
@@ -320,7 +320,7 @@ describe("serializeError / deserializeError", () => {
     expect(rebuilt.retryAfter).toBe(2);
   });
 
-  test("captures a `Retry-After` header into a numeric retryAfterMs so it survives the boundary", () => {
+  test("captures a `Retry-After` header into a numeric retryAfter (seconds) so it survives the boundary", () => {
     // The header lives on a non-cloneable `Headers`; serializeError must parse it
     // at the source, else the relayer/consumer back-off is lost across the worker.
     const relayer429 = Object.assign(new Error("relayer 429"), {
@@ -328,7 +328,7 @@ describe("serializeError / deserializeError", () => {
       cause: { response: { headers: new Headers({ "Retry-After": "300" }) } },
     });
     const rebuilt = deserializeError(serializeError(relayer429));
-    expect(extractRetryAfterMs(rebuilt)).toBe(300_000);
+    expect(extractRetryAfter(rebuilt)).toBe(300);
   });
 
   test("preserves the cause chain so chain-walking detectors keep working", () => {

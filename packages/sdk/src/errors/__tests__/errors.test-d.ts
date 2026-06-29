@@ -73,8 +73,8 @@ describe("RelayerRequestFailedError", () => {
     expectTypeOf<RelayerRequestFailedError["statusCode"]>().toEqualTypeOf<number | undefined>();
   });
 
-  test("exposes back-pressure: retryAfterMs and retryable", () => {
-    expectTypeOf<RelayerRequestFailedError["retryAfterMs"]>().toEqualTypeOf<number | undefined>();
+  test("exposes back-pressure: retryAfter and retryable", () => {
+    expectTypeOf<RelayerRequestFailedError["retryAfter"]>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RelayerRequestFailedError["retryable"]>().toEqualTypeOf<boolean>();
   });
 });
@@ -111,7 +111,7 @@ describe("matchZamaError", () => {
       RELAYER_REQUEST_FAILED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
         expectTypeOf(e.statusCode).toEqualTypeOf<number | undefined>();
-        expectTypeOf(e.retryAfterMs).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
         expectTypeOf(e.retryable).toEqualTypeOf<boolean>();
       },
       NOT_ENTITLED: (e) => {
@@ -120,7 +120,7 @@ describe("matchZamaError", () => {
       },
       RPC_RATE_LIMITED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
-        expectTypeOf(e.retryAfterMs).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();

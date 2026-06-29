@@ -1,4 +1,4 @@
-import { extractHttpStatus, extractRetryAfterMs } from "../utils/error";
+import { extractHttpStatus, extractRetryAfter } from "../utils/error";
 import { ZamaError } from "./base";
 import { EncryptionFailedError } from "./encryption";
 import { RelayerRequestFailedError } from "./relayer";
@@ -31,7 +31,7 @@ export function wrapEncryptError(error: unknown, fallbackMessage: string): ZamaE
       statusCode,
       {
         cause: error,
-        retryAfterMs: extractRetryAfterMs(error),
+        retryAfter: extractRetryAfter(error),
       },
     );
   }
