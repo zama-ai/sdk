@@ -35,9 +35,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-  },
+  relayers: { [sepolia.id]: web() },
 });
 ```
 
@@ -78,9 +76,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
 ```
 

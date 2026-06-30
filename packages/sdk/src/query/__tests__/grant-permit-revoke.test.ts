@@ -45,14 +45,12 @@ describe("hasPermitQueryOptions", () => {
     });
     expect(options.queryKey).toEqual([
       "zama.hasPermit",
-      {
-        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
-      },
+      { contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"] },
     ]);
 
-    const result = await options.queryFn({
-      queryKey: options.queryKey,
-    } as Parameters<typeof options.queryFn>[0]);
+    const result = await options.queryFn({ queryKey: options.queryKey } as Parameters<
+      typeof options.queryFn
+    >[0]);
     expect(result).toBe(true);
     expect(isAllowedSpy).toHaveBeenCalledTimes(1);
   });
@@ -65,13 +63,9 @@ describe("hasPermitQueryOptions", () => {
       "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
     ] as [Address, ...Address[]];
 
-    const options = hasPermitQueryOptions(sdk, {
-      contractAddresses: contracts,
-    });
+    const options = hasPermitQueryOptions(sdk, { contractAddresses: contracts });
 
-    await options.queryFn({
-      queryKey: options.queryKey,
-    } as Parameters<typeof options.queryFn>[0]);
+    await options.queryFn({ queryKey: options.queryKey } as Parameters<typeof options.queryFn>[0]);
 
     expect(isAllowedSpy).toHaveBeenCalledWith(contracts);
   });
@@ -95,9 +89,7 @@ describe("hasPermitQueryOptions", () => {
   });
 
   test("is disabled when the contract list is empty", ({ sdk }) => {
-    const options = hasPermitQueryOptions(sdk, {
-      contractAddresses: [],
-    });
+    const options = hasPermitQueryOptions(sdk, { contractAddresses: [] });
 
     expect(options.enabled).toBe(false);
   });
@@ -111,9 +103,7 @@ describe("hasPermitQueryOptions", () => {
     expect(options.enabled).toBe(false);
     expect(options.queryKey).toEqual([
       "zama.hasPermit",
-      {
-        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
-      },
+      { contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"] },
     ]);
   });
 
@@ -124,9 +114,9 @@ describe("hasPermitQueryOptions", () => {
       contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
     });
 
-    const result = await options.queryFn({
-      queryKey: options.queryKey,
-    } as Parameters<typeof options.queryFn>[0]);
+    const result = await options.queryFn({ queryKey: options.queryKey } as Parameters<
+      typeof options.queryFn
+    >[0]);
     expect(result).toBe(false);
   });
 
@@ -135,16 +125,12 @@ describe("hasPermitQueryOptions", () => {
 
     const optionsA = hasPermitQueryOptions(
       sdk,
-      {
-        contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"],
-      },
+      { contractAddresses: ["0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B"] },
       { walletAccount },
     );
     const optionsB = hasPermitQueryOptions(
       sdk,
-      {
-        contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"],
-      },
+      { contractAddresses: ["0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a"] },
       { walletAccount },
     );
 

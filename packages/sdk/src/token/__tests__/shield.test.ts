@@ -124,9 +124,7 @@ describe("WrappedToken.shield", () => {
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({
-      [fixtureHandle]: 1000n,
-    });
+    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [fixtureHandle]: 1000n });
 
     const shieldResult = await token.shield(500n);
     expect(shieldResult.txHash).toBe("0xtxhash");
@@ -134,10 +132,7 @@ describe("WrappedToken.shield", () => {
     expect(signer.writeContract).toHaveBeenCalledTimes(2);
     expect(signer.writeContract).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({
-        functionName: "approve",
-        args: expect.arrayContaining([500n]),
-      }),
+      expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
     );
     expect(signer.writeContract).toHaveBeenNthCalledWith(
       2,
@@ -449,9 +444,7 @@ describe("WrappedToken.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({
-        onEvent: (event: unknown) => emitted.push(event),
-      });
+      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
       const { WrappedToken } = await import("../../token/wrapped-token");
       const token = new WrappedToken(sdk, tokenAddress);
 
@@ -480,9 +473,7 @@ describe("WrappedToken.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({
-        onEvent: (event: unknown) => emitted.push(event),
-      });
+      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
       const { WrappedToken } = await import("../../token/wrapped-token");
       const token = new WrappedToken(sdk, tokenAddress);
 
@@ -512,9 +503,7 @@ describe("WrappedToken.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({
-        onEvent: (event: unknown) => emitted.push(event),
-      });
+      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
       const { WrappedToken } = await import("../../token/wrapped-token");
       const token = new WrappedToken(sdk, tokenAddress);
 
@@ -547,9 +536,7 @@ describe("WrappedToken.shield", () => {
       tokenAddress,
     }) => {
       const emitted: unknown[] = [];
-      const sdk = createSDK({
-        onEvent: (event: unknown) => emitted.push(event),
-      });
+      const sdk = createSDK({ onEvent: (event: unknown) => emitted.push(event) });
       const { WrappedToken } = await import("../../token/wrapped-token");
       const token = new WrappedToken(sdk, tokenAddress);
 
@@ -583,8 +570,6 @@ describe("WrappedToken.shield", () => {
     const options = shieldMutationOptions(mockWrappedToken);
 
     await options.mutationFn({ amount: 1n, approvalStrategy: "max" });
-    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, {
-      approvalStrategy: "max",
-    });
+    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, { approvalStrategy: "max" });
   });
 });

@@ -39,19 +39,13 @@ type AnyKeySuspenseOptions<TData, TError> = UseSuspenseQueryOptions<
 export function useQuery<TData = unknown, TError = DefaultError>(
   options: AnyKeyQueryOptions<TData, TError>,
 ): UseQueryResult<TData, TError> {
-  return tanstack_useQuery({
-    ...options,
-    queryKeyHashFn: hashFn,
-  });
+  return tanstack_useQuery({ ...options, queryKeyHashFn: hashFn });
 }
 
 export function useSuspenseQuery<TData = unknown, TError = DefaultError>(
   options: AnyKeySuspenseOptions<TData, TError>,
 ): UseSuspenseQueryResult<TData, TError> {
-  return tanstack_useSuspenseQuery({
-    ...options,
-    queryKeyHashFn: hashFn,
-  });
+  return tanstack_useSuspenseQuery({ ...options, queryKeyHashFn: hashFn });
 }
 
 /**
@@ -72,9 +66,6 @@ export function useQueries<
 }): TCombinedResult {
   return tanstack_useQueries({
     ...options,
-    queries: queries.map((q) => ({
-      ...q,
-      queryKeyHashFn: hashFn,
-    })) as [...QueriesOptions<T>],
+    queries: queries.map((q) => ({ ...q, queryKeyHashFn: hashFn })) as [...QueriesOptions<T>],
   });
 }

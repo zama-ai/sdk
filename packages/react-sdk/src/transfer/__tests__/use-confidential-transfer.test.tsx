@@ -160,20 +160,12 @@ describe("useConfidentialTransfer", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-success-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSuccess = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSuccess,
-        },
-      ),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }, { onMutate, onSuccess }),
     );
 
     await act(() =>
@@ -222,20 +214,12 @@ describe("useConfidentialTransfer", () => {
   }) => {
     vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
-    const expectedContext = {
-      requestId: "transfer-settled-optimistic",
-    } as const;
+    const expectedContext = { requestId: "transfer-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
     const onSettled = vi.fn();
 
     const { result } = renderWithProviders(() =>
-      useConfidentialTransfer(
-        { address: tokenAddress, optimistic: true },
-        {
-          onMutate,
-          onSettled,
-        },
-      ),
+      useConfidentialTransfer({ address: tokenAddress, optimistic: true }, { onMutate, onSettled }),
     );
 
     await act(() =>
@@ -539,9 +523,7 @@ describe("useConfidentialTransfer error propagation", () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(
       () => useMutation(confidentialTransferMutationOptions(mockWrappedToken)),
-      {
-        wrapper: Wrapper,
-      },
+      { wrapper: Wrapper },
     );
 
     await act(async () => {

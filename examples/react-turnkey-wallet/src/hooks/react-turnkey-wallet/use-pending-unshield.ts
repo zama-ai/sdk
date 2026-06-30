@@ -42,9 +42,5 @@ export function usePendingUnshield(selectedPair: TokenWrapperPairWithMetadata | 
     setPendingUnshieldHash(null);
   }, [selectedPair]);
 
-  return {
-    pendingUnshieldHash,
-    setPendingUnshieldHash,
-    clearStoredPendingUnshield,
-  };
+  return { pendingUnshieldHash, setPendingUnshieldHash, clearStoredPendingUnshield };
 }

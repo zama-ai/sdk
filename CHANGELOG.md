@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2026-06-29)
+
+### Code Refactoring
+
+- **sdk:** type matchZamaError handlers by matched error subclass [SDK-231] ([#488](https://github.com/zama-ai/sdk/issues/488)) ([9c98fbc]())
+
+## [3.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2026-06-26)
+
+### Bug Fixes
+
+- **sdk:** resolve node worker without import.meta.resolve for SSR bundlers [SDK-235] ([#490](https://github.com/zama-ai/sdk/issues/490)) ([7ce975b]()), closes [#285]()
+
+## [3.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0-alpha.1) (2026-06-25)
+
+### Features
+
+- **sdk:** add confidentialTransferAndCall to Token methods [SDK-168] ([#423](https://github.com/zama-ai/sdk/issues/423)) ([7b2b916]())
+
 ## [3.2.0](https://github.com/zama-ai/sdk/compare/v3.1.0...v3.2.0) (2026-06-24)
 
 ### Features

@@ -252,9 +252,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      })) as string[];
+      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
 
       // Switch before setting address: both chainId and address are then known
       // when the first non-connect-screen render fires, avoiding a brief flash

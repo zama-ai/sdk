@@ -32,9 +32,7 @@ export interface WrapperFixtures {
     hook: () => TResult,
     overrides?: Partial<ZamaConfig>,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
-  ) => ReturnType<typeof renderHook<TResult, unknown>> & {
-    queryClient: QueryClient;
-  };
+  ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
 
 type WrapperDeps = QueryClientFixtures & {
@@ -89,10 +87,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);
-      return {
-        ...renderHook(hook, { wrapper: Wrapper, ...options }),
-        queryClient,
-      };
+      return { ...renderHook(hook, { wrapper: Wrapper, ...options }), queryClient };
     }
     await use(renderWithProviders);
   },

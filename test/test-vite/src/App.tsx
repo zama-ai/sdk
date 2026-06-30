@@ -26,6 +26,10 @@ export default function App() {
           <Route path="wallet" Component={lazy(() => import("./pages/wallet"))} />
           <Route path="shield" Component={lazy(() => import("./pages/shield"))} />
           <Route path="transfer" Component={lazy(() => import("./pages/transfer"))} />
+          <Route
+            path="transfer-and-call"
+            Component={lazy(() => import("./pages/transfer-and-call"))}
+          />
           <Route path="transfer-from" Component={lazy(() => import("./pages/transfer-from"))} />
           <Route path="unshield" Component={lazy(() => import("./pages/unshield"))} />
           <Route path="unshield-all" Component={lazy(() => import("./pages/unshield-all"))} />

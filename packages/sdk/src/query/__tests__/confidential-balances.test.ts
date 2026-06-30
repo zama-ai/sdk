@@ -61,10 +61,7 @@ describe("confidentialBalancesQueryOptions", () => {
     const t1 = createMockToken(tokenA);
     const options = confidentialBalancesQueryOptions(
       [t1],
-      {
-        account: owner,
-        query: { enabled: false },
-      },
+      { account: owner, query: { enabled: false } },
       { walletAccount: signer.walletAccount.getSnapshot() },
     );
 

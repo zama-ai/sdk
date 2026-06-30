@@ -11,6 +11,7 @@ import {ConfidentialWrapperV3} from
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ConfidentialTokenWrappersRegistry} from "protocol-apps-registry/contracts/confidential-token-wrappers-registry/contracts/ConfidentialTokenWrappersRegistry.sol";
+import {ERC7984ReceiverMock} from "@openzeppelin/confidential-contracts/mocks/token/ERC7984ReceiverMock.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -74,7 +75,14 @@ contract Deploy is Script {
         registry.registerConfidentialToken(address(erc1363Token), address(cERC1363));
         console.log("WrappersRegistry:", address(registry));
 
-        // 7. Bring each proxy to V3 storage so denylist admin (blockUser/unblockUser/isBlocked)
+        // 7. Deploy the ERC-7984 receiver mock (used by confidentialTransferAndCall e2e).
+        //    `data == abi.encode(uint8(1))` succeeds, `0` fails silently, `>1` reverts with InvalidInput.
+        //    This is the final contract creation; it must precede the reinitializeV3 calls below so
+        //    its CREATE address stays identical to the one recorded in `contracts/deployments.json`.
+        ERC7984ReceiverMock confidentialReceiver = new ERC7984ReceiverMock();
+        console.log("ConfidentialReceiver:", address(confidentialReceiver));
+
+        // 8. Bring each proxy to V3 storage so denylist admin (blockUser/unblockUser/isBlocked)
         // and V3 denylist enforcement on transfer/wrap/unwrap are active in tests. Empty initial
         // denylist; no underlying denylist selector configured.
         // Deferred to the end of broadcast so that no transaction is inserted between contract
@@ -87,7 +95,7 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // 8. Write deployments.json
+        // 9. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));
@@ -95,6 +103,7 @@ contract Deploy is Script {
         vm.serializeAddress(json, "cUSDT", address(cUSDT));
         vm.serializeAddress(json, "ERC1363", address(erc1363Token));
         vm.serializeAddress(json, "cERC1363", address(cERC1363));
+        vm.serializeAddress(json, "confidentialReceiver", address(confidentialReceiver));
         string memory finalJson = vm.serializeAddress(json, "wrappersRegistry", address(registry));
 
         string memory path = string.concat(vm.projectRoot(), "/deployments.json");

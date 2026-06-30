@@ -125,10 +125,7 @@ async function handleMessage(request) {
       case "GENERATE_KEYPAIR": {
         const instance = await getInstance(request.payload.chainId);
         const kp = instance.generateKeypair();
-        send(id, type, {
-          publicKey: ensure0x(kp.publicKey),
-          privateKey: ensure0x(kp.privateKey),
-        });
+        send(id, type, { publicKey: ensure0x(kp.publicKey), privateKey: ensure0x(kp.privateKey) });
         break;
       }
 
@@ -150,10 +147,7 @@ async function handleMessage(request) {
           },
           types: {
             UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification.map(
-              (f) => ({
-                name: f.name,
-                type: f.type,
-              }),
+              (f) => ({ name: f.name, type: f.type }),
             ),
           },
           message: {
@@ -205,10 +199,7 @@ async function handleMessage(request) {
         }
 
         const encrypted = await input.encrypt();
-        send(id, type, {
-          handles: encrypted.handles,
-          inputProof: encrypted.inputProof,
-        });
+        send(id, type, { handles: encrypted.handles, inputProof: encrypted.inputProof });
         break;
       }
 
@@ -284,10 +275,7 @@ async function handleMessage(request) {
 
       case "GET_PUBLIC_KEY": {
         send(id, type, {
-          result: {
-            publicKeyId: "mock-public-key-id",
-            publicKey: new Uint8Array([1, 2, 3, 4]),
-          },
+          result: { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([1, 2, 3, 4]) },
         });
         break;
       }

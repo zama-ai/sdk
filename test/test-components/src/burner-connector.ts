@@ -92,11 +92,7 @@ class BurnerWalletConnector {
   }
 
   private createClient(chain: Chain, account: PrivateKeyAccount): WalletClient {
-    return createWalletClient({
-      chain,
-      account,
-      transport: http(this.resolveRpcUrl(chain)),
-    });
+    return createWalletClient({ chain, account, transport: http(this.resolveRpcUrl(chain)) });
   }
 
   private async handleSendTransaction(
@@ -134,9 +130,7 @@ class BurnerWalletConnector {
     chainId: number;
   }> {
     const provider = await this.getProvider();
-    const accounts = (await provider.request({
-      method: "eth_accounts",
-    })) as Address[];
+    const accounts = (await provider.request({ method: "eth_accounts" })) as Address[];
     let currentChainId = await this.getChainId();
     if (chainId && currentChainId !== chainId) {
       const chain = await this.switchChain({ chainId });
@@ -164,10 +158,7 @@ class BurnerWalletConnector {
           return this.handleSendTransaction(client, account, (params as [TransactionParams])[0]);
 
         case "personal_sign":
-          return client.signMessage({
-            account,
-            message: { raw: (params as [Hex])[0] },
-          });
+          return client.signMessage({ account, message: { raw: (params as [Hex])[0] } });
 
         case "eth_signTypedData_v4": {
           const typedData = JSON.parse((params as [string, string])[1]);
@@ -218,9 +209,7 @@ class BurnerWalletConnector {
 
   async getChainId(): Promise<number> {
     const provider = await this.getProvider();
-    const hexChainId = (await provider.request({
-      method: "eth_chainId",
-    })) as Hex;
+    const hexChainId = (await provider.request({ method: "eth_chainId" })) as Hex;
     return fromHex(hexChainId, "number");
   }
 
@@ -236,9 +225,7 @@ class BurnerWalletConnector {
     if (accounts.length === 0) {
       this.onDisconnect();
     } else {
-      this.config.emitter.emit("change", {
-        accounts: accounts.map(getAddress),
-      });
+      this.config.emitter.emit("change", { accounts: accounts.map(getAddress) });
     }
   }
 

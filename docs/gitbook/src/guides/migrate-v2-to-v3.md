@@ -31,7 +31,7 @@ treat this guide as the source of truth.
 Upgrade this repository from @zama-fhe/sdk and @zama-fhe/react-sdk v2.x to v3.x.
 
 SOURCE OF TRUTH — follow it exactly:
-https://docs.zama.org/protocol/sdk/migration/migrate-v2-to-v3.md
+https://docs.zama.org/protocol/sdk/alpha/migration/migrate-v2-to-v3.md
 
 Rules:
 1. Fetch and read that guide BEFORE doing anything. It is authoritative. Do NOT
@@ -39,7 +39,7 @@ Rules:
    @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
    For any symbol you're unsure about, use the guide's symbol-mapping table; for
    anything it doesn't cover, fetch
-   https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links.
+   https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt and follow its links.
 2. First print a short PLAN: list every file importing @zama-fhe/sdk or
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
@@ -172,9 +172,7 @@ const auth = RELAYER_API_KEY
 
 const relayer = new RelayerNode({
   getChainId: async () => sepolia.id,
-  transports: {
-    [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) },
-  },
+  transports: { [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) } },
 });
 
 using sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
@@ -192,9 +190,7 @@ import { node } from "@zama-fhe/sdk/node";
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 
 using sdk = new ZamaSDK(
@@ -587,12 +583,7 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 const { data: decrypted } = useUserDecrypt({ handles });
 
-const handle = (await sdk.signer.readContract({
-  address,
-  abi,
-  functionName,
-  args,
-})) as string;
+const handle = (await sdk.signer.readContract({ address, abi, functionName, args })) as string;
 setHandles([{ handle, contractAddress }]);
 // read result:
 decrypted?.[handles[0].handle];

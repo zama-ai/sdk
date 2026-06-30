@@ -37,10 +37,7 @@ import {
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-});
+const logs = await publicClient.getLogs({ address: tokenAddress, topics: [TOKEN_TOPICS] });
 
 const events = decodeOnChainEvents(logs);
 

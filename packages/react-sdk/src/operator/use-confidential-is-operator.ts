@@ -46,10 +46,7 @@ export function useConfidentialIsOperator(
 ) {
   const { address, spender, holder } = config;
   const sdk = useZamaSDK();
-  const baseOpts = confidentialIsOperatorQueryOptions(sdk, address, {
-    holder,
-    spender,
-  });
+  const baseOpts = confidentialIsOperatorQueryOptions(sdk, address, { holder, spender });
 
   return useQuery({
     ...baseOpts,
@@ -76,9 +73,6 @@ export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOpera
   const sdk = useZamaSDK();
 
   return useSuspenseQuery<boolean>(
-    confidentialIsOperatorQueryOptions(sdk, address, {
-      holder,
-      spender,
-    }),
+    confidentialIsOperatorQueryOptions(sdk, address, { holder, spender }),
   );
 }

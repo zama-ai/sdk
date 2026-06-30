@@ -32,6 +32,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
+  /** @internal */
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
@@ -173,15 +174,9 @@ export class ZamaSDK {
    */
   emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
     try {
-      this.#onEvent({
-        ...input,
-        tokenAddress,
-        timestamp: Date.now(),
-      } as ZamaSDKEvent);
+      this.#onEvent({ ...input, tokenAddress, timestamp: Date.now() } as ZamaSDKEvent);
     } catch (error) {
-      this.#logger.warn(`${input.type} event listener silently failed`, {
-        error,
-      });
+      this.#logger.warn(`${input.type} event listener silently failed`, { error });
     }
   }
 

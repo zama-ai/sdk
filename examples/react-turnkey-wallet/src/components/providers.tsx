@@ -65,10 +65,7 @@ function signatureToHex(signature: { r: string; s: string; v: string }): `0x${st
   return serializeSignature(signature, "hex") as `0x${string}`;
 }
 
-type EmbeddedEthereumAccount = WalletAccount & {
-  address: Address;
-  organizationId?: string;
-};
+type EmbeddedEthereumAccount = WalletAccount & { address: Address; organizationId?: string };
 
 function buildTurnkeyAccount(input: {
   walletAccount: EmbeddedEthereumAccount;
@@ -165,9 +162,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TurnkeyProvider
         config={turnkeyConfig}
-        callbacks={{
-          onError: (error) => console.error("Turnkey error:", error),
-        }}
+        callbacks={{ onError: (error) => console.error("Turnkey error:", error) }}
       >
         <TurnkeyZamaBridge>{children}</TurnkeyZamaBridge>
       </TurnkeyProvider>
@@ -257,10 +252,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
           transport: http(RPC_URL),
         }) as WalletClient;
 
-        const nextPublicClient = createPublicClient({
-          chain: viemChain,
-          transport: http(RPC_URL),
-        });
+        const nextPublicClient = createPublicClient({ chain: viemChain, transport: http(RPC_URL) });
 
         if (!cancelled) {
           setWalletAddress(ethAccount.address as Address);

@@ -12,10 +12,7 @@ describe("confidentialBalanceQueryOptions", () => {
     const walletAccount = signer.walletAccount.getSnapshot();
     const options = confidentialBalanceQueryOptions(
       token,
-      {
-        tokenAddress,
-        account: owner,
-      },
+      { tokenAddress, account: owner },
       { walletAccount },
     );
 
@@ -52,11 +49,7 @@ describe("confidentialBalanceQueryOptions", () => {
     const token = createMockToken(tokenAddress);
     const options = confidentialBalanceQueryOptions(
       token,
-      {
-        tokenAddress,
-        account: owner,
-        query: { enabled: false },
-      },
+      { tokenAddress, account: owner, query: { enabled: false } },
       { walletAccount: signer.walletAccount.getSnapshot() },
     );
 
@@ -82,10 +75,7 @@ describe("confidentialBalanceQueryOptions", () => {
 
     const options = confidentialBalanceQueryOptions(
       token,
-      {
-        tokenAddress,
-        account: owner,
-      },
+      { tokenAddress, account: owner },
       { walletAccount: signer.walletAccount.getSnapshot() },
     );
 

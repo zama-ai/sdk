@@ -3,6 +3,7 @@ export { AllowAllPanel } from "./allow-all-panel";
 export { ConnectWallet } from "./connect-wallet";
 export { FheRelayerPanel } from "./fhe-relayer-panel";
 export { ShieldForm } from "./shield-form";
+export { TransferAndCallForm } from "./transfer-and-call-form";
 export { TransferForm } from "./transfer-form";
 export { TransferFromForm } from "./transfer-from-form";
 export { UnshieldForm } from "./unshield-form";
