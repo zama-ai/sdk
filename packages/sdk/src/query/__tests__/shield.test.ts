@@ -7,9 +7,7 @@ describe("shieldMutationOptions", () => {
 
     expect(options.mutationKey).toEqual(["zama.shield", mockWrappedToken.address]);
     await options.mutationFn({ amount: 1n, approvalStrategy: "exact" });
-    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, {
-      approvalStrategy: "exact",
-    });
+    expect(mockWrappedToken.shield).toHaveBeenCalledWith(1n, { approvalStrategy: "exact" });
   });
 
   test("passes undefined optional shield params", async ({ mockWrappedToken }) => {

@@ -52,9 +52,7 @@ describe("useApproveUnderlying", () => {
     const onSuccess = vi.fn();
 
     const { result, queryClient } = renderWithProviders(() =>
-      useApproveUnderlying(wrapperAddress, {
-        onSuccess,
-      }),
+      useApproveUnderlying(wrapperAddress, { onSuccess }),
     );
 
     queryClient.setQueryData(allowanceKey, 500n);

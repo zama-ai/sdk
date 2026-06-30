@@ -38,10 +38,7 @@ describe("ZamaConfigBase (mapped relayers)", () => {
     // Valid: relayer for every chain
     assertType<ZamaConfigBase<readonly [typeof sepolia, typeof mainnet]>>({
       chains: [sepolia, mainnet] as const,
-      relayers: {
-        [sepolia.id]: {} as RelayerConfig,
-        [mainnet.id]: {} as RelayerConfig,
-      },
+      relayers: { [sepolia.id]: {} as RelayerConfig, [mainnet.id]: {} as RelayerConfig },
     });
   });
 
@@ -55,9 +52,6 @@ describe("ZamaConfigBase (mapped relayers)", () => {
 
   test("rejects empty chains tuple", () => {
     // @ts-expect-error — empty tuple does not satisfy AtLeastOneChain
-    assertType<ZamaConfigBase<readonly []>>({
-      chains: [] as const,
-      relayers: {},
-    });
+    assertType<ZamaConfigBase<readonly []>>({ chains: [] as const, relayers: {} });
   });
 });

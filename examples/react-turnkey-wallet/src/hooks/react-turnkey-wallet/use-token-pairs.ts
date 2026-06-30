@@ -22,10 +22,5 @@ export function useTokenPairs(selectedTokenAddressState: Address | null) {
     [selectedTokenAddress, validPairs],
   );
 
-  return {
-    isRegistryPending,
-    validPairs,
-    selectedTokenAddress,
-    selectedPair,
-  };
+  return { isRegistryPending, validPairs, selectedTokenAddress, selectedPair };
 }

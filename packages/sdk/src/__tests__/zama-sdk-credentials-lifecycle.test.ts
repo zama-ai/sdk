@@ -167,12 +167,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerA = createMockSigner();
       const providerA = createMockProvider();
       const relayerA = createMockRelayer();
-      const sdkA = createSDK({
-        signer: signerA,
-        provider: providerA,
-        relayer: relayerA,
-        storage,
-      });
+      const sdkA = createSDK({ signer: signerA, provider: providerA, relayer: relayerA, storage });
 
       await sdkA.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signerA.signTypedData).toHaveBeenCalledOnce();
@@ -190,12 +185,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerB = createMockSigner();
       const providerB = createMockProvider();
       const relayerB = createMockRelayer();
-      const sdkB = createSDK({
-        signer: signerB,
-        provider: providerB,
-        relayer: relayerB,
-        storage,
-      });
+      const sdkB = createSDK({ signer: signerB, provider: providerB, relayer: relayerB, storage });
 
       expect(await sdkB.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
 

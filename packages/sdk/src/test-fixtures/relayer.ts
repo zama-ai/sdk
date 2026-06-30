@@ -17,33 +17,29 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     chains: [{ id: 31337 }],
     activeChain: { id: 31337 },
     switchChain: vi.fn(),
-    generateTransportKeyPair: vi.fn().mockResolvedValue({
-      publicKey: TEST_PUBLIC_KEY,
-      privateKey: TEST_PRIVATE_KEY,
-    }),
-    createEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { UserDecryptRequestVerification: [] },
-      message: {
-        publicKey: TEST_PUBLIC_KEY,
-        contractAddresses: [TOKEN],
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    }),
-    encrypt: vi.fn().mockResolvedValue({
-      encryptedValues: [VALID_ENCRYPTED_VALUE],
-      inputProof: VALID_INPUT_PROOF,
-    }),
-    userDecrypt: vi.fn().mockResolvedValue({
-      [VALID_ENCRYPTED_VALUE as string]: 1000n,
-    }),
+    generateTransportKeyPair: vi
+      .fn()
+      .mockResolvedValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
+    createEIP712: vi
+      .fn()
+      .mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { UserDecryptRequestVerification: [] },
+        message: {
+          publicKey: TEST_PUBLIC_KEY,
+          contractAddresses: [TOKEN],
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      }),
+    encrypt: vi
+      .fn()
+      .mockResolvedValue({
+        encryptedValues: [VALID_ENCRYPTED_VALUE],
+        inputProof: VALID_INPUT_PROOF,
+      }),
+    userDecrypt: vi.fn().mockResolvedValue({ [VALID_ENCRYPTED_VALUE as string]: 1000n }),
     publicDecrypt: vi.fn().mockImplementation((handles: string[]) => {
       const clearValues: Record<string, bigint> = {};
       for (const h of handles) {
@@ -55,29 +51,22 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
         decryptionProof: "0xproof",
       });
     }),
-    createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {},
-    }),
-    delegatedUserDecrypt: vi.fn().mockResolvedValue({
-      [VALID_ENCRYPTED_VALUE as string]: 1000n,
-    }),
+    createDelegatedUserDecryptEIP712: vi
+      .fn()
+      .mockResolvedValue({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {},
+      }),
+    delegatedUserDecrypt: vi.fn().mockResolvedValue({ [VALID_ENCRYPTED_VALUE as string]: 1000n }),
     requestZKProofVerification: vi.fn(),
     getAclAddress: vi.fn().mockResolvedValue(ACL),
-    fetchFheEncryptionKeyBytes: vi.fn().mockResolvedValue({
-      publicKeyId: "pk-1",
-      publicKey: new Uint8Array([1]),
-    }),
-    getPublicParams: vi.fn().mockResolvedValue({
-      publicParams: new Uint8Array([2]),
-      publicParamsId: "pp-1",
-    }),
+    fetchFheEncryptionKeyBytes: vi
+      .fn()
+      .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
+    getPublicParams: vi
+      .fn()
+      .mockResolvedValue({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" }),
     terminate: vi.fn(),
     ...overrides,
   } as unknown as RelayerSDK;

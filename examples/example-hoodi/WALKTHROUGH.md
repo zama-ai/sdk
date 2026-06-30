@@ -421,10 +421,7 @@ transfer.mutate({
 // Unshield: 2 transactions (unwrap + finalizeUnwrap).
 // Amount is in confidential token units — use cTokenDecimals.
 // onFinalizing fires between the two transactions — use it to update the progress UI.
-unshield.mutate({
-  amount: parseUnits("2", cTokenDecimals),
-  onFinalizing: () => setStep(2),
-});
+unshield.mutate({ amount: parseUnits("2", cTokenDecimals), onFinalizing: () => setStep(2) });
 ```
 
 ### Delegation hooks

@@ -39,10 +39,7 @@ class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
 
   protected createWorker(): TestWorker {
     this.createWorkerCount++;
-    const worker: TestWorker = {
-      postMessage: vi.fn(),
-      terminate: vi.fn(),
-    };
+    const worker: TestWorker = { postMessage: vi.fn(), terminate: vi.fn() };
     this.lastWorker = worker;
     return worker;
   }
@@ -63,15 +60,10 @@ class TestWorkerClient extends BaseWorkerClient<TestWorker, TestConfig> {
     return `req-${++requestIdCounter}`;
   }
 
-  protected getInitPayload(): {
-    type: WorkerRequestType;
-    payload: WorkerRequest["payload"];
-  } {
+  protected getInitPayload(): { type: WorkerRequestType; payload: WorkerRequest["payload"] } {
     return {
       type: this.config.initType,
-      payload: {
-        fhevmConfig: { chainId: 1 },
-      } as unknown as WorkerRequest["payload"],
+      payload: { fhevmConfig: { chainId: 1 } } as unknown as WorkerRequest["payload"],
     };
   }
 
@@ -126,12 +118,7 @@ async function initClient(config?: Partial<TestConfig>): Promise<TestWorkerClien
 function autoResolvePostMessage(client: TestWorkerClient, data: unknown = {}): void {
   client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
-      client.simulateResponse({
-        id: req.id,
-        type: req.type,
-        success: true,
-        data,
-      });
+      client.simulateResponse({ id: req.id, type: req.type, success: true, data });
     });
   });
 }
@@ -139,12 +126,7 @@ function autoResolvePostMessage(client: TestWorkerClient, data: unknown = {}): v
 function autoRejectPostMessage(client: TestWorkerClient, error: string): void {
   client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
-      client.simulateResponse({
-        id: req.id,
-        type: req.type,
-        success: false,
-        error,
-      });
+      client.simulateResponse({ id: req.id, type: req.type, success: false, error });
     });
   });
 }
@@ -177,12 +159,7 @@ describe("BaseWorkerClient", () => {
   });
 
   test("logs a handled request failure at debug, never error", async () => {
-    const sink: GenericLogger = {
-      info: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    const sink: GenericLogger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const client = await initClient({ logger: new LoggerService(sink) });
     autoRejectPostMessage(client, "decrypt failed");
 
@@ -198,12 +175,7 @@ describe("BaseWorkerClient", () => {
   });
 
   test("logs a genuine worker fault at error", async () => {
-    const sink: GenericLogger = {
-      info: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
+    const sink: GenericLogger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const client = await initClient({ logger: new LoggerService(sink) });
 
     const pending = client.generateKeypair({ chainId: 1 });
@@ -248,12 +220,7 @@ describe("BaseWorkerClient", () => {
 
   test("logs warning for unknown response ID without crashing", async () => {
     const warn = vi.fn();
-    const mockLogger: GenericLogger = {
-      info: vi.fn(),
-      debug: vi.fn(),
-      warn,
-      error: vi.fn(),
-    };
+    const mockLogger: GenericLogger = { info: vi.fn(), debug: vi.fn(), warn, error: vi.fn() };
     const client = new TestWorkerClient({ logger: new LoggerService(mockLogger) });
 
     client.simulateResponse({
@@ -517,10 +484,7 @@ describe("BaseWorkerClient", () => {
     const client = await initClient();
     autoResolvePostMessage(client, "0xproof");
 
-    await client.requestZKProofVerification({
-      chainId: 1,
-      zkProof: { proof: "0x" } as never,
-    });
+    await client.requestZKProofVerification({ chainId: 1, zkProof: { proof: "0x" } as never });
 
     const lastCall = client.lastWorker!.postMessage.mock.calls.at(-1)![0];
     expect(lastCall.type).toBe("REQUEST_ZK_PROOF_VERIFICATION");

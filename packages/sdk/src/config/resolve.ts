@@ -61,10 +61,7 @@ export function resolveChainRelayers(
       );
     }
 
-    result.set(id, {
-      chain: chainConfig,
-      relayer: relayerConfig,
-    });
+    result.set(id, { chain: chainConfig, relayer: relayerConfig });
   }
 
   const relayerIdSet = new Set(Object.keys(relayers).map(Number));

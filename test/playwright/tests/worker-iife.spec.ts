@@ -15,9 +15,7 @@ test("worker loads without SyntaxError in Vite ESM environment", async ({ page, 
   await page.getByTestId("shield-button").click();
 
   // Wait for the shield transaction to succeed (proves the worker round-tripped)
-  await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x", {
-    timeout: 30000,
-  });
+  await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x", { timeout: 30000 });
 
   // No SyntaxError in console — this is the IIFE fix validation
   const syntaxErrors = errors.filter((e) => e.includes("SyntaxError"));

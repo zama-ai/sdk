@@ -1,10 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "types": ["node"]
-  },
+  "compilerOptions": { "target": "ESNext", "lib": ["ESNext"], "types": ["node"] },
   "include": ["fixtures", "tests/node", "**/*.node.spec.ts"],
   "exclude": ["node_modules"]
 }

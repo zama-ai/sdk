@@ -61,16 +61,7 @@ const FHE_TYPE_NAME_TO_ID = {
  * Maps FHE type IDs to their bit-width (used for byte-length padding).
  * @type {Record<number, number>}
  */
-const FHE_TYPE_ID_TO_BITS = {
-  0: 2,
-  2: 8,
-  3: 16,
-  4: 32,
-  5: 64,
-  6: 128,
-  7: 160,
-  8: 256,
-};
+const FHE_TYPE_ID_TO_BITS = { 0: 2, 2: 8, 3: 16, 4: 32, 5: 64, 6: 128, 7: 160, 8: 256 };
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -493,11 +484,7 @@ async function handlePublicDecrypt(req, res) {
       ],
     },
     primaryType: "PublicDecryptVerification",
-    message: {
-      ctHandles: handles,
-      decryptedResult: abiEncodedClearValues,
-      extraData: "0x",
-    },
+    message: { ctHandles: handles, decryptedResult: abiEncodedClearValues, extraData: "0x" },
   });
 
   const decryptionProof = toHex(toBytes(concat([toHex(new Uint8Array([1])), signature])));
@@ -569,13 +556,7 @@ async function handleDelegatedUserDecrypt(req, res) {
  * @param {import("node:http").ServerResponse} res
  */
 function handleKeyurl(_req, res) {
-  sendJson(res, {
-    fhePublicKey: {
-      dataId: "mock-public-key-id",
-      urls: [],
-    },
-    crs: {},
-  });
+  sendJson(res, { fhePublicKey: { dataId: "mock-public-key-id", urls: [] }, crs: {} });
 }
 
 // ── Server ──────────────────────────────────────────────────

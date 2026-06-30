@@ -53,10 +53,7 @@ const MOCK_EIP712 = {
 };
 
 function createRelayer() {
-  return new RelayerWeb({
-    chain: { chainId: 1 } as any,
-    worker: mockWorkerClient as any,
-  });
+  return new RelayerWeb({ chain: { chainId: 1 } as any, worker: mockWorkerClient as any });
 }
 
 describe("createEIP712 includes EIP712Domain type", () => {

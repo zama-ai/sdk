@@ -140,10 +140,7 @@ describe("WrappedToken", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(3);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({
-          functionName: "approve",
-          args: expect.arrayContaining([0n]),
-        }),
+        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([0n]) }),
       );
     });
 
@@ -285,10 +282,7 @@ describe("WrappedToken", () => {
       wrappedToken,
       inputProof,
     }) => {
-      vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        encryptedValues: [],
-        inputProof,
-      });
+      vi.mocked(relayer.encrypt).mockResolvedValueOnce({ encryptedValues: [], inputProof });
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
@@ -384,9 +378,7 @@ describe("WrappedToken", () => {
         ],
       });
 
-      const result = await wrappedToken.unshield(50n, {
-        skipBalanceCheck: true,
-      });
+      const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
       expect(relayer.encrypt).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -431,9 +423,7 @@ describe("WrappedToken", () => {
       wrappedToken,
       provider,
     }) => {
-      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
-        logs: [],
-      });
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
         "No UnwrapRequested event found in unshield receipt",
@@ -524,9 +514,7 @@ describe("WrappedToken", () => {
         ],
       });
 
-      const result = await wrappedToken.unshield(50n, {
-        skipBalanceCheck: true,
-      });
+      const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
       expect(result.txHash).toBe("0xtxhash");
     });
 

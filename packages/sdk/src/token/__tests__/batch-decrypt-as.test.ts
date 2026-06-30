@@ -17,27 +17,26 @@ const HANDLE_B = ("0x" + "b2".repeat(32)) as EncryptedValue;
  * Token batching without priming the full EIP-712 sign flow.
  */
 function stubDelegatedBatchDecrypt(sdk: ZamaSDK, values: Record<EncryptedValue, bigint>) {
-  const stub = vi.fn().mockImplementation(
-    async ({
-      encryptedInputs,
-    }: {
-      encryptedInputs: {
-        encryptedValue: EncryptedValue;
-        contractAddress: Address;
-      }[];
-    }) => ({
-      items: encryptedInputs.map(({ encryptedValue, contractAddress }) => {
-        const value = values[encryptedValue];
-        return value !== undefined
-          ? { encryptedValue, contractAddress, value }
-          : {
-              encryptedValue,
-              contractAddress,
-              error: new Error(`No value for ${encryptedValue}`),
-            };
+  const stub = vi
+    .fn()
+    .mockImplementation(
+      async ({
+        encryptedInputs,
+      }: {
+        encryptedInputs: { encryptedValue: EncryptedValue; contractAddress: Address }[];
+      }) => ({
+        items: encryptedInputs.map(({ encryptedValue, contractAddress }) => {
+          const value = values[encryptedValue];
+          return value !== undefined
+            ? { encryptedValue, contractAddress, value }
+            : {
+                encryptedValue,
+                contractAddress,
+                error: new Error(`No value for ${encryptedValue}`),
+              };
+        }),
       }),
-    }),
-  );
+    );
   Object.defineProperty(sdk.decryption, "delegatedBatchDecryptValues", {
     value: stub,
     configurable: true,
@@ -54,10 +53,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
@@ -83,9 +79,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   });
 
   test("returns empty map for empty token list", async () => {
-    const result = await Token.batchDecryptBalancesAs([], {
-      delegatorAddress: DELEGATOR,
-    });
+    const result = await Token.batchDecryptBalancesAs([], { delegatorAddress: DELEGATOR });
     expect(result.size).toBe(0);
   });
 
@@ -97,19 +91,14 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
     const ZERO = ("0x" + "00".repeat(32)) as EncryptedValue;
 
     vi.mocked(delegateProvider.readContract).mockResolvedValueOnce(ZERO);
 
     const token = new Token(delegateSdk, TOKEN_A);
 
-    const balances = await Token.batchDecryptBalancesAs([token], {
-      delegatorAddress: DELEGATOR,
-    });
+    const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
     expect(balances.get(TOKEN_A)).toBe(0n);
     expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
@@ -127,10 +116,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
     // Pre-populate cache via shared storage: ownerAddress = DELEGATOR
     await cachingService.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
@@ -140,9 +126,7 @@ describe("Token.batchDecryptBalancesAs", () => {
 
     const token = new Token(delegateSdk, TOKEN_A);
 
-    const balances = await Token.batchDecryptBalancesAs([token], {
-      delegatorAddress: DELEGATOR,
-    });
+    const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
     // Delegation check now fires even when the cache resolves everything, so
     // revoked delegations can't leak stale cached values.
@@ -160,10 +144,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
     await cachingService.set(DELEGATOR, TOKEN_A, HANDLE_A, 42n);
 
     vi.mocked(delegateProvider.readContract)
@@ -173,9 +154,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const token = new Token(delegateSdk, TOKEN_A);
 
     await expect(
-      Token.batchDecryptBalancesAs([token], {
-        delegatorAddress: DELEGATOR,
-      }),
+      Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR }),
     ).rejects.toMatchObject({
       code: "DECRYPTION_FAILED",
       message: expect.stringContaining(TOKEN_A),
@@ -191,10 +170,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
@@ -221,10 +197,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf → non-zero, goes to uncached
@@ -233,9 +206,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const token = new Token(delegateSdk, TOKEN_A);
 
     await expect(
-      Token.batchDecryptBalancesAs([token], {
-        delegatorAddress: DELEGATOR,
-      }),
+      Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR }),
     ).rejects.toMatchObject({
       code: "DECRYPTION_FAILED",
       message: expect.stringContaining(TOKEN_A),
@@ -252,10 +223,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
@@ -265,9 +233,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const token = new Token(delegateSdk, TOKEN_A);
 
     await expect(
-      Token.batchDecryptBalancesAs([token], {
-        delegatorAddress: DELEGATOR,
-      }),
+      Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR }),
     ).rejects.toMatchObject({
       code: "DECRYPTION_FAILED",
       message: expect.stringContaining(TOKEN_A),
@@ -283,10 +249,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
@@ -295,9 +258,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const token = new Token(delegateSdk, TOKEN_A);
     stubDelegatedBatchDecrypt(delegateSdk, { [HANDLE_A]: 42n });
 
-    const balances = await Token.batchDecryptBalancesAs([token], {
-      delegatorAddress: DELEGATOR,
-    });
+    const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
     expect(balances.get(TOKEN_A)).toBe(42n);
     expect(delegateProvider.getBlockTimestamp).not.toHaveBeenCalled();
@@ -310,10 +271,7 @@ describe("Token.batchDecryptBalancesAs", () => {
   }) => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
@@ -343,11 +301,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const delegateSigner = createMockSigner(DELEGATE);
     const delegateProvider = createMockProvider();
     const storage = createMockStorage();
-    const delegateSdk = createSDK({
-      signer: delegateSigner,
-      provider: delegateProvider,
-      storage,
-    });
+    const delegateSdk = createSDK({ signer: delegateSigner, provider: delegateProvider, storage });
 
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A)
@@ -359,9 +313,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     // Sabotage the storage so any cache write fails — decrypt should still succeed.
     vi.spyOn(storage, "set").mockRejectedValue(new Error("storage full"));
 
-    const balances = await Token.batchDecryptBalancesAs([token], {
-      delegatorAddress: DELEGATOR,
-    });
+    const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
     expect(balances.get(TOKEN_A)).toBe(99n);
   });

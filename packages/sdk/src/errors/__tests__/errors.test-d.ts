@@ -115,16 +115,12 @@ describe("matchZamaError", () => {
 
   test("narrowing is additive: base-typed and base-field handlers still compile", () => {
     // a handler reading only base fields still compiles and infers the return type
-    const fromBaseField = matchZamaError(new Error("any"), {
-      SIGNING_REJECTED: (e) => e.message,
-    });
+    const fromBaseField = matchZamaError(new Error("any"), { SIGNING_REJECTED: (e) => e.message });
     expectTypeOf(fromBaseField).toEqualTypeOf<string | undefined>();
 
     // a handler annotated with the base type stays assignable (params are contravariant)
     const baseHandler = (e: ZamaError) => e.code;
-    const fromBaseHandler = matchZamaError(new Error("any"), {
-      SIGNING_REJECTED: baseHandler,
-    });
+    const fromBaseHandler = matchZamaError(new Error("any"), { SIGNING_REJECTED: baseHandler });
     expectTypeOf(fromBaseHandler).toEqualTypeOf<ZamaErrorCode | undefined>();
   });
 });

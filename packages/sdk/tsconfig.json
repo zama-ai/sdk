@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "tsBuildInfoFile": ".tsbuildinfo"
-  },
+  "compilerOptions": { "tsBuildInfoFile": ".tsbuildinfo" },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": [
     "src/**/*.test.ts",
