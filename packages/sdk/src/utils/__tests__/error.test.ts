@@ -206,6 +206,30 @@ describe("hasStructuredRpcRateLimitSignal", () => {
     );
   });
 
+  test("matches a viem JSON-RPC `code: 429` (its own shouldRetry shape)", () => {
+    expect(hasStructuredRpcRateLimitSignal(Object.assign(new Error("x"), { code: 429 }))).toBe(
+      true,
+    );
+  });
+
+  test("matches an ethers 429: `code: SERVER_ERROR` + string `info.responseStatus`", () => {
+    // ethers carries the status only in info.responseStatus (a string), with no
+    // numeric top-level status — the leading code must be parsed out of it.
+    const ethers429 = Object.assign(new Error("server response error"), {
+      code: "SERVER_ERROR",
+      info: { responseStatus: "429 Too Many Requests" },
+    });
+    expect(hasStructuredRpcRateLimitSignal(ethers429)).toBe(true);
+  });
+
+  test("does NOT match a non-429 ethers `info.responseStatus` (e.g. 500)", () => {
+    const ethers500 = Object.assign(new Error("server response error"), {
+      code: "SERVER_ERROR",
+      info: { responseStatus: "500 Internal Server Error" },
+    });
+    expect(hasStructuredRpcRateLimitSignal(ethers500)).toBe(false);
+  });
+
   test("does NOT match a bare `statusCode: 429` (relayer / node-fetch shape)", () => {
     expect(
       hasStructuredRpcRateLimitSignal(

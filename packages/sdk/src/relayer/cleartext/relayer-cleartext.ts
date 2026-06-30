@@ -55,6 +55,7 @@ import type { FheChain } from "../../chains/types";
 import {
   ConfigurationError,
   DecryptionFailedError,
+  DelegationNotPropagatedError,
   EncryptionFailedError,
   NotEntitledError,
 } from "../../errors";
@@ -466,6 +467,28 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       if (!results[i]) {
         throw new DecryptionFailedError(
           `Encrypted value ${encryptedValues[i]!} is not delegated for user decryption`,
+        );
+      }
+    }
+
+    // Parity with the relayer/worker path: a delegated handle still requires the
+    // *delegator* to hold the ACL grant (`persistAllowed`). Without this check,
+    // the same condition surfaces differently in local cleartext dev than in
+    // production — exactly where integrators wire up their error handling. On the
+    // delegated path this is a *transient* propagation/lag window, so it maps to
+    // DelegationNotPropagatedError (retryable), matching `wrapDecryptError`.
+    const delegatorAllowed = await Promise.all(
+      encryptedValues.map((encryptedValue) =>
+        this.#persistAllowed(encryptedValue, delegatorAddress),
+      ),
+    );
+
+    for (let i = 0; i < encryptedValues.length; i++) {
+      if (!delegatorAllowed[i]) {
+        throw new DelegationNotPropagatedError(
+          `Delegated decryption of encrypted value ${encryptedValues[i]!} was denied by the on-chain ` +
+            `ACL check for delegator ${delegatorAddress}. This is most commonly a propagation/lag window — ` +
+            `allow 1–2 minutes after granting before retrying.`,
         );
       }
     }

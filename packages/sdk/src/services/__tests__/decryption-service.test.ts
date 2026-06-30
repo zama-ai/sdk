@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
-import { NotEntitledError, RpcRateLimitError } from "../../errors";
+import { DelegationNotPropagatedError, NotEntitledError, RpcRateLimitError } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -293,7 +293,7 @@ describe("DecryptionService", () => {
       expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
     });
 
-    test("maps the relayer's not-entitled failure to NotEntitledError with the injected contract + delegator", async ({
+    test("maps the relayer's not-entitled failure on the delegated path to transient DelegationNotPropagatedError", async ({
       decryptionService,
       provider,
       relayer,
@@ -315,8 +315,11 @@ describe("DecryptionService", () => {
         },
       } as never);
       // The relayer's ACL gate throws a message-only Error; after the worker
-      // boundary only the message survives, and the contract/delegator are
-      // injected from the request context the service holds.
+      // boundary only the message survives. On the delegated path that verdict
+      // comes from the *delegator's* `persistAllowed` L1 read, which is false
+      // transiently under propagation lag — so it is surfaced as the retryable
+      // DelegationNotPropagatedError, not the terminal NotEntitledError used for a
+      // direct signer denial.
       vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
         new Error(
           `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
@@ -331,12 +334,8 @@ describe("DecryptionService", () => {
           userAddress,
         )
         .catch((e: unknown) => e);
-      expect(error).toBeInstanceOf(NotEntitledError);
-      expect(error).toMatchObject({
-        encryptedValue: HANDLE_A,
-        contractAddress: CONTRACT_A,
-        account: getAddress(delegatorAddress),
-      });
+      expect(error).toBeInstanceOf(DelegationNotPropagatedError);
+      expect(error).not.toBeInstanceOf(NotEntitledError);
     });
 
     test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({

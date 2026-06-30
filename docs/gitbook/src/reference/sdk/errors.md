@@ -87,7 +87,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                             |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                       |
-| `NotEntitledError`                      | `NOT_ENTITLED`                        | Signer/account lacks ACL permission to decrypt this encrypted value (don't retry) |
+| `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)  |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                             |
@@ -102,7 +102,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Same-block delegate/revoke not allowed                                            |
 | `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Contract address equals caller                                                    |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                    |
-| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to gateway yet                          |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegated decrypt failed transiently (gateway not synced yet, or delegator ACL read stale) — retry |
 | `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured                               |
 | `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account                                 |
 | `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter has not resolved its account yet                             |
@@ -307,11 +307,13 @@ matchZamaError(error, {
 
 **Code:** `NOT_ENTITLED`
 
-The configured signer (for user decrypt) or delegator (for delegated decrypt) is not entitled to decrypt the encrypted value: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+The configured signer is not entitled to decrypt the encrypted value: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
 
 The SDK derives this typed error from the relayer's own authoritative ACL check — it adds no extra on-chain reads.
 
-> **Scope:** `NotEntitledError` covers the **actor** (signer/delegator) not being entitled. The rarer "the dapp contract itself is not authorized for this encrypted value" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
+> **Scope:** `NotEntitledError` covers the **direct signer** (user-decrypt path) not being entitled. The rarer "the dapp contract itself is not authorized for this encrypted value" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
+
+> **Delegated path:** on a *delegated* decrypt, a "not entitled" verdict comes from the **delegator's** `persistAllowed` L1 read, which returns `false` transiently while a just-granted delegation propagates or when the RPC serves a stale block. That case is **not** terminal — it surfaces as the retryable [`DelegationNotPropagatedError`](#delegationnotpropagatederror) instead, mirroring the delegated-500 handling.
 
 The error carries `encryptedValue`, `contractAddress`, and `account`.
 
@@ -580,7 +582,7 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_PROPAGATED`
 
-Thrown when `decryptBalanceAs` fails with an HTTP 500 in a delegated context. The most likely cause is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes.
+Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
 
 ```ts
 matchZamaError(error, {

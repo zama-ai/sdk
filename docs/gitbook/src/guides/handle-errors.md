@@ -42,7 +42,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals the contract address                                                     |
 | `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                           |
 | `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                                     |
-| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegation exists on L1 but hasn't synced to the gateway yet                             |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry |
 | `AclPausedError`                        | `ACL_PAUSED`                          | The ACL contract is paused                                                               |
 
 ### 2. Catch with instanceof

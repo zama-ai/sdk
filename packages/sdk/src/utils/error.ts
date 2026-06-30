@@ -181,13 +181,31 @@ export function deserializeError(serialized: SerializedError): Error {
 // ============================================================================
 
 /**
- * Structured (unambiguous) consumer rate-limit signal: JSON-RPC -32005 or a
- * viem-style numeric `status: 429`. Deliberately NOT `statusCode: 429` — that is
- * the relayer / node-fetch HTTP shape, which stays {@link RelayerRequestFailedError}
- * (SDK-236), so a relayer 429 is never mistaken for a consumer-RPC throttle.
+ * Structured (unambiguous) consumer rate-limit signal across the RPC providers
+ * the SDK reads through:
+ * - JSON-RPC `-32005` ("limit exceeded");
+ * - viem-style numeric `status: 429`, and viem's own `shouldRetry` shape where
+ *   the JSON-RPC error `code` is `429`;
+ * - ethers' 429, which surfaces as `code: "SERVER_ERROR"` with the status only
+ *   in `info.responseStatus` (a string like `"429 Too Many Requests"`) and no
+ *   numeric top-level status — the leading code is parsed out of it.
+ *
+ * Deliberately NOT `statusCode: 429` — that is the relayer / node-fetch HTTP
+ * shape, which stays {@link RelayerRequestFailedError} (SDK-236), so a relayer
+ * 429 is never mistaken for a consumer-RPC throttle.
  */
 function nodeHasStructuredRateLimit(node: Record<string, unknown>): boolean {
-  return node.code === JSON_RPC_LIMIT_EXCEEDED || node.status === 429;
+  if (node.code === JSON_RPC_LIMIT_EXCEEDED || node.status === 429 || node.code === 429) {
+    return true;
+  }
+  // ethers: `code: "SERVER_ERROR"`, status lives in `info.responseStatus`.
+  if (node.code === "SERVER_ERROR" && typeof node.info === "object" && node.info !== null) {
+    const responseStatus = (node.info as Record<string, unknown>).responseStatus;
+    if (typeof responseStatus === "string" && /^\s*429\b/.test(responseStatus)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function nodeIsRpcRateLimit(node: Record<string, unknown>): boolean {

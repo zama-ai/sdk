@@ -183,6 +183,24 @@ describe("wrapDecryptError", () => {
       expect((wrapped as NotEntitledError).account).toBe("0xActor");
     });
 
+    test("on the delegated path a not-entitled message maps to transient DelegationNotPropagatedError, not terminal NotEntitled", () => {
+      // The delegated "not entitled" verdict comes from the delegator's
+      // `persistAllowed` L1 read, which returns false *transiently* under RPC lag
+      // / a just-landed delegation — so it must be retryable, mirroring the
+      // delegated-500 handling, rather than terminal NotEntitledError.
+      const relayerError = new Error(
+        `User address 0xDelegator is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+      );
+      const wrapped = wrapDecryptError(relayerError, "fallback", {
+        isDelegated: true,
+        contractAddress: "0xContract",
+        account: "0xDelegator",
+      });
+      expect(wrapped).toBeInstanceOf(DelegationNotPropagatedError);
+      expect(wrapped).not.toBeInstanceOf(NotEntitledError);
+      expect((wrapped as { cause?: unknown }).cause).toBe(relayerError);
+    });
+
     test("maps a rebuilt worker rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
       // After deserializeError rebuilds the worker error, the structured signal
       // (-32005) and retryAfter are read directly — no separate worker taxonomy.
@@ -214,6 +232,22 @@ describe("wrapDecryptError", () => {
     test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {
       const rpcError = Object.assign(new Error("limit exceeded"), { code: -32005 });
       expect(wrapDecryptError(rpcError, "fallback")).toBeInstanceOf(RpcRateLimitError);
+    });
+
+    test("maps an ethers 429 (SERVER_ERROR + info.responseStatus) to RpcRateLimitError, not DecryptionFailed", () => {
+      // ethers' L1 reads throw a 429 as `code: "SERVER_ERROR"` with the status
+      // only in `info.responseStatus` (a string) and no numeric top-level status;
+      // without parsing it the retryable signal is lost to DecryptionFailedError.
+      const ethers429 = Object.assign(new Error("server response error (eth_call)"), {
+        code: "SERVER_ERROR",
+        info: { responseStatus: "429 Too Many Requests" },
+      });
+      expect(wrapDecryptError(ethers429, "fallback")).toBeInstanceOf(RpcRateLimitError);
+    });
+
+    test("maps a viem JSON-RPC `code: 429` to RpcRateLimitError", () => {
+      const viem429 = Object.assign(new Error("Too Many Requests"), { code: 429 });
+      expect(wrapDecryptError(viem429, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
     test("maps a status-bearing consumer 429 (viem `status`) to RpcRateLimitError", () => {

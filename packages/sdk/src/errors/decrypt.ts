@@ -33,8 +33,9 @@ export interface DecryptErrorContext {
 /**
  * The single decryption-error classifier. Maps a caught error to the right typed
  * SDK error: not-entitled (ACL), consumer RPC rate-limit, NoCiphertext (400),
- * DelegationNotPropagated (delegated 500), RelayerRequestFailed (other HTTP), or
- * the generic DecryptionFailed fallback.
+ * DelegationNotPropagated (delegated 500 *or* a delegated ACL denial, which is
+ * transient), RelayerRequestFailed (other HTTP), or the generic DecryptionFailed
+ * fallback.
  *
  * Errors that are already typed SDK errors are returned as-is so callers can
  * still match the original cause. All structured signals (codes, status, cause
@@ -65,6 +66,24 @@ export function wrapDecryptError(
   // survives the worker boundary; the handle is parseable from it and the
   // contract/account come from the request context the caller holds.
   if (error instanceof Error && isNotEntitledMessage(error.message)) {
+    // On the delegated path the "not entitled" verdict comes from the
+    // *delegator's* `persistAllowed` L1 read, which has no staleness tolerance:
+    // it returns false *transiently* when the delegation has just landed or the
+    // consumer's RPC serves a lagging block. Terminal `NotEntitledError` ("never
+    // retry") would be the wrong signal for that 1–2 min window, so — mirroring
+    // the delegated-500 branch below — surface the retryable
+    // `DelegationNotPropagatedError` instead. A direct signer denial (non-
+    // delegated) stays terminal `NotEntitledError`.
+    if (ctx.isDelegated) {
+      return new DelegationNotPropagatedError(
+        "Delegated decryption was denied by the on-chain ACL check. " +
+          "This is most commonly caused by the delegation not having propagated yet, or by the " +
+          "RPC node serving a stale block — after granting delegation, allow 1–2 minutes (and prefer " +
+          "a fresh, low-lag RPC endpoint) before retrying. If it persists, the delegator may genuinely " +
+          "lack the on-chain ACL grant.",
+        { cause: error },
+      );
+    }
     return new NotEntitledError(
       {
         encryptedValue: parseHandleFromMessage(error.message) ?? "",
