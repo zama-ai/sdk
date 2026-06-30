@@ -411,15 +411,17 @@ function readRetryAfterHeader(headers: unknown): number | undefined {
 }
 
 /**
- * A node's `Retry-After` header (seconds), whether it sits directly on the error
- * (viem's `HttpRequestError.headers`) or on a wrapped fetch `Response` (the
- * relayer SDK's `cause.response.headers`).
+ * A node's **relayer** `Retry-After` header (seconds), read from a wrapped fetch
+ * `Response` (the relayer SDK's `cause.response.headers`). The SDK owns the
+ * relayer fetch, so parsing the header there is legitimate.
+ *
+ * The viem/chain side (`HttpRequestError.headers`) is deliberately **not** read:
+ * for consumer RPC the integrator's viem/ethers transport already honors
+ * `Retry-After` in its own retry loop (and retries) before the error ever
+ * surfaces, so re-reading it here would re-implement a transport concern.
+ * Chain-RPC backoff is configured on the consumer's transport (`chain.network`).
  */
 function retryAfterFromHeader(node: Record<string, unknown>): number | undefined {
-  const direct = readRetryAfterHeader(node.headers);
-  if (direct !== undefined) {
-    return direct;
-  }
   const response = node.response;
   if (response !== null && typeof response === "object") {
     return readRetryAfterHeader((response as Record<string, unknown>).headers);
@@ -445,9 +447,9 @@ function retryAfterFromNode(node: Record<string, unknown>): number | undefined {
 /**
  * Best-effort extraction of a server-driven retry delay, in **seconds**, from
  * anywhere in an error's cause chain. Reads a numeric `retryAfter` property and
- * the HTTP `Retry-After` header (viem's `HttpRequestError.headers` and the
- * relayer's `cause.response.headers`, the only place real edge/Cloudflare 429s
- * carry it). `undefined` when absent.
+ * the **relayer's** `Retry-After` header (`cause.response.headers`). The
+ * consumer-RPC/chain side is intentionally not read — viem/ethers own that
+ * backoff (see {@link retryAfterFromHeader}). `undefined` when absent.
  */
 export function extractRetryAfter(error: unknown): number | undefined {
   const node = findInErrorChain(error, (n) => retryAfterFromNode(n) !== undefined);

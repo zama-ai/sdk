@@ -205,10 +205,12 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RpcRateLimitError).retryAfter).toBe(2);
     });
 
-    test("populates retryAfter (seconds) from a real viem HttpRequestError's Retry-After header", () => {
-      // The dominant real provider: a Cloudflare/edge 429 reaches us as a viem
-      // HttpRequestError carrying `status: 429` + a `Retry-After` header (a
-      // `Headers` object, never a numeric prop), nested under a higher cause.
+    test("classifies a real viem HttpRequestError 429 as RpcRateLimitError WITHOUT reading its Retry-After header", () => {
+      // A Cloudflare/edge 429 reaches us as a viem HttpRequestError (`status: 429`
+      // + a `Retry-After` header). It is still classified as a retryable
+      // RpcRateLimitError — but the chain-side header is deliberately NOT read:
+      // the consumer's viem/ethers transport already owns that backoff (and
+      // retries on it) before the error surfaces, so retryAfter stays undefined.
       const httpError = new HttpRequestError({
         url: "https://rpc.example/eth",
         status: 429,
@@ -218,7 +220,7 @@ describe("wrapDecryptError", () => {
       const readError = Object.assign(new Error("eth_call failed"), { cause: httpError });
       const wrapped = wrapDecryptError(readError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
-      expect((wrapped as RpcRateLimitError).retryAfter).toBe(30);
+      expect((wrapped as RpcRateLimitError).retryAfter).toBeUndefined();
     });
 
     test("maps a raw JSON-RPC -32005 (no HTTP status) to RpcRateLimitError", () => {

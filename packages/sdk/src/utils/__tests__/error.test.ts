@@ -354,13 +354,15 @@ describe("extractRetryAfter", () => {
     expect(extractRetryAfter({ cause: { retryAfter: -500 } })).toBeUndefined();
   });
 
-  test("parses a `Retry-After` header (seconds) off viem's `HttpRequestError.headers`", () => {
-    // viem delivers the back-off only on a `Headers` object, never a numeric prop.
+  test("does NOT read a `Retry-After` header off viem's chain-side `HttpRequestError.headers`", () => {
+    // Chain-RPC backoff is owned by the consumer's viem/ethers transport (it
+    // honors Retry-After and retries before the error surfaces), so the SDK does
+    // not re-read the chain-side header — only the relayer's response header.
     const viemLike = Object.assign(new Error("HTTP 429"), {
       status: 429,
       headers: new Headers({ "Retry-After": "120" }),
     });
-    expect(extractRetryAfter(viemLike)).toBe(120);
+    expect(extractRetryAfter(viemLike)).toBeUndefined();
   });
 
   test("parses a `Retry-After` header off a relayer error's `cause.response.headers`", () => {
