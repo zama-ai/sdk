@@ -22,7 +22,9 @@ import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
 import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
 import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
-import { SEPOLIA_CHAIN_ID } from "@/lib/config";
+import { VaultDepositCard } from "@/components/VaultDepositCard";
+import { VaultPositionCard } from "@/components/VaultPositionCard";
+import { SEPOLIA_CHAIN_ID, VAULT_ADDRESS, VAULT_CONFIDENTIAL_TOKEN } from "@/lib/config";
 
 // Standard ERC-20 balanceOf ABI — used by useReadContract for public balance polling.
 // parseAbi is required — viem does not parse human-readable ABI strings automatically.
@@ -282,6 +284,10 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
   }
 
+  // Bumped after a vault deposit to remount VaultPositionCard so it re-reads sharesOf
+  // (the deposit changed the position; the previously revealed value is now stale).
+  const [vaultNonce, setVaultNonce] = useState(0);
+
   // ERC-20 balance via wagmi — auto-refetches when args (address) change on account switch.
   // Uses the wagmi HTTP transport, not window.ethereum, so polling is fast.
   const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
@@ -400,6 +406,40 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
         balanceDecryptRequired={!isAllowed}
         onSuccess={refreshPublicBalances}
       />
+
+      {/* ── Reacting contract — confidentialTransferAndCall demo ───────────────
+          Only rendered for the confidential token the example vault is bound to.
+          Deposit moves tokens into the vault and credits a beneficiary atomically;
+          the beneficiary reveals and withdraws their confidential position. */}
+      {token.confidentialTokenAddress.toLowerCase() === VAULT_CONFIDENTIAL_TOKEN.toLowerCase() && (
+        <>
+          <div className="section-label">Reacting contract — ConfidentialVault</div>
+
+          <VaultDepositCard
+            key={`vault-deposit-${address}-${token.confidentialTokenAddress}`}
+            tokenAddress={token.confidentialTokenAddress}
+            vaultAddress={VAULT_ADDRESS}
+            connectedAddress={address}
+            decimals={decimals}
+            symbol={confidentialSymbol}
+            disabled={false}
+            balanceDecryptRequired={!isAllowed}
+            onSuccess={() => {
+              refreshPublicBalances();
+              setVaultNonce((n) => n + 1);
+            }}
+          />
+
+          <VaultPositionCard
+            key={`vault-position-${address}-${token.confidentialTokenAddress}-${vaultNonce}`}
+            vaultAddress={VAULT_ADDRESS}
+            connectedAddress={address}
+            decimals={decimals}
+            symbol={confidentialSymbol}
+            onWithdraw={refreshPublicBalances}
+          />
+        </>
+      )}
 
       {/* ── Delegation — token owner perspective ──────────────────────────────
           These cards are used by the wallet that OWNS the token.
