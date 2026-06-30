@@ -155,8 +155,8 @@ importers:
         specifier: 1.12.3
         version: 1.12.3
       typescript:
-        specifier: ^5.0.0
-        version: 5.9.3
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/react-sdk:
     dependencies:
