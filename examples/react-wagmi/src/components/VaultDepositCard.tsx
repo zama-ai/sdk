@@ -21,6 +21,15 @@ interface VaultDepositCardProps {
   onSuccess?: () => void;
 }
 
+// The SDK wraps transaction failures as `TransactionRevertedError` with the underlying
+// viem/RPC error in `cause`. Surface that reason so reverts aren't hidden behind a generic message.
+function depositErrorText(error: (Error & { cause?: unknown }) | null): string {
+  if (!error) return "";
+  const cause = error.cause as { shortMessage?: string; message?: string } | undefined;
+  const causeMsg = cause?.shortMessage ?? cause?.message;
+  return causeMsg ? `${error.message} — ${causeMsg}` : error.message;
+}
+
 export function VaultDepositCard({
   tokenAddress,
   vaultAddress,
@@ -97,7 +106,7 @@ export function VaultDepositCard({
         <p className="token-meta">Decrypt your balance first to enable deposits.</p>
       )}
       {deposit.isError && (
-        <div className="alert alert-error card-status">{deposit.error?.message}</div>
+        <div className="alert alert-error card-status">{depositErrorText(deposit.error)}</div>
       )}
       {deposit.isSuccess && deposit.data?.txHash && (
         <div className="alert alert-success card-status">

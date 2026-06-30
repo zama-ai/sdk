@@ -24,11 +24,7 @@ import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { DecryptAsCard } from "@/components/DecryptAsCard";
 import { VaultDepositCard } from "@/components/VaultDepositCard";
 import { VaultPositionCard } from "@/components/VaultPositionCard";
-import {
-  SEPOLIA_CHAIN_ID,
-  VAULT_ADDRESS,
-  VAULT_CONFIDENTIAL_TOKEN,
-} from "@/lib/config";
+import { SEPOLIA_CHAIN_ID, VAULT_ADDRESS, VAULT_CONFIDENTIAL_TOKEN } from "@/lib/config";
 
 // Standard ERC-20 balanceOf ABI — used by useReadContract for public balance polling.
 // parseAbi is required — viem does not parse human-readable ABI strings automatically.
@@ -290,6 +286,10 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
   }
 
+  // Bumped after a vault deposit to remount VaultPositionCard so it re-reads sharesOf
+  // (the deposit changed the position; the previously revealed value is now stale).
+  const [vaultNonce, setVaultNonce] = useState(0);
+
   // ERC-20 balance via wagmi — auto-refetches when args (address) change on account switch.
   // Uses the wagmi HTTP transport, not window.ethereum, so polling is fast.
   const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
@@ -413,8 +413,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
           Only rendered for the confidential token the example vault is bound to.
           Deposit moves tokens into the vault and credits a beneficiary atomically;
           the beneficiary reveals and withdraws their confidential position. */}
-      {token.confidentialTokenAddress.toLowerCase() ===
-        VAULT_CONFIDENTIAL_TOKEN.toLowerCase() && (
+      {token.confidentialTokenAddress.toLowerCase() === VAULT_CONFIDENTIAL_TOKEN.toLowerCase() && (
         <>
           <div className="section-label">Reacting contract — ConfidentialVault</div>
 
@@ -427,11 +426,14 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
             symbol={confidentialSymbol}
             disabled={false}
             balanceDecryptRequired={!isAllowed}
-            onSuccess={refreshPublicBalances}
+            onSuccess={() => {
+              refreshPublicBalances();
+              setVaultNonce((n) => n + 1);
+            }}
           />
 
           <VaultPositionCard
-            key={`vault-position-${address}-${token.confidentialTokenAddress}`}
+            key={`vault-position-${address}-${token.confidentialTokenAddress}-${vaultNonce}`}
             vaultAddress={VAULT_ADDRESS}
             connectedAddress={address}
             decimals={decimals}
