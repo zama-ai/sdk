@@ -24,9 +24,9 @@ export { pendingUnshieldQueryOptions };
  *
  * @example
  * ```tsx
- * const { data: pending } = usePendingUnshield("0xWrapper");
+ * const { data: unwrapTxHash } = usePendingUnshield("0xWrapper");
  * const { mutate: resume } = useResumeUnshield("0xWrapper");
- * if (pending) return <button onClick={() => resume({ unwrapTxHash: pending })}>Resume</button>;
+ * if (unwrapTxHash) return <button onClick={() => resume({ unwrapTxHash })}>Resume</button>;
  * ```
  */
 export function usePendingUnshield(
@@ -47,7 +47,7 @@ export function usePendingUnshield(
  *
  * @example
  * ```tsx
- * const { data: pending } = usePendingUnshieldSuspense("0xWrapper");
+ * const { data: unwrapTxHash } = usePendingUnshieldSuspense("0xWrapper");
  * ```
  */
 export function usePendingUnshieldSuspense(tokenAddress: Address) {

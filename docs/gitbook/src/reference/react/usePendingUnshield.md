@@ -31,14 +31,12 @@ function ResumeUnshieldGuard({
   wrapperAddress: Address;
   children: React.ReactNode;
 }) {
-  const { data: pending } = usePendingUnshield(wrapperAddress);
+  const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
-  if (pending) {
+  if (unwrapTxHash) {
     // Finalize on user action, not on load — never trigger a wallet tx unprompted.
-    return (
-      <button onClick={() => resumeUnshield({ unwrapTxHash: pending })}>Resume unshield</button>
-    );
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
   }
 
   return children;
@@ -57,7 +55,7 @@ function ResumeUnshieldGuard({
 Address of the confidential wrapper contract. Passed positionally as the first argument.
 
 ```ts
-const { data: pending } = usePendingUnshield("0xWrapper");
+const { data: unwrapTxHash } = usePendingUnshield("0xWrapper");
 ```
 
 ## Return Type
@@ -73,7 +71,7 @@ Use `usePendingUnshieldSuspense` inside a `<Suspense>` boundary. The hook throws
 ```tsx
 import { usePendingUnshieldSuspense } from "@zama-fhe/react-sdk";
 
-const { data: pending } = usePendingUnshieldSuspense("0xWrapper");
+const { data: unwrapTxHash } = usePendingUnshieldSuspense("0xWrapper");
 ```
 
 ## Related
