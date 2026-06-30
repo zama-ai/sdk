@@ -30,9 +30,7 @@ test.describe("confidential vault — confidentialTransferAndCall", () => {
 
   test("renders the vault section for the bound token", async ({ page }) => {
     await expect(page.getByText("Reacting contract — ConfidentialVault")).toBeVisible();
-    await expect(
-      page.getByText("Deposit into Vault — confidentialTransferAndCall"),
-    ).toBeVisible();
+    await expect(page.getByText("Deposit into Vault — confidentialTransferAndCall")).toBeVisible();
     await expect(page.getByText("Your Vault Position")).toBeVisible();
   });
 
@@ -55,8 +53,6 @@ test.describe("confidential vault — confidentialTransferAndCall", () => {
   test("hides the vault section for an unbound token", async ({ page }) => {
     await page.getByRole("combobox").selectOption(MOCK_CTOKEN2_ADDRESS);
     await expect(page.getByText("Reacting contract — ConfidentialVault")).toBeHidden();
-    await expect(
-      page.getByText("Deposit into Vault — confidentialTransferAndCall"),
-    ).toBeHidden();
+    await expect(page.getByText("Deposit into Vault — confidentialTransferAndCall")).toBeHidden();
   });
 });

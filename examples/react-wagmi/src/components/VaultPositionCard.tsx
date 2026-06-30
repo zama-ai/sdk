@@ -4,12 +4,7 @@ import { useState } from "react";
 import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { useMutation } from "@tanstack/react-query";
-import {
-  useDecryptValues,
-  useGrantPermit,
-  useHasPermit,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useDecryptValues, useGrantPermit, useHasPermit, useZamaSDK } from "@zama-fhe/react-sdk";
 import type { Address, EncryptedValue } from "@zama-fhe/sdk";
 import { isEncryptedValueZero } from "@zama-fhe/sdk";
 import { VAULT_ABI } from "@/lib/vaultAbi";

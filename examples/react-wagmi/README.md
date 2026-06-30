@@ -31,13 +31,13 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
-| `NEXT_PUBLIC_VAULT_ADDRESS`   | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected. |
+| Variable                               | Required | Description                                                                                         |
+| -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `RELAYER_URL`                          | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`.         |
+| `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
+| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
+| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected.      |
 
 ## Running e2e tests
 

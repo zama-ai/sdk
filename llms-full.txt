@@ -18022,13 +18022,13 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
-| `NEXT_PUBLIC_VAULT_ADDRESS`   | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
-| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected. |
+| Variable                               | Required | Description                                                                                         |
+| -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `RELAYER_URL`                          | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`.         |
+| `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
+| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
+| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected.      |
 
 ## Running e2e tests
 
@@ -18355,10 +18355,14 @@ permit scoped to the **vault** address — distinct from the confidential-token 
 page grants:
 
 ```ts
-const { data: handle } = useReadContract({ address: vaultAddress, abi: VAULT_ABI,
-  functionName: "sharesOf", args: [connectedAddress] });
+const { data: handle } = useReadContract({
+  address: vaultAddress,
+  abi: VAULT_ABI,
+  functionName: "sharesOf",
+  args: [connectedAddress],
+});
 
-await grantPermit.mutateAsync([vaultAddress]);               // permit scoped to the vault
+await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
 const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
 ```
 

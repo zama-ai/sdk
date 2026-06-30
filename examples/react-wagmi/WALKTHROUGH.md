@@ -304,10 +304,14 @@ permit scoped to the **vault** address — distinct from the confidential-token 
 page grants:
 
 ```ts
-const { data: handle } = useReadContract({ address: vaultAddress, abi: VAULT_ABI,
-  functionName: "sharesOf", args: [connectedAddress] });
+const { data: handle } = useReadContract({
+  address: vaultAddress,
+  abi: VAULT_ABI,
+  functionName: "sharesOf",
+  args: [connectedAddress],
+});
 
-await grantPermit.mutateAsync([vaultAddress]);               // permit scoped to the vault
+await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
 const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
 ```
 
