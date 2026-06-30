@@ -359,8 +359,8 @@ export class WrappedToken extends Token {
    *
    * @example
    * ```ts
-   * const pending = await wrappedToken.getPendingUnshield();
-   * if (pending) await wrappedToken.resumeUnshield(pending);
+   * const unwrapTxHash = await wrappedToken.getPendingUnshield();
+   * if (unwrapTxHash) await wrappedToken.resumeUnshield(unwrapTxHash);
    * ```
    */
   async getPendingUnshield(): Promise<Hex | null> {
