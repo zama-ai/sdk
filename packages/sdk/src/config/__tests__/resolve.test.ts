@@ -6,10 +6,7 @@ import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
 /** Stub the public RelayerConfig seam — no internal-module mocking. */
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
-  return {
-    type,
-    createRelayer: () => ({}) as unknown as RelayerSDK,
-  };
+  return { type, createRelayer: () => ({}) as unknown as RelayerSDK };
 }
 
 describe("resolveChainRelayers", () => {
@@ -71,10 +68,7 @@ describe("resolveChainRelayers", () => {
       [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-    expect(result.get(11155111)).toEqual({
-      chain: sepolia,
-      relayer: sepoliaCfg,
-    });
+    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
     expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
   });
 });

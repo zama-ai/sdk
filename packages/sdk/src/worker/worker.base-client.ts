@@ -148,9 +148,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      this.logger.warn("[WorkerClient] Received response for unknown request", {
-        id: response.id,
-      });
+      this.logger.warn("[WorkerClient] Received response for unknown request", { id: response.id });
       return;
     }
 
@@ -160,10 +158,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     this.#pendingRequests.delete(response.id);
 
     if (response.success) {
-      this.logger.debug(`[WorkerClient] ← ${pending.type} OK`, {
-        id: response.id,
-        elapsed,
-      });
+      this.logger.debug(`[WorkerClient] ← ${pending.type} OK`, { id: response.id, elapsed });
       pending.resolve(response.data);
     } else {
       // A failed worker response is a handled operation failure: it is
@@ -225,10 +220,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         const elapsed = Math.round(performance.now() - startTime);
         // A timeout is surfaced via the rejected promise below, so it is a
         // handled failure and stays at `debug` rather than `error`.
-        this.logger.debug(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
-          id,
-          elapsed,
-        });
+        this.logger.debug(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, { id, elapsed });
         reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 

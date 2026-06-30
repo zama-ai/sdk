@@ -127,9 +127,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   page: async ({ page, privateKey, account, viemClient, contracts }, use) => {
     // Mint ERC-20 tokens to the test account before snapshotting, so every test
     // starts from a funded state regardless of what the deploy script did.
-    const nonce = await viemClient.getTransactionCount({
-      address: account.address,
-    });
+    const nonce = await viemClient.getTransactionCount({ address: account.address });
     const usdcHash = await viemClient.writeContract({
       address: contracts.USDC,
       abi: mintAbi,
@@ -153,10 +151,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
     // Intercept the CDN request for the relayer SDK bundle and serve the mock
     await page.route("**/relayer-sdk-js*", async (route) => {
-      await route.fulfill({
-        contentType: "application/javascript",
-        body: mockCdnBundle,
-      });
+      await route.fulfill({ contentType: "application/javascript", body: mockCdnBundle });
     });
 
     // Inject wallet private key for the burner-connector
@@ -166,9 +161,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
     // Navigate to home and ensure wallet is connected
     await page.goto("/");
-    const connectButton = page.getByRole("button", {
-      name: "Connect Wallet",
-    });
+    const connectButton = page.getByRole("button", { name: "Connect Wallet" });
     const walletAddress = page.getByTestId("wallet-address");
 
     // Wallet may auto-reconnect from a previous session, or need a manual click

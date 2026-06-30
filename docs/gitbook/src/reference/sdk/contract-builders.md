@@ -15,10 +15,7 @@ type ReadContractConfig = {
   args: readonly unknown[];
 };
 
-type WriteContractConfig = ReadContractConfig & {
-  value?: bigint;
-  gas?: bigint;
-};
+type WriteContractConfig = ReadContractConfig & { value?: bigint; gas?: bigint };
 ```
 
 {% hint style="warning" %}

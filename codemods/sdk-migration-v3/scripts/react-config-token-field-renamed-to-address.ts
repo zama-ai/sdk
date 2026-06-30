@@ -20,10 +20,7 @@ const HOOKS = new Set([
   "useConfidentialIsOperator",
 ]);
 
-const RENAME: Record<string, string> = {
-  tokenAddress: "address",
-  tokenAddresses: "addresses",
-};
+const RENAME: Record<string, string> = { tokenAddress: "address", tokenAddresses: "addresses" };
 
 // Pre-filter: only visit files that call one of the affected hooks.
 export const getSelector: GetSelector<Tsx> = () => ({

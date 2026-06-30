@@ -81,9 +81,7 @@ import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 Address of the confidential wrapper contract.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper" });
 ```
 
 ### optimistic
@@ -93,10 +91,7 @@ const { mutateAsync: shield } = useShield({
 Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-  optimistic: true,
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper", optimistic: true });
 ```
 
 ---

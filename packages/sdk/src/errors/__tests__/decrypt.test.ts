@@ -49,9 +49,7 @@ describe("wrapDecryptError", () => {
 
   describe("HTTP status mapping", () => {
     test("maps statusCode 400 to NoCiphertextError preserving the message", () => {
-      const error = Object.assign(new Error("no ciphertext for handle"), {
-        statusCode: 400,
-      });
+      const error = Object.assign(new Error("no ciphertext for handle"), { statusCode: 400 });
       const wrapped = wrapDecryptError(error, "fallback");
       expect(wrapped).toBeInstanceOf(NoCiphertextError);
       expect(wrapped.message).toBe("no ciphertext for handle");
@@ -59,27 +57,21 @@ describe("wrapDecryptError", () => {
     });
 
     test("maps statusCode 500 + isDelegated=true to DelegationNotPropagatedError", () => {
-      const error = Object.assign(new Error("internal error"), {
-        statusCode: 500,
-      });
+      const error = Object.assign(new Error("internal error"), { statusCode: 500 });
       const wrapped = wrapDecryptError(error, "fallback", { isDelegated: true });
       expect(wrapped).toBeInstanceOf(DelegationNotPropagatedError);
       expect((wrapped as { cause?: unknown }).cause).toBe(error);
     });
 
     test("maps statusCode 500 + isDelegated=false to RelayerRequestFailedError", () => {
-      const error = Object.assign(new Error("server error"), {
-        statusCode: 500,
-      });
+      const error = Object.assign(new Error("server error"), { statusCode: 500 });
       const wrapped = wrapDecryptError(error, "fallback", { isDelegated: false });
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(500);
     });
 
     test("maps other HTTP status codes to RelayerRequestFailedError preserving the code", () => {
-      const error = Object.assign(new Error("rate limited"), {
-        statusCode: 429,
-      });
+      const error = Object.assign(new Error("rate limited"), { statusCode: 429 });
       const wrapped = wrapDecryptError(error, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);

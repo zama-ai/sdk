@@ -32,11 +32,7 @@ describe("filterQueryOptions", () => {
       pollingInterval: 12_000,
     });
 
-    expect(filtered).toEqual({
-      address: "0xabc",
-      owner: "0xdef",
-      chainId: 1,
-    });
+    expect(filtered).toEqual({ address: "0xabc", owner: "0xdef", chainId: 1 });
   });
 
   test("returns empty object when only stripped options are present", () => {

@@ -130,12 +130,7 @@ function sendSuccess<T>(
   data: T,
   transfer?: Transferable[],
 ): void {
-  const response: SuccessResponse<T> = {
-    id,
-    type,
-    success: true,
-    data,
-  };
+  const response: SuccessResponse<T> = { id, type, success: true, data };
   return transfer ? self.postMessage(response, transfer) : self.postMessage(response);
 }
 
@@ -209,11 +204,7 @@ function setupFetchInterceptor(): void {
         headers.set(CSRF_HEADER_NAME, csrfTokenBase);
       }
 
-      return originalFetch(input, {
-        ...init,
-        headers,
-        credentials: "include",
-      });
+      return originalFetch(input, { ...init, headers, credentials: "include" });
     }
 
     // Pass through other requests unchanged

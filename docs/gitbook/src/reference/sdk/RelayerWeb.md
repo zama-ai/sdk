@@ -31,9 +31,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-  },
+  relayers: { [sepolia.id]: web() },
 });
 ```
 
@@ -44,10 +42,7 @@ const config = createConfig({
 import { RelayerWeb } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  chain: sepolia,
-  worker: relayerWorkerClient,
-});
+const relayer = new RelayerWeb({ chain: sepolia, worker: relayerWorkerClient });
 ```
 
 {% endtab %}

@@ -99,10 +99,7 @@ export function wrapDecryptError(
   // relayer-origin 429s carry `code: "RELAYER_FETCH_ERROR"` and are excluded,
   // staying RelayerRequestFailedError below.
   if (hasStructuredRpcRateLimitSignal(error)) {
-    return new RpcRateLimitError(message, {
-      cause: error,
-      retryAfter: extractRetryAfter(error),
-    });
+    return new RpcRateLimitError(message, { cause: error, retryAfter: extractRetryAfter(error) });
   }
 
   const statusCode = extractHttpStatus(error);
@@ -111,10 +108,7 @@ export function wrapDecryptError(
   // when no HTTP status is present — otherwise the status classification (e.g. a
   // relayer error whose body mentions a rate limit) takes precedence.
   if (statusCode === undefined && isRpcRateLimitError(error)) {
-    return new RpcRateLimitError(message, {
-      cause: error,
-      retryAfter: extractRetryAfter(error),
-    });
+    return new RpcRateLimitError(message, { cause: error, retryAfter: extractRetryAfter(error) });
   }
 
   if (statusCode === 400) {
@@ -141,7 +135,5 @@ export function wrapDecryptError(
     });
   }
 
-  return new DecryptionFailedError(fallbackMessage, {
-    cause: error,
-  });
+  return new DecryptionFailedError(fallbackMessage, { cause: error });
 }

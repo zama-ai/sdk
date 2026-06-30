@@ -134,10 +134,7 @@ export function Providers({ children }: { children: ReactNode }) {
   // SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
   const zamaConfig = useMemo(() => {
     const ethereum = getEthereumProvider();
-    const publicClient = createPublicClient({
-      chain: sepolia,
-      transport: http(SEPOLIA_RPC_URL),
-    });
+    const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
     const provider = new ViemProvider({ publicClient });
     const zamaSepolia = {
       ...fheSepolia,

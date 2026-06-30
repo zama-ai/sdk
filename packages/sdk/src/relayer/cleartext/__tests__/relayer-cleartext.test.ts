@@ -62,10 +62,7 @@ function createMockProvider(options: MockClientOptions = {}) {
         const to = tx.to.toLowerCase();
 
         if (to === hardhatCleartextConfig.aclContractAddress.toLowerCase()) {
-          const parsed = decodeFunctionData({
-            abi: ACL_ABI,
-            data: tx.data as `0x${string}`,
-          });
+          const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
           if (!parsed) {
             throw new Error("Unable to parse ACL call");
           }
@@ -110,10 +107,7 @@ function createMockProvider(options: MockClientOptions = {}) {
         }
 
         if (to === hardhatCleartextConfig.executorAddress.toLowerCase()) {
-          const parsed = decodeFunctionData({
-            abi: EXECUTOR_ABI,
-            data: tx.data as `0x${string}`,
-          });
+          const parsed = decodeFunctionData({ abi: EXECUTOR_ABI, data: tx.data as `0x${string}` });
           if (!parsed || parsed.functionName !== "plaintexts") {
             throw new Error("Unable to parse executor call");
           }
@@ -141,19 +135,11 @@ function createInstance(options: MockClientOptions = {}): {
   calls: MockCall[];
 } {
   const { provider, calls } = createMockProvider(options);
-  return {
-    fhevm: new RelayerCleartext({
-      ...hardhatCleartextConfig,
-      network: provider,
-    }),
-    calls,
-  };
+  return { fhevm: new RelayerCleartext({ ...hardhatCleartextConfig, network: provider }), calls };
 }
 
 function createUserDecryptParams(
-  overrides: Omit<Partial<UserDecryptParams>, "encryptedValues"> & {
-    encryptedValues: string[];
-  },
+  overrides: Omit<Partial<UserDecryptParams>, "encryptedValues"> & { encryptedValues: string[] },
 ): UserDecryptParams {
   const { encryptedValues, ...rest } = overrides;
   return {
@@ -219,12 +205,7 @@ describe("RelayerCleartext", () => {
     const { provider } = createMockProvider();
 
     expect(
-      () =>
-        new RelayerCleartext({
-          ...hardhatCleartextConfig,
-          network: provider,
-          id: 1,
-        }),
+      () => new RelayerCleartext({ ...hardhatCleartextConfig, network: provider, id: 1 }),
     ).toThrow(/not allowed on chain 1/);
   });
 
@@ -232,12 +213,7 @@ describe("RelayerCleartext", () => {
     const { provider } = createMockProvider();
 
     expect(
-      () =>
-        new RelayerCleartext({
-          ...hardhatCleartextConfig,
-          network: provider,
-          id: 11155111,
-        }),
+      () => new RelayerCleartext({ ...hardhatCleartextConfig, network: provider, id: 11155111 }),
     ).toThrow(/not allowed on chain 11155111/);
   });
 
@@ -419,16 +395,10 @@ describe("RelayerCleartext", () => {
 
   test("userDecrypt throws NotEntitledError when ACL.persistAllowed returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
-    const { fhevm } = createInstance({
-      persistAllowed: () => false,
-    });
+    const { fhevm } = createInstance({ persistAllowed: () => false });
 
     await expect(
-      fhevm.userDecrypt(
-        createUserDecryptParams({
-          encryptedValues: [handle],
-        }),
-      ),
+      fhevm.userDecrypt(createUserDecryptParams({ encryptedValues: [handle] })),
     ).rejects.toBeInstanceOf(NotEntitledError);
   });
 
@@ -437,10 +407,7 @@ describe("RelayerCleartext", () => {
     const handleB = asHandle("0x" + "02".repeat(32));
     const { fhevm, calls } = createInstance({
       persistAllowed: () => true,
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 7n, [handleB.toLowerCase()]: 11n },
     });
 
     const result = await fhevm.userDecrypt(
@@ -469,18 +436,11 @@ describe("RelayerCleartext", () => {
 
     const { fhevm, calls } = createInstance({
       persistAllowed: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
-      plaintexts: {
-        [handleA.toLowerCase()]: 1n,
-        [handleB.toLowerCase()]: 2n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 1n, [handleB.toLowerCase()]: 2n },
     });
 
     await expect(
-      fhevm.userDecrypt(
-        createUserDecryptParams({
-          encryptedValues: [handleA, handleB],
-        }),
-      ),
+      fhevm.userDecrypt(createUserDecryptParams({ encryptedValues: [handleA, handleB] })),
     ).rejects.toThrow(new RegExp(normalizedB));
 
     const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
@@ -499,11 +459,7 @@ describe("RelayerCleartext", () => {
       plaintexts: { [handle.toLowerCase()]: 42n },
     });
 
-    await fhevm.userDecrypt(
-      createUserDecryptParams({
-        encryptedValues: [handle],
-      }),
-    );
+    await fhevm.userDecrypt(createUserDecryptParams({ encryptedValues: [handle] }));
 
     expect(persistAllowedAccounts).toHaveLength(2);
     const normalized = persistAllowedAccounts.map((a) => a.toLowerCase());
@@ -551,9 +507,7 @@ describe("RelayerCleartext", () => {
     });
 
     const result = await fhevm.userDecrypt(
-      createUserDecryptParams({
-        encryptedValues: [handleUpper],
-      }),
+      createUserDecryptParams({ encryptedValues: [handleUpper] }),
     );
 
     const keys = Object.keys(result);
@@ -608,9 +562,7 @@ describe("RelayerCleartext", () => {
 
   test("publicDecrypt throws when ACL.isAllowedForDecryption returns false", async () => {
     const handle = asHandle("0x" + "34".repeat(32));
-    const { fhevm } = createInstance({
-      isAllowedForDecryption: () => false,
-    });
+    const { fhevm } = createInstance({ isAllowedForDecryption: () => false });
 
     await expect(fhevm.publicDecrypt([handle])).rejects.toThrow(/not allowed/i);
   });
@@ -622,10 +574,7 @@ describe("RelayerCleartext", () => {
 
     const { fhevm, calls } = createInstance({
       isAllowedForDecryption: (handle) => handle.toLowerCase() !== normalizedB.toLowerCase(),
-      plaintexts: {
-        [handleA.toLowerCase()]: 10n,
-        [handleB.toLowerCase()]: 20n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 10n, [handleB.toLowerCase()]: 20n },
     });
 
     await expect(fhevm.publicDecrypt([handleA, handleB])).rejects.toThrow(new RegExp(normalizedB));
@@ -640,10 +589,7 @@ describe("RelayerCleartext", () => {
 
     const { fhevm } = createInstance({
       isAllowedForDecryption: () => true,
-      plaintexts: {
-        [handleA.toLowerCase()]: 42n,
-        [handleB.toLowerCase()]: 99n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 42n, [handleB.toLowerCase()]: 99n },
     });
 
     const result = await fhevm.publicDecrypt([handleA, handleB]);
@@ -711,9 +657,7 @@ describe("RelayerCleartext", () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const delegatorAddress = USER_ADDRESS;
     const delegateAddress = "0x3000000000000000000000000000000000000003";
-    const { fhevm, calls } = createInstance({
-      isHandleDelegatedForUserDecryption: () => false,
-    });
+    const { fhevm, calls } = createInstance({ isHandleDelegatedForUserDecryption: () => false });
 
     await expect(
       fhevm.delegatedUserDecrypt({
@@ -773,10 +717,7 @@ describe("RelayerCleartext", () => {
     const delegateAddress = "0x3000000000000000000000000000000000000003";
 
     const { fhevm, calls } = createInstance({
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 7n, [handleB.toLowerCase()]: 11n },
     });
 
     const result = await fhevm.delegatedUserDecrypt({
@@ -801,17 +742,11 @@ describe("RelayerCleartext", () => {
         const tx = call.params[0] as { to: string; data: string };
         const target = getAddress(tx.to);
         if (target === getAddress(hardhatCleartextConfig.aclContractAddress)) {
-          const parsed = decodeFunctionData({
-            abi: ACL_ABI,
-            data: tx.data as `0x${string}`,
-          });
+          const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
           return parsed?.functionName ?? "unknown";
         }
         if (target === getAddress(hardhatCleartextConfig.executorAddress)) {
-          const parsed = decodeFunctionData({
-            abi: EXECUTOR_ABI,
-            data: tx.data as `0x${string}`,
-          });
+          const parsed = decodeFunctionData({ abi: EXECUTOR_ABI, data: tx.data as `0x${string}` });
           return parsed?.functionName ?? "unknown";
         }
         return "unknown";
@@ -837,10 +772,7 @@ describe("RelayerCleartext", () => {
     const { fhevm, calls } = createInstance({
       isHandleDelegatedForUserDecryption: (_delegator, _delegate, _contractAddress, handle) =>
         handle.toLowerCase() !== normalizedB.toLowerCase(),
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 7n, [handleB.toLowerCase()]: 11n },
     });
 
     await expect(
@@ -863,10 +795,7 @@ describe("RelayerCleartext", () => {
       getAddress(hardhatCleartextConfig.aclContractAddress),
     ).filter((call) => {
       const tx = call.params[0] as { data: string };
-      const parsed = decodeFunctionData({
-        abi: ACL_ABI,
-        data: tx.data as `0x${string}`,
-      });
+      const parsed = decodeFunctionData({ abi: ACL_ABI, data: tx.data as `0x${string}` });
       return parsed?.functionName === "isHandleDelegatedForUserDecryption";
     });
     expect(delegationCalls).toHaveLength(2);
@@ -883,10 +812,7 @@ describe("RelayerCleartext", () => {
     const handleB = asHandle("0x" + "02".repeat(32));
     const { fhevm } = createInstance({
       persistAllowed: () => true,
-      plaintexts: {
-        [handleA.toLowerCase()]: 7n,
-        [handleB.toLowerCase()]: 11n,
-      },
+      plaintexts: { [handleA.toLowerCase()]: 7n, [handleB.toLowerCase()]: 11n },
     });
 
     const result = await fhevm.delegatedUserDecrypt({
@@ -913,10 +839,7 @@ describe("RelayerCleartext", () => {
 
     const { fhevm } = createInstance({
       persistAllowed: () => true,
-      plaintexts: {
-        [boolHandle.toLowerCase()]: 1n,
-        [addressHandle.toLowerCase()]: addressValue,
-      },
+      plaintexts: { [boolHandle.toLowerCase()]: 1n, [addressHandle.toLowerCase()]: addressValue },
     });
 
     const result = await fhevm.delegatedUserDecrypt({

@@ -14,18 +14,14 @@ vi.mock("../../utils/query", async () => {
 
 const mockSdk = {
   signer: {
-    walletAccount: {
-      getSnapshot: vi.fn().mockReturnValue({ address: OWNER, chainId: 31337 }),
-    },
+    walletAccount: { getSnapshot: vi.fn().mockReturnValue({ address: OWNER, chainId: 31337 }) },
   },
   onWalletAccountChange: vi.fn().mockReturnValue(() => {}),
   provider: { readContract: vi.fn() },
   createToken: vi.fn((address: Address) => ({ address })),
 };
 
-vi.mock("../../provider", () => ({
-  useZamaSDK: vi.fn(() => mockSdk),
-}));
+vi.mock("../../provider", () => ({ useZamaSDK: vi.fn(() => mockSdk) }));
 
 vi.mock("@zama-fhe/sdk/query", () => ({
   confidentialBalancesQueryOptions: vi.fn(() => ({

@@ -36,10 +36,7 @@ const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
 // Routes ETH balance reads through the direct Sepolia RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
-const rpcClient = createPublicClient({
-  chain: sepolia,
-  transport: http(SEPOLIA_RPC_URL),
-});
+const rpcClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
 
 // Attempt to switch to Sepolia. If the network is unknown to the wallet (error 4902),
 // prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)
@@ -90,9 +87,7 @@ function SelectedTokenPanel({
   const sdk = useZamaSDK();
 
   // Check whether cached credentials cover the selected confidential token.
-  const { data: isAllowed } = useHasPermit({
-    contractAddresses: [token.confidentialTokenAddress],
-  });
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   const decimals = token.confidential.decimals;
   const erc20Decimals = token.underlying.decimals;
@@ -388,9 +383,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      })) as string[];
+      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
 
       const currentChainId = (await ethereum.request({ method: "eth_chainId" })) as string;
       setAddress(accounts[0] ?? null);

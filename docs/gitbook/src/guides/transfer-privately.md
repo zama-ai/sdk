@@ -56,10 +56,7 @@ const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
   address: "0xEncryptedERC20Address",
 });
 
-const { txHash } = await transfer({
-  to: "0xRecipientAddress",
-  amount: 500n,
-});
+const { txHash } = await transfer({ to: "0xRecipientAddress", amount: 500n });
 ```
 
 {% endtab %}
@@ -90,11 +87,7 @@ import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xEncryptedERC20Address");
 
-await transferFrom({
-  from: "0xOwnerAddress",
-  to: "0xRecipientAddress",
-  amount: 500n,
-});
+await transferFrom({ from: "0xOwnerAddress", to: "0xRecipientAddress", amount: 500n });
 ```
 
 {% endtab %}
@@ -131,9 +124,7 @@ const {
   isPending, // true while the transaction is in flight
   isSuccess, // true after the mutation completes
   error, // populated if the transfer fails
-} = useConfidentialTransfer({
-  address: "0xEncryptedERC20Address",
-});
+} = useConfidentialTransfer({ address: "0xEncryptedERC20Address" });
 
 // Balance caches are invalidated automatically on success.
 // The useConfidentialBalance hook picks up the updated balance
@@ -157,13 +148,7 @@ const TOKEN = "0xEncryptedERC20Address";
 function TransferForm() {
   const { address } = useAccount();
   const { data: balance } = useConfidentialBalance({ address: TOKEN, account: address });
-  const {
-    mutateAsync: transfer,
-    isPending,
-    error,
-  } = useConfidentialTransfer({
-    address: TOKEN,
-  });
+  const { mutateAsync: transfer, isPending, error } = useConfidentialTransfer({ address: TOKEN });
 
   const handleTransfer = async () => {
     await transfer({ to: "0xRecipient", amount: 100n });

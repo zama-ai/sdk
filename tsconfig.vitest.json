@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node", "vitest/globals"]
-  },
+  "compilerOptions": { "types": ["node", "vitest/globals"] },
   "include": [
     "vitest.setup.ts",
     "packages/sdk/src/**/*.test.ts",

@@ -34,11 +34,7 @@ import { sepolia as sepoliaViem } from "viem/chains";
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
 const publicClient = createPublicClient({ chain: sepoliaViem, transport: http() });
-const walletClient = createWalletClient({
-  account,
-  chain: sepoliaViem,
-  transport: http(),
-});
+const walletClient = createWalletClient({ account, chain: sepoliaViem, transport: http() });
 
 const mySepolia = {
   ...sepolia,
@@ -51,9 +47,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -83,9 +77,7 @@ app.post("/api/transfer", (req, res) => {
       publicClient,
       walletClient,
       storage: asyncLocalStorage,
-      relayers: {
-        [mySepolia.id]: node(),
-      },
+      relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
     const token = sdk.createToken("0xTokenAddress");
@@ -168,9 +160,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);

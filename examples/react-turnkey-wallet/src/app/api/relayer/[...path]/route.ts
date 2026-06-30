@@ -42,9 +42,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
 
   return new Response(await upstream.text(), {
     status: upstream.status,
-    headers: {
-      "Content-Type": upstream.headers.get("Content-Type") ?? "application/json",
-    },
+    headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
   });
 }
 

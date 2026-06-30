@@ -42,19 +42,10 @@ const ManifestSchema = z.object({
   response: z.object({
     fheKeyInfo: z
       .array(
-        z.object({
-          fhePublicKey: z.object({
-            urls: z.array(z.string()).check(z.minLength(1)),
-          }),
-        }),
+        z.object({ fhePublicKey: z.object({ urls: z.array(z.string()).check(z.minLength(1)) }) }),
       )
       .check(z.minLength(1)),
-    crs: z.record(
-      z.string(),
-      z.object({
-        urls: z.array(z.string()).check(z.minLength(1)),
-      }),
-    ),
+    crs: z.record(z.string(), z.object({ urls: z.array(z.string()).check(z.minLength(1)) })),
   }),
 });
 
@@ -347,11 +338,7 @@ export class FheArtifactCache {
 
     // Track partial progress so the catch block can reuse already-read data
     let storedPk: CachedPublicKey | null = null;
-    let paramEntries: Array<{
-      bits: number;
-      key: string;
-      data: CachedPublicParams;
-    }> = [];
+    let paramEntries: Array<{ bits: number; key: string; data: CachedPublicParams }> = [];
 
     try {
       // 1. Read PK cache entry and collect params entries in parallel
@@ -394,10 +381,7 @@ export class FheArtifactCache {
         await this.#writeEntries(
           pkKey,
           { ...storedPk, lastValidatedAt: retryTimestamp },
-          paramEntries.map((e) => ({
-            ...e,
-            data: { ...e.data, lastValidatedAt: retryTimestamp },
-          })),
+          paramEntries.map((e) => ({ ...e, data: { ...e.data, lastValidatedAt: retryTimestamp } })),
         );
         this.#lastRevalidatedAt = retryTimestamp;
         return false;
@@ -410,20 +394,14 @@ export class FheArtifactCache {
       if (!manifestParsed.success) {
         this.#logger.error(
           "Relayer manifest has unexpected shape — check relayer URL and API version",
-          {
-            relayerUrl: this.#relayerUrl,
-            error: z.prettifyError(manifestParsed.error),
-          },
+          { relayerUrl: this.#relayerUrl, error: z.prettifyError(manifestParsed.error) },
         );
         // Fail-open with short retry — but the error-level log distinguishes this from transient failures
         const retryTimestamp = now - this.#ttlMs + SHORT_RETRY_MS;
         await this.#writeEntries(
           pkKey,
           { ...storedPk, lastValidatedAt: retryTimestamp },
-          paramEntries.map((e) => ({
-            ...e,
-            data: { ...e.data, lastValidatedAt: retryTimestamp },
-          })),
+          paramEntries.map((e) => ({ ...e, data: { ...e.data, lastValidatedAt: retryTimestamp } })),
         );
         this.#lastRevalidatedAt = retryTimestamp;
         return false;
@@ -470,10 +448,7 @@ export class FheArtifactCache {
           return true;
         }
 
-        let updatedData: CachedPublicParams = {
-          ...entry.data,
-          lastValidatedAt: now,
-        };
+        let updatedData: CachedPublicParams = { ...entry.data, lastValidatedAt: now };
         if (crsUrl) {
           const freshness = await this.#checkArtifactFreshness(crsUrl, entry.data);
           if (!freshness.fresh) {
@@ -507,11 +482,7 @@ export class FheArtifactCache {
         isProgrammingError
           ? "Unexpected error during revalidation (possible bug)"
           : "Revalidation failed, using cached artifacts (fail-open)",
-        {
-          chainId: this.#chainId,
-          relayerUrl: this.#relayerUrl,
-          error: error.message,
-        },
+        { chainId: this.#chainId, relayerUrl: this.#relayerUrl, error: error.message },
       );
 
       // Fail-open: use short retry interval (5 min) instead of full TTL

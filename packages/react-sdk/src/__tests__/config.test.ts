@@ -9,26 +9,17 @@ import { WagmiSigner } from "../wagmi/wagmi-signer";
 
 vi.mock(import("../wagmi/wagmi-signer"), async (importOriginal) => {
   const actual = await importOriginal();
-  return {
-    ...actual,
-    WagmiSigner: vi.fn(),
-  };
+  return { ...actual, WagmiSigner: vi.fn() };
 });
 
 vi.mock(import("../../../sdk/src/viem/viem-signer"), async (importOriginal) => {
   const actual = await importOriginal();
-  return {
-    ...actual,
-    ViemSigner: vi.fn(),
-  };
+  return { ...actual, ViemSigner: vi.fn() };
 });
 
 vi.mock(import("../../../sdk/src/ethers/ethers-signer"), async (importOriginal) => {
   const actual = await importOriginal();
-  return {
-    ...actual,
-    EthersSigner: vi.fn(),
-  };
+  return { ...actual, EthersSigner: vi.fn() };
 });
 
 const MockWagmiSigner = vi.mocked(WagmiSigner);
@@ -36,9 +27,7 @@ const MockViemSigner = vi.mocked(ViemSigner);
 const MockEthersSigner = vi.mocked(EthersSigner);
 
 function mockWagmiConfig(chainIds: number[] = [11155111]) {
-  return {
-    chains: chainIds.map((id) => ({ id, name: `Chain ${id}` })),
-  } as any;
+  return { chains: chainIds.map((id) => ({ id, name: `Chain ${id}` })) } as any;
 }
 
 beforeEach(() => {
@@ -86,9 +75,7 @@ describe("createConfig", () => {
       const config = createWagmiConfig({
         chains: [sepolia],
         wagmiConfig: mockWagmiConfig([11155111]),
-        relayers: {
-          [11155111]: web(),
-        },
+        relayers: { [11155111]: web() },
       });
       expect(config.relayer).toBeDefined();
     });

@@ -115,10 +115,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     await this.ensureInit();
     const chainId = this.chain.id;
     const result = await this.#worker.generateKeypair({ chainId });
-    return {
-      publicKey: result.publicKey,
-      privateKey: result.privateKey,
-    };
+    return { publicKey: result.publicKey, privateKey: result.privateKey };
   }
 
   /**
@@ -152,12 +149,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
 
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.encrypt({
-        chainId,
-        values,
-        contractAddress,
-        userAddress,
-      });
+      const result = await this.#worker.encrypt({ chainId, values, contractAddress, userAddress });
       return {
         encryptedValues: result.handles.map((handle) => toHex(handle)),
         inputProof: toHex(result.inputProof),
@@ -190,10 +182,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.publicDecrypt({
-        chainId,
-        encryptedValues,
-      });
+      const result = await this.#worker.publicDecrypt({ chainId, encryptedValues });
       return {
         clearValues: result.clearValues,
         abiEncodedClearValues: result.abiEncodedClearValues,
@@ -235,10 +224,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.delegatedUserDecrypt({
-        chainId,
-        ...params,
-      });
+      const result = await this.#worker.delegatedUserDecrypt({ chainId, ...params });
       return result.clearValues;
     });
   }

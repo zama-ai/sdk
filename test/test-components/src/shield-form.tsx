@@ -13,10 +13,7 @@ export function ShieldForm({
 }) {
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: allowance } = useUnderlyingAllowance({
-    address: wrapperAddress,
-    owner: address,
-  });
+  const { data: allowance } = useUnderlyingAllowance({ address: wrapperAddress, owner: address });
   const shield = useShield({ address: wrapperAddress });
 
   return (

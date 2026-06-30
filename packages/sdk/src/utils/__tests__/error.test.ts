@@ -68,9 +68,7 @@ describe("isContractCallError", () => {
   });
 
   test("detects ethers CALL_EXCEPTION", () => {
-    const err = Object.assign(new Error("call exception"), {
-      code: "CALL_EXCEPTION",
-    });
+    const err = Object.assign(new Error("call exception"), { code: "CALL_EXCEPTION" });
     expect(isContractCallError(err)).toBe(true);
   });
 
@@ -133,10 +131,7 @@ describe("extractHttpStatus", () => {
   });
 
   test("prefers a top-level statusCode over the cause", () => {
-    const error = Object.assign(new Error("boom"), {
-      cause: { status: 500 },
-      statusCode: 403,
-    });
+    const error = Object.assign(new Error("boom"), { cause: { status: 500 }, statusCode: 403 });
     expect(extractHttpStatus(error)).toBe(403);
   });
 

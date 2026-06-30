@@ -10,11 +10,7 @@ const steps = [
     command: "pnpm",
     args: ["exec", "vitest", "run", "--config", "vitest.abi.config.ts"],
   },
-  {
-    name: "verify-clean",
-    command: "git",
-    args: ["diff", "--exit-code", "--", ...generatedFiles],
-  },
+  { name: "verify-clean", command: "git", args: ["diff", "--exit-code", "--", ...generatedFiles] },
 ];
 
 for (const step of steps) {

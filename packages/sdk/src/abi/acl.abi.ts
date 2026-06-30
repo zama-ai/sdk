@@ -6,16 +6,8 @@ export const aclAbi = [
     type: "function",
     name: "allow",
     inputs: [
-      {
-        name: "handle",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "handle", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -23,13 +15,7 @@ export const aclAbi = [
   {
     type: "function",
     name: "allowForDecryption",
-    inputs: [
-      {
-        name: "handlesList",
-        type: "bytes32[]",
-        internalType: "bytes32[]",
-      },
-    ],
+    inputs: [{ name: "handlesList", type: "bytes32[]", internalType: "bytes32[]" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -37,16 +23,8 @@ export const aclAbi = [
     type: "function",
     name: "allowTransient",
     inputs: [
-      {
-        name: "ciphertext",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "ciphertext", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -62,21 +40,9 @@ export const aclAbi = [
     type: "function",
     name: "delegateForUserDecryption",
     inputs: [
-      {
-        name: "delegate",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "contractAddress",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "expirationDate",
-        type: "uint64",
-        internalType: "uint64",
-      },
+      { name: "delegate", type: "address", internalType: "address" },
+      { name: "contractAddress", type: "address", internalType: "address" },
+      { name: "expirationDate", type: "uint64", internalType: "uint64" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -85,184 +51,72 @@ export const aclAbi = [
     type: "function",
     name: "getUserDecryptionDelegationExpirationDate",
     inputs: [
-      {
-        name: "delegator",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "delegate",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "contractAddress",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "delegator", type: "address", internalType: "address" },
+      { name: "delegate", type: "address", internalType: "address" },
+      { name: "contractAddress", type: "address", internalType: "address" },
     ],
-    outputs: [
-      {
-        name: "",
-        type: "uint64",
-        internalType: "uint64",
-      },
-    ],
+    outputs: [{ name: "", type: "uint64", internalType: "uint64" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "isAccountDenied",
-    inputs: [
-      {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
+    inputs: [{ name: "account", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "isAllowed",
     inputs: [
-      {
-        name: "handle",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "handle", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
     ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "isAllowedForDecryption",
-    inputs: [
-      {
-        name: "handle",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
+    inputs: [{ name: "handle", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "isHandleDelegatedForUserDecryption",
     inputs: [
-      {
-        name: "delegator",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "delegate",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "contractAddress",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "handle",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+      { name: "delegator", type: "address", internalType: "address" },
+      { name: "delegate", type: "address", internalType: "address" },
+      { name: "contractAddress", type: "address", internalType: "address" },
+      { name: "handle", type: "bytes32", internalType: "bytes32" },
     ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "multicall",
-    inputs: [
-      {
-        name: "data",
-        type: "bytes[]",
-        internalType: "bytes[]",
-      },
-    ],
-    outputs: [
-      {
-        name: "results",
-        type: "bytes[]",
-        internalType: "bytes[]",
-      },
-    ],
+    inputs: [{ name: "data", type: "bytes[]", internalType: "bytes[]" }],
+    outputs: [{ name: "results", type: "bytes[]", internalType: "bytes[]" }],
     stateMutability: "payable",
   },
   {
     type: "function",
     name: "persistAllowed",
     inputs: [
-      {
-        name: "handle",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "handle", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
     ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "view",
   },
   {
     type: "function",
     name: "revokeDelegationForUserDecryption",
     inputs: [
-      {
-        name: "delegate",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "contractAddress",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "delegate", type: "address", internalType: "address" },
+      { name: "contractAddress", type: "address", internalType: "address" },
     ],
     outputs: [],
     stateMutability: "nonpayable",

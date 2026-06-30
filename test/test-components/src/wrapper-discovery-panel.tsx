@@ -3,10 +3,7 @@
 import { useWrapperDiscovery, type UseWrapperDiscoveryConfig } from "@zama-fhe/react-sdk";
 
 export function WrapperDiscoveryPanel({ tokenAddress, erc20Address }: UseWrapperDiscoveryConfig) {
-  const wrapperDiscovery = useWrapperDiscovery({
-    tokenAddress,
-    erc20Address,
-  });
+  const wrapperDiscovery = useWrapperDiscovery({ tokenAddress, erc20Address });
 
   return (
     <section className="space-y-2">

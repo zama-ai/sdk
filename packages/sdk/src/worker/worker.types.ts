@@ -80,9 +80,7 @@ export interface InitRequest extends BaseRequest {
 
 export interface UpdateCsrfRequest extends BaseRequest {
   type: "UPDATE_CSRF";
-  payload: {
-    csrfToken: string;
-  };
+  payload: { csrfToken: string };
 }
 
 export interface EncryptRequest extends BaseRequest {
@@ -113,10 +111,7 @@ export interface UserDecryptRequest extends BaseRequest {
 
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
-  payload: {
-    chainId: number;
-    encryptedValues: EncryptedValue[];
-  };
+  payload: { chainId: number; encryptedValues: EncryptedValue[] };
 }
 
 export interface GenerateKeypairRequest extends BaseRequest {
@@ -166,10 +161,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
-  payload: {
-    chainId: number;
-    zkProof: ZKProofLike;
-  };
+  payload: { chainId: number; zkProof: ZKProofLike };
 }
 
 export interface GetPublicKeyRequest extends BaseRequest {
@@ -179,10 +171,7 @@ export interface GetPublicKeyRequest extends BaseRequest {
 
 export interface GetPublicParamsRequest extends BaseRequest {
   type: "GET_PUBLIC_PARAMS";
-  payload: {
-    chainId: number;
-    bits: number;
-  };
+  payload: { chainId: number; bits: number };
 }
 
 export type WorkerRequest =

@@ -28,10 +28,7 @@ describe("underlyingAllowanceQueryOptions", () => {
 
     expect(options.queryKey).toEqual([
       "zama.underlyingAllowance",
-      {
-        tokenAddress: getAddress(WRAPPER),
-        owner: getAddress(OWNER),
-      },
+      { tokenAddress: getAddress(WRAPPER), owner: getAddress(OWNER) },
     ]);
   });
 

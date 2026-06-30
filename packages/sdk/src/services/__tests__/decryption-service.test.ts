@@ -16,10 +16,7 @@ const HANDLE_B = `0x${"bb".repeat(32)}` as EncryptedValue;
 const ZERO_ENCRYPTED_VALUE = `0x${"00".repeat(32)}` as EncryptedValue;
 
 function handles(items: Array<[EncryptedValue, Address]>): EncryptedInput[] {
-  return items.map(([encryptedValue, contractAddress]) => ({
-    encryptedValue,
-    contractAddress,
-  }));
+  return items.map(([encryptedValue, contractAddress]) => ({ encryptedValue, contractAddress }));
 }
 
 describe("DecryptionService", () => {
@@ -30,9 +27,7 @@ describe("DecryptionService", () => {
   }) => {
     await expect(
       decryptionService.userDecrypt(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
-    ).resolves.toEqual({
-      [ZERO_ENCRYPTED_VALUE]: 0n,
-    });
+    ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n });
     expect(relayer.createEIP712).not.toHaveBeenCalled();
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
   });
@@ -62,16 +57,10 @@ describe("DecryptionService", () => {
     await expect(cachingService.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
     await expect(cachingService.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encryptedValues: [HANDLE_A],
-        contractAddress: CONTRACT_A,
-      }),
+      expect.objectContaining({ encryptedValues: [HANDLE_A], contractAddress: CONTRACT_A }),
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encryptedValues: [HANDLE_B],
-        contractAddress: CONTRACT_B,
-      }),
+      expect.objectContaining({ encryptedValues: [HANDLE_B], contractAddress: CONTRACT_B }),
     );
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptStart }));
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
@@ -87,9 +76,7 @@ describe("DecryptionService", () => {
 
     await expect(
       decryptionService.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
-    ).resolves.toEqual({
-      [HANDLE_A]: 42n,
-    });
+    ).resolves.toEqual({ [HANDLE_A]: 42n });
     expect(relayer.createEIP712).not.toHaveBeenCalled();
     expect(relayer.userDecrypt).not.toHaveBeenCalled();
   });
@@ -118,10 +105,7 @@ describe("DecryptionService", () => {
       expect.any(Number),
     );
     expect(relayer.userDecrypt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        encryptedValues: [HANDLE_B],
-        contractAddress: CONTRACT_B,
-      }),
+      expect.objectContaining({ encryptedValues: [HANDLE_B], contractAddress: CONTRACT_B }),
     );
   });
 
@@ -180,12 +164,7 @@ describe("DecryptionService", () => {
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: {
-        name: "test",
-        version: "1",
-        chainId: 1,
-        verifyingContract: "0xkms",
-      },
+      domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
       types: { DelegatedUserDecryptRequestVerification: [] },
       message: {
         publicKey: TEST_PUBLIC_KEY,
