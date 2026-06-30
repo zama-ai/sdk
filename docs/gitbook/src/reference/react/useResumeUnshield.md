@@ -114,7 +114,7 @@ The SDK persists the unwrap tx hash automatically when phase 1 is submitted and 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
 {% hint style="info" %}
-For custom flows that bypass `resumeUnshield`, the lower-level `savePendingUnshield`, `loadPendingUnshield`, and `clearPendingUnshield` helpers remain exported from `@zama-fhe/sdk`.
+The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
 {% endhint %}
 
 ## Return Type

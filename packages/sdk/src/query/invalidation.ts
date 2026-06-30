@@ -64,6 +64,13 @@ export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddre
   invalidateWagmiBalanceQueries(queryClient);
 }
 
+export function invalidateAfterUnshieldSettled(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
+  invalidatePendingUnshieldQueries(queryClient, tokenAddress);
+}
+
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
 }

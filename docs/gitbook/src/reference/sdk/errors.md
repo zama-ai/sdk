@@ -540,19 +540,19 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 
 ## Common problems
 
-| Symptom                                   | Cause                                       | Fix                                                                                        |
-| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                         |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                |
-| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                 |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
-| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
-| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
-| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
-| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
+| Symptom                                   | Cause                                       | Fix                                                                                             |
+| ----------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                              |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
+| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.         |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more.      |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                     |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.        |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                                  |
 
 ## Related
 

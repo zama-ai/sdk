@@ -3223,7 +3223,7 @@ Resuming is intentionally caller-driven: surface a "resume" prompt rather than f
 
 
 > [!INFO]
-> For custom flows, the lower-level `savePendingUnshield`, `loadPendingUnshield`, and `clearPendingUnshield` helpers remain exported from `@zama-fhe/sdk`. You only need them if you bypass `unshield()` / `resumeUnshield()` and orchestrate `unwrap` + `finalizeUnwrap` yourself.
+> The SDK persists and clears the pending-unshield state for you — there are no storage helpers to call by hand. `getPendingUnshield()` (read) and `unshield()` / `resumeUnshield()` (orchestrated write) are the full surface. If you orchestrate `unwrap` + `finalizeUnwrap` yourself, manage your own persistence between the two phases.
 
 
 ### 5. Use unshield hooks in React
@@ -3709,15 +3709,15 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                              | Why                                         | Fix                                                                                                 |
-| ----------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.              |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                      |
-| `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If already finalized, clear the pending state with `clearPendingUnshield()`.   |
-| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.       |
+| What you see                              | Why                                         | Fix                                                                                                     |
+| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.     |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                 |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.                  |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                          |
+| `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |
 
 ## Next steps
 
@@ -7771,19 +7771,19 @@ matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily d
 
 ## Common problems
 
-| Symptom                                   | Cause                                       | Fix                                                                                        |
-| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                         |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                |
-| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                 |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
-| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
-| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
-| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
-| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                             |
+| Symptom                                   | Cause                                       | Fix                                                                                             |
+| ----------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature            | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Catch `NoCiphertextError` and show an empty state.                                              |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
+| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow           | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth           | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.         |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount     | Show the user their balance and the shortfall. Wait for incoming transfers or shield more.      |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount    | Show the user their public token balance. They need to acquire more tokens.                     |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check         | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.        |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                | Check network connectivity and RPC endpoint. Retry the shield.                                  |
 
 ## Related
 
@@ -10690,7 +10690,7 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 
 
 > [!INFO]
-> For custom flows that bypass `resumeUnshield`, the lower-level `savePendingUnshield`, `loadPendingUnshield`, and `clearPendingUnshield` helpers remain exported from `@zama-fhe/sdk`.
+> The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
 
 
 ## Return Type

@@ -627,11 +627,6 @@ export class ChromeSessionStorage implements GenericStorage {
 // @public
 export const chromeSessionStorage: ChromeSessionStorage;
 
-// Warning: (ae-internal-missing-underscore) The name "clearPendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
-
 // @public
 export function cleartext(): CleartextRelayerConfig;
 
@@ -11226,16 +11221,6 @@ export interface ListPairsOptions {
     pageSize?: number;
 }
 
-// Warning: (ae-internal-missing-underscore) The name "loadPendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
-
-// Warning: (ae-internal-missing-underscore) The name "loadPendingUnshieldRequest" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
-
 // @public
 export const mainnet: {
     readonly id: 1;
@@ -11442,14 +11427,6 @@ export interface PaginatedResult<T> {
     readonly pageSize: number;
     // (undocumented)
     readonly total: number;
-}
-
-// Warning: (ae-internal-missing-underscore) The name "PendingUnshieldRequest" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export interface PendingUnshieldRequest {
-    readonly unwrapRequestId?: EncryptedValue;
-    readonly unwrapTxHash: Hex;
 }
 
 // @public
@@ -12941,11 +12918,6 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
 }
-
-// Warning: (ae-internal-missing-underscore) The name "savePendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
-//
-// @internal
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
 export const sepolia: {

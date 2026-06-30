@@ -485,6 +485,9 @@ export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddre
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
+export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tokenAddress: Address): void;
+
+// @public (undocumented)
 export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)

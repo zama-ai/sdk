@@ -114,7 +114,7 @@ The flow is:
 Resuming is intentionally caller-driven: surface a "resume" prompt rather than finalizing on load, so you never trigger a wallet transaction the user did not initiate.
 
 {% hint style="info" %}
-For custom flows, the lower-level `savePendingUnshield`, `loadPendingUnshield`, and `clearPendingUnshield` helpers remain exported from `@zama-fhe/sdk`. You only need them if you bypass `unshield()` / `resumeUnshield()` and orchestrate `unwrap` + `finalizeUnwrap` yourself.
+The SDK persists and clears the pending-unshield state for you — there are no storage helpers to call by hand. `getPendingUnshield()` (read) and `unshield()` / `resumeUnshield()` (orchestrated write) are the full surface. If you orchestrate `unwrap` + `finalizeUnwrap` yourself, manage your own persistence between the two phases.
 {% endhint %}
 
 ### 5. Use unshield hooks in React

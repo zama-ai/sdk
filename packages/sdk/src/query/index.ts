@@ -10,6 +10,7 @@ export {
   invalidateAfterTransfer,
   invalidateAfterUnwrap,
   invalidateAfterUnshield,
+  invalidateAfterUnshieldSettled,
   invalidateBalanceQueries,
   invalidateWagmiBalanceQueries,
   invalidateWalletLifecycleQueries,

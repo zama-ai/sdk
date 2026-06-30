@@ -1,11 +1,10 @@
 import { waitFor } from "@testing-library/react";
-import { savePendingUnshield } from "@zama-fhe/sdk";
+import type { Hex } from "@zama-fhe/sdk";
+import { savePendingUnshield } from "../../../../sdk/src/token/pending-unshield";
 import { describe, expect, test } from "../../test-fixtures";
-import { usePendingUnshield } from "../use-pending-unshield";
+import { usePendingUnshield, usePendingUnshieldSuspense } from "../use-pending-unshield";
 
 describe("usePendingUnshield", () => {
-  const UNWRAP_TX = ("0x" + "ab".repeat(32)) as `0x${string}`;
-
   test("returns null when no unshield is pending", async ({
     renderWithProviders,
     wrapperAddress,
@@ -16,16 +15,43 @@ describe("usePendingUnshield", () => {
     expect(result.current.data).toBeNull();
   });
 
-  test("returns the persisted unwrap tx hash when an unshield is pending", async ({
+  test("resolves to the persisted unwrap tx hash", async ({
     renderWithProviders,
-    wrapperAddress,
     storage,
+    wrapperAddress,
   }) => {
-    await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+    const unwrapTxHash = `0x${"ab".repeat(32)}` as Hex;
+    await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
 
     const { result } = renderWithProviders(() => usePendingUnshield(wrapperAddress));
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toBe(UNWRAP_TX);
+    expect(result.current.data).toBe(unwrapTxHash);
+  });
+});
+
+describe("usePendingUnshieldSuspense", () => {
+  test("resolves to null when no unshield is pending", async ({
+    renderWithProviders,
+    wrapperAddress,
+  }) => {
+    const { result } = renderWithProviders(() => usePendingUnshieldSuspense(wrapperAddress));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
+  });
+
+  test("resolves to the persisted unwrap tx hash", async ({
+    renderWithProviders,
+    storage,
+    wrapperAddress,
+  }) => {
+    const unwrapTxHash = `0x${"ab".repeat(32)}` as Hex;
+    await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
+
+    const { result } = renderWithProviders(() => usePendingUnshieldSuspense(wrapperAddress));
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(unwrapTxHash);
   });
 });
