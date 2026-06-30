@@ -50,10 +50,7 @@ const transfers = logs.flatMap((log) => decodeConfidentialTransfer(log) ?? []);
 // 3. Decrypt every amount in a single call. `decryptValues` groups inputs by
 //    contract and returns a record keyed by the encrypted value.
 const cleartext = await sdk.decryption.decryptValues(
-  transfers.map((t) => ({
-    encryptedValue: t.encryptedAmount,
-    contractAddress: tokenAddress,
-  })),
+  transfers.map((t) => ({ encryptedValue: t.encryptedAmount, contractAddress: tokenAddress })),
 );
 
 for (const transfer of transfers) {
