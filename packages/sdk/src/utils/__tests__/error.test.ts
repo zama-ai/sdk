@@ -7,6 +7,8 @@ import {
   extractHttpStatus,
   isRpcRateLimitError,
   hasStructuredRpcRateLimitSignal,
+  isConsumerRpcError,
+  isRetryableRelayerError,
   isNotEntitledMessage,
   parseHandleFromMessage,
   extractRetryAfter,
@@ -248,6 +250,91 @@ describe("hasStructuredRpcRateLimitSignal", () => {
         Object.assign(new Error("x"), { cause: { code: "RELAYER_FETCH_ERROR", status: 429 } }),
       ),
     ).toBe(false);
+  });
+});
+
+describe("isConsumerRpcError", () => {
+  test("detects ethers transport codes (NETWORK_ERROR / SERVER_ERROR / TIMEOUT)", () => {
+    for (const code of ["NETWORK_ERROR", "SERVER_ERROR", "TIMEOUT"]) {
+      expect(isConsumerRpcError(Object.assign(new Error("boom"), { code }))).toBe(true);
+    }
+  });
+
+  test("detects viem transport error classes by name", () => {
+    for (const name of ["HttpRequestError", "RpcRequestError", "TimeoutError"]) {
+      const err = new Error("boom");
+      err.name = name;
+      expect(isConsumerRpcError(err)).toBe(true);
+    }
+  });
+
+  test("detects a structured consumer rate-limit (-32005 / status 429)", () => {
+    expect(isConsumerRpcError(Object.assign(new Error("x"), { code: -32005 }))).toBe(true);
+    expect(isConsumerRpcError(Object.assign(new Error("x"), { status: 429 }))).toBe(true);
+  });
+
+  test("a relayer HTTP error is NOT consumer-RPC", () => {
+    const relayer = Object.assign(new Error("relayer respond with HTTP code 503"), {
+      cause: { code: "RELAYER_FETCH_ERROR", status: 503 },
+    });
+    expect(isConsumerRpcError(relayer)).toBe(false);
+  });
+
+  test("a bare network error with no provider signature is NOT consumer-RPC", () => {
+    expect(isConsumerRpcError(new Error("fetch failed"))).toBe(false);
+  });
+});
+
+describe("isRetryableRelayerError", () => {
+  test("retries a relayer gateway transient (RELAYER_FETCH_ERROR 502/503/504)", () => {
+    for (const status of [502, 503, 504]) {
+      const err = Object.assign(new Error(`relayer respond with HTTP code ${status}`), {
+        cause: { code: "RELAYER_FETCH_ERROR", status },
+      });
+      expect(isRetryableRelayerError(err)).toBe(true);
+    }
+  });
+
+  test("does NOT retry a relayer 500 (terminal) or 429 (back-pressure, surfaced)", () => {
+    const e500 = Object.assign(new Error("relayer respond with HTTP code 500"), {
+      cause: { code: "RELAYER_FETCH_ERROR", status: 500 },
+    });
+    const e429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
+    });
+    expect(isRetryableRelayerError(e500)).toBe(false);
+    expect(isRetryableRelayerError(e429)).toBe(false);
+  });
+
+  test("retries a relayer-boundary network failure (no consumer-RPC signature)", () => {
+    expect(isRetryableRelayerError(new Error("fetch failed"))).toBe(true);
+    expect(isRetryableRelayerError(new Error("socket hang up"))).toBe(true);
+    expect(isRetryableRelayerError(new Error("read ECONNRESET"))).toBe(true);
+  });
+
+  test("does NOT retry a consumer-RPC transport fault (deferred to viem/ethers)", () => {
+    // ethers network error and viem TimeoutError both bubble up from the worker's
+    // ACL read — already retried by the integrator's client.
+    const ethersNet = Object.assign(new Error("fetch failed"), { code: "NETWORK_ERROR" });
+    const viemTimeout = Object.assign(new Error("The request timed out."), {
+      name: "TimeoutError",
+    });
+    expect(isRetryableRelayerError(ethersNet)).toBe(false);
+    expect(isRetryableRelayerError(viemTimeout)).toBe(false);
+  });
+
+  test("does NOT retry a bare timeout (owned by viem/ethers + the worker timeout)", () => {
+    expect(isRetryableRelayerError(new Error("Request timed out after 30000ms"))).toBe(false);
+  });
+
+  test("does NOT retry a terminal not-entitled error or a non-Error", () => {
+    expect(
+      isRetryableRelayerError(
+        new Error("User address 0x1 is not authorized to user decrypt handle 0x2"),
+      ),
+    ).toBe(false);
+    expect(isRetryableRelayerError("fetch failed")).toBe(false);
+    expect(isRetryableRelayerError(null)).toBe(false);
   });
 });
 

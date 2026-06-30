@@ -1,9 +1,19 @@
+import { isRetryableRelayerError } from "../utils/error";
+
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
 
 /**
- * Retry an async operation with exponential backoff.
- * Only retries on transient errors (timeout, network). Does not retry user-facing errors.
+ * Retry a **relayer** operation with exponential backoff.
+ *
+ * The SDK only owns retries for the relayer transport — the one network actor
+ * viem/ethers don't model. Consumer-RPC reads (e.g. the worker's ACL
+ * `persistAllowed` pre-check) go through the integrator's own viem/ethers
+ * client, which already retries transport faults; retrying them again here would
+ * stack on top of that. So this gate ({@link isRetryableRelayerError}) retries
+ * only relayer-attributable transients (HTTP 502/503/504 and relayer-boundary
+ * network failures) and defers everything else — consumer-RPC faults, timeouts,
+ * relayer back-pressure (429, surfaced with `retryAfter`), and terminal errors.
  */
 export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES): Promise<T> {
   let lastError: unknown;
@@ -12,7 +22,7 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES):
       return await fn();
     } catch (error) {
       lastError = error;
-      if (attempt < retries && isTransientError(error)) {
+      if (attempt < retries && isRetryableRelayerError(error)) {
         await sleep(RETRY_BASE_MS * 2 ** attempt);
         continue;
       }
@@ -20,25 +30,6 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES):
     }
   }
   throw lastError;
-}
-
-function isTransientError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const msg = error.message.toLowerCase();
-  return (
-    msg.includes("timed out") ||
-    msg.includes("timeout") ||
-    msg.includes("econnreset") ||
-    msg.includes("econnrefused") ||
-    msg.includes("network") ||
-    msg.includes("fetch failed") ||
-    msg.includes("socket hang up") ||
-    msg.includes("502") ||
-    msg.includes("503") ||
-    msg.includes("504")
-  );
 }
 
 function sleep(ms: number): Promise<void> {

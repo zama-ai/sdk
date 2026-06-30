@@ -259,6 +259,90 @@ export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
 }
 
 /**
+ * Transport-error signatures of the consumer's own RPC client (viem / ethers).
+ * The worker's on-chain reads (the ACL `persistAllowed` pre-check) go through
+ * that client, which already retries transport faults internally — so a failure
+ * carrying one of these shapes must NOT be retried again by the SDK on top.
+ */
+function nodeHasConsumerRpcSignature(node: Record<string, unknown>): boolean {
+  // ethers transient transport codes.
+  const code = node.code;
+  if (code === "NETWORK_ERROR" || code === "SERVER_ERROR" || code === "TIMEOUT") {
+    return true;
+  }
+  // viem transport error classes (the `name` survives the worker boundary).
+  const name = node.name;
+  return (
+    name === "HttpRequestError" ||
+    name === "RpcRequestError" ||
+    name === "TimeoutError" ||
+    name === "WebSocketRequestError"
+  );
+}
+
+/**
+ * True when a failure originates from the **consumer's RPC provider** (viem /
+ * ethers) rather than the relayer. Keeps the SDK's relayer retry from
+ * double-retrying transport faults the integrator's client already retried.
+ * A relayer HTTP error (`RELAYER_FETCH_ERROR`) is never consumer-RPC.
+ */
+export function isConsumerRpcError(error: unknown): boolean {
+  if (isRelayerFetchError(error)) {
+    return false;
+  }
+  if (hasStructuredRpcRateLimitSignal(error)) {
+    return true;
+  }
+  return findInErrorChain(error, nodeHasConsumerRpcSignature) !== undefined;
+}
+
+/**
+ * True only for transient faults attributable to the **relayer transport** — the
+ * one network actor the SDK owns retries for, since viem/ethers don't model the
+ * relayer. This is the single gate for {@link withRetry}.
+ *
+ * Two-tier retry model:
+ * - **Relayer transport** (here): a relayer HTTP 502/503/504 — tagged
+ *   `RELAYER_FETCH_ERROR` with a gateway status — or a relayer-boundary network
+ *   failure (the relayer SDK uses bare `fetch`, so a transport error with no
+ *   viem/ethers signature is the relayer connection itself). Retried.
+ * - **Consumer RPC** ({@link isConsumerRpcError}): deferred to viem/ethers, never
+ *   retried here. Timeouts are owned by viem/ethers and the worker-level
+ *   operation timeout (SDK-237), so they are not auto-retried at this layer.
+ *
+ * Relayer back-pressure (HTTP 429) is deliberately excluded: it is surfaced to
+ * the caller as a retryable {@link RelayerRequestFailedError} with `retryAfter`,
+ * not silently retried.
+ */
+export function isRetryableRelayerError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  if (isConsumerRpcError(error)) {
+    return false;
+  }
+  // Relayer HTTP gateway transients (502/503/504), tagged by the relayer SDK.
+  const relayerGatewayError = findInErrorChain(
+    error,
+    (n) =>
+      n.code === "RELAYER_FETCH_ERROR" &&
+      (n.status === 502 || n.status === 503 || n.status === 504),
+  );
+  if (relayerGatewayError) {
+    return true;
+  }
+  // Relayer-boundary transport failure (no consumer-RPC signature above).
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("econnreset") ||
+    msg.includes("econnrefused") ||
+    msg.includes("socket hang up") ||
+    msg.includes("fetch failed") ||
+    msg.includes("network")
+  );
+}
+
+/**
  * The relayer SDK's ACL gate (`validateAclPermissions`) throws a message-only
  * Error when the actor isn't allowed: `User address <a> is not authorized to
  * user decrypt handle <h>!`. Matching it here, once, against the pinned
