@@ -10,7 +10,7 @@ Most decryption examples start from a balance: you call `confidentialBalanceOf`,
 The SDK treats both sources identically. A decryption input is just `{ encryptedValue, contractAddress }`, and an event-log encrypted value drops straight in:
 
 ```ts
-const clear = await sdk.decryption.decryptValues([
+const cleartext = await sdk.decryption.decryptValues([
   { encryptedValue: transfer.encryptedAmount, contractAddress: tokenAddress },
 ]);
 ```
@@ -57,9 +57,7 @@ const cleartext = await sdk.decryption.decryptValues(
 );
 
 for (const transfer of transfers) {
-  console.log(
-    `${transfer.from} → ${transfer.to}: ${cleartext[transfer.encryptedAmount]}`,
-  );
+  console.log(`${transfer.from} → ${transfer.to}: ${cleartext[transfer.encryptedAmount]}`);
 }
 ```
 
