@@ -176,6 +176,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
+- [Decrypt values from event logs](./decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
 - [RelayerNode](../reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management
