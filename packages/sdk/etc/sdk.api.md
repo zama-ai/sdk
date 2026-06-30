@@ -627,7 +627,9 @@ export class ChromeSessionStorage implements GenericStorage {
 // @public
 export const chromeSessionStorage: ChromeSessionStorage;
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "clearPendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
 
 // @public
@@ -11224,10 +11226,14 @@ export interface ListPairsOptions {
     pageSize?: number;
 }
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "loadPendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "loadPendingUnshieldRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
 
 // @public
@@ -11438,7 +11444,9 @@ export interface PaginatedResult<T> {
     readonly total: number;
 }
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "PendingUnshieldRequest" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export interface PendingUnshieldRequest {
     readonly unwrapRequestId?: EncryptedValue;
     readonly unwrapTxHash: Hex;
@@ -12934,7 +12942,9 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
 }
 
-// @public
+// Warning: (ae-internal-missing-underscore) The name "savePendingUnshield" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
 export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
