@@ -132,10 +132,14 @@ export function VaultPositionCard({
         </div>
       )}
       {decrypt.isError && (
-        <div className="alert alert-error card-status">{decrypt.error?.message}</div>
+        <div className="alert alert-error card-status">
+          {decrypt.error?.message ?? "Decryption failed"}
+        </div>
       )}
       {withdraw.isError && (
-        <div className="alert alert-error card-status">{withdraw.error?.message}</div>
+        <div className="alert alert-error card-status">
+          {withdraw.error?.message ?? "Withdrawal failed"}
+        </div>
       )}
       {withdraw.isSuccess && withdraw.data && (
         <div className="alert alert-success card-status">

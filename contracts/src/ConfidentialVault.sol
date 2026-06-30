@@ -32,6 +32,9 @@ contract ConfidentialVault is IERC7984Receiver, ZamaEthereumConfig {
     {
         require(msg.sender == address(confidentialToken), UnauthorizedToken(msg.sender));
 
+        // Malformed `data` (< 32 bytes) reverts here, which reverts the whole transfer
+        // atomically — the deposit fails rather than refunding. The bound UI always encodes
+        // a full address, so this only guards against direct callers.
         address beneficiary = abi.decode(data, (address));
 
         // No beneficiary: return encrypted `false` so the token refunds the transfer atomically.
@@ -58,11 +61,12 @@ contract ConfidentialVault is IERC7984Receiver, ZamaEthereumConfig {
         euint64 amount = _shares[msg.sender];
         require(FHE.isInitialized(amount), NothingToWithdraw(msg.sender));
 
-        // Checks-effects-interactions: zero the balance before the outbound transfer.
-        euint64 zero = FHE.asEuint64(0);
-        FHE.allowThis(zero);
-        FHE.allow(zero, msg.sender);
-        _shares[msg.sender] = zero;
+        // Checks-effects-interactions: clear the balance before the outbound transfer.
+        // Reset the slot to the uninitialized (bytes32(0)) sentinel — not `FHE.asEuint64(0)`,
+        // which is an initialized handle. This makes `sharesOf` report empty and a repeat
+        // withdraw revert on the `isInitialized` guard above. (`euint64` is a user-defined
+        // value type, so `delete` is unavailable; wrap the zero handle directly.)
+        _shares[msg.sender] = euint64.wrap(bytes32(0));
 
         // The token runs the FHE ops inside `confidentialTransfer`, so it needs access to `amount`.
         FHE.allowTransient(amount, address(confidentialToken));

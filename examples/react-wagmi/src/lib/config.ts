@@ -16,6 +16,6 @@ export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLI
 // (cUSDC) at deployment — the vault cards only render when that token is selected.
 // See contracts/src/ConfidentialVault.sol and contracts/script/DeployVault.s.sol.
 export const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-  "0x1A50c30364A711e14930A4fd9Ebd6709A81Ec423") as `0x${string}`;
+  "0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7") as `0x${string}`;
 export const VAULT_CONFIDENTIAL_TOKEN = (process.env.NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN ||
   "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as `0x${string}`;

@@ -27,7 +27,8 @@ function depositErrorText(error: (Error & { cause?: unknown }) | null): string {
   if (!error) return "";
   const cause = error.cause as { shortMessage?: string; message?: string } | undefined;
   const causeMsg = cause?.shortMessage ?? cause?.message;
-  return causeMsg ? `${error.message} — ${causeMsg}` : error.message;
+  const base = error.message || "Deposit failed";
+  return causeMsg ? `${base} — ${causeMsg}` : base;
 }
 
 export function VaultDepositCard({
