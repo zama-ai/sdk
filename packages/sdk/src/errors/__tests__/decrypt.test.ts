@@ -12,6 +12,7 @@ import {
   ZamaError,
   wrapDecryptError,
 } from "../index";
+import { deserializeError, serializeError } from "../../utils/error";
 
 describe("wrapDecryptError", () => {
   describe("passthrough for already-typed SDK errors", () => {
@@ -237,6 +238,22 @@ describe("wrapDecryptError", () => {
         info: { responseStatus: "429 Too Many Requests" },
       });
       expect(wrapDecryptError(ethers429, "fallback")).toBeInstanceOf(RpcRateLimitError);
+    });
+
+    test("keeps the ethers 429 verdict after the worker round-trip (serialize → deserialize)", () => {
+      // The real worker path: an ethers 429 raised inside the worker is serialized
+      // across `postMessage` and rebuilt on the main thread before classification.
+      // Structured clone drops the nested `info`, so unless `info.responseStatus`
+      // is lifted the rebuilt error loses the signal and collapses to terminal
+      // DecryptionFailedError — the throttle-amplification the fatal-batch flag
+      // exists to prevent. It must classify identically to the direct error.
+      const ethers429 = Object.assign(new Error("server response error (eth_call)"), {
+        code: "SERVER_ERROR",
+        error: new Error("underlying transport"),
+        info: { responseStatus: "429 Too Many Requests" },
+      });
+      const rebuilt = deserializeError(serializeError(ethers429));
+      expect(wrapDecryptError(rebuilt, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
     test("maps a viem JSON-RPC `code: 429` to RpcRateLimitError", () => {

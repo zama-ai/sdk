@@ -98,11 +98,91 @@ export interface SerializedError {
   statusCode?: number;
   /** Server-driven retry delay in **seconds** (numeric prop or parsed `Retry-After`). */
   retryAfter?: number;
+  /**
+   * ethers surfaces an HTTP status only as a string on `info.responseStatus`
+   * (e.g. `"429 Too Many Requests"`), not as a numeric `status`. It lives on a
+   * nested `info` object the flattening would otherwise skip, so it is lifted
+   * onto the envelope and rebuilt onto `error.info.responseStatus`, letting the
+   * ethers rate-limit detector classify a worker-origin 429 exactly as it would
+   * the same error on the main thread.
+   */
+  responseStatus?: string;
   cause?: SerializedError;
 }
 
 /** Scalar signal fields carried verbatim across the boundary, in both directions. */
 const SERIALIZED_SCALAR_KEYS = ["code", "status", "statusCode", "retryAfter"] as const;
+
+/**
+ * ethers reports its HTTP status only as a string on `info.responseStatus`
+ * (e.g. `"429 Too Many Requests"`). Read it directly off the node — not via the
+ * cause-chain flattening, which descends a single branch — so it survives even
+ * when the error also carries an `error` link that would be walked first.
+ */
+function responseStatusFromNode(node: Record<string, unknown>): string | undefined {
+  const info = node.info;
+  if (info !== null && typeof info === "object") {
+    const responseStatus = (info as Record<string, unknown>).responseStatus;
+    if (typeof responseStatus === "string") {
+      return responseStatus;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Copy the scalar signal fields the classifier keys on from a raw error node
+ * onto the envelope, only where not already set — so a shallower node keeps
+ * priority. Also lifts ethers' string `info.responseStatus` and the relayer's
+ * `Retry-After` header (both destroyed by structured clone: the header lives on
+ * a non-cloneable `Headers`, the status on a nested `info` the flattening skips).
+ */
+function captureNodeSignals(node: Record<string, unknown>, into: SerializedError): void {
+  if (into.code === undefined && (typeof node.code === "string" || typeof node.code === "number")) {
+    into.code = node.code;
+  }
+  if (into.status === undefined && typeof node.status === "number") {
+    into.status = node.status;
+  }
+  if (into.statusCode === undefined && typeof node.statusCode === "number") {
+    into.statusCode = node.statusCode;
+  }
+  if (into.responseStatus === undefined) {
+    const responseStatus = responseStatusFromNode(node);
+    if (responseStatus !== undefined) {
+      into.responseStatus = responseStatus;
+    }
+  }
+  if (into.retryAfter === undefined) {
+    if (typeof node.retryAfter === "number") {
+      into.retryAfter = node.retryAfter;
+    } else {
+      const fromHeader = retryAfterFromHeader(node);
+      if (fromHeader !== undefined) {
+        into.retryAfter = fromHeader;
+      }
+    }
+  }
+}
+
+/** Lift any still-missing scalar signal from an already-serialized child up. */
+function hoistMissingSignals(from: SerializedError, into: SerializedError): void {
+  if (into.code === undefined && from.code !== undefined) {
+    into.code = from.code;
+  }
+  if (into.status === undefined && from.status !== undefined) {
+    into.status = from.status;
+  }
+  if (into.statusCode === undefined && from.statusCode !== undefined) {
+    into.statusCode = from.statusCode;
+  }
+  if (into.responseStatus === undefined && from.responseStatus !== undefined) {
+    into.responseStatus = from.responseStatus;
+  }
+  if (into.retryAfter === undefined && from.retryAfter !== undefined) {
+    into.retryAfter = from.retryAfter;
+  }
+}
 
 /**
  * Flatten an error (and its `cause` / `error` / `info` chain) into a
@@ -117,35 +197,23 @@ export function serializeError(error: unknown, depth = 6): SerializedError {
       : (coerced as unknown as Record<string, unknown>);
 
   const serialized: SerializedError = { name: coerced.name, message: coerced.message };
-
-  if (typeof node.code === "string" || typeof node.code === "number") {
-    serialized.code = node.code;
-  }
-  if (typeof node.status === "number") {
-    serialized.status = node.status;
-  }
-  if (typeof node.statusCode === "number") {
-    serialized.statusCode = node.statusCode;
-  }
-  if (typeof node.retryAfter === "number") {
-    serialized.retryAfter = node.retryAfter;
-  }
-  // The relayer's / viem's back-off lives only on a non-cloneable `Headers`
-  // (the `Retry-After` header), which structured clone destroys. Parse it to a
-  // number (seconds) here, at the source, so the delay survives the worker boundary.
-  if (serialized.retryAfter === undefined) {
-    const fromHeader = retryAfterFromHeader(node);
-    if (fromHeader !== undefined) {
-      serialized.retryAfter = fromHeader;
-    }
-  }
+  captureNodeSignals(node, serialized);
 
   if (depth > 0) {
+    // Walk *every* nested link (`cause` / `error` / `info`), not just the first
+    // present one: an error commonly carries several (ethers puts the underlying
+    // fault on `error` and the HTTP status on `info`), and the signal-bearing
+    // branch is not always the first. Keep the first as the representative
+    // `.cause` for message/chain fidelity, and lift any still-missing scalar
+    // signal off the others so none is dropped.
     for (const key of NESTED_ERROR_KEYS) {
       const next = node[key];
       if (next !== undefined && next !== null && typeof next === "object") {
-        serialized.cause = serializeError(next, depth - 1);
-        break;
+        const child = serializeError(next, depth - 1);
+        if (serialized.cause === undefined) {
+          serialized.cause = child;
+        }
+        hoistMissingSignals(child, serialized);
       }
     }
   }
@@ -169,6 +237,12 @@ export function deserializeError(serialized: SerializedError): Error {
     if (value !== undefined) {
       error[key] = value;
     }
+  }
+  // Rebuild ethers' `info.responseStatus` on the same node as its `code`, so the
+  // ethers rate-limit detector (`code: "SERVER_ERROR"` + `info.responseStatus`)
+  // matches the round-tripped error exactly as it would the original.
+  if (serialized.responseStatus !== undefined) {
+    error.info = { responseStatus: serialized.responseStatus };
   }
   if (serialized.cause) {
     error.cause = deserializeError(serialized.cause);
