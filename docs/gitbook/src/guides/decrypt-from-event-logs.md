@@ -5,7 +5,7 @@ description: Decrypt an FHE encrypted value pulled straight off an event log —
 
 # Decrypt values from event logs
 
-Most decryption examples start from a balance: you call `confidentialBalanceOf`, get back an encrypted value, and decrypt it. But a balance is not the only source of an encrypted value. **Any `bytes32` encrypted value emitted in an event log is a valid decryption input** — and decrypting from logs is the single most common pattern on the backend: indexers, wallet transaction history, accounting pipelines, and bridges all read confidential amounts straight off `ConfidentialTransfer`, `Wrap`, and `UnwrapFinalized` events.
+Most decryption examples start from a balance: you call `confidentialBalanceOf`, get back an encrypted value, and decrypt it. But a balance is not the only source of an encrypted value. **Any `bytes32` encrypted value emitted in an event log is a valid decryption input** — and decrypting from logs is a common backend pattern: indexers, wallet transaction history, accounting pipelines, and bridges all read confidential amounts straight off `ConfidentialTransfer`, `Wrap`, and `UnwrapFinalized` events.
 
 The SDK treats both sources identically. A decryption input is just `{ encryptedValue, contractAddress }`, and an event-log encrypted value drops straight in:
 
@@ -28,23 +28,25 @@ A minimal indexer: fetch every confidential transfer for a token, decode each lo
 ```ts
 import { decodeConfidentialTransfer, TOKEN_TOPICS } from "@zama-fhe/sdk";
 import type { Address } from "viem";
-// `sdk` and `publicClient` come from your Node.js backend setup — see
-// the Node.js backend guide for createConfig + node() relayer.
+// `sdk` and `publicClient` come from your Node.js backend setup (createConfig +
+// node() relayer). `./client` stands in for wherever you export them — the
+// Node.js backend guide builds them as inline consts, so extract them there.
 import { sdk, publicClient } from "./client";
 
 const tokenAddress = "0xYourConfidentialToken" as Address;
 
-// 1. Fetch raw logs for the confidential token events.
+// 1. Fetch raw logs for the confidential token events. Providers cap getLogs
+//    block ranges, so large backfills need to page from a start block.
 const logs = await publicClient.getLogs({
   address: tokenAddress,
   topics: [TOKEN_TOPICS],
-  fromBlock: 0n,
+  fromBlock: startBlock,
   toBlock: "latest",
 });
 
 // 2. Decode the ConfidentialTransfer logs. Each carries an `encryptedAmount` —
-//    the same kind of encrypted value as a balance handle. The decoder returns
-//    null for non-matching logs, so `flatMap(... ?? [])` drops them.
+//    the same kind of encrypted value you get from a balance. The decoder
+//    returns null for non-matching logs, so `flatMap(... ?? [])` drops them.
 const transfers = logs.flatMap((log) => decodeConfidentialTransfer(log) ?? []);
 
 // 3. Decrypt every amount in a single call. `decryptValues` groups inputs by
@@ -97,12 +99,22 @@ To decode a single log instead of a batch, use the individual decoders (`decodeC
 Pass the decoded encrypted values to `sdk.decryption.decryptValues`. Each input pairs the encrypted value with the contract that emitted it. The result is a record mapping each encrypted value back to its clear-text value.
 
 ```ts
-const cleartext = await sdk.decryption.decryptValues([
-  { encryptedValue: transfer.encryptedAmount, contractAddress: tokenAddress },
-]);
+// Narrow the decoded `events` to the type you want. Each event exposes its
+// encrypted value under a different field (see the table above), so narrow on
+// `eventName` first — `encryptedAmount` is only valid after filtering to
+// `ConfidentialTransfer`.
+const transfers = events.filter((e) => e.eventName === "ConfidentialTransfer");
 
-// cleartext: { "0xencryptedValue…": 500n }
-const amount = cleartext[transfer.encryptedAmount]; // 500n
+const cleartext = await sdk.decryption.decryptValues(
+  transfers.map((transfer) => ({
+    encryptedValue: transfer.encryptedAmount,
+    contractAddress: tokenAddress,
+  })),
+);
+
+// cleartext maps each encrypted value back to its clear-text amount:
+// { "0xencryptedValue…": 500n }
+const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
 
 `decryptValues` accepts many inputs at once, groups them by contract address, and issues one decryption request per contract — so decrypting a page of transfers costs one round-trip per token, not one per transfer. Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
