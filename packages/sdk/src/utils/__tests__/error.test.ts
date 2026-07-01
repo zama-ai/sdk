@@ -439,6 +439,52 @@ describe("serializeError / deserializeError", () => {
     expect(extractRetryAfter(rebuilt)).toBe(300);
   });
 
+  test("round-trips an ethers 429 whose status lives only in info.responseStatus", () => {
+    // The worker's relayer-sdk read (persistAllowed) goes through ethers; an
+    // edge/Cloudflare 429 surfaces as `code: "SERVER_ERROR"` + a *string*
+    // `info.responseStatus`. Structured clone drops the nested `info`, so
+    // without lifting it the round-tripped error loses the rate-limit signal and
+    // wrapDecryptError mis-classifies it as terminal DecryptionFailedError.
+    const ethers429 = Object.assign(new Error("could not coalesce error"), {
+      code: "SERVER_ERROR",
+      info: { responseStatus: "429 Too Many Requests" },
+    });
+    // Same verdict directly and after the worker round-trip (the invariant).
+    expect(isRpcRateLimitError(ethers429)).toBe(true);
+    expect(hasStructuredRpcRateLimitSignal(ethers429)).toBe(true);
+    const rebuilt = deserializeError(serializeError(ethers429));
+    expect(isRpcRateLimitError(rebuilt)).toBe(true);
+    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
+  });
+
+  test("does not invent a rate-limit for a non-429 ethers info.responseStatus", () => {
+    // A 503 must stay non-rate-limit after the round-trip too — parsing the
+    // status to a numeric `status` would have diverged here; preserving the
+    // string keeps direct and round-tripped classification identical.
+    const ethers503 = Object.assign(new Error("bad gateway"), {
+      code: "SERVER_ERROR",
+      info: { responseStatus: "503 Service Unavailable" },
+    });
+    const rebuilt = deserializeError(serializeError(ethers503));
+    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(
+      hasStructuredRpcRateLimitSignal(ethers503),
+    );
+    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(false);
+    expect(extractHttpStatus(rebuilt)).toBeUndefined();
+  });
+
+  test("keeps a signal carried on a later branch than the first (walks all links)", () => {
+    // ethers puts the underlying fault on `error` (walked first) and the HTTP
+    // status on `info` — dropping every branch but the first would lose the 429.
+    const err = Object.assign(new Error("server response"), {
+      code: "SERVER_ERROR",
+      error: new Error("underlying transport"),
+      info: { responseStatus: "429 Too Many Requests" },
+    });
+    const rebuilt = deserializeError(serializeError(err));
+    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
+  });
+
   test("preserves the cause chain so chain-walking detectors keep working", () => {
     // ethers-style nested provider error: structured clone would drop the chain.
     const err = Object.assign(new Error("could not coalesce error"), {

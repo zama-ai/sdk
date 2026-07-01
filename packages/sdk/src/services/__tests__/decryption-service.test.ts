@@ -251,10 +251,10 @@ describe("DecryptionService", () => {
 
   describe("isDelegationPropagated", () => {
     function mockEip712(
-      relayer: { createDelegatedUserDecryptEIP712: unknown },
+      relayer: { createDelegatedUserDecryptEIP712: (...args: never[]) => unknown },
       delegatorAddress: Address,
     ) {
-      vi.mocked(relayer.createDelegatedUserDecryptEIP712 as never).mockResolvedValue({
+      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
         domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
         types: { DelegatedUserDecryptRequestVerification: [] },
         message: {

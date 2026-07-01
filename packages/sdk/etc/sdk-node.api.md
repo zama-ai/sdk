@@ -546,6 +546,21 @@ export const sepolia: {
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
 
+// @public
+export interface SerializedError {
+    // (undocumented)
+    cause?: SerializedError;
+    code?: string | number;
+    // (undocumented)
+    message: string;
+    // (undocumented)
+    name: string;
+    responseStatus?: string;
+    retryAfter?: number;
+    status?: number;
+    statusCode?: number;
+}
+
 // @public (undocumented)
 export interface SuccessResponse<T> extends BaseResponse {
     // (undocumented)
