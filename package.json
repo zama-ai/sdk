@@ -38,6 +38,7 @@
     "forge-fhevm:build": "cd contracts/lib/forge-fhevm && forge build",
     "fhevm:build": "cd contracts/lib/fhevm/sdk/js-sdk/contracts && FOUNDRY_PROFILE=v13 forge build script/v0.13.0/DeployCleartextFHEVMHost.s.sol",
     "contracts:build": "pnpm forge-fhevm:build && pnpm fhevm:build && cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test",
     "anvil": "anvil --port 8545 --chain-id 31337 --silent",
     "e2e:test": "pnpm --filter @zama-fhe/playwright e2e:test",
     "e2e:test:ui": "pnpm --filter @zama-fhe/playwright e2e:test:ui",
@@ -65,7 +66,7 @@
     "size:json": "size-limit --json"
   },
   "devDependencies": {
-    "@ast-grep/cli": "^0.43.0",
+    "@ast-grep/cli": "^0.44.0",
     "@faker-js/faker": "^10.5.0",
     "@fhevm/mock-utils": "0.4.2",
     "@microsoft/api-extractor": "^7.58.9",
@@ -95,8 +96,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "markdown-it": "^14.2.0",
-    "oxfmt": "^0.55.0",
-    "oxlint": "^1.70.0",
+    "oxfmt": "^0.56.0",
+    "oxlint": "^1.71.0",
     "oxlint-tsgolint": "0.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

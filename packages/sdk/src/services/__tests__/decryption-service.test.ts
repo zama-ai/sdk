@@ -1,5 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
+import { DelegationNotPropagatedError, NotEntitledError, RpcRateLimitError } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -230,5 +231,155 @@ describe("DecryptionService", () => {
     await expect(
       service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 10n });
+  });
+
+  describe("RPC rate-limit classification (SDK-239)", () => {
+    test("delegatedUserDecrypt throws RpcRateLimitError when a delegation pre-check read is rate-limited", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      const rpcError = Object.assign(new Error("Too Many Requests"), { code: -32005 });
+      vi.mocked(provider.readContract).mockRejectedValue(rpcError);
+
+      await expect(
+        decryptionService.delegatedDecryptValues(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+        ),
+      ).rejects.toBeInstanceOf(RpcRateLimitError);
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
+    });
+
+    test("maps the relayer's not-entitled failure on the delegated path to transient DelegationNotPropagatedError", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      // The relayer's ACL gate throws a message-only Error; after the worker
+      // boundary only the message survives. On the delegated path that verdict
+      // comes from the *delegator's* `persistAllowed` L1 read, which is false
+      // transiently under propagation lag — so it is surfaced as the retryable
+      // DelegationNotPropagatedError, not the terminal NotEntitledError used for a
+      // direct signer denial.
+      vi.mocked(relayer.decryptValues).mockRejectedValue(
+        new Error(
+          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
+        ),
+      );
+
+      const error = await decryptionService
+        .delegatedDecryptValues(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+        )
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(DelegationNotPropagatedError);
+      expect(error).not.toBeInstanceOf(NotEntitledError);
+    });
+
+    test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockRejectedValue(
+        Object.assign(new Error("Too Many Requests"), { code: -32005 }),
+      );
+
+      await expect(
+        decryptionService.delegatedBatchDecryptHandlesAs({
+          encryptedInputs: handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          delegatorAddress,
+          delegateAddress,
+          accountAddress: userAddress,
+          maxConcurrency: 1,
+        }),
+      ).rejects.toBeInstanceOf(RpcRateLimitError);
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
+    });
+
+    test("a fatal error in the per-item fallback short-circuits the still-queued items", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      // 3 handles, concurrency 2: the bulk attempt fails non-fatally (so we fall
+      // into the per-item loop), then the first per-item worker hits a fatal
+      // RpcRateLimitError. Without the shared abort flag the freed worker would
+      // pick up the third item and re-hit the throttled relayer; we assert it
+      // does not.
+      const CONTRACT_C = getAddress("0x5555555555555555555555555555555555555555") as Address;
+      const HANDLE_C = `0x${"cc".repeat(32)}` as EncryptedValue;
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+
+      let bulkCalls = 0;
+      let resolveAFailed = (): void => {};
+      const aFailed = new Promise<void>((r) => {
+        resolveAFailed = r;
+      });
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: { encryptedValues: EncryptedValue[] }) => {
+          // Bulk phase: one call per contract, all reject non-fatally.
+          if (bulkCalls < 3) {
+            bulkCalls++;
+            throw new Error("batch failed");
+          }
+          // Per-item phase.
+          const ev = encryptedValues[0];
+          if (ev === HANDLE_A) {
+            resolveAFailed();
+            throw Object.assign(new Error("Too Many Requests"), { code: -32005 });
+          }
+          if (ev === HANDLE_B) {
+            // Let HANDLE_A's fatal classification flip the abort flag first, then
+            // a macrotask hop so the freed worker re-enters the loop afterwards.
+            await aFailed;
+            await new Promise((r) => setTimeout(r, 5));
+            return [{ type: "uint64", value: 20n }];
+          }
+          return [{ type: "uint64", value: 30n }];
+        },
+      );
+
+      await expect(
+        decryptionService.delegatedBatchDecryptHandlesAs({
+          encryptedInputs: handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+            [HANDLE_C, CONTRACT_C],
+          ]),
+          delegatorAddress,
+          delegateAddress,
+          accountAddress: userAddress,
+          maxConcurrency: 2,
+        }),
+      ).rejects.toBeInstanceOf(RpcRateLimitError);
+
+      // 3 bulk calls (one per contract) + 2 per-item calls (HANDLE_A fatal,
+      // HANDLE_B in-flight). HANDLE_C is short-circuited by the abort flag, so it
+      // never reaches the relayer — without the flag this would be 6.
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(5);
+    });
   });
 });

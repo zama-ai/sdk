@@ -1,31 +1,28 @@
-name: ABI Check
+name: Contracts Test
 
 on:
   pull_request:
     branches: [main, prerelease]
     paths:
       - "contracts/src/**"
+      - "contracts/test/**"
       - "contracts/foundry.toml"
       - "contracts/soldeer.lock"
       - "contracts/lib/forge-fhevm/src/**"
       - "contracts/lib/forge-fhevm/foundry.toml"
       - "contracts/lib/forge-fhevm/soldeer.lock"
-      - "packages/sdk/src/abi/**"
-      - "scripts/abi/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/abi.yml"
+      - ".github/workflows/contracts-test.yml"
   workflow_call:
 
 concurrency:
-  group: abi-check-${{ github.ref }}
+  group: contracts-test-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  abi-check:
+  contracts-test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -42,7 +39,7 @@ jobs:
 
       - name: Restore Forge build cache
         id: forge-build-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
             contracts/out
@@ -62,36 +59,5 @@ jobs:
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: cd contracts/lib/forge-fhevm && forge build
 
-      - name: Build contracts
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts && forge build
-
-      - name: Save Forge build cache
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            contracts/out
-            contracts/cache
-            contracts/dependencies
-            contracts/lib/forge-fhevm/out
-            contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-
-      - name: Install dependencies
-        run: pnpm ci --ignore-scripts
-
-      - name: Verify SDK ABIs are up to date
-        run: pnpm abi:check
+      - name: Run contract tests
+        run: cd contracts && forge test -vvv
