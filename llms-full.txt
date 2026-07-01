@@ -3559,9 +3559,11 @@ import type { Address } from "viem";
 import { sdk, publicClient } from "./client";
 
 const tokenAddress = "0xYourConfidentialToken" as Address;
+// The token's deployment block. Providers cap getLogs block ranges, so large
+// backfills page forward from here instead of fetching everything in one call.
+const startBlock = 0n;
 
-// 1. Fetch raw logs for the confidential token events. Providers cap getLogs
-//    block ranges, so large backfills need to page from a start block.
+// 1. Fetch raw logs for the confidential token events.
 const logs = await publicClient.getLogs({
   address: tokenAddress,
   topics: [TOKEN_TOPICS],
