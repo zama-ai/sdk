@@ -128,6 +128,10 @@ describe("createConfig validation", () => {
     expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
     expect(() => node({ operationTimeout: 0 })).toThrow(ConfigurationError);
     expect(() => node({ initTimeout: -1 })).toThrow(ConfigurationError);
+    // Above the setTimeout-overflow-safe cap (1 hour) — must fail loudly rather
+    // than silently clamp to an instant timeout.
+    expect(() => node({ operationTimeout: 3_601 })).toThrow(ConfigurationError);
+    expect(() => node({ initTimeout: 100_000 })).toThrow(ConfigurationError);
   });
 
   test("accepts valid node worker-timeout options", () => {

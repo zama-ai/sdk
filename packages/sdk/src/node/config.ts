@@ -47,11 +47,20 @@ export interface NodeRelayerConfig extends RelayerConfig {
   ) => RelayerNode;
 }
 
+/**
+ * Upper bound (seconds) for the worker-timeout knobs. Timeouts are passed to
+ * `setTimeout`, whose delay is a 32-bit signed int of **milliseconds**: a value
+ * over ~24.8 days overflows and clamps to ~1 ms, silently firing instantly. Cap
+ * well below that (1 hour is already far beyond any legitimate FHE operation) so
+ * an absurd config fails loudly at the factory boundary instead of misbehaving.
+ */
+const MAX_WORKER_TIMEOUT_SECONDS = 3_600;
+
 const NodePoolOptionsSchema = z.object({
   poolSize: z.optional(z.int().check(z.positive())),
   fheArtifactCacheTTL: z.optional(z.int().check(z.nonnegative())),
-  operationTimeout: z.optional(z.int().check(z.positive())),
-  initTimeout: z.optional(z.int().check(z.positive())),
+  operationTimeout: z.optional(z.int().check(z.positive(), z.lte(MAX_WORKER_TIMEOUT_SECONDS))),
+  initTimeout: z.optional(z.int().check(z.positive(), z.lte(MAX_WORKER_TIMEOUT_SECONDS))),
   recycleWorkerOnTimeout: z.optional(z.boolean()),
 });
 

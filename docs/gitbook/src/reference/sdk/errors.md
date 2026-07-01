@@ -25,6 +25,7 @@ import {
   NotEntitledError,
   RpcRateLimitError,
   WorkerTimeoutError,
+  WorkerRecycledError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -90,7 +91,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
-| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled (retryable)                                                             |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)                                                 |
+| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                                                   |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
@@ -354,7 +356,7 @@ try {
 
 **Code:** `OPERATION_TIMEOUT`
 
-A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker** (terminating the hung thread) so it self-heals, and the operation is **retryable**. It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
+A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker by default** (terminating the hung thread) so it self-heals, and the operation is **retryable**. Recycling is gated by `recycleWorkerOnTimeout` (default `true`) and never applies to the browser worker (a single worker with no pool). It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
 
 Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
 
@@ -377,6 +379,24 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
+
+### WorkerRecycledError
+
+**Code:** `WORKER_RECYCLED`
+
+An in-flight operation was **aborted as collateral** when its worker was recycled to recover from *another* operation's timeout (Node pool self-healing) — this operation itself did not time out. Because it never reached a verdict, it is **retryable**: the next call lazily re-inits a fresh worker. It is intentionally distinct from `WorkerTimeoutError` (this op did not exceed its own bound) and from `DecryptionFailedError` (nothing actually failed to decrypt), so you can retry it rather than treating it as a terminal failure. The error carries `operation` and (in the Node pool) `worker`.
+
+```ts
+matchZamaError(error, {
+  WORKER_RECYCLED: async (e) => {
+    // Transient: the worker was replaced under us. Just retry.
+    await backoff();
+    retry();
+  },
+});
+```
+
+**How to handle:** Retry — the request was cancelled by an unrelated recycle, not by a failure of its own.
 
 ## "No balance" vs "zero balance"
 
