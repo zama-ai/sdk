@@ -40,7 +40,12 @@ export {
   useConfidentialTransfer,
   type UseConfidentialTransferConfig,
 } from "./transfer/use-confidential-transfer";
+export {
+  useConfidentialTransferAndCall,
+  type UseConfidentialTransferAndCallConfig,
+} from "./transfer/use-confidential-transfer-and-call";
 export { useConfidentialTransferFrom } from "./transfer/use-confidential-transfer-from";
+export { useConfidentialTransferFromAndCall } from "./transfer/use-confidential-transfer-from-and-call";
 export { useConfidentialSetOperator } from "./operator/use-confidential-set-operator";
 export {
   useConfidentialIsOperator,

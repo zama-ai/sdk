@@ -98,9 +98,7 @@ describe("Permits", () => {
 
       await expect(
         sdk.permits.grantDelegationPermit(DELEGATOR, [CONTRACT_A]),
-      ).rejects.toMatchObject({
-        operation: "grantDelegationPermit",
-      });
+      ).rejects.toMatchObject({ operation: "grantDelegationPermit" });
     });
   });
 

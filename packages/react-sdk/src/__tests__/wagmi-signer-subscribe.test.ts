@@ -250,11 +250,7 @@ describe("WagmiSigner.subscribe", () => {
     onWalletAccountChange.mockClear();
 
     capturedOnChange!(
-      {
-        status: "connected",
-        address: ADDR_A.toLowerCase() as Address,
-        chainId: 1,
-      },
+      { status: "connected", address: ADDR_A.toLowerCase() as Address, chainId: 1 },
       { status: "connected", address: ADDR_A, chainId: 1 },
     );
     expect(onWalletAccountChange).not.toHaveBeenCalled();

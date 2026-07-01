@@ -29,9 +29,7 @@ export function wrapEncryptError(error: unknown, fallbackMessage: string): ZamaE
     return new RelayerRequestFailedError(
       error instanceof Error ? error.message : fallbackMessage,
       statusCode,
-      {
-        cause: error,
-      },
+      { cause: error },
     );
   }
 

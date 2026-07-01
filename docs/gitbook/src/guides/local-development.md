@@ -39,9 +39,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -87,9 +85,7 @@ const config = createConfig({
   chains: [myHardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [myHardhat.id]: cleartext(),
-  },
+  relayers: { [myHardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);

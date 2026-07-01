@@ -26,9 +26,7 @@ function ValidityCheck({ confidentialTokenAddress }: { confidentialTokenAddress:
     data: isValid,
     isLoading,
     error,
-  } = useIsConfidentialTokenValid({
-    confidentialTokenAddress,
-  });
+  } = useIsConfidentialTokenValid({ confidentialTokenAddress });
 
   if (isLoading) return <p>Checking...</p>;
   if (error) return <p>Error: {error.message}</p>;

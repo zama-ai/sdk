@@ -85,10 +85,7 @@ The address that delegated decryption rights.
 The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
-await decryptAs({
-  delegatorAddress: "0xDelegator",
-  accountAddress: "0xBalanceHolder",
-});
+await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
 ```
 
 ## Return Type

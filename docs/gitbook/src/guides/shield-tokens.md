@@ -92,9 +92,7 @@ console.log("Shield tx:", txHash);
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: shield, isPending } = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending } = useShield({ address: "0xWrapperAddress" });
 
 const { txHash } = await shield({ amount: 1000n });
 ```
@@ -171,13 +169,7 @@ console.log("Confirmed in block:", receipt.blockNumber);
 {% tab title="React" %}
 
 ```tsx
-const {
-  mutateAsync: shield,
-  isPending,
-  isSuccess,
-} = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending, isSuccess } = useShield({ address: "0xWrapperAddress" });
 
 // isPending is true while the transaction is in flight
 // isSuccess flips to true when the mutation completes

@@ -55,9 +55,7 @@ const sdk = new ZamaSDK(config);
 {
   "manifest_version": 3,
   "permissions": ["storage"],
-  "background": {
-    "service_worker": "background.js"
-  }
+  "background": { "service_worker": "background.js" }
 }
 ```
 

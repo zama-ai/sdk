@@ -20,10 +20,7 @@ import { createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 ```
@@ -41,9 +38,7 @@ You rarely need to instantiate `ViemSigner` directly. The viem `createConfig` bu
 Viem wallet client for signing transactions and typed data.
 
 ```ts
-const signer = new ViemSigner({
-  walletClient,
-});
+const signer = new ViemSigner({ walletClient });
 ```
 
 ---
@@ -55,10 +50,7 @@ const signer = new ViemSigner({
 Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
 
 ```ts
-const signer = new ViemSigner({
-  walletClient,
-  ethereum: window.ethereum,
-});
+const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 ```
 
 ## Methods

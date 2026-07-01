@@ -8,9 +8,15 @@ import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 
 /**
- * Public namespace for FHE decryption.
+ * Public namespace for FHE decryption — the canonical way to decrypt.
  *
- * Exposed as `sdk.decryption`. Owns the SDK-level guards (signer requirement on
+ * Exposed as `sdk.decryption`. Prefer these methods over the low-level
+ * `sdk.relayer.userDecrypt` / `delegatedUserDecrypt` / `publicDecrypt`: they
+ * assemble the credential bundle (transport key pair, EIP-712 permit) for you,
+ * cache results, and wrap relayer errors. Reach for `sdk.relayer.*` only when
+ * you must control credential assembly by hand.
+ *
+ * Owns the SDK-level guards (signer requirement on
  * `decryptValues` and `delegatedDecryptValues`, empty-array
  * short-circuit on `decryptPublicValues`, relayer error wrapping) and delegates the
  * actual work to the internal {@link DecryptionService} or the relayer directly for
@@ -137,11 +143,7 @@ export class Decryption {
    */
   async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
     if (encryptedValues.length === 0) {
-      return {
-        clearValues: {},
-        decryptionProof: "0x",
-        abiEncodedClearValues: "0x",
-      };
+      return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
     try {

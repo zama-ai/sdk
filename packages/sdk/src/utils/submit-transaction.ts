@@ -45,15 +45,9 @@ export async function submitTransaction(params: {
     const failure =
       error instanceof ZamaError
         ? error
-        : new TransactionRevertedError(`Transaction failed during ${operation}`, {
-            cause: error,
-          });
+        : new TransactionRevertedError(`Transaction failed during ${operation}`, { cause: error });
 
-    emit({
-      type: ZamaSDKEvents.TransactionError,
-      operation,
-      error: failure,
-    });
+    emit({ type: ZamaSDKEvents.TransactionError, operation, error: failure });
     throw failure;
   }
 }

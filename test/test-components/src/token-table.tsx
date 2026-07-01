@@ -18,11 +18,7 @@ function TokenRow({
   balance: bigint | undefined;
   revealed: boolean;
   isDecrypting: boolean;
-  LinkComponent: React.ComponentType<{
-    to: string;
-    className?: string;
-    children: React.ReactNode;
-  }>;
+  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const { data: metadata } = useMetadata(address);
 
@@ -57,11 +53,7 @@ function ERC20TokenRow({
 }: {
   tokenAddress: Address;
   wrapper: Address;
-  LinkComponent: React.ComponentType<{
-    to: string;
-    className?: string;
-    children: React.ReactNode;
-  }>;
+  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const { address: connectedAddress } = useConnection();
   const balanceContract = connectedAddress
@@ -106,11 +98,7 @@ export function TokenTable({
 }: {
   tokenAddresses: Address[];
   erc20Tokens?: { address: Address; wrapper: Address }[];
-  LinkComponent: React.ComponentType<{
-    to: string;
-    className?: string;
-    children: React.ReactNode;
-  }>;
+  LinkComponent: React.ComponentType<{ to: string; className?: string; children: React.ReactNode }>;
 }) {
   const [revealed, setRevealed] = useState(false);
   const { address } = useAccount();

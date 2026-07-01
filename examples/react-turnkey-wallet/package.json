@@ -10,24 +10,24 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.100.0",
+    "@tanstack/react-query": "^5.101.2",
     "@turnkey/react-wallet-kit": "^1.11.1",
-    "@turnkey/viem": "^0.14.28",
-    "@zama-fhe/react-sdk": "3.1.0",
-    "@zama-fhe/sdk": "3.1.0",
-    "next": "^16.2.5",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "@turnkey/viem": "^0.14.31",
+    "@zama-fhe/react-sdk": "^3.2.0",
+    "@zama-fhe/sdk": "^3.2.0",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "viem": "^2.53.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^22.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^10.6.0",
+    "eslint-config-next": "^16.2.9",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3"
   }
 }

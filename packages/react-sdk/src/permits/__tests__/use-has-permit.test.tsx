@@ -101,11 +101,7 @@ describe("useHasPermit", () => {
     renderWithProviders(() => useHasPermit({ contractAddresses: [] }), { signer });
 
     await waitFor(() => {
-      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enabled: false,
-        }),
-      );
+      expect(vi.mocked(useQuery)).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
     });
   });
 });

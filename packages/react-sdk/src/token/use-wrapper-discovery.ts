@@ -92,10 +92,6 @@ export function useWrapperDiscoverySuspense(config: UseWrapperDiscoverySuspenseC
   const registryAddress = useWrappersRegistryAddress();
 
   return useSuspenseQuery<Address | null>(
-    wrapperDiscoveryQueryOptions(sdk.registry, {
-      tokenAddress,
-      erc20Address,
-      registryAddress,
-    }),
+    wrapperDiscoveryQueryOptions(sdk.registry, { tokenAddress, erc20Address, registryAddress }),
   );
 }

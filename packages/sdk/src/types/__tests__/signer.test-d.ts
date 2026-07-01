@@ -58,9 +58,7 @@ describe("WalletAccountChange", () => {
   });
 
   test("accepts connect shape (next only)", () => {
-    expectTypeOf<{
-      next: { address: Address; chainId: number };
-    }>().toExtend<WalletAccountChange>();
+    expectTypeOf<{ next: { address: Address; chainId: number } }>().toExtend<WalletAccountChange>();
   });
 
   test("accepts disconnect shape (previous only)", () => {

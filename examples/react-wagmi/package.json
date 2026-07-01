@@ -2,7 +2,7 @@
   "name": "react-wagmi-example",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
-    "@zama-fhe/react-sdk": "3.1.0",
-    "@zama-fhe/sdk": "3.1.0",
+    "@zama-fhe/react-sdk": "3.3.0-alpha.3",
+    "@zama-fhe/sdk": "3.3.0-alpha.3",
     "next": "^16.2.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

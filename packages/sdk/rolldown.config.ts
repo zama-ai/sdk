@@ -11,9 +11,7 @@ const shared = {
     /^node:/,
     /^zod($|\/)/,
   ],
-  resolve: {
-    tsconfigFilename: "tsconfig.build.json",
-  },
+  resolve: { tsconfigFilename: "tsconfig.build.json" },
   treeshake: true,
 };
 
@@ -35,12 +33,7 @@ export default defineConfig([
       "node/index": "src/node/index.ts",
       "node/relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
     },
-    output: {
-      dir: "dist/esm",
-      format: "esm",
-      sourcemap: true,
-      minify: true,
-    },
+    output: { dir: "dist/esm", format: "esm", sourcemap: true, minify: true },
     ...shared,
     plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
   },

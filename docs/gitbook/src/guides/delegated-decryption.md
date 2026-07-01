@@ -37,9 +37,7 @@ const { txHash } = await sdk.delegations.delegateDecryption({
 // 2. Wait 1–2 minutes for gateway propagation
 
 // 3. Delegate reads the delegator's balance
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 {% endtab %}
@@ -124,9 +122,7 @@ The delegate calls `token.decryptBalanceAs` to read the delegator's balance. The
 {% tab title="SDK" %}
 
 ```ts
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 {% endtab %}
@@ -155,9 +151,7 @@ import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, {
-  delegatorAddress: "0xDelegator",
-});
+const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
 
 // balances is a Map<Address, bigint>
 for (const [address, balance] of balances) {
@@ -220,9 +214,7 @@ try {
 }
 
 try {
-  const balance = await token.decryptBalanceAs({
-    delegatorAddress: "0xDelegator",
-  });
+  const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically

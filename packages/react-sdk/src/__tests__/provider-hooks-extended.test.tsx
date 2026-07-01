@@ -62,9 +62,7 @@ describe("useMetadataSuspense", () => {
       .mockResolvedValueOnce("TT")
       .mockResolvedValueOnce(18);
 
-    const { result } = renderWithProviders(() => useMetadataSuspense(tokenAddress), {
-      signer,
-    });
+    const { result } = renderWithProviders(() => useMetadataSuspense(tokenAddress), { signer });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ name: "TestToken", symbol: "TT", decimals: 18 });
@@ -85,9 +83,7 @@ describe("useTotalSupplySuspense", () => {
       return 100000n;
     });
 
-    const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), {
-      signer,
-    });
+    const { result } = renderWithProviders(() => useTotalSupplySuspense(tokenAddress), { signer });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBe(100000n);

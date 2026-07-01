@@ -4,9 +4,7 @@ declare module "*/hardhat/deployments.json" {
     cUSDT: string;
     erc20: string;
     cToken: string;
-    fhevm: {
-      acl: string;
-    };
+    fhevm: { acl: string };
   };
   export default deployments;
 }

@@ -21,16 +21,12 @@ describe("confidentialIsOperatorQueryOptions", () => {
     const missingHolder = confidentialIsOperatorQueryOptions(
       sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C",
-      },
+      { spender: "0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" },
     );
     const missingSpender = confidentialIsOperatorQueryOptions(
       sdk,
       "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
-      {
-        holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-      },
+      { holder: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" },
     );
 
     expect(missingHolder.enabled).toBe(false);

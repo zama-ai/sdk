@@ -178,19 +178,7 @@ In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `
 
 ## Authentication
 
-The relayer requires an API key. In browser apps, proxy requests through your backend so the key stays server-side. Override `relayerUrl` in the chain definition to point at your proxy:
-
-```ts
-import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
-
-// Browser apps: proxy through your backend (recommended)
-const mySepolia = {
-  ...sepolia,
-  relayerUrl: "https://your-app.com/api/relayer/11155111",
-} as const satisfies FheChain;
-```
-
-See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for a backend proxy example.
+The `sepolia` testnet relayer needs **no API key** — the preset works as-is, so leave `auth` unset and move on. You only need a key for the Zama-hosted **mainnet** relayer; when you deploy there, see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the backend-proxy (browser) and direct-key (server) patterns.
 
 ## Install
 
@@ -244,9 +232,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected()],
-  transports: {
-    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
-  },
+  transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
 const mySepolia = {
@@ -289,10 +275,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const mySepolia = {
   ...sepoliaFhe,
@@ -303,9 +286,7 @@ const config = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -327,9 +308,7 @@ const mySepolia = {
 const config = createConfig({
   chains: [mySepolia],
   ethereum: window.ethereum!,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -364,9 +343,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -390,9 +367,7 @@ const config = createConfig({
   chains: [mySepolia],
   signer: wallet,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -431,9 +406,7 @@ function MyTokenPage() {
     address: WRAPPER,
     account: address,
   });
-  const { mutateAsync: shield, isPending: isShielding } = useShield({
-    address: WRAPPER,
-  });
+  const { mutateAsync: shield, isPending: isShielding } = useShield({ address: WRAPPER });
   const { mutateAsync: transfer, isPending: isSending } = useConfidentialTransfer({
     address: WRAPPER,
   });
@@ -644,9 +617,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
-  transports: {
-    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
-  },
+  transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
 export const mySepolia = {
@@ -719,10 +690,7 @@ export function BalanceDisplay() {
     data: balance,
     isLoading,
     error,
-  } = useConfidentialBalance({
-    address: TOKEN_ADDRESS,
-    account: address,
-  });
+  } = useConfidentialBalance({ address: TOKEN_ADDRESS, account: address });
 
   if (error) return <p>Failed to load balance.</p>;
 
@@ -751,9 +719,7 @@ import { useShield } from "@zama-fhe/react-sdk";
 import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
-  const { mutateAsync: shield, isPending } = useShield({
-    address: WRAPPER_ADDRESS,
-  });
+  const { mutateAsync: shield, isPending } = useShield({ address: WRAPPER_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -794,9 +760,7 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    address: TOKEN_ADDRESS,
-  });
+  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: TOKEN_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1568,9 +1532,7 @@ const auth = RELAYER_API_KEY
 
 const relayer = new RelayerNode({
   getChainId: async () => sepolia.id,
-  transports: {
-    [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) },
-  },
+  transports: { [sepolia.id]: { network: SEPOLIA_RPC_URL, ...(auth && { auth }) } },
 });
 
 using sdk = new ZamaSDK({ relayer, signer, storage: new MemoryStorage() });
@@ -1587,9 +1549,7 @@ import { node } from "@zama-fhe/sdk/node";
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 
 using sdk = new ZamaSDK(
@@ -1976,12 +1936,7 @@ import { useUserDecrypt } from "@zama-fhe/react-sdk";
 const [handles, setHandles] = useState<{ handle: string; contractAddress: `0x${string}` }[]>([]);
 const { data: decrypted } = useUserDecrypt({ handles });
 
-const handle = (await sdk.signer.readContract({
-  address,
-  abi,
-  functionName,
-  args,
-})) as string;
+const handle = (await sdk.signer.readContract({ address, abi, functionName, args })) as string;
 setHandles([{ handle, contractAddress }]);
 // read result:
 decrypted?.[handles[0].handle];
@@ -2172,6 +2127,11 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
+
+> [!INFO]
+> The Sepolia testnet relayer needs **no API key** — presets like `sepolia` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md).
+
+
 ### 2. Pick a relayer
 
 Relayers tell the SDK how to run FHE operations on each chain.
@@ -2233,10 +2193,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 ```
 
 ### Tab: ethers
@@ -2278,10 +2235,7 @@ const myMainnet = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia, myMainnet],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 ```
 
@@ -2306,10 +2260,7 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2331,9 +2282,7 @@ const mySepolia = {
 const config = createConfig({
   chains: [mySepolia],
   ethereum: window.ethereum!,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2357,9 +2306,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2384,9 +2331,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2415,9 +2360,7 @@ const config = createConfig({
   walletClient,
   storage: indexedDBStorage,
   permitStorage: chromeSessionStorage,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2505,10 +2448,7 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: sharedWeb,
-    [myMainnet.id]: sharedWeb,
-  },
+  relayers: { [mySepolia.id]: sharedWeb, [myMainnet.id]: sharedWeb },
 });
 ```
 
@@ -2530,11 +2470,11 @@ Chains that reference the _same_ relayer object — the result of a single `web(
 
 # Authentication
 
-The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
+The Zama-hosted **mainnet** relayer requires an API key on every request. The **Sepolia testnet** relayer is open — it needs no key, so on testnet you can leave `auth` unset and skip this guide. This page covers the two strategies for the mainnet relayer (or any keyed endpoint): proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
 
 > [!INFO]
-> Don't have an API key yet? See [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+> Building on Sepolia testnet? You don't need an API key — the `sepolia` preset works out of the box. API keys apply only to the Zama-hosted **mainnet** relayer; see [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/relayer-api-keys.md) to apply for one (or self-host instead).
 
 
 ## Steps
@@ -2568,10 +2508,7 @@ const app = express();
 app.use(express.json());
 
 // Map chain IDs to their network config
-const Configs: Record<number, typeof mainnet> = {
-  [mainnet.id]: mainnet,
-  [sepolia.id]: sepolia,
-};
+const Configs: Record<number, typeof mainnet> = { [mainnet.id]: mainnet, [sepolia.id]: sepolia };
 
 app.use("/api/relayer/:chainId", async (req, res) => {
   const config = Configs[Number(req.params.chainId)];
@@ -2585,10 +2522,7 @@ app.use("/api/relayer/:chainId", async (req, res) => {
 
   const response = await fetch(url, {
     method: req.method,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": process.env.RELAYER_API_KEY!,
-    },
+    headers: { "content-type": "application/json", "x-api-key": process.env.RELAYER_API_KEY! },
     body,
     // @ts-expect-error: required by the relayer
     duplex: "half",
@@ -2635,10 +2569,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage,
-  relayers: {
-    [myMainnet.id]: web(),
-    [mySepolia.id]: web(),
-  },
+  relayers: { [myMainnet.id]: web(), [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2709,6 +2640,11 @@ When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `
 # Relayer API keys
 
 The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
+
+
+> [!INFO]
+> Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet** the relayer is open — the `sepolia` preset works with no key, so you can build and test the full flow before requesting one.
+
 
 ## Overview
 
@@ -2865,9 +2801,7 @@ console.log("Shield tx:", txHash);
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: shield, isPending } = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending } = useShield({ address: "0xWrapperAddress" });
 
 const { txHash } = await shield({ amount: 1000n });
 ```
@@ -2935,13 +2869,7 @@ console.log("Confirmed in block:", receipt.blockNumber);
 ### Tab: React
 
 ```tsx
-const {
-  mutateAsync: shield,
-  isPending,
-  isSuccess,
-} = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending, isSuccess } = useShield({ address: "0xWrapperAddress" });
 
 // isPending is true while the transaction is in flight
 // isSuccess flips to true when the mutation completes
@@ -3014,10 +2942,7 @@ const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
   address: "0xEncryptedERC20Address",
 });
 
-const { txHash } = await transfer({
-  to: "0xRecipientAddress",
-  amount: 500n,
-});
+const { txHash } = await transfer({ to: "0xRecipientAddress", amount: 500n });
 ```
 
 
@@ -3045,11 +2970,7 @@ import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
 
 const { mutateAsync: transferFrom } = useConfidentialTransferFrom("0xEncryptedERC20Address");
 
-await transferFrom({
-  from: "0xOwnerAddress",
-  to: "0xRecipientAddress",
-  amount: 500n,
-});
+await transferFrom({ from: "0xOwnerAddress", to: "0xRecipientAddress", amount: 500n });
 ```
 
 
@@ -3083,9 +3004,7 @@ const {
   isPending, // true while the transaction is in flight
   isSuccess, // true after the mutation completes
   error, // populated if the transfer fails
-} = useConfidentialTransfer({
-  address: "0xEncryptedERC20Address",
-});
+} = useConfidentialTransfer({ address: "0xEncryptedERC20Address" });
 
 // Balance caches are invalidated automatically on success.
 // The useConfidentialBalance hook picks up the updated balance
@@ -3107,13 +3026,7 @@ const TOKEN = "0xEncryptedERC20Address";
 function TransferForm() {
   const { address } = useAccount();
   const { data: balance } = useConfidentialBalance({ address: TOKEN, account: address });
-  const {
-    mutateAsync: transfer,
-    isPending,
-    error,
-  } = useConfidentialTransfer({
-    address: TOKEN,
-  });
+  const { mutateAsync: transfer, isPending, error } = useConfidentialTransfer({ address: TOKEN });
 
   const handleTransfer = async () => {
     await transfer({ to: "0xRecipient", amount: 100n });
@@ -3141,6 +3054,56 @@ function TransferForm() {
 ```
 
 The `matchZamaError` helper maps SDK error codes to user-friendly messages. See the [Error Handling guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for the full list of error types.
+
+## Transfer into a contract (receiver hook)
+
+Sometimes the recipient is a contract that needs to _react_ to the transfer — for example a confidential vault that credits a deposit, or a payment splitter that fans the amount out. `confidentialTransferAndCall` moves the encrypted amount **and** invokes the recipient's ERC-7984 receiver hook in a single transaction, so the deposit can never land without the contract being told about it.
+
+Use `token.confidentialTransferAndCall()` (or the `useConfidentialTransferAndCall` hook). The third argument, `data`, is an opaque payload forwarded verbatim to the receiver's hook. The SDK never encodes, validates, or inspects it — its layout is defined by the receiving contract's ABI, not the token's. Encode it with viem's `encodeAbiParameters` to match what the contract expects.
+
+This example deposits `500` confidential tokens into a vault, passing the depositor's account so the vault credits the right balance:
+
+
+### Tab: Core SDK
+
+```ts
+import { encodeAbiParameters } from "viem";
+
+const VAULT = "0xVaultAddress";
+
+// Shape must match the vault's receiver hook signature.
+const data = encodeAbiParameters([{ type: "address" }], ["0xDepositorAccount"]);
+
+const { txHash } = await token.confidentialTransferAndCall(VAULT, 500n, data);
+console.log("Deposit tx:", txHash);
+```
+
+### Tab: React
+
+```tsx
+import { useConfidentialTransferAndCall } from "@zama-fhe/react-sdk";
+import { encodeAbiParameters } from "viem";
+
+const VAULT = "0xVaultAddress";
+
+const { mutateAsync: depositAndCall } = useConfidentialTransferAndCall({
+  address: "0xEncryptedERC20Address",
+});
+
+const data = encodeAbiParameters([{ type: "address" }], ["0xDepositorAccount"]);
+
+await depositAndCall({ to: VAULT, amount: 500n, data });
+```
+
+
+Like `confidentialTransfer`, this validates the confidential balance before submitting and throws `InsufficientConfidentialBalanceError` if it is too low — catching an over-deposit before you spend gas on a transfer the vault would revert. Leave the check on for ordinary wallets; only set `skipBalanceCheck: true` for smart wallets that cannot produce the EIP-712 signature the decrypt-and-compare requires. (This is the same escape hatch introduced for `confidentialTransfer` above, not a per-deposit toggle.)
+
+To deposit on behalf of an owner who has approved you as an operator, use `confidentialTransferFromAndCall(owner, vault, amount, data)` — the operator-initiated counterpart, mirroring `confidentialTransferFrom`.
+
+
+> [!WARNING]
+> A confirmed transaction means the receiver hook **ran**, not that your deposit has **settled**. A vault that queues or batches deposits may accept the call and credit your balance later. Don't treat the mined receipt as proof of settlement — read the vault's own state (or listen for its settlement event) before showing the user a final balance.
+
 
 ## Next steps
 
@@ -3509,13 +3472,7 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance(
-  {
-    address: "0xToken",
-    account: address,
-  },
-  { refetchInterval: 5_000 },
-);
+} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
 ```
 
 ### Tab: Multiple tokens
@@ -3550,14 +3507,10 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 const queryClient = useQueryClient();
 
 // Invalidate all balance queries
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.all,
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 
@@ -3659,8 +3612,8 @@ matchZamaError(error, {
   SIGNING_REJECTED: () => toast("Please approve the transaction"),
   ENCRYPTION_FAILED: () => toast("Encryption failed -- please retry"),
   TRANSACTION_REVERTED: (e) => toast(`Transaction failed: ${e.message}`),
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: () => toast("Insufficient confidential balance"),
-  INSUFFICIENT_ERC20_BALANCE: () => toast("Not enough tokens to shield"),
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => toast(`Need ${e.requested}, have ${e.available}`),
+  INSUFFICIENT_ERC20_BALANCE: (e) => toast(`Need ${e.requested}, have ${e.available}`),
   BALANCE_CHECK_UNAVAILABLE: () => toast("Sign to verify your balance first"),
   ERC20_READ_FAILED: () => toast("Could not read token balance -- check your connection"),
   _: () => toast("Something went wrong"),
@@ -3670,7 +3623,7 @@ matchZamaError(error, {
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is not a `ZamaError` at all (and no `_` is provided), `matchZamaError` returns `undefined`.
 
-Each handler receives the error typed as the base `ZamaError`, so `.code` and `.message` are available but subclass-specific fields are not. To read fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode`, narrow with `instanceof` (step 2) inside the handler.
+Each handler receives the error class for its code, so subclass fields are available without a cast — `INSUFFICIENT_CONFIDENTIAL_BALANCE` hands you an `InsufficientConfidentialBalanceError` with `.available` / `.requested`, `RELAYER_REQUEST_FAILED` an error with `.statusCode`, and so on.
 
 ### 4. Handle specific errors
 
@@ -3783,6 +3736,11 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 
+
+> [!INFO]
+> The `auth` / `RELAYER_API_KEY` shown below is for the Zama-hosted **mainnet** relayer. The **Sepolia testnet** relayer needs no key — omit `auth` on testnet.
+
+
 ## Steps
 
 ### 1. Install packages
@@ -3806,11 +3764,7 @@ import { sepolia as sepoliaViem } from "viem/chains";
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
 const publicClient = createPublicClient({ chain: sepoliaViem, transport: http() });
-const walletClient = createWalletClient({
-  account,
-  chain: sepoliaViem,
-  transport: http(),
-});
+const walletClient = createWalletClient({ account, chain: sepoliaViem, transport: http() });
 
 const mySepolia = {
   ...sepolia,
@@ -3823,9 +3777,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -3855,9 +3807,7 @@ app.post("/api/transfer", (req, res) => {
       publicClient,
       walletClient,
       storage: asyncLocalStorage,
-      relayers: {
-        [mySepolia.id]: node(),
-      },
+      relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
     const token = sdk.createToken("0xTokenAddress");
@@ -3940,9 +3890,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4016,9 +3964,7 @@ const sdk = new ZamaSDK(config);
 {
   "manifest_version": 3,
   "permissions": ["storage"],
-  "background": {
-    "service_worker": "background.js"
-  }
+  "background": { "service_worker": "background.js" }
 }
 ```
 
@@ -4094,9 +4040,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4142,9 +4086,7 @@ const config = createConfig({
   chains: [myHardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [myHardhat.id]: cleartext(),
-  },
+  relayers: { [myHardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4231,10 +4173,7 @@ import { web } from "@zama-fhe/sdk/web";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
-const wagmiConfig = createConfig({
-  chains: [sepolia],
-  transports: { [sepolia.id]: http() },
-});
+const wagmiConfig = createConfig({ chains: [sepolia], transports: { [sepolia.id]: http() } });
 
 const mySepolia = {
   ...sepoliaFhe,
@@ -4508,9 +4447,7 @@ const { txHash } = await sdk.delegations.delegateDecryption({
 // 2. Wait 1–2 minutes for gateway propagation
 
 // 3. Delegate reads the delegator's balance
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 
@@ -4593,9 +4530,7 @@ The delegate calls `token.decryptBalanceAs` to read the delegator's balance. The
 ### Tab: SDK
 
 ```ts
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 
@@ -4622,9 +4557,7 @@ import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, {
-  delegatorAddress: "0xDelegator",
-});
+const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
 
 // balances is a Map<Address, bigint>
 for (const [address, balance] of balances) {
@@ -4685,9 +4618,7 @@ try {
 }
 
 try {
-  const balance = await token.decryptBalanceAs({
-    delegatorAddress: "0xDelegator",
-  });
+  const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically
@@ -4968,6 +4899,11 @@ function ConfidentialAction() {
 
 ### 3. Decryption of the encrypted data
 
+
+> [!INFO]
+> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.userDecrypt`, which makes you build the credential bundle by hand, is an escape hatch — reach for it only when you genuinely need that control.
+
+
 Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
 
 A good decryption UX follows three steps:
@@ -5219,10 +5155,7 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-    [mainnet.id]: web(),
-  },
+  relayers: { [sepolia.id]: web(), [mainnet.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -6307,9 +6240,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-  },
+  relayers: { [sepolia.id]: web() },
 });
 ```
 
@@ -6319,10 +6250,7 @@ const config = createConfig({
 import { RelayerWeb } from "@zama-fhe/sdk/web";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const relayer = new RelayerWeb({
-  chain: sepolia,
-  worker: relayerWorkerClient,
-});
+const relayer = new RelayerWeb({ chain: sepolia, worker: relayerWorkerClient });
 ```
 
 
@@ -6412,12 +6340,12 @@ import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
-  chains: [{ ...sepolia, auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY } }],
+  // Sepolia testnet needs no relayer key; for the mainnet relayer add
+  // `auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY }` to the chain.
+  chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -6485,9 +6413,7 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 ```
 
@@ -6887,9 +6813,7 @@ const provider = new ViemProvider({ publicClient });
 Viem public client for reading chain data.
 
 ```ts
-const provider = new ViemProvider({
-  publicClient,
-});
+const provider = new ViemProvider({ publicClient });
 ```
 
 ## Methods
@@ -6927,10 +6851,7 @@ import { createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 import { ViemSigner } from "@zama-fhe/sdk/viem";
 
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 ```
@@ -6949,9 +6870,7 @@ const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 Viem wallet client for signing transactions and typed data.
 
 ```ts
-const signer = new ViemSigner({
-  walletClient,
-});
+const signer = new ViemSigner({ walletClient });
 ```
 
 ---
@@ -6963,10 +6882,7 @@ const signer = new ViemSigner({
 Raw EIP-1193 provider for wallet lifecycle event subscriptions. When provided, the signer emits wallet account transitions on disconnect, account change, and chain change. Omit if you handle lifecycle events manually.
 
 ```ts
-const signer = new ViemSigner({
-  walletClient,
-  ethereum: window.ethereum,
-});
+const signer = new ViemSigner({ walletClient, ethereum: window.ethereum });
 ```
 
 ## Methods
@@ -7047,9 +6963,7 @@ Pass exactly one of the two parameters below.
 Pre-built ethers provider (e.g. `JsonRpcProvider`, `WebSocketProvider`).
 
 ```ts
-const provider = new EthersProvider({
-  provider: new JsonRpcProvider(rpcUrl),
-});
+const provider = new EthersProvider({ provider: new JsonRpcProvider(rpcUrl) });
 ```
 
 ---
@@ -7061,9 +6975,7 @@ const provider = new EthersProvider({
 Raw EIP-1193 provider from the browser wallet. The adapter wraps it in a `BrowserProvider` internally.
 
 ```ts
-const provider = new EthersProvider({
-  ethereum: window.ethereum!,
-});
+const provider = new EthersProvider({ ethereum: window.ethereum! });
 ```
 
 ## Methods
@@ -7134,9 +7046,7 @@ Pass exactly one of the two parameters below.
 Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
 
 ```ts
-const signer = new EthersSigner({
-  ethereum: window.ethereum!,
-});
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 ```
 
 ---
@@ -7151,9 +7061,7 @@ Ethers signer for server-side or scripted use. `subscribe()` is not available in
 const provider = new JsonRpcProvider(rpcUrl);
 const wallet = new Wallet(privateKey, provider);
 
-const signer = new EthersSigner({
-  signer: wallet,
-});
+const signer = new EthersSigner({ signer: wallet });
 ```
 
 ## Methods
@@ -7399,20 +7307,20 @@ const message = matchZamaError(error, {
   ENCRYPTION_FAILED: () => "Encryption failed — try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
   NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: () => "Insufficient confidential balance",
-  INSUFFICIENT_ERC20_BALANCE: () => "Not enough tokens to shield",
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
+  INSUFFICIENT_ERC20_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
   BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
   ERC20_READ_FAILED: () => "Could not read token balance -- check your connection",
   _: (e) => `Unexpected error: ${e}`,
 });
 ```
 
-| Parameter  | Type                                                                 | Description                             |
-| ---------- | -------------------------------------------------------------------- | --------------------------------------- |
-| `error`    | `unknown`                                                            | The caught error                        |
-| `handlers` | `Record<ErrorCode, (e: ZamaError) => T> & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
+| Parameter  | Type                                                                           | Description                             |
+| ---------- | ------------------------------------------------------------------------------ | --------------------------------------- |
+| `error`    | `unknown`                                                                      | The caught error                        |
+| `handlers` | `{ [K in ErrorCode]?: (e: ErrorForCode[K]) => T } & { _?: (e: unknown) => T }` | Map of error codes to handler functions |
 
-The `_` wildcard catches any `ZamaError` not explicitly handled. Handlers receive the error typed as the base `ZamaError` (`.code`, `.message`); to read subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode`, narrow with `instanceof` (see the detail sections below).
+The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler receives the error class for its code, so subclass fields like `InsufficientConfidentialBalanceError.available` or `RelayerRequestFailedError.statusCode` are available without a cast.
 
 ## Error summary
 
@@ -7516,9 +7424,7 @@ try {
 The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts.
 
 ```ts
-matchZamaError(error, {
-  SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message),
-});
+matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });
 ```
 
 **How to handle:** Check wallet connectivity and firmware version. Retry after the underlying issue is resolved.
@@ -7544,9 +7450,7 @@ matchZamaError(error, {
 FHE decryption failed. Can occur after an interrupted unshield or when the transport key pair state is corrupted.
 
 ```ts
-matchZamaError(error, {
-  DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing"),
-});
+matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing") });
 ```
 
 **How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
@@ -7657,9 +7561,7 @@ try {
 Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE worker fails to initialize (e.g. missing WASM support, terminated relayer).
 
 ```ts
-matchZamaError(error, {
-  CONFIGURATION: (e) => console.error("Configuration error:", e.message),
-});
+matchZamaError(error, { CONFIGURATION: (e) => console.error("Configuration error:", e.message) });
 ```
 
 **How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
@@ -7780,9 +7682,7 @@ matchZamaError(error, {
 No active delegation exists for the given `(delegator, delegate, contract)` tuple. Thrown when attempting to revoke a non-existent delegation, and by `decryptBalanceAs` / `batchDecryptBalancesAs` (including on cache hits) when the delegation is missing or has been revoked.
 
 ```ts
-matchZamaError(error, {
-  DELEGATION_NOT_FOUND: () => showError("No active delegation found"),
-});
+matchZamaError(error, { DELEGATION_NOT_FOUND: () => showError("No active delegation found") });
 ```
 
 **How to handle:** Verify the delegator, delegate, and contract addresses are correct.
@@ -7879,9 +7779,7 @@ matchZamaError(error, {
 Caught from the on-chain `EnforcedPause` revert. The ACL contract is paused, temporarily disabling all delegation operations.
 
 ```ts
-matchZamaError(error, {
-  ACL_PAUSED: () => showError("Delegation is temporarily disabled"),
-});
+matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily disabled") });
 ```
 
 **How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.
@@ -7931,10 +7829,7 @@ type ReadContractConfig = {
   args: readonly unknown[];
 };
 
-type WriteContractConfig = ReadContractConfig & {
-  value?: bigint;
-  gas?: bigint;
-};
+type WriteContractConfig = ReadContractConfig & { value?: bigint; gas?: bigint };
 ```
 
 
@@ -8149,9 +8044,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-  },
+  relayers: { [sepolia.id]: web() },
 });
 ```
 
@@ -8190,9 +8083,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
 ```
 
@@ -8358,10 +8249,7 @@ import {
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-});
+const logs = await publicClient.getLogs({ address: tokenAddress, topics: [TOKEN_TOPICS] });
 
 const events = decodeOnChainEvents(logs);
 
@@ -8823,22 +8711,22 @@ import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                        | Description                                                                                              |
-| ------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain identifier                                                                                         |
-| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                  |
-| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                |
-| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                    |
-| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                     |
-| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                     |
-| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                          |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                        |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                        |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat) |
-| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                       |
-| `auth`                                      | `Auth \| undefined`         | Authentication for the relayer endpoint                                                                  |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                         |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                       |
+| Field                                       | Type                        | Description                                                                                                                               |
+| ------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                                                          |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                   |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                 |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                     |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                      |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                      |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                           |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                         |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                         |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                  |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                        |
+| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer; leave unset on the Sepolia testnet relayer, which needs no key. |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                          |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                        |
 
 ### Usage with `createConfig`
 
@@ -8853,10 +8741,7 @@ const config = createConfig({
   chains: [sepolia, mainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web(),
-    [mainnet.id]: web(),
-  },
+  relayers: { [sepolia.id]: web(), [mainnet.id]: web() },
 });
 ```
 
@@ -8864,7 +8749,7 @@ Per-chain overrides (e.g. `relayerUrl`, `network`) are set by spreading the chai
 
 ### Browser apps
 
-In browser environments, proxy relayer requests through your backend to avoid exposing API keys. Override `relayerUrl` in the chain definition:
+When using the keyed **mainnet** relayer, proxy requests through your backend so the API key never reaches the client (the Sepolia testnet relayer needs no key, so this is mainnet-only). Override `relayerUrl` in the chain definition:
 
 ```ts
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
@@ -8903,9 +8788,7 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 ```
 
@@ -8924,10 +8807,7 @@ const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfie
 const config = createConfig({
   chains: [mySepolia, myMainnet],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 ```
 
@@ -9045,9 +8925,7 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 const queryClient = new QueryClient();
 
@@ -9079,10 +8957,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const mySepolia = {
   ...sepoliaFhe,
@@ -9093,9 +8968,7 @@ const zamaConfig = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 const queryClient = new QueryClient();
 
@@ -9123,9 +8996,7 @@ const zamaConfig = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 const queryClient = new QueryClient();
 
@@ -9190,10 +9061,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     data: balance,
     isLoading,
     error,
-  } = useConfidentialBalance({
-    address: tokenAddress,
-    account: address,
-  });
+  } = useConfidentialBalance({ address: tokenAddress, account: address });
 
   if (isLoading) return <span>Decrypting...</span>;
   if (error) return <span>Error: {error.message}</span>;
@@ -9221,10 +9089,7 @@ const myMainnet = {
 
 export const zamaConfig = createConfig({
   chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
   wagmiConfig,
 });
 ```
@@ -9246,10 +9111,7 @@ Contract address of the confidential token.
 ### Tab: component.tsx
 
 ```tsx
-const { data } = useConfidentialBalance({
-  address: "0xToken",
-  account: address,
-});
+const { data } = useConfidentialBalance({ address: "0xToken", account: address });
 ```
 
 
@@ -9268,10 +9130,7 @@ Address whose balance to read. The query is disabled while `undefined`. Pass the
 import { useAccount } from "wagmi";
 
 const { address } = useAccount();
-const { data } = useConfidentialBalance({
-  address: "0xToken",
-  account: address,
-});
+const { data } = useConfidentialBalance({ address: "0xToken", account: address });
 ```
 
 
@@ -9608,15 +9467,10 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    address: tokenAddress,
-  });
+  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: tokenAddress });
 
   async function handleSend() {
-    const { txHash, receipt } = await transfer({
-      to: "0xRecipient",
-      amount: 1000n,
-    });
+    const { txHash, receipt } = await transfer({ to: "0xRecipient", amount: 1000n });
     console.log("Confirmed in block", receipt.blockNumber);
   }
 
@@ -9672,9 +9526,7 @@ Contract address of the confidential token.
 ### Tab: component.tsx
 
 ```tsx
-const { mutateAsync: transfer } = useConfidentialTransfer({
-  address: "0xToken",
-});
+const { mutateAsync: transfer } = useConfidentialTransfer({ address: "0xToken" });
 ```
 
 
@@ -9685,10 +9537,7 @@ const { mutateAsync: transfer } = useConfidentialTransfer({
 Default: `false`. When `true`, optimistically subtracts the transfer amount from the cached confidential balance before the transaction confirms; rolls back on error.
 
 ```tsx
-const { mutateAsync: transfer } = useConfidentialTransfer({
-  address: "0xToken",
-  optimistic: true,
-});
+const { mutateAsync: transfer } = useConfidentialTransfer({ address: "0xToken", optimistic: true });
 ```
 
 ---
@@ -9970,11 +9819,7 @@ Number of tokens to transfer (in the token's smallest unit). Encrypted before su
 ### Tab: component.tsx
 
 ```tsx
-await transferFrom({
-  from: "0xOwner",
-  to: "0xRecipient",
-  amount: 500n,
-});
+await transferFrom({ from: "0xOwner", to: "0xRecipient", amount: 500n });
 ```
 
 
@@ -10123,9 +9968,7 @@ import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 Address of the confidential wrapper contract.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper" });
 ```
 
 ### optimistic
@@ -10135,10 +9978,7 @@ const { mutateAsync: shield } = useShield({
 Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-  optimistic: true,
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper", optimistic: true });
 ```
 
 ---
@@ -11545,9 +11385,7 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: ["0xContractA", "0xContractB"],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContractA", "0xContractB"] });
 ```
 
 An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.
@@ -11954,9 +11792,7 @@ const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");
 Address of the operator to approve.
 
 ```ts
-await setOperator({
-  operator: "0xDEX",
-});
+await setOperator({ operator: "0xDEX" });
 ```
 
 ---
@@ -11970,10 +11806,7 @@ Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 ```ts
 const oneDay = Math.floor(Date.now() / 1000) + 86_400;
 
-await setOperator({
-  operator: "0xDEX",
-  until: oneDay,
-});
+await setOperator({ operator: "0xDEX", until: oneDay });
 ```
 
 ## Return Type
@@ -12185,11 +12018,7 @@ function OperatorCheck({
   holder: `0x${string}`;
   spender: `0x${string}`;
 }) {
-  const { data: isOperator } = useConfidentialIsOperatorSuspense({
-    tokenAddress,
-    holder,
-    spender,
-  });
+  const { data: isOperator } = useConfidentialIsOperatorSuspense({ tokenAddress, holder, spender });
 
   // data is always defined — no loading state needed
   return <span>{isOperator ? "Approved" : "Not approved"}</span>;
@@ -12241,10 +12070,7 @@ function AllowanceDisplay({
   wrapperAddress: `0x${string}`;
   owner: `0x${string}` | undefined;
 }) {
-  const { data: allowance, isLoading } = useUnderlyingAllowance({
-    address: wrapperAddress,
-    owner,
-  });
+  const { data: allowance, isLoading } = useUnderlyingAllowance({ address: wrapperAddress, owner });
 
   if (isLoading) return <span>Loading allowance...</span>;
   return <span>Allowance: {allowance?.toString() ?? "0"}</span>;
@@ -12261,10 +12087,7 @@ function AllowanceDisplay({
 Address of the confidential wrapper contract. The hook reads the underlying ERC-20 allowance granted by `owner` to this wrapper.
 
 ```ts
-const { data: allowance } = useUnderlyingAllowance({
-  address: "0xWrapper",
-  owner: "0xOwner",
-});
+const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner: "0xOwner" });
 ```
 
 ---
@@ -12276,10 +12099,7 @@ const { data: allowance } = useUnderlyingAllowance({
 Address whose allowance to read. The query is disabled while `undefined`.
 
 ```ts
-const { data: allowance } = useUnderlyingAllowance({
-  address: "0xWrapper",
-  owner: "0xOwner",
-});
+const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner: "0xOwner" });
 ```
 
 ## Return Type
@@ -12356,10 +12176,7 @@ function Allowance({
   wrapperAddress: `0x${string}`;
   owner: `0x${string}`;
 }) {
-  const { data: allowance } = useUnderlyingAllowanceSuspense({
-    address: wrapperAddress,
-    owner,
-  });
+  const { data: allowance } = useUnderlyingAllowanceSuspense({ address: wrapperAddress, owner });
 
   // data is always defined — no loading state needed
   return <span>Allowance: {allowance.toString()}</span>;
@@ -12409,10 +12226,7 @@ function WrapperInfo({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     data: wrapperAddress,
     isLoading,
     error,
-  } = useWrapperDiscovery({
-    tokenAddress,
-    erc20Address: "0xUSDC",
-  });
+  } = useWrapperDiscovery({ tokenAddress, erc20Address: "0xUSDC" });
 
   if (isLoading) return <p>Discovering wrapper...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -12437,10 +12251,7 @@ Address of any confidential token you control. Used to scope the query cache key
 Address of the ERC-20 token to discover the wrapper for. Pass `undefined` to disable the query.
 
 ```ts
-useWrapperDiscovery({
-  tokenAddress: "0xConfidentialToken",
-  erc20Address: "0xUSDC",
-});
+useWrapperDiscovery({ tokenAddress: "0xConfidentialToken", erc20Address: "0xUSDC" });
 ```
 
 ## Return Type
@@ -12613,11 +12424,7 @@ import { useListPairs } from "@zama-fhe/react-sdk";
 import { useListPairs } from "@zama-fhe/react-sdk";
 
 function TokenPairList() {
-  const { data, isLoading, error } = useListPairs({
-    page: 1,
-    pageSize: 20,
-    metadata: true,
-  });
+  const { data, isLoading, error } = useListPairs({ page: 1, pageSize: 20, metadata: true });
 
   if (isLoading) return <p>Loading pairs...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -13038,14 +12845,7 @@ import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 
 function PairSlice() {
-  const {
-    data: pairs,
-    isLoading,
-    error,
-  } = useTokenPairsSlice({
-    fromIndex: 0n,
-    toIndex: 10n,
-  });
+  const { data: pairs, isLoading, error } = useTokenPairsSlice({ fromIndex: 0n, toIndex: 10n });
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -13313,9 +13113,7 @@ import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
 function LookupWrapper({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { data, isLoading, error } = useConfidentialTokenAddress({
-    tokenAddress,
-  });
+  const { data, isLoading, error } = useConfidentialTokenAddress({ tokenAddress });
 
   if (isLoading) return <p>Looking up...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -13438,9 +13236,7 @@ import { useTokenAddress } from "@zama-fhe/react-sdk";
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
 function ReverseLookup({ confidentialTokenAddress }: { confidentialTokenAddress: `0x${string}` }) {
-  const { data, isLoading, error } = useTokenAddress({
-    confidentialTokenAddress,
-  });
+  const { data, isLoading, error } = useTokenAddress({ confidentialTokenAddress });
 
   if (isLoading) return <p>Looking up...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -13566,9 +13362,7 @@ function ValidityCheck({ confidentialTokenAddress }: { confidentialTokenAddress:
     data: isValid,
     isLoading,
     error,
-  } = useIsConfidentialTokenValid({
-    confidentialTokenAddress,
-  });
+  } = useIsConfidentialTokenValid({ confidentialTokenAddress });
 
   if (isLoading) return <p>Checking...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -14443,10 +14237,7 @@ The address to grant decryption rights to.
 When the delegation expires. If omitted, the delegation is permanent.
 
 ```ts
-await delegate({
-  delegateAddress: "0xDelegate",
-  expirationDate: new Date("2025-12-31"),
-});
+await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2025-12-31") });
 ```
 
 ## Return Type
@@ -14964,10 +14755,7 @@ The address that delegated decryption rights.
 The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
-await decryptAs({
-  delegatorAddress: "0xDelegator",
-  accountAddress: "0xBalanceHolder",
-});
+await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
 ```
 
 ## Return Type
@@ -15275,9 +15063,7 @@ const queryClient = useQueryClient();
 queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token's balances
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 
 // Invalidate a specific owner's balance
 queryClient.invalidateQueries({
@@ -15360,9 +15146,7 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ```tsx
 // After a transfer made outside the SDK
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 ### Prefetch balances on hover
@@ -15658,9 +15442,7 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: web({ security: { integrityCheck: false } }),
-  },
+  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
 });
 ```
 
@@ -15742,9 +15524,7 @@ const config = createConfig({
   walletClient,
   relayers: {
     [sepolia.id]: web({
-      security: {
-        getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "",
-      },
+      security: { getCsrfToken: () => document.cookie.match(/csrf=(\w+)/)?.[1] ?? "" },
     }),
   },
 });
@@ -16334,10 +16114,7 @@ transfer.mutate({
 // Unshield: 2 transactions (unwrap + finalizeUnwrap).
 // Amount is in confidential token units — use cTokenDecimals.
 // onFinalizing fires between the two transactions — use it to update the progress UI.
-unshield.mutate({
-  amount: parseUnits("2", cTokenDecimals),
-  onFinalizing: () => setStep(2),
-});
+unshield.mutate({ amount: parseUnits("2", cTokenDecimals), onFinalizing: () => setStep(2) });
 ```
 
 ### Delegation hooks
@@ -16718,9 +16495,7 @@ It then derives a Zama Sepolia chain config from the SDK preset:
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 ```
 
@@ -16735,9 +16510,7 @@ using sdkA = new ZamaSDK(
     chains: [zamaSepolia],
     signer: walletA,
     storage: new MemoryStorage(),
-    relayers: {
-      [zamaSepolia.id]: node(),
-    },
+    relayers: { [zamaSepolia.id]: node() },
   }),
 );
 ```
@@ -17177,9 +16950,7 @@ It then derives an FHE Sepolia chain object from the SDK preset:
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && {
-    auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-  }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 ```
 
@@ -17195,9 +16966,7 @@ using sdkA = new ZamaSDK(
     publicClient,
     walletClient: walletClientA,
     storage: new MemoryStorage(),
-    relayers: {
-      [zamaSepolia.id]: node(),
-    },
+    relayers: { [zamaSepolia.id]: node() },
   }),
 );
 ```
@@ -17598,11 +17367,7 @@ shield.mutate({
 
 ```ts
 const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -17875,11 +17640,7 @@ const zamaSepolia = {
   network: SEPOLIA_RPC_URL,
 } as const;
 
-const walletClient = createWalletClient({
-  account,
-  chain: sepolia,
-  transport: custom(ethereum),
-});
+const walletClient = createWalletClient({ account, chain: sepolia, transport: custom(ethereum) });
 const signer = ethereum ? new ViemSigner({ walletClient, ethereum }) : undefined;
 
 const zamaConfig = createConfig({
@@ -18046,11 +17807,7 @@ required.
 
 ```ts
 const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -18158,9 +17915,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();
@@ -18269,14 +18024,14 @@ npm run test:e2e   # starts dev server and runs all specs
 Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on Sepolia testnet.
 
-Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery.
+Covers: connect wallet, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, deposit into a reacting contract (`confidentialTransferAndCall`).
 
 ## Stack
 
 - **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
 - **React 19** + **wagmi v3** + **viem v2**
 - **TanStack Query v5** for async state
-- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/react-sdk** — `ZamaProvider`, `useConfidentialBalance`, `useUnshield`, `useConfidentialTransferAndCall`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
 - **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through a local Next.js proxy (`/api/relayer`)
 
@@ -18297,11 +18052,13 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                               | Required | Description                                                                                         |
+| -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `RELAYER_URL`                          | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`.         |
+| `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
+| `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
+| `NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` | No       | Confidential token the vault is bound to (cUSDC). Vault cards render only when it is selected.      |
 
 ## Running e2e tests
 
@@ -18534,9 +18291,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once to useGrantPermit — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();
@@ -18600,7 +18355,58 @@ The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvi
 
 ---
 
-## 10. Running locally
+## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
+
+The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
+`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
+recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
+value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
+
+The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
+deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
+that token is selected. Configure the addresses via `NEXT_PUBLIC_VAULT_ADDRESS` and
+`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` (see `src/lib/config.ts`); deploy your own with
+[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
+
+**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
+beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
+
+```ts
+const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
+
+// The vault decodes `data` as the beneficiary address to credit.
+const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
+deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
+```
+
+**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
+beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
+permit scoped to the **vault** address — distinct from the confidential-token permits the main
+page grants:
+
+```ts
+const { data: handle } = useReadContract({
+  address: vaultAddress,
+  abi: VAULT_ABI,
+  functionName: "sharesOf",
+  args: [connectedAddress],
+});
+
+await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
+const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
+```
+
+Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
+contract method, not part of the `Token` surface. The vault transfers the caller's full
+confidential balance back via `confidentialTransfer`.
+
+> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
+> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
+> receiver-callback pattern.
+
+---
+
+## 11. Running locally
 
 ```bash
 cd examples/react-wagmi
@@ -18930,15 +18736,9 @@ import { sepolia } from "viem/chains";
 
 const tokenAddress = "0xYourConfidentialToken" as Address;
 const rpcUrl = "https://sepolia.infura.io/v3/YOUR_KEY";
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(rpcUrl),
-});
+const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) });
 
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const chain = {
   ...sepoliaFhe,
@@ -18975,10 +18775,7 @@ function AuthGate({
 }
 
 function Balance() {
-  const { data: balance, isLoading } = useConfidentialBalance({
-    address: tokenAddress,
-    account,
-  });
+  const { data: balance, isLoading } = useConfidentialBalance({ address: tokenAddress, account });
 
   if (isLoading) return <p>Decrypting...</p>;
   return <p>Balance: {balance?.toString()}</p>;

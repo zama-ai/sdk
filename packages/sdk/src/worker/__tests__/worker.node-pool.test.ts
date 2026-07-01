@@ -15,11 +15,9 @@ vi.mock(import("../worker.node-client"), () => {
       createEIP712: vi.fn().mockResolvedValue({}),
       encrypt: vi.fn().mockResolvedValue({ handles: [], inputProof: "0x" }),
       userDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
-      publicDecrypt: vi.fn().mockResolvedValue({
-        clearValues: {},
-        abiEncodedClearValues: "0x",
-        decryptionProof: "0x",
-      }),
+      publicDecrypt: vi
+        .fn()
+        .mockResolvedValue({ clearValues: {}, abiEncodedClearValues: "0x", decryptionProof: "0x" }),
       createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({}),
       delegatedUserDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
       requestZKProofVerification: vi.fn().mockResolvedValue("0x"),
@@ -33,9 +31,7 @@ vi.mock(import("../worker.node-client"), () => {
 // Must import after mock so the mock is in place
 const { NodeWorkerClient } = await import("../worker.node-client");
 
-const baseConfig = {
-  chains: [{ chainId: 1 }],
-} as unknown as NodeWorkerPoolConfig;
+const baseConfig = { chains: [{ chainId: 1 }] } as unknown as NodeWorkerPoolConfig;
 
 type MockClientInstance = Record<
   | "initWorker"
@@ -57,9 +53,7 @@ describe("NodeWorkerPool", () => {
   /** Get mock instances created by NodeWorkerClient constructor. */
   function getInstances(offset = 0): MockClientInstance[] {
     return (
-      NodeWorkerClient as unknown as {
-        mock: { results: { value: MockClientInstance }[] };
-      }
+      NodeWorkerClient as unknown as { mock: { results: { value: MockClientInstance }[] } }
     ).mock.results
       .slice(offset)
       .map((r) => r.value);
@@ -198,10 +192,7 @@ describe("NodeWorkerPool", () => {
     expect(instance.userDecrypt).toHaveBeenCalled();
 
     await pool.publicDecrypt({ chainId: 1, encryptedValues: [HANDLE] });
-    expect(instance.publicDecrypt).toHaveBeenCalledWith({
-      chainId: 1,
-      encryptedValues: [HANDLE],
-    });
+    expect(instance.publicDecrypt).toHaveBeenCalledWith({ chainId: 1, encryptedValues: [HANDLE] });
 
     await pool.createDelegatedUserDecryptEIP712({
       chainId: 1,
@@ -228,23 +219,14 @@ describe("NodeWorkerPool", () => {
     });
     expect(instance.delegatedUserDecrypt).toHaveBeenCalled();
 
-    await pool.requestZKProofVerification({
-      chainId: 1,
-      zkProof: {} as unknown as ZKProofLike,
-    });
-    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({
-      chainId: 1,
-      zkProof: {},
-    });
+    await pool.requestZKProofVerification({ chainId: 1, zkProof: {} as unknown as ZKProofLike });
+    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({ chainId: 1, zkProof: {} });
 
     await pool.getPublicKey({ chainId: 1 });
     expect(instance.getPublicKey).toHaveBeenCalledWith({ chainId: 1 });
 
     await pool.getPublicParams({ chainId: 1, bits: 2048 });
-    expect(instance.getPublicParams).toHaveBeenCalledWith({
-      chainId: 1,
-      bits: 2048,
-    });
+    expect(instance.getPublicParams).toHaveBeenCalledWith({ chainId: 1, bits: 2048 });
   });
 
   test("clears workers and active counts on terminate", async () => {

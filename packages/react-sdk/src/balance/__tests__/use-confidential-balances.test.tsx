@@ -34,9 +34,7 @@ describe("useConfidentialBalances", () => {
       }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.data?.results.get(tokenAddress)).toBe(10n);
     expect(result.current.data?.results.get(otherTokenAddress)).toBe(20n);
@@ -67,9 +65,7 @@ describe("useConfidentialBalances", () => {
       useConfidentialBalances({ addresses: [mixedCaseToken], account: userAddress }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.data?.results.get(mixedCaseToken)).toBe(33n);
   });
@@ -108,9 +104,7 @@ describe("useConfidentialBalances", () => {
       useConfidentialBalances({ addresses: [tokenAddress], account: OTHER }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
     expect(result.current.data?.results.get(tokenAddress)).toBe(77n);
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
@@ -146,9 +140,7 @@ describe("useConfidentialBalances", () => {
         useConfidentialBalances({ addresses: tokens, account: userAddress }),
       );
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-        timeout: 5_000,
-      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
       const { data, dataUpdatedAt, ...state } = result.current;
       const { promise: statePromise, ...stableState } = state;

@@ -28,9 +28,7 @@ module.exports = {
         // title notes for every `* ` bullet in a squash body, which the
         // analyzer treats as breaking. Header `!` still escalates via
         // breakingHeaderPattern, which ignores noteKeywords.
-        parserOpts: {
-          noteKeywords: ["__NO_BREAKING_NOTES__"],
-        },
+        parserOpts: { noteKeywords: ["__NO_BREAKING_NOTES__"] },
         releaseRules: [
           { breaking: true, release: "major" },
           { scope: "security", release: "patch" },
@@ -73,24 +71,16 @@ module.exports = {
             { type: "test", hidden: true },
           ],
         },
-        writerOpts: {
-          mainTemplate,
-          commitPartial,
-        },
+        writerOpts: { mainTemplate, commitPartial },
       },
     ],
     [
       "@semantic-release/changelog",
-      {
-        changelogFile: "CHANGELOG.md",
-        changelogTitle: "# Changelog",
-      },
+      { changelogFile: "CHANGELOG.md", changelogTitle: "# Changelog" },
     ],
     [
       "@semantic-release/exec",
-      {
-        prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}",
-      },
+      { prepareCmd: "node scripts/release/prepare-lockstep.mjs ${nextRelease.version}" },
     ],
     [
       "@semantic-release/git",
