@@ -12,6 +12,7 @@ import type {
   NotEntitledError,
   RpcRateLimitError,
   WorkerTimeoutError,
+  WorkerRecycledError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -128,6 +129,11 @@ describe("matchZamaError", () => {
         expectTypeOf(e.operation).toEqualTypeOf<string>();
         expectTypeOf(e.timeout).toEqualTypeOf<number>();
         expectTypeOf(e.elapsed).toEqualTypeOf<number>();
+      },
+      WORKER_RECYCLED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<WorkerRecycledError>();
+        expectTypeOf(e.operation).toEqualTypeOf<string>();
+        expectTypeOf(e.worker).toEqualTypeOf<string | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();

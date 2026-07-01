@@ -10,6 +10,7 @@ import {
   SigningFailedError,
   SigningRejectedError,
   WorkerTimeoutError,
+  WorkerRecycledError,
   ZamaError,
   wrapDecryptError,
 } from "../index";
@@ -48,6 +49,14 @@ describe("wrapDecryptError", () => {
         operation: "USER_DECRYPT",
         timeout: 30,
         elapsed: 30.002,
+      });
+      expect(wrapDecryptError(original, "fallback")).toBe(original);
+    });
+
+    test("returns the same WorkerRecycledError unchanged (a recycle-abort is retryable, not terminal)", () => {
+      const original = new WorkerRecycledError({
+        operation: "USER_DECRYPT",
+        worker: "node-worker-1",
       });
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });

@@ -2,7 +2,7 @@ import { describe, test, expect, vi, afterEach } from "../../test-fixtures";
 import { LoggerService } from "../../services/logger-service";
 import { BaseWorkerClient, DEFAULT_TIMEOUT_MS, INIT_TIMEOUT_MS } from "../worker.base-client";
 import type { WorkerClientTimeoutConfig } from "../worker.base-client";
-import { WorkerTimeoutError } from "../../errors";
+import { WorkerRecycledError, WorkerTimeoutError } from "../../errors";
 import type {
   GenericLogger,
   WorkerEnv,
@@ -295,7 +295,7 @@ describe("BaseWorkerClient", () => {
     expect(client.createWorkerCount).toBe(2);
   });
 
-  test("rejects sibling in-flight requests as a plain recycle error, not a fake timeout", async () => {
+  test("rejects sibling in-flight requests as a retryable WorkerRecycledError, not a fake timeout", async () => {
     const client = await initClient({ workerLabel: "node-worker-1" }); // real timers; #worker is set
 
     vi.useFakeTimers();
@@ -319,12 +319,16 @@ describe("BaseWorkerClient", () => {
 
       // The operation that actually exceeded its bound gets a typed timeout.
       expect(firstErr).toBeInstanceOf(WorkerTimeoutError);
-      // The sibling was aborted by the recycle, not timed out: plain error, and
-      // crucially NOT a WorkerTimeoutError claiming it ran the full timeout.
-      expect(siblingErr).toBeInstanceOf(Error);
+      // The sibling was aborted by the recycle, not timed out: it gets a typed,
+      // retryable WorkerRecycledError — crucially NOT a WorkerTimeoutError
+      // claiming it ran the full timeout, and not a bare Error that would
+      // degrade to terminal DecryptionFailedError through wrapDecryptError.
+      expect(siblingErr).toBeInstanceOf(WorkerRecycledError);
       expect(siblingErr).not.toBeInstanceOf(WorkerTimeoutError);
+      expect((siblingErr as WorkerRecycledError).operation).toBe("GENERATE_KEYPAIR");
       expect(siblingErr!.message).toMatch(/recycled/i);
       // The recycle reason names the worker for diagnostics.
+      expect((siblingErr as WorkerRecycledError).worker).toBe("node-worker-1");
       expect(siblingErr!.message).toContain("node-worker-1");
     } finally {
       vi.useRealTimers();

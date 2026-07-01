@@ -6,6 +6,7 @@ import {
   NoCiphertextError,
   RelayerRequestFailedError,
   WorkerTimeoutError,
+  WorkerRecycledError,
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
@@ -121,6 +122,26 @@ describe("WorkerTimeoutError", () => {
     const err = new WorkerTimeoutError({ operation: "ENCRYPT", timeout: 5, elapsed: 5.001 });
     expect(err.worker).toBeUndefined();
     expect(err.message).toBe("Worker operation ENCRYPT timed out after 5s");
+  });
+});
+
+describe("WorkerRecycledError", () => {
+  test("has correct code, name, and diagnostic fields", () => {
+    const err = new WorkerRecycledError({ operation: "USER_DECRYPT", worker: "node-worker-2" });
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err.code).toBe(ZamaErrorCode.WorkerRecycled);
+    expect(err.name).toBe("WorkerRecycledError");
+    expect(err.operation).toBe("USER_DECRYPT");
+    expect(err.worker).toBe("node-worker-2");
+    expect(err.message).toMatch(/USER_DECRYPT.*recycled.*node-worker-2/);
+  });
+
+  test("worker label is optional", () => {
+    const err = new WorkerRecycledError({ operation: "ENCRYPT" });
+    expect(err.worker).toBeUndefined();
+    expect(err.message).toBe(
+      "Worker operation ENCRYPT was aborted because its worker was recycled after a timeout",
+    );
   });
 });
 

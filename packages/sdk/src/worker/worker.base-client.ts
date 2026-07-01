@@ -27,7 +27,7 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { deserializeError } from "../utils/error";
-import { WorkerTimeoutError } from "../errors/timeout";
+import { WorkerRecycledError, WorkerTimeoutError } from "../errors/timeout";
 
 /**
  * Timeout / recovery knobs shared by every worker client (node + web), so the
@@ -304,16 +304,17 @@ export abstract class BaseWorkerClient<TWorker, TConfig extends WorkerClientTime
     this.#worker = null;
     this.#initPromise = null;
     // The sibling requests still in flight did not time out — they are aborted
-    // collateral of recycling the worker. Reject them like a worker crash
-    // (see `terminate`/`handleWorkerError`) rather than mislabeling them as
-    // their own timeouts; only the operation that actually exceeded its bound
+    // collateral of recycling the worker. Reject them with a typed, retryable
+    // `WorkerRecycledError` (not their own `WorkerTimeoutError`, since they never
+    // exceeded a bound) so consumers can retry them instead of receiving a
+    // terminal `DecryptionFailedError` — the fate of a bare `Error` through
+    // `wrapDecryptError`. Only the operation that actually exceeded its bound
     // gets a `WorkerTimeoutError`.
-    const reason =
-      "Worker recycled after a timeout" +
-      (this.config.workerLabel ? ` (worker ${this.config.workerLabel})` : "");
     for (const [id, pending] of this.#pendingRequests) {
       clearTimeout(pending.timeoutId);
-      pending.reject(new Error(reason));
+      pending.reject(
+        new WorkerRecycledError({ operation: pending.type, worker: this.config.workerLabel }),
+      );
       this.#pendingRequests.delete(id);
     }
     this.logger.warn("[WorkerClient] recycled worker after a timeout", {
