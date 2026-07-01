@@ -26,6 +26,8 @@ import type {
   InsufficientERC20BalanceError,
 } from "./balance";
 import type { ConfigurationError, RelayerRequestFailedError } from "./relayer";
+import type { NotEntitledError } from "./entitlement";
+import type { RpcRateLimitError } from "./rpc";
 import type {
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
@@ -57,6 +59,8 @@ type ErrorForCode = Complete<{
   [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
   [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
   [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+  [ZamaErrorCode.NotEntitled]: NotEntitledError;
+  [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
   [ZamaErrorCode.Configuration]: ConfigurationError;
   [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
   [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;

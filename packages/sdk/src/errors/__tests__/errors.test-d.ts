@@ -9,6 +9,8 @@ import type {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -70,6 +72,11 @@ describe("RelayerRequestFailedError", () => {
   test("has optional statusCode", () => {
     expectTypeOf<RelayerRequestFailedError["statusCode"]>().toEqualTypeOf<number | undefined>();
   });
+
+  test("exposes back-pressure: retryAfter and retryable", () => {
+    expectTypeOf<RelayerRequestFailedError["retryAfter"]>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RelayerRequestFailedError["retryable"]>().toEqualTypeOf<boolean>();
+  });
 });
 
 describe("matchZamaError", () => {
@@ -104,6 +111,16 @@ describe("matchZamaError", () => {
       RELAYER_REQUEST_FAILED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
         expectTypeOf(e.statusCode).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryable).toEqualTypeOf<boolean>();
+      },
+      NOT_ENTITLED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<NotEntitledError>();
+        expectTypeOf(e.encryptedValue).toEqualTypeOf<string>();
+      },
+      RPC_RATE_LIMITED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();

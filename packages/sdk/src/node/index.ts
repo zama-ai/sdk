@@ -10,6 +10,9 @@
 
 export { node } from "./config";
 export type { NodeRelayerConfig, NodePoolOptions } from "./config";
+// Surfaced because `ErrorResponse.serialized` (below) is typed as it — custom
+// worker implementors otherwise get an opaque type across the `/node` boundary.
+export type { SerializedError } from "../utils/error";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
 export type { RelayerNodeConfig } from "../relayer/relayer-node";

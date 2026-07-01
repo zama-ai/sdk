@@ -6,6 +6,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValue, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
+import type { SerializedError } from "../utils/error";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -212,12 +213,17 @@ export interface SuccessResponse<T> extends BaseResponse {
   data: T;
 }
 
-export interface ErrorResponse extends BaseResponse {
+/**
+ * A failed worker response. The error and its cause chain are serialized into a
+ * structured-clone-safe {@link SerializedError} (structured clone strips
+ * prototypes/codes/causes across the boundary); the main thread rebuilds it
+ * ({@link deserializeError}) and classifies it once in `wrapDecryptError`.
+ */
+export type ErrorResponse = BaseResponse & {
   success: false;
   error: string;
-  /** HTTP status code from the relayer, when available. */
-  statusCode?: number;
-}
+  serialized?: SerializedError;
+};
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 

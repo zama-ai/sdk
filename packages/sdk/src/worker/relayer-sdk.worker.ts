@@ -6,7 +6,7 @@
 import type { EncryptInput, RelayerSDKGlobal } from "../relayer/relayer-sdk.types";
 import type { FhevmInstance, FhevmInstanceConfig } from "@zama-fhe/relayer-sdk/bundle";
 import type { FheChain } from "../chains/types";
-import { prefixHex, unprefixHex } from "../utils";
+import { prefixHex, serializeError, unprefixHex } from "../utils";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import type {
   CreateDelegatedEIP712Request,
@@ -15,7 +15,6 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptRequest,
   EncryptResponseData,
-  ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
   GetPublicKeyRequest,
@@ -138,17 +137,17 @@ function sendSuccess<T>(
 /**
  * Send an error response back to the main thread.
  */
-function sendError(
-  id: string,
-  type: WorkerRequest["type"],
-  error: string,
-  statusCode?: number,
-): void {
-  const response: ErrorResponse = { id, type, success: false, error };
-  if (statusCode !== undefined) {
-    response.statusCode = statusCode;
-  }
-  self.postMessage(response);
+function sendError(id: string, type: WorkerRequest["type"], error: unknown): void {
+  // The error and its cause chain are serialized into a structured-clone-safe
+  // envelope; the main thread rebuilds it and classifies it once in
+  // `wrapDecryptError`. The worker stays taxonomy-agnostic.
+  self.postMessage({
+    id,
+    type,
+    success: false,
+    error: error instanceof Error ? error.message : String(error),
+    serialized: serializeError(error),
+  });
 }
 
 // Store original fetch for use in SDK loading
@@ -308,8 +307,7 @@ async function handleInit(request: InitRequest): Promise<void> {
 
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -387,9 +385,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     sendSuccess(id, type, response, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -422,38 +418,8 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
-}
-
-/**
- * Extract an HTTP status code from an error, if present.
- * Relayer SDK errors may carry a `status` or `statusCode` property.
- */
-function extractHttpStatus(error: unknown): number | undefined {
-  if (error === null || error === undefined || typeof error !== "object") {
-    return undefined;
-  }
-  const e = error as Record<string, unknown>;
-  if (typeof e.statusCode === "number") {
-    return e.statusCode;
-  }
-  if (typeof e.status === "number") {
-    return e.status;
-  }
-  // Check nested cause
-  if (e.cause !== null && e.cause !== undefined && typeof e.cause === "object") {
-    const cause = e.cause as Record<string, unknown>;
-    if (typeof cause.statusCode === "number") {
-      return cause.statusCode;
-    }
-    if (typeof cause.status === "number") {
-      return cause.status;
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -471,9 +437,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -495,8 +459,7 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -518,8 +481,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
     sendSuccess(id, type, eip712);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -542,8 +504,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
     sendSuccess(id, type, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -577,9 +538,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -604,9 +563,7 @@ async function handleRequestZKProofVerification(
 
     sendSuccess(id, type, result, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -625,9 +582,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -649,9 +604,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const statusCode = extractHttpStatus(error);
-    sendError(id, type, message, statusCode);
+    sendError(id, type, error);
   }
 }
 
@@ -712,11 +665,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         throw new Error(`Unknown request type: ${(request as WorkerRequest).type}`);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     sendError(
       request?.id ?? "unknown",
       request?.type ?? ("UNKNOWN" as WorkerRequest["type"]),
-      message,
+      error,
     );
   }
 };
