@@ -352,7 +352,7 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  test("error response includes statusCode when present", async () => {
+  test("rebuilds the error and its scalar signal fields from the serialized envelope", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -362,8 +362,8 @@ describe("BaseWorkerClient", () => {
           type: req.type,
           success: false,
           error: "rate limited",
-          statusCode: 429,
-        } as WorkerResponse<unknown> & { statusCode: number });
+          serialized: { name: "Error", message: "rate limited", statusCode: 429, retryAfter: 3 },
+        } as WorkerResponse<unknown>);
       });
     });
 
@@ -371,9 +371,57 @@ describe("BaseWorkerClient", () => {
       await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as Error).message).toBe("rate limited");
-      expect((error as Error & { statusCode?: number }).statusCode).toBe(429);
+      const e = error as Error & { statusCode?: number; retryAfter?: number };
+      expect(e.message).toBe("rate limited");
+      expect(e.statusCode).toBe(429);
+      expect(e.retryAfter).toBe(3);
     }
+  });
+
+  test("rebuilds the cause chain so chain-walking classification keeps working", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "could not coalesce error",
+          serialized: {
+            name: "Error",
+            message: "could not coalesce error",
+            code: "SERVER_ERROR",
+            cause: { name: "Error", message: "Too Many Requests", code: -32005 },
+          },
+        } as WorkerResponse<unknown>);
+      });
+    });
+
+    try {
+      await client.generateKeypair({ chainId: 1 });
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      const cause = (error as Error & { cause?: { code?: number } }).cause;
+      expect(cause?.code).toBe(-32005);
+    }
+  });
+
+  test("falls back to a plain Error when the serialized envelope is absent", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "legacy error",
+        } as WorkerResponse<unknown>);
+      });
+    });
+
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("legacy error");
   });
 
   test("terminate is a no-op when no worker exists", () => {

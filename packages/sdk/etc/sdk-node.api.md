@@ -292,14 +292,12 @@ export type EncryptResult = {
     inputProof: Hex;
 };
 
-// @public (undocumented)
-export interface ErrorResponse extends BaseResponse {
-    // (undocumented)
-    error: string;
-    statusCode?: number;
-    // (undocumented)
+// @public
+export type ErrorResponse = BaseResponse & {
     success: false;
-}
+    error: string;
+    serialized?: SerializedError;
+};
 
 // @public (undocumented)
 export interface GenerateKeypairRequest extends BaseRequest {
