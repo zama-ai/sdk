@@ -85,6 +85,18 @@ describe("NodeWorkerPool", () => {
     }
   });
 
+  test("stamps each worker with a node-worker-N label for timeout diagnostics", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
+    await pool.initPool();
+
+    const calls = vi.mocked(NodeWorkerClient).mock.calls;
+    expect(calls.map((c) => (c[0] as { workerLabel?: string }).workerLabel)).toEqual([
+      "node-worker-0",
+      "node-worker-1",
+      "node-worker-2",
+    ]);
+  });
+
   test("sends sequential calls to worker 0 when all are idle", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();

@@ -3549,6 +3549,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                            |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                   |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`)                                              |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled (retryable)                          |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                          |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                              |
@@ -3640,6 +3641,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                    |
 | `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`; on a 429, retry after `.retryAfter` seconds. |
+| `WorkerTimeoutError`                   | Retry with client-side backoff (the Node worker is recycled). Raise `node({ operationTimeout })` for legitimately long operations.                      |
 | `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
@@ -3751,7 +3753,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -7244,6 +7246,7 @@ import {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
+  WorkerTimeoutError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -7309,6 +7312,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled (retryable)                                                             |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
@@ -7567,6 +7571,34 @@ try {
 ```
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
+
+### WorkerTimeoutError
+
+**Code:** `OPERATION_TIMEOUT`
+
+A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker** (terminating the hung thread) so it self-heals, and the operation is **retryable**. It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
+
+Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
+
+```ts
+import { node } from "@zama-fhe/sdk/node";
+
+relayers: {
+  [sepolia.id]: node({ operationTimeout: 10 }),
+}
+```
+
+```ts
+matchZamaError(error, {
+  OPERATION_TIMEOUT: async (e) => {
+    // The worker was recycled; retry with your own backoff.
+    await backoff();
+    retry(); // or raise operationTimeout if the op is legitimately long
+  },
+});
+```
+
+**How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
 
 ## "No balance" vs "zero balance"
 

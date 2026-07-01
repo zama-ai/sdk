@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 import { LoggerService } from "../../services/logger-service";
+import { DEFAULT_TIMEOUT_MS } from "../worker.base-client";
+import { WorkerTimeoutError } from "../../errors";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Hoisted mocks — vi.mock factories are hoisted above imports, so any
@@ -334,6 +336,33 @@ describe("RelayerWorkerClient", () => {
     expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
+  });
+
+  test("a timed-out request rejects with WorkerTimeoutError but does NOT recycle the web worker", async () => {
+    setupAutoResolvingWebWorker();
+    const client = new RelayerWorkerClient(defaultWebConfig());
+    await client.initWorker();
+    const worker = lastMockWorker!;
+    // No-op subsequent requests so the operation hangs and times out.
+    worker.postMessage.mockImplementation(() => {});
+
+    vi.useFakeTimers();
+    try {
+      let err: Error | undefined;
+      const p = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        err = e;
+      });
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+      await p;
+
+      // The timeout is still typed/diagnosable (the SDK-237 improvement)...
+      expect(err).toBeInstanceOf(WorkerTimeoutError);
+      expect((err as WorkerTimeoutError).worker).toBe("web-worker");
+      // ...but recycling is a Node-pool recovery: the browser worker stays put.
+      expect(worker.terminate).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("onmessage handler dispatches response to handleResponse", async () => {

@@ -126,5 +126,13 @@ describe("createConfig validation", () => {
   test("rejects invalid node transport numeric options at the factory boundary", () => {
     expect(() => node({ poolSize: 0 })).toThrow(ConfigurationError);
     expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
+    expect(() => node({ operationTimeout: 0 })).toThrow(ConfigurationError);
+    expect(() => node({ initTimeout: -1 })).toThrow(ConfigurationError);
+  });
+
+  test("accepts valid node worker-timeout options", () => {
+    expect(() =>
+      node({ operationTimeout: 5, initTimeout: 90, recycleWorkerOnTimeout: false }),
+    ).not.toThrow();
   });
 });

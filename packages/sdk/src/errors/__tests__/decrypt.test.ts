@@ -9,6 +9,7 @@ import {
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
+  WorkerTimeoutError,
   ZamaError,
   wrapDecryptError,
 } from "../index";
@@ -39,6 +40,15 @@ describe("wrapDecryptError", () => {
 
     test("returns the same SigningRejectedError unchanged", () => {
       const original = new SigningRejectedError("user cancelled");
+      expect(wrapDecryptError(original, "fallback")).toBe(original);
+    });
+
+    test("returns the same WorkerTimeoutError unchanged (a timeout is not a DecryptionFailedError)", () => {
+      const original = new WorkerTimeoutError({
+        operation: "USER_DECRYPT",
+        timeout: 30,
+        elapsed: 30.002,
+      });
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 

@@ -5,6 +5,7 @@ import {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  WorkerTimeoutError,
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
@@ -95,6 +96,31 @@ describe("RelayerRequestFailedError", () => {
     expect(
       new RelayerRequestFailedError("server error", 503, { retryAfter: 60 }).retryAfter,
     ).toBeUndefined();
+  });
+});
+
+describe("WorkerTimeoutError", () => {
+  test("has correct code, name, and diagnostic fields", () => {
+    const err = new WorkerTimeoutError({
+      operation: "USER_DECRYPT",
+      timeout: 30,
+      elapsed: 30.004,
+      worker: "node-worker-2",
+    });
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err.code).toBe(ZamaErrorCode.OperationTimeout);
+    expect(err.name).toBe("WorkerTimeoutError");
+    expect(err.operation).toBe("USER_DECRYPT");
+    expect(err.timeout).toBe(30);
+    expect(err.elapsed).toBe(30.004);
+    expect(err.worker).toBe("node-worker-2");
+    expect(err.message).toMatch(/USER_DECRYPT timed out after 30s.*node-worker-2/);
+  });
+
+  test("worker label is optional", () => {
+    const err = new WorkerTimeoutError({ operation: "ENCRYPT", timeout: 5, elapsed: 5.001 });
+    expect(err.worker).toBeUndefined();
+    expect(err.message).toBe("Worker operation ENCRYPT timed out after 5s");
   });
 });
 
