@@ -1,4 +1,4 @@
-import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
+import type { ClearValue, EncryptedValue, DecryptPublicValuesResult } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
@@ -8,7 +8,7 @@ export function decryptPublicValuesMutationOptions(
 ): MutationFactoryOptions<
   readonly ["zama.decryptPublicValues"],
   EncryptedValue[],
-  PublicDecryptResult
+  DecryptPublicValuesResult
 > {
   return {
     mutationKey: ["zama.decryptPublicValues"],

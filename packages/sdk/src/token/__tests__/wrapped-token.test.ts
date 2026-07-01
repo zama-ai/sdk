@@ -266,8 +266,8 @@ describe("WrappedToken", () => {
     }) => {
       const result = await wrappedToken.unwrap(50n);
 
-      expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 50n, type: "euint64" }],
+      expect(relayer.encryptValues).toHaveBeenCalledWith({
+        values: [{ value: 50n, type: "uint64" }],
         contractAddress: wrapperAddress,
         userAddress,
       });
@@ -282,7 +282,7 @@ describe("WrappedToken", () => {
       wrappedToken,
       inputProof,
     }) => {
-      vi.mocked(relayer.encrypt).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({ encryptedValues: [], inputProof });
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
@@ -301,7 +301,7 @@ describe("WrappedToken", () => {
 
       await wrappedToken.unwrapAll();
 
-      expect(relayer.encrypt).not.toHaveBeenCalled();
+      expect(relayer.encryptValues).not.toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "unwrap",
@@ -326,7 +326,9 @@ describe("WrappedToken", () => {
       const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
       const result = await wrappedToken.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([unwrapRequestId]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [unwrapRequestId],
+      });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -338,7 +340,7 @@ describe("WrappedToken", () => {
       wrappedToken,
     }) => {
       const original = new DecryptionFailedError("already wrapped");
-      vi.mocked(relayer.decryptPublicValues).mockRejectedValueOnce(original);
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
@@ -380,12 +382,14 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
-      expect(relayer.encrypt).toHaveBeenCalled();
+      expect(relayer.encryptValues).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -415,7 +419,9 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshieldAll();
 
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(result.txHash).toBe("0xtxhash");
     });
 
@@ -452,7 +458,9 @@ describe("WrappedToken", () => {
       const result = await wrappedToken.resumeUnshield("0xprevioustx" as `0x${string}`);
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(result.txHash).toBe("0xtxhash");
     });
   });
@@ -477,7 +485,7 @@ describe("WrappedToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 100n }]);
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [

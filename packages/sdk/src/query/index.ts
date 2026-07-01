@@ -131,21 +131,22 @@ export type {
   UnwrapFinalizedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
-export type { ClearValue, EncryptParams, EncryptResult, EncryptedValue } from "../relayer/types";
+export type {
+  ClearValue,
+  EncryptParameters,
+  EncryptResult,
+  EncryptedValue,
+} from "../relayer/types";
 export type { EncryptInput, EIP712TypedData } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
-export type {
-  UserDecryptParams as DecryptValuesParams,
-  PublicDecryptResult as DecryptPublicValuesResult,
-  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "../relayer/types";
-export type { RelayerSDK } from "../relayer/types";
+export type { DecryptPublicValuesResult } from "../relayer/types";
+export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type { TransportKeyPair } from "../credentials";
+export type { SerializedTransportKeyPair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,

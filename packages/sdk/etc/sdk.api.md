@@ -9,14 +9,18 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
+import { EncryptValuesParameters } from '@fhevm/sdk/actions/encrypt';
+import { EncryptValuesReturnType } from '@fhevm/sdk/actions/encrypt';
 import { Hex } from 'viem';
 import { Provider } from 'ethers';
 import { PublicClient } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
+import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
 import { z } from 'zod/mini';
 
@@ -642,7 +646,7 @@ export interface CleartextRelayerConfig extends RelayerConfig {
 }
 
 // @public
-export type ClearValue = bigint | boolean | string;
+export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -5457,53 +5461,7 @@ export interface DecryptStartEvent extends BaseEvent {
 }
 
 // @public
-export interface DecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public
 export const DefaultRegistryAddresses: Record<number, Address>;
-
-// @public
-export interface DelegatedDecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    delegateAddress: Address;
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    startTimestamp: number;
-}
 
 // @public
 export interface DelegatedForUserDecryptionEvent {
@@ -5834,14 +5792,14 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 // @public
 export type EncryptInput = {
-    value: boolean | bigint;
-    type: "ebool";
-} | {
     value: bigint;
-    type: Exclude<FheTypeName, "ebool" | "eaddress">;
+    type: Exclude<TypedValue["type"], "bool" | "address">;
+} | {
+    value: boolean | 1n | 0n;
+    type: "bool";
 } | {
     value: Address;
-    type: "eaddress";
+    type: "address";
 };
 
 // @public
@@ -5850,7 +5808,7 @@ export class EncryptionFailedError extends ZamaError {
 }
 
 // @public
-export interface EncryptParams {
+export interface EncryptParameters extends EncryptValuesParameters {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -5859,10 +5817,12 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = {
+export interface EncryptResult {
+    // (undocumented)
     encryptedValues: EncryptedValue[];
+    // (undocumented)
     inputProof: Hex;
-};
+}
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -5908,17 +5868,6 @@ export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
 }
-
-// @public
-export interface FheEncryptionKey {
-    // (undocumented)
-    publicKey: Uint8Array;
-    // (undocumented)
-    publicKeyId: string;
-}
-
-// @public
-export type FheTypeName = "ebool" | "euint8" | "euint16" | "euint32" | "euint64" | "euint128" | "euint256" | "eaddress";
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
@@ -11416,9 +11365,6 @@ export function nameContract(tokenAddress: Address): {
 };
 
 // @public
-export type NetworkType = "hardhat" | "sepolia" | "mainnet";
-
-// @public
 export class NoCiphertextError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -12639,21 +12585,10 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-    generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Address;
-    terminate(): void;
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    // (undocumented)
+    chain: FheChain;
 }
-
-// @public
-export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // @public (undocumented)
 export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
@@ -12917,6 +12852,14 @@ export const sepolia: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
+
+// @public
+export interface SerializedTransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
 
 // @public
 export function setOperatorContract(tokenAddress: Address, operator: Address, until?: number): {
@@ -14695,14 +14638,6 @@ export interface TransferSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
-}
-
-// @public
-export interface TransportKeyPair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
 }
 
 // @public
@@ -19545,7 +19480,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    encrypt(params: EncryptParameters): Promise<EncryptValuesReturnType>;
     // @internal
     get logger(): GenericLogger;
     // @internal

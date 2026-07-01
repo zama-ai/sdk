@@ -5,10 +5,8 @@
 ```ts
 
 import { Address } from 'viem';
-import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
-import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { EIP1193Provider } from 'viem';
-import { Hex } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public

@@ -1,8 +1,10 @@
+import type { Hex } from "viem";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
 import type { Permission } from "../types";
 import { checksum } from "../utils";
+import { LoggerService } from "../../services/logger-service";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 const DELEGATOR = checksum("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC");
@@ -17,47 +19,48 @@ const directScope = { signerAddress: USER, chainId: 31337, delegatorAddress: USE
 const delegatedScope = { signerAddress: USER, chainId: 31337, delegatorAddress: DELEGATOR };
 
 function makePermission(
-  overrides: Partial<Permission> & {
-    signedContractAddresses: Permission["signedContractAddresses"];
+  overrides: Partial<Omit<Permission, "serializedPermit">> & {
+    contractAddresses: Permission["contractAddresses"];
+    signature?: Hex;
   },
 ): Permission {
+  const { signature = SIGNATURE, ...rest } = overrides;
   return {
     keypairPublicKey: PUBLIC_KEY,
-    signerAddress: USER,
-    delegatorAddress: USER,
-    chainId: 31337,
-    signature: SIGNATURE,
     startTimestamp: Math.floor(Date.now() / 1000),
     durationDays: 30,
-    ...overrides,
+    ...rest,
+    serializedPermit: {
+      eip712: { primaryType: "UserDecryptRequestVerification", domain: {}, types: {}, message: {} },
+      signature,
+      signerAddress: USER,
+    },
   };
 }
 
 const test = baseTest.extend<{ store: PermissionStore }>({
   // eslint-disable-next-line no-empty-pattern
   store: async ({}, use) => {
-    await use(new PermissionStore({ storage: new MemoryStorage() }));
+    await use(new PermissionStore({ storage: new MemoryStorage(), logger: new LoggerService() }));
   },
 });
 
 describe("PermissionStore", () => {
   test("append + list round-trips", async ({ store }) => {
     await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A], signature: SIGNATURE }),
+      makePermission({ contractAddresses: [TOKEN_A], signature: SIGNATURE }),
     ]);
 
     const list = await store.list(directScope);
     expect(list).toHaveLength(1);
-    expect(list[0]!.signature).toBe(SIGNATURE);
-    expect(list[0]!.signedContractAddresses).toEqual([TOKEN_A]);
+    expect(list[0]!.serializedPermit.signature).toBe(SIGNATURE);
+    expect(list[0]!.contractAddresses).toEqual([TOKEN_A]);
   });
 
   test("deletePermitsTouching drops every permit containing a listed address", async ({
     store,
   }) => {
-    await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B] }),
-    ]);
+    await store.append(directScope, [makePermission({ contractAddresses: [TOKEN_A, TOKEN_B] })]);
     await store.deletePermitsTouching(directScope, [TOKEN_A]);
     expect(await store.list(directScope)).toEqual([]);
   });
@@ -65,10 +68,8 @@ describe("PermissionStore", () => {
   test("direct and delegated scopes are isolated; clearAllForSigner cascades", async ({
     store,
   }) => {
-    await store.append(directScope, [makePermission({ signedContractAddresses: [TOKEN_A] })]);
-    await store.append(delegatedScope, [
-      makePermission({ signedContractAddresses: [TOKEN_B], delegatorAddress: DELEGATOR }),
-    ]);
+    await store.append(directScope, [makePermission({ contractAddresses: [TOKEN_A] })]);
+    await store.append(delegatedScope, [makePermission({ contractAddresses: [TOKEN_B] })]);
 
     expect(await store.list(directScope)).toHaveLength(1);
     expect(await store.list(delegatedScope)).toHaveLength(1);
@@ -85,7 +86,7 @@ describe("PermissionStore", () => {
       const startSeconds = Math.floor(Date.now() / 1000);
       await store.append(directScope, [
         makePermission({
-          signedContractAddresses: [TOKEN_A],
+          contractAddresses: [TOKEN_A],
           startTimestamp: startSeconds,
           durationDays: 30,
         }),
@@ -102,15 +103,15 @@ describe("PermissionStore", () => {
 
   test("listUsableAndPrune filters out permissions bound to other keypairs", async ({ store }) => {
     await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A], keypairPublicKey: OTHER_PUBLIC_KEY }),
+      makePermission({ contractAddresses: [TOKEN_A], keypairPublicKey: OTHER_PUBLIC_KEY }),
     ]);
     await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_B], keypairPublicKey: PUBLIC_KEY }),
+      makePermission({ contractAddresses: [TOKEN_B], keypairPublicKey: PUBLIC_KEY }),
     ]);
 
     const surviving = await store.listUsableAndPrune(directScope, PUBLIC_KEY);
     expect(surviving).toHaveLength(1);
-    expect(surviving[0]!.signedContractAddresses).toEqual([TOKEN_B]);
+    expect(surviving[0]!.contractAddresses).toEqual([TOKEN_B]);
   });
 
   test("replace swaps the entry identified by signature", async ({ store }) => {
@@ -119,24 +120,24 @@ describe("PermissionStore", () => {
     const SIG_OTHER = `0x${"cc".repeat(65)}` as const;
 
     await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A], signature: SIG_OLD }),
-      makePermission({ signedContractAddresses: [TOKEN_B], signature: SIG_OTHER }),
+      makePermission({ contractAddresses: [TOKEN_A], signature: SIG_OLD }),
+      makePermission({ contractAddresses: [TOKEN_B], signature: SIG_OTHER }),
     ]);
 
     await store.replace(
       directScope,
       SIG_OLD,
-      makePermission({ signedContractAddresses: [TOKEN_A, TOKEN_B], signature: SIG_NEW }),
+      makePermission({ contractAddresses: [TOKEN_A, TOKEN_B], signature: SIG_NEW }),
     );
 
     const list = await store.list(directScope);
-    const signatures = list.map((p) => p.signature).toSorted();
+    const signatures = list.map((p) => p.serializedPermit.signature).toSorted();
     expect(signatures).toEqual([SIG_OTHER, SIG_NEW].toSorted());
-    expect(list.find((p) => p.signature === SIG_NEW)?.signedContractAddresses).toEqual([
+    expect(list.find((p) => p.serializedPermit.signature === SIG_NEW)?.contractAddresses).toEqual([
       TOKEN_A,
       TOKEN_B,
     ]);
-    expect(list.find((p) => p.signature === SIG_OLD)).toBeUndefined();
+    expect(list.find((p) => p.serializedPermit.signature === SIG_OLD)).toBeUndefined();
   });
 
   test("replace with an unknown signature behaves like append", async ({ store }) => {
@@ -145,17 +146,19 @@ describe("PermissionStore", () => {
     const SIG_MISSING = `0x${"ff".repeat(65)}` as const;
 
     await store.append(directScope, [
-      makePermission({ signedContractAddresses: [TOKEN_A], signature: SIG_EXISTING }),
+      makePermission({ contractAddresses: [TOKEN_A], signature: SIG_EXISTING }),
     ]);
 
     await store.replace(
       directScope,
       SIG_MISSING,
-      makePermission({ signedContractAddresses: [TOKEN_B], signature: SIG_NEW }),
+      makePermission({ contractAddresses: [TOKEN_B], signature: SIG_NEW }),
     );
 
     const list = await store.list(directScope);
     expect(list).toHaveLength(2);
-    expect(list.map((p) => p.signature).toSorted()).toEqual([SIG_EXISTING, SIG_NEW].toSorted());
+    expect(list.map((p) => p.serializedPermit.signature).toSorted()).toEqual(
+      [SIG_EXISTING, SIG_NEW].toSorted(),
+    );
   });
 });

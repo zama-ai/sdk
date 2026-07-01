@@ -2,10 +2,11 @@ import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { ChainRouter } from "../chains/router";
-import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/types";
+import type { ClearValue, EncryptedValue, DecryptPublicValuesResult } from "../relayer/types";
 import type { BatchDecryptResult, DecryptionService } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
+import { assertNonNullable } from "../utils";
 
 /**
  * Public namespace for FHE decryption — the canonical way to decrypt.
@@ -141,13 +142,25 @@ export class Decryption {
    *   await sdk.decryption.decryptPublicValues([encryptedValue]);
    * ```
    */
-  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult> {
     if (encryptedValues.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
     try {
-      return await this.#router.relayer.decryptPublicValues(encryptedValues);
+      const result = await this.#router.relayer.decryptPublicValuesWithSignatures({
+        encryptedValues,
+      });
+      const clearValues: Record<EncryptedValue, ClearValue> = {};
+      result.checkSignaturesArgs.handlesList.forEach((handle, i) => {
+        assertNonNullable(result.clearValues[i], `result.clearValues[${i}]`);
+        clearValues[handle] = result.clearValues[i].value;
+      });
+      return {
+        clearValues,
+        abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+        decryptionProof: result.checkSignaturesArgs.decryptionProof,
+      };
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }

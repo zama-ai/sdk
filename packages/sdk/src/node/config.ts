@@ -1,16 +1,15 @@
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { RelayerSDK } from "../relayer/types";
 
 /** Node transport — drives the FHE backend directly (no worker pool). */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
-  readonly createRelayer: (chain: FheChain) => RelayerSDK;
+  readonly createRelayer: (chain: FheChain) => FhevmRelayer;
 }
 
 /**
- * Node.js transport — drives `@fhevm/sdk` via {@link RelayerSDK} on the calling thread.
+ * Node.js transport — drives `@fhevm/sdk` via {@link FhevmRelayer} on the calling thread.
  *
  * @example
  * ```ts

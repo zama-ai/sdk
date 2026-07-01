@@ -260,7 +260,7 @@ describe("Token event emissions", () => {
       relayer,
       tokenAddress,
     }) => {
-      relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
+      relayer.encryptValues = vi.fn().mockRejectedValue(new Error("encrypt boom"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(

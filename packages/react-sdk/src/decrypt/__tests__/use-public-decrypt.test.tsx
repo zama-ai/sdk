@@ -4,14 +4,17 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useDecryptPublicValues } from "../use-public-decrypt";
 
 describe("useDecryptPublicValues", () => {
-  test("delegates to relayer.decryptPublicValues and populates cache", async ({
+  test("delegates to relayer.decryptPublicValuesWithSignatures and populates cache", async ({
     renderWithProviders,
     relayer,
   }) => {
-    vi.mocked(relayer.decryptPublicValues).mockResolvedValue({
-      clearValues: { "0xhandle1": 500n },
-      abiEncodedClearValues: "0x",
-      decryptionProof: "0xproof",
+    vi.mocked(relayer.decryptPublicValuesWithSignatures).mockResolvedValue({
+      clearValues: [{ type: "uint64", value: 500n }],
+      checkSignaturesArgs: {
+        handlesList: ["0xhandle1"],
+        abiEncodedCleartexts: "0x",
+        decryptionProof: "0xproof",
+      },
     });
 
     const { result, queryClient } = renderWithProviders(() => useDecryptPublicValues());
@@ -19,7 +22,9 @@ describe("useDecryptPublicValues", () => {
     result.current.mutate(["0xhandle1"]);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(relayer.decryptPublicValues).toHaveBeenCalledWith(["0xhandle1"]);
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+      encryptedValues: ["0xhandle1"],
+    });
 
     expect(queryClient.getQueryData(zamaQueryKeys.decryption.encryptedValue("0xhandle1"))).toBe(
       500n,

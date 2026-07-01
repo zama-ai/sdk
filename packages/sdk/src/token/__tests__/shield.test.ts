@@ -124,7 +124,7 @@ describe("WrappedToken.shield", () => {
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
-    vi.mocked(relayer.decryptValues).mockResolvedValue({ [fixtureHandle]: 1000n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 1000n }]);
 
     const shieldResult = await token.shield(500n);
     expect(shieldResult.txHash).toBe("0xtxhash");

@@ -5,11 +5,35 @@
 ```ts
 
 import { Address } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
+import { DecryptPublicValueParameters } from '@fhevm/sdk/actions/base';
+import { DecryptPublicValuesParameters } from '@fhevm/sdk/actions/base';
+import { DecryptPublicValuesReturnType } from '@fhevm/sdk/actions/base';
+import { DecryptPublicValuesWithSignaturesParameters } from '@fhevm/sdk/actions/base';
+import { DecryptPublicValuesWithSignaturesReturnType } from '@fhevm/sdk/actions/base';
+import { DecryptValueParameters } from '@fhevm/sdk/actions/decrypt';
+import { DecryptValuesFromPairsParameters } from '@fhevm/sdk/actions/decrypt';
+import { DecryptValuesFromPairsReturnType } from '@fhevm/sdk/actions/decrypt';
+import { DecryptValuesParameters } from '@fhevm/sdk/actions/decrypt';
+import { DecryptValuesReturnType } from '@fhevm/sdk/actions/decrypt';
 import { EIP1193Provider } from 'viem';
+import { EncryptValueParameters } from '@fhevm/sdk/actions/encrypt';
+import { EncryptValueReturnType } from '@fhevm/sdk/actions/encrypt';
+import { EncryptValuesParameters } from '@fhevm/sdk/actions/encrypt';
+import { EncryptValuesReturnType } from '@fhevm/sdk/actions/encrypt';
+import { FetchFheEncryptionKeyBytesParameters } from '@fhevm/sdk/actions/chain';
 import { Hex } from 'viem';
+import { ParseSignedDecryptionPermitParameters } from '@fhevm/sdk/actions/chain';
+import { ParseTransportKeyPairParameters } from '@fhevm/sdk/actions/chain';
+import { SerializeSignedDecryptionPermitParameters } from '@fhevm/sdk/actions/chain';
+import { SerializeSignedDecryptionPermitReturnType } from '@fhevm/sdk/actions/chain';
+import { SerializeTransportKeyPairParameters } from '@fhevm/sdk/actions/chain';
+import { SerializeTransportKeyPairReturnType } from '@fhevm/sdk/actions/chain';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
+import { TransportKeyPair } from '@fhevm/sdk/actions/decrypt';
+import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
 export const anvil: {
@@ -62,7 +86,7 @@ export const chains: Record<number, FheChain>;
 export function cleartext(): CleartextRelayerConfig;
 
 // @public
-export type ClearValue = bigint | boolean | string;
+export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public
 export interface DecryptPublicValuesResult {
@@ -75,68 +99,16 @@ export interface DecryptPublicValuesResult {
 }
 
 // @public
-export interface DecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public
-export interface DelegatedDecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    delegateAddress: Address;
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    startTimestamp: number;
-}
-
-// @public
 export type EIP712TypedData = CreateKmsUserDecryptEip712ReturnType | CreateKmsDelegatedUserDecryptEip712ReturnType;
 
 // @public
-export interface EncryptParams {
+export interface EncryptParameters extends EncryptValuesParameters {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
     values: EncryptInput[];
 }
-
-// @public
-export type EncryptResult = {
-    encryptedValues: EncryptedValue[];
-    inputProof: Hex;
-};
 
 // @public
 export interface GenericLogger {
@@ -215,7 +187,7 @@ export function node(): NodeRelayerConfig;
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
+    readonly createRelayer: (chain: FheChain) => FhevmRelayer;
     // (undocumented)
     readonly type: "node";
 }
@@ -228,17 +200,9 @@ export interface RelayerConfig {
 }
 
 // @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-    generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Address;
-    terminate(): void;
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    // (undocumented)
+    chain: FheChain;
 }
 
 // @public

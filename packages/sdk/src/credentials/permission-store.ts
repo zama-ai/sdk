@@ -99,7 +99,7 @@ export class PermissionStore {
   ): Promise<void> {
     const validated = PermissionSchema.parse(newPermission);
     const existing = await this.list(scope);
-    const filtered = existing.filter((p) => p.signature !== oldSignature);
+    const filtered = existing.filter((p) => p.serializedPermit.signature !== oldSignature);
     await this.#storage.set(permissionScopeKey(scope), [...filtered, validated]);
     await this.#trackScope(scope);
   }
@@ -107,7 +107,7 @@ export class PermissionStore {
   /**
    * Delete every permit whose signed payload touches any listed contract.
    *
-   * The store never edits `signedContractAddresses`, because that field is part
+   * The store never edits `contractAddresses`, because that field is part
    * of the EIP-712 payload covered by `signature`.
    */
   async deletePermitsTouching(

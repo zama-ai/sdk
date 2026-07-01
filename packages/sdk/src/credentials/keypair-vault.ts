@@ -1,13 +1,14 @@
+import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
+import type { ChecksummedAddress } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
-import { transportKeyPairStorageKey } from "./storage-keys";
 import { StoredTransportKeyPairSchema } from "./schemas";
-import type { TransportKeyPair, StoredTransportKeyPair } from "./types";
-import type { ChecksummedAddress } from "../schemas/primitives";
+import { transportKeyPairStorageKey } from "./storage-keys";
+import type { StoredTransportKeyPair } from "./types";
 import { nowSeconds } from "./utils";
 
 interface TransportKeyPairVaultConfig {
-  generator: () => Promise<TransportKeyPair>;
+  generator: () => Promise<SerializeTransportKeyPairReturnType>;
   storage: GenericStorage;
   /** Transport key pair lifetime in seconds. Pre-validated by the caller. */
   ttl: number;
@@ -22,7 +23,7 @@ interface TransportKeyPairVaultConfig {
  * permit revocations. Storage entries are keyed only by the signer address.
  */
 export class TransportKeyPairVault {
-  readonly #generator: () => Promise<TransportKeyPair>;
+  readonly #generator: () => Promise<SerializeTransportKeyPairReturnType>;
   readonly #storage: GenericStorage;
   readonly #ttl: number;
   readonly #logger: GenericLogger;

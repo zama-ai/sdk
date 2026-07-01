@@ -46,14 +46,23 @@ describe("ZamaSDK", () => {
     expect(w2.address).toBe("0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB");
   });
 
-  test("terminate delegates to relayer.terminate", ({ sdk, relayer }) => {
+  test("terminate disposes the SDK and signer", ({ createMockSigner, createSDK }) => {
+    const dispose = vi.fn();
+    const sdk = createSDK({ signer: { ...createMockSigner(), dispose } });
+    const sdkDispose = vi.spyOn(sdk, "dispose");
+
     sdk.terminate();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+
+    expect(sdkDispose).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
-  test("[Symbol.dispose] delegates to terminate", ({ sdk, relayer }) => {
+  test("[Symbol.dispose] delegates to terminate", ({ sdk }) => {
+    const terminate = vi.spyOn(sdk, "terminate");
+
     sdk[Symbol.dispose]();
-    expect(relayer.terminate).toHaveBeenCalledOnce();
+
+    expect(terminate).toHaveBeenCalledOnce();
   });
 
   test("terminate calls signer.dispose", ({ createMockSigner, createSDK }) => {

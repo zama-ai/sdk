@@ -9,6 +9,7 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193EventMap } from 'viem';
@@ -22,6 +23,7 @@ import { ProviderMessage } from 'viem';
 import { ProviderRpcError } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
+import { TypedValue } from '@fhevm/sdk/types';
 
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;

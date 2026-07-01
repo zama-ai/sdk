@@ -8,7 +8,7 @@ describe("useDelegatedDecryptValues", () => {
     relayer,
     handle,
   }) => {
-    vi.mocked(relayer.delegatedDecryptValues).mockResolvedValue({ [handle]: 300n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 300n }]);
 
     const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as `0x${string}`;
     const delegatorAddress = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as `0x${string}`;
@@ -21,7 +21,7 @@ describe("useDelegatedDecryptValues", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(relayer.delegatedDecryptValues).toHaveBeenCalledOnce();
+    expect(relayer.decryptValues).toHaveBeenCalledOnce();
     expect(result.current.data).toEqual({ [handle]: 300n });
   });
 });

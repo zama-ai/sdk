@@ -2,7 +2,7 @@
 import type { FheChain } from "../chains/types";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerSDK } from "../relayer/types";
+import type { FhevmRelayerSDK } from "../relayer/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { LoggerService } from "../services/logger-service";
 import { ZamaSDK } from "../zama-sdk";
@@ -23,7 +23,7 @@ export interface SdkFixtures {
 
 function buildSDK(
   chain: FheChain,
-  relayer: RelayerSDK,
+  relayer: FhevmRelayerSDK,
   provider: GenericProvider,
   signer: GenericSigner,
   storage: GenericStorage,

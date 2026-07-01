@@ -25,11 +25,11 @@ describe("EncryptionService", () => {
     const emitEvent = vi.fn();
     const service = createEncryptionService({ emitEvent });
 
-    const result = await service.encrypt(ENCRYPT_PARAMS);
+    const result = await service.encryptValues(ENCRYPT_PARAMS);
 
     expect(result.encryptedValues).toEqual([handle]);
     expect(result.inputProof).toBe(inputProof);
-    expect(relayer.encrypt).toHaveBeenCalledWith(ENCRYPT_PARAMS);
+    expect(relayer.encryptValues).toHaveBeenCalledWith(ENCRYPT_PARAMS);
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },
       ENCRYPT_PARAMS.contractAddress,
@@ -47,9 +47,11 @@ describe("EncryptionService", () => {
   }) => {
     const emitEvent = vi.fn();
     const service = createEncryptionService({ emitEvent });
-    vi.mocked(relayer.encrypt).mockRejectedValueOnce(new Error("boom"));
+    vi.mocked(relayer.encryptValues).mockRejectedValueOnce(new Error("boom"));
 
-    await expect(service.encrypt(ENCRYPT_PARAMS)).rejects.toBeInstanceOf(EncryptionFailedError);
+    await expect(service.encryptValues(ENCRYPT_PARAMS)).rejects.toBeInstanceOf(
+      EncryptionFailedError,
+    );
 
     expect(emitEvent).toHaveBeenCalledWith(
       {
@@ -70,9 +72,9 @@ describe("EncryptionService", () => {
       new Error("Input proof failed: relayer respond with HTTP code 403 Missing Zama API Key"),
       { statusCode: 403 },
     );
-    vi.mocked(relayer.encrypt).mockRejectedValueOnce(relayerError);
+    vi.mocked(relayer.encryptValues).mockRejectedValueOnce(relayerError);
 
-    const caught = await service.encrypt(ENCRYPT_PARAMS).catch((e: unknown) => e);
+    const caught = await service.encryptValues(ENCRYPT_PARAMS).catch((e: unknown) => e);
 
     expect(caught).toBeInstanceOf(RelayerRequestFailedError);
     expect((caught as RelayerRequestFailedError).statusCode).toBe(403);
@@ -87,9 +89,9 @@ describe("EncryptionService", () => {
     const original = new ZamaError(ZamaErrorCode.EncryptionFailed, "already wrapped");
     const emitEvent = vi.fn();
     const service = createEncryptionService({ emitEvent });
-    vi.mocked(relayer.encrypt).mockRejectedValueOnce(original);
+    vi.mocked(relayer.encryptValues).mockRejectedValueOnce(original);
 
-    await expect(service.encrypt(ENCRYPT_PARAMS)).rejects.toBe(original);
+    await expect(service.encryptValues(ENCRYPT_PARAMS)).rejects.toBe(original);
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptError, error: original, durationMs: expect.any(Number) },
       ENCRYPT_PARAMS.contractAddress,

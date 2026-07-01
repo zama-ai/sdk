@@ -250,9 +250,9 @@ describe("useConfidentialTransfer", () => {
     let currentHandle: string = handle;
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
     vi.mocked(relayer.decryptValues).mockImplementation(
-      async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
-        [encryptedValues[0]]: encryptedValues[0] === handle ? 1000n : 500n,
-      }),
+      async ({ encryptedValues }: { encryptedValues: Hex[] }) => [
+        { type: "uint64", value: encryptedValues[0] === handle ? 1000n : 500n },
+      ],
     );
     vi.mocked(signer.writeContract).mockImplementation(async () => {
       currentHandle = handleB;

@@ -28,13 +28,10 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isActive: false when expiryTimestamp is 0n", async ({
     sdk,
-    relayer,
     tokenAddress,
-    aclAddress,
     provider,
     mockQueryContext,
   }) => {
-    vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     const options = delegationStatusQueryOptions(sdk, {
@@ -52,13 +49,10 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isActive: true when expiryTimestamp is MAX_UINT64 (skips getBlockTimestamp)", async ({
     sdk,
-    relayer,
     tokenAddress,
-    aclAddress,
     provider,
     mockQueryContext,
   }) => {
-    vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     const options = delegationStatusQueryOptions(sdk, {
@@ -76,14 +70,11 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isActive: true when expiryTimestamp is in the future", async ({
     sdk,
-    relayer,
     tokenAddress,
-    aclAddress,
     provider,
     mockQueryContext,
   }) => {
     const futureTimestamp = BigInt(Math.floor(Date.now() / 1000) + 3600);
-    vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(futureTimestamp);
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(BigInt(Math.floor(Date.now() / 1000)));
 
@@ -102,14 +93,11 @@ describe("delegationStatusQueryOptions", () => {
 
   test("returns isActive: false when expiryTimestamp is in the past", async ({
     sdk,
-    relayer,
     tokenAddress,
-    aclAddress,
     provider,
     mockQueryContext,
   }) => {
     const pastTimestamp = 1000n;
-    vi.mocked(relayer.getAclAddress).mockResolvedValue(aclAddress);
     vi.mocked(provider.readContract).mockResolvedValue(pastTimestamp);
     vi.mocked(provider.getBlockTimestamp).mockResolvedValue(2000n);
 

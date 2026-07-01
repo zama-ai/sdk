@@ -364,7 +364,7 @@ export class WrappedToken extends Token {
     const userAddress = getAddress(account.address);
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "euint64" }],
+      values: [{ value: amount, type: "uint64" }],
       contractAddress: this.address,
       userAddress,
     });

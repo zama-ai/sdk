@@ -31,7 +31,7 @@ describe("CredentialService.allow", () => {
     vi.mocked(signer.signTypedData).mockClear();
     const second = await credentialService.grantPermit([A]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
-    expect(second.permits).toHaveLength(1);
+    expect(second.permissions).toHaveLength(1);
   });
 
   test("only prompts for uncovered contracts on partial coverage", async ({
@@ -71,7 +71,7 @@ describe("CredentialService.allow", () => {
   }) => {
     const result = await credentialService.grantPermit([]);
     expect(result.keypair.publicKey).toBeDefined();
-    expect(result.permits).toEqual([]);
+    expect(result.permissions).toEqual([]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 export type {
-  StoredTransportKeyPairWithPermits,
-  TransportKeyPair,
+  ResolvedCredentials,
+  SerializedTransportKeyPair,
   StoredTransportKeyPair,
   Permission,
 } from "./types";

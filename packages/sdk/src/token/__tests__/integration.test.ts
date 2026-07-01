@@ -74,7 +74,7 @@ describe("Integration: multi-step workflows", () => {
       expect(transferResult.txHash).toBe("0xtxhash");
 
       // Verify encrypt was called with correct params
-      expect(relayer.encrypt).toHaveBeenCalledWith({
+      expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 250n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
@@ -115,7 +115,7 @@ describe("Integration: multi-step workflows", () => {
       expect(unwrapResult.txHash).toBe("0xtxhash");
 
       // Verify encryption happened
-      expect(relayer.encrypt).toHaveBeenCalledWith({
+      expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 500n, type: "euint64" }],
         contractAddress: wrapperAddress,
         userAddress,
@@ -143,8 +143,10 @@ describe("Integration: multi-step workflows", () => {
       const finalizeResult = await wrappedToken.finalizeUnwrap(UNWRAP_AMOUNT);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
-      // Verify decryptPublicValues was called with the burn handle
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
+      // Verify decryptPublicValuesWithSignatures was called with the burn handle
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [UNWRAP_AMOUNT],
+      });
 
       // Verify finalizeUnwrap contract call
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -183,13 +185,15 @@ describe("Integration: multi-step workflows", () => {
       const unshieldResult = await wrappedToken.unshield(500n, { skipBalanceCheck: true });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
-      // Verify full pipeline: encrypt → unwrap → waitForReceipt → decryptPublicValues → finalizeUnwrap
-      expect(relayer.encrypt).toHaveBeenCalled();
+      // Verify full pipeline: encrypt → unwrap → waitForReceipt → decryptPublicValuesWithSignatures → finalizeUnwrap
+      expect(relayer.encryptValues).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalled();
-      expect(relayer.decryptPublicValues).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [UNWRAP_AMOUNT],
+      });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );

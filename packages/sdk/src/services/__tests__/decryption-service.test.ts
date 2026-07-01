@@ -5,7 +5,6 @@ import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { LoggerService } from "../logger-service";
 
-const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 import { CachingService } from "../caching-service";
 
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;
@@ -27,7 +26,7 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n });
-    expect(relayer.createEIP712).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
@@ -41,8 +40,8 @@ describe("DecryptionService", () => {
     const emitEvent = vi.fn();
     const service = createDecryptionService({ emitEvent });
     vi.mocked(relayer.decryptValues)
-      .mockResolvedValueOnce({ [HANDLE_A]: 10n })
-      .mockResolvedValueOnce({ [HANDLE_B]: 20n });
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n }])
+      .mockResolvedValueOnce([{ type: "uint64", value: 20n }]);
 
     const result = await service.decryptValues(
       handles([
@@ -76,7 +75,7 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.createEIP712).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
@@ -85,7 +84,7 @@ describe("DecryptionService", () => {
     relayer,
     userAddress,
   }) => {
-    vi.mocked(relayer.decryptValues).mockResolvedValue({ [HANDLE_B]: 20n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 20n }]);
 
     await expect(
       decryptionService.decryptValues(
@@ -97,11 +96,8 @@ describe("DecryptionService", () => {
       ),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n, [HANDLE_B]: 20n });
 
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      TEST_PUBLIC_KEY,
-      [CONTRACT_A, CONTRACT_B],
-      expect.anything(),
-      expect.any(Number),
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledWith(
+      expect.objectContaining({ contractAddresses: [CONTRACT_A, CONTRACT_B] }),
     );
     expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [HANDLE_B], contractAddress: CONTRACT_B }),
@@ -128,7 +124,7 @@ describe("DecryptionService", () => {
         userAddress,
       ),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("delegatedDecryptValues fails fast when delegation is inactive", async ({
@@ -149,8 +145,8 @@ describe("DecryptionService", () => {
         userAddress,
       ),
     ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
-    expect(relayer.createDelegatedUserDecryptEIP712).not.toHaveBeenCalled();
-    expect(relayer.delegatedDecryptValues).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("delegatedBatchDecryptHandlesAs isolates per-handle failures after batch failure", async ({
@@ -162,22 +158,10 @@ describe("DecryptionService", () => {
     userAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {
-        publicKey: TEST_PUBLIC_KEY,
-        contractAddresses: [CONTRACT_A],
-        delegatorAddress,
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    } as never);
-    vi.mocked(relayer.delegatedDecryptValues)
+    vi.mocked(relayer.decryptValues)
       .mockRejectedValueOnce(new Error("batch failed"))
       .mockRejectedValueOnce(new Error("batch failed"))
-      .mockResolvedValueOnce({ [HANDLE_A]: 10n })
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n }])
       .mockRejectedValueOnce(new Error("handle failed"));
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
@@ -210,7 +194,7 @@ describe("DecryptionService", () => {
     userAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-    vi.mocked(relayer.delegatedDecryptValues).mockResolvedValue({});
+    vi.mocked(relayer.decryptValues).mockResolvedValue([]);
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
       encryptedInputs: handles([[HANDLE_A, CONTRACT_A]]),
@@ -241,7 +225,7 @@ describe("DecryptionService", () => {
     const service = createDecryptionService({
       cache: new CachingService(storage, new LoggerService()),
     });
-    vi.mocked(relayer.decryptValues).mockResolvedValue({ [HANDLE_A]: 10n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 10n }]);
 
     await expect(
       service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),

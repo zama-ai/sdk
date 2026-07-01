@@ -4,9 +4,11 @@ import type {
   ParseSignedDecryptionPermitParameters,
   SerializeTransportKeyPairReturnType,
 } from "@fhevm/sdk/actions/chain";
+import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
 import type { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
-import type { TransportKeyPair } from "../credentials/types";
+import type { FheChain } from "../chains/types";
+import type { TypedValue } from "@fhevm/sdk/types";
 
 // ============================================================================
 // Application Types
@@ -17,58 +19,34 @@ import type { TransportKeyPair } from "../credentials/types";
 // surface independent of the underlying FHE library.
 // ============================================================================
 
-/** Network configuration for the relayer. */
-export type NetworkType = "hardhat" | "sepolia" | "mainnet";
-
-/** Canonical FHE type names accepted by encryption. */
-export type FheTypeName =
-  | "ebool"
-  | "euint8"
-  | "euint16"
-  | "euint32"
-  | "euint64"
-  | "euint128"
-  | "euint256"
-  | "eaddress";
-
 /** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. */
 export type EncryptedValue = Hex;
 
 /** Result from encryption — contract-ready hex encrypted values and input proof. */
-export type EncryptResult = { encryptedValues: EncryptedValue[]; inputProof: Hex };
+export interface EncryptResult {
+  encryptedValues: EncryptedValue[];
+  inputProof: Hex;
+}
 
 /** Canonical SDK type for a decrypted clear-text value. */
-export type ClearValue = bigint | boolean | string;
+export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
-  | { value: boolean | bigint; type: "ebool" }
-  | { value: bigint; type: Exclude<FheTypeName, "ebool" | "eaddress"> }
-  | { value: Address; type: "eaddress" };
+  | { value: bigint; type: Exclude<TypedValue["type"], "bool" | "address"> }
+  | { value: boolean | 1n | 0n; type: "bool" }
+  | { value: Address; type: "address" };
 
 /** Parameters for encryption */
-export interface EncryptParams {
+export interface EncryptParameters extends EncryptValuesParameters {
   /** Typed inputs for encryption. Each value must specify its FHE type. */
   values: EncryptInput[];
   contractAddress: Address;
   userAddress: Address;
 }
 
-/** Parameters for user decryption */
-export interface UserDecryptParams {
-  encryptedValues: EncryptedValue[];
-  contractAddress: Address;
-  signedContractAddresses: Address[];
-  privateKey: Hex;
-  publicKey: Hex;
-  signature: Hex;
-  signerAddress: Address;
-  startTimestamp: number;
-  durationDays: number;
-}
-
 /** Result from public decryption. */
-export interface PublicDecryptResult {
+export interface DecryptPublicValuesResult {
   clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
@@ -82,29 +60,6 @@ export interface PublicDecryptResult {
 export type EIP712TypedData =
   | CreateKmsUserDecryptEip712ReturnType
   | CreateKmsDelegatedUserDecryptEip712ReturnType;
-
-/** FHE encryption key — the network's TFHE public key used to encrypt inputs for confidential contracts. */
-export interface FheEncryptionKey {
-  publicKeyId: string;
-  publicKey: Uint8Array;
-}
-
-/** Parameters for delegated user decryption */
-export interface DelegatedUserDecryptParams {
-  encryptedValues: EncryptedValue[];
-  contractAddress: Address;
-  signedContractAddresses: Address[];
-  privateKey: Hex;
-  publicKey: Hex;
-  signature: Hex;
-  delegatorAddress: Address;
-  delegateAddress: Address;
-  startTimestamp: number;
-  durationDays: number;
-}
-
-/** SDK status */
-export type RelayerSDKStatus = "idle" | "initializing" | "ready" | "error";
 
 // ============================================================================
 // `@fhevm/sdk`-derived types
@@ -133,12 +88,6 @@ export type SerializedTransportKeyPair = SerializeTransportKeyPairReturnType;
 /** Serialized signed decryption permit as it crosses the signer / worker boundary. */
 export type SerializedSignedPermit = ParseSignedDecryptionPermitParameters["serializedPermit"];
 
-/** A handle/contract pair to user-decrypt. */
-export interface DecryptPair {
-  readonly encryptedValue: EncryptedValue;
-  readonly contractAddress: Address;
-}
-
 // ============================================================================
 // Relayer backend interface
 // ============================================================================
@@ -147,47 +96,23 @@ export interface DecryptPair {
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.
  */
-export interface RelayerSDK {
-  /** Generate a transport key pair (ML-KEM public + private key) used for user-decryption. */
-  generateTransportKeyPair(): Promise<TransportKeyPair>;
-
-  /** Create EIP-712 typed data for signing an FHE decrypt credential. */
-  createEIP712(
-    publicKey: Hex,
-    contractAddresses: Address[],
-    startTimestamp: number,
-    durationDays?: number,
-  ): Promise<EIP712TypedData>;
-
-  /** Encrypt plaintext values into FHE ciphertexts. */
-  encrypt(params: EncryptParams): Promise<EncryptResult>;
-
-  /** Decrypt FHE encrypted values using the user's own credentials. */
-  decryptValues(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-
-  /** Decrypt encrypted values using the network public key (no credential needed). */
-  decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
-
-  /** Create EIP-712 typed data for a delegated user decrypt credential. */
-  createDelegatedUserDecryptEIP712(
-    publicKey: Hex,
-    contractAddresses: Address[],
-    delegatorAddress: Address,
-    startTimestamp: number,
-    durationDays?: number,
-  ): Promise<EIP712TypedData>;
-
-  /** Decrypt FHE encrypted values using delegated user credentials. */
-  delegatedDecryptValues(
-    params: DelegatedUserDecryptParams,
-  ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-
-  /** Fetch the network's FHE encryption key. Returns `null` if not available. */
-  fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-
-  /** Return the ACL contract address for the current chain. */
-  getAclAddress(): Address;
-
-  /** Terminate the relayer backend and release resources. */
-  terminate(): void;
+export interface FhevmRelayerSDK extends Pick<
+  FhevmClient,
+  | "encryptValue"
+  | "encryptValues"
+  | "decryptPublicValue"
+  | "decryptPublicValues"
+  | "decryptPublicValuesWithSignatures"
+  | "decryptValue"
+  | "decryptValues"
+  | "decryptValuesFromPairs"
+  | "fetchFheEncryptionKeyBytes"
+  | "generateTransportKeyPair"
+  | "serializeTransportKeyPair"
+  | "serializeSignedDecryptionPermit"
+  | "signDecryptionPermit"
+  | "parseTransportKeyPair"
+  | "parseSignedDecryptionPermit"
+> {
+  chain: FheChain;
 }

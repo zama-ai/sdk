@@ -182,7 +182,9 @@ describe("Unshield callbacks (P4)", () => {
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
-    vi.mocked(relayer.decryptPublicValues).mockRejectedValue(new Error("decrypt error"));
+    vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValue(
+      new Error("decrypt error"),
+    );
 
     await expect(token.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
       DecryptionFailedError,

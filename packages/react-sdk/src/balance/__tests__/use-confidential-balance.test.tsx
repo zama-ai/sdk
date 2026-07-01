@@ -7,7 +7,7 @@ describe("useConfidentialBalance", () => {
   test("default", async ({ renderWithProviders, relayer, provider, tokenAddress, userAddress }) => {
     const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 123n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 123n }]);
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -58,7 +58,7 @@ describe("useConfidentialBalance", () => {
   }) => {
     const handle = `0x${"cd".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 456n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 456n }]);
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
@@ -82,7 +82,7 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 123n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 123n }]);
 
       const { result } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -138,7 +138,7 @@ describe("useConfidentialBalance", () => {
       vi.mocked(relayer.decryptValues).mockImplementation(
         async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
           const value = encryptedValues[0] === handleA ? 111n : 222n;
-          return { [encryptedValues[0]]: value };
+          return [{ type: "uint64", value }];
         },
       );
 
@@ -173,7 +173,7 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"ad".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValue({ [handle]: 999n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 999n }]);
 
       const { result, rerender } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),

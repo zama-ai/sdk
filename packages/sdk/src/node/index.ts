@@ -11,17 +11,13 @@ export { node } from "./config";
 export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
-export type { RelayerSDK } from "../relayer/types";
+export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { GenericLogger } from "../types/logger";
 
 // Relayer types used in RelayerNode's public API
-export type { ClearValue, EIP712TypedData, EncryptParams, EncryptResult } from "../relayer/types";
+export type { ClearValue, EIP712TypedData, EncryptParameters } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
-export type {
-  UserDecryptParams as DecryptValuesParams,
-  PublicDecryptResult as DecryptPublicValuesResult,
-  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "../relayer/types";
+export type { DecryptPublicValuesResult } from "../relayer/types";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";

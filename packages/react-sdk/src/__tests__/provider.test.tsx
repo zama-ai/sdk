@@ -40,10 +40,14 @@ describe("ZamaProvider & useZamaSDK", () => {
     relayer,
     renderWithProviders,
   }) => {
-    const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
+    const { result, unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
-    unmount();
-    expect(relayer.terminate).not.toHaveBeenCalled();
+    // Unmount runs the provider's cleanup effect, which disposes SDK-owned
+    // signer subscriptions but must leave the caller-owned relayer untouched.
+    // The relayer no longer exposes terminate(); the invariant to guard is that
+    // unmounting neither throws nor swaps out / tears down the caller's relayer.
+    expect(() => unmount()).not.toThrow();
+    expect(result.current.relayer).toBe(relayer);
   });
 
   test("invalidates wallet-scoped queries when the signer lifecycle changes", ({

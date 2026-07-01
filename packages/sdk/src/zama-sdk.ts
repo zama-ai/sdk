@@ -5,7 +5,7 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./ev
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
-import type { EncryptParams, EncryptResult, RelayerSDK } from "./relayer/types";
+import type { EncryptParameters, FhevmRelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -32,7 +32,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  */
 export class ZamaSDK {
   /** @internal */
-  readonly relayer: RelayerSDK;
+  readonly relayer: FhevmRelayerSDK;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
@@ -215,14 +215,14 @@ export class ZamaSDK {
    * @example
    * ```ts
    * const { encryptedValues, inputProof } = await sdk.encrypt({
-   *   values: [{ value: 1000n, type: "euint64" }],
+   *   values: [{ value: 1000n, type: "uint64" }],
    *   contractAddress: "0xToken",
    *   userAddress: "0xUser",
    * });
    * ```
    */
-  async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return this.#encryptionService.encrypt(params);
+  async encrypt(params: EncryptParameters) {
+    return this.#encryptionService.encryptValues(params);
   }
 
   /**
@@ -276,7 +276,6 @@ export class ZamaSDK {
    */
   terminate(): void {
     this.dispose();
-    this.relayer.terminate();
     this.signer?.dispose?.();
   }
 

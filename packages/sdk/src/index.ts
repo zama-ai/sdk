@@ -23,27 +23,19 @@ export type {
   ResolvedChainRelayer,
 } from "./config";
 export type { ChainRouter } from "./chains/router";
-export type { RelayerSDK } from "./relayer/types";
+export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
-  RelayerSDKStatus,
   EncryptResult,
-  EncryptParams,
+  EncryptParameters,
   EncryptInput,
   EncryptedValue,
   ClearValue,
   EIP712TypedData,
-  NetworkType,
-  FheEncryptionKey,
-  FheTypeName,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
-export type {
-  UserDecryptParams as DecryptValuesParams,
-  PublicDecryptResult as DecryptPublicValuesResult,
-  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "./relayer/types";
+export type { DecryptPublicValuesResult } from "./relayer/types";
 export type { GenericLogger } from "./types/logger";
 
 // Chain presets and types
@@ -93,7 +85,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { TransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
+export type { SerializedTransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,

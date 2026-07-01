@@ -1,15 +1,13 @@
+import type { DecryptValuesReturnType } from "@fhevm/sdk/actions/decrypt";
 import { getAddress, type Address } from "viem";
+import type { ChainRouter } from "../chains/router";
 import type { CredentialService } from "../credentials/credential-service";
-import {
-  resolveDelegatedDecryptPermit,
-  resolveUserDecryptPermit,
-} from "../credentials/decrypt-permit";
-import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
+import { resolvePermit } from "../credentials/decrypt-permit";
+import type { ResolvedCredentials } from "../credentials/types";
 import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { ChainRouter } from "../chains/router";
 import type { ClearValue, EncryptedValue } from "../relayer/types";
 import { toError } from "../utils";
 import { pLimit } from "../utils/concurrency";
@@ -19,13 +17,13 @@ import type { DelegationService } from "./delegation-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
+  resolveCredentials: (contractAddresses: Address[]) => Promise<ResolvedCredentials>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
-    credentials: StoredTransportKeyPairWithPermits;
+    credentials: ResolvedCredentials;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
-  }) => Promise<Record<EncryptedValue, ClearValue>>;
+  }) => Promise<DecryptValuesReturnType>;
   errorMessage: string;
   delegated?: boolean;
 }
@@ -77,27 +75,21 @@ export class DecryptionService {
       requesterAddress: normalizedSigner,
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses),
-      decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
-        return this.#router.relayer.decryptValues({
-          encryptedValues,
-          contractAddress,
-          ...resolveUserDecryptPermit(credentials, contractAddress),
-          signerAddress: normalizedSigner,
-        });
-      },
+      decryptContract: ({ credentials, contractAddress, encryptedValues }) =>
+        this.#decryptValues(credentials, contractAddress, encryptedValues),
       errorMessage: "Failed to decrypt encrypted values",
     });
   }
 
   async delegatedDecryptValues(
-    encryptedValues: EncryptedInput[],
+    encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#decrypt(encryptedValues, {
+    return this.#decrypt(encryptedInputs, {
       requesterAddress: getAddress(accountAddress),
       resolveCredentials: (contractAddresses) =>
         this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
@@ -106,19 +98,8 @@ export class DecryptionService {
           delegatorAddress: normalizedDelegator,
           delegateAddress: normalizedDelegate,
         }),
-      decryptContract: async ({
-        credentials,
-        contractAddress,
-        // oxlint-disable-next-line no-shadow
-        encryptedValues,
-      }) => {
-        return this.#router.relayer.delegatedDecryptValues({
-          encryptedValues: encryptedValues,
-          contractAddress,
-          ...resolveDelegatedDecryptPermit(credentials, contractAddress),
-          delegateAddress: normalizedDelegate,
-        });
-      },
+      decryptContract: ({ credentials, contractAddress, encryptedValues }) =>
+        this.#decryptValues(credentials, contractAddress, encryptedValues),
       errorMessage: "Failed to decrypt delegated encrypted values",
       delegated: true,
     });
@@ -193,6 +174,34 @@ export class DecryptionService {
     );
 
     return { items };
+  }
+
+  /**
+   * Run a user (or delegated-user) decrypt for one contract: rebuild the
+   * `@fhevm/sdk` transport key pair and signed permit from the resolved permit,
+   * then decrypt. The delegation, if any, is encoded in the permit — both paths
+   * share this call. Returns the positional clear values for `encryptedValues`.
+   */
+  async #decryptValues(
+    credentials: ResolvedCredentials,
+    contractAddress: Address,
+    encryptedValues: EncryptedValue[],
+  ): Promise<DecryptValuesReturnType> {
+    const permit = resolvePermit(credentials, contractAddress);
+    const transportKeyPair = await this.#router.relayer.parseTransportKeyPair({
+      publicKey: permit.publicKey,
+      privateKey: permit.privateKey,
+    });
+    const signedPermit = await this.#router.relayer.parseSignedDecryptionPermit({
+      transportKeyPair,
+      serializedPermit: permit.serializedPermit,
+    });
+    return this.#router.relayer.decryptValues({
+      transportKeyPair,
+      signedPermit,
+      encryptedValues,
+      contractAddress,
+    });
   }
 
   async #decrypt(
@@ -274,12 +283,19 @@ export class DecryptionService {
             encryptedValues,
           });
 
-          for (const [encryptedValue, value] of Object.entries(decrypted)) {
-            result[encryptedValue as EncryptedValue] = value;
+          // `decryptValues` returns clear values positionally aligned with the
+          // requested `encryptedValues`; zip them back into the handle→value map.
+          for (let i = 0; i < encryptedValues.length; i++) {
+            const encryptedValue = encryptedValues[i];
+            const value = decrypted[i]?.value as ClearValue | undefined;
+            if (encryptedValue === undefined || value === undefined) {
+              continue;
+            }
+            result[encryptedValue] = value;
             await this.#cache.set(
               strategy.requesterAddress,
               contractAddress,
-              encryptedValue as EncryptedValue,
+              encryptedValue,
               value,
             );
           }

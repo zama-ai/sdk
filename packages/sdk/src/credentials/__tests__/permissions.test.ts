@@ -1,3 +1,4 @@
+import type { Hex } from "viem";
 import { describe, test, expect } from "../../test-fixtures";
 import { checksum } from "../utils";
 import { findPermitToWiden, sortedUnion } from "../permissions";
@@ -34,19 +35,21 @@ const ADDRS = Array.from({ length: 12 }, (_, i) => {
 const [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = ADDRS;
 
 function makePermission(
-  signedContractAddresses: Permission["signedContractAddresses"],
-  overrides: Partial<Permission> = {},
+  contractAddresses: Permission["contractAddresses"],
+  overrides: Partial<Omit<Permission, "serializedPermit">> & { signature?: Hex } = {},
 ): Permission {
+  const { signature = SIG_1, ...rest } = overrides;
   return {
     keypairPublicKey: PUBLIC_KEY,
-    signerAddress: USER,
-    delegatorAddress: USER,
-    chainId: 31337,
-    signedContractAddresses,
-    signature: SIG_1,
+    contractAddresses,
     startTimestamp: 1_700_000_000,
     durationDays: 30,
-    ...overrides,
+    ...rest,
+    serializedPermit: {
+      eip712: { primaryType: "UserDecryptRequestVerification", domain: {}, types: {}, message: {} },
+      signature,
+      signerAddress: USER,
+    },
   };
 }
 

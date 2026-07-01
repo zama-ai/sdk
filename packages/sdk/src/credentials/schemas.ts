@@ -1,7 +1,6 @@
 import { z } from "zod/mini";
 import {
   checksummedAddress,
-  chainId,
   hex,
   positiveDays,
   positiveSeconds,
@@ -38,13 +37,23 @@ export const StoredTransportKeyPairSchema = z.object({
   expiresAt: positiveSeconds,
 });
 
+export const Eip712Schema = z.object({
+  domain: z.record(z.string(), z.unknown()),
+  primaryType: z.optional(z.string()),
+  types: z.record(z.string(), z.array(z.object({ name: z.string(), type: z.string() }))),
+  message: z.record(z.string(), z.unknown()),
+});
+
+export const SerializedPermitSchema = z.object({
+  eip712: Eip712Schema,
+  signature: hex,
+  signerAddress: checksummedAddress,
+});
+
 export const PermissionSchema = z.object({
   keypairPublicKey: hex,
-  signerAddress: checksummedAddress,
-  delegatorAddress: checksummedAddress,
-  chainId,
-  signedContractAddresses: z.array(checksummedAddress).check(z.maxLength(MAX_CONTRACTS_PER_PERMIT)),
-  signature: hex,
+  contractAddresses: z.array(checksummedAddress).check(z.maxLength(MAX_CONTRACTS_PER_PERMIT)),
+  serializedPermit: SerializedPermitSchema,
   startTimestamp: unixSeconds,
   durationDays: positiveDays,
 });

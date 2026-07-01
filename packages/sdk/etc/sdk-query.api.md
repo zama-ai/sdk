@@ -9,15 +9,19 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
+import { EncryptValuesParameters } from '@fhevm/sdk/actions/encrypt';
+import { EncryptValuesReturnType } from '@fhevm/sdk/actions/encrypt';
 import { Hex } from 'viem';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { QueryKey } from '@tanstack/query-core';
 import { QueryObserverOptions } from '@tanstack/query-core';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { skipToken } from '@tanstack/query-core';
+import { TypedValue } from '@fhevm/sdk/types';
 import { z } from 'zod/mini';
 
 // @public
@@ -75,7 +79,7 @@ export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 // @public
-export type ClearValue = bigint | boolean | string;
+export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public (undocumented)
 export interface ConfidentialBalanceQueryConfig {
@@ -257,28 +261,6 @@ export interface DecryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
-// @public
-export interface DecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    signerAddress: Address;
-    // (undocumented)
-    startTimestamp: number;
-}
-
 // @public (undocumented)
 export function decryptValuesQueryOptions(sdk: ZamaSDK, encryptedInputs: DecryptInput[], signerContext?: SignerQueryContext): QueryFactoryOptions<DecryptResult, Error, DecryptResult, ReturnType<typeof zamaQueryKeys.decryption.encryptedInputs>>;
 
@@ -291,30 +273,6 @@ export interface DelegatedDecryptValuesMutationParams {
     delegatorAddress: Address;
     // (undocumented)
     encryptedInputs: DecryptInput[];
-}
-
-// @public
-export interface DelegatedDecryptValuesParams {
-    // (undocumented)
-    contractAddress: Address;
-    // (undocumented)
-    delegateAddress: Address;
-    // (undocumented)
-    delegatorAddress: Address;
-    // (undocumented)
-    durationDays: number;
-    // (undocumented)
-    encryptedValues: EncryptedValue[];
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-    // (undocumented)
-    signature: Hex;
-    // (undocumented)
-    signedContractAddresses: Address[];
-    // (undocumented)
-    startTimestamp: number;
 }
 
 // @public (undocumented)
@@ -384,21 +342,21 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 // @public
 export type EncryptInput = {
-    value: boolean | bigint;
-    type: "ebool";
-} | {
     value: bigint;
-    type: Exclude<FheTypeName, "ebool" | "eaddress">;
+    type: Exclude<TypedValue["type"], "bool" | "address">;
+} | {
+    value: boolean | 1n | 0n;
+    type: "bool";
 } | {
     value: Address;
-    type: "eaddress";
+    type: "address";
 };
 
 // @public (undocumented)
-export function encryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult>;
+export function encryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParameters, EncryptValuesReturnType>;
 
 // @public
-export interface EncryptParams {
+export interface EncryptParameters extends EncryptValuesParameters {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
@@ -407,10 +365,12 @@ export interface EncryptParams {
 }
 
 // @public
-export type EncryptResult = {
+export interface EncryptResult {
+    // (undocumented)
     encryptedValues: EncryptedValue[];
+    // (undocumented)
     inputProof: Hex;
-};
+}
 
 // @public (undocumented)
 export interface EncryptStartEvent extends BaseEvent {
@@ -580,17 +540,9 @@ export interface RawLog {
 }
 
 // @public
-export interface RelayerSDK {
-    createDelegatedUserDecryptEIP712(publicKey: Hex, contractAddresses: Address[], delegatorAddress: Address, startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
-    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    decryptValues(params: DecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    delegatedDecryptValues(params: DelegatedDecryptValuesParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
-    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
-    generateTransportKeyPair(): Promise<TransportKeyPair>;
-    getAclAddress(): Address;
-    terminate(): void;
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    // (undocumented)
+    chain: FheChain;
 }
 
 // @public (undocumented)
@@ -621,6 +573,14 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 
 // @public
 export function revokePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revokePermits"], Address[] | void, void>;
+
+// @public
+export interface SerializedTransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
 
 // @public (undocumented)
 export interface SetOperatorSubmittedEvent extends BaseEvent {
@@ -816,14 +776,6 @@ export interface TransferSubmittedEvent extends BaseEvent {
     txHash: Hex;
     // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
-}
-
-// @public
-export interface TransportKeyPair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
 }
 
 // @public (undocumented)
@@ -1204,7 +1156,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    encrypt(params: EncryptParameters): Promise<EncryptValuesReturnType>;
     // @internal
     get logger(): GenericLogger;
     // @internal

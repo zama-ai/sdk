@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import { createConfig, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
-import type { RelayerSDK } from "@zama-fhe/sdk/relayer/types";
+import type { FhevmRelayerSDK } from "@zama-fhe/sdk/relayer/types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
 import type React from "react";
@@ -24,7 +24,7 @@ export interface WrapperFixtures {
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerSDK;
+    relayer: FhevmRelayerSDK;
     storage: GenericStorage;
   };
   renderWithProviders: <TResult>(
@@ -36,7 +36,7 @@ export interface WrapperFixtures {
 
 type WrapperDeps = QueryClientFixtures & {
   chain: FheChain;
-  relayer: RelayerSDK;
+  relayer: FhevmRelayerSDK;
   provider: GenericProvider;
   signer: GenericSigner;
   storage: GenericStorage;
