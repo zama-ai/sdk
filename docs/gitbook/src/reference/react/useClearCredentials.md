@@ -1,11 +1,11 @@
 ---
 title: useClearCredentials
-description: Wipe the FHE keypair and all permits for the connected wallet.
+description: Wipe the transport key pair and all permits for the connected wallet.
 ---
 
 # useClearCredentials
 
-Wipe the keypair for the current signer and cascade-delete every permit (across chains and delegators) referencing it. Use this for "log out" handlers that should leave no trace.
+Wipe the transport key pair for the current signer and cascade-delete every permit (across chains and delegators) referencing it. Use this for "log out" handlers that should leave no trace.
 
 ## Import
 
@@ -55,10 +55,10 @@ clearCredentials();
 
 ## Behavior
 
-- Wipes the FHE keypair for the connected wallet.
+- Wipes the transport key pair for the connected wallet.
 - Cascade-deletes every permit across all chains and delegators.
-- Auto-invalidates all [`useHasPermit`](/reference/react/useHasPermit) queries on success.
-- After clearing, any decrypt operation will generate a fresh keypair and prompt for new permits.
+- Auto-invalidates all [`useHasPermit`](./useHasPermit.md) queries on success.
+- After clearing, any decrypt operation will generate a fresh transport key pair and prompt for new permits.
 
 {% hint style="info" %}
 The SDK auto-clears credentials on wallet disconnect or account change when the signer adapter implements `walletAccount.subscribe()`. You do not need to call this hook manually for that case.
@@ -66,6 +66,6 @@ The SDK auto-clears credentials on wallet disconnect or account change when the 
 
 ## Related
 
-- [`useRevokePermits`](/reference/react/useRevokePermits) — remove permits without touching the keypair
-- [`useGrantPermit`](/reference/react/useGrantPermit) — sign permits for contracts
-- [`useHasPermit`](/reference/react/useHasPermit) — check whether stored permits cover contracts
+- [`useRevokePermits`](./useRevokePermits.md) — remove permits without touching the transport key pair
+- [`useGrantPermit`](./useGrantPermit.md) — sign permits for contracts
+- [`useHasPermit`](./useHasPermit.md) — check whether stored permits cover contracts

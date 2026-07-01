@@ -19,7 +19,7 @@ const HOP_BY_HOP = new Set([
 // Allowlist of request headers to forward to the upstream relayer.
 // Using an allowlist (rather than stripping hop-by-hop headers) prevents accidentally
 // forwarding browser cookies, Authorization headers, or other sensitive credentials.
-// RelayerWeb only sends content-type, accept, and content-length — no other headers needed.
+// The web() relayer only sends content-type, accept, and content-length — no other headers needed.
 const REQUEST_ALLOW = new Set(["content-type", "accept", "content-length"]);
 
 function forwardHeaders(incoming: Headers): Headers {
@@ -75,7 +75,7 @@ async function proxy(req: NextRequest, path: string[]) {
     });
   } catch (err) {
     // Network failure (unreachable host, DNS error, timeout) — return a JSON error so
-    // the RelayerWeb worker gets valid JSON instead of an HTML 500 page from Next.js.
+    // the web() relayer worker gets valid JSON instead of an HTML 500 page from Next.js.
     console.error("[relayer-proxy]", url.toString(), err);
     return new Response(JSON.stringify({ error: "Relayer unreachable" }), {
       status: 503,

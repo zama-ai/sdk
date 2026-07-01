@@ -20,12 +20,12 @@ import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
-  chains: [{ ...sepolia, auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY } }],
+  // Sepolia testnet needs no relayer key; for the mainnet relayer add
+  // `auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY }` to the chain.
+  chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [sepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -39,17 +39,11 @@ const sdk = new ZamaSDK(config);
 
 Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
 
-### logger
-
-`GenericLogger | undefined`
-
-Optional logger for observing worker lifecycle and request timing.
-
 ### fheArtifactStorage
 
 `GenericStorage | undefined`
 
-Persistent storage for caching FHE public key and params.
+Persistent storage for caching the FHE encryption key and params.
 
 ### fheArtifactCacheTTL
 
@@ -59,6 +53,6 @@ How long cached FHE artifacts remain valid, in seconds. Must be a non-negative i
 
 ## Related
 
-- [ZamaSDK](/reference/sdk/ZamaSDK) — pass the config to the SDK constructor
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser variant using Web Workers and WASM
-- [Configuration guide](/guides/configuration) — authentication and network presets
+- [ZamaSDK](./ZamaSDK.md) — pass the config to the SDK constructor
+- [RelayerWeb](./RelayerWeb.md) — browser variant using Web Workers and WASM
+- [Configuration guide](../../guides/configuration.md) — authentication and network presets

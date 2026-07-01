@@ -64,10 +64,7 @@ import type {
  *   and the zero-reset also mitigates the ERC-20 approve race.
  */
 export type ShieldPlan =
-  | {
-      readonly path: "transferAndCall";
-      readonly steps: readonly [TransferAndCallRequest];
-    }
+  | { readonly path: "transferAndCall"; readonly steps: readonly [TransferAndCallRequest] }
   | {
       readonly path: "approveAndWrap";
       readonly steps:
@@ -404,13 +401,14 @@ export class WrappedToken extends Token {
       await this.assertConfidentialBalance(amount);
     }
 
-    const callbacks: UnshieldCallbacks = {
-      onFinalizing,
-      onFinalizeSubmitted,
-    };
+    const callbacks: UnshieldCallbacks = { onFinalizing, onFinalizeSubmitted };
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrap(amount);
-    void swallow("unshield: onUnwrapSubmitted", () => onUnwrapSubmitted?.(unwrapResult.txHash));
+    void swallow(
+      "unshield: onUnwrapSubmitted",
+      () => onUnwrapSubmitted?.(unwrapResult.txHash),
+      this.sdk.logger,
+    );
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
 
@@ -430,8 +428,10 @@ export class WrappedToken extends Token {
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.unwrapAll();
-    void swallow("unshieldAll: onUnwrapSubmitted", () =>
-      callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
+    void swallow(
+      "unshieldAll: onUnwrapSubmitted",
+      () => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
+      this.sdk.logger,
     );
     return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
   }
@@ -530,9 +530,7 @@ export class WrappedToken extends Token {
    * Complete an unwrap by providing the public decryption proof.
    * Call this after an unshield request has been processed on-chain.
    *
-   * @param unwrapRequestIdOrAmount - `unwrapRequestId` from the `UnwrapRequested` event.
-   *   The `burnAmount` form is accepted only to resume unshields persisted by an
-   *   older SDK version.
+   * @param unwrapRequestId - `unwrapRequestId` from the `UnwrapRequested` event.
    * @returns The transaction hash and mined receipt.
    *
    * @example
@@ -541,17 +539,17 @@ export class WrappedToken extends Token {
    * const txHash = await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
    * ```
    */
-  async finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult> {
+  async finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestIdOrAmount]);
-    const clearValue = result.clearValues[unwrapRequestIdOrAmount];
+    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId]);
+    const clearValue = result.clearValues[unwrapRequestId];
     assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({
       operation: "finalizeUnwrap",
       config: finalizeUnwrapContract(
         this.address,
-        unwrapRequestIdOrAmount,
+        unwrapRequestId,
         clearValue,
         result.decryptionProof,
       ),
@@ -585,11 +583,7 @@ export class WrappedToken extends Token {
     operationId: string,
     callbacks: UnshieldCallbacks | undefined,
   ): Promise<TransactionResult> {
-    this.emit({
-      type: ZamaSDKEvents.UnshieldPhase1Submitted,
-      txHash: unshieldHash,
-      operationId,
-    });
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
     let receipt;
     try {
       receipt = await this.sdk.provider.waitForTransactionReceipt(unshieldHash);
@@ -597,16 +591,14 @@ export class WrappedToken extends Token {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new TransactionRevertedError("Failed to get unshield receipt", {
-        cause: error,
-      });
+      throw new TransactionRevertedError("Failed to get unshield receipt", { cause: error });
     }
     const event = findUnwrapRequested(receipt.logs);
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
     }
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
-    void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.());
+    void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
     const finalizeResult = await this.finalizeUnwrap(
       event.unwrapRequestId ?? event.encryptedAmount,
     );
@@ -615,8 +607,10 @@ export class WrappedToken extends Token {
       txHash: finalizeResult.txHash,
       operationId,
     });
-    void swallow("unshield: onFinalizeSubmitted", () =>
-      callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash),
+    void swallow(
+      "unshield: onFinalizeSubmitted",
+      () => callbacks?.onFinalizeSubmitted?.(finalizeResult.txHash),
+      this.sdk.logger,
     );
     return finalizeResult;
   }

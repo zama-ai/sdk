@@ -126,28 +126,24 @@ useEffect(() => {
 ## 4. Shield (`ShieldCard.tsx`)
 
 ```ts
-const shield = useShield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const shield = useShield({ address: tokenAddress }, { onSuccess });
 shield.mutate({
   amount: parsedAmount,
-  approvalStrategy: "max",
+  approvalStrategy: "exact",
   onApprovalSubmitted: () => setPhase("approve"),
   onShieldSubmitted: () => setPhase("submit"),
 });
 ```
 
-`useShield` owns the approval + wrap flow. The SDK automatically routes through ERC-1363 `transferAndCall` when supported, or through approve + wrap otherwise. `approvalStrategy: "max"` keeps the spend cap reusable across future shields while leaving USDT-style reset handling and transaction routing inside the SDK.
+`useShield` owns the approval + wrap flow. The SDK automatically routes through ERC-1363 `transferAndCall` when supported, or through approve + wrap otherwise. `approvalStrategy: "exact"` approves exactly the shielded amount while leaving USDT-style reset handling and transaction routing inside the SDK.
 
 ---
 
 ## 5. Confidential Transfer (`TransferCard.tsx`)
 
 ```ts
-const transfer = useConfidentialTransfer({ tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -157,7 +153,7 @@ Two phases: encrypting the amount locally (step 1), then submitting the transact
 ## 6. Unshield (`UnshieldCard.tsx`)
 
 ```ts
-const unshield = useUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const unshield = useUnshield(tokenAddress, { onSuccess });
 ```
 
 For ERC-7984 tokens the wrapper IS the token, so `tokenAddress === wrapperAddress`.
@@ -178,7 +174,7 @@ If the user closes the tab between Phase 1 and Phase 2, the pending state is per
 ```ts
 const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
 // → non-null: show a "Finalize" button
-const resume = useResumeUnshield({ tokenAddress, wrapperAddress: tokenAddress }, { onSuccess });
+const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
@@ -198,7 +194,7 @@ Three cards cover the full delegation lifecycle.
 ### Grant access (`DelegateDecryptionCard.tsx`)
 
 ```ts
-const delegate = useDelegateDecryption({ tokenAddress }, { onSuccess });
+const delegate = useDelegateDecryption(tokenAddress, { onSuccess });
 delegate.mutate({
   delegateAddress,
   expirationDate: noExpiry ? undefined : new Date(expirationInput),
@@ -211,7 +207,7 @@ The ACL contract enforces a minimum expiry of **1 hour** from now. Anything shor
 ### Revoke access (`RevokeDelegationCard.tsx`)
 
 ```ts
-const revoke = useRevokeDelegation({ tokenAddress }, { onSuccess });
+const revoke = useRevokeDelegation(tokenAddress, { onSuccess });
 revoke.mutate({ delegateAddress });
 ```
 
@@ -221,7 +217,7 @@ Shows a live delegation status indicator as the user types the owner address:
 
 ```ts
 const delegationStatus = useDelegationStatus({
-  tokenAddress,
+  contractAddress: tokenAddress,
   delegatorAddress: ownerAddress, // the owner who granted access
   delegateAddress: connectedAddress, // us
 });
@@ -234,7 +230,7 @@ const decryptAs = useDecryptBalanceAs(tokenAddress);
 decryptAs.mutate({ delegatorAddress: ownerAddress });
 ```
 
-Note: `useDecryptBalanceAs` takes a positional `tokenAddress` (unlike `useDelegateDecryption` / `useRevokeDelegation` which use a config object). `DelegationNotFoundError` and `DelegationExpiredError` from `@zama-fhe/sdk` are used to show user-friendly error messages.
+Note: `useDecryptBalanceAs`, `useDelegateDecryption`, and `useRevokeDelegation` all take a positional `tokenAddress` as their first argument. `DelegationNotFoundError` and `DelegationExpiredError` from `@zama-fhe/sdk` are used to show user-friendly error messages.
 
 ---
 
@@ -246,7 +242,7 @@ Three balances are shown:
 | ------------ | ------------------------------ | -------------------------------------------------------------- |
 | ETH          | Direct RPC (`JsonRpcProvider`) | `useQuery` → `rpcProvider.getBalance()`                        |
 | ERC-20       | Direct RPC via SDK signer      | `useQuery` → `sdk.signer.readContract(balanceOfContract(...))` |
-| Confidential | Relayer decryption             | `useConfidentialBalance({ tokenAddress })`                     |
+| Confidential | Relayer decryption             | `useConfidentialBalance({ address })`                          |
 
 **Explicit decrypt pattern**: `useConfidentialBalance` is only enabled after the user has authorized FHE decryption via an EIP-712 wallet signature (`useHasPermit({ contractAddresses })` → `useGrantPermit()`). Until then, `BalancesCard` shows a "Decrypt Balance" button rather than a balance value. This avoids blind-signing prompts on mount.
 

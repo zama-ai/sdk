@@ -7,6 +7,10 @@ description: How to obtain, configure, and securely manage your Zama Relayer API
 
 The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
 
+{% hint style="info" %}
+Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet** the relayer is open — the `sepolia` preset works with no key, so you can build and test the full flow before requesting one.
+{% endhint %}
+
 ## Overview
 
 There are two options to access the FHEVM Relayer for mainnet deployment:
@@ -29,6 +33,8 @@ Once you receive your API key, wire it into the SDK using one of the two strateg
 
 - **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
 - **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
+
+For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
 
 The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
 

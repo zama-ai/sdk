@@ -176,7 +176,7 @@ const { data: meta } = useMetadata("0xToken");
 // meta.name, meta.symbol, meta.decimals
 ```
 
-See [useMetadata reference](/reference/react/useMetadata) for full options.
+See [useMetadata reference](../reference/react/useMetadata.md) for full options.
 
 ### 8. Use the balance hooks in React
 
@@ -194,13 +194,7 @@ const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance(
-  {
-    address: "0xToken",
-    account: address,
-  },
-  { refetchInterval: 5_000 },
-);
+} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
 ```
 
 {% endtab %}
@@ -238,14 +232,10 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 const queryClient = useQueryClient();
 
 // Invalidate all balance queries
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.all,
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
 
 // Invalidate one token
-queryClient.invalidateQueries({
-  queryKey: zamaQueryKeys.confidentialBalance.token("0xToken"),
-});
+queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
 ```
 
 {% endtab %}
@@ -254,6 +244,6 @@ queryClient.invalidateQueries({
 ## Next steps
 
 - See [Avoid blind-sign wallet popups](encrypt-decrypt.md#gating-useconfidentialbalance) to gate balance queries behind explicit user action.
-- See [Token Operations](/reference/sdk/Token) for the full `Token` API.
-- See [Hooks](/reference/react/query-keys) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
+- See [Token Operations](../reference/sdk/Token.md) for the full `Token` API.
+- See [Hooks](../reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](handle-errors.md).

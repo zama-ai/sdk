@@ -2,7 +2,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
 import type React from "react";
-import type { ZamaConfig } from "@zama-fhe/sdk";
+import type { GenericLogger, ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
 import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
 import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
@@ -10,6 +10,14 @@ import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
 import type { QueryClientFixtures } from "./query-client";
 import { Providers } from "./providers";
+
+/** Silent logger standing in for the SDK's resolved no-op `LoggerService`. */
+const noopLogger: GenericLogger = {
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+  debug: () => {},
+};
 
 export interface WrapperFixtures {
   createWrapper: (overrides?: Partial<ZamaConfig>) => {
@@ -24,9 +32,7 @@ export interface WrapperFixtures {
     hook: () => TResult,
     overrides?: Partial<ZamaConfig>,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
-  ) => ReturnType<typeof renderHook<TResult, unknown>> & {
-    queryClient: QueryClient;
-  };
+  ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
 
 type WrapperDeps = QueryClientFixtures & {
@@ -47,10 +53,11 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         signer,
         storage,
         permitStorage: storage,
-        keypairTTL: 2592000,
+        transportKeyPairTTL: 2592000,
         permitTTL: 1,
         registryTTL: 86400,
         onEvent: undefined,
+        logger: noopLogger,
         ...overrides,
       } as unknown as ZamaConfig;
 
@@ -80,10 +87,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);
-      return {
-        ...renderHook(hook, { wrapper: Wrapper, ...options }),
-        queryClient,
-      };
+      return { ...renderHook(hook, { wrapper: Wrapper, ...options }), queryClient };
     }
     await use(renderWithProviders);
   },

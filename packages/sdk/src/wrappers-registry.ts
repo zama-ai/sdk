@@ -15,7 +15,7 @@ import {
   symbolContract,
 } from "./contracts";
 import { ConfigurationError } from "./errors/relayer";
-import { mainnet, sepolia, hoodi } from "./chains";
+import { mainnet, sepolia, hoodi, ingenTestnet, bscTestnet } from "./chains";
 import { checksummedAddress, nonNegativeSeconds } from "./schemas/primitives";
 import type { GenericProvider } from "./types/provider";
 import { parseConfiguration } from "./validation";
@@ -28,6 +28,8 @@ export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,
   [sepolia.id]: sepolia.registryAddress,
   [hoodi.id]: hoodi.registryAddress,
+  [ingenTestnet.id]: ingenTestnet.registryAddress,
+  [bscTestnet.id]: bscTestnet.registryAddress,
 };
 
 /** Default registry TTL in seconds (24 hours). */
@@ -159,10 +161,7 @@ export class WrappersRegistry {
   }
 
   #setCached<T>(key: string, data: T, ttlMs = this.#ttlMs): T {
-    this.#cache.set(key, {
-      data,
-      expiresAt: Date.now() + ttlMs,
-    });
+    this.#cache.set(key, { data, expiresAt: Date.now() + ttlMs });
     return data;
   }
 
@@ -295,12 +294,7 @@ export class WrappersRegistry {
           ? result.value
           : Object.assign({}, items[i], {
               metadataFailed: true as const,
-              underlying: {
-                name: "Unknown",
-                symbol: "???",
-                decimals: 0,
-                totalSupply: 0n,
-              },
+              underlying: { name: "Unknown", symbol: "???", decimals: 0, totalSupply: 0n },
               confidential: { name: "Unknown", symbol: "???", decimals: 0 },
             }),
       );
@@ -328,12 +322,7 @@ export class WrappersRegistry {
 
     return {
       ...pair,
-      underlying: {
-        name: uName,
-        symbol: uSymbol,
-        decimals: uDecimals,
-        totalSupply: uTotalSupply,
-      },
+      underlying: { name: uName, symbol: uSymbol, decimals: uDecimals, totalSupply: uTotalSupply },
       confidential: { name: cName, symbol: cSymbol, decimals: cDecimals },
     };
   }
@@ -366,10 +355,9 @@ export class WrappersRegistry {
     const normalized = getAddress(tokenAddress);
 
     const cacheKey = `ct:${registry}:${normalized}`;
-    const cached = this.#getCached<{
-      confidentialTokenAddress: Address;
-      isValid: boolean;
-    } | null>(cacheKey);
+    const cached = this.#getCached<{ confidentialTokenAddress: Address; isValid: boolean } | null>(
+      cacheKey,
+    );
     if (cached !== undefined) {
       return cached;
     }
@@ -408,10 +396,7 @@ export class WrappersRegistry {
     const normalized = getAddress(confidentialTokenAddress);
 
     const cacheKey = `ut:${registry}:${normalized}`;
-    const cached = this.#getCached<{
-      tokenAddress: Address;
-      isValid: boolean;
-    } | null>(cacheKey);
+    const cached = this.#getCached<{ tokenAddress: Address; isValid: boolean } | null>(cacheKey);
     if (cached !== undefined) {
       return cached;
     }

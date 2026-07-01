@@ -5,10 +5,10 @@ description: How to authenticate with the relayer using a backend proxy or a dir
 
 # Authentication
 
-The relayer requires an API key for every request. This guide covers the two authentication strategies: proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
+The Zama-hosted **mainnet** relayer requires an API key on every request. The **Sepolia testnet** relayer is open — it needs no key, so on testnet you can leave `auth` unset and skip this guide. This page covers the two strategies for the mainnet relayer (or any keyed endpoint): proxying through your backend (recommended for browser apps) and passing the key directly (suitable for server-side apps).
 
 {% hint style="info" %}
-Don't have an API key yet? See [Relayer API keys](relayer-api-keys.md) for how to apply for a Zama-hosted Relayer key (or self-host instead).
+Building on Sepolia testnet? You don't need an API key — the `sepolia` preset works out of the box. API keys apply only to the Zama-hosted **mainnet** relayer; see [Relayer API keys](relayer-api-keys.md) to apply for one (or self-host instead).
 {% endhint %}
 
 ## Steps
@@ -42,10 +42,7 @@ const app = express();
 app.use(express.json());
 
 // Map chain IDs to their network config
-const Configs: Record<number, typeof mainnet> = {
-  [mainnet.id]: mainnet,
-  [sepolia.id]: sepolia,
-};
+const Configs: Record<number, typeof mainnet> = { [mainnet.id]: mainnet, [sepolia.id]: sepolia };
 
 app.use("/api/relayer/:chainId", async (req, res) => {
   const config = Configs[Number(req.params.chainId)];
@@ -59,10 +56,7 @@ app.use("/api/relayer/:chainId", async (req, res) => {
 
   const response = await fetch(url, {
     method: req.method,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": process.env.RELAYER_API_KEY!,
-    },
+    headers: { "content-type": "application/json", "x-api-key": process.env.RELAYER_API_KEY! },
     body,
     // @ts-expect-error: required by the relayer
     duplex: "half",
@@ -109,10 +103,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage,
-  relayers: {
-    [myMainnet.id]: web(),
-    [mySepolia.id]: web(),
-  },
+  relayers: { [myMainnet.id]: web(), [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -134,36 +125,40 @@ const mySepolia = {
 } as const satisfies FheChain;
 ```
 
-Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](/guides/node-js-backend) for a complete example.
+Then pass `mySepolia` to `createConfig` — the `auth` field is picked up automatically by the relayer. See the [Node.js backend guide](./node-js-backend.md) for a complete example.
 
 The `auth` field supports multiple methods depending on how your relayer is configured.
 
 ### 5. Auth methods reference
 
-The `auth` field accepts three formats:
+The `auth` field accepts three formats. **Which one to use depends on where your relayer lives** — the transport has to match what your relayer (or the auth layer in front of it) expects.
 
-| Method         | Format                                     | Header sent                 |
-| -------------- | ------------------------------------------ | --------------------------- |
-| `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | `x-api-key: key`            |
-| `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | Sets a cookie               |
-| `BearerToken`  | `{ __type: "BearerToken", value: "jwt" }`  | `Authorization: Bearer jwt` |
+| Method         | How it's sent                   | Use it when                                                                                                              |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `ApiKeyHeader` | `x-api-key: key` header         | **Zama-hosted relayer** — required; it only accepts the key in the `x-api-key` header. Also the default for most setups. |
+| `ApiKeyCookie` | `x-api-key=key` cookie          | **Behind your own proxy** — authenticate the SDK→proxy hop with a cookie; your proxy then injects `x-api-key` upstream.  |
+| `BearerToken`  | `Authorization: Bearer <token>` | **Self-hosted relayer** — only if your own auth layer expects a bearer token.                                            |
+
+{% hint style="warning" %}
+Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests without the `x-api-key` header are rejected. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer.
+{% endhint %}
 
 ```ts
-// API key in a header (most common)
+// Zama-hosted relayer — API key in the x-api-key header (required)
 auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
-// API key in a cookie
+// Behind your own proxy — credential carried as a cookie to your proxy
 auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 
-// Bearer token (e.g. from your own auth system)
-auth: { __type: "BearerToken", value: "your-jwt-token" }
+// Self-hosted relayer — only if your auth layer expects a bearer token
+auth: { __type: "BearerToken", token: "your-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](/reference/sdk/RelayerWeb) for details.
+When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
 
 ## Next steps
 
-- [Configuration](/guides/configuration) — full relayer, signer, and storage setup
-- [Shield Tokens](/guides/shield-tokens) — start converting public tokens to confidential form
-- [RelayerWeb reference](/reference/sdk/RelayerWeb) — security options and multi-threading
-- [RelayerNode reference](/reference/sdk/RelayerNode) — `node()` transport factory
+- [Configuration](./configuration.md) — full relayer, signer, and storage setup
+- [Shield Tokens](./shield-tokens.md) — start converting public tokens to confidential form
+- [RelayerWeb reference](../reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [RelayerNode reference](../reference/sdk/RelayerNode.md) — `node()` transport factory

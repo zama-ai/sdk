@@ -18,9 +18,6 @@ export function useConfidentialTokenAddress({
   const registryAddress = useWrappersRegistryAddress();
 
   return useQuery<readonly [boolean, Address]>(
-    confidentialTokenAddressQueryOptions(sdk, {
-      registryAddress,
-      tokenAddress,
-    }),
+    confidentialTokenAddressQueryOptions(sdk, { registryAddress, tokenAddress }),
   );
 }

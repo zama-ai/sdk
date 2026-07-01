@@ -7,9 +7,7 @@ describe("decryptBalanceAsMutationOptions", () => {
     const options = decryptBalanceAsMutationOptions(readonlyToken);
 
     expect(options.mutationKey).toEqual(["zama.decryptBalanceAs", readonlyToken.address]);
-    await options.mutationFn({
-      delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
-    });
+    await options.mutationFn({ delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" });
     expect(readonlyToken.decryptBalanceAs).toHaveBeenCalledWith({
       delegatorAddress: "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B",
       accountAddress: undefined,

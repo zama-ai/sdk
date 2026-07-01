@@ -1,4 +1,4 @@
-import { EncryptionFailedError, ZamaError } from "../errors";
+import { wrapEncryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
@@ -29,28 +29,16 @@ export class EncryptionService {
       this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
       const result = await this.#relayer.encrypt(params);
       this.#emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptEnd,
-          durationMs: Date.now() - t0,
-        },
+        { type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 },
         params.contractAddress,
       );
       return result;
     } catch (error) {
       this.#emitEvent(
-        {
-          type: ZamaSDKEvents.EncryptError,
-          error: toError(error),
-          durationMs: Date.now() - t0,
-        },
+        { type: ZamaSDKEvents.EncryptError, error: toError(error), durationMs: Date.now() - t0 },
         params.contractAddress,
       );
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new EncryptionFailedError("Encryption failed", {
-        cause: error,
-      });
+      throw wrapEncryptError(error, "Encryption failed");
     }
   }
 }

@@ -5,7 +5,7 @@ description: Provider adapter that wraps an ethers Provider or EIP-1193 source f
 
 # EthersProvider
 
-Provider adapter that wraps an ethers `Provider` or EIP-1193 source for read-only chain access. Implements [GenericProvider](/reference/sdk/GenericProvider).
+Provider adapter that wraps an ethers `Provider` or EIP-1193 source for read-only chain access. Implements [GenericProvider](./GenericProvider.md).
 
 ## Import
 
@@ -53,9 +53,7 @@ Pass exactly one of the two parameters below.
 Pre-built ethers provider (e.g. `JsonRpcProvider`, `WebSocketProvider`).
 
 ```ts
-const provider = new EthersProvider({
-  provider: new JsonRpcProvider(rpcUrl),
-});
+const provider = new EthersProvider({ provider: new JsonRpcProvider(rpcUrl) });
 ```
 
 ---
@@ -67,18 +65,16 @@ const provider = new EthersProvider({
 Raw EIP-1193 provider from the browser wallet. The adapter wraps it in a `BrowserProvider` internally.
 
 ```ts
-const provider = new EthersProvider({
-  ethereum: window.ethereum!,
-});
+const provider = new EthersProvider({ ethereum: window.ethereum! });
 ```
 
 ## Methods
 
-All methods are inherited from [GenericProvider](/reference/sdk/GenericProvider).
+All methods are inherited from [GenericProvider](./GenericProvider.md).
 
 ## Related
 
-- [GenericProvider](/reference/sdk/GenericProvider) -- interface this class implements
-- [EthersSigner](/reference/sdk/EthersSigner) -- companion signer adapter
-- [ViemProvider](/reference/sdk/ViemProvider) -- viem alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericProvider](./GenericProvider.md) -- interface this class implements
+- [EthersSigner](./EthersSigner.md) -- companion signer adapter
+- [ViemProvider](./ViemProvider.md) -- viem alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

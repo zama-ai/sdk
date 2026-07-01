@@ -43,8 +43,8 @@ export interface RelayerWebConfig {
   worker: RelayerWorkerClient;
   /** Security options (CSRF, CDN integrity). */
   security?: RelayerWebSecurityConfig;
-  /** Optional logger for observing worker lifecycle and request timing. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for observing worker lifecycle and request timing. */
+  logger: GenericLogger;
   /**
    * Number of WASM threads for parallel FHE operations inside the Web Worker.
    * Uses `wasm-bindgen-rayon` under the hood via `SharedArrayBuffer`.
@@ -78,28 +78,16 @@ export interface RelayerWebConfig {
 export type EncryptedValue = Bytes32Hex;
 
 /** Result from encryption — contract-ready hex encrypted values and input proof. */
-export type EncryptResult = {
-  encryptedValues: EncryptedValue[];
-  inputProof: Hex;
-};
+export type EncryptResult = { encryptedValues: EncryptedValue[]; inputProof: Hex };
 
 /** Canonical SDK type for a decrypted clear-text value (`bigint | boolean | string`). */
 export type ClearValue = ClearValueType;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
-  | {
-      value: boolean | bigint;
-      type: "ebool";
-    }
-  | {
-      value: bigint;
-      type: Exclude<SDK.FheTypeName, "ebool" | "eaddress">;
-    }
-  | {
-      value: Address;
-      type: "eaddress";
-    };
+  | { value: boolean | bigint; type: "ebool" }
+  | { value: bigint; type: Exclude<SDK.FheTypeName, "ebool" | "eaddress"> }
+  | { value: Address; type: "eaddress" };
 
 /** Parameters for encryption */
 export interface EncryptParams {
@@ -131,8 +119,8 @@ export type PublicDecryptResult = PublicDecryptResults;
  */
 export type EIP712TypedData = KmsUserDecryptEIP712Type | KmsDelegatedUserDecryptEIP712Type;
 
-/** FHE encryption key */
-export interface PublicKeyData {
+/** FHE encryption key — the network's TFHE public key used to encrypt inputs for confidential contracts. */
+export interface FheEncryptionKey {
   publicKeyId: string;
   publicKey: Uint8Array;
 }

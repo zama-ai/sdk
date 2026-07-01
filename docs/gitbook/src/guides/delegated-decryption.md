@@ -5,14 +5,14 @@ description: Grant another address the right to decrypt confidential balances, t
 
 # Delegated decryption
 
-Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own FHE keypair and a delegated EIP-712 flow to prove they have permission.
+Delegation lets one address grant another address the right to decrypt its confidential balances. The delegate never receives the delegator's private keys — they use their own transport key pair and a delegated EIP-712 flow to prove they have permission.
 
 Common use cases:
 
 - **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
 - **Auditors** — a third party verifies holdings without the token owner being online.
 
-This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting, make sure your project is set up following the [Configuration](/guides/configuration) guide.
+This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
 
 ## Example
 
@@ -37,9 +37,7 @@ const { txHash } = await sdk.delegations.delegateDecryption({
 // 2. Wait 1–2 minutes for gateway propagation
 
 // 3. Delegate reads the delegator's balance
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 {% endtab %}
@@ -94,9 +92,7 @@ The delegate calls `token.decryptBalanceAs` to read the delegator's balance. The
 {% tab title="SDK" %}
 
 ```ts
-const balance = await token.decryptBalanceAs({
-  delegatorAddress: "0xDelegator",
-});
+const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
 {% endtab %}
@@ -125,9 +121,7 @@ import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, {
-  delegatorAddress: "0xDelegator",
-});
+const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
 
 // balances is a Map<Address, bigint>
 for (const [address, balance] of balances) {
@@ -190,9 +184,7 @@ try {
 }
 
 try {
-  const balance = await token.decryptBalanceAs({
-    delegatorAddress: "0xDelegator",
-  });
+  const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 } catch (error) {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically
@@ -207,11 +199,11 @@ try {
 {% endtab %}
 {% endtabs %}
 
-See [Handle errors](/guides/handle-errors) for full error-handling patterns and [Error types](/reference/sdk/errors) for the complete list.
+See [Handle errors](./handle-errors.md) for full error-handling patterns and [Error types](../reference/sdk/errors.md) for the complete list.
 
 ## Next steps
 
-- [Delegations reference](/reference/sdk/delegation) — full `Delegations` namespace API
-- [useDelegateDecryption](/reference/react/useDelegateDecryption) — React hook to grant delegation
-- [useDecryptBalanceAs](/reference/react/useDecryptBalanceAs) — React hook to decrypt as a delegate
-- [useDelegationStatus](/reference/react/useDelegationStatus) — React hook to query delegation status
+- [Delegations reference](../reference/sdk/delegation.md) — full `Delegations` namespace API
+- [useDelegateDecryption](../reference/react/useDelegateDecryption.md) — React hook to grant delegation
+- [useDecryptBalanceAs](../reference/react/useDecryptBalanceAs.md) — React hook to decrypt as a delegate
+- [useDelegationStatus](../reference/react/useDelegationStatus.md) — React hook to query delegation status

@@ -1,16 +1,24 @@
 import { describe, test, expect } from "../test-fixtures";
-import { getAddress, keccak256, toHex, toBytes, type Address, type Hex } from "viem";
+import {
+  encodeEventTopics,
+  getAddress,
+  keccak256,
+  toHex,
+  toBytes,
+  type Address,
+  type Hex,
+} from "viem";
+import { confidentialWrapperAbi } from "../abi/confidential-wrapper.abi";
 import {
   Topics,
   decodeConfidentialTransfer,
-  decodeWrapped,
+  decodeWrap,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
   decodeOnChainEvent,
   decodeOnChainEvents,
   findUnwrapRequested,
-  findWrapped,
+  findWrap,
   AclTopics,
   decodeDelegatedForUserDecryption,
   decodeRevokedDelegationForUserDecryption,
@@ -30,18 +38,41 @@ const bytes32 = (hex: string): Hex => `0x${hex.padStart(64, "0")}`;
 describe("Topic constants match keccak256", () => {
   const cases: [string, string][] = [
     ["ConfidentialTransfer(address,address,bytes32)", Topics.ConfidentialTransfer],
-    ["Wrapped(address,uint256)", Topics.Wrapped],
+    ["Wrap(address,uint256,bytes32)", Topics.Wrap],
     ["UnwrapRequested(address,bytes32,bytes32)", Topics.UnwrapRequested],
     ["UnwrapFinalized(address,bytes32,bytes32,uint64)", Topics.UnwrapFinalized],
-    [
-      "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-      Topics.UnwrappedStarted,
-    ],
   ];
 
   for (const [sig, expected] of cases) {
     test(sig, () => {
       expect(keccak256(toHex(toBytes(sig)))).toBe(expected);
+    });
+  }
+
+  // Pin the deployed Wrap topic0 to a literal so a regression to a
+  // wrong-but-self-consistent signature (the SDK-240 root cause) can't stay green.
+  test("Topics.Wrap matches the deployed wrapper topic0", () => {
+    expect(Topics.Wrap).toBe("0xcda691c81d2fd787d8c209adb4ae8b138f857d7575adf7669195ed05482e701b");
+  });
+});
+
+// Cross-check each token topic0 against the bundled wrapper ABI (the single source
+// of truth). A one-sided ABI⇄decoder drift — the SDK-240 root cause, where SDK-216
+// updated the ABI without the hand-written decoder — fails here loudly. Stronger than
+// the keccak test above, which recomputes from the same hand-written signature string.
+describe("Token topics stay in sync with the bundled wrapper ABI", () => {
+  const eventNames = [
+    "ConfidentialTransfer",
+    "Wrap",
+    "UnwrapRequested",
+    "UnwrapFinalized",
+  ] as const;
+
+  for (const eventName of eventNames) {
+    test(eventName, () => {
+      expect(Topics[eventName]).toBe(
+        encodeEventTopics({ abi: confidentialWrapperAbi, eventName })[0],
+      );
     });
   }
 });
@@ -58,57 +89,40 @@ describe("decodeConfidentialTransfer", () => {
 
   test("decodes valid log", () => {
     const event = decodeConfidentialTransfer(log);
-    expect(event).toEqual({
-      eventName: "ConfidentialTransfer",
-      from,
-      to,
-      encryptedAmount,
-    });
+    expect(event).toEqual({ eventName: "ConfidentialTransfer", from, to, encryptedAmount });
   });
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeConfidentialTransfer({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
+      decodeConfidentialTransfer({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
     expect(
-      decodeConfidentialTransfer({
-        ...log,
-        topics: [Topics.ConfidentialTransfer],
-      }),
+      decodeConfidentialTransfer({ ...log, topics: [Topics.ConfidentialTransfer] }),
     ).toBeNull();
   });
 });
 
-describe("decodeWrapped", () => {
+describe("decodeWrap", () => {
   const to = addr("dead");
-  const amountIn = 2000n;
+  const roundedAmount = 2000n;
+  const encryptedWrappedAmount = bytes32("ab".repeat(32));
 
   const log: RawLog = {
-    topics: [Topics.Wrapped, topic("dead")],
-    data: `0x${word(amountIn.toString(16))}`,
+    topics: [Topics.Wrap, topic("dead")],
+    data: `0x${word(roundedAmount.toString(16))}${word(encryptedWrappedAmount.slice(2))}`,
   };
 
   test("decodes valid log", () => {
-    const event = decodeWrapped(log);
-    expect(event).toEqual({
-      eventName: "Wrapped",
-      to,
-      amountIn,
-    });
+    const event = decodeWrap(log);
+    expect(event).toEqual({ eventName: "Wrap", to, roundedAmount, encryptedWrappedAmount });
   });
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeWrapped({
-        ...log,
-        topics: [Topics.UnwrapRequested, ...log.topics.slice(1)],
-      }),
+      decodeWrap({ ...log, topics: [Topics.UnwrapRequested, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -135,10 +149,7 @@ describe("decodeUnwrapRequested", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeUnwrapRequested({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
+      decodeUnwrapRequested({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -167,52 +178,7 @@ describe("decodeUnwrapFinalized", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeUnwrapFinalized({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
-    ).toBeNull();
-  });
-});
-
-describe("decodeUnwrappedStarted", () => {
-  const requestId = 10n;
-  const txId = 20n;
-  const toAddr = addr("cafe");
-  const refund = addr("beef");
-  const requestedAmount = bytes32("11".repeat(32));
-  const burnAmount = bytes32("22".repeat(32));
-
-  const log: RawLog = {
-    topics: [
-      Topics.UnwrappedStarted,
-      topic(requestId.toString(16)),
-      topic(txId.toString(16)),
-      topic("cafe"),
-    ],
-    data: `0x${word("1")}${word("beef")}${word("11".repeat(32))}${word("22".repeat(32))}`,
-  };
-
-  test("decodes valid log", () => {
-    const event = decodeUnwrappedStarted(log);
-    expect(event).toEqual({
-      eventName: "UnwrappedStarted",
-      requestId,
-      txId,
-      to: toAddr,
-      returnVal: true,
-      refund,
-      requestedAmount,
-      burnAmount,
-    });
-  });
-
-  test("returns null for wrong topic", () => {
-    expect(
-      decodeUnwrappedStarted({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
+      decodeUnwrapFinalized({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 });
@@ -238,10 +204,7 @@ describe("decodeOnChainEvent", () => {
   });
 
   test("returns null for unknown event", () => {
-    const log: RawLog = {
-      topics: [topic("00".repeat(32))],
-      data: "0x",
-    };
+    const log: RawLog = { topics: [topic("00".repeat(32))], data: "0x" };
     expect(decodeOnChainEvent(log)).toBeNull();
   });
 });
@@ -304,21 +267,21 @@ describe("findUnwrapRequested", () => {
   });
 });
 
-describe("findWrapped", () => {
-  test("finds first Wrapped in mixed logs", () => {
+describe("findWrap", () => {
+  test("finds first Wrap in mixed logs", () => {
     const logs: RawLog[] = [
       {
-        topics: [Topics.Wrapped, topic("dead")],
-        data: `0x${word(2000n.toString(16))}`,
+        topics: [Topics.Wrap, topic("dead")],
+        data: `0x${word(2000n.toString(16))}${word("ab".repeat(32))}`,
       },
     ];
-    const event = findWrapped(logs);
-    expect(event?.eventName).toBe("Wrapped");
-    expect(event?.amountIn).toBe(2000n);
+    const event = findWrap(logs);
+    expect(event?.eventName).toBe("Wrap");
+    expect(event?.roundedAmount).toBe(2000n);
   });
 
   test("returns null when none found", () => {
-    expect(findWrapped([])).toBeNull();
+    expect(findWrap([])).toBeNull();
   });
 });
 
@@ -370,19 +333,13 @@ describe("decodeDelegatedForUserDecryption", () => {
 
   test("returns null for wrong topic", () => {
     expect(
-      decodeDelegatedForUserDecryption({
-        ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
-      }),
+      decodeDelegatedForUserDecryption({ ...log, topics: [Topics.Wrap, ...log.topics.slice(1)] }),
     ).toBeNull();
   });
 
   test("returns null for insufficient topics", () => {
     expect(
-      decodeDelegatedForUserDecryption({
-        ...log,
-        topics: [AclTopics.DelegatedForUserDecryption],
-      }),
+      decodeDelegatedForUserDecryption({ ...log, topics: [AclTopics.DelegatedForUserDecryption] }),
     ).toBeNull();
   });
 });
@@ -413,7 +370,7 @@ describe("decodeRevokedDelegationForUserDecryption", () => {
     expect(
       decodeRevokedDelegationForUserDecryption({
         ...log,
-        topics: [Topics.Wrapped, ...log.topics.slice(1)],
+        topics: [Topics.Wrap, ...log.topics.slice(1)],
       }),
     ).toBeNull();
   });
@@ -448,10 +405,7 @@ describe("decodeAclEvent", () => {
   });
 
   test("returns null for unknown event", () => {
-    const log: RawLog = {
-      topics: [topic("00".repeat(32))],
-      data: "0x",
-    };
+    const log: RawLog = { topics: [topic("00".repeat(32))], data: "0x" };
     expect(decodeAclEvent(log)).toBeNull();
   });
 });

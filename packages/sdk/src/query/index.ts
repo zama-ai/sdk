@@ -68,9 +68,17 @@ export {
 export { shieldMutationOptions, type ShieldParams } from "./shield";
 export { confidentialTransferMutationOptions, type ConfidentialTransferParams } from "./transfer";
 export {
+  confidentialTransferAndCallMutationOptions,
+  type ConfidentialTransferAndCallParams,
+} from "./transfer-and-call";
+export {
   confidentialTransferFromMutationOptions,
   type ConfidentialTransferFromParams,
 } from "./transfer-from";
+export {
+  confidentialTransferFromAndCallMutationOptions,
+  type ConfidentialTransferFromAndCallParams,
+} from "./transfer-from-and-call";
 export {
   confidentialSetOperatorMutationOptions,
   type ConfidentialSetOperatorParams,
@@ -133,10 +141,9 @@ export {
 export type { RawLog } from "../events/onchain-events";
 export type {
   ConfidentialTransferEvent,
-  WrappedEvent,
+  WrapEvent,
   UnwrapRequestedEvent,
   UnwrapFinalizedEvent,
-  UnwrappedStartedEvent,
 } from "../events/onchain-events";
 export type { OnChainEvent } from "../events/onchain-events";
 export type {
@@ -158,7 +165,7 @@ export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type { Keypair } from "../credentials";
+export type { TransportKeyPair } from "../credentials";
 export type {
   GenericSigner,
   GenericStorage,

@@ -146,10 +146,7 @@
       },
 
       generateKeypair() {
-        return {
-          publicKey: randomHex(32),
-          privateKey: randomHex(32),
-        };
+        return { publicKey: randomHex(32), privateKey: randomHex(32) };
       },
 
       createEIP712(publicKey, contractAddresses, startTimestamp, durationDays) {
@@ -329,10 +326,7 @@
       },
 
       getPublicKey() {
-        return {
-          publicKeyId: "mock-public-key-id",
-          publicKey: new Uint8Array([1, 2, 3, 4]),
-        };
+        return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([1, 2, 3, 4]) };
       },
 
       getPublicParams(_bits) {

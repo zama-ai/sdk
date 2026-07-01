@@ -80,9 +80,7 @@ function GatedDecrypt({
 Contract addresses to check credentials against. Returns `true` only when stored permits cover **all** specified addresses.
 
 ```tsx
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: ["0xContractA", "0xContractB"],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContractA", "0xContractB"] });
 ```
 
 An empty list is a no-op: the query is disabled and `data` stays `undefined`, so you can call the hook unconditionally even when there is nothing to check yet.
@@ -106,13 +104,13 @@ Standard React Query options forwarded to the underlying query. Pass `{ enabled:
 `data` is a `boolean`:
 
 - `true` -- stored permits cover all specified addresses; decrypts will not prompt the wallet.
-- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useGrantPermit`](/reference/react/useGrantPermit) to authorize.
+- `false` -- no stored permits, or the `permitTTL` has expired. Call [`useGrantPermit`](./useGrantPermit.md) to authorize.
 
 {% include ".gitbook/includes/query-result.md" %}
 
 ## Related
 
-- [Avoid blind-sign wallet popups](/guides/encrypt-decrypt#3-avoid-blind-sign-wallet-popups) -- gating balance queries to avoid blind-sign popups
-- [`useGrantPermit`](/reference/react/useGrantPermit) -- pre-authorize contracts with one wallet signature
-- [`useRevokePermits`](/reference/react/useRevokePermits) -- revoke permits
-- [Permit Model](/concepts/permit-model) -- permit lifecycle and TTL configuration
+- [Avoid blind-sign wallet popups](../../guides/encrypt-decrypt.md#gating-useconfidentialbalance) -- gating balance queries to avoid blind-sign popups
+- [`useGrantPermit`](./useGrantPermit.md) -- pre-authorize contracts with one wallet signature
+- [`useRevokePermits`](./useRevokePermits.md) -- revoke permits
+- [Permit Model](../../concepts/permit-model.md) -- permit lifecycle and TTL configuration

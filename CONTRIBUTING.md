@@ -63,6 +63,12 @@ pnpm build        # Build output
 
 4. Open a pull request
 
+### GitBook Documentation
+
+The docs in `docs/gitbook/src/` are published to GitBook (both `main` and `prerelease` ship as separate spaces). **Links between doc pages must be relative `.md` paths** — e.g. `[Token](../reference/sdk/Token.md)`, never host-absolute (`/reference/sdk/Token`). GitBook serves each space under a sub-path (`docs.zama.org/protocol/sdk/…`), so a leading-slash link resolves against the site root and breaks (it only surfaces on the live site — use GitBook's per-PR preview to check rendering). Anchors must match a heading in the target page.
+
+`pnpm docs:check-links` validates this (no host-absolute links, every relative target and `#anchor` resolves) and runs in CI on any docs change. Run it locally before pushing doc edits.
+
 ### LLM Documentation Artifacts
 
 The repository publishes generated LLM entry points for coding agents:
@@ -79,6 +85,14 @@ pnpm llm:check
 ```
 
 The pre-commit hook regenerates and stages the LLM artifacts automatically when relevant staged sources change. If a corpus source is partially staged, stage or discard the remaining changes before committing so the generated files match the committed source state.
+
+Doc URLs are branch-specific: the corpus and the migration-guide prompt link to `raw.githubusercontent.com/zama-ai/sdk/<branch>/…` and `docs.zama.org/protocol/sdk/<space>/…` — `main`/`stable` on the release branch, `prerelease`/`alpha` on the prerelease branch. They can't be derived at build time (CI checks out PRs detached, and the committed artifacts must match the rebuild), so the branch is committed and flipped at promotion with one idempotent command:
+
+```bash
+pnpm docs:retarget main        # or: prerelease
+```
+
+CI (`pnpm docs:check-target`, driven by the PR's base branch) fails any PR whose committed URLs target the wrong branch and points you at the command above.
 
 ### API Reports
 

@@ -220,20 +220,14 @@ describe("eip1193Subscribe", () => {
   });
 
   test("returns a no-op unsubscribe when provider is undefined", () => {
-    const unsub = eip1193Subscribe({
-      provider: undefined,
-      onWalletAccountChange: () => {},
-    });
+    const unsub = eip1193Subscribe({ provider: undefined, onWalletAccountChange: () => {} });
     expect(unsub).toBeTypeOf("function");
     unsub();
   });
 
   test("registers and removes all three native listeners", () => {
     const provider = createFakeProvider();
-    const unsub = eip1193Subscribe({
-      provider,
-      onWalletAccountChange: () => {},
-    });
+    const unsub = eip1193Subscribe({ provider, onWalletAccountChange: () => {} });
 
     expect(provider.listenerCount("accountsChanged")).toBe(1);
     expect(provider.listenerCount("disconnect")).toBe(1);
@@ -268,10 +262,7 @@ describe("eip1193Subscribe", () => {
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({
       provider,
-      getInitialWalletAccount: () => ({
-        address: ADDR_A,
-        chainId: CHAIN_31337,
-      }),
+      getInitialWalletAccount: () => ({ address: ADDR_A, chainId: CHAIN_31337 }),
       onWalletAccountChange,
     });
 
@@ -292,11 +283,7 @@ describe("eip1193Subscribe", () => {
     const getInitialWalletAccount = vi
       .fn()
       .mockResolvedValue({ address: ADDR_A, chainId: CHAIN_31337 });
-    eip1193Subscribe({
-      provider,
-      getInitialWalletAccount,
-      onWalletAccountChange,
-    });
+    eip1193Subscribe({ provider, getInitialWalletAccount, onWalletAccountChange });
 
     await vi.waitFor(() => {
       expect(getInitialWalletAccount).toHaveBeenCalledOnce();
@@ -318,11 +305,7 @@ describe("eip1193Subscribe", () => {
     const getInitialWalletAccount = vi
       .fn()
       .mockResolvedValue({ address: ADDR_A, chainId: CHAIN_31337 });
-    eip1193Subscribe({
-      provider,
-      getInitialWalletAccount,
-      onWalletAccountChange,
-    });
+    eip1193Subscribe({ provider, getInitialWalletAccount, onWalletAccountChange });
 
     await vi.waitFor(() => {
       expect(getInitialWalletAccount).toHaveBeenCalledOnce();
@@ -340,12 +323,11 @@ describe("eip1193Subscribe", () => {
 
   test("ignores initial wallet account when a provider event wins the race", async () => {
     let resolveInitial!: (walletAccount: { address: Address; chainId: number }) => void;
-    const initialWalletAccountPromise = new Promise<{
-      address: Address;
-      chainId: number;
-    }>((resolve) => {
-      resolveInitial = resolve;
-    });
+    const initialWalletAccountPromise = new Promise<{ address: Address; chainId: number }>(
+      (resolve) => {
+        resolveInitial = resolve;
+      },
+    );
     const provider = createFakeProvider();
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({
@@ -393,10 +375,7 @@ describe("eip1193Subscribe", () => {
   });
 
   test("does not request initial accounts or chain", () => {
-    const provider = createFakeProvider({
-      accounts: [ADDR_A],
-      chainId: "0x7a69",
-    });
+    const provider = createFakeProvider({ accounts: [ADDR_A], chainId: "0x7a69" });
     const onWalletAccountChange = vi.fn();
     eip1193Subscribe({ provider, onWalletAccountChange });
 

@@ -95,11 +95,7 @@ function OperatorCheck({
   holder: `0x${string}`;
   spender: `0x${string}`;
 }) {
-  const { data: isOperator } = useConfidentialIsOperatorSuspense({
-    tokenAddress,
-    holder,
-    spender,
-  });
+  const { data: isOperator } = useConfidentialIsOperatorSuspense({ tokenAddress, holder, spender });
 
   // data is always defined — no loading state needed
   return <span>{isOperator ? "Approved" : "Not approved"}</span>;
@@ -116,5 +112,5 @@ function App() {
 
 ## Related
 
-- [`useConfidentialSetOperator`](/reference/react/useConfidentialSetOperator) — approve an operator
-- [`Token.isOperator()`](/reference/sdk/Token#isoperator) — imperative equivalent on the SDK class
+- [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) — approve an operator
+- [`Token.isOperator()`](../sdk/Token.md#isoperator) — imperative equivalent on the SDK class

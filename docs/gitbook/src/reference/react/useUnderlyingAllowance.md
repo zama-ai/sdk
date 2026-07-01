@@ -28,10 +28,7 @@ function AllowanceDisplay({
   wrapperAddress: `0x${string}`;
   owner: `0x${string}` | undefined;
 }) {
-  const { data: allowance, isLoading } = useUnderlyingAllowance({
-    address: wrapperAddress,
-    owner,
-  });
+  const { data: allowance, isLoading } = useUnderlyingAllowance({ address: wrapperAddress, owner });
 
   if (isLoading) return <span>Loading allowance...</span>;
   return <span>Allowance: {allowance?.toString() ?? "0"}</span>;
@@ -50,10 +47,7 @@ function AllowanceDisplay({
 Address of the confidential wrapper contract. The hook reads the underlying ERC-20 allowance granted by `owner` to this wrapper.
 
 ```ts
-const { data: allowance } = useUnderlyingAllowance({
-  address: "0xWrapper",
-  owner: "0xOwner",
-});
+const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner: "0xOwner" });
 ```
 
 ---
@@ -65,10 +59,7 @@ const { data: allowance } = useUnderlyingAllowance({
 Address whose allowance to read. The query is disabled while `undefined`.
 
 ```ts
-const { data: allowance } = useUnderlyingAllowance({
-  address: "0xWrapper",
-  owner: "0xOwner",
-});
+const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner: "0xOwner" });
 ```
 
 ## Return Type
@@ -92,10 +83,7 @@ function Allowance({
   wrapperAddress: `0x${string}`;
   owner: `0x${string}`;
 }) {
-  const { data: allowance } = useUnderlyingAllowanceSuspense({
-    address: wrapperAddress,
-    owner,
-  });
+  const { data: allowance } = useUnderlyingAllowanceSuspense({ address: wrapperAddress, owner });
 
   // data is always defined — no loading state needed
   return <span>Allowance: {allowance.toString()}</span>;
@@ -112,5 +100,5 @@ function App() {
 
 ## Related
 
-- [`useShield`](/reference/react/useShield) — shield tokens (handles approval automatically)
-- [`zamaQueryKeys.underlyingAllowance`](/reference/react/query-keys) — cache keys for manual invalidation
+- [`useShield`](./useShield.md) — shield tokens (handles approval automatically)
+- [`zamaQueryKeys.underlyingAllowance`](./query-keys.md) — cache keys for manual invalidation

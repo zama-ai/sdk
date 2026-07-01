@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useUnshield, useZamaSDK, clearPendingUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import { useUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
+import { clearPendingUnshield } from "@zama-fhe/sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { parseAmount } from "@/lib/parseAmount";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 import { setActiveUnshieldToken } from "@/lib/activeUnshield";
@@ -29,21 +30,17 @@ export function UnshieldCard({
 
   const { storage } = useZamaSDK();
 
-  const unshield = useUnshield(
-    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
-    { tokenAddress, wrapperAddress: tokenAddress },
-    {
-      onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress).catch((err) =>
-          console.error("[UnshieldCard] Failed to clear pending unshield:", err),
-        );
-        onSuccess?.();
-      },
-      // Clear the active token ref on failure so a stale address is never used by the
-      // onEvent handler in ZamaProvider if a subsequent UnshieldPhase1Submitted fires.
-      onError: () => setActiveUnshieldToken(null),
+  const unshield = useUnshield(tokenAddress, {
+    onSuccess: () => {
+      clearPendingUnshield(storage, tokenAddress).catch((err) =>
+        console.error("[UnshieldCard] Failed to clear pending unshield:", err),
+      );
+      onSuccess?.();
     },
-  );
+    // Clear the active token ref on failure so a stale address is never used by the
+    // onEvent handler in ZamaProvider if a subsequent UnshieldPhase1Submitted fires.
+    onError: () => setActiveUnshieldToken(null),
+  });
 
   const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Unshielding… (2/2)" : "Unshielding… (1/2)";
@@ -57,10 +54,8 @@ export function UnshieldCard({
     setActiveUnshieldToken(tokenAddress);
     unshield.mutate({
       amount: parsedAmount,
-      callbacks: {
-        // onFinalizing fires between the two on-chain transactions, marking step 2.
-        onFinalizing: () => setStep(2),
-      },
+      // onFinalizing fires between the two on-chain transactions, marking step 2.
+      onFinalizing: () => setStep(2),
     });
   }
 

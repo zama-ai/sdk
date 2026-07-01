@@ -1,6 +1,7 @@
 import { getAddress, type Address, type Hex } from "viem";
 import {
   approveContract,
+  confidentialBalanceOfContract,
   confidentialTransferContract,
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
@@ -13,7 +14,6 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import { confidentialBalanceOfContract } from "../contracts/encrypted";
 import type { CredentialService } from "../credentials/credential-service";
 import { checksum } from "../credentials/utils";
 import {
@@ -265,9 +265,7 @@ export class OfflineSigningService {
       if (error instanceof ZamaError) {
         throw error;
       }
-      throw new SigningFailedError(`Sign failed for ${preparedTx.kind}`, {
-        cause: error,
-      });
+      throw new SigningFailedError(`Sign failed for ${preparedTx.kind}`, { cause: error });
     }
   }
 
@@ -599,11 +597,7 @@ export class OfflineSigningService {
     }
     const providerChainId = await this.#provider.getChainId();
     if (snapshot.chainId !== providerChainId) {
-      throw new ChainMismatchError({
-        operation,
-        signerChainId: snapshot.chainId,
-        providerChainId,
-      });
+      throw new ChainMismatchError({ operation, signerChainId: snapshot.chainId, providerChainId });
     }
   }
 

@@ -1,0 +1,9 @@
+id: rename-use-delegated-user-decrypt-hook
+snapshots:
+  const d = useDelegatedUserDecrypt();:
+    fixed: const d = useDelegatedDecrypt();
+    labels:
+    - source: useDelegatedUserDecrypt
+      style: primary
+      start: 10
+      end: 33

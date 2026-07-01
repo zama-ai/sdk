@@ -39,9 +39,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -87,9 +85,7 @@ const config = createConfig({
   chains: [myHardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [myHardhat.id]: cleartext(),
-  },
+  relayers: { [myHardhat.id]: cleartext() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -111,6 +107,6 @@ Usually, you want to use the same `gatewayChainId` and verifying contract addres
 
 ## Next steps
 
-- [RelayerCleartext reference](/reference/sdk/RelayerCleartext) — full constructor options and `CleartextConfig` type
-- [Configuration](/guides/configuration) — production setup with `web()` or `node()` relayer factories
-- [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Mainnet, Sepolia, and more
+- [RelayerCleartext reference](../reference/sdk/RelayerCleartext.md) — the cleartext relayer and its chain-definition fields
+- [Configuration](./configuration.md) — production setup with `web()` or `node()` relayer factories
+- [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Mainnet, Sepolia, and more

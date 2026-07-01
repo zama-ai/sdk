@@ -52,9 +52,6 @@ export function DecryptAsCard({
     delegateAddress: connectedAddress,
   });
 
-  // Note: useDecryptBalanceAs takes a positional tokenAddress argument, unlike
-  // useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }.
-  // This asymmetry is a current SDK API design decision.
   const decryptAs = useDecryptBalanceAs(tokenAddress);
 
   function handleDecrypt() {

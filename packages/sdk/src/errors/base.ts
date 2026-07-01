@@ -24,10 +24,10 @@ export const ZamaErrorCode = {
   DecryptionFailed: "DECRYPTION_FAILED",
   /** On-chain transaction reverted. */
   TransactionReverted: "TRANSACTION_REVERTED",
-  /** FHE keypair has expired and needs regeneration. */
-  KeypairExpired: "KEYPAIR_EXPIRED",
-  /** Relayer rejected FHE keypair (stale, expired, or malformed). */
-  InvalidKeypair: "INVALID_KEYPAIR",
+  /** Transport key pair has expired and needs regeneration. */
+  TransportKeyPairExpired: "KEYPAIR_EXPIRED",
+  /** Relayer rejected transport key pair (stale, expired, or malformed). */
+  InvalidTransportKeyPair: "INVALID_KEYPAIR",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
@@ -94,33 +94,4 @@ export class ZamaError extends Error {
     this.name = "ZamaError";
     this.code = code;
   }
-}
-
-/**
- * Pattern-match on a {@link ZamaError} by its error code.
- * Falls through to the `_` wildcard handler if no specific handler matches.
- * Returns `undefined` if the error is not a `ZamaError` and no `_` handler is provided.
- *
- * @example
- * ```ts
- * matchZamaError(error, {
- *   SIGNING_REJECTED: () => toast("Please approve in wallet"),
- *   TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
- *   _: () => toast("Unknown error"),
- * });
- * ```
- */
-export function matchZamaError<R>(
-  error: unknown,
-  handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
-    _?: (error: unknown) => R;
-  },
-): R | undefined {
-  if (error instanceof ZamaError) {
-    const handler = handlers[error.code];
-    if (handler) {
-      return handler(error);
-    }
-  }
-  return handlers._?.(error);
 }

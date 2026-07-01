@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  useZamaSDK,
-  useResumeUnshield,
-  loadPendingUnshield,
-  clearPendingUnshield,
-} from "@zama-fhe/react-sdk";
-import type { Address, Hex } from "@zama-fhe/react-sdk";
+import { useZamaSDK, useResumeUnshield } from "@zama-fhe/react-sdk";
+import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import type { Address, Hex } from "@zama-fhe/sdk";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
@@ -26,19 +22,15 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
       .catch((err) => console.error("[PendingUnshieldCard] loadPendingUnshield failed:", err));
   }, [storage, tokenAddress]);
 
-  const resume = useResumeUnshield(
-    // For ERC-7984 tokens, the wrapper IS the token — tokenAddress and wrapperAddress are the same.
-    { tokenAddress, wrapperAddress: tokenAddress },
-    {
-      onSuccess: () => {
-        clearPendingUnshield(storage, tokenAddress).catch((err) =>
-          console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
-        );
-        setPendingTxHash(null);
-        onSuccess?.();
-      },
+  const resume = useResumeUnshield(tokenAddress, {
+    onSuccess: () => {
+      clearPendingUnshield(storage, tokenAddress).catch((err) =>
+        console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
+      );
+      setPendingTxHash(null);
+      onSuccess?.();
     },
-  );
+  });
 
   if (!pendingTxHash) return null;
 

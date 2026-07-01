@@ -1,0 +1,5 @@
+id: rename-delegated-user-decrypt-params-import
+valid:
+  - 'import type { DelegatedDecryptMutationParams } from "@zama-fhe/react-sdk";'
+invalid:
+  - 'import type { DelegatedUserDecryptMutationParams } from "@zama-fhe/react-sdk";'

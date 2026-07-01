@@ -11,7 +11,6 @@ import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
@@ -28,8 +27,8 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     createEIP712(publicKey: Hex, contractAddresses: Address[], startTimestamp: number, durationDays?: number): Promise<EIP712TypedData>;
     delegatedUserDecrypt(params: DelegatedUserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
-    generateKeypair(): Promise<KeypairType<Hex>>;
-    getPublicKey(): Promise<PublicKeyData | null>;
+    fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
+    generateTransportKeyPair(): Promise<TransportKeyPair>;
     getPublicParams(bits: number): Promise<PublicParamsData | null>;
     // (undocumented)
     protected init(): Promise<void>;
@@ -44,7 +43,7 @@ export interface RelayerWebConfig {
     chain: FheChain;
     fheArtifactCacheTTL?: number;
     fheArtifactStorage?: GenericStorage;
-    logger?: GenericLogger;
+    logger: GenericLogger;
     security?: RelayerWebSecurityConfig;
     threads?: number;
     worker: RelayerWorkerClient;
@@ -62,15 +61,15 @@ export function web(options?: WebRelayerOptions): WebRelayerConfig;
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
     // (undocumented)
-    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+    readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient, logger: GenericLogger) => RelayerWeb;
     // (undocumented)
-    readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
+    readonly createWorker: (chains: FheChain[], logger: GenericLogger) => RelayerWorkerClient;
     // (undocumented)
     readonly type: "web";
 }
 
 // @public
-export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
+export type WebRelayerOptions = Partial<Pick<RelayerWebConfig, "threads" | "security" | "fheArtifactStorage" | "fheArtifactCacheTTL">>;
 
 // (No @packageDocumentation comment for this package)
 

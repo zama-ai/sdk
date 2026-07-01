@@ -1,0 +1,9 @@
+# Placeholder / example URLs used in documentation code samples (not real endpoints).
+# One regex per line, matched against each URL lychee finds.
+your-app\.com
+your-relayer-proxy\.com
+localhost
+127\.0\.0\.1
+# Placeholder API key in infura sample URLs (sepolia/mainnet.infura.io/v3/YOUR_KEY) —
+# matches the key, not the host, so real infura links would still be checked.
+YOUR_KEY

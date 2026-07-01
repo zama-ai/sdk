@@ -21,17 +21,10 @@
     "restriction": "off",
     "nursery": "off"
   },
-  "options": {
-    "denyWarnings": true,
-    "typeAware": true
-  },
-  "env": {
-    "builtin": true
-  },
+  "options": { "denyWarnings": true, "typeAware": true },
+  "env": { "builtin": true },
   "settings": {
-    "react": {
-      "version": "19.2.4"
-    },
+    "react": { "version": "19.2.4" },
     "next": {
       "rootDir": [
         "packages/test-nextjs",
@@ -157,37 +150,28 @@
     {
       "files": [
         "scripts/**",
+        "codemods/**",
         "**/*.config.ts",
         "**/*.config.mts",
         "**/*.config.cts",
         "packages/sdk/src/worker/**",
-        "packages/sdk/src/token/credentials-manager.ts",
-        "packages/sdk/src/token/credential-manager-base.ts",
-        "packages/sdk/src/token/balance-cache.ts",
         "packages/sdk/src/token/token.ts"
       ],
-      "rules": {
-        "no-console": "off"
-      }
+      "rules": { "no-console": "off" }
     },
     {
       "files": [
-        "packages/react-sdk/src/relayer/use-user-decrypted-values.ts",
         "packages/react-sdk/src/wagmi/wagmi-signer.ts",
         "packages/sdk/src/ethers/ethers-signer.ts",
         "packages/sdk/src/events/onchain-events.ts",
         "packages/sdk/src/query/confidential-balances.ts",
         "packages/sdk/src/relayer/cleartext/relayer-cleartext.ts",
         "packages/sdk/src/relayer/relayer-utils.ts",
-        "packages/sdk/src/token/readonly-token.ts",
         "packages/sdk/src/token/token.ts",
-        "packages/sdk/src/utils.ts",
         "packages/sdk/src/viem/viem-signer.ts",
         "packages/sdk/src/worker/worker.node-pool.ts"
       ],
-      "rules": {
-        "@typescript-eslint/no-non-null-assertion": "off"
-      }
+      "rules": { "@typescript-eslint/no-non-null-assertion": "off" }
     }
   ]
 }

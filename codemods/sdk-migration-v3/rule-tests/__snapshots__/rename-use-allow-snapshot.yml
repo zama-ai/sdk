@@ -1,0 +1,9 @@
+id: rename-use-allow
+snapshots:
+  const a = useAllow();:
+    fixed: const a = useGrantPermit();
+    labels:
+    - source: useAllow
+      style: primary
+      start: 10
+      end: 18

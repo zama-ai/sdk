@@ -46,10 +46,7 @@ export function useConfidentialBalance(
 
   const baseOptions = confidentialBalanceQueryOptions(
     token,
-    {
-      tokenAddress: address,
-      account,
-    },
+    { tokenAddress: address, account },
     { walletAccount },
   );
 

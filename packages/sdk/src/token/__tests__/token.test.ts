@@ -37,7 +37,7 @@ describe("Token", () => {
       const balance = await token.balanceOf(userAddress);
 
       expect(balance).toBe(1000n);
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
       expect(signer.signTypedData).toHaveBeenCalled();
       expect(relayer.userDecrypt).toHaveBeenCalled();
     });
@@ -150,10 +150,7 @@ describe("Token", () => {
       token,
       inputProof,
     }) => {
-      vi.mocked(relayer.encrypt).mockResolvedValueOnce({
-        encryptedValues: [],
-        inputProof,
-      });
+      vi.mocked(relayer.encrypt).mockResolvedValueOnce({ encryptedValues: [], inputProof });
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -186,9 +183,7 @@ describe("Token", () => {
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
           skipBalanceCheck: true,
         }),
-      ).rejects.toMatchObject({
-        code: ZamaErrorCode.TransactionReverted,
-      });
+      ).rejects.toMatchObject({ code: ZamaErrorCode.TransactionReverted });
     });
   });
 
@@ -227,9 +222,131 @@ describe("Token", () => {
           "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address,
           200n,
         ),
-      ).rejects.toMatchObject({
-        code: ZamaErrorCode.TransactionReverted,
+      ).rejects.toMatchObject({ code: ZamaErrorCode.TransactionReverted });
+    });
+  });
+
+  describe("confidentialTransferAndCall", () => {
+    const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
+    const DATA = "0xdeadbeef" as const;
+
+    test("encrypts amount, forwards data and sends transaction", async ({
+      relayer,
+      signer,
+      userAddress,
+      token,
+      tokenAddress,
+      handle,
+      inputProof,
+    }) => {
+      const result = await token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, {
+        skipBalanceCheck: true,
       });
+
+      expect(relayer.encrypt).toHaveBeenCalledWith({
+        values: [{ value: 100n, type: "euint64" }],
+        contractAddress: tokenAddress,
+        userAddress,
+      });
+      // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "confidentialTransferAndCall",
+          args: [getAddress(RECIPIENT), handle, inputProof, DATA],
+        }),
+      );
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("throws EncryptionFailed when encrypt returns empty encrypted values", async ({
+      relayer,
+      token,
+      inputProof,
+    }) => {
+      vi.mocked(relayer.encrypt).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+
+      await expect(
+        token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
+      ).rejects.toMatchObject({
+        code: ZamaErrorCode.EncryptionFailed,
+        message: "Encryption returned no encrypted values",
+      });
+    });
+
+    test("wraps non-ZamaError from writeContract in TransactionReverted", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
+      ).rejects.toMatchObject({ code: ZamaErrorCode.TransactionReverted });
+    });
+
+    test("validates balance when skipBalanceCheck is not set", async ({ token, provider }) => {
+      vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
+
+      await expect(token.confidentialTransferAndCall(RECIPIENT, 100n, DATA)).rejects.toMatchObject({
+        code: ZamaErrorCode.InsufficientConfidentialBalance,
+      });
+    });
+
+    test("invokes onEncryptComplete callback", async ({ token }) => {
+      const onEncryptComplete = vi.fn();
+      await token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, {
+        skipBalanceCheck: true,
+        onEncryptComplete,
+      });
+      expect(onEncryptComplete).toHaveBeenCalled();
+    });
+  });
+
+  describe("confidentialTransferFromAndCall", () => {
+    const FROM = "0xcccccccccccccccccccccccccccccccccccccccc" as Address;
+    const TO = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
+    const DATA = "0xdeadbeef" as const;
+
+    test("encrypts amount with from as userAddress, forwards data and sends transaction", async ({
+      relayer,
+      signer,
+      token,
+      tokenAddress,
+      handle,
+      inputProof,
+    }) => {
+      const result = await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA);
+
+      expect(relayer.encrypt).toHaveBeenCalledWith({
+        values: [{ value: 200n, type: "euint64" }],
+        contractAddress: tokenAddress,
+        userAddress: getAddress(FROM),
+      });
+      // Pin the full ordered args so a wrong-order regression fails here, not only in contracts.test.ts.
+      expect(signer.writeContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          functionName: "confidentialTransferFromAndCall",
+          args: [getAddress(FROM), getAddress(TO), handle, inputProof, DATA],
+        }),
+      );
+      expect(result.txHash).toBe("0xtxhash");
+    });
+
+    test("wraps non-ZamaError from writeContract in TransactionReverted", async ({
+      signer,
+      token,
+    }) => {
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
+
+      await expect(
+        token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA),
+      ).rejects.toMatchObject({ code: ZamaErrorCode.TransactionReverted });
+    });
+
+    test("invokes onEncryptComplete callback", async ({ token }) => {
+      const onEncryptComplete = vi.fn();
+      await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA, { onEncryptComplete });
+      expect(onEncryptComplete).toHaveBeenCalled();
     });
   });
 
@@ -343,9 +460,7 @@ describe("Token", () => {
     });
 
     test("skipBalanceCheck: true bypasses validation", async ({ token }) => {
-      const result = await token.confidentialTransfer(RECIPIENT, 100n, {
-        skipBalanceCheck: true,
-      });
+      const result = await token.confidentialTransfer(RECIPIENT, 100n, { skipBalanceCheck: true });
       expect(result.txHash).toBe("0xtxhash");
     });
 
@@ -438,9 +553,7 @@ describe("Token", () => {
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(ZERO_ENCRYPTED_VALUE);
 
-      const balance = await token.decryptBalanceAs({
-        delegatorAddress: DELEGATOR,
-      });
+      const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
 
       expect(balance).toBe(0n);
       expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
@@ -455,13 +568,9 @@ describe("Token", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle) // confidentialBalanceOf
         .mockResolvedValueOnce(2n ** 64n - 1n); // getDelegationExpiry → permanent
-      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({
-        [handle]: 1234n,
-      });
+      vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValueOnce({ [handle]: 1234n });
 
-      const balance = await token.decryptBalanceAs({
-        delegatorAddress: DELEGATOR,
-      });
+      const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
 
       expect(balance).toBe(1234n);
       expect(relayer.delegatedUserDecrypt).toHaveBeenCalledOnce();

@@ -24,10 +24,7 @@ describe("RelayerDispatcher", () => {
       expect(
         () =>
           new RelayerDispatcher([chainA, chainB], {
-            [1]: {
-              type: "web",
-              createRelayer: () => createMockRelayer(),
-            },
+            [1]: { type: "web", createRelayer: () => createMockRelayer() },
           }),
       ).toThrow("Chain 2 has no relayer configured");
     });
@@ -132,7 +129,7 @@ describe("RelayerDispatcher", () => {
 
   describe("dispatches all RelayerSDK methods", () => {
     test.for([
-      ["generateKeypair", []],
+      ["generateTransportKeyPair", []],
       ["createEIP712", ["0xpubkey", ["0xcontract"], 1000]],
       ["encrypt", [{ values: [] }]],
       ["userDecrypt", [{ encryptedValues: [] }]],
@@ -140,7 +137,7 @@ describe("RelayerDispatcher", () => {
       ["createDelegatedUserDecryptEIP712", ["0xpubkey", ["0xcontract"], "0xdelegator", 1000]],
       ["delegatedUserDecrypt", [{ encryptedValues: [] }]],
       ["requestZKProofVerification", [{ proof: "0x" }]],
-      ["getPublicKey", []],
+      ["fetchFheEncryptionKeyBytes", []],
       ["getPublicParams", [2048]],
       ["getAclAddress", []],
     ] as [keyof RelayerSDK, unknown[]][])(
@@ -165,11 +162,7 @@ describe("RelayerDispatcher", () => {
       const chainA = createMockChain({ id: 1 });
       const worker = makeMockWorker();
       const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: {
-          type: "web",
-          createWorker: () => worker,
-          createRelayer: () => createMockRelayer(),
-        },
+        [1]: { type: "web", createWorker: () => worker, createRelayer: () => createMockRelayer() },
       });
       dispatcher.terminate();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
@@ -184,16 +177,8 @@ describe("RelayerDispatcher", () => {
       const w1 = makeMockWorker();
       const w2 = makeMockWorker();
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: {
-          type: "web",
-          createWorker: () => w1,
-          createRelayer: () => createMockRelayer(),
-        },
-        [2]: {
-          type: "web",
-          createWorker: () => w2,
-          createRelayer: () => createMockRelayer(),
-        },
+        [1]: { type: "web", createWorker: () => w1, createRelayer: () => createMockRelayer() },
+        [2]: { type: "web", createWorker: () => w2, createRelayer: () => createMockRelayer() },
       });
       dispatcher.terminate();
       expect(w1.terminate).toHaveBeenCalledTimes(1);
@@ -205,10 +190,7 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       const shared = createMockRelayer();
       // Same config object → same group → one worker, one createRelayer call per chain but same mock
-      const sharedConfig: RelayerConfig = {
-        type: "web",
-        createRelayer: () => shared,
-      };
+      const sharedConfig: RelayerConfig = { type: "web", createRelayer: () => shared };
       const dispatcher = new RelayerDispatcher([chainA, chainB], {
         [1]: sharedConfig,
         [2]: sharedConfig,
@@ -273,11 +255,7 @@ describe("RelayerDispatcher", () => {
       const worker = makeMockWorker();
       const relayer = createMockRelayer();
       const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: {
-          type: "web",
-          createWorker: () => worker,
-          createRelayer: () => relayer,
-        },
+        [1]: { type: "web", createWorker: () => worker, createRelayer: () => relayer },
       });
       dispatcher[Symbol.dispose]();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
@@ -291,13 +269,5 @@ function relayerConfigs(
   chains: FheChain[],
   createRelayer: () => RelayerSDK,
 ): Record<number, RelayerConfig> {
-  return Object.fromEntries(
-    chains.map((c) => [
-      c.id,
-      {
-        type: "web",
-        createRelayer,
-      },
-    ]),
-  );
+  return Object.fromEntries(chains.map((c) => [c.id, { type: "web", createRelayer }]));
 }

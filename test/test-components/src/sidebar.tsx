@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/wallet", label: "Wallet" },
   { to: "/shield", label: "Shield" },
   { to: "/transfer", label: "Transfer" },
+  { to: "/transfer-and-call", label: "Transfer & Call" },
   { to: "/unshield", label: "Unshield" },
   { to: "/approve", label: "Approve" },
   { to: "/transfer-from", label: "Transfer From" },

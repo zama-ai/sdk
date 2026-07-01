@@ -14,7 +14,7 @@ import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
 ```
 
 {% hint style="info" %}
-For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](/reference/sdk/network-presets) for examples.
+For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](./network-presets.md) for examples.
 {% endhint %}
 
 ## Usage
@@ -31,9 +31,7 @@ const config = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 ```
 
@@ -88,14 +86,14 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 | Method                                  | Description                                                         |
 | --------------------------------------- | ------------------------------------------------------------------- |
-| `generateKeypair()`                     | Returns a random mock keypair.                                      |
+| `generateTransportKeyPair()`            | Returns a random mock transport key pair.                           |
 | `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
 | `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
 | `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
 | `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
 | `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
 | `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
-| `getPublicKey()`                        | Returns a mock public key.                                          |
+| `fetchFheEncryptionKeyBytes()`          | Returns a mock FHE encryption key.                                  |
 | `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
 | `terminate()`                           | No-op — no resources to release.                                    |
 
@@ -105,7 +103,7 @@ The cleartext relayer implements the full `RelayerSDK` interface:
 
 ## Related
 
-- [Local Development guide](/guides/local-development) — when and how to use cleartext mode
-- [RelayerWeb](/reference/sdk/RelayerWeb) — browser relayer with real FHE
-- [RelayerNode](/reference/sdk/RelayerNode) — Node.js relayer with real FHE
-- [Network Presets](/reference/sdk/network-presets) — production network configs
+- [Local Development guide](../../guides/local-development.md) — when and how to use cleartext mode
+- [RelayerWeb](./RelayerWeb.md) — browser relayer with real FHE
+- [RelayerNode](./RelayerNode.md) — Node.js relayer with real FHE
+- [Network Presets](./network-presets.md) — production network configs

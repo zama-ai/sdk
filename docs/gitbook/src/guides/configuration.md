@@ -17,12 +17,20 @@ Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain incl
 import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 ```
 
-| Chain     | Chain ID   | Description        |
-| --------- | ---------- | ------------------ |
-| `mainnet` | `1`        | Ethereum Mainnet   |
-| `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `560048`   | Hoodi Testnet      |
-| `hardhat` | `31337`    | Local Hardhat node |
+| Chain          | Chain ID   | Description             |
+| -------------- | ---------- | ----------------------- |
+| `mainnet`      | `1`        | Ethereum Mainnet        |
+| `sepolia`      | `11155111` | Sepolia Testnet         |
+| `hoodi`        | `560048`   | Hoodi Testnet           |
+| `ingenTestnet` | `364301`   | InGen Testnet           |
+| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
+| `hardhat`      | `31337`    | Local Hardhat node      |
+
+`anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
+
+{% hint style="info" %}
+The Sepolia testnet relayer needs **no API key** — presets like `sepolia` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](authentication.md).
+{% endhint %}
 
 ### 2. Pick a relayer
 
@@ -86,10 +94,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 ```
 
 {% endtab %}
@@ -107,7 +112,7 @@ const walletClient = createWalletClient({
 {% endtab %}
 {% endtabs %}
 
-For full type information, see the [ViemProvider](/reference/sdk/ViemProvider) / [ViemSigner](/reference/sdk/ViemSigner) and [EthersProvider](/reference/sdk/EthersProvider) / [EthersSigner](/reference/sdk/EthersSigner) reference pages. You can also implement [GenericProvider](/reference/sdk/GenericProvider) and [GenericSigner](/reference/sdk/GenericSigner) for a custom integration.
+For full type information, see the [ViemProvider](../reference/sdk/ViemProvider.md) / [ViemSigner](../reference/sdk/ViemSigner.md) and [EthersProvider](../reference/sdk/EthersProvider.md) / [EthersSigner](../reference/sdk/EthersSigner.md) reference pages. You can also implement [GenericProvider](../reference/sdk/GenericProvider.md) and [GenericSigner](../reference/sdk/GenericSigner.md) for a custom integration.
 
 ### 4. Create the config
 
@@ -134,10 +139,7 @@ const myMainnet = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia, myMainnet],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 ```
 
@@ -163,10 +165,7 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -189,9 +188,7 @@ const mySepolia = {
 const config = createConfig({
   chains: [mySepolia],
   ethereum: window.ethereum!,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -216,9 +213,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -244,15 +239,13 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-See [GenericSigner](/reference/sdk/GenericSigner) and [GenericProvider](/reference/sdk/GenericProvider) for the interfaces your adapter must implement.
+See [GenericSigner](../reference/sdk/GenericSigner.md) and [GenericProvider](../reference/sdk/GenericProvider.md) for the interfaces your adapter must implement.
 
 {% endtab %}
 {% tab title="Web Extensions" %}
@@ -276,31 +269,29 @@ const config = createConfig({
   walletClient,
   storage: indexedDBStorage,
   permitStorage: chromeSessionStorage,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](/guides/web-extensions) for manifest configuration, multi-context sharing, and browser close behavior.
+Your `manifest.json` must include the `"storage"` permission. See the [Web Extensions guide](./web-extensions.md) for manifest configuration, multi-context sharing, and browser close behavior.
 
 {% endtab %}
 {% endtabs %}
 
-Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](/guides/authentication) for the full setup.
+Browser apps should proxy relayer requests through a backend to keep the API key secret. See the [Authentication guide](./authentication.md) for the full setup.
 
 ### 5. (Optional) Configure TTLs and event listener
 
-You can tune how long the FHE keypair and permits remain valid, and subscribe to lifecycle events for debugging:
+You can tune how long the transport key pair and permits remain valid, and subscribe to lifecycle events for debugging:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  keypairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
+  transportKeyPairTTL: 604800, // 7 days in seconds (default: 2592000 = 30 days)
   permitTTL: 7, // 7 days (default: 30 days)
   onEvent: ({ type, tokenAddress, ...rest }) => {
     console.debug(`[zama] ${type}`, rest);
@@ -312,13 +303,13 @@ When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thr
 
 ### 6. (Optional) Choose a storage backend
 
-The FHE keypair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
+The transport key pair is cached so users don't get a wallet popup on every decrypt. By default, `createConfig` picks the right storage for your environment. Override with the `storage` field if needed:
 
-| Storage             | When to use                                         |
-| ------------------- | --------------------------------------------------- |
-| `indexedDBStorage`  | Browser apps — persists across reloads and sessions |
-| `memoryStorage`     | Tests, scripts, throwaway sessions                  |
-| `asyncLocalStorage` | Node.js servers — isolates FHE keypair per request  |
+| Storage             | When to use                                               |
+| ------------------- | --------------------------------------------------------- |
+| `indexedDBStorage`  | Browser apps — persists across reloads and sessions       |
+| `memoryStorage`     | Tests, scripts, throwaway sessions                        |
+| `asyncLocalStorage` | Node.js servers — isolates transport key pair per request |
 
 ```ts
 import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
@@ -326,16 +317,40 @@ import { indexedDBStorage, memoryStorage } from "@zama-fhe/sdk";
 // import { asyncLocalStorage } from "@zama-fhe/sdk/node";
 ```
 
-For full storage options see the [GenericStorage](/reference/sdk/GenericStorage) reference.
+For full storage options see the [GenericStorage](../reference/sdk/GenericStorage.md) reference.
+
+### 7. (Optional) Supply a logger
+
+The SDK is **silent by default** — it emits no console output of its own. Operation failures always surface through the rejected promise or typed error, never as a stray `console.error`. To observe internal diagnostics, pass a `logger` to `createConfig`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  logger: console, // or a pino / winston / OpenTelemetry DiagLogger instance
+});
+```
+
+The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `debug` — that `console` and common logging libraries satisfy directly, so no adapter is needed. The SDK never bundles a logging library or imposes a format; level filtering is left to your logger. Levels follow these conventions:
+
+| Level   | What the SDK emits                                                                           |
+| ------- | -------------------------------------------------------------------------------------------- |
+| `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
+| `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
+| `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
+| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+
+The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
 
 ## Shared relayer options
 
-When multiple chains use the same relayer type, pass a shared options object to reuse a single relayer instance:
+When multiple chains use the same relayer, create it once and reference that single instance from each chain:
 
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedOpts = { threads: 8, logger: console };
+const sharedWeb = web({ threads: 8 });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
@@ -344,18 +359,15 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(sharedOpts),
-    [myMainnet.id]: web(sharedOpts),
-  },
+  relayers: { [mySepolia.id]: sharedWeb, [myMainnet.id]: sharedWeb },
 });
 ```
 
-Chains that pass the _same_ `options` object (by reference) share a single relayer instance, reducing memory usage.
+Chains that reference the _same_ relayer object — the result of a single `web()` call — share one worker, reducing memory usage.
 
 ## Next steps
 
-- [Authentication](/guides/authentication) — set up a backend proxy or use a direct API key
-- [Shield Tokens](/guides/shield-tokens) — convert public ERC-20 tokens into confidential form
-- [Chain Objects](/reference/sdk/network-presets) — pre-configured chain definitions for Sepolia, Mainnet, and more
-- [GenericStorage reference](/reference/sdk/GenericStorage) — custom storage implementations
+- [Authentication](./authentication.md) — set up a backend proxy or use a direct API key
+- [Shield Tokens](./shield-tokens.md) — convert public ERC-20 tokens into confidential form
+- [Chain Objects](../reference/sdk/network-presets.md) — pre-configured chain definitions for Sepolia, Mainnet, and more
+- [GenericStorage reference](../reference/sdk/GenericStorage.md) — custom storage implementations

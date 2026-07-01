@@ -27,10 +27,7 @@ export function useIsConfidential(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery<boolean>({
-    ...isConfidentialQueryOptions(sdk, tokenAddress),
-    ...options,
-  });
+  return useQuery<boolean>({ ...isConfidentialQueryOptions(sdk, tokenAddress), ...options });
 }
 
 /**
@@ -70,10 +67,7 @@ export function useIsWrapper(
 ) {
   const sdk = useZamaSDK();
 
-  return useQuery<boolean>({
-    ...isWrapperQueryOptions(sdk, tokenAddress),
-    ...options,
-  });
+  return useQuery<boolean>({ ...isWrapperQueryOptions(sdk, tokenAddress), ...options });
 }
 
 /**

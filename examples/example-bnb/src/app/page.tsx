@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import {
   useConfidentialBalance,
-  useIsAllowed,
-  useAllow,
+  useHasPermit,
+  useGrantPermit,
   useListPairs,
   useZamaSDK,
 } from "@zama-fhe/react-sdk";
@@ -99,16 +99,14 @@ function SelectedTokenPanel({
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
-  const { data: isAllowed } = useIsAllowed({
-    contractAddresses: [token.confidentialTokenAddress],
-  });
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   const decimals = token.confidential.decimals;
   const erc20Decimals = token.underlying.decimals;
   const confidentialSymbol = token.confidential.symbol;
   const erc20Symbol = token.underlying.symbol;
 
-  const allowTokens = useAllow();
+  const allowTokens = useGrantPermit();
   function handleDecrypt() {
     if (validPairs.length === 0) return;
     allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
@@ -135,13 +133,16 @@ function SelectedTokenPanel({
   };
 
   const balance = useConfidentialBalance(
-    { tokenAddress: token.confidentialTokenAddress, account: address },
+    { address: token.confidentialTokenAddress, account: address },
     { enabled: isBnb && !!isAllowed },
   );
 
   const mint = useMutation({
     mutationFn: async () => {
-      const signer = sdk.requireSigner("mint");
+      const signer = sdk.signer;
+      if (!signer) {
+        throw new Error("Connect a wallet before minting tokens.");
+      }
       const txHash = await signer.writeContract({
         address: token.tokenAddress,
         abi: MINT_ABI,
@@ -200,7 +201,6 @@ function SelectedTokenPanel({
       <ShieldCard
         key={`shield-${address}-${token.confidentialTokenAddress}`}
         tokenAddress={token.confidentialTokenAddress}
-        underlyingAddress={token.tokenAddress}
         decimals={erc20Decimals}
         symbol={erc20Symbol}
         disabled={actionsDisabled}
@@ -359,9 +359,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      })) as string[];
+      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
 
       await handleSwitchToBnb();
       setAddress(accounts[0] ?? null);

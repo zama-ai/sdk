@@ -1,21 +1,20 @@
 export {
   confidentialBalanceOfContract,
   confidentialTransferContract,
+  confidentialTransferAndCallContract,
   confidentialTransferFromContract,
+  confidentialTransferFromAndCallContract,
   isOperatorContract,
   setOperatorContract,
   unwrapContract,
   unwrapFromBalanceContract,
   confidentialTotalSupplyContract,
   rateContract,
-} from "./encrypted";
-
-export {
   finalizeUnwrapContract,
   underlyingContract,
   inferredTotalSupplyContract,
   wrapContract,
-} from "./wrapper";
+} from "./confidential-wrapper";
 
 export {
   nameContract,

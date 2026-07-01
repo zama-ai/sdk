@@ -22,9 +22,7 @@ import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
 
 function LookupWrapper({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { data, isLoading, error } = useConfidentialTokenAddress({
-    tokenAddress,
-  });
+  const { data, isLoading, error } = useConfidentialTokenAddress({ tokenAddress });
 
   if (isLoading) return <p>Looking up...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -65,7 +63,7 @@ The `data` field resolves to `readonly [boolean, Address]`:
 
 ## Related
 
-- [useTokenAddress](/reference/react/useTokenAddress) -- reverse lookup (confidential &rarr; plain)
-- [useIsConfidentialTokenValid](/reference/react/useIsConfidentialTokenValid) -- check if a confidential token is valid
-- [useWrapperDiscovery](/reference/react/useWrapperDiscovery) -- alternative lookup via the deployment coordinator
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getConfidentialTokenAddress()` method
+- [useTokenAddress](./useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
+- [useIsConfidentialTokenValid](./useIsConfidentialTokenValid.md) -- check if a confidential token is valid
+- [useWrapperDiscovery](./useWrapperDiscovery.md) -- alternative lookup via the deployment coordinator
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getConfidentialTokenAddress()` method

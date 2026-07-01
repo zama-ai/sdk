@@ -1,17 +1,21 @@
 import { z } from "zod/mini";
 import type { RelayerConfig } from "../config/types";
+import type { GenericLogger } from "../worker/worker.types";
 import { RelayerNode } from "../relayer/relayer-node";
 import type { FheChain } from "../chains/types";
 import type { GenericStorage } from "../types";
 import { parseConfiguration } from "../validation";
 import { NodeWorkerPool } from "../worker/worker.node-pool";
-import type { GenericLogger } from "../worker/worker.types";
 import { assertCondition } from "../utils";
 
-/** Pool options for the `node()` transport factory. */
+/**
+ * Pool options for the `node()` transport factory.
+ *
+ * Logging is configured once, SDK-wide, via `createConfig({ logger })` — there
+ * is deliberately no per-relayer logger option.
+ */
 export interface NodePoolOptions {
   poolSize?: number;
-  logger?: GenericLogger;
   fheArtifactStorage?: GenericStorage;
   fheArtifactCacheTTL?: number;
 }
@@ -19,8 +23,12 @@ export interface NodePoolOptions {
 /** Node transport — narrows worker type to `NodeWorkerPool`. */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
-  readonly createWorker: (chains: FheChain[]) => NodeWorkerPool;
-  readonly createRelayer: (chain: FheChain, worker: NodeWorkerPool) => RelayerNode;
+  readonly createWorker: (chains: FheChain[], logger: GenericLogger) => NodeWorkerPool;
+  readonly createRelayer: (
+    chain: FheChain,
+    worker: NodeWorkerPool,
+    logger: GenericLogger,
+  ) => RelayerNode;
 }
 
 const NodePoolOptionsSchema = z.object({
@@ -47,13 +55,13 @@ export function node(options?: NodePoolOptions): NodeRelayerConfig {
   }
   return {
     type: "node",
-    createWorker: (chains) => new NodeWorkerPool({ chains, ...options }),
-    createRelayer: (chain, pool) => {
+    createWorker: (chains, logger) => new NodeWorkerPool({ chains, ...options, logger }),
+    createRelayer: (chain, pool, logger) => {
       assertCondition(
         !!pool,
         "node() relayer requires a worker pool — createWorker must be called first.",
       );
-      return new RelayerNode({ chain, pool, ...options });
+      return new RelayerNode({ chain, pool, ...options, logger });
     },
   };
 }

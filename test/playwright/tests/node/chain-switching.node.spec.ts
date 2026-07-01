@@ -10,6 +10,6 @@ test("RelayerNode resolves correct ACL address from chain config", async ({ sdk,
 });
 
 test("RelayerNode generates a valid keypair", async ({ sdk }) => {
-  const kp = await sdk.relayer.generateKeypair();
+  const kp = await sdk.relayer.generateTransportKeyPair();
   expect(kp.publicKey).toMatch(/^0x[0-9a-fA-F]+$/);
 });

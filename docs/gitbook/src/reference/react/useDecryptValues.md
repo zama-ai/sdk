@@ -1,18 +1,18 @@
 ---
 title: useDecryptValues
-description: Query hook that automatically decrypts FHE encrypted values once credentials are available via useGrantPermit.
+description: Query hook for FHE user decryption. Disabled by default — enable it to fire, and gate on a cached permit to avoid an unexpected wallet prompt.
 ---
 
 # useDecryptValues
 
-Query hook for user decryption. Automatically fires when credentials are available (acquired via [`useGrantPermit`](/reference/react/useGrantPermit)) and inputs are provided. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
+Query hook for user decryption. **Disabled by default** — pass `enabled` to run it, and gate on a cached permit (via [`useHasPermit`](./useHasPermit.md)) to avoid an unexpected wallet prompt. Checks the persistent decrypt cache first and only hits the relayer for uncached entries.
 
 {% hint style="info" %}
 Renamed from `useUserDecrypt` to align with the Zama glossary (prerelease rename). If you were on the old name, update imports to `useDecryptValues`.
 {% endhint %}
 
 {% hint style="info" %}
-**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](/reference/react/useConfidentialBalance) which handles decryption and caching automatically. Use `useDecryptValues` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
+**This is the recommended way to decrypt.** For token balances, prefer [`useConfidentialBalance`](./useConfidentialBalance.md) which handles decryption and caching automatically. Use `useDecryptValues` when your smart contract uses FHE types directly (e.g. a confidential voting contract, a sealed-bid auction, or any non-token contract).
 {% endhint %}
 
 ## Import
@@ -75,11 +75,14 @@ import { type EncryptedInput } from "@zama-fhe/sdk";
 Inputs from different contracts can be mixed in a single call — `useDecryptValues` automatically groups them by contract address and issues one decryption request per unique contract:
 
 ```tsx
-const { data } = useDecryptValues([
-  { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
-  { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
-]);
+const { data } = useDecryptValues(
+  [
+    { encryptedValue: "0xvalue1...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue2...", contractAddress: "0xContractA" },
+    { encryptedValue: "0xvalue3...", contractAddress: "0xContractB" },
+  ],
+  { enabled: true },
+);
 
 // data: { "0xvalue1...": 500n, "0xvalue2...": 200n, "0xvalue3...": 1000n }
 ```
@@ -110,7 +113,7 @@ When all requested inputs are already cached, `data` contains the cached values 
 2. **Decrypt** — calls `sdk.decryption.decryptValues(inputs)` which checks the persistent cache, then hits the relayer for any uncached entries.
 
 {% hint style="warning" %}
-**`useDecryptValues` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](/reference/react/useHasPermit):
+**`useDecryptValues` does not automatically gate on permits.** If permits are not cached when the query fires, the SDK will prompt the user's wallet for a signature. To avoid unexpected popups, gate the query yourself using [`useHasPermit`](./useHasPermit.md):
 
 ```tsx
 const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xContract"] });
@@ -124,18 +127,18 @@ This ensures the decrypt query only fires after `useGrantPermit` has been called
 
 ## Permit caching
 
-`useDecryptValues` relies on permits acquired via [`useGrantPermit`](/reference/react/useGrantPermit):
+`useDecryptValues` relies on permits acquired via [`useGrantPermit`](./useGrantPermit.md):
 
-- **First `grantPermit()` call** — generates a new FHE keypair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
+- **First `grantPermit()` call** — generates a new transport key pair, creates EIP-712 typed data, and requests a wallet signature. The permits are then cached.
 - **Subsequent queries** — reuse the cached permits if they are still valid (not expired).
-- **Expiry** — the FHE keypair expires after `keypairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
+- **Expiry** — the transport key pair expires after `transportKeyPairTTL` seconds (default: 2592000 = 30 days, configurable via SDK config). Permits expire after `permitTTL` days (default: 30). Once expired, call `grantPermit()` again to generate fresh permits.
 
 This means users only see a wallet signature prompt once per TTL window, even if they decrypt multiple times.
 
 ## Related
 
-- [`useGrantPermit`](/reference/react/useGrantPermit) — pre-authorize contracts with one wallet signature (required before `useDecryptValues` fires)
-- [`useHasPermit`](/reference/react/useHasPermit) — check whether permits are cached and cover specific contracts
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) — high-level hook that decrypts token balances with automatic caching
-- [`useEncrypt`](/reference/react/useEncrypt) — reverse operation, encrypt a plaintext value for on-chain submission
-- [Encrypt & Decrypt guide](/guides/encrypt-decrypt) — full walkthrough with end-to-end examples
+- [`useGrantPermit`](./useGrantPermit.md) — pre-authorize contracts with one wallet signature (required before `useDecryptValues` fires)
+- [`useHasPermit`](./useHasPermit.md) — check whether permits are cached and cover specific contracts
+- [`useConfidentialBalance`](./useConfidentialBalance.md) — high-level hook that decrypts token balances with automatic caching
+- [`useEncrypt`](./useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
+- [Encrypt & Decrypt guide](../../guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples

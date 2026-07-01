@@ -5,7 +5,7 @@ description: Provider adapter that wraps a viem PublicClient for read-only chain
 
 # ViemProvider
 
-Provider adapter that wraps a viem `PublicClient` for read-only chain access. Implements [GenericProvider](/reference/sdk/GenericProvider).
+Provider adapter that wraps a viem `PublicClient` for read-only chain access. Implements [GenericProvider](./GenericProvider.md).
 
 ## Import
 
@@ -41,18 +41,16 @@ You rarely need to instantiate `ViemProvider` directly. The viem `createConfig` 
 Viem public client for reading chain data.
 
 ```ts
-const provider = new ViemProvider({
-  publicClient,
-});
+const provider = new ViemProvider({ publicClient });
 ```
 
 ## Methods
 
-All methods are inherited from [GenericProvider](/reference/sdk/GenericProvider).
+All methods are inherited from [GenericProvider](./GenericProvider.md).
 
 ## Related
 
-- [GenericProvider](/reference/sdk/GenericProvider) -- interface this class implements
-- [ViemSigner](/reference/sdk/ViemSigner) -- companion signer adapter
-- [EthersProvider](/reference/sdk/EthersProvider) -- ethers alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericProvider](./GenericProvider.md) -- interface this class implements
+- [ViemSigner](./ViemSigner.md) -- companion signer adapter
+- [EthersProvider](./EthersProvider.md) -- ethers alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

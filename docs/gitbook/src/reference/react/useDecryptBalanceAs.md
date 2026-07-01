@@ -85,10 +85,7 @@ The address that delegated decryption rights.
 The address whose on-chain balance to read. Defaults to `delegatorAddress`. Use this when the balance holder differs from the delegator.
 
 ```ts
-await decryptAs({
-  delegatorAddress: "0xDelegator",
-  accountAddress: "0xBalanceHolder",
-});
+await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
 ```
 
 ## Return Type
@@ -99,7 +96,7 @@ await decryptAs({
 
 ## Related
 
-- [`useBatchDecryptBalancesAs`](/reference/react/useBatchDecryptBalancesAs) -- batch variant for multiple tokens
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check delegation status before decrypting
-- [`useConfidentialBalance`](/reference/react/useConfidentialBalance) -- decrypt your own balance (non-delegated)
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useBatchDecryptBalancesAs`](./useBatchDecryptBalancesAs.md) -- batch variant for multiple tokens
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check delegation status before decrypting
+- [`useConfidentialBalance`](./useConfidentialBalance.md) -- decrypt your own balance (non-delegated)
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference

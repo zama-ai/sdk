@@ -28,10 +28,7 @@ function TokenBalance({ tokenAddress }: { tokenAddress: `0x${string}` }) {
     data: balance,
     isLoading,
     error,
-  } = useConfidentialBalance({
-    address: tokenAddress,
-    account: address,
-  });
+  } = useConfidentialBalance({ address: tokenAddress, account: address });
 
   if (isLoading) return <span>Decrypting...</span>;
   if (error) return <span>Error: {error.message}</span>;
@@ -60,10 +57,7 @@ const myMainnet = {
 
 export const zamaConfig = createConfig({
   chains: [mySepolia, myMainnet],
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
   wagmiConfig,
 });
 ```
@@ -87,10 +81,7 @@ Contract address of the confidential token.
 {% tab title="component.tsx" %}
 
 ```tsx
-const { data } = useConfidentialBalance({
-  address: "0xToken",
-  account: address,
-});
+const { data } = useConfidentialBalance({ address: "0xToken", account: address });
 ```
 
 {% endtab %}
@@ -111,10 +102,7 @@ Address whose balance to read. The query is disabled while `undefined`. Pass the
 import { useAccount } from "wagmi";
 
 const { address } = useAccount();
-const { data } = useConfidentialBalance({
-  address: "0xToken",
-  account: address,
-});
+const { data } = useConfidentialBalance({ address: "0xToken", account: address });
 ```
 
 {% endtab %}
@@ -134,6 +122,6 @@ The `data` property is `bigint | undefined` -- the decrypted token balance.
 
 ## Related
 
-- [useConfidentialBalances](/reference/react/useConfidentialBalances) -- batch variant for multiple tokens
-- [Check Balances guide](/guides/check-balances)
-- [Query Keys](/reference/react/query-keys) -- `zamaQueryKeys.confidentialBalance`
+- [useConfidentialBalances](./useConfidentialBalances.md) -- batch variant for multiple tokens
+- [Check Balances guide](../../guides/check-balances.md)
+- [Query Keys](./query-keys.md) -- `zamaQueryKeys.confidentialBalance`

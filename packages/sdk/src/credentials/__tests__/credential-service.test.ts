@@ -137,19 +137,19 @@ describe("CredentialService.handleWalletAccountChange", () => {
     relayer,
   }) => {
     const credentialService = createCredentialService();
-    vi.mocked(relayer.generateKeypair).mockClear();
+    vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
     await credentialService.handleWalletAccountChange(undefined, { address: USER });
 
-    expect(relayer.generateKeypair).not.toHaveBeenCalled();
+    expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
   });
 });
 
-describe("CredentialService.warmKeypair", () => {
+describe("CredentialService.warmTransportKeyPair", () => {
   test("populates the vault for the requested address", async ({ credentialService, relayer }) => {
-    await credentialService.warmKeypair(USER);
+    await credentialService.warmTransportKeyPair(USER);
 
-    expect(relayer.generateKeypair).toHaveBeenCalled();
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
   });
 });
 
@@ -176,11 +176,7 @@ describe("CredentialService.allow signing-error wrapping", () => {
       reject: () => new Error("network unreachable"),
       expected: SigningFailedError,
     },
-    {
-      label: "non-Error throw",
-      reject: () => "boom",
-      expected: SigningFailedError,
-    },
+    { label: "non-Error throw", reject: () => "boom", expected: SigningFailedError },
   ])(
     "$label is wrapped via SigningError taxonomy",
     async ({ reject, expected }, { credentialService, signer }) => {
@@ -291,12 +287,13 @@ describe("CredentialService.grantPermit widening", () => {
     createCredentialService,
     signer,
   }) => {
-    // permitTTL=1 day, keypairTTL=30 days so the keypair outlives the test window.
-    // Re-sign at t≈23h; if the widened permit still carried the original startTimestamp
-    // it would expire at t=24h. Anchoring to the re-sign keeps it usable until t≈47h.
+    // permitTTL=1 day, transportKeyPairTTL=30 days so the transport key pair outlives the
+    // test window. Re-sign at t≈23h; if the widened permit still carried the original
+    // startTimestamp it would expire at t=24h. Anchoring to the re-sign keeps it usable
+    // until t≈47h.
     const credentialService = createCredentialService({
       permitTTL: 1,
-      keypairTTL: 30 * 86400,
+      transportKeyPairTTL: 30 * 86400,
     });
     vi.useFakeTimers({ toFake: ["Date"] });
     try {

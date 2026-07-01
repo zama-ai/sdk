@@ -16,7 +16,7 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
- * - {@link DecryptionFailedError} — public decryption of the burn amount failed
+ * - {@link DecryptionFailedError} — public decryption of the unwrap amount failed
  * - {@link TransactionRevertedError} — on-chain finalize transaction reverted
  *
  * @param address - Address of the confidential wrapper contract.

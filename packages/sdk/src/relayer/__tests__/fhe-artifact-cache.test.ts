@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
+import { LoggerService } from "../../services/logger-service";
 
 const DUMMY_RELAYER_URL = "https://relayer.example.com";
 
@@ -11,25 +12,26 @@ describe("FheArtifactCache", () => {
     storage = new MemoryStorage();
   });
 
-  // ── getPublicKey ──────────────────────────────────────────────
+  // ── fetchFheEncryptionKeyBytes ──────────────────────────────────────────────
 
-  describe("getPublicKey", () => {
+  describe("fetchFheEncryptionKeyBytes", () => {
     test("returns cached public key without calling fetcher on cache hit", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1, 2, 3]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
       // First call — fetches and stores
-      const result1 = await cache.getPublicKey(fetcher);
+      const result1 = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result1).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce();
 
       // Second call — returns from cache, no fetch
-      const result2 = await cache.getPublicKey(fetcher);
+      const result2 = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result2).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce(); // Still once
     });
@@ -43,8 +45,9 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
-      await cache1.getPublicKey(fetcher);
+      await cache1.fetchFheEncryptionKeyBytes(fetcher);
       expect(fetcher).toHaveBeenCalledOnce();
 
       // New cache instance, same storage — should restore without fetching
@@ -52,9 +55,10 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(null);
-      const result = await cache2.getPublicKey(fetcher2);
+      const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
 
       expect(result).toEqual(pk);
       expect(fetcher2).not.toHaveBeenCalled();
@@ -68,16 +72,18 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
-      await cache1.getPublicKey(vi.fn().mockResolvedValue(pk1));
+      await cache1.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk1));
 
       const cache2 = new FheArtifactCache({
         storage,
         chainId: 1,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(pk2);
-      const result = await cache2.getPublicKey(fetcher2);
+      const result = await cache2.fetchFheEncryptionKeyBytes(fetcher2);
 
       // Different chain → must fetch again
       expect(fetcher2).toHaveBeenCalledOnce();
@@ -89,15 +95,16 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockResolvedValue(null);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toBeNull();
 
       // Next call should try again since null wasn't cached
       const fetcher2 = vi.fn().mockResolvedValue(null);
-      await cache.getPublicKey(fetcher2);
+      await cache.fetchFheEncryptionKeyBytes(fetcher2);
       expect(fetcher2).toHaveBeenCalledOnce();
     });
 
@@ -112,11 +119,12 @@ describe("FheArtifactCache", () => {
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toEqual(pk);
       expect(fetcher).toHaveBeenCalledOnce();
     });
@@ -132,11 +140,12 @@ describe("FheArtifactCache", () => {
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
       const fetcher = vi.fn().mockResolvedValue(pk);
 
-      const result = await cache.getPublicKey(fetcher);
+      const result = await cache.fetchFheEncryptionKeyBytes(fetcher);
       expect(result).toEqual(pk);
     });
 
@@ -146,21 +155,16 @@ describe("FheArtifactCache", () => {
         set: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn().mockResolvedValue(undefined),
       };
-      const logger = {
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      };
+      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       const cache = new FheArtifactCache({
         storage: badStorage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
-        logger,
+        logger: new LoggerService(logger),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([5]) };
-      await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("Failed to read public key"),
@@ -173,10 +177,11 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockRejectedValue(new Error("network down"));
 
-      await expect(cache.getPublicKey(fetcher)).rejects.toThrow("network down");
+      await expect(cache.fetchFheEncryptionKeyBytes(fetcher)).rejects.toThrow("network down");
     });
 
     test("deletes corrupt cache entry and falls back to fetcher", async () => {
@@ -187,9 +192,10 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
-      const result = await cache.getPublicKey(vi.fn().mockResolvedValue(pk));
+      const result = await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(pk));
 
       expect(result).toEqual(pk);
       // Corrupt entry should have been deleted
@@ -208,11 +214,9 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
-      const pp = {
-        publicParamsId: "pp1",
-        publicParams: new Uint8Array([4, 5, 6]),
-      };
+      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([4, 5, 6]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const result1 = await cache.getPublicParams(2048, fetcher);
@@ -225,16 +229,14 @@ describe("FheArtifactCache", () => {
     });
 
     test("persists public params to storage and restores from a fresh cache instance", async () => {
-      const pp = {
-        publicParamsId: "pp1",
-        publicParams: new Uint8Array([7, 8]),
-      };
+      const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([7, 8]) };
       const fetcher = vi.fn().mockResolvedValue(pp);
 
       const cache1 = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       await cache1.getPublicParams(2048, fetcher);
 
@@ -242,6 +244,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher2 = vi.fn().mockResolvedValue(null);
       const result = await cache2.getPublicParams(2048, fetcher2);
@@ -255,15 +258,10 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
-      const pp2048 = {
-        publicParamsId: "pp-2048",
-        publicParams: new Uint8Array([1]),
-      };
-      const pp4096 = {
-        publicParamsId: "pp-4096",
-        publicParams: new Uint8Array([2]),
-      };
+      const pp2048 = { publicParamsId: "pp-2048", publicParams: new Uint8Array([1]) };
+      const pp4096 = { publicParamsId: "pp-4096", publicParams: new Uint8Array([2]) };
 
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp2048));
       const fetcher4096 = vi.fn().mockResolvedValue(pp4096);
@@ -278,6 +276,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const fetcher = vi.fn().mockResolvedValue(null);
 
@@ -294,6 +293,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(pp));
@@ -371,20 +371,8 @@ describe("FheArtifactCache", () => {
     const MANIFEST = {
       status: "succeeded",
       response: {
-        fheKeyInfo: [
-          {
-            fhePublicKey: {
-              dataId: "pk-id-1",
-              urls: [PK_ARTIFACT_URL],
-            },
-          },
-        ],
-        crs: {
-          2048: {
-            dataId: "pp-id-1",
-            urls: [CRS_ARTIFACT_URL],
-          },
-        },
+        fheKeyInfo: [{ fhePublicKey: { dataId: "pk-id-1", urls: [PK_ARTIFACT_URL] } }],
+        crs: { 2048: { dataId: "pp-id-1", urls: [CRS_ARTIFACT_URL] } },
       },
     };
 
@@ -461,12 +449,13 @@ describe("FheArtifactCache", () => {
         storage: st,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
       // Prime the in-memory params map so revalidation discovers bits=2048
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
       // Also prime the public key
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       return cache;
     }
 
@@ -511,10 +500,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK returns 200 = changed
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -533,11 +519,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK fresh (304), CRS changed (200)
-      mockFetch({
-        pkStatus: 304,
-        crsStatus: 200,
-        crsHeaders: { etag: '"pp-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 304, crsStatus: 200, crsHeaders: { etag: '"pp-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -585,11 +567,7 @@ describe("FheArtifactCache", () => {
       );
 
       // 304 with a new etag header (servers may update weak→strong)
-      mockFetch({
-        pkStatus: 304,
-        pkHeaders: { etag: '"refreshed-etag"' },
-        crsStatus: 304,
-      });
+      mockFetch({ pkStatus: 304, pkHeaders: { etag: '"refreshed-etag"' }, crsStatus: 304 });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(false);
@@ -650,9 +628,10 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: 0,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       // Even with fresh timestamps, TTL=0 should always proceed
@@ -666,12 +645,7 @@ describe("FheArtifactCache", () => {
 
     test("logs warning on network error when logger is provided", async () => {
       const expired = Date.now() - CACHE_TTL_MS - 1000;
-      const logger = {
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      };
+      const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       await storage.set(PK_STORAGE_KEY, makeCachedPk({ lastValidatedAt: expired }));
       await storage.set(PARAMS_STORAGE_KEY, makeCachedParams({ lastValidatedAt: expired }));
@@ -682,9 +656,9 @@ describe("FheArtifactCache", () => {
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
         ttl: CACHE_TTL,
-        logger,
+        logger: new LoggerService(logger),
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network failure"));
@@ -716,10 +690,7 @@ describe("FheArtifactCache", () => {
       );
 
       // PK artifact changed (200)
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -755,16 +726,14 @@ describe("FheArtifactCache", () => {
         storage: failDeleteStorage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
       await cache.getPublicParams(2048, vi.fn().mockResolvedValue(null));
 
       // PK artifact changed (200)
-      mockFetch({
-        pkStatus: 200,
-        pkHeaders: { etag: '"pk-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 200, pkHeaders: { etag: '"pk-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       // Should still report stale even though storage delete failed
@@ -784,18 +753,15 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
       // Prime only PK (not params) — simulates a cold start where
       // getPublicParams hasn't been called yet
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
 
       // CRS artifact changed (200)
-      mockFetch({
-        pkStatus: 304,
-        crsStatus: 200,
-        crsHeaders: { etag: '"pp-etag-ROTATED"' },
-      });
+      mockFetch({ pkStatus: 304, crsStatus: 200, crsHeaders: { etag: '"pp-etag-ROTATED"' } });
 
       const result = await cache.revalidateIfDue();
       expect(result).toBe(true);
@@ -809,6 +775,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: RELAYER_URL,
+        logger: new LoggerService(),
         ttl: CACHE_TTL,
       });
 
@@ -843,11 +810,7 @@ describe("FheArtifactCache", () => {
       globalThis.fetch = vi.fn().mockImplementation((url: string | URL) => {
         const urlStr = String(url);
         if (urlStr === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve(MANIFEST),
-          });
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(MANIFEST) });
         }
         if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
           return Promise.resolve({
@@ -884,19 +847,11 @@ describe("FheArtifactCache", () => {
       globalThis.fetch = vi.fn().mockImplementation((url: string | URL, opts?: RequestInit) => {
         const urlStr = String(url);
         if (urlStr === `${RELAYER_URL}/keyurl`) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.resolve(MANIFEST),
-          });
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(MANIFEST) });
         }
         if (urlStr === PK_ARTIFACT_URL || urlStr === CRS_ARTIFACT_URL) {
           if (opts?.method === "HEAD") {
-            return Promise.resolve({
-              status: 405,
-              ok: false,
-              headers: new Headers(),
-            });
+            return Promise.resolve({ status: 405, ok: false, headers: new Headers() });
           }
           // GET fallback returns 304
           return Promise.resolve({
@@ -928,11 +883,12 @@ describe("FheArtifactCache", () => {
   // ── Concurrent access ─────────────────────────────────────────
 
   describe("concurrent access", () => {
-    test("deduplicates concurrent getPublicKey calls", async () => {
+    test("deduplicates concurrent fetchFheEncryptionKeyBytes calls", async () => {
       const cache = new FheArtifactCache({
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pk = { publicKeyId: "id1", publicKey: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pk) => void;
@@ -943,8 +899,8 @@ describe("FheArtifactCache", () => {
       );
 
       // Fire two concurrent calls
-      const p1 = cache.getPublicKey(fetcher);
-      const p2 = cache.getPublicKey(fetcher);
+      const p1 = cache.fetchFheEncryptionKeyBytes(fetcher);
+      const p2 = cache.fetchFheEncryptionKeyBytes(fetcher);
 
       resolveDeferred(pk);
       const [r1, r2] = await Promise.all([p1, p2]);
@@ -959,6 +915,7 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: 11155111,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
       });
       const pp = { publicParamsId: "pp1", publicParams: new Uint8Array([1]) };
       let resolveDeferred!: (v: typeof pp) => void;
@@ -996,9 +953,10 @@ describe("FheArtifactCache", () => {
         storage,
         chainId: CHAIN_ID,
         relayerUrl: DUMMY_RELAYER_URL,
+        logger: new LoggerService(),
         ttl: 60,
       });
-      await cache.getPublicKey(vi.fn().mockResolvedValue(null));
+      await cache.fetchFheEncryptionKeyBytes(vi.fn().mockResolvedValue(null));
 
       // Use a deferred promise for the manifest fetch so we can control timing
       let resolveManifest!: (v: unknown) => void;
@@ -1030,13 +988,7 @@ describe("FheArtifactCache", () => {
           Promise.resolve({
             status: "succeeded",
             response: {
-              fheKeyInfo: [
-                {
-                  fhePublicKey: {
-                    urls: ["https://cdn.example.com/pk.bin"],
-                  },
-                },
-              ],
+              fheKeyInfo: [{ fhePublicKey: { urls: ["https://cdn.example.com/pk.bin"] } }],
               crs: {},
             },
           }),

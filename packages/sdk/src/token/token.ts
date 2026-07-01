@@ -1,7 +1,9 @@
 import { type Address, getAddress, type Hex } from "viem";
 import {
   confidentialBalanceOfContract,
+  confidentialTransferAndCallContract,
   confidentialTransferContract,
+  confidentialTransferFromAndCallContract,
   confidentialTransferFromContract,
   decimalsContract,
   ERC7984_INTERFACE_ID,
@@ -276,10 +278,7 @@ export class Token {
     const outcomes = await pLimit(
       tokens.map((t) => async () => {
         try {
-          return {
-            status: "fulfilled" as const,
-            value: await t.balanceOf(owner),
-          };
+          return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
         } catch (reason) {
           return { status: "rejected" as const, reason };
         }
@@ -302,9 +301,7 @@ export class Token {
         const error =
           reason instanceof ZamaError
             ? reason
-            : new DecryptionFailedError(toError(reason).message, {
-                cause: reason,
-              });
+            : new DecryptionFailedError(toError(reason).message, { cause: reason });
         errors.set(tokenAddress, error);
       }
     }
@@ -486,9 +483,7 @@ export class Token {
         token.address,
         outcome.reason instanceof ZamaError
           ? outcome.reason
-          : new DecryptionFailedError(toError(outcome.reason).message, {
-              cause: outcome.reason,
-            }),
+          : new DecryptionFailedError(toError(outcome.reason).message, { cause: outcome.reason }),
       );
     }
     return encryptedValues;
@@ -544,7 +539,7 @@ export class Token {
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
-    void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.());
+    void swallow("transfer: onEncryptComplete", () => onEncryptComplete?.(), this.sdk.logger);
 
     if (encryptedValues.length === 0) {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
@@ -596,7 +591,11 @@ export class Token {
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });
-    void swallow("transferFrom: onEncryptComplete", () => callbacks?.onEncryptComplete?.());
+    void swallow(
+      "transferFrom: onEncryptComplete",
+      () => callbacks?.onEncryptComplete?.(),
+      this.sdk.logger,
+    );
 
     if (encryptedValues.length === 0) {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
@@ -610,6 +609,151 @@ export class Token {
         normalizedTo,
         encryptedValues[0]!,
         inputProof,
+      ),
+      onSubmitted: callbacks?.onTransferSubmitted,
+    });
+  }
+
+  /**
+   * ERC-7984 `confidentialTransferAndCall`: encrypted transfer that also invokes
+   * the recipient's receiver hook (`onConfidentialTransferReceived`) in a single
+   * transaction. The caller crafts the opaque `data` payload — the SDK does not
+   * encode, validate, or interpret it.
+   *
+   * Balance validation follows the same rules as {@link Token.confidentialTransfer}.
+   *
+   * @param to - Recipient address. Must implement the ERC-7984 receiver hook.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @param data - Opaque bytes forwarded to the recipient's receiver hook.
+   * @param options - Optional: `skipBalanceCheck` (default `false`).
+   * @returns The transaction hash and mined receipt.
+   *
+   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
+   * @throws if the balance is less than `amount`. {@link InsufficientConfidentialBalanceError}
+   * @throws if balance validation requires decryption that is not possible. {@link BalanceCheckUnavailableError}
+   * @throws if FHE encryption fails. {@link EncryptionFailedError}
+   * @throws if the on-chain transfer reverts. {@link TransactionRevertedError}
+   *
+   * @example
+   * ```ts
+   * const txHash = await token.confidentialTransferAndCall(
+   *   "0xRecipient",
+   *   1000n,
+   *   "0xabcd", // caller-encoded payload forwarded to the receiver hook
+   * );
+   * ```
+   */
+  async confidentialTransferAndCall(
+    to: Address,
+    amount: bigint,
+    data: Hex,
+    options?: TransferOptions,
+  ): Promise<TransactionResult> {
+    this.#requireSigner("confidentialTransferAndCall");
+    const account = await requireAlignedWalletAccount(
+      "confidentialTransferAndCall",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const { skipBalanceCheck = false, onEncryptComplete, onTransferSubmitted } = options ?? {};
+
+    const normalizedTo = getAddress(to);
+
+    if (!skipBalanceCheck) {
+      await this.assertConfidentialBalance(amount);
+    }
+
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
+      contractAddress: this.address,
+      userAddress: getAddress(account.address),
+    });
+    void swallow(
+      "transferAndCall: onEncryptComplete",
+      () => onEncryptComplete?.(),
+      this.sdk.logger,
+    );
+
+    if (encryptedValues.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
+    }
+
+    return this.submitTransaction({
+      operation: "transferAndCall",
+      config: confidentialTransferAndCallContract(
+        this.address,
+        normalizedTo,
+        encryptedValues[0]!,
+        inputProof,
+        data,
+      ),
+      onSubmitted: onTransferSubmitted,
+    });
+  }
+
+  /**
+   * ERC-7984 `confidentialTransferFromAndCall`: operator-initiated encrypted
+   * transfer that also invokes the recipient's receiver hook in a single
+   * transaction. The caller must be an approved operator for `from` and crafts
+   * the opaque `data` payload — the SDK does not encode or interpret it.
+   *
+   * @param from - The address to transfer from (caller must be an approved operator).
+   * @param to - Recipient address. Must implement the ERC-7984 receiver hook.
+   * @param amount - Plaintext amount to transfer (encrypted automatically via FHE).
+   * @param data - Opaque bytes forwarded to the recipient's receiver hook.
+   * @param callbacks - Optional progress callbacks.
+   * @returns The transaction hash and mined receipt.
+   *
+   * @example
+   * ```ts
+   * const txHash = await token.confidentialTransferFromAndCall(
+   *   "0xFrom",
+   *   "0xRecipient",
+   *   500n,
+   *   "0xabcd",
+   * );
+   * ```
+   */
+  async confidentialTransferFromAndCall(
+    from: Address,
+    to: Address,
+    amount: bigint,
+    data: Hex,
+    callbacks?: TransferCallbacks,
+  ): Promise<TransactionResult> {
+    this.#requireSigner("confidentialTransferFromAndCall");
+    await requireAlignedWalletAccount(
+      "confidentialTransferFromAndCall",
+      this.sdk.signer,
+      this.sdk.provider,
+    );
+    const normalizedFrom = getAddress(from);
+    const normalizedTo = getAddress(to);
+
+    const { encryptedValues, inputProof } = await this.sdk.encrypt({
+      values: [{ value: amount, type: "euint64" }],
+      contractAddress: this.address,
+      userAddress: normalizedFrom,
+    });
+    void swallow(
+      "transferFromAndCall: onEncryptComplete",
+      () => callbacks?.onEncryptComplete?.(),
+      this.sdk.logger,
+    );
+
+    if (encryptedValues.length === 0) {
+      throw new EncryptionFailedError("Encryption returned no encrypted values");
+    }
+
+    return this.submitTransaction({
+      operation: "transferFromAndCall",
+      config: confidentialTransferFromAndCallContract(
+        this.address,
+        normalizedFrom,
+        normalizedTo,
+        encryptedValues[0]!,
+        inputProof,
+        data,
       ),
       onSubmitted: callbacks?.onTransferSubmitted,
     });
@@ -738,6 +882,7 @@ export class Token {
       config,
       emit: (input) => this.emit(input),
       onSubmitted,
+      logger: this.sdk.logger,
     });
   }
 

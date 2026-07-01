@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
+import { LoggerService } from "../../services/logger-service";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Hoisted mocks — vi.mock factories are hoisted above imports, so any
@@ -72,9 +73,7 @@ let uuidCounter = 0;
 
 vi.stubGlobal(
   "crypto",
-  Object.create(globalThis.crypto, {
-    randomUUID: { value: () => `uuid-${++uuidCounter}` },
-  }),
+  Object.create(globalThis.crypto, { randomUUID: { value: () => `uuid-${++uuidCounter}` } }),
 );
 
 // ---------------------------------------------------------------------------
@@ -118,13 +117,12 @@ function defaultWebConfig() {
     cdnUrl: "https://cdn.example.com/relayer.js",
     chains: [{ chainId: 1 } as never],
     csrfToken: "csrf-token-123",
+    logger: new LoggerService(),
   };
 }
 
 function defaultNodeConfig() {
-  return {
-    chains: [{ chainId: 1 } as never],
-  };
+  return { chains: [{ chainId: 1 } as never], logger: new LoggerService() };
 }
 
 /** Simulate a successful response for any request posted to a mock browser Worker. */
@@ -133,12 +131,7 @@ function autoResolveWebWorker(worker: MockWorker): void {
     Promise.resolve().then(() => {
       worker.onmessage?.(
         new MessageEvent("message", {
-          data: {
-            id: req.id,
-            type: req.type,
-            success: true,
-            data: { initialized: true },
-          },
+          data: { id: req.id, type: req.type, success: true, data: { initialized: true } },
         }),
       );
     });
@@ -150,12 +143,7 @@ function autoResolveNodeWorker(worker: MockNodeWorker): void {
   worker.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
       const handler = worker.listeners["message"]?.[0];
-      handler?.({
-        id: req.id,
-        type: req.type,
-        success: true,
-        data: { initialized: true },
-      });
+      handler?.({ id: req.id, type: req.type, success: true, data: { initialized: true } });
     });
   });
 }
@@ -298,27 +286,23 @@ describe("RelayerWorkerClient", () => {
     const client = new RelayerWorkerClient(config);
     await client.initWorker();
 
+    const { logger: _logger, ...payloadConfig } = config;
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual({ env: "web", ...config });
+    expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
   });
 
   test("getInitPayload() excludes logger from the payload sent to the worker", async () => {
     setupAutoResolvingWebWorker();
-    const logger = {
+    const logger = new LoggerService({
       info: vi.fn(),
       debug: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-    };
-    const config = {
-      ...defaultWebConfig(),
-      logger,
-      integrity: "sha384-abc",
-      thread: 4,
-    };
+    });
+    const config = { ...defaultWebConfig(), logger, integrity: "sha384-abc", thread: 4 };
     const client = new RelayerWorkerClient(config);
     await client.initWorker();
 
@@ -344,9 +328,10 @@ describe("RelayerWorkerClient", () => {
     const worker = await client.initWorker();
     expect(worker).toBeDefined();
 
+    const { logger: _logger, ...payloadConfig } = config;
     const req = getFirstPostedRequest(lastMockWorker!);
     expect(req.type).toBe("INIT");
-    expect(req.payload).toEqual({ env: "web", ...config });
+    expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
   });
@@ -423,12 +408,7 @@ describe("RelayerWorkerClient", () => {
       Promise.resolve().then(() => {
         worker.onmessage?.(
           new MessageEvent("message", {
-            data: {
-              id: req.id,
-              type: req.type,
-              success: true,
-              data: { updated: true },
-            },
+            data: { id: req.id, type: req.type, success: true, data: { updated: true } },
           }),
         );
       });

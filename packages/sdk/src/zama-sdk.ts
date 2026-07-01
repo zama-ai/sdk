@@ -22,6 +22,7 @@ import type {
   GenericStorage,
   WalletAccountListener,
 } from "./types";
+import type { GenericLogger } from "./worker/worker.types";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -34,6 +35,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  * emission).
  */
 export class ZamaSDK {
+  /** @internal */
   readonly relayer: RelayerDispatcher;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
@@ -53,6 +55,7 @@ export class ZamaSDK {
   readonly offlineSigning: OfflineSigning;
   readonly #registryTTL: number;
   readonly #onEvent: ZamaSDKEventListener;
+  readonly #logger: GenericLogger;
   readonly #cachingService: CachingService;
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
@@ -67,11 +70,13 @@ export class ZamaSDK {
     this.signer = config.signer;
     this.storage = config.storage;
     this.#onEvent = config.onEvent ?? function () {};
-    this.#cachingService = new CachingService(config.storage);
+    this.#logger = config.logger;
+    this.#cachingService = new CachingService(config.storage, this.#logger);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
       emitEvent: this.emitEvent.bind(this),
+      logger: this.#logger,
     });
 
     const registryAddresses: Record<number, Address> = {};
@@ -93,10 +98,11 @@ export class ZamaSDK {
     this.#credentialService = new CredentialService({
       relayer: this.relayer,
       signer: config.signer,
-      keypairTTL: config.keypairTTL,
+      transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
       storage: this.storage,
       permitStorage: config.permitStorage,
+      logger: this.#logger,
     });
     if (config.signer) {
       this.#decryptionService = new DecryptionService({
@@ -116,6 +122,7 @@ export class ZamaSDK {
       relayer: this.relayer,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      logger: this.#logger,
     });
     this.#offlineSigningService = new OfflineSigningService({
       signer: config.signer,
@@ -131,6 +138,7 @@ export class ZamaSDK {
       provider: this.provider,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
+      logger: this.#logger,
     });
     this.delegations = new Delegations({
       signer: this.signer,
@@ -161,6 +169,17 @@ export class ZamaSDK {
   }
 
   /**
+   * The SDK-wide logger, exposed so contract abstractions ({@link Token},
+   * {@link WrappedToken}) can route their best-effort failures through the
+   * same sink. Silent by default.
+   *
+   * @internal
+   */
+  get logger(): GenericLogger {
+    return this.#logger;
+  }
+
+  /**
    * Emit a structured SDK event into the unified SDK event stream.
    *
    * Listener exceptions are caught and logged so that a misbehaving subscriber
@@ -173,14 +192,9 @@ export class ZamaSDK {
    */
   emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
     try {
-      this.#onEvent({
-        ...input,
-        tokenAddress,
-        timestamp: Date.now(),
-      } as ZamaSDKEvent);
+      this.#onEvent({ ...input, tokenAddress, timestamp: Date.now() } as ZamaSDKEvent);
     } catch (error) {
-      // oxlint-disable-next-line no-console
-      console.error("[zama-sdk] onEvent listener threw:", error);
+      this.#logger.warn(`${input.type} event listener silently failed`, { error });
     }
   }
 

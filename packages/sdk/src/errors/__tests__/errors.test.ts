@@ -2,7 +2,7 @@ import { describe, test, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
-  InvalidKeypairError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
   SigningRejectedError,
@@ -22,23 +22,23 @@ import {
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
 
-describe("InvalidKeypairError", () => {
+describe("InvalidTransportKeyPairError", () => {
   test("is instanceof ZamaError", () => {
-    const err = new InvalidKeypairError("creds rejected");
+    const err = new InvalidTransportKeyPairError("creds rejected");
     expect(err).toBeInstanceOf(ZamaError);
-    expect(err).toBeInstanceOf(InvalidKeypairError);
+    expect(err).toBeInstanceOf(InvalidTransportKeyPairError);
   });
 
   test("has correct code and name", () => {
-    const err = new InvalidKeypairError("creds rejected");
-    expect(err.code).toBe(ZamaErrorCode.InvalidKeypair);
-    expect(err.name).toBe("InvalidKeypairError");
+    const err = new InvalidTransportKeyPairError("creds rejected");
+    expect(err.code).toBe(ZamaErrorCode.InvalidTransportKeyPair);
+    expect(err.name).toBe("InvalidTransportKeyPairError");
     expect(err.message).toBe("creds rejected");
   });
 
   test("supports ErrorOptions cause", () => {
     const cause = new Error("upstream");
-    const err = new InvalidKeypairError("creds rejected", { cause });
+    const err = new InvalidTransportKeyPairError("creds rejected", { cause });
     expect(err.cause).toBe(cause);
   });
 });
@@ -86,34 +86,25 @@ describe("RelayerRequestFailedError", () => {
 describe("matchZamaError", () => {
   test("dispatches to the correct handler by error code", () => {
     const error = new SigningRejectedError("rejected");
-    const result = matchZamaError(error, {
-      SIGNING_REJECTED: (e) => `handled: ${e.message}`,
-    });
+    const result = matchZamaError(error, { SIGNING_REJECTED: (e) => `handled: ${e.message}` });
     expect(result).toBe("handled: rejected");
   });
 
   test("falls through to wildcard when no specific handler matches", () => {
     const error = new EncryptionFailedError("failed");
-    const result = matchZamaError(error, {
-      SIGNING_REJECTED: () => "wrong",
-      _: () => "wildcard",
-    });
+    const result = matchZamaError(error, { SIGNING_REJECTED: () => "wrong", _: () => "wildcard" });
     expect(result).toBe("wildcard");
   });
 
   test("returns undefined for non-ZamaError without wildcard", () => {
     const error = new Error("random");
-    const result = matchZamaError(error, {
-      SIGNING_REJECTED: () => "wrong",
-    });
+    const result = matchZamaError(error, { SIGNING_REJECTED: () => "wrong" });
     expect(result).toBeUndefined();
   });
 
   test("passes non-ZamaError to wildcard handler", () => {
     const error = new Error("random");
-    const result = matchZamaError(error, {
-      _: (e) => `caught: ${(e as Error).message}`,
-    });
+    const result = matchZamaError(error, { _: (e) => `caught: ${(e as Error).message}` });
     expect(result).toBe("caught: random");
   });
 });
@@ -152,30 +143,21 @@ describe("wrapSigningError", () => {
   test("preserves non-Error cause instead of dropping it", () => {
     const stringError = "string error value";
     expect(() => wrapSigningError(stringError, "test")).toThrow(
-      expect.objectContaining({
-        code: "SIGNING_FAILED",
-        cause: stringError,
-      }),
+      expect.objectContaining({ code: "SIGNING_FAILED", cause: stringError }),
     );
   });
 
   test("preserves object cause instead of dropping it", () => {
     const objError = { message: "something went wrong", code: 42 };
     expect(() => wrapSigningError(objError, "test")).toThrow(
-      expect.objectContaining({
-        code: "SIGNING_FAILED",
-        cause: objError,
-      }),
+      expect.objectContaining({ code: "SIGNING_FAILED", cause: objError }),
     );
   });
 
   test("detects rejection from non-Error objects with code 4001", () => {
     const walletError = { code: 4001, message: "User rejected" };
     expect(() => wrapSigningError(walletError, "test")).toThrow(
-      expect.objectContaining({
-        code: "SIGNING_REJECTED",
-        cause: walletError,
-      }),
+      expect.objectContaining({ code: "SIGNING_REJECTED", cause: walletError }),
     );
   });
 

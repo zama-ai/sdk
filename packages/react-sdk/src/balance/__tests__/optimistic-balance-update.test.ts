@@ -21,10 +21,7 @@ const WALLET_ACCOUNT = { address: userAddress, chainId: 31337 };
 
 describe("unwrapOptimisticCallerContext", () => {
   test("returns wrappedContext and callerContext when optimistic is true", () => {
-    const inner: OptimisticMutateContext = {
-      snapshot: [],
-      callerContext: { requestId: "abc" },
-    };
+    const inner: OptimisticMutateContext = { snapshot: [], callerContext: { requestId: "abc" } };
     const { wrappedContext, callerContext } = unwrapOptimisticCallerContext(true, inner);
     expect(wrappedContext).toBe(inner);
     expect(callerContext).toEqual({ requestId: "abc" });

@@ -6,16 +6,21 @@ import {console} from "forge-std/console.sol";
 import {TestERC20} from "../src/mocks/Erc20Mintable.sol";
 import {TestERC1363} from "../src/mocks/Erc1363Mintable.sol";
 import {ConfidentialWrapper} from "protocol-apps-wrapper/contracts/confidential-wrapper/contracts/ConfidentialWrapper.sol";
+import {ConfidentialWrapperV3} from
+    "protocol-apps-wrapper/contracts/confidential-wrapper/contracts/upgrades/ConfidentialWrapperV3.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ConfidentialTokenWrappersRegistry} from "protocol-apps-registry/contracts/confidential-token-wrappers-registry/contracts/ConfidentialTokenWrappersRegistry.sol";
+import {ERC7984ReceiverMock} from "@openzeppelin/confidential-contracts/mocks/token/ERC7984ReceiverMock.sol";
 
 contract Deploy is Script {
     function run() external {
         vm.startBroadcast();
 
-        // 1. Deploy ConfidentialWrapper implementation (for UUPS proxies)
-        ConfidentialWrapper wrapperImpl = new ConfidentialWrapper();
+        // 1. Deploy ConfidentialWrapperV3 implementation (for UUPS proxies).
+        // V3 matches what's live on mainnet and sepolia (zama-ai/protocol-apps@main),
+        // and exposes the owner-controlled denylist surface (blockUser/unblockUser/isBlocked).
+        ConfidentialWrapperV3 wrapperImpl = new ConfidentialWrapperV3();
         console.log("WrapperImpl:", address(wrapperImpl));
 
         // 2. Deploy test ERC20 tokens
@@ -26,12 +31,12 @@ contract Deploy is Script {
         console.log("USDT:", address(usdt));
 
         // 3. Deploy wrapper proxies directly
-        ConfidentialWrapper cUSDC = _deployWrapper(
+        ConfidentialWrapperV3 cUSDC = _deployWrapper(
             address(wrapperImpl), "Confidential ERC20 Token", "cERC20", IERC20(address(usdc))
         );
         console.log("cUSDC:", address(cUSDC));
 
-        ConfidentialWrapper cUSDT = _deployWrapper(
+        ConfidentialWrapperV3 cUSDT = _deployWrapper(
             address(wrapperImpl), "Confidential Tether USD", "cUSDT", IERC20(address(usdt))
         );
         console.log("cUSDT:", address(cUSDT));
@@ -40,7 +45,7 @@ contract Deploy is Script {
         TestERC1363 erc1363Token = new TestERC1363("ERC1363 Token", "ERC1363", 6);
         console.log("ERC1363:", address(erc1363Token));
 
-        ConfidentialWrapper cERC1363 = _deployWrapper(
+        ConfidentialWrapperV3 cERC1363 = _deployWrapper(
             address(wrapperImpl), "Confidential ERC1363 Token", "cERC1363", IERC20(address(erc1363Token))
         );
         console.log("cERC1363:", address(cERC1363));
@@ -70,9 +75,27 @@ contract Deploy is Script {
         registry.registerConfidentialToken(address(erc1363Token), address(cERC1363));
         console.log("WrappersRegistry:", address(registry));
 
+        // 7. Deploy the ERC-7984 receiver mock (used by confidentialTransferAndCall e2e).
+        //    `data == abi.encode(uint8(1))` succeeds, `0` fails silently, `>1` reverts with InvalidInput.
+        //    This is the final contract creation; it must precede the reinitializeV3 calls below so
+        //    its CREATE address stays identical to the one recorded in `contracts/deployments.json`.
+        ERC7984ReceiverMock confidentialReceiver = new ERC7984ReceiverMock();
+        console.log("ConfidentialReceiver:", address(confidentialReceiver));
+
+        // 8. Bring each proxy to V3 storage so denylist admin (blockUser/unblockUser/isBlocked)
+        // and V3 denylist enforcement on transfer/wrap/unwrap are active in tests. Empty initial
+        // denylist; no underlying denylist selector configured.
+        // Deferred to the end of broadcast so that no transaction is inserted between contract
+        // creations — keeps every CREATE address identical to the pre-V3 deploy script, which
+        // matters because `contracts/deployments.json` is checked in and consumed at build time
+        // by test-nextjs/test-vite.
+        cUSDC.reinitializeV3(new address[](0), bytes4(0), false);
+        cUSDT.reinitializeV3(new address[](0), bytes4(0), false);
+        cERC1363.reinitializeV3(new address[](0), bytes4(0), false);
+
         vm.stopBroadcast();
 
-        // 7. Write deployments.json
+        // 9. Write deployments.json
         string memory json = "deployments";
         vm.serializeAddress(json, "erc20", address(usdc));
         vm.serializeAddress(json, "cToken", address(cUSDC));
@@ -80,6 +103,7 @@ contract Deploy is Script {
         vm.serializeAddress(json, "cUSDT", address(cUSDT));
         vm.serializeAddress(json, "ERC1363", address(erc1363Token));
         vm.serializeAddress(json, "cERC1363", address(cERC1363));
+        vm.serializeAddress(json, "confidentialReceiver", address(confidentialReceiver));
         string memory finalJson = vm.serializeAddress(json, "wrappersRegistry", address(registry));
 
         string memory path = string.concat(vm.projectRoot(), "/deployments.json");
@@ -92,7 +116,7 @@ contract Deploy is Script {
         string memory name,
         string memory symbol,
         IERC20 underlying
-    ) internal returns (ConfidentialWrapper) {
+    ) internal returns (ConfidentialWrapperV3) {
         string memory contractURI = string.concat(
             "data:application/json;utf8,",
             '{"name":"', name, '","symbol":"', symbol, '"}'
@@ -101,6 +125,6 @@ contract Deploy is Script {
             ConfidentialWrapper.initialize,
             (name, symbol, contractURI, underlying, msg.sender)
         );
-        return ConfidentialWrapper(payable(address(new ERC1967Proxy(implementation, initData))));
+        return ConfidentialWrapperV3(payable(address(new ERC1967Proxy(implementation, initData))));
     }
 }

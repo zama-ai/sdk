@@ -13,6 +13,8 @@ import { BroadcastParams } from '@zama-fhe/sdk/query';
 import { ClearValues } from '@zama-fhe/relayer-sdk/web';
 import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
+import { ConfidentialTransferAndCallParams } from '@zama-fhe/sdk/query';
+import { ConfidentialTransferFromAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
@@ -130,6 +132,15 @@ export function useConfidentialTokenAddress(input: {
 export function useConfidentialTransfer<TContext = unknown>(config: UseConfidentialTransferConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferParams, TContext>;
 
 // @public
+export function useConfidentialTransferAndCall<TContext = unknown>(config: UseConfidentialTransferAndCallConfig, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferAndCallParams, TContext>): UseMutationResult<TransactionResult, Error, ConfidentialTransferAndCallParams, TContext>;
+
+// @public
+export interface UseConfidentialTransferAndCallConfig {
+    address: Address;
+    optimistic?: boolean;
+}
+
+// @public
 export interface UseConfidentialTransferConfig {
     address: Address;
     optimistic?: boolean;
@@ -137,6 +148,9 @@ export interface UseConfidentialTransferConfig {
 
 // @public
 export function useConfidentialTransferFrom(address: Address, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromParams, Address>): UseMutationResult<TransactionResult, Error, ConfidentialTransferFromParams, `0x${string}`>;
+
+// @public
+export function useConfidentialTransferFromAndCall(address: Address, options?: UseMutationOptions<TransactionResult, Error, ConfidentialTransferFromAndCallParams, Address>): UseMutationResult<TransactionResult, Error, ConfidentialTransferFromAndCallParams, `0x${string}`>;
 
 // @public
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;

@@ -61,9 +61,7 @@ describe("pending-unshield persistence", () => {
   });
 
   test("deletes invalid persisted pending unshield data", async ({ storage, wrapperAddress }) => {
-    await storage.set(`zama:pending-unshield:${wrapperAddress}`, {
-      unwrapTxHash: 123,
-    });
+    await storage.set(`zama:pending-unshield:${wrapperAddress}`, { unwrapTxHash: 123 });
     expect(await loadPendingUnshield(storage, wrapperAddress)).toBeNull();
     expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
   });

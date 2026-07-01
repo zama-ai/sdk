@@ -1,0 +1,9 @@
+id: rename-delegated-user-decrypt-params-import
+snapshots:
+  import type { DelegatedUserDecryptMutationParams } from "@zama-fhe/react-sdk";:
+    fixed: import type { DelegatedDecryptMutationParams } from "@zama-fhe/react-sdk";
+    labels:
+    - source: DelegatedUserDecryptMutationParams
+      style: primary
+      start: 14
+      end: 48

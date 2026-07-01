@@ -1,5 +1,5 @@
 import { describe, test, expect } from "../../test-fixtures";
-import { toError, isContractCallError } from "../error";
+import { toError, isContractCallError, extractHttpStatus } from "../error";
 
 describe("toError", () => {
   test("returns the same Error instance", () => {
@@ -52,9 +52,7 @@ describe("isContractCallError", () => {
   });
 
   test("detects ethers CALL_EXCEPTION", () => {
-    const err = Object.assign(new Error("call exception"), {
-      code: "CALL_EXCEPTION",
-    });
+    const err = Object.assign(new Error("call exception"), { code: "CALL_EXCEPTION" });
     expect(isContractCallError(err)).toBe(true);
   });
 
@@ -90,5 +88,50 @@ describe("isContractCallError", () => {
     expect(isContractCallError("string")).toBe(false);
     expect(isContractCallError(null)).toBe(false);
     expect(isContractCallError(undefined)).toBe(false);
+  });
+});
+
+describe("extractHttpStatus", () => {
+  test("reads a top-level statusCode", () => {
+    expect(extractHttpStatus(Object.assign(new Error("nope"), { statusCode: 403 }))).toBe(403);
+  });
+
+  test("reads a top-level status", () => {
+    expect(extractHttpStatus(Object.assign(new Error("nope"), { status: 401 }))).toBe(401);
+  });
+
+  test("reads cause.status (the relayer SDK shape)", () => {
+    // relayer-sdk throws `new Error(message, { cause: { code, status, ... } })`
+    const relayerError = Object.assign(
+      new Error("Public decrypt failed: relayer respond with HTTP code 403"),
+      { cause: { code: "RELAYER_FETCH_ERROR", status: 403 } },
+    );
+    expect(extractHttpStatus(relayerError)).toBe(403);
+  });
+
+  test("reads cause.statusCode", () => {
+    const error = Object.assign(new Error("boom"), { cause: { statusCode: 429 } });
+    expect(extractHttpStatus(error)).toBe(429);
+  });
+
+  test("prefers a top-level statusCode over the cause", () => {
+    const error = Object.assign(new Error("boom"), { cause: { status: 500 }, statusCode: 403 });
+    expect(extractHttpStatus(error)).toBe(403);
+  });
+
+  test("returns undefined when no numeric status is present", () => {
+    expect(extractHttpStatus(new Error("plain"))).toBeUndefined();
+    expect(
+      extractHttpStatus(
+        Object.assign(new Error("with string status"), { cause: { status: "403" } }),
+      ),
+    ).toBeUndefined();
+  });
+
+  test("returns undefined for non-object values", () => {
+    expect(extractHttpStatus("string")).toBeUndefined();
+    expect(extractHttpStatus(null)).toBeUndefined();
+    expect(extractHttpStatus(undefined)).toBeUndefined();
+    expect(extractHttpStatus(403)).toBeUndefined();
   });
 });

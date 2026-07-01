@@ -5,7 +5,7 @@ description: Interface that all signer adapters must implement for the SDK to in
 
 # GenericSigner
 
-Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](/reference/sdk/ViemSigner) or [EthersSigner](/reference/sdk/EthersSigner).
+Interface that all signer adapters must implement for the SDK to interact with wallets. You only need this if you are building a custom signer -- otherwise use [ViemSigner](./ViemSigner.md) or [EthersSigner](./EthersSigner.md).
 
 ## Import
 
@@ -32,7 +32,7 @@ interface WalletAccountStore {
 ```
 
 {% hint style="info" %}
-For read operations (`readContract`, `waitForTransactionReceipt`), see [GenericProvider](/reference/sdk/GenericProvider).
+For read operations (`readContract`, `waitForTransactionReceipt`), see [GenericProvider](./GenericProvider.md).
 {% endhint %}
 
 ## Usage with `createConfig`
@@ -156,11 +156,11 @@ The SDK calls `walletAccount.subscribe()` during initialization. The listener re
 - `previous` -- the previous `{ address, chainId }` identity, when one was known.
 - `next` -- the next `{ address, chainId }` identity, when the wallet is connected.
 
-When `previous` is present, the SDK clears that previous account's keypair, permits, and decrypt cache.
+When `previous` is present, the SDK clears that previous account's transport key pair, permits, and decrypt cache.
 
 ## Related
 
-- [GenericProvider](/reference/sdk/GenericProvider) -- read-only chain access interface
-- [ViemSigner](/reference/sdk/ViemSigner) -- viem implementation
-- [EthersSigner](/reference/sdk/EthersSigner) -- ethers implementation
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericProvider](./GenericProvider.md) -- read-only chain access interface
+- [ViemSigner](./ViemSigner.md) -- viem implementation
+- [EthersSigner](./EthersSigner.md) -- ethers implementation
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

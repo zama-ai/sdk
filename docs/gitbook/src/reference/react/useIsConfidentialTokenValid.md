@@ -26,9 +26,7 @@ function ValidityCheck({ confidentialTokenAddress }: { confidentialTokenAddress:
     data: isValid,
     isLoading,
     error,
-  } = useIsConfidentialTokenValid({
-    confidentialTokenAddress,
-  });
+  } = useIsConfidentialTokenValid({ confidentialTokenAddress });
 
   if (isLoading) return <p>Checking...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -67,6 +65,6 @@ The `data` field resolves to `boolean`:
 
 ## Related
 
-- [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) -- look up the wrapper for an ERC-20
-- [useTokenAddress](/reference/react/useTokenAddress) -- reverse lookup (confidential &rarr; plain)
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `isConfidentialTokenValid()` method
+- [useConfidentialTokenAddress](./useConfidentialTokenAddress.md) -- look up the wrapper for an ERC-20
+- [useTokenAddress](./useTokenAddress.md) -- reverse lookup (confidential &rarr; plain)
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `isConfidentialTokenValid()` method

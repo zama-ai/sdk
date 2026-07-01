@@ -12,9 +12,9 @@
 
 ERC-7984 is a token standard that adds **confidential balances and transfer amounts** to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 
-The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`) and the `Token` API (`sdk.createToken().shield()`).
+The **Zama SDK** (`@zama-fhe/sdk`, `@zama-fhe/react-sdk`) handles all cryptographic operations — encryption, decryption, EIP-712 signing — behind simple React hooks (`useShield`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`).
 
-This example uses the **cleartext stack** (`RelayerCleartext`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
+This example uses the **cleartext stack** (`cleartext()`), which is Zama's lightweight backend for chains where the full FHE co-processor is not deployed (including Hoodi). See [How the cleartext stack works](#how-the-cleartext-stack-works) below.
 
 ---
 
@@ -35,7 +35,7 @@ Specifically:
 | Operation                    | SDK API                                                      | Source file                                            | Transactions          |
 | ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
 | Decrypt confidential balance | `useHasPermit` + `useGrantPermit` + `useConfidentialBalance` | `src/app/page.tsx` + `src/components/BalancesCard.tsx` | 0 (read)              |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                                 | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
+| Shield (ERC-20 → cToken)     | `useShield`                                                  | `src/components/ShieldCard.tsx`                        | 1–3 (wrap, ± approve) |
 | Confidential transfer        | `useConfidentialTransfer`                                    | `src/components/TransferCard.tsx`                      | 1                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                                | `src/components/UnshieldCard.tsx`                      | 2 (unwrap + finalize) |
 | Grant decryption access      | `useDelegateDecryption`                                      | `src/components/DelegateDecryptionCard.tsx`            | 1                     |
@@ -63,15 +63,15 @@ The full Zama FHE stack (used on Sepolia and Mainnet) relies on:
 **Hoodi uses the cleartext stack.** In cleartext mode:
 
 - Values are stored as **plaintexts** in the `CleartextFHEVMExecutor` contract on-chain (no actual FHE encryption)
-- The `RelayerCleartext` class acts as a local relayer: it reads plaintexts directly from the executor contract and produces mock KMS signatures locally
+- The `cleartext()` transport acts as a local relayer: it reads plaintexts directly from the executor contract and produces mock KMS signatures locally
 - **No external service** is required — no relayer URL, no API key
 
-The SDK interface is identical in both modes. From the application developer's perspective, you swap `RelayerWeb` (or `RelayerNode`) for `RelayerCleartext` and point it at the Hoodi preset config. All hooks behave the same way.
+The SDK interface is identical in both modes. From the application developer's perspective, you swap `web()` (or `node()`) for `cleartext()` and point it at the Hoodi preset config. All hooks behave the same way.
 
 ```
 Full FHE stack (Sepolia / Mainnet)      Cleartext stack (Hoodi)
 ──────────────────────────────────      ──────────────────────────────────────
-RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
+web() → external HTTP service      cleartext() → on-chain executor
   └─ FHE co-processor (on-chain)          └─ plaintexts(handle) → plaintext
   └─ KMS decryption (server-side)         └─ mock KMS signature (local)
   └─ Zama relayer API key required        └─ No API key, no external service
@@ -85,18 +85,18 @@ RelayerWeb → external HTTP service      RelayerCleartext → on-chain executor
 User (browser wallet)
   │
   ▼
-page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield / useConfidentialBalance
+page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidentialBalance
   │
   ▼
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
   │
   ▼
 @zama-fhe/sdk (ZamaSDK)
-  ├─ EthersSigner   → hybrid EIP-1193 provider
+  ├─ ethers adapter   → hybrid EIP-1193 provider
   │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(HOODI_RPC_URL)
   │    └─ writes + polling (signing, eth_sendTransaction,
   │         eth_blockNumber, eth_getTransactionReceipt) → injected wallet
-  └─ RelayerCleartext → hoodiCleartextConfig
+  └─ cleartext() → the hoodi preset
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
@@ -110,7 +110,7 @@ page.tsx — sdk.createToken().shield() / useConfidentialTransfer / useUnshield 
 
 To ensure ethers' `PollingBlockSubscriber` checks for new receipts on every poll interval (4 s rather than once per block at ~12 s), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the returned block number has not advanced, the counter increments by 1.
 
-**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `EthersSigner` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `EthersSigner` is created with the live account ref already populated. An EIP-712 session credential is persisted in IndexedDB and survives page reloads within the 30-day TTL.
+**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `ethers adapter` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `ethers adapter` is created with the live account ref already populated. An EIP-712 session credential is persisted in IndexedDB and survives page reloads within the 30-day TTL.
 
 ---
 
@@ -221,7 +221,7 @@ If your ERC-20 balance shows `0`, click **Mint** next to the ERC-20 balance, or 
 Two balances are displayed:
 
 - **ERC-20 balance** — your public on-chain balance of the underlying token. Read via a standard `balanceOf` call.
-- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `RelayerCleartext` (Phase 2).
+- **Confidential balance** — your confidential cToken balance, read via `useConfidentialBalance`. The SDK reads the encrypted handle on-chain (Phase 1), then decrypts it via `cleartext()` (Phase 2).
 
 **Explicit decrypt pattern:** the confidential balance is not queried until you explicitly authorize FHE decryption. The Balances card shows a **Decrypt Balance** button instead of a balance value until you sign. This avoids blind EIP-712 prompts on mount.
 
@@ -233,18 +233,15 @@ If you have never shielded any tokens, the confidential balance shows **—** af
 
 Enter a human-readable amount (e.g., `1.5`) and click **Shield**. This converts public ERC-20 tokens into confidential cTokens.
 
-The app manages ERC-20 allowances automatically. The spend cap is set to your **full ERC-20 balance** (not the exact shield amount), so once approved, subsequent shields within the remaining cap need only the wrap transaction — no re-approval. The number of wallet confirmations depends on the current allowance:
+The app delegates the entire approve + wrap flow to `useShield` — it does not read ERC-20 allowances, submit approvals, or call wrapper contracts directly. With `approvalStrategy: "exact"` the SDK approves exactly the shielded amount, performing a USDT-style allowance reset first when an existing non-zero allowance would block the approval. The number of wallet confirmations depends on the underlying token and current allowance:
 
-| Situation                                          | Transactions                                       | Confirmations |
-| -------------------------------------------------- | -------------------------------------------------- | ------------- |
-| Allowance already covers the amount                | `wrap` only                                        | 1             |
-| No existing allowance (or zero)                    | `approve(fullBalance)` → `wrap`                    | 2             |
-| Non-zero allowance insufficient — standard token   | `approve(fullBalance)` → `wrap` (direct overwrite) | 2             |
-| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(fullBalance)` → `wrap`     | 3 _(rare)_    |
+| Situation                                          | Transactions                              | Confirmations |
+| -------------------------------------------------- | ----------------------------------------- | ------------- |
+| Allowance already covers the amount                | `wrap` only                               | 1             |
+| No existing allowance (or zero)                    | `approve(amount)` → `wrap`                | 2             |
+| Non-zero allowance insufficient — USDT-style token | `approve(0)` → `approve(amount)` → `wrap` | 3 _(rare)_    |
 
-When re-approving (non-zero insufficient allowance), the app optimistically tries `approve(fullBalance)` directly. `writeContract` goes through the signer, so `eth_estimateGas` is called with `from = userAddress` — correctly simulating the allowance check. For standard ERC-20 tokens, gas estimation succeeds and the wallet is prompted once. For USDT-style tokens (which revert when `approve(nonZero)` is called with a non-zero existing allowance), gas estimation fails **before the wallet is prompted** — the app silently falls back to the reset path. User rejections are re-thrown immediately and never misidentified as USDT-style.
-
-The button shows **Shielding… (1/2 approve)** during approval and **Shielding… (2/2 wrap)** once the approval is confirmed. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
+The button shows **Shielding… (approving)** during approval and **Shielding… (wrapping)** once the approval is confirmed. Gas fees on Hoodi are effectively zero. The ERC-20 balance refreshes automatically on success.
 
 ### Step 6 — Confidential transfer
 
@@ -262,7 +259,7 @@ Enter an amount and click **Unshield**. This converts cTokens back into public E
 Unshield is a two-phase operation:
 
 1. **Unwrap** — a transaction that burns the cTokens and emits an `UnwrapRequested` event containing the encrypted amount handle. The button shows **Unshielding… (1/2)**. One wallet confirmation.
-2. **Finalize** — the `RelayerCleartext` decrypts the amount locally (no external call, no wallet prompt), then submits a `finalizeUnwrap` transaction that releases the ERC-20 tokens. The button shows **Unshielding… (2/2)**. One wallet confirmation.
+2. **Finalize** — the `cleartext()` decrypts the amount locally (no external call, no wallet prompt), then submits a `finalizeUnwrap` transaction that releases the ERC-20 tokens. The button shows **Unshielding… (2/2)**. One wallet confirmation.
 
 Both phases complete within seconds on Hoodi. The ERC-20 balance refreshes automatically on success.
 
@@ -312,55 +309,52 @@ Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter
 
 ```tsx
 // src/providers.tsx
-import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext";
-import { EthersSigner } from "@zama-fhe/sdk/ethers";
-import { ZamaProvider, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/react-sdk";
+import { createConfig } from "@zama-fhe/sdk/ethers";
+import { cleartext, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/sdk";
+import { hoodi } from "@zama-fhe/sdk/chains";
+import { ZamaProvider } from "@zama-fhe/react-sdk";
+import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_RPC_URL || fallback
 
-// getEthereumProvider() prefers window.phantom.ethereum when Phantom is detected,
-// falling back to window.ethereum for MetaMask and other EIP-1193 wallets.
-// Route read-only RPC calls to a direct JsonRpcProvider for fast receipt polling.
-// Wallet calls (signing, account management) are forwarded to the injected wallet.
-// See providers.tsx for the full implementation — createHybridEthereum also takes a
-// liveAccountsRef cache to resolve accounts immediately on wallet switch.
-const hybridEthereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
-const signer = new EthersSigner({ ethereum: hybridEthereum });
+// The hybrid EIP-1193 provider routes reads to a direct JsonRpcProvider and wallet calls
+// (signing, nonce, receipt polling) to the injected wallet — see providers.tsx for
+// createHybridEthereum and its liveAccountsRef cache. It is passed as `ethereum`; SDK reads
+// also use `provider` (the direct Hoodi RPC).
+const ethereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
+const provider = new JsonRpcProvider(HOODI_RPC_URL);
 
-// hoodiCleartextConfig contains the chainId, executor address, and ACL address for Hoodi.
-// Override `network` to use a custom RPC endpoint.
-const relayer = new RelayerCleartext({ ...hoodiCleartextConfig, network: HOODI_RPC_URL });
+// IMPORTANT: use a separate IndexedDBStorage instance for permitStorage.
+// Both storage and permitStorage use the same key internally — sharing one database
+// overwrites the encrypted keypair and forces the user to re-sign on every decryption.
+const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-// IMPORTANT: use a separate IndexedDBStorage instance for sessionStorage.
-// Both storage and sessionStorage use the same key internally — if they share the same
-// database, the session entry overwrites the encrypted keypair, which corrupts credentials
-// and forces the user to re-sign on every balance decryption.
-const sessionDBStorage = new IndexedDBStorage("SessionStore");
+// `hoodi` is the shipped Hoodi cleartext chain preset (chain 560048). cleartext() is the
+// relayer transport — Hoodi runs the cleartext FHEVM host stack, so there is no real
+// relayer/KMS network to call.
+const config = createConfig({
+  chains: [hoodi],
+  ethereum,
+  provider,
+  storage: indexedDBStorage, // "CredentialStore" DB — encrypted FHE keypair
+  permitStorage: permitDBStorage, // "PermitStore" DB — EIP-712 permit signatures
+  relayers: { [hoodi.id]: cleartext() },
+});
 
-<ZamaProvider
-  relayer={relayer}
-  signer={signer}
-  storage={indexedDBStorage} // "CredentialStore" DB — encrypted FHE keypair
-  sessionStorage={sessionDBStorage} // "SessionStore" DB — EIP-712 session signatures
->
-  ...
-</ZamaProvider>;
+<ZamaProvider config={config}>...</ZamaProvider>;
 ```
 
 ### Hook usage
 
 ```tsx
-import { parseUnits, isError } from "ethers";
+import { parseUnits } from "ethers";
 import {
-  useZamaSDK,
+  useShield,
   useListPairs,
   useHasPermit,
   useGrantPermit,
   useConfidentialTransfer,
   useUnshield,
   useConfidentialBalance,
-  allowanceContract,
-  approveContract,
-  balanceOfContract,
 } from "@zama-fhe/react-sdk";
 
 // Fetch all valid token pairs from the on-chain WrappersRegistry.
@@ -377,10 +371,10 @@ const erc20Decimals = pair?.underlying.decimals ?? 0;
 
 // Explicit decrypt pattern: check credentials before enabling the balance display.
 // useHasPermit returns true only when cached credentials cover the selected token.
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: cTokenAddress ? [cTokenAddress] : [],
-  query: { enabled: Boolean(cTokenAddress) },
-});
+const { data: hasPermit } = useHasPermit(
+  { contractAddresses: cTokenAddress ? [cTokenAddress] : [] },
+  { enabled: Boolean(cTokenAddress) },
+);
 
 // useGrantPermit triggers the EIP-712 wallet signature that authorizes decryption.
 // Pass all confidential token addresses at once — a single signature covers all tokens.
@@ -390,74 +384,30 @@ function handleDecrypt() {
   if (addresses.length > 0) grantPermits.mutate(addresses);
 }
 
-const transfer = useConfidentialTransfer({ tokenAddress: cTokenAddress });
-const unshield = useUnshield({ tokenAddress: cTokenAddress, wrapperAddress: cTokenAddress });
+const transfer = useConfidentialTransfer({ address: cTokenAddress });
+const unshield = useUnshield(cTokenAddress);
 
 // Pass enabled: false until the user has authorized decrypt (hasPermit).
 // This prevents the hook from firing an EIP-712 prompt on mount.
 const balance = useConfidentialBalance(
-  { tokenAddress: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
+  // `account` (the balance holder) is optional — it defaults to the connected signer.
+  // page.tsx passes it explicitly; omit it for the connected wallet's own balance.
+  { address: cTokenAddress ?? "0x0000000000000000000000000000000000000000" },
   { enabled: !!hasPermit && !!cTokenAddress },
 );
 
-// Shield: manual approval + wrap.
-// Spend cap strategy: approve for the user's full ERC-20 balance (not the exact shield amount).
-// This avoids re-approval on every shield — subsequent shields within the remaining cap
-// need only the wrap transaction. Re-approval is only triggered when the cap is exceeded.
-//
-// USDT-style detection (non-zero insufficient allowance): writeContract uses the signer,
-// so eth_estimateGas runs with from=userAddress. For USDT-style tokens, gas estimation
-// reverts before the wallet is prompted. We catch this and fall back to reset(0) + approve.
-// User rejections (ACTION_REJECTED) are re-thrown immediately.
-//
-// The shield logic runs inside an async function (e.g., a TanStack Query mutationFn):
-const sdk = useZamaSDK();
-const shieldAmount = parseUnits("10", erc20Decimals);
-const token = sdk.createToken(cTokenAddress);
-const userAddress = await sdk.signer.getAddress();
-
-const currentAllowance = (await sdk.signer.readContract(
-  allowanceContract(erc20Address, userAddress, cTokenAddress),
-)) as bigint;
-
-if (currentAllowance < shieldAmount) {
-  const erc20Balance = (await sdk.signer.readContract(
-    balanceOfContract(erc20Address, userAddress),
-  )) as bigint;
-
-  if (currentAllowance > 0n) {
-    // Try direct overwrite — works for standard ERC-20s (2 txs total: approve + wrap).
-    // USDT-style: gas estimation fails pre-wallet → fall back to reset + approve (3 txs).
-    let needsReset = false;
-    try {
-      const approveHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, erc20Balance),
-      );
-      await sdk.signer.waitForTransactionReceipt(approveHash);
-    } catch (err) {
-      if (isError(err, "ACTION_REJECTED")) throw err; // user rejected — stop here
-      needsReset = true; // gas estimation reverted → USDT-style token
-    }
-    if (needsReset) {
-      const resetHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, 0n),
-      );
-      await sdk.signer.waitForTransactionReceipt(resetHash);
-      const approveHash = await sdk.signer.writeContract(
-        approveContract(erc20Address, cTokenAddress, erc20Balance),
-      );
-      await sdk.signer.waitForTransactionReceipt(approveHash);
-    }
-  } else {
-    // Zero allowance: direct approve — no reset needed for any token.
-    const approveHash = await sdk.signer.writeContract(
-      approveContract(erc20Address, cTokenAddress, erc20Balance),
-    );
-    await sdk.signer.waitForTransactionReceipt(approveHash);
-  }
-}
-// approvalStrategy: 'skip' — allowance is confirmed above (or was already sufficient).
-await token.shield(shieldAmount, { approvalStrategy: "skip" });
+// Shield: useShield owns the entire approve + wrap flow — the app does not read ERC-20
+// allowances, submit approvals, or call wrapper contracts. approvalStrategy "exact" approves
+// exactly the shielded amount; the SDK performs the USDT-style allowance reset when an
+// existing non-zero allowance would otherwise block the approval, and routes through ERC-1363
+// transferAndCall when the underlying ERC-20 supports it.
+const shield = useShield({ address: cTokenAddress });
+shield.mutate({
+  amount: parseUnits("10", erc20Decimals),
+  approvalStrategy: "exact",
+  onApprovalSubmitted: () => setPhase("approve"),
+  onShieldSubmitted: () => setPhase("wrap"),
+});
 
 // Transfer: FHE encryption (local) + 1 transaction.
 // Amount is in confidential token units — use cTokenDecimals.
@@ -465,16 +415,13 @@ await token.shield(shieldAmount, { approvalStrategy: "skip" });
 transfer.mutate({
   to: "0xRecipient",
   amount: parseUnits("5", cTokenDecimals),
-  callbacks: { onEncryptComplete: () => setStep(2) },
+  onEncryptComplete: () => setStep(2),
 });
 
 // Unshield: 2 transactions (unwrap + finalizeUnwrap).
 // Amount is in confidential token units — use cTokenDecimals.
 // onFinalizing fires between the two transactions — use it to update the progress UI.
-unshield.mutate({
-  amount: parseUnits("2", cTokenDecimals),
-  callbacks: { onFinalizing: () => setStep(2) },
-});
+unshield.mutate({ amount: parseUnits("2", cTokenDecimals), onFinalizing: () => setStep(2) });
 ```
 
 ### Delegation hooks
@@ -490,21 +437,21 @@ import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 
 // Grant decryption access — 1 transaction.
 // expirationDate: undefined → SDK sends MAX_UINT64 on-chain (permanent delegation).
-const delegate = useDelegateDecryption({ tokenAddress: cTokenAddress });
+const delegate = useDelegateDecryption(cTokenAddress);
 // Permanent delegation (no expiry):
 delegate.mutate({ delegateAddress: "0xDelegate" });
 // With expiry (must be at least 1 hour in the future):
 delegate.mutate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-01-01") });
 
 // Revoke decryption access — 1 transaction.
-const revoke = useRevokeDelegation({ tokenAddress: cTokenAddress });
+const revoke = useRevokeDelegation(cTokenAddress);
 revoke.mutate({ delegateAddress: "0xDelegate" });
 
 // Query delegation status — fires automatically when both addresses are valid.
 // Pass undefined for either address to disable the query (useful before the user
 // has entered an address).
 const { data: status } = useDelegationStatus({
-  tokenAddress: cTokenAddress,
+  contractAddress: cTokenAddress,
   delegatorAddress: "0xOwner", // the wallet that granted the delegation
   delegateAddress: "0xDelegate", // the wallet that received it (usually the connected wallet)
 });
@@ -513,8 +460,8 @@ const { data: status } = useDelegationStatus({
 
 // Decrypt owner's balance as a delegate — 0 transactions (read + local cache).
 // Throws DelegationNotFoundError / DelegationExpiredError if the ACL check fails.
-// Note: useDecryptBalanceAs takes a positional tokenAddress argument (unlike
-// useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }).
+// Note: useDecryptBalanceAs, useDelegateDecryption, and useRevokeDelegation all take a
+// positional tokenAddress as their first argument.
 const decryptAs = useDecryptBalanceAs(cTokenAddress);
 decryptAs.mutate({ delegatorAddress: "0xOwner" });
 // decryptAs.data → bigint (raw balance)
@@ -553,10 +500,10 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 | ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                               |
 | Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                                            |
 | "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                                                                                   | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                                                      |
-| Asked to sign an EIP-712 message after each action        | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, make sure `storage` and `sessionStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances — sharing the same instance corrupts the stored credentials (see Providers setup)                           |
-| Shield fails immediately after approving spend cap        | Approval transaction not yet confirmed on Hoodi when wrap was attempted                                                                                  | Wait for the approval confirmation and retry — the app detects this and shows a hint                                                                                                                                                                                                                                                                             |
+| Asked to sign an EIP-712 message after each action        | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, make sure `storage` and `permitStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances — sharing the same instance corrupts the stored credentials (see Providers setup)                            |
+| Shield fails right after the approval transaction         | The approval reverted or was rejected before the wrap step                                                                                               | Retry — useShield re-reads the allowance and re-approves only if needed                                                                                                                                                                                                                                                                                          |
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                         |
-| Shield stuck on "Shielding… (1/2)"                        | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                  |
+| Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                  |
 | Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                |
 | "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                     |
 | "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                              |
@@ -597,7 +544,7 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 ## Going further
 
 - **Additional tokens** — register new ERC-7984 pairs in the on-chain WrappersRegistry at `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`. The app picks them up automatically via `useListPairs` on the next load — no code change required.
-- **Production use** — replace `RelayerCleartext` with `RelayerWeb` (browser) or `RelayerNode` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
+- **Production use** — replace `cleartext()` with `web()` (browser) or `node()` (server) when targeting a chain with the full FHE co-processor (Sepolia, Mainnet).
 - **Batch balance decryption** — for multiple tokens, use `useConfidentialBalances` (batch hook) to decrypt all balances in a single relayer call.
 - **Optimistic balance updates** — for `useConfidentialTransfer`, pass `optimistic: true` to immediately update the cached confidential balance while the transaction confirms, then roll back automatically on error. Improves perceived responsiveness in production UIs.
 
@@ -607,9 +554,9 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 | Package                 | Version            | Role                                                                                                                                                                                                                             |
 | ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `RelayerCleartext`, `EthersSigner`, contract builders                                                                                                                                                                 |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, `createConfig`, contract builders                                                                                                                                                                      |
 | `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `EthersSigner`)                                                                                                                                                                                             |
+| `ethers`                | ^6.13.0            | Ethereum client (via `ethers adapter`)                                                                                                                                                                                           |
 | `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
 | `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
 | **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |

@@ -5,7 +5,7 @@ description: Fetch a range of token wrapper pairs from the registry by index.
 
 # useTokenPairsSlice
 
-Fetches a range of token wrapper pairs from the registry using start and end indices. This is the low-level pagination primitive — for page-based pagination, use [`useListPairs`](/reference/react/useListPairs) instead.
+Fetches a range of token wrapper pairs from the registry using start and end indices. This is the low-level pagination primitive — for page-based pagination, use [`useListPairs`](./useListPairs.md) instead.
 
 ## Import
 
@@ -22,14 +22,7 @@ import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 import { useTokenPairsSlice } from "@zama-fhe/react-sdk";
 
 function PairSlice() {
-  const {
-    data: pairs,
-    isLoading,
-    error,
-  } = useTokenPairsSlice({
-    fromIndex: 0n,
-    toIndex: 10n,
-  });
+  const { data: pairs, isLoading, error } = useTokenPairsSlice({ fromIndex: 0n, toIndex: 10n });
 
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -87,7 +80,7 @@ interface TokenWrapperPair {
 
 ## Related
 
-- [useListPairs](/reference/react/useListPairs) -- page-based pagination with metadata support
-- [useTokenPairsLength](/reference/react/useTokenPairsLength) -- get total count for pagination bounds
-- [useTokenPair](/reference/react/useTokenPair) -- fetch a single pair by index
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level `getTokenPairsSlice()` method
+- [useListPairs](./useListPairs.md) -- page-based pagination with metadata support
+- [useTokenPairsLength](./useTokenPairsLength.md) -- get total count for pagination bounds
+- [useTokenPair](./useTokenPair.md) -- fetch a single pair by index
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level `getTokenPairsSlice()` method

@@ -15,7 +15,6 @@ import { ContractFunctionReturnType } from 'viem';
 import { EIP1193Provider } from 'viem';
 import { Hex } from 'viem';
 import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KeypairType } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { MutationFunctionContext } from '@tanstack/query-core';
@@ -153,6 +152,18 @@ export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQue
 // @public (undocumented)
 export function confidentialTokenAddressQueryOptions(sdk: ZamaSDK, config: ConfidentialTokenAddressQueryConfig): QueryFactoryOptions<readonly [boolean, Address], Error, readonly [boolean, Address], ReturnType<typeof zamaQueryKeys.wrappersRegistry.confidentialTokenAddress>>;
 
+// @public (undocumented)
+export function confidentialTransferAndCallMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransferAndCall", Address], ConfidentialTransferAndCallParams, TransactionResult>;
+
+// @public
+export interface ConfidentialTransferAndCallParams extends TransferOptions {
+    // (undocumented)
+    amount: bigint;
+    data: Hex;
+    // (undocumented)
+    to: Address;
+}
+
 // @public
 export interface ConfidentialTransferEvent {
     readonly encryptedAmount: EncryptedValue;
@@ -160,6 +171,21 @@ export interface ConfidentialTransferEvent {
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
     readonly to: Address;
+}
+
+// @public (undocumented)
+export function confidentialTransferFromAndCallMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransferFromAndCall", Address], ConfidentialTransferFromAndCallParams, TransactionResult>;
+
+// @public
+export interface ConfidentialTransferFromAndCallParams {
+    // (undocumented)
+    amount: bigint;
+    callbacks?: TransferCallbacks;
+    data: Hex;
+    // (undocumented)
+    from: Address;
+    // (undocumented)
+    to: Address;
 }
 
 // @public (undocumented)
@@ -410,20 +436,8 @@ export function filterQueryOptions<TOptions extends Record<string, unknown>>(opt
 export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.finalizeUnwrap", Address], FinalizeUnwrapParams, TransactionResult>;
 
 // @public
-export type FinalizeUnwrapParams = /** Identifier from an `UnwrapRequested` event. Preferred. */{
+export type FinalizeUnwrapParams = {
     unwrapRequestId: EncryptedValue;
-    burnAmount?: never;
-}
-/**
-* Encrypted burn amount. Direct-call escape hatch for resuming an
-* unshield persisted by an older SDK version that did not record
-* `unwrapRequestId`; the orchestrated `WrappedToken.resumeUnshield()` flow
-* always rediscovers `unwrapRequestId` from the receipt and never reaches
-* this branch.
-*/
-| {
-    unwrapRequestId?: never;
-    burnAmount: EncryptedValue;
 };
 
 // @public (undocumented)
@@ -515,14 +529,6 @@ export function isConfidentialTokenValidQueryOptions(sdk: ZamaSDK, config: IsCon
 // @public (undocumented)
 export function isWrapperQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: IsConfidentialQueryConfig): QueryFactoryOptions<boolean, Error, boolean, ReturnType<typeof zamaQueryKeys.isWrapper.token>>;
 
-// @public
-export interface Keypair {
-    // (undocumented)
-    privateKey: Hex;
-    // (undocumented)
-    publicKey: Hex;
-}
-
 // @public (undocumented)
 export interface ListPairsQueryConfig {
     // (undocumented)
@@ -550,7 +556,7 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
-export type OnChainEvent = ConfidentialTransferEvent | WrappedEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent | UnwrappedStartedEvent;
+export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
 export function prepareMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.prepare"], PrepareParams, PrepareResult>;
@@ -732,7 +738,9 @@ export class Token {
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
     confidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     confidentialTransfer(to: Address, amount: bigint, options?: TransferOptions): Promise<TransactionResult>;
+    confidentialTransferAndCall(to: Address, amount: bigint, data: Hex, options?: TransferOptions): Promise<TransactionResult>;
     confidentialTransferFrom(from: Address, to: Address, amount: bigint, callbacks?: TransferCallbacks): Promise<TransactionResult>;
+    confidentialTransferFromAndCall(from: Address, to: Address, amount: bigint, data: Hex, callbacks?: TransferCallbacks): Promise<TransactionResult>;
     decimals(): Promise<number>;
     decryptBalanceAs(input: {
         delegatorAddress: Address;
@@ -870,6 +878,14 @@ export interface TransferSubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
 
+// @public
+export interface TransportKeyPair {
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
+
 // @public (undocumented)
 export interface UnderlyingAllowanceQueryConfig {
     // (undocumented)
@@ -953,19 +969,6 @@ export interface UnwrapParams {
 }
 
 // @public
-export interface UnwrappedStartedEvent {
-    readonly burnAmount: EncryptedValue;
-    // (undocumented)
-    readonly eventName: "UnwrappedStarted";
-    readonly refund: Address;
-    readonly requestedAmount: EncryptedValue;
-    readonly requestId: bigint;
-    readonly returnVal: boolean;
-    readonly to: Address;
-    readonly txId: bigint;
-}
-
-// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     // (undocumented)
@@ -1002,10 +1005,11 @@ export interface WalletAccountChange {
 export type WalletAccountListener = (change: WalletAccountChange) => void;
 
 // @public
-export interface WrappedEvent {
-    readonly amountIn: bigint;
+export interface WrapEvent {
+    readonly encryptedWrappedAmount: EncryptedValue;
     // (undocumented)
-    readonly eventName: "Wrapped";
+    readonly eventName: "Wrap";
+    readonly roundedAmount: bigint;
     readonly to: Address;
 }
 
@@ -1014,7 +1018,7 @@ export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     // (undocumented)
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
-    finalizeUnwrap(unwrapRequestIdOrAmount: EncryptedValue): Promise<TransactionResult>;
+    finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     isPayable(): Promise<boolean>;
     prepareShield(amount: bigint, options?: {
         recipient?: Address;
@@ -1056,10 +1060,11 @@ export type ZamaConfig = {
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
     readonly permitStorage: GenericStorage;
-    readonly keypairTTL: number;
+    readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
+    readonly logger: GenericLogger;
 } & {
     readonly [zamaConfigBrand]: true;
 };
@@ -1264,6 +1269,8 @@ export class ZamaSDK {
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    // @internal
+    get logger(): GenericLogger;
     readonly offlineSigning: OfflineSigning;
     // @internal
     onWalletAccountChange(listener: WalletAccountListener): () => void;
@@ -1271,7 +1278,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // (undocumented)
+    // @internal (undocumented)
     readonly relayer: RelayerDispatcher;
     // (undocumented)
     readonly signer: GenericSigner | undefined;

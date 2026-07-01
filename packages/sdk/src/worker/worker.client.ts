@@ -18,8 +18,8 @@ export interface WorkerClientConfig {
   csrfToken: string;
   /** Expected SHA-384 hex digest of the CDN bundle for integrity verification. */
   integrity?: string;
-  /** Optional logger for tracing worker request lifecycle. */
-  logger?: GenericLogger;
+  /** SDK-wide logger for tracing worker request lifecycle. */
+  logger: GenericLogger;
   /** Number of WASM threads for parallel FHE operations (passed to `initSDK({ thread })`). */
   thread?: number;
 }
@@ -67,10 +67,7 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     return crypto.randomUUID();
   }
 
-  protected getInitPayload(): {
-    type: WorkerRequestType;
-    payload: WorkerRequest["payload"];
-  } {
+  protected getInitPayload(): { type: WorkerRequestType; payload: WorkerRequest["payload"] } {
     // Explicitly construct the payload from serializable fields only.
     // Functions (e.g. `logger`) cannot be cloned by the structured clone
     // algorithm used by `worker.postMessage()`.
@@ -86,8 +83,6 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
    * Call this before making authenticated requests to ensure the token is fresh.
    */
   async updateCsrf(csrfToken: string): Promise<void> {
-    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", {
-      csrfToken,
-    });
+    await this.sendRequest<UpdateCsrfResponseData>("UPDATE_CSRF", { csrfToken });
   }
 }

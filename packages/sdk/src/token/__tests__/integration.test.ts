@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
 
 const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
-const BURN_HANDLE = ("0x" + "ff".repeat(32)) as Address;
+const UNWRAP_AMOUNT = ("0x" + "ff".repeat(32)) as Address;
 
 describe("Integration: multi-step workflows", () => {
   describe("shield flow: approve → shield → verify balance", () => {
@@ -34,10 +34,7 @@ describe("Integration: multi-step workflows", () => {
       expect(signer.writeContract).toHaveBeenCalledTimes(2);
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({
-          functionName: "approve",
-          args: expect.arrayContaining([500n]),
-        }),
+        expect.objectContaining({ functionName: "approve", args: expect.arrayContaining([500n]) }),
       );
       expect(signer.writeContract).toHaveBeenNthCalledWith(
         2,
@@ -134,7 +131,7 @@ describe("Integration: multi-step workflows", () => {
               `0x000000000000000000000000${userAddress.slice(2)}`,
               `0x${"aa".repeat(32)}`,
             ],
-            data: BURN_HANDLE,
+            data: UNWRAP_AMOUNT,
           },
         ],
       });
@@ -143,11 +140,11 @@ describe("Integration: multi-step workflows", () => {
       vi.mocked(signer.writeContract).mockClear();
       vi.mocked(signer.writeContract).mockResolvedValue("0xfinalizetx");
 
-      const finalizeResult = await wrappedToken.finalizeUnwrap(BURN_HANDLE);
+      const finalizeResult = await wrappedToken.finalizeUnwrap(UNWRAP_AMOUNT);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");
 
       // Verify publicDecrypt was called with the burn handle
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
 
       // Verify finalizeUnwrap contract call
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -172,9 +169,9 @@ describe("Integration: multi-step workflows", () => {
             topics: [
               Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
-              `0x${"aa".repeat(32)}`,
+              UNWRAP_AMOUNT,
             ],
-            data: BURN_HANDLE,
+            data: `0x${"00".repeat(32)}`,
           },
         ],
       };
@@ -183,9 +180,7 @@ describe("Integration: multi-step workflows", () => {
         .mockResolvedValueOnce(eventReceipt) // #waitAndFinalizeUnshield receipt (parses event)
         .mockResolvedValueOnce({ logs: [] }); // finalizeUnwrap receipt
 
-      const unshieldResult = await wrappedToken.unshield(500n, {
-        skipBalanceCheck: true,
-      });
+      const unshieldResult = await wrappedToken.unshield(500n, { skipBalanceCheck: true });
       expect(unshieldResult.txHash).toBe("0xtxhash");
 
       // Verify full pipeline: encrypt → unwrap → waitForReceipt → publicDecrypt → finalizeUnwrap
@@ -194,7 +189,7 @@ describe("Integration: multi-step workflows", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalled();
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.publicDecrypt).toHaveBeenCalledWith([UNWRAP_AMOUNT]);
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );

@@ -52,9 +52,7 @@ import { sepolia as sepoliaFhe, type FheChain } from "@zama-fhe/sdk/chains";
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
-  transports: {
-    [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY"),
-  },
+  transports: { [sepolia.id]: http("https://sepolia.infura.io/v3/YOUR_KEY") },
 });
 
 export const mySepolia = {
@@ -80,7 +78,7 @@ export const WRAPPER_ADDRESS = "0xYourWrapperAddress" as const;
 {% endtab %}
 {% endtabs %}
 
-Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](/guides/authentication) for proxy setup details.
+Replace `YOUR_KEY` with your Infura (or Alchemy) project ID, and update the relayer URL to point at your backend proxy. See the [Authentication guide](../guides/authentication.md) for proxy setup details.
 
 ## 4. Create the App layout with providers
 
@@ -131,10 +129,7 @@ export function BalanceDisplay() {
     data: balance,
     isLoading,
     error,
-  } = useConfidentialBalance({
-    address: TOKEN_ADDRESS,
-    account: address,
-  });
+  } = useConfidentialBalance({ address: TOKEN_ADDRESS, account: address });
 
   if (error) return <p>Failed to load balance.</p>;
 
@@ -162,12 +157,10 @@ Create `src/ShieldForm.tsx`. Shielding converts public ERC-20 tokens into their 
 ```tsx
 import { type FormEvent } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function ShieldForm() {
-  const { mutateAsync: shield, isPending } = useShield({
-    address: WRAPPER_ADDRESS,
-  });
+  const { mutateAsync: shield, isPending } = useShield({ address: WRAPPER_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -210,9 +203,7 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { TOKEN_ADDRESS } from "./config";
 
 export function TransferForm() {
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    address: TOKEN_ADDRESS,
-  });
+  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: TOKEN_ADDRESS });
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -255,7 +246,7 @@ Create `src/UnshieldForm.tsx`. Unshielding withdraws confidential tokens back to
 ```tsx
 import { useState, type FormEvent } from "react";
 import { useUnshield } from "@zama-fhe/react-sdk";
-import { TOKEN_ADDRESS, WRAPPER_ADDRESS } from "./config";
+import { WRAPPER_ADDRESS } from "./config";
 
 export function UnshieldForm() {
   const [status, setStatus] = useState("");
@@ -295,11 +286,11 @@ export function UnshieldForm() {
 {% endtab %}
 {% endtabs %}
 
-See [Hooks > useUnshield](/reference/react/useUnshield) for the full callback reference.
+See [Hooks > useUnshield](../reference/react/useUnshield.md) for the full callback reference.
 
 ## 9. Add error handling
 
-Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](/guides/handle-errors) for the full list of error codes.
+Create `src/ErrorMessage.tsx`. The `matchZamaError` utility maps SDK error codes to user-friendly messages without long `instanceof` chains. See [Error Handling](../guides/handle-errors.md) for the full list of error codes.
 
 {% tabs %}
 {% tab title="src/ErrorMessage.tsx" %}
@@ -314,7 +305,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
     SIGNING_REJECTED: () => "Transaction cancelled -- please approve in your wallet.",
     ENCRYPTION_FAILED: () => "Encryption failed -- try again.",
     TRANSACTION_REVERTED: () => "Transaction failed on-chain -- check your balance.",
-    KEYPAIR_EXPIRED: () => "Keypair expired -- sign again to continue.",
+    KEYPAIR_EXPIRED: () => "Transport key pair expired -- sign again to continue.",
     _: (e) => e.message,
   });
 
@@ -375,7 +366,7 @@ Open the app in your browser, connect your wallet, and try the full flow: shield
 
 ## Next steps
 
-- [Configuration](/guides/configuration) -- customize authentication, storage backends, and network presets
-- [Error Handling](/guides/handle-errors) -- handle every SDK error type
-- [React Hooks](/reference/react/query-keys) -- explore all available hooks
-- [Core SDK](/reference/sdk/ZamaSDK) -- use the imperative API for non-React apps
+- [Configuration](../guides/configuration.md) -- customize authentication, storage backends, and network presets
+- [Error Handling](../guides/handle-errors.md) -- handle every SDK error type
+- [React Hooks](../reference/react/query-keys.md) -- explore all available hooks
+- [Core SDK](../reference/sdk/ZamaSDK.md) -- use the imperative API for non-React apps

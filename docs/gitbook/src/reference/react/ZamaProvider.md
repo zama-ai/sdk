@@ -41,9 +41,7 @@ const mySepolia = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 const queryClient = new QueryClient();
 
@@ -76,10 +74,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 
 const mySepolia = {
   ...sepoliaFhe,
@@ -90,9 +85,7 @@ const zamaConfig = createConfig({
   chains: [mySepolia],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 const queryClient = new QueryClient();
 
@@ -121,9 +114,7 @@ const zamaConfig = createConfig({
   chains: [hardhat],
   publicClient,
   walletClient,
-  relayers: {
-    [hardhat.id]: cleartext(),
-  },
+  relayers: { [hardhat.id]: cleartext() },
 });
 const queryClient = new QueryClient();
 
@@ -151,9 +142,9 @@ import { type ZamaProviderProps } from "@zama-fhe/react-sdk";
 
 `ZamaConfig`
 
-Configuration object created by [`createConfig`](/guides/configuration). Wires together chains, relayers, signer, and storage for the SDK.
+Configuration object created by [`createConfig`](../../guides/configuration.md). Wires together chains, relayers, signer, and storage for the SDK.
 
 ## Related
 
-- [Configuration guide](/guides/configuration)
-- [Permit Model](/concepts/permit-model)
+- [Configuration guide](../../guides/configuration.md)
+- [Permit Model](../../concepts/permit-model.md)

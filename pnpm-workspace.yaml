@@ -1,4 +1,5 @@
 packages:
+  - "codemods/*"
   - "packages/*"
   - "tools/*"
   - "test/*"
@@ -35,6 +36,8 @@ minimumReleaseAgeExclude:
 # trusted package now published by a new owner).
 # https://pnpm.io/settings#trustpolicy
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - "@zama-fhe/relayer-sdk"
 
 # Fail instead of silently re-installing when the lockfile and node_modules
 # disagree before running scripts.

@@ -7,16 +7,21 @@ import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
 import { swallow } from "../utils/swallow";
-import { KeypairVault } from "./keypair-vault";
+import { TransportKeyPairVault } from "./keypair-vault";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { PermissionStore } from "./permission-store";
 import type { PermissionScope } from "./storage-keys";
-import type { CredentialBundle, Permission, StoredKeypair } from "./types";
+import type {
+  StoredTransportKeyPairWithPermits,
+  Permission,
+  StoredTransportKeyPair,
+} from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
+import type { GenericLogger } from "../worker/worker.types";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
-export const DEFAULT_KEYPAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
+export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
@@ -31,14 +36,16 @@ export interface CredentialServiceConfig {
    * (canonical cross-process custody shape).
    */
   signer?: GenericSigner;
-  /** Keypair lifetime in seconds. Pre-validated. */
-  keypairTTL: number;
+  /** Transport key pair lifetime in seconds. Pre-validated. */
+  transportKeyPairTTL: number;
   /** Permit lifetime in days. Pre-validated. */
   permitTTL: number;
-  /** Backing storage for keypairs (and permits if `permitStorage` is omitted). */
+  /** Backing storage for transport key pairs (and permits if `permitStorage` is omitted). */
   storage: GenericStorage;
   /** Optional dedicated storage for permits; defaults to `storage`. */
   permitStorage?: GenericStorage;
+  /** SDK-wide logger for credential-path diagnostics. */
+  logger: GenericLogger;
 }
 
 /**
@@ -48,24 +55,28 @@ export interface CredentialServiceConfig {
  * transitions via `handleWalletAccountChange`.
  */
 export class CredentialService {
-  readonly #vault: KeypairVault;
+  readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
   readonly #relayer: RelayerDispatcher;
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
+  readonly #logger: GenericLogger;
 
   constructor(config: CredentialServiceConfig) {
-    this.#vault = new KeypairVault({
-      generator: () => config.relayer.generateKeypair(),
+    this.#vault = new TransportKeyPairVault({
+      generator: () => config.relayer.generateTransportKeyPair(),
       storage: config.storage,
-      ttl: config.keypairTTL,
+      ttl: config.transportKeyPairTTL,
+      logger: config.logger,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
+      logger: config.logger,
     });
     this.#relayer = config.relayer;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
+    this.#logger = config.logger;
   }
 
   #requireSigner(operation: string): GenericSigner {
@@ -84,7 +95,10 @@ export class CredentialService {
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
    * @throws if signing fails for any other reason. {@link SigningFailedError}
    */
-  async grantPermit(contracts: readonly Address[], delegator?: Address): Promise<CredentialBundle> {
+  async grantPermit(
+    contracts: readonly Address[],
+    delegator?: Address,
+  ): Promise<StoredTransportKeyPairWithPermits> {
     const signer = this.#requireSigner("grantPermit");
     const account = signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
@@ -108,15 +122,21 @@ export class CredentialService {
       if (candidate !== null) {
         const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
         const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
-        await swallow("replace permit", () =>
-          this.#store.replace(scope, candidate.signature, widened),
+        await swallow(
+          "replace permit",
+          () => this.#store.replace(scope, candidate.signature, widened),
+          this.#logger,
         );
         permits[permits.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
           const permission = await this.#signPermit({ chunk, keypair, scope });
           permits.push(permission);
-          await swallow("persist permit", () => this.#store.append(scope, [permission]));
+          await swallow(
+            "persist permit",
+            () => this.#store.append(scope, [permission]),
+            this.#logger,
+          );
         }
       }
     }
@@ -201,14 +221,14 @@ export class CredentialService {
   }
 
   /**
-   * Warm the signer keypair cache for a known address.
+   * Warm the signer transport key pair cache for a known address.
    *
    * Best-effort prefetch primitive: correctness still comes from `grantPermit`,
-   * which lazily creates the keypair when needed. Errors (storage failure,
+   * which lazily creates the transport key pair when needed. Errors (storage failure,
    * relayer 4xx, missing Worker in SSR) are **not** swallowed here — the caller
    * decides whether to log, ignore, or surface them.
    */
-  async warmKeypair(address: Address): Promise<void> {
+  async warmTransportKeyPair(address: Address): Promise<void> {
     await this.#vault.getOrCreate(checksum(address));
   }
 
@@ -254,7 +274,7 @@ export class CredentialService {
     options: { from: Address; chainId: number; delegator?: Address },
   ): Promise<{
     typedData: EIP712TypedData | null;
-    keypair: StoredKeypair;
+    keypair: StoredTransportKeyPair;
     scope: PermissionScope;
     chunk: ChecksummedAddress[];
     startTimestamp: number;
@@ -269,24 +289,12 @@ export class CredentialService {
       delegatorAddress: delegator ? checksum(delegator) : signerAddress,
     };
     if (requested.length === 0) {
-      return {
-        typedData: null,
-        keypair,
-        scope,
-        chunk: [],
-        startTimestamp: nowSeconds(),
-      };
+      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
     }
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     const uncovered = uncoveredContracts(permits, requested);
     if (uncovered.length === 0) {
-      return {
-        typedData: null,
-        keypair,
-        scope,
-        chunk: [],
-        startTimestamp: nowSeconds(),
-      };
+      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
     }
     const chunks = chunkContracts(uncovered);
     const [chunk, ...extra] = chunks;
@@ -317,7 +325,7 @@ export class CredentialService {
    */
   async registerSignedPermit(input: {
     signature: Hex;
-    keypair: Pick<StoredKeypair, "publicKey">;
+    keypair: Pick<StoredTransportKeyPair, "publicKey">;
     scope: PermissionScope;
     chunk: ChecksummedAddress[];
     startTimestamp: number;
@@ -338,7 +346,7 @@ export class CredentialService {
 
   async #signPermit(input: {
     chunk: ChecksummedAddress[];
-    keypair: StoredKeypair;
+    keypair: StoredTransportKeyPair;
     scope: PermissionScope;
   }): Promise<Permission> {
     const { chunk, keypair, scope } = input;

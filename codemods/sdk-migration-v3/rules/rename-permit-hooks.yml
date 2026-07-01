@@ -1,0 +1,28 @@
+id: rename-use-allow
+language: tsx
+rule:
+  pattern: useAllow
+fix: useGrantPermit
+---
+id: rename-use-is-allowed
+language: tsx
+rule:
+  pattern: useIsAllowed
+fix: useHasPermit
+---
+# Plain `pattern: UseIsAllowedConfig` only matches `identifier` nodes (import specifiers).
+# Type-position occurrences (`cfg: UseIsAllowedConfig`) parse as `type_identifier`, which
+# ast-grep only matches via a contextual pattern with explicit `selector`.
+id: rename-use-is-allowed-config-import
+language: tsx
+rule:
+  pattern: UseIsAllowedConfig
+fix: UseHasPermitConfig
+---
+id: rename-use-is-allowed-config-type-position
+language: tsx
+rule:
+  pattern:
+    context: "let x: UseIsAllowedConfig"
+    selector: type_identifier
+fix: UseHasPermitConfig

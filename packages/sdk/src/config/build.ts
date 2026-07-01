@@ -1,8 +1,9 @@
 import {
-  DEFAULT_KEYPAIR_TTL_SECONDS,
+  DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
   DEFAULT_PERMIT_DURATION_DAYS,
 } from "../credentials/credential-service";
-import { KeypairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
+import { TransportKeyPairTTLSchema, PermitTTLSchema } from "../credentials/schemas";
+import { LoggerService } from "../services/logger-service";
 import { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { GenericProvider, GenericSigner } from "../types";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
@@ -22,7 +23,8 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const { storage, permitStorage } = resolveStorage(params.storage, params.permitStorage);
-  const relayer = new RelayerDispatcher(params.chains, params.relayers);
+  const logger = new LoggerService(params.logger);
+  const relayer = new RelayerDispatcher(params.chains, params.relayers, logger);
 
   return {
     chains: params.chains,
@@ -31,9 +33,9 @@ export function buildZamaConfig(
     signer,
     storage,
     permitStorage,
-    keypairTTL: parseConfiguration(
-      KeypairTTLSchema,
-      params.keypairTTL ?? DEFAULT_KEYPAIR_TTL_SECONDS,
+    transportKeyPairTTL: parseConfiguration(
+      TransportKeyPairTTLSchema,
+      params.transportKeyPairTTL ?? DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
     ),
     permitTTL: parseConfiguration(
       PermitTTLSchema,
@@ -43,6 +45,7 @@ export function buildZamaConfig(
       RegistryTTLSchema,
       params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS,
     ),
+    logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
 }

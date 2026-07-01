@@ -195,9 +195,9 @@ const { txHash } = await wrappedToken.unwrapAll();
 
 ### finalizeUnwrap
 
-`(unwrapRequestIdOrAmount: EncryptedValue) => Promise<TransactionResult>`
+`(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Prefer passing the `unwrapRequestId` from the `UnwrapRequested` event. The older burn-amount-handle form is accepted only for compatibility with previously persisted unshield state.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
 
 ```ts
 const event = findUnwrapRequested(receipt.logs);
@@ -210,6 +210,6 @@ await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
 
 - [Token](Token.md) — base ERC-7984 confidential-token API
 - [ZamaSDK](ZamaSDK.md) — creates `WrappedToken` via `createWrappedToken()`
-- [Shield tokens](/guides/shield-tokens) — full shield flow
-- [Unshield tokens](/guides/unshield-tokens) — full unshield flow
-- [useWrappedToken](/reference/react/useWrappedToken) — React hook returning a `WrappedToken`
+- [Shield tokens](../../guides/shield-tokens.md) — full shield flow
+- [Unshield tokens](../../guides/unshield-tokens.md) — full unshield flow
+- [useWrappedToken](../react/useWrappedToken.md) — React hook returning a `WrappedToken`

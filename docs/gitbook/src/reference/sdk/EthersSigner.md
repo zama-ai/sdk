@@ -5,7 +5,7 @@ description: Signer adapter that wraps an ethers Signer or EIP-1193 source for w
 
 # EthersSigner
 
-Signer adapter that wraps an ethers `Signer` or EIP-1193 source for wallet operations. Implements [GenericSigner](/reference/sdk/GenericSigner).
+Signer adapter that wraps an ethers `Signer` or EIP-1193 source for wallet operations. Implements [GenericSigner](./GenericSigner.md).
 
 ## Import
 
@@ -55,9 +55,7 @@ Pass exactly one of the two parameters below.
 Raw EIP-1193 provider from the browser wallet (e.g. `window.ethereum`). Enables automatic credential cleanup on disconnect and account change.
 
 ```ts
-const signer = new EthersSigner({
-  ethereum: window.ethereum!,
-});
+const signer = new EthersSigner({ ethereum: window.ethereum! });
 ```
 
 ---
@@ -72,14 +70,12 @@ Ethers signer for server-side or scripted use. `subscribe()` is not available in
 const provider = new JsonRpcProvider(rpcUrl);
 const wallet = new Wallet(privateKey, provider);
 
-const signer = new EthersSigner({
-  signer: wallet,
-});
+const signer = new EthersSigner({ signer: wallet });
 ```
 
 ## Methods
 
-All methods are inherited from [GenericSigner](/reference/sdk/GenericSigner).
+All methods are inherited from [GenericSigner](./GenericSigner.md).
 
 | Method                   | Browser | Node.js |
 | ------------------------ | ------- | ------- |
@@ -94,7 +90,7 @@ Only the browser mode (passing `ethereum`) emits wallet account transitions. In 
 
 ## Related
 
-- [GenericSigner](/reference/sdk/GenericSigner) -- interface this class implements
-- [EthersProvider](/reference/sdk/EthersProvider) -- companion provider adapter
-- [ViemSigner](/reference/sdk/ViemSigner) -- viem alternative
-- [Configuration guide](/guides/configuration) -- full setup walkthrough
+- [GenericSigner](./GenericSigner.md) -- interface this class implements
+- [EthersProvider](./EthersProvider.md) -- companion provider adapter
+- [ViemSigner](./ViemSigner.md) -- viem alternative
+- [Configuration guide](../../guides/configuration.md) -- full setup walkthrough

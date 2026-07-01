@@ -4,7 +4,7 @@ import {
   resolveDelegatedDecryptPermit,
   resolveUserDecryptPermit,
 } from "../credentials/decrypt-permit";
-import type { CredentialBundle } from "../credentials/types";
+import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
 import { DecryptionFailedError, isFatalBatchError, wrapDecryptError, ZamaError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
@@ -19,10 +19,10 @@ import type { DelegationService } from "./delegation-service";
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  resolveCredentials: (contractAddresses: Address[]) => Promise<CredentialBundle>;
+  resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
-    credentials: CredentialBundle;
+    credentials: StoredTransportKeyPairWithPermits;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
   }) => Promise<Record<EncryptedValue, ClearValue>>;
@@ -148,10 +148,7 @@ export class DecryptionService {
 
     try {
       const decrypted = await this.delegatedUserDecrypt(
-        items.map(({ encryptedValue, contractAddress }) => ({
-          encryptedValue,
-          contractAddress,
-        })),
+        items.map(({ encryptedValue, contractAddress }) => ({ encryptedValue, contractAddress })),
         delegatorAddress,
         delegateAddress,
         normalizedAccount,
@@ -175,12 +172,7 @@ export class DecryptionService {
       items.map((item) => async () => {
         try {
           const decrypted = await this.delegatedUserDecrypt(
-            [
-              {
-                encryptedValue: item.encryptedValue,
-                contractAddress: item.contractAddress,
-              },
-            ],
+            [{ encryptedValue: item.encryptedValue, contractAddress: item.contractAddress }],
             delegatorAddress,
             delegateAddress,
             normalizedAccount,
@@ -341,13 +333,7 @@ export class DecryptionService {
 
   async #assertAllDelegationsActive(
     contractAddresses: readonly Address[],
-    {
-      delegatorAddress,
-      delegateAddress,
-    }: {
-      delegatorAddress: Address;
-      delegateAddress: Address;
-    },
+    { delegatorAddress, delegateAddress }: { delegatorAddress: Address; delegateAddress: Address },
   ): Promise<void> {
     const inactive = await this.#delegationService.findInactiveDelegations(
       contractAddresses,

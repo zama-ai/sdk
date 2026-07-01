@@ -1,7 +1,7 @@
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
-import { KeypairVault } from "../keypair-vault";
-import type { Keypair } from "../types";
+import { TransportKeyPairVault } from "../keypair-vault";
+import type { TransportKeyPair } from "../types";
 import { checksum } from "../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
@@ -10,7 +10,7 @@ const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const TTL_SECONDS = 86400;
 
-function makeGenerator(): () => Promise<Keypair> {
+function makeGenerator(): () => Promise<TransportKeyPair> {
   // Each call generates a unique keypair so cache hits/misses are observable
   // via equality without poking the generator's call count.
   let counter = 0;
@@ -23,11 +23,11 @@ function makeGenerator(): () => Promise<Keypair> {
   });
 }
 
-const test = baseTest.extend<{ vault: KeypairVault }>({
+const test = baseTest.extend<{ vault: TransportKeyPairVault }>({
   // eslint-disable-next-line no-empty-pattern
   vault: async ({}, use) => {
     await use(
-      new KeypairVault({
+      new TransportKeyPairVault({
         generator: makeGenerator(),
         storage: new MemoryStorage(),
         ttl: TTL_SECONDS,
@@ -36,7 +36,7 @@ const test = baseTest.extend<{ vault: KeypairVault }>({
   },
 });
 
-describe("KeypairVault", () => {
+describe("TransportKeyPairVault", () => {
   test("caches per address, dedupes concurrent calls, and isolates distinct addresses", async ({
     vault,
   }) => {
@@ -58,9 +58,33 @@ describe("KeypairVault", () => {
     expect(after).not.toEqual(before);
   });
 
+  test("clear() routes a storage-delete failure to the logger", async () => {
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+    });
+
+    // clear() is best-effort: it must not reject, but the swallowed delete
+    // failure should leave a breadcrumb when a logger is configured.
+    await expect(vault.clear(USER)).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "delete transport key pair entry failed",
+      expect.objectContaining({ error: expect.any(Error) }),
+    );
+  });
+
   test("treats malformed stored data as a cache miss and regenerates", async () => {
     const storage = new MemoryStorage();
-    const vault = new KeypairVault({ generator: makeGenerator(), storage, ttl: TTL_SECONDS });
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+    });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.
     // We use a wrapper-driven approach (stub `get` to return junk for the next

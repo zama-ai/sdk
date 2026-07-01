@@ -70,14 +70,8 @@ describe("ZamaProvider & useZamaSDK", () => {
     queryClient.setQueryData(wagmiBalanceKey, 2n);
 
     listener({
-      previous: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 31337,
-      },
-      next: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 1,
-      },
+      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
+      next: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 1 },
     });
 
     return waitFor(() => {
@@ -94,7 +88,7 @@ describe("ZamaProvider & useZamaSDK", () => {
     renderWithProviders(() => useZamaSDK(), { relayer });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 
@@ -105,32 +99,48 @@ describe("ZamaProvider & useZamaSDK", () => {
   }) => {
     const { Wrapper } = createWrapper({ signer, relayer });
     renderHook(() => useZamaSDK(), { wrapper: Wrapper });
-    vi.mocked(relayer.generateKeypair).mockClear();
+    vi.mocked(relayer.generateTransportKeyPair).mockClear();
 
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
     listener({
-      previous: {
-        address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa",
-        chainId: 31337,
-      },
-      next: {
-        address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
-        chainId: 1,
-      },
+      previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
+      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 1 },
     });
 
     await waitFor(() => {
-      expect(relayer.generateKeypair).toHaveBeenCalled();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalled();
     });
   });
 
-  test("passes keypairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
+  test("logs a single-prefixed warning when transport-key-pair warmup fails", async ({
+    renderWithProviders,
+    relayer,
+  }) => {
+    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    vi.mocked(relayer.generateTransportKeyPair).mockRejectedValue(new Error("warmup boom"));
+
+    renderWithProviders(() => useZamaSDK(), { relayer, logger: sink });
+
+    await waitFor(() => {
+      expect(sink.warn).toHaveBeenCalled();
+    });
+
+    // The provider passes a bare message; the `[zama-sdk]` prefix is owned
+    // solely by LoggerService. A literal prefix here would double up in
+    // production (the regression this test guards against). Assert it for every
+    // warmup-failure log (mount + each wallet-account change re-warm).
+    for (const [message] of vi.mocked(sink.warn).mock.calls) {
+      expect(message).toBe("warm transport key pair failed");
+    }
+  });
+
+  test("passes transportKeyPairTTL and onEvent to ZamaSDK", ({ createWrapper }) => {
     tokenSDKConstructorArgs.length = 0;
 
     const onEvent: ZamaSDKEventListener = vi.fn();
     const { Wrapper, signer, relayer } = createWrapper({
-      keypairTTL: 604800,
+      transportKeyPairTTL: 604800,
       permitTTL: 1,
       onEvent,
     });
@@ -141,17 +151,15 @@ describe("ZamaProvider & useZamaSDK", () => {
     expect(result.current.signer).toBe(signer);
     expect(result.current.relayer).toBe(relayer);
 
-    // Verify ZamaSDK was constructed with keypairTTL (7 days in seconds)
+    // Verify ZamaSDK was constructed with transportKeyPairTTL (7 days in seconds)
     expect(tokenSDKConstructorArgs).toHaveLength(1);
-    expect(tokenSDKConstructorArgs[0]).toEqual(expect.objectContaining({ keypairTTL: 604800 }));
+    expect(tokenSDKConstructorArgs[0]).toEqual(
+      expect.objectContaining({ transportKeyPairTTL: 604800 }),
+    );
 
     // onEvent is stabilized via ref — verify it delegates correctly
     const wrappedOnEvent = tokenSDKConstructorArgs[0].onEvent!;
-    wrappedOnEvent({
-      type: "credentials:loading",
-      timestamp: 1,
-      contractAddresses: [],
-    } as never);
+    wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
   });
 });

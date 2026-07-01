@@ -9,10 +9,7 @@ import type { ZamaConfigViem } from "./types";
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(
   params: ZamaConfigViem<TChains>,
 ): ZamaConfig {
-  const signer = new ViemSigner({
-    walletClient: params.walletClient,
-    ethereum: params.ethereum,
-  });
+  const signer = new ViemSigner({ walletClient: params.walletClient, ethereum: params.ethereum });
   const provider = new ViemProvider({ publicClient: params.publicClient });
   return buildZamaConfig(signer, provider, params);
 }

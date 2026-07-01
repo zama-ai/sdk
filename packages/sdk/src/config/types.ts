@@ -6,18 +6,21 @@ import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
 import type { RelayerWeb } from "../relayer/relayer-web";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
+import type { GenericLogger } from "../worker/worker.types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
 
 export type { AtLeastOneChain };
 
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
-/** Options for web() relayer (threads, security, logger, storage). */
+/**
+ * Options for web() relayer (threads, security, storage).
+ *
+ * Logging is configured once, SDK-wide, via `createConfig({ logger })` — there
+ * is deliberately no per-relayer logger option.
+ */
 export type WebRelayerOptions = Partial<
-  Pick<
-    RelayerWebConfig,
-    "threads" | "security" | "logger" | "fheArtifactStorage" | "fheArtifactCacheTTL"
-  >
+  Pick<RelayerWebConfig, "threads" | "security" | "fheArtifactStorage" | "fheArtifactCacheTTL">
 >;
 
 // ── Relayer config types ─────────────────────────────────────────────────────
@@ -31,28 +34,44 @@ export type WebRelayerOptions = Partial<
  */
 export interface RelayerConfig {
   readonly type: string;
-  /** Create a shared worker/pool for all chains in this relayer group. */
+  /**
+   * Create a shared worker/pool for all chains in this relayer group.
+   * `logger` is the SDK-wide logger from `createConfig`, threaded through so
+   * worker diagnostics route through the consumer's logger.
+   */
   // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: FheChain[]) => any;
-  /** Create a single-chain relayer. `worker` is the return value of `createWorker`. */
+  readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
+  /**
+   * Create a single-chain relayer. `worker` is the return value of
+   * `createWorker`; `logger` is the SDK-wide logger from `createConfig`.
+   */
   readonly createRelayer: (
     chain: FheChain,
     // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
     worker: any,
+    logger: GenericLogger,
   ) => RelayerSDK;
 }
 
 /** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
 export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
-  readonly createWorker: (chains: FheChain[]) => RelayerWorkerClient;
-  readonly createRelayer: (chain: FheChain, worker: RelayerWorkerClient) => RelayerWeb;
+  readonly createWorker: (chains: FheChain[], logger: GenericLogger) => RelayerWorkerClient;
+  readonly createRelayer: (
+    chain: FheChain,
+    worker: RelayerWorkerClient,
+    logger: GenericLogger,
+  ) => RelayerWeb;
 }
 
 /** Cleartext relayer config — no worker, returns `RelayerCleartext`. */
 export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
-  readonly createRelayer: (chain: FheChain, worker: unknown) => RelayerCleartext;
+  readonly createRelayer: (
+    chain: FheChain,
+    worker: unknown,
+    logger: GenericLogger,
+  ) => RelayerCleartext;
 }
 
 /** Shared options across all adapter paths. */
@@ -65,14 +84,22 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   storage?: GenericStorage;
   /** Optional dedicated storage for permits. Defaults to `storage`. */
   permitStorage?: GenericStorage;
-  /** ML-KEM keypair TTL in seconds. Default: 2592000 (30 days). */
-  keypairTTL?: number;
-  /** Permit lifetime in days. Default: 30. Clamped to `keypairTTL / 86400`. */
+  /** ML-KEM transport key pair TTL in seconds. Default: 2592000 (30 days). */
+  transportKeyPairTTL?: number;
+  /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Optional logger for SDK diagnostics. Conforms to the four-level
+   * {@link GenericLogger} interface (`error`/`warn`/`info`/`debug`), which
+   * common loggers (console, pino, winston, OpenTelemetry's `DiagLogger`)
+   * satisfy directly. When omitted, the SDK emits no log output of its own.
+   * The SDK never bundles a logging library or imposes a format.
+   */
+  logger?: GenericLogger;
 }
 
 /** Generic config — pass any {@link GenericSigner} and {@link GenericProvider} directly. */
@@ -101,8 +128,13 @@ export type ZamaConfig = {
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
   readonly permitStorage: GenericStorage;
-  readonly keypairTTL: number;
+  readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
+  /**
+   * The SDK-wide logger, always present. Wraps the optional consumer-supplied
+   * {@link GenericLogger}; silent when none was configured.
+   */
+  readonly logger: GenericLogger;
 } & { readonly [zamaConfigBrand]: true };

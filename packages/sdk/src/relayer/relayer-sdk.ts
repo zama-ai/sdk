@@ -1,9 +1,9 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
+import type { TransportKeyPair } from "../credentials/types";
 import type {
   ClearValue,
   DelegatedUserDecryptParams,
@@ -11,8 +11,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
@@ -23,10 +23,16 @@ import type { Address, Hex } from "viem";
  * encryption, decryption, key generation, and proof verification.
  */
 export interface FheOperations {
-  /** Generate an FHE keypair (public + private key). */
-  generateKeypair(): Promise<KeypairType<Hex>>;
+  /** Generate a transport key pair (ML-KEM public + private key) used for user-decryption. */
+  generateTransportKeyPair(): Promise<TransportKeyPair>;
 
-  /** Create EIP-712 typed data for signing an FHE decrypt credential. */
+  /**
+   * Create EIP-712 typed data for signing an FHE decrypt credential.
+   *
+   * Low-level credential builder. Prefer the high-level
+   * `sdk.decryption.decryptValues` ({@link Decryption.decryptValues}), which
+   * assembles and caches this credential for you.
+   */
   createEIP712(
     publicKey: Hex,
     contractAddresses: Address[],
@@ -37,13 +43,31 @@ export interface FheOperations {
   /** Encrypt plaintext values into FHE ciphertexts. */
   encrypt(params: EncryptParams): Promise<EncryptResult>;
 
-  /** Decrypt FHE encrypted values using the user's own credentials. */
+  /**
+   * Decrypt FHE encrypted values using the user's own credentials.
+   *
+   * Low-level: the caller assembles the credential bundle (transport key pair,
+   * EIP-712 permit) in {@link UserDecryptParams}. Prefer the high-level
+   * `sdk.decryption.decryptValues` ({@link Decryption.decryptValues}), which
+   * manages credentials, caching, and error wrapping.
+   */
   userDecrypt(params: UserDecryptParams): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
 
-  /** Decrypt encrypted values using the network public key (no credential needed). */
+  /**
+   * Decrypt encrypted values using the network public key (no credential needed).
+   *
+   * Low-level. Prefer the high-level `sdk.decryption.decryptPublicValues`
+   * ({@link Decryption.decryptPublicValues}).
+   */
   publicDecrypt(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult>;
 
-  /** Create EIP-712 typed data for a delegated user decrypt credential. */
+  /**
+   * Create EIP-712 typed data for a delegated user decrypt credential.
+   *
+   * Low-level credential builder. Prefer the high-level
+   * `sdk.decryption.delegatedDecryptValues` ({@link Decryption.delegatedDecryptValues}),
+   * which assembles and caches this credential for you.
+   */
   createDelegatedUserDecryptEIP712(
     publicKey: Hex,
     contractAddresses: Address[],
@@ -52,7 +76,13 @@ export interface FheOperations {
     durationDays?: number,
   ): Promise<KmsDelegatedUserDecryptEIP712Type>;
 
-  /** Decrypt FHE encrypted values using delegated user credentials. */
+  /**
+   * Decrypt FHE encrypted values using delegated user credentials.
+   *
+   * Low-level: the caller assembles the delegated credential bundle in
+   * {@link DelegatedUserDecryptParams}. Prefer the high-level
+   * `sdk.decryption.delegatedDecryptValues` ({@link Decryption.delegatedDecryptValues}).
+   */
   delegatedUserDecrypt(
     params: DelegatedUserDecryptParams,
   ): Promise<Readonly<Record<EncryptedValue, ClearValue>>>;
@@ -60,8 +90,8 @@ export interface FheOperations {
   /** Submit a ZK proof for on-chain verification. */
   requestZKProofVerification(zkProof: ZKProofLike): Promise<InputProofBytesType>;
 
-  /** Fetch the FHE network public key. Returns `null` if not available. */
-  getPublicKey(): Promise<PublicKeyData | null>;
+  /** Fetch the network's FHE encryption key. Returns `null` if not available. */
+  fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null>;
 
   /** Fetch FHE public parameters for a given bit size. Returns `null` if not available. */
   getPublicParams(bits: number): Promise<PublicParamsData | null>;

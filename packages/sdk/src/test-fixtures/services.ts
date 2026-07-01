@@ -10,6 +10,7 @@ import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
 import { EncryptionService } from "../services/encryption-service";
 import { LifecycleService } from "../services/lifecycle-service";
+import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import type { ProviderFixtures } from "./provider";
 import type { RelayerFixtures } from "./relayer";
@@ -64,17 +65,18 @@ type ServiceDeps = RelayerFixtures & SignerFixtures & ProviderFixtures & Storage
 
 export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   cachingService: async ({ storage }, use) => {
-    await use(new CachingService(storage));
+    await use(new CachingService(storage, new LoggerService()));
   },
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
       new CredentialService({
         relayer: (config.relayer ?? relayer) as CredentialServiceConfig["relayer"],
         signer: config.signer ?? signer,
-        keypairTTL: config.keypairTTL ?? 86400,
+        transportKeyPairTTL: config.transportKeyPairTTL ?? 86400,
         permitTTL: config.permitTTL ?? 1,
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
+        logger: new LoggerService(),
       });
     await use(factory);
   },
@@ -87,6 +89,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         provider: overrides.provider ?? provider,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
         emitEvent: overrides.emitEvent,
+        logger: new LoggerService(),
       });
     await use(factory);
   },
@@ -128,6 +131,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cachingService: overrides.cachingService ?? cachingService,
         relayer: (overrides.relayer ?? relayer) as unknown as RelayerDispatcher,
         credentialService: overrides.credentialService,
+        logger: new LoggerService(),
       });
     await use(factory);
   },

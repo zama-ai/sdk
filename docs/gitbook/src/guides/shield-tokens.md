@@ -31,13 +31,13 @@ Among the wrapped tokens registered on Ethereum mainnet today, the routing is:
 | cWETH                | WETH       | `approve` + `wrap` (two txs)  |
 | cBRON                | BRON       | `approve` + `wrap` (two txs)  |
 
-ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](/reference/sdk/WrappersRegistry) for how to look up the wrapper for a given ERC-20.
+ERC-1363 is a conditional optimisation, not a recommended new default — only a small subset of tokens implement it today. Tokens that don't (USDC, USDT, DAI, and most existing ERC-20s) continue to use `approve` + `wrap`. Any newly deployed wrapper picks up the `transferAndCall` path automatically if its underlying ERC-20 implements ERC-1363 — no opt-in is required from your code. See the [`WrappersRegistry` reference](../reference/sdk/WrappersRegistry.md) for how to look up the wrapper for a given ERC-20.
 
 ## Steps
 
 ### 1. Create a wrapped-token instance
 
-Start from a configured SDK instance (see [Configuration](/guides/configuration)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper _is_ the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
+Start from a configured SDK instance (see [Configuration](./configuration.md)) and create a `WrappedToken` pointing at your confidential wrapper contract. The wrapper _is_ the confidential token: `createWrappedToken(addr)` takes a single address — the wrapper's own address.
 
 If you only have the underlying ERC-20 address, the built-in registry resolves the matching wrapper.
 
@@ -92,11 +92,9 @@ console.log("Shield tx:", txHash);
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
 
-const { mutateAsync: shield, isPending } = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending } = useShield({ address: "0xWrapperAddress" });
 
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}
@@ -154,7 +152,7 @@ This sends only the shield transaction. If the allowance is insufficient, the tr
 
 ### 5. Track the transaction
 
-Both the core SDK and React hooks return the transaction hash. You can use it to wait for confirmation or show progress in your UI:
+Both the core SDK and React hooks resolve to a `TransactionResult` with the transaction `txHash` and its mined `receipt`. Use them to wait for confirmation or show progress in your UI:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -171,18 +169,12 @@ console.log("Confirmed in block:", receipt.blockNumber);
 {% tab title="React" %}
 
 ```tsx
-const {
-  mutateAsync: shield,
-  isPending,
-  isSuccess,
-} = useShield({
-  address: "0xWrapperAddress",
-});
+const { mutateAsync: shield, isPending, isSuccess } = useShield({ address: "0xWrapperAddress" });
 
 // isPending is true while the transaction is in flight
 // isSuccess flips to true when the mutation completes
 // Balance caches are automatically invalidated on success
-const txHash = await shield({ amount: 1000n });
+const { txHash } = await shield({ amount: 1000n });
 ```
 
 {% endtab %}
@@ -192,6 +184,6 @@ In React, balance caches are automatically invalidated after a successful shield
 
 ## Next steps
 
-- [Transfer Privately](/guides/transfer-privately) — send confidential tokens to another address
-- [WrappedToken.shield reference](/reference/sdk/WrappedToken#shield) — full API signature and options
-- [useShield reference](/reference/react/useShield) — React hook details
+- [Transfer Privately](./transfer-privately.md) — send confidential tokens to another address
+- [WrappedToken.shield reference](../reference/sdk/WrappedToken.md#shield) — full API signature and options
+- [useShield reference](../reference/react/useShield.md) — React hook details

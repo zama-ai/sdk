@@ -8,11 +8,7 @@ test.describe("wrong network screen", () => {
     // accounts: [] → shows connect screen on load.
     // chainId: WRONG_CHAIN_ID → after connecting, wagmi reads eth_chainId = WRONG_CHAIN_ID
     //   → chainId !== SEPOLIA_CHAIN_ID → Screen 2 ("Sepolia Network Required") renders.
-    await mockWallet({
-      accounts: [],
-      chainId: WRONG_CHAIN_ID,
-      requestAccounts: [TEST_ADDRESS],
-    });
+    await mockWallet({ accounts: [], chainId: WRONG_CHAIN_ID, requestAccounts: [TEST_ADDRESS] });
     await page.goto("/");
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
   });

@@ -5,7 +5,7 @@ description: Send confidential ERC-20 tokens privately.
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](/reference/react/useConfidentialBalance) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -22,15 +22,10 @@ import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 
 function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
-  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({
-    address: tokenAddress,
-  });
+  const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: tokenAddress });
 
   async function handleSend() {
-    const { txHash, receipt } = await transfer({
-      to: "0xRecipient",
-      amount: 1000n,
-    });
+    const { txHash, receipt } = await transfer({ to: "0xRecipient", amount: 1000n });
     console.log("Confirmed in block", receipt.blockNumber);
   }
 
@@ -89,9 +84,7 @@ Contract address of the confidential token.
 {% tab title="component.tsx" %}
 
 ```tsx
-const { mutateAsync: transfer } = useConfidentialTransfer({
-  address: "0xToken",
-});
+const { mutateAsync: transfer } = useConfidentialTransfer({ address: "0xToken" });
 ```
 
 {% endtab %}
@@ -104,10 +97,7 @@ const { mutateAsync: transfer } = useConfidentialTransfer({
 Default: `false`. When `true`, optimistically subtracts the transfer amount from the cached confidential balance before the transaction confirms; rolls back on error.
 
 ```tsx
-const { mutateAsync: transfer } = useConfidentialTransfer({
-  address: "0xToken",
-  optimistic: true,
-});
+const { mutateAsync: transfer } = useConfidentialTransfer({ address: "0xToken", optimistic: true });
 ```
 
 ---
@@ -173,6 +163,6 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 ## Related
 
-- [useConfidentialTransferFrom](/reference/react/useConfidentialTransferFrom) -- operator transfer variant
-- [Transfer Privately guide](/guides/transfer-privately)
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- auto-invalidated on success
+- [useConfidentialTransferFrom](./useConfidentialTransferFrom.md) -- operator transfer variant
+- [Transfer Privately guide](../../guides/transfer-privately.md)
+- [useConfidentialBalance](./useConfidentialBalance.md) -- auto-invalidated on success

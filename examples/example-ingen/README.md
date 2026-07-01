@@ -20,7 +20,7 @@ unshield, grant/revoke/use delegation, pending unshield recovery.
 - **Next.js 16** (App Router, Webpack)
 - **React 19** + **ethers v6**
 - **TanStack Query v5**
-- **@zama-fhe/react-sdk@3.0.0-alpha.41** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **@zama-fhe/react-sdk@3.0.0-alpha.34** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
 - **@zama-fhe/sdk/ethers** — `createConfig` wires ethers-compatible provider/signer adapters
 - **`cleartext()` transport** — no relayer/KMS network, signatures verified by mock keys baked into the SDK
 

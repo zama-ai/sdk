@@ -14,11 +14,10 @@ import {
   decodeOnChainEvents,
   TOKEN_TOPICS,
   decodeConfidentialTransfer,
-  decodeWrapped,
+  decodeWrap,
   decodeUnwrapRequested,
   decodeUnwrapFinalized,
-  decodeUnwrappedStarted,
-  findWrapped,
+  findWrap,
   findUnwrapRequested,
   // ACL delegation events
   ACL_TOPICS,
@@ -33,15 +32,12 @@ import {
 
 ## decodeOnChainEvents
 
-`(logs: Log[]) => DecodedEvent[]`
+`(logs: RawLog[]) => OnChainEvent[]`
 
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-});
+const logs = await publicClient.getLogs({ address: tokenAddress, topics: [TOKEN_TOPICS] });
 
 const events = decodeOnChainEvents(logs);
 
@@ -50,8 +46,8 @@ for (const event of events) {
     case "ConfidentialTransfer":
       console.log(event.from, event.to, event.encryptedAmount);
       break;
-    case "Wrapped":
-      console.log(event.account, event.amount);
+    case "Wrap":
+      console.log(event.to, event.roundedAmount, event.encryptedWrappedAmount);
       break;
     case "UnwrapRequested":
       console.log(event.receiver, event.unwrapRequestId);
@@ -63,11 +59,15 @@ for (const event of events) {
 }
 ```
 
-| Parameter | Type    | Description                                                 |
-| --------- | ------- | ----------------------------------------------------------- |
-| `logs`    | `Log[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
+| Parameter | Type       | Description                                                 |
+| --------- | ---------- | ----------------------------------------------------------- |
+| `logs`    | `RawLog[]` | Raw log entries from `eth_getLogs` or a transaction receipt |
 
-**Returns:** `DecodedEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrapped"`, `"UnwrapRequested"`, `"UnwrapFinalized"`, or `"UnwrappedStarted"`.
+**Returns:** `OnChainEvent[]` — each event has an `.eventName` of `"ConfidentialTransfer"`, `"Wrap"`, `"UnwrapRequested"`, or `"UnwrapFinalized"`.
+
+{% hint style="info" %}
+A shield emits **both** a `ConfidentialTransfer(from=zeroAddress, …)` and a `Wrap` event. `Wrap.encryptedWrappedAmount` is the same FHE handle as the co-emitted `ConfidentialTransfer.encryptedAmount` — use `Wrap` as the shield marker (it carries the cleartext `roundedAmount`) and correlate the two halves rather than counting both.
+{% endhint %}
 
 ## TOKEN_TOPICS
 
@@ -91,10 +91,9 @@ Each decoder takes a single log entry and returns a typed event object, or `null
 | Decoder                           | Event type             | Description                                  |
 | --------------------------------- | ---------------------- | -------------------------------------------- |
 | `decodeConfidentialTransfer(log)` | `ConfidentialTransfer` | Encrypted transfer between accounts          |
-| `decodeWrapped(log)`              | `Wrapped`              | Tokens wrapped (shielded)                    |
+| `decodeWrap(log)`                 | `Wrap`                 | Tokens wrapped (shielded)                    |
 | `decodeUnwrapRequested(log)`      | `UnwrapRequested`      | Unwrap initiated; includes `unwrapRequestId` |
 | `decodeUnwrapFinalized(log)`      | `UnwrapFinalized`      | Unwrap completed; includes `unwrapRequestId` |
-| `decodeUnwrappedStarted(log)`     | `UnwrappedStarted`     | Unwrap decryption started                    |
 
 ```ts
 import { decodeConfidentialTransfer } from "@zama-fhe/sdk";
@@ -111,25 +110,25 @@ for (const log of receipt.logs) {
 
 Search a log array and return the first matching event.
 
-### findWrapped
+### findWrap
 
-`(logs: Log[]) => WrappedEvent | undefined`
+`(logs: RawLog[]) => WrapEvent | null`
 
-Finds the first `Wrapped` event in a set of logs. Useful after a shield transaction.
+Finds the first `Wrap` event in a set of logs. Useful after a shield transaction.
 
 ```ts
-import { findWrapped } from "@zama-fhe/sdk";
+import { findWrap } from "@zama-fhe/sdk";
 
 const receipt = await walletClient.waitForTransactionReceipt({ hash: txHash });
-const wrappedEvent = findWrapped(receipt.logs);
-if (wrappedEvent) {
-  console.log(`Wrapped ${wrappedEvent.amount} tokens`);
+const wrapEvent = findWrap(receipt.logs);
+if (wrapEvent) {
+  console.log(`Wrapped ${wrapEvent.roundedAmount} tokens`);
 }
 ```
 
 ### findUnwrapRequested
 
-`(logs: Log[]) => UnwrapRequestedEvent | undefined`
+`(logs: RawLog[]) => UnwrapRequestedEvent | null`
 
 Finds the first `UnwrapRequested` event in a set of logs. Useful after an unshield initiation.
 
@@ -226,5 +225,5 @@ ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEv
 
 ## Related
 
-- [Delegated Decryption](/reference/sdk/delegation) — delegation API with on-chain event examples
-- [Token](/reference/sdk/Token) — high-level API for token operations
+- [Delegated Decryption](./delegation.md) — delegation API with on-chain event examples
+- [Token](./Token.md) — high-level API for token operations

@@ -5,7 +5,7 @@ description: Transfer confidential tokens on behalf of an owner who approved you
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](/reference/react/useConfidentialSetOperator) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](/reference/react/useConfidentialBalance) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
 
 ## Import
 
@@ -120,11 +120,7 @@ Number of tokens to transfer (in the token's smallest unit). Encrypted before su
 {% tab title="component.tsx" %}
 
 ```tsx
-await transferFrom({
-  from: "0xOwner",
-  to: "0xRecipient",
-  amount: 500n,
-});
+await transferFrom({ from: "0xOwner", to: "0xRecipient", amount: 500n });
 ```
 
 {% endtab %}
@@ -141,7 +137,7 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 ## Related
 
-- [useConfidentialTransfer](/reference/react/useConfidentialTransfer) -- direct transfer (no operator)
-- [useConfidentialSetOperator](/reference/react/useConfidentialSetOperator) -- grant operator approval
-- [Operator Approvals guide](/guides/operator-approvals)
-- [useConfidentialBalance](/reference/react/useConfidentialBalance) -- auto-invalidated on success
+- [useConfidentialTransfer](./useConfidentialTransfer.md) -- direct transfer (no operator)
+- [useConfidentialSetOperator](./useConfidentialSetOperator.md) -- grant operator approval
+- [Operator Approvals guide](../../guides/operator-approvals.md)
+- [useConfidentialBalance](./useConfidentialBalance.md) -- auto-invalidated on success

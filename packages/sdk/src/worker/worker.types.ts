@@ -13,9 +13,14 @@ import type { Address, Hex } from "viem";
 // ============================================================================
 
 /**
- * Optional logger for worker client observability.
- * Pass to `WorkerClientConfig` or `NodeWorkerClientConfig` to observe
- * request lifecycle (start, success, error, timeout).
+ * Minimal four-level logger the SDK logs through.
+ *
+ * Supplied optionally by the consumer via `createConfig({ logger })` and
+ * threaded SDK-wide; `console`, pino, winston, and OpenTelemetry's `DiagLogger`
+ * satisfy it directly, so no adapter is needed. Levels: `error` (unexpected
+ * internal failures only — never failures already surfaced via a rejection),
+ * `warn` (recoverable/degraded conditions), `info` (reserved for coarse
+ * lifecycle milestones; not currently emitted), `debug` (verbose diagnostics).
  */
 export interface GenericLogger {
   info: (message: string, data?: Record<string, unknown>) => void;
@@ -74,9 +79,7 @@ export interface InitRequest extends BaseRequest {
 
 export interface UpdateCsrfRequest extends BaseRequest {
   type: "UPDATE_CSRF";
-  payload: {
-    csrfToken: string;
-  };
+  payload: { csrfToken: string };
 }
 
 export interface EncryptRequest extends BaseRequest {
@@ -107,10 +110,7 @@ export interface UserDecryptRequest extends BaseRequest {
 
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
-  payload: {
-    chainId: number;
-    encryptedValues: EncryptedValue[];
-  };
+  payload: { chainId: number; encryptedValues: EncryptedValue[] };
 }
 
 export interface GenerateKeypairRequest extends BaseRequest {
@@ -160,10 +160,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
-  payload: {
-    chainId: number;
-    zkProof: ZKProofLike;
-  };
+  payload: { chainId: number; zkProof: ZKProofLike };
 }
 
 export interface GetPublicKeyRequest extends BaseRequest {
@@ -173,10 +170,7 @@ export interface GetPublicKeyRequest extends BaseRequest {
 
 export interface GetPublicParamsRequest extends BaseRequest {
   type: "GET_PUBLIC_PARAMS";
-  payload: {
-    chainId: number;
-    bits: number;
-  };
+  payload: { chainId: number; bits: number };
 }
 
 export type WorkerRequest =

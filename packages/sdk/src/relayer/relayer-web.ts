@@ -1,6 +1,5 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
@@ -10,6 +9,7 @@ import { IndexedDBStorage } from "../storage/indexeddb-storage";
 import type { GenericStorage } from "../types";
 import type { RelayerWorkerClient } from "../worker/worker.client";
 import type { FheChain } from "../chains/types";
+import type { TransportKeyPair } from "../credentials/types";
 import { BaseRelayer } from "./base-relayer";
 import { FheArtifactCache } from "./fhe-artifact-cache";
 import type { RelayerSDK } from "./relayer-sdk";
@@ -20,8 +20,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   RelayerWebConfig,
   UserDecryptParams,
@@ -33,11 +33,11 @@ import { withRetry } from "./relayer-utils";
  * Update this when upgrading @zama-fhe/relayer-sdk, and keep the
  * peerDependencies range in package.json in sync (~x.y.z).
  */
-export const RELAYER_SDK_VERSION = "0.4.2";
+export const RELAYER_SDK_VERSION = "0.4.4";
 export const CDN_URL = `https://cdn.zama.org/relayer-sdk-js/${RELAYER_SDK_VERSION}/relayer-sdk-js.umd.cjs`;
 /** SHA-384 hex digest of the pinned CDN bundle for integrity verification. */
 export const CDN_INTEGRITY =
-  "114438b01d518b53a447fa3e8bfbe6e71031cb42ac43219bb9f53488456fdfa4bbc8989628366d436e68f6526c7647eb";
+  "a50426aae8440e802102c8674dd8451f34fe79352d5e2cc6b89d9f1aa340296176c2ee33d9aa4657752f8ca96f74f921";
 
 /**
  * RelayerWeb — single-chain browser encryption/decryption layer.
@@ -109,16 +109,13 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   }
 
   /**
-   * Generate a keypair for FHE operations.
+   * Generate a transport key pair (ML-KEM public + private key) used for user-decryption.
    */
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateTransportKeyPair(): Promise<TransportKeyPair> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const result = await this.#worker.generateKeypair({ chainId });
-    return {
-      publicKey: result.publicKey,
-      privateKey: result.privateKey,
-    };
+    return { publicKey: result.publicKey, privateKey: result.privateKey };
   }
 
   /**
@@ -152,12 +149,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
 
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.encrypt({
-        chainId,
-        values,
-        contractAddress,
-        userAddress,
-      });
+      const result = await this.#worker.encrypt({ chainId, values, contractAddress, userAddress });
       return {
         encryptedValues: result.handles.map((handle) => toHex(handle)),
         inputProof: toHex(result.inputProof),
@@ -232,10 +224,7 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
     const chainId = this.chain.id;
     return withRetry(async () => {
       await this.#refreshCsrfToken();
-      const result = await this.#worker.delegatedUserDecrypt({
-        chainId,
-        ...params,
-      });
+      const result = await this.#worker.delegatedUserDecrypt({ chainId, ...params });
       return result.clearValues;
     });
   }
@@ -253,14 +242,14 @@ export class RelayerWeb extends BaseRelayer implements RelayerSDK, Disposable {
   }
 
   /**
-   * Get the TFHE compact public key.
+   * Fetch the network's FHE encryption key (ID + bytes).
    * When storage is configured, the result is cached persistently.
    */
-  async getPublicKey(): Promise<PublicKeyData | null> {
+  async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
     await this.ensureInit();
     const chainId = this.chain.id;
     const artifactCache = this.#getArtifactCache();
-    return artifactCache.getPublicKey(
+    return artifactCache.fetchFheEncryptionKeyBytes(
       async () => (await this.#worker.getPublicKey({ chainId })).result,
     );
   }

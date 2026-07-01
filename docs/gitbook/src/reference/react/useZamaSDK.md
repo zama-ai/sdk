@@ -77,6 +77,6 @@ The configured SDK instance. Throws if called outside a `ZamaProvider`.
 
 ## Related
 
-- [useToken](/reference/react/useToken) — memoised `Token` instance for a given address
-- [useWrappedToken](/reference/react/useWrappedToken) — memoised `WrappedToken` for ERC-7984 wrapper operations
-- [ZamaSDK](/reference/sdk/ZamaSDK) — full API reference for the SDK class
+- [useToken](./useToken.md) — memoised `Token` instance for a given address
+- [useWrappedToken](./useWrappedToken.md) — memoised `WrappedToken` for ERC-7984 wrapper operations
+- [ZamaSDK](../sdk/ZamaSDK.md) — full API reference for the SDK class

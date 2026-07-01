@@ -2,17 +2,8 @@ import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
 
 export default defineConfig({
-  input: {
-    index: "src/index.ts",
-    "wagmi/index": "src/wagmi/index.ts",
-  },
-  output: {
-    dir: "dist",
-    format: "esm",
-    sourcemap: true,
-    minify: true,
-    banner: '"use client";',
-  },
+  input: { index: "src/index.ts", "wagmi/index": "src/wagmi/index.ts" },
+  output: { dir: "dist", format: "esm", sourcemap: true, minify: true, banner: '"use client";' },
   external: [
     /^react/,
     /^@tanstack/,
@@ -23,9 +14,7 @@ export default defineConfig({
     /^@noble/,
     /^@scure/,
   ],
-  resolve: {
-    tsconfigFilename: "tsconfig.build.json",
-  },
+  resolve: { tsconfigFilename: "tsconfig.build.json" },
   treeshake: true,
   plugins: [dts({ tsconfig: "tsconfig.build.json" })],
 });

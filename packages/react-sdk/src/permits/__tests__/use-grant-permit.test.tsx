@@ -35,11 +35,7 @@ describe("useGrantPermit", () => {
         queryClient.getQueryCache().find({ queryKey: zamaQueryKeys.hasPermit.all }) === undefined;
       expect(variables).toEqual([tokenAddress, otherTokenAddress]);
     });
-    const { result, queryClient } = renderWithProviders(() =>
-      useGrantPermit({
-        onSuccess,
-      }),
-    );
+    const { result, queryClient } = renderWithProviders(() => useGrantPermit({ onSuccess }));
     queryClient.setQueryData(zamaQueryKeys.hasPermit.all, true);
 
     await act(() => result.current.mutateAsync([tokenAddress, otherTokenAddress]));

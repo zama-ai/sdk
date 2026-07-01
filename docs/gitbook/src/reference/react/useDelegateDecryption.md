@@ -5,7 +5,7 @@ description: Mutation hook that grants FHE decryption rights for a token to anot
 
 # useDelegateDecryption
 
-Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](/reference/react/useDelegationStatus) queries on success.
+Mutation hook that grants FHE decryption rights for a token to another address via the on-chain ACL. Automatically invalidates [`useDelegationStatus`](./useDelegationStatus.md) queries on success.
 
 ## Import
 
@@ -45,10 +45,6 @@ function DelegateButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 
 ## Parameters
 
-```ts
-import { type UseZamaConfig } from "@zama-fhe/react-sdk";
-```
-
 ### address
 
 `Address`
@@ -80,10 +76,7 @@ The address to grant decryption rights to.
 When the delegation expires. If omitted, the delegation is permanent.
 
 ```ts
-await delegate({
-  delegateAddress: "0xDelegate",
-  expirationDate: new Date("2025-12-31"),
-});
+await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2025-12-31") });
 ```
 
 ## Return Type
@@ -94,7 +87,7 @@ await delegate({
 
 ## Related
 
-- [`useRevokeDelegation`](/reference/react/useRevokeDelegation) -- revoke a previously granted delegation
-- [`useDelegationStatus`](/reference/react/useDelegationStatus) -- check whether a delegation is active
-- [`useDecryptBalanceAs`](/reference/react/useDecryptBalanceAs) -- decrypt a balance as the delegate
-- [Delegated Decryption](/reference/sdk/delegation) -- SDK reference
+- [`useRevokeDelegation`](./useRevokeDelegation.md) -- revoke a previously granted delegation
+- [`useDelegationStatus`](./useDelegationStatus.md) -- check whether a delegation is active
+- [`useDecryptBalanceAs`](./useDecryptBalanceAs.md) -- decrypt a balance as the delegate
+- [Delegated Decryption](../sdk/delegation.md) -- SDK reference

@@ -24,11 +24,7 @@ import { useListPairs } from "@zama-fhe/react-sdk";
 import { useListPairs } from "@zama-fhe/react-sdk";
 
 function TokenPairList() {
-  const { data, isLoading, error } = useListPairs({
-    page: 1,
-    pageSize: 20,
-    metadata: true,
-  });
+  const { data, isLoading, error } = useListPairs({ page: 1, pageSize: 20, metadata: true });
 
   if (isLoading) return <p>Loading pairs...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -137,7 +133,7 @@ Results are cached with a TTL matching the SDK's `registryTTL` (default: 24 hour
 
 ## Related
 
-- [WrappersRegistry](/reference/sdk/WrappersRegistry) -- SDK-level registry class with `listPairs()` method
-- [useTokenPairsRegistry](/reference/react/useTokenPairsRegistry) -- fetch all pairs at once (no pagination)
-- [useConfidentialTokenAddress](/reference/react/useConfidentialTokenAddress) -- look up a single token's wrapper
-- [Query Keys](/reference/react/query-keys) -- manual cache control via `zamaQueryKeys.wrappersRegistry`
+- [WrappersRegistry](../sdk/WrappersRegistry.md) -- SDK-level registry class with `listPairs()` method
+- [useTokenPairsRegistry](./useTokenPairsRegistry.md) -- fetch all pairs at once (no pagination)
+- [useConfidentialTokenAddress](./useConfidentialTokenAddress.md) -- look up a single token's wrapper
+- [Query Keys](./query-keys.md) -- manual cache control via `zamaQueryKeys.wrappersRegistry`

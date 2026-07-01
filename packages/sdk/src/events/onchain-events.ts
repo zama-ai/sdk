@@ -24,19 +24,12 @@ function eventTopic(signature: string): Hex {
 export const Topics = {
   /** `ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)` */
   ConfidentialTransfer: eventTopic("ConfidentialTransfer(address,address,bytes32)"),
-  // NOTE: New wrapper contracts no longer emit Wrapped — shields now emit
-  // ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
-  // compatibility with older deployments.
-  /** `Wrapped(address indexed to, uint256 amountIn)` */
-  Wrapped: eventTopic("Wrapped(address,uint256)"),
+  /** `Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)` */
+  Wrap: eventTopic("Wrap(address,uint256,bytes32)"),
   /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
   UnwrapRequested: eventTopic("UnwrapRequested(address,bytes32,bytes32)"),
   /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
   UnwrapFinalized: eventTopic("UnwrapFinalized(address,bytes32,bytes32,uint64)"),
-  /** `UnwrappedStarted(bool returnVal, uint256 indexed requestId, ...)` */
-  UnwrappedStarted: eventTopic(
-    "UnwrappedStarted(bool,uint256,uint256,address,address,bytes32,bytes32)",
-  ),
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -54,16 +47,19 @@ export interface ConfidentialTransferEvent {
   readonly encryptedAmount: EncryptedValue;
 }
 
-// NOTE: New wrapper contracts no longer emit this event — shields now emit
-// ConfidentialTransfer(from=zeroAddress, ...) instead. Retained for backward
-// compatibility with older deployments.
-/** Decoded `Wrapped` event — an ERC-20 shield (wrap) operation. */
-export interface WrappedEvent {
-  readonly eventName: "Wrapped";
+/**
+ * Decoded `Wrap` event — an ERC-20 shield (wrap) operation. Emitted alongside a
+ * `ConfidentialTransfer(from=zeroAddress, ...)`; `encryptedWrappedAmount` is the same FHE
+ * handle that lands in `ConfidentialTransfer.encryptedAmount`.
+ */
+export interface WrapEvent {
+  readonly eventName: "Wrap";
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
-  /** Underlying ERC-20 tokens deposited. */
-  readonly amountIn: bigint;
+  /** Cleartext underlying ERC-20 tokens deposited, rounded down to a multiple of the rate. */
+  readonly roundedAmount: bigint;
+  /** FHE encrypted value for the wrapped (minted) amount. */
+  readonly encryptedWrappedAmount: EncryptedValue;
 }
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
@@ -90,32 +86,12 @@ export interface UnwrapFinalizedEvent {
   readonly unwrapRequestId?: EncryptedValue;
 }
 
-/** Decoded `UnwrappedStarted` event — the relayer began processing an unshield. */
-export interface UnwrappedStartedEvent {
-  readonly eventName: "UnwrappedStarted";
-  /** Whether the unwrap start succeeded. */
-  readonly returnVal: boolean;
-  /** On-chain request ID. */
-  readonly requestId: bigint;
-  /** On-chain transaction ID. */
-  readonly txId: bigint;
-  /** Receiver address. */
-  readonly to: Address;
-  /** Refund address (if applicable). */
-  readonly refund: Address;
-  /** FHE encrypted value of the requested amount. */
-  readonly requestedAmount: EncryptedValue;
-  /** FHE encrypted value of the burn amount. */
-  readonly burnAmount: EncryptedValue;
-}
-
 /** Union of all decoded confidential token event types. */
 export type OnChainEvent =
   | ConfidentialTransferEvent
-  | WrappedEvent
+  | WrapEvent
   | UnwrapRequestedEvent
-  | UnwrapFinalizedEvent
-  | UnwrappedStartedEvent;
+  | UnwrapFinalizedEvent;
 
 // ---------------------------------------------------------------------------
 // ABI decoding helpers (no external deps)
@@ -123,10 +99,6 @@ export type OnChainEvent =
 
 function topicToAddress(topic: Hex): Address {
   return getAddress(prefixHex(topic.slice(-40)));
-}
-
-function topicToBigInt(topic: Hex): bigint {
-  return BigInt(topic);
 }
 
 function topicToBytes32(topic: Hex): EncryptedValue {
@@ -147,10 +119,6 @@ function wordToAddress(data: Hex, index: number): Address {
 
 function wordToBigInt(data: Hex, index: number): bigint {
   return BigInt("0x" + wordAt(data, index));
-}
-
-function wordToBool(data: Hex, index: number): boolean {
-  return BigInt("0x" + wordAt(data, index)) !== 0n;
 }
 
 function wordToBytes32(data: Hex, index: number): EncryptedValue {
@@ -182,15 +150,13 @@ export function decodeConfidentialTransfer(log: RawLog): ConfidentialTransferEve
   };
 }
 
-// NOTE: New wrapper contracts no longer emit this event. Retained for backward
-// compatibility with older deployments.
 /**
- * Wrapped(address indexed to, uint256 amountIn)
+ * Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)
  * Indexed: to (topics[1])
- * Data: amountIn (uint256)
+ * Data: roundedAmount (uint256), encryptedWrappedAmount (bytes32)
  */
-export function decodeWrapped(log: RawLog): WrappedEvent | null {
-  if (log.topics[0] !== Topics.Wrapped) {
+export function decodeWrap(log: RawLog): WrapEvent | null {
+  if (log.topics[0] !== Topics.Wrap) {
     return null;
   }
   if (log.topics.length < 2) {
@@ -198,9 +164,10 @@ export function decodeWrapped(log: RawLog): WrappedEvent | null {
   }
 
   return {
-    eventName: "Wrapped",
+    eventName: "Wrap",
     to: topicToAddress(log.topics[1]!),
-    amountIn: wordToBigInt(log.data, 0),
+    roundedAmount: wordToBigInt(log.data, 0),
+    encryptedWrappedAmount: wordToBytes32(log.data, 1),
   };
 }
 
@@ -243,32 +210,6 @@ export function decodeUnwrapFinalized(log: RawLog): UnwrapFinalizedEvent | null 
   };
 }
 
-/**
- * UnwrappedStarted(bool returnVal, uint256 indexed requestId, uint256 indexed txId, address indexed to,
- *                  address refund, bytes32 requestedAmount, bytes32 burnAmount)
- * Indexed: requestId (topics[1]), txId (topics[2]), to (topics[3])
- * Data: returnVal, refund, requestedAmount, burnAmount
- */
-export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | null {
-  if (log.topics[0] !== Topics.UnwrappedStarted) {
-    return null;
-  }
-  if (log.topics.length < 4) {
-    return null;
-  }
-
-  return {
-    eventName: "UnwrappedStarted",
-    requestId: topicToBigInt(log.topics[1]!),
-    txId: topicToBigInt(log.topics[2]!),
-    to: topicToAddress(log.topics[3]!),
-    returnVal: wordToBool(log.data, 0),
-    refund: wordToAddress(log.data, 1),
-    requestedAmount: wordToBytes32(log.data, 2),
-    burnAmount: wordToBytes32(log.data, 3),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Convenience helpers
 // ---------------------------------------------------------------------------
@@ -287,10 +228,9 @@ export function decodeUnwrappedStarted(log: RawLog): UnwrappedStartedEvent | nul
 export function decodeOnChainEvent(log: RawLog): OnChainEvent | null {
   return (
     decodeConfidentialTransfer(log) ??
-    decodeWrapped(log) ??
+    decodeWrap(log) ??
     decodeUnwrapRequested(log) ??
-    decodeUnwrapFinalized(log) ??
-    decodeUnwrappedStarted(log)
+    decodeUnwrapFinalized(log)
   );
 }
 
@@ -332,20 +272,18 @@ export function findUnwrapRequested(logs: readonly RawLog[]): UnwrapRequestedEve
   return null;
 }
 
-// NOTE: New wrapper contracts no longer emit this event. Retained for backward
-// compatibility with older deployments.
 /**
- * Find the first {@link WrappedEvent} in a logs array.
+ * Find the first {@link WrapEvent} in a logs array.
  *
  * @example
  * ```ts
- * const event = findWrapped(receipt.logs);
- * if (event) console.log(event.to, event.amountIn);
+ * const event = findWrap(receipt.logs);
+ * if (event) console.log(event.to, event.roundedAmount);
  * ```
  */
-export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
+export function findWrap(logs: readonly RawLog[]): WrapEvent | null {
   for (const log of logs) {
-    const event = decodeWrapped(log);
+    const event = decodeWrap(log);
     if (event) {
       return event;
     }
@@ -360,10 +298,9 @@ export function findWrapped(logs: readonly RawLog[]): WrappedEvent | null {
  */
 export const TOKEN_TOPICS = [
   Topics.ConfidentialTransfer,
-  Topics.Wrapped,
+  Topics.Wrap,
   Topics.UnwrapRequested,
   Topics.UnwrapFinalized,
-  Topics.UnwrappedStarted,
 ] as const;
 
 // ---------------------------------------------------------------------------

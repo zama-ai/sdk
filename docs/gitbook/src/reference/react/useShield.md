@@ -81,9 +81,7 @@ import { type UseShieldConfig } from "@zama-fhe/react-sdk";
 Address of the confidential wrapper contract.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper" });
 ```
 
 ### optimistic
@@ -93,10 +91,7 @@ const { mutateAsync: shield } = useShield({
 Default: `false`. When `true`, optimistically adds the wrapped amount to the cached confidential balance before the transaction confirms; rolls back on error.
 
 ```ts
-const { mutateAsync: shield } = useShield({
-  address: "0xWrapper",
-  optimistic: true,
-});
+const { mutateAsync: shield } = useShield({ address: "0xWrapper", optimistic: true });
 ```
 
 ---
@@ -173,5 +168,5 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
-- [useUnshield](/reference/react/useUnshield) — reverse operation, unshield back to public ERC-20
-- [WrappedToken.shield](/reference/sdk/WrappedToken#shield) — imperative equivalent on the `WrappedToken` class
+- [useUnshield](./useUnshield.md) — reverse operation, unshield back to public ERC-20
+- [WrappedToken.shield](../sdk/WrappedToken.md#shield) — imperative equivalent on the `WrappedToken` class

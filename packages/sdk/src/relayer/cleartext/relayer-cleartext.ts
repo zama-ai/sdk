@@ -17,13 +17,13 @@ import {
 import { mainnet, sepolia } from "viem/chains";
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   KmsPublicDecryptEIP712Type,
   KmsUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
 
+import type { TransportKeyPair } from "../../credentials/types";
 import type { RelayerSDK } from "../relayer-sdk";
 import type {
   ClearValue,
@@ -32,8 +32,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   UserDecryptParams,
 } from "../relayer-sdk.types";
@@ -167,7 +167,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     this.inputSigner = privateKeyToAccount(config.inputSignerPrivateKey ?? MOCK_INPUT_SIGNER_PK);
   }
 
-  async generateKeypair(): Promise<KeypairType<Hex>> {
+  async generateTransportKeyPair(): Promise<TransportKeyPair> {
     const publicKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
     let privateKey = toHex(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -230,9 +230,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressInputVerification as Address,
       ),
-      types: {
-        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
-      },
+      types: { CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification },
       primaryType: "CiphertextVerification",
       message: {
         ctHandles: handles,
@@ -309,11 +307,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     const decryptionProof = concat([toHex(new Uint8Array([1])), signature]);
 
-    return {
-      clearValues,
-      abiEncodedClearValues,
-      decryptionProof,
-    };
+    return { clearValues, abiEncodedClearValues, decryptionProof };
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -360,18 +354,12 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     throw new ConfigurationError("Not implemented in cleartext mode");
   }
 
-  async getPublicKey(): Promise<PublicKeyData | null> {
-    return {
-      publicKeyId: "mock-public-key-id",
-      publicKey: new Uint8Array([32]),
-    };
+  async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
+    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
   }
 
   async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
-    return {
-      publicParams: new Uint8Array([32]),
-      publicParamsId: "mock-public-params-id",
-    };
+    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 
   async getAclAddress(): Promise<Address> {

@@ -61,9 +61,7 @@ const { mutateAsync: setOperator } = useConfidentialSetOperator("0xToken");
 Address of the operator to approve.
 
 ```ts
-await setOperator({
-  operator: "0xDEX",
-});
+await setOperator({ operator: "0xDEX" });
 ```
 
 ---
@@ -77,10 +75,7 @@ Unix timestamp (seconds) when the approval expires. Defaults to 1 hour from now.
 ```ts
 const oneDay = Math.floor(Date.now() / 1000) + 86_400;
 
-await setOperator({
-  operator: "0xDEX",
-  until: oneDay,
-});
+await setOperator({ operator: "0xDEX", until: oneDay });
 ```
 
 ## Return Type
@@ -91,6 +86,6 @@ await setOperator({
 
 ## Related
 
-- [`useConfidentialIsOperator`](/reference/react/useConfidentialIsOperator) — check if a spender is currently an operator
-- [`useConfidentialTransferFrom`](/reference/react/useConfidentialTransferFrom) — operator transfer using an existing approval
-- [`Token.setOperator()`](/reference/sdk/Token#setoperator) — imperative equivalent on the SDK class
+- [`useConfidentialIsOperator`](./useConfidentialIsOperator.md) — check if a spender is currently an operator
+- [`useConfidentialTransferFrom`](./useConfidentialTransferFrom.md) — operator transfer using an existing approval
+- [`Token.setOperator()`](../sdk/Token.md#setoperator) — imperative equivalent on the SDK class

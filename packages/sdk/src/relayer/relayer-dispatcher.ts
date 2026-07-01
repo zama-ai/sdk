@@ -1,6 +1,5 @@
 import type {
   InputProofBytesType,
-  KeypairType,
   KmsDelegatedUserDecryptEIP712Type,
   ZKProofLike,
 } from "@zama-fhe/relayer-sdk/bundle";
@@ -8,8 +7,10 @@ import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { resolveChainRelayers } from "../config/resolve";
+import type { TransportKeyPair } from "../credentials/types";
 import { ConfigurationError } from "../errors";
 import { assertNonNullable, toError } from "../utils";
+import type { GenericLogger } from "../worker/worker.types";
 import type { RelayerSDK } from "./relayer-sdk";
 import type {
   ClearValue,
@@ -18,8 +19,8 @@ import type {
   EncryptParams,
   EncryptResult,
   EncryptedValue,
+  FheEncryptionKey,
   PublicDecryptResult,
-  PublicKeyData,
   PublicParamsData,
   UserDecryptParams,
 } from "./relayer-sdk.types";
@@ -50,6 +51,7 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
   constructor(
     chains: readonly [FheChain, ...FheChain[]],
     configs: Readonly<Record<number, RelayerConfig>>,
+    logger: GenericLogger,
   ) {
     if (chains.length === 0) {
       throw new ConfigurationError("At least one chain is required.");
@@ -77,12 +79,12 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     try {
       for (const [relayerCfg, groupChains] of groups) {
         const allChainConfigs = groupChains.map(([, chain]) => chain);
-        const worker = relayerCfg.createWorker?.(allChainConfigs);
+        const worker = relayerCfg.createWorker?.(allChainConfigs, logger);
         if (worker) {
           workers.push(worker);
         }
         for (const [chainId, chain] of groupChains) {
-          relayers.set(chainId, relayerCfg.createRelayer(chain, worker));
+          relayers.set(chainId, relayerCfg.createRelayer(chain, worker, logger));
         }
       }
     } catch (error) {
@@ -125,8 +127,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return relayer;
   }
 
-  generateKeypair(): Promise<KeypairType<Hex>> {
-    return this.#active.generateKeypair();
+  generateTransportKeyPair(): Promise<TransportKeyPair> {
+    return this.#active.generateTransportKeyPair();
   }
 
   createEIP712(
@@ -176,8 +178,8 @@ export class RelayerDispatcher implements RelayerSDK, Disposable {
     return this.#active.requestZKProofVerification(zkProof);
   }
 
-  getPublicKey(): Promise<PublicKeyData | null> {
-    return this.#active.getPublicKey();
+  fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
+    return this.#active.fetchFheEncryptionKeyBytes();
   }
 
   getPublicParams(bits: number): Promise<PublicParamsData | null> {

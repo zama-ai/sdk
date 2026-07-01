@@ -4,6 +4,7 @@ import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/relayer-sdk";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
+import { LoggerService } from "../services/logger-service";
 import { ZamaSDK } from "../zama-sdk";
 import type { ChainFixtures } from "./chain";
 import type { ProviderFixtures } from "./provider";
@@ -35,10 +36,13 @@ function buildSDK(
     signer,
     storage,
     permitStorage: storage,
-    keypairTTL: 2592000,
+    transportKeyPairTTL: 2592000,
     permitTTL: 1,
     registryTTL: 86400,
     onEvent: undefined,
+    // Resolved configs always carry a LoggerService (buildZamaConfig guarantees
+    // it); the silent default mirrors a consumer who configured no logger.
+    logger: new LoggerService(),
     ...overrides,
   } as unknown as ZamaConfig);
 }

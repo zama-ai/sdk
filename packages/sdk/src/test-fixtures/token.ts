@@ -16,21 +16,13 @@ export type CreateWrappedTokenFn = (sdk: ZamaSDK, address?: Address) => WrappedT
 export type CreateMockTokenFn = (
   addressOrArgs?:
     | Address
-    | {
-        address?: Address;
-        signer?: GenericSigner;
-        txResult?: TransactionResult;
-      },
+    | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
 ) => Token;
 
 export type CreateMockWrappedTokenFn = (
   addressOrArgs?:
     | Address
-    | {
-        address?: Address;
-        signer?: GenericSigner;
-        txResult?: TransactionResult;
-      },
+    | { address?: Address; signer?: GenericSigner; txResult?: TransactionResult },
 ) => WrappedToken;
 
 function createMockTokenInternal(address: Address, signer: GenericSigner): Token {
@@ -113,6 +105,8 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         ...base,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferFromAndCall: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
       } as unknown as Token;
     };
@@ -135,6 +129,8 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         ...base,
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
+        confidentialTransferFromAndCall: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
         underlying: vi.fn().mockResolvedValue(addr),
         allowance: vi.fn().mockResolvedValue(0n),
