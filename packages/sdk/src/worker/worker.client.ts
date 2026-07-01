@@ -37,8 +37,9 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
     // worker keeps attracting least-connections work, cascading timeouts. The
     // browser runs a single worker with no such pool, and `web()` exposes no
     // timeout knobs, so a timeout here stays a typed reject without tearing
-    // down the worker. Opt out before the spread so the default is `false`.
-    super({ workerLabel: "web-worker", recycleWorkerOnTimeout: false, ...config }, config.logger);
+    // down the worker. Force it off after the spread so the browser worker is
+    // never recycled, regardless of config.
+    super({ workerLabel: "web-worker", ...config, recycleWorkerOnTimeout: false }, config.logger);
   }
 
   protected createWorker(): Worker {

@@ -97,6 +97,26 @@ describe("NodeWorkerPool", () => {
     ]);
   });
 
+  test("threads the timeout knobs through to each worker client", async () => {
+    const pool = new NodeWorkerPool({
+      ...baseConfig,
+      poolSize: 1,
+      operationTimeout: 7,
+      initTimeout: 90,
+      recycleWorkerOnTimeout: false,
+    });
+    await pool.initPool();
+
+    const config = vi.mocked(NodeWorkerClient).mock.calls[0]![0] as {
+      operationTimeout?: number;
+      initTimeout?: number;
+      recycleWorkerOnTimeout?: boolean;
+    };
+    expect(config.operationTimeout).toBe(7);
+    expect(config.initTimeout).toBe(90);
+    expect(config.recycleWorkerOnTimeout).toBe(false);
+  });
+
   test("sends sequential calls to worker 0 when all are idle", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();
