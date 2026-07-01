@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.3.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.3...v3.3.0-alpha.4) (2026-07-01)
+
+### Features
+
+- **examples:** demonstrate confidentialTransferAndCall vault deposit [SDK-244] ([#495](https://github.com/zama-ai/sdk/issues/495)) ([f2af503]())
+
+### Reverts
+
+- pin conventional-changelog-conventionalcommits back to ^9.3.1 ([#514](https://github.com/zama-ai/sdk/issues/514)) ([c5db065]()), closes [#505]() [#495]()
+
 ## [3.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2026-06-29)
 
 ### Code Refactoring
