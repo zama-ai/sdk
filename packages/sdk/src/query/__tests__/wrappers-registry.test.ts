@@ -258,3 +258,22 @@ describe("listPairsQueryOptions", () => {
     expect(options.queryKey[1]).toMatchObject({ registryAddress: zeroAddress });
   });
 });
+
+describe("registry TTL", () => {
+  test("staleTime equals sdk.registry.ttlMs for every sdk-based factory", ({ createSDK }) => {
+    const sdk = createSDK({ registryTTL: 3600 });
+    const config = { registryAddress: REGISTRY };
+    const allOptions = [
+      tokenPairsQueryOptions(sdk, config),
+      tokenPairsLengthQueryOptions(sdk, config),
+      tokenPairsSliceQueryOptions(sdk, { ...config, fromIndex: 0n, toIndex: 1n }),
+      tokenPairQueryOptions(sdk, { ...config, index: 0n }),
+      confidentialTokenAddressQueryOptions(sdk, { ...config, tokenAddress: TOKEN }),
+      tokenAddressQueryOptions(sdk, { ...config, confidentialTokenAddress: C_TOKEN }),
+      isConfidentialTokenValidQueryOptions(sdk, { ...config, confidentialTokenAddress: C_TOKEN }),
+    ];
+    for (const options of allOptions) {
+      expect(options.staleTime).toBe(3_600_000);
+    }
+  });
+});
