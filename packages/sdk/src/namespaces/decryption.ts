@@ -3,7 +3,11 @@ import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
-import type { BatchDecryptResult, DecryptionService } from "../services/decryption-service";
+import type {
+  BatchDecryptResult,
+  DecryptionService,
+  DelegatedDecryptOptions,
+} from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 
@@ -96,6 +100,9 @@ export class Decryption {
    *   dimension. Defaults to `delegatorAddress`. Pass the actual account address
    *   when decrypting on behalf of someone whose balance is stored under a
    *   different address (e.g. `decryptBalanceAs` with an explicit `accountAddress`).
+   * @param options - Delegated-decrypt options. By default the call rides out the
+   *   gateway propagation window ({@link DelegatedDecryptOptions.waitForPropagation});
+   *   pass `{ waitForPropagation: false }` to fail fast instead.
    * @returns Map of encrypted value → clear-text value.
    *
    * @example
@@ -110,6 +117,7 @@ export class Decryption {
     encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     accountAddress: Address = delegatorAddress,
+    options?: DelegatedDecryptOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("delegatedDecryptValues");
     const account = await requireAlignedWalletAccount(
@@ -122,6 +130,7 @@ export class Decryption {
       delegatorAddress,
       account.address,
       accountAddress,
+      options,
     );
   }
 
@@ -165,6 +174,8 @@ export class Decryption {
    * @param delegatorAddress - The address that granted delegation rights.
    * @param accountAddress - The account on whose behalf decryption is performed. Defaults to `delegatorAddress`.
    * @param maxConcurrency - Maximum parallel decrypt calls during per-entry fallback.
+   * @param waitForPropagation - Ride out the gateway propagation window on the
+   *   initial batch attempt (default `true`). See {@link DelegatedDecryptOptions.waitForPropagation}.
    * @returns Per-entry results, each with a value or an error.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
@@ -190,12 +201,13 @@ export class Decryption {
     delegatorAddress,
     accountAddress = delegatorAddress,
     maxConcurrency,
+    waitForPropagation,
   }: {
     encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
     accountAddress?: Address;
     maxConcurrency?: number;
-  }): Promise<BatchDecryptResult> {
+  } & DelegatedDecryptOptions): Promise<BatchDecryptResult> {
     const service = this.#requireDecryptionService("delegatedBatchDecryptValues");
     const account = await requireAlignedWalletAccount(
       "delegatedBatchDecryptValues",
@@ -208,6 +220,7 @@ export class Decryption {
       delegateAddress: account.address,
       accountAddress,
       maxConcurrency,
+      waitForPropagation,
     });
   }
 }

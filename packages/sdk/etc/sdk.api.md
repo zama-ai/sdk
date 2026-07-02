@@ -5427,8 +5427,8 @@ export class Decryption {
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
-    }): Promise<BatchDecryptResult>;
-    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    } & DelegatedDecryptOptions): Promise<BatchDecryptResult>;
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address, options?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -5767,7 +5767,6 @@ export class Delegations {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
         delegationService: DelegationService;
-        decryptionService: DecryptionService | undefined;
     });
     delegateDecryption(input: {
         contractAddress: Address;
@@ -5784,7 +5783,6 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<boolean>;
-    isPropagated(encryptedInputs: DecryptInput[], delegatorAddress: Address): Promise<boolean>;
     revokeDelegation(input: {
         contractAddress: Address;
         delegateAddress: Address;

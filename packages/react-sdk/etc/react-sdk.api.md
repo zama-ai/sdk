@@ -198,18 +198,6 @@ export function useIsConfidentialTokenValid(input: {
 }): UseQueryResult<boolean, Error>;
 
 // @public
-export function useIsDelegationPropagated(config: UseIsDelegationPropagatedConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
-
-// @public (undocumented)
-export interface UseIsDelegationPropagatedConfig {
-    delegatorAddress?: Address;
-    encryptedInputs: EncryptedInput[];
-}
-
-// @public
-export type UseIsDelegationPropagatedResult = ReturnType<typeof useIsDelegationPropagated>;
-
-// @public
 export function useIsWrapper(tokenAddress: Address, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
 // @public

@@ -3,8 +3,6 @@ import type { DelegationService } from "../services/delegation-service";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { requireConfigured } from "../errors";
-import type { DecryptionService } from "../services/decryption-service";
-import type { EncryptedInput } from "../query/user-decrypt";
 
 /**
  * Public namespace for on-chain decryption-delegation management.
@@ -14,43 +12,39 @@ import type { EncryptedInput } from "../query/user-decrypt";
  * actual work to the internal {@link DelegationService}.
  *
  * Delegation operations write to the host chain ACL; after a delegation is mined,
- * allow **1–2 minutes** before attempting delegated decryption to let the gateway
- * sync the ACL state via cross-chain event propagation.
+ * the gateway syncs the ACL state via cross-chain event propagation — usually
+ * within ~10 blocks (a few seconds). Delegated decryption rides out that window
+ * with a bounded internal retry, so callers can decrypt right after granting.
  */
 export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #delegationService: DelegationService;
-  readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
     delegationService: DelegationService;
-    decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
     this.#delegationService = opts.delegationService;
-    this.#decryptionService = opts.decryptionService;
   }
 
   #requireSigner(operation: string): GenericSigner {
     return requireConfigured(this.#signer, operation);
   }
 
-  #requireDecryptionService(operation: string): DecryptionService {
-    return requireConfigured(this.#decryptionService, operation);
-  }
-
   /**
    * Delegate decryption rights for a confidential contract to another address.
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
-   * **Important:** After the transaction is mined, allow **1–2 minutes** before
-   * attempting delegated decryption. The delegation is recorded on L1 immediately,
-   * but the gateway must sync the ACL state via cross-chain event propagation.
+   * The delegation is recorded on L1 immediately, but the gateway must sync the
+   * ACL state via cross-chain event propagation — usually within ~10 blocks (a
+   * few seconds). You do not need to wait: delegated decryption rides out that
+   * window with a bounded internal retry, so you can decrypt right after this
+   * resolves.
    *
    * @param contractAddress - The confidential contract address to delegate on.
    * @param delegateAddress - Address to delegate decryption rights to.
@@ -153,32 +147,5 @@ export class Delegations {
     delegateAddress: Address;
   }): Promise<bigint> {
     return this.#delegationService.getDelegationExpiry(params);
-  }
-
-  /**
-   * Check whether a delegation has propagated to the gateway and is usable for
-   * delegated decryption — a proactive alternative to attempting a decrypt and
-   * catching {@link DelegationNotPropagatedError}.
-   *
-   * Unlike {@link isActive} (which reads the host-chain ACL and is `true` the
-   * instant the grant tx mines), this probes the gateway's synced state by
-   * forcing a delegated-decrypt round-trip. Poll it (e.g. every few seconds)
-   * after `delegateDecryption` until it returns `true`.
-   *
-   * @param encryptedInputs - Encrypted values to probe, each paired with its contract.
-   * @param delegatorAddress - The address that granted delegation rights to the connected wallet.
-   * @returns `true` once the delegation is usable on the gateway, `false` while it is still syncing.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if signer and provider are on different chains. {@link ChainMismatchError}
-   * @throws if no grant exists on the host chain. {@link DelegationNotFoundError}
-   * @throws if the grant has expired on the host chain. {@link DelegationExpiredError}
-   */
-  async isPropagated(
-    encryptedInputs: EncryptedInput[],
-    delegatorAddress: Address,
-  ): Promise<boolean> {
-    const service = this.#requireDecryptionService("isPropagated");
-    const account = await requireAlignedWalletAccount("isPropagated", this.#signer, this.#provider);
-    return service.isDelegationPropagated(encryptedInputs, delegatorAddress, account.address);
   }
 }

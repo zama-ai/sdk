@@ -475,8 +475,8 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       if (!delegatorAllowed[i]) {
         throw new DelegationNotPropagatedError(
           `Delegated decryption of encrypted value ${encryptedValues[i]!} was denied by the on-chain ` +
-            `ACL check for delegator ${delegatorAddress}. This is most commonly a propagation/lag window — ` +
-            `allow 1–2 minutes after granting before retrying.`,
+            `ACL check for delegator ${delegatorAddress}. This is most commonly a propagation/lag window ` +
+            `(~10 blocks, a few seconds) that the SDK normally retries across — retry shortly.`,
         );
       }
     }
