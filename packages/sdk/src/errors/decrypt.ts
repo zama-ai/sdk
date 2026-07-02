@@ -11,6 +11,7 @@ import {
   extractRetryAfter,
   hasStructuredRpcRateLimitSignal,
   isNotEntitledMessage,
+  isRelayerError,
   isRpcRateLimitError,
   parseHandleFromMessage,
 } from "../utils/error";
@@ -96,8 +97,8 @@ export function wrapDecryptError(
 
   // Consumer's RPC provider throttling an on-chain read. An unambiguous
   // structured signal (-32005 / viem `status: 429`) wins over any HTTP status;
-  // relayer-origin 429s carry `code: "RELAYER_FETCH_ERROR"` and are excluded,
-  // staying RelayerRequestFailedError below.
+  // relayer-origin errors are `@fhevm/sdk` `Relayer*` classes and are excluded by
+  // `isRelayerError`, staying RelayerRequestFailedError below.
   if (hasStructuredRpcRateLimitSignal(error)) {
     return new RpcRateLimitError(message, { cause: error, retryAfter: extractRetryAfter(error) });
   }
@@ -128,7 +129,7 @@ export function wrapDecryptError(
     );
   }
 
-  if (statusCode !== undefined) {
+  if (isRelayerError(error) || statusCode !== undefined) {
     return new RelayerRequestFailedError(message, statusCode, {
       cause: error,
       retryAfter: extractRetryAfter(error),

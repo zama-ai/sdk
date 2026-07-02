@@ -159,12 +159,12 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 
-    test("maps the relayer's not-entitled message to NotEntitledError, injecting ctx", () => {
-      // The relayer throws a message-only Error; the message survives the worker
-      // boundary, the handle is parsed from it, and contract/account are injected
-      // from the request context the caller (decryption-service) holds.
+    test("maps @fhevm/sdk's not-entitled message to NotEntitledError, injecting ctx", () => {
+      // @fhevm/sdk's AclUserDecryptionError carries a message-only actor denial; the
+      // handle is parsed from it, and contract/account are injected from the request
+      // context the caller (decryption-service) holds.
       const relayerError = new Error(
-        `User address 0xActor is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+        `User 0xActor is not authorized to decrypt handle 0x${"12".repeat(32)}!`,
       );
       const wrapped = wrapDecryptError(relayerError, "fallback", {
         contractAddress: "0xContract",
@@ -182,7 +182,7 @@ describe("wrapDecryptError", () => {
       // / a just-landed delegation — so it must be retryable, mirroring the
       // delegated-500 handling, rather than terminal NotEntitledError.
       const relayerError = new Error(
-        `User address 0xDelegator is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+        `User 0xDelegator is not authorized to decrypt handle 0x${"12".repeat(32)}!`,
       );
       const wrapped = wrapDecryptError(relayerError, "fallback", {
         isDelegated: true,
@@ -279,30 +279,44 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
-    test("keeps the relayer's own 429 (RELAYER_FETCH_ERROR cause) as RelayerRequestFailedError", () => {
-      // The cause chain (and its RELAYER_FETCH_ERROR tag) now survives the worker
-      // boundary via serializeError, so this is the realistic worker-origin shape.
-      const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
-        cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
-      });
+    test("keeps an @fhevm/sdk relayer 429 as RelayerRequestFailedError (not RpcRateLimit)", () => {
+      // @fhevm/sdk relayer errors are Error instances named Relayer* with a numeric
+      // `status`; the Relayer* name keeps them out of the consumer RpcRateLimitError
+      // bucket (SDK-236) even at status 429.
+      const relayerError = Object.assign(
+        new Error("User decryption: Relayer returned unexpected response status: 429"),
+        { name: "RelayerResponseStatusError", status: 429 },
+      );
       const wrapped = wrapDecryptError(relayerError, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
     test("surfaces relayer back-pressure: a 429 with Retry-After → retryable + retryAfter (seconds)", () => {
-      // The relayer's Cloudflare 429 carries `Retry-After` on `cause.response`.
+      // A relayer error carrying an HTTP status and a `Retry-After` on
+      // `cause.response` maps to a retryable RelayerRequestFailedError.
       const relayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+        name: "RelayerResponseStatusError",
         statusCode: 429,
-        cause: {
-          code: "RELAYER_FETCH_ERROR",
-          response: { headers: new Headers({ "Retry-After": "300" }) },
-        },
+        cause: { response: { headers: new Headers({ "Retry-After": "300" }) } },
       });
       const wrapped = wrapDecryptError(relayer429, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
       expect((wrapped as RelayerRequestFailedError).retryAfter).toBe(300);
+    });
+
+    test("keeps an @fhevm/sdk RelayerMaxRetryError (no status) as RelayerRequestFailedError", () => {
+      // After @fhevm/sdk exhausts its internal 429 back-pressure retries it throws
+      // RelayerMaxRetryError, which carries no HTTP status. It must stay in the
+      // relayer's domain rather than degrading to a generic DecryptionFailedError.
+      const maxRetry = Object.assign(
+        new Error("User decryption: Maximum polling retry limit exceeded (5 attempts)"),
+        { name: "RelayerMaxRetryError" },
+      );
+      const wrapped = wrapDecryptError(maxRetry, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
     });
   });
 });

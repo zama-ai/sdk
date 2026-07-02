@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import type { ChainRouter } from "./chains/router";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
@@ -31,8 +32,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  * (chain alignment, signer requirement, event emission).
  */
 export class ZamaSDK {
-  /** @internal */
-  readonly relayer: FhevmRelayerSDK;
+  readonly #router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
@@ -58,7 +58,7 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
 
   constructor(config: ZamaConfig) {
-    this.relayer = config.router.relayer;
+    this.#router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
@@ -158,6 +158,15 @@ export class ZamaSDK {
    */
   get logger(): GenericLogger {
     return this.#logger;
+  }
+
+  /**
+   * The single-chain relayer backend for the **currently active** chain.
+   *
+   * @internal
+   */
+  get relayer(): FhevmRelayerSDK {
+    return this.#router.relayer;
   }
 
   /**

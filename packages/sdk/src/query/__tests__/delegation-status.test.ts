@@ -1,9 +1,13 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
+import { createMockChain } from "../../test-fixtures/chain";
+import { createMockRelayer } from "../../test-fixtures/relayer";
 import { delegationStatusQueryOptions } from "../delegation-status";
 import { MAX_UINT64 } from "../../contracts/constants";
 
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as const;
 const DELEGATE = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as const;
+const ACL_CHAIN_1 = "0x1111111111111111111111111111111111111111" as const;
+const ACL_CHAIN_2 = "0x2222222222222222222222222222222222222222" as const;
 
 describe("delegationStatusQueryOptions", () => {
   test("is disabled when required params are missing", async ({ sdk, tokenAddress }) => {
@@ -123,5 +127,41 @@ describe("delegationStatusQueryOptions", () => {
     await expect(options.queryFn!(mockQueryContext(options.queryKey))).rejects.toThrow(
       "delegationStatusQueryOptions: contractAddress must not be null or undefined",
     );
+  });
+
+  test("reads the ACL address from the currently active chain after switchChain", async ({
+    createSDK,
+    provider,
+    tokenAddress,
+    mockQueryContext,
+  }) => {
+    // `sdk.relayer` follows the router, so a switch to a chain whose ACL differs
+    // must query that chain's ACL — not the one active at construction (SDK-458:
+    // the frozen `sdk.relayer` field read chains[0] on every chain). Each per-chain
+    // backend binds its own chain (as production `createRelayer(chain)` does), so
+    // the ACL is read off `relayer.chain`.
+    const chain1 = createMockChain({ id: 1, aclContractAddress: ACL_CHAIN_1 });
+    const chain2 = createMockChain({ id: 2, aclContractAddress: ACL_CHAIN_2 });
+    const router = createMockRouter({
+      chains: [chain1, chain2],
+      relayers: {
+        1: createMockRelayer({ chain: chain1 }),
+        2: createMockRelayer({ chain: chain2 }),
+      },
+      activeChainId: 1,
+    });
+    const sdk = createSDK({ router });
+    router.switchChain(2);
+
+    vi.mocked(provider.readContract).mockResolvedValue(0n);
+    const options = delegationStatusQueryOptions(sdk, {
+      contractAddress: tokenAddress,
+      delegatorAddress: DELEGATOR,
+      delegateAddress: DELEGATE,
+    });
+    await options.queryFn!(mockQueryContext(options.queryKey));
+
+    const call = vi.mocked(provider.readContract).mock.calls[0]?.[0] as { address: string };
+    expect(call.address).toBe(ACL_CHAIN_2);
   });
 });

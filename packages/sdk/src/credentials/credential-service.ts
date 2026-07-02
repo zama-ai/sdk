@@ -2,7 +2,6 @@ import type { Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
 import { wrapSigningError } from "../errors/signing";
-import type { FhevmRelayerSDK } from "../relayer/types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
@@ -43,7 +42,7 @@ export interface CredentialServiceConfig {
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
-  readonly #relayer: FhevmRelayerSDK;
+  readonly #router: ChainRouter;
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
@@ -63,7 +62,7 @@ export class CredentialService {
       storage: config.permitStorage ?? config.storage,
       logger: config.logger,
     });
-    this.#relayer = config.router.relayer;
+    this.#router = config.router;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
@@ -242,9 +241,13 @@ export class CredentialService {
     const { chunk, keypair, scope } = input;
     const startTimestamp = nowSeconds();
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
-
+    // Resolve the backend live off the router: `signDecryptionPermit` projects the
+    // active chain's `gatewayChainId` / decryption verifying-contract into the
+    // EIP-712 domain, so a `CredentialService` that outlives a `switchChain` must
+    // sign against the current chain — never the one captured at construction.
+    const { relayer } = this.#router;
     try {
-      const transportKeyPair = await this.#relayer.parseTransportKeyPair({
+      const transportKeyPair = await relayer.parseTransportKeyPair({
         publicKey: keypair.publicKey,
         privateKey: keypair.privateKey,
       });
@@ -257,14 +260,14 @@ export class CredentialService {
         signer: this.#signer,
       };
       const signedPermit = isDelegated
-        ? await this.#relayer.signDecryptionPermit({
+        ? await relayer.signDecryptionPermit({
             ...permitInput,
             delegatorAddress: scope.delegatorAddress,
           })
-        : await this.#relayer.signDecryptionPermit(permitInput);
+        : await relayer.signDecryptionPermit(permitInput);
 
       const serializedPermit = SerializedPermitSchema.parse(
-        this.#relayer.serializeSignedDecryptionPermit({ signedPermit }),
+        relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
       return {

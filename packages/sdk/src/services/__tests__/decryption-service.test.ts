@@ -272,9 +272,7 @@ describe("DecryptionService", () => {
       // DelegationNotPropagatedError, not the terminal NotEntitledError used for a
       // direct signer denial.
       vi.mocked(relayer.decryptValues).mockRejectedValue(
-        new Error(
-          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
-        ),
+        new Error(`User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`),
       );
 
       const error = await decryptionService

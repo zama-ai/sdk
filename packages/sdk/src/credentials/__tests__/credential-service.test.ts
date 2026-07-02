@@ -1,5 +1,7 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import { createMockChain } from "../../test-fixtures/chain";
+import { createMockRelayer } from "../../test-fixtures/relayer";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -73,6 +75,33 @@ describe("CredentialService.allow", () => {
     expect(result.keypair.publicKey).toBeDefined();
     expect(result.permissions).toEqual([]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService chain switching", () => {
+  test("signs permits against the active chain's relayer after switchChain", async ({
+    createCredentialService,
+  }) => {
+    // A `CredentialService` outlives chain-only switches (LifecycleService keeps
+    // credentials across them). Permits are EIP-712-signed against the *active*
+    // chain's decryption domain, so post-switch grants must route through the new
+    // chain's backend — not the one active at construction (SDK-458 regression).
+    const relayerA = createMockRelayer();
+    const relayerB = createMockRelayer();
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      relayers: { 1: relayerA, 2: relayerB },
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(relayerA.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signDecryptionPermit).not.toHaveBeenCalled();
+
+    router.switchChain(2);
+    await credentialService.grantPermit([B]);
+    expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
   });
 });
 
