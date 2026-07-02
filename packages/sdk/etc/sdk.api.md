@@ -5471,7 +5471,7 @@ export interface DecryptValuesParams {
     startTimestamp: number;
 }
 
-// @public
+// @public @deprecated
 export const DefaultRegistryAddresses: Record<number, Address>;
 
 // @public
