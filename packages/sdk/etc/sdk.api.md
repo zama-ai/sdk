@@ -5475,6 +5475,11 @@ export interface DecryptValuesParams {
 export const DefaultRegistryAddresses: Record<number, Address>;
 
 // @public
+export interface DelegatedDecryptOptions {
+    waitForPropagation?: boolean;
+}
+
+// @public
 export interface DelegatedDecryptValuesParams {
     // (undocumented)
     contractAddress: Address;

@@ -77,7 +77,11 @@ export {
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
 export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
-export type { BatchDecryptItem, BatchDecryptResult } from "./services/decryption-service";
+export type {
+  BatchDecryptItem,
+  BatchDecryptResult,
+  DelegatedDecryptOptions,
+} from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
