@@ -3521,6 +3521,173 @@ queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.toke
 - See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useConfidentialBalance`, `useConfidentialBalances`, and query key details.
 - To handle `NoCiphertextError` and other failures, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md).
 
+## Decrypt values from event logs
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/guides/decrypt-from-event-logs.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md
+- logical_path: guides/decrypt-from-event-logs
+
+# Decrypt values from event logs
+
+Most decryption examples start from a balance: you call `confidentialBalanceOf`, get back an encrypted value, and decrypt it. But a balance is not the only source of an encrypted value. **Any `bytes32` encrypted value emitted in an event log is a valid decryption input** — and decrypting from logs is a common backend pattern: indexers, wallet transaction history, accounting pipelines, and bridges all read confidential amounts straight off `ConfidentialTransfer`, `Wrap`, and `UnwrapFinalized` events.
+
+The SDK treats both sources identically. A decryption input is just `{ encryptedValue, contractAddress }`, and an event-log encrypted value drops straight in:
+
+```ts
+const cleartext = await sdk.decryption.decryptValues([
+  { encryptedValue: transfer.encryptedAmount, contractAddress: tokenAddress },
+]);
+```
+
+This guide shows the full loop — fetch logs, decode them, decrypt the amounts — and explains the one real-world constraint that catches indexers: **who is allowed to decrypt a given encrypted value.**
+
+Before starting, set up a Node.js backend following the [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) guide. This guide reuses that `sdk` and `publicClient`.
+
+## Example
+
+A minimal indexer: fetch every confidential transfer for a token, decode each log, and decrypt the amounts in one batch.
+
+{% code title="indexer.ts" %}
+
+```ts
+import { decodeConfidentialTransfer, TOKEN_TOPICS } from "@zama-fhe/sdk";
+import type { Address } from "viem";
+// `sdk` and `publicClient` come from your Node.js backend setup (createConfig +
+// node() relayer). `./client` stands in for wherever you export them — the
+// Node.js backend guide builds them as inline consts, so extract them there.
+import { sdk, publicClient } from "./client";
+
+const tokenAddress = "0xYourConfidentialToken" as Address;
+// The token's deployment block. Providers cap getLogs block ranges, so large
+// backfills page forward from here instead of fetching everything in one call.
+const startBlock = 0n;
+
+// 1. Fetch raw logs for the confidential token events.
+const logs = await publicClient.getLogs({
+  address: tokenAddress,
+  topics: [TOKEN_TOPICS],
+  fromBlock: startBlock,
+  toBlock: "latest",
+});
+
+// 2. Decode the ConfidentialTransfer logs. Each carries an `encryptedAmount` —
+//    the same kind of encrypted value you get from a balance. The decoder
+//    returns null for non-matching logs, so `flatMap(... ?? [])` drops them.
+const transfers = logs.flatMap((log) => decodeConfidentialTransfer(log) ?? []);
+
+// 3. Decrypt every amount in a single call. `decryptValues` groups inputs by
+//    contract and returns a record keyed by the encrypted value.
+const cleartext = await sdk.decryption.decryptValues(
+  transfers.map((t) => ({ encryptedValue: t.encryptedAmount, contractAddress: tokenAddress })),
+);
+
+for (const transfer of transfers) {
+  console.log(`${transfer.from} → ${transfer.to}: ${cleartext[transfer.encryptedAmount]}`);
+}
+```
+
+{% endcode %}
+
+That is the entire pattern. The rest of this guide breaks it into steps and covers the access-control caveat.
+
+## Steps
+
+### 1. Fetch and decode the logs
+
+Use the [event decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) to turn raw `eth_getLogs` entries into typed events. `TOKEN_TOPICS` fetches every supported token event in one RPC call; `decodeOnChainEvents` decodes them and skips anything unrecognized.
+
+```ts
+import { decodeOnChainEvents, TOKEN_TOPICS } from "@zama-fhe/sdk";
+
+const logs = await publicClient.getLogs({
+  address: tokenAddress,
+  topics: [TOKEN_TOPICS],
+  fromBlock: startBlock,
+  toBlock: "latest",
+});
+
+const events = decodeOnChainEvents(logs);
+```
+
+Each decoded event exposes its encrypted value under a typed field:
+
+| Event                  | Encrypted value field    | Meaning                       |
+| ---------------------- | ------------------------ | ----------------------------- |
+| `ConfidentialTransfer` | `encryptedAmount`        | Amount transferred            |
+| `Wrap`                 | `encryptedWrappedAmount` | Amount shielded (minted)      |
+| `UnwrapRequested`      | `encryptedAmount`        | Amount requested for unshield |
+| `UnwrapFinalized`      | `encryptedAmount`        | Amount unshielded             |
+
+To decode a single log instead of a batch, use the individual decoders (`decodeConfidentialTransfer(log)`, `decodeWrap(log)`, …), each of which returns `null` for a non-matching log. See the [event decoders reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) for the full list and field types.
+
+### 2. Decrypt the encrypted values
+
+Pass the decoded encrypted values to `sdk.decryption.decryptValues`. Each input pairs the encrypted value with the contract that emitted it. The result is a record mapping each encrypted value back to its clear-text value.
+
+```ts
+// Narrow the decoded `events` to the type you want. Each event exposes its
+// encrypted value under a different field (see the table above), so narrow on
+// `eventName` first — `encryptedAmount` is only valid after filtering to
+// `ConfidentialTransfer`.
+const transfers = events.filter((e) => e.eventName === "ConfidentialTransfer");
+
+const cleartext = await sdk.decryption.decryptValues(
+  transfers.map((transfer) => ({
+    encryptedValue: transfer.encryptedAmount,
+    contractAddress: tokenAddress,
+  })),
+);
+
+// cleartext maps each encrypted value back to its clear-text amount:
+// { "0xencryptedValue…": 500n }
+const amount = cleartext[transfers[0].encryptedAmount]; // 500n
+```
+
+`decryptValues` accepts many inputs at once, groups them by contract address, and issues one decryption request per contract — so decrypting a page of transfers costs one round-trip per token, not one per transfer. Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
+
+
+> [!INFO]
+> **No explicit permit call needed.** `decryptValues` signs and caches the required EIP-712 permit on demand the first time it runs for a contract. In a backend you can call `sdk.permits.grantPermit([tokenAddress])` up front if you prefer to do the signing during startup rather than on the first decrypt — but it is not required.
+
+
+### 3. Make sure your signer is allowed to decrypt
+
+This is the constraint that trips up indexers. Decryption is **access-controlled on-chain**: the relayer only returns a clear-text value if the configured signer's address has on-chain decryption rights for that specific encrypted value. The encrypted value being readable in a public log does **not** mean anyone can decrypt it.
+
+For a `ConfidentialTransfer`, the protocol grants decryption rights to the parties to the transfer. So the two cases are:
+
+- **Your backend is a party to the transfers** (e.g. a custodial wallet or exchange decrypting deposits and withdrawals for accounts it controls). The configured signer already has rights, and `decryptValues` works directly as shown above.
+- **Your backend is a neutral indexer** decrypting amounts that belong to other users (a block explorer, a shared analytics service). Your signer has no rights to those encrypted values, and `decryptValues` will fail. The user must first **delegate decryption rights** to your backend's address; you then decrypt with `sdk.decryption.delegatedDecryptValues(inputs, delegatorAddress)`.
+
+If you only ever index your own accounts' activity, you can stop here. If you need to decrypt on behalf of other users, follow the [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md) guide — the only change to the loop above is swapping `decryptValues` for `delegatedDecryptValues` and passing the delegator's address.
+
+## In the browser (React)
+
+The same pattern works in a dApp showing a user's confidential transaction history. Fetch and decode the logs the same way, then feed the encrypted values to `useDecryptValues` instead of calling the SDK directly:
+
+```tsx
+import { useDecryptValues } from "@zama-fhe/react-sdk";
+
+// `transfers` decoded from logs as above
+const inputs = transfers.map((t) => ({
+  encryptedValue: t.encryptedAmount,
+  contractAddress: tokenAddress,
+}));
+
+const { data: cleartext } = useDecryptValues(inputs);
+// cleartext?.[transfers[0].encryptedAmount] → 500n
+```
+
+Gate the decrypt behind a permit check so the wallet signature prompt only appears on user action — see [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md#3-decryption-of-the-encrypted-data) for the `DecryptGate` pattern.
+
+## Next steps
+
+- [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) — every decoder, finder, and event field type
+- [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) — backend setup, storage isolation, and direct API key auth
+- [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md) — decrypt on behalf of other users
+- [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md) — the full decryption UX in the browser
+
 ## Handle errors
 
 - source_type: official-doc
@@ -3549,6 +3716,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                            |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                   |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`)                                              |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)               |
+| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                 |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                          |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                              |
@@ -3640,6 +3809,8 @@ Here is a quick reference for the most common errors and how to respond:
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                    |
 | `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`; on a 429, retry after `.retryAfter` seconds. |
+| `WorkerTimeoutError`                   | Retry with client-side backoff (the Node worker is recycled by default). Raise `node({ operationTimeout })` for legitimately long operations.           |
+| `WorkerRecycledError`                  | Just retry — the request was cancelled as collateral of another operation's timeout recycle, not by a failure of its own.                               |
 | `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
@@ -3751,7 +3922,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3900,6 +4071,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
+- [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
 - [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and permit management
@@ -7246,6 +7418,8 @@ import {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -7311,6 +7485,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)                                                  |
+| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                                                    |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
@@ -7569,6 +7745,52 @@ try {
 ```
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
+
+### WorkerTimeoutError
+
+**Code:** `OPERATION_TIMEOUT`
+
+A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker by default** (terminating the hung thread) so it self-heals, and the operation is **retryable**. Recycling is gated by `recycleWorkerOnTimeout` (default `true`) and never applies to the browser worker (a single worker with no pool). It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
+
+Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
+
+```ts
+import { node } from "@zama-fhe/sdk/node";
+
+relayers: {
+  [sepolia.id]: node({ operationTimeout: 10 }),
+}
+```
+
+```ts
+matchZamaError(error, {
+  OPERATION_TIMEOUT: async (e) => {
+    // The worker was recycled; retry with your own backoff.
+    await backoff();
+    retry(); // or raise operationTimeout if the op is legitimately long
+  },
+});
+```
+
+**How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
+
+### WorkerRecycledError
+
+**Code:** `WORKER_RECYCLED`
+
+An in-flight operation was **aborted as collateral** when its worker was recycled to recover from _another_ operation's timeout (Node pool self-healing) — this operation itself did not time out. Because it never reached a verdict, it is **retryable**: the next call lazily re-inits a fresh worker. It is intentionally distinct from `WorkerTimeoutError` (this op did not exceed its own bound) and from `DecryptionFailedError` (nothing actually failed to decrypt), so you can retry it rather than treating it as a terminal failure. The error carries `operation` and (in the Node pool) `worker`.
+
+```ts
+matchZamaError(error, {
+  WORKER_RECYCLED: async (e) => {
+    // Transient: the worker was replaced under us. Just retry.
+    await backoff();
+    retry();
+  },
+});
+```
+
+**How to handle:** Retry — the request was cancelled by an unrelated recycle, not by a failure of its own.
 
 ## "No balance" vs "zero balance"
 
@@ -8477,6 +8699,7 @@ const logs = await publicClient.getLogs({
 
 ## Related
 
+- [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md) — decrypt the encrypted amounts these decoders return
 - [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/delegation.md) — delegation API with on-chain event examples
 - [Token](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Token.md) — high-level API for token operations
 

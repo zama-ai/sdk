@@ -59,7 +59,7 @@ export interface BaseRequest {
 }
 
 // @public
-export abstract class BaseWorkerClient<TWorker, TConfig> {
+export abstract class BaseWorkerClient<TWorker, TConfig extends WorkerClientTimeoutConfig> {
     constructor(config: TConfig, logger: GenericLogger);
     // (undocumented)
     protected readonly config: TConfig;
@@ -447,8 +447,11 @@ export interface NodePoolOptions {
     fheArtifactCacheTTL?: number;
     // (undocumented)
     fheArtifactStorage?: GenericStorage;
+    initTimeout?: number;
+    operationTimeout?: number;
     // (undocumented)
     poolSize?: number;
+    recycleWorkerOnTimeout?: boolean;
 }
 
 // @public
@@ -462,7 +465,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 }
 
 // @public (undocumented)
-export interface NodeWorkerClientConfig {
+export interface NodeWorkerClientConfig extends WorkerClientTimeoutConfig {
     // (undocumented)
     chains: FheChain[];
     logger: GenericLogger;
