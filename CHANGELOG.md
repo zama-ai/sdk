@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.6...v3.3.0-alpha.7) (2026-07-02)
+
+### Code Refactoring
+
+- **sdk:** single source of truth for WrappersRegistry config [SDK-127] ([#517](https://github.com/zama-ai/sdk/issues/517)) ([e7feeb0]())
+
 ## [3.3.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.5...v3.3.0-alpha.6) (2026-07-02)
 
 ### Bug Fixes
