@@ -1,14 +1,11 @@
 import type {
   CreateKmsDelegatedUserDecryptEip712ReturnType,
   CreateKmsUserDecryptEip712ReturnType,
-  ParseSignedDecryptionPermitParameters,
-  SerializeTransportKeyPairReturnType,
 } from "@fhevm/sdk/actions/chain";
-import type { EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
+import type { TypedValue } from "@fhevm/sdk/types";
 import type { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
-import type { TypedValue } from "@fhevm/sdk/types";
 
 // ============================================================================
 // Application Types
@@ -22,52 +19,46 @@ import type { TypedValue } from "@fhevm/sdk/types";
 /** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. */
 export type EncryptedValue = Hex;
 
-/** Result from encryption — contract-ready hex encrypted values and input proof. */
-export interface EncryptResult {
-  encryptedValues: EncryptedValue[];
-  inputProof: Hex;
-}
-
 /** Canonical SDK type for a decrypted clear-text value. */
 export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
-  | { value: bigint; type: Exclude<TypedValue["type"], "bool" | "address"> }
-  | { value: boolean | 1n | 0n; type: "bool" }
-  | { value: Address; type: "address" };
+  | { readonly type: Exclude<TypedValue["type"], "bool" | "address">; readonly value: bigint }
+  | { readonly type: "bool"; readonly value: boolean | 1n | 0n }
+  | { readonly type: "address"; readonly value: Address };
 
 /** Parameters for encryption */
-export interface EncryptParameters extends EncryptValuesParameters {
+export interface EncryptParams {
   /** Typed inputs for encryption. Each value must specify its FHE type. */
-  values: EncryptInput[];
+  readonly values: readonly EncryptInput[];
   contractAddress: Address;
   userAddress: Address;
 }
 
+/** Result from encryption — contract-ready hex encrypted values and input proof. */
+export interface EncryptResult {
+  readonly encryptedValues: readonly EncryptedValue[];
+  inputProof: Hex;
+}
+
 /** Result from public decryption. */
 export interface DecryptPublicValuesResult {
-  clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+  readonly clearValues: Record<EncryptedValue, ClearValue>;
   abiEncodedClearValues: Hex;
   decryptionProof: Hex;
 }
 
 /**
- * EIP-712 typed data for a (delegated) user-decrypt permit — the discriminated
- * union `@fhevm/sdk` produces, keyed by `primaryType`. Built by the FHE backend
- * and signed by the signer layer (`GenericSigner.signTypedData`).
+ * EIP-712 typed data for a (delegated) user-decrypt permit. Built by the FHE
+ * backend and handed to the signer layer (`GenericSigner.signTypedData`), which
+ * forwards it to the wallet. A structural shape — the SDK's contract is "sign
+ * this typed data", independent of the specific KMS permit variant `@fhevm/sdk`
+ * produces (which is versioned and evolves).
  */
 export type EIP712TypedData =
   | CreateKmsUserDecryptEip712ReturnType
   | CreateKmsDelegatedUserDecryptEip712ReturnType;
-
-// ============================================================================
-// `@fhevm/sdk`-derived types
-//
-// Shapes inferred from the underlying `@fhevm/sdk` engine. Kept here (rather
-// than inlined in `FhevmRelayer`) so the relayer layer shares one source of
-// truth for the engine's client, options, and serialized boundary types.
-// ============================================================================
 
 /** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
 export type FhevmClient = ReturnType<typeof createFhevmClient>;
@@ -83,14 +74,10 @@ export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 /** Serialized transport key pair as it crosses the signer / worker boundary. */
-export type SerializedTransportKeyPair = SerializeTransportKeyPairReturnType;
-
-/** Serialized signed decryption permit as it crosses the signer / worker boundary. */
-export type SerializedSignedPermit = ParseSignedDecryptionPermitParameters["serializedPermit"];
-
-// ============================================================================
-// Relayer backend interface
-// ============================================================================
+export interface SerializedTransportKeyPair {
+  publicKey: Hex;
+  privateKey: Hex;
+}
 
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives

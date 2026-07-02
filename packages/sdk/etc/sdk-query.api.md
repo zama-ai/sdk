@@ -13,8 +13,6 @@ import { createFhevmClient } from '@fhevm/sdk/viem';
 import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
-import { EncryptValuesParameters } from '@fhevm/sdk/actions/encrypt';
-import { EncryptValuesReturnType } from '@fhevm/sdk/actions/encrypt';
 import { Hex } from 'viem';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { QueryKey } from '@tanstack/query-core';
@@ -246,7 +244,7 @@ export interface DecryptPublicValuesResult {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+    readonly clearValues: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     decryptionProof: Hex;
 }
@@ -342,32 +340,32 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 // @public
 export type EncryptInput = {
-    value: bigint;
-    type: Exclude<TypedValue["type"], "bool" | "address">;
+    readonly type: Exclude<TypedValue["type"], "bool" | "address">;
+    readonly value: bigint;
 } | {
-    value: boolean | 1n | 0n;
-    type: "bool";
+    readonly type: "bool";
+    readonly value: boolean | 1n | 0n;
 } | {
-    value: Address;
-    type: "address";
+    readonly type: "address";
+    readonly value: Address;
 };
 
 // @public (undocumented)
-export function encryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParameters, EncryptValuesReturnType>;
+export function encryptMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult>;
 
 // @public
-export interface EncryptParameters extends EncryptValuesParameters {
+export interface EncryptParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    values: EncryptInput[];
+    readonly values: readonly EncryptInput[];
 }
 
 // @public
 export interface EncryptResult {
     // (undocumented)
-    encryptedValues: EncryptedValue[];
+    readonly encryptedValues: readonly EncryptedValue[];
     // (undocumented)
     inputProof: Hex;
 }
@@ -1162,7 +1160,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    encrypt(params: EncryptParameters): Promise<EncryptValuesReturnType>;
+    encrypt(params: EncryptParams): Promise<EncryptResult>;
     // @internal
     get logger(): GenericLogger;
     // @internal

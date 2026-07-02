@@ -3,14 +3,14 @@ import type { ChainRouter } from "../chains/router";
 import { wrapEncryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { EncryptParameters } from "../relayer/types";
+import type { EncryptParams, EncryptResult } from "../relayer/types";
 import { toError } from "../utils";
 
 export class EncryptionService {
   readonly #router: ChainRouter;
   readonly #emitEvent: (
     input: ZamaSDKEventInput,
-    tokenAddress?: EncryptParameters["contractAddress"],
+    tokenAddress?: EncryptParams["contractAddress"],
   ) => void;
 
   constructor({
@@ -18,16 +18,13 @@ export class EncryptionService {
     emitEvent,
   }: {
     router: ChainRouter;
-    emitEvent: (
-      input: ZamaSDKEventInput,
-      tokenAddress?: EncryptParameters["contractAddress"],
-    ) => void;
+    emitEvent: (input: ZamaSDKEventInput, tokenAddress?: EncryptParams["contractAddress"]) => void;
   }) {
     this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
-  async encryptValues(params: EncryptParameters) {
+  async encryptValues(params: EncryptParams): Promise<EncryptResult> {
     const t0 = Date.now();
     const normalizedContractAddress = getAddress(params.contractAddress);
     try {

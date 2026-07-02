@@ -5,7 +5,7 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./ev
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
-import type { EncryptParameters, FhevmRelayerSDK } from "./relayer/types";
+import type { EncryptParams, FhevmRelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -221,7 +221,7 @@ export class ZamaSDK {
    * });
    * ```
    */
-  async encrypt(params: EncryptParameters) {
+  async encrypt(params: EncryptParams) {
     return this.#encryptionService.encryptValues(params);
   }
 

@@ -93,7 +93,7 @@ export interface DecryptPublicValuesResult {
     // (undocumented)
     abiEncodedClearValues: Hex;
     // (undocumented)
-    clearValues: Readonly<Record<EncryptedValue, ClearValue>>;
+    readonly clearValues: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     decryptionProof: Hex;
 }
@@ -102,12 +102,12 @@ export interface DecryptPublicValuesResult {
 export type EIP712TypedData = CreateKmsUserDecryptEip712ReturnType | CreateKmsDelegatedUserDecryptEip712ReturnType;
 
 // @public
-export interface EncryptParameters extends EncryptValuesParameters {
+export interface EncryptParams {
     // (undocumented)
     contractAddress: Address;
     // (undocumented)
     userAddress: Address;
-    values: EncryptInput[];
+    readonly values: readonly EncryptInput[];
 }
 
 // @public

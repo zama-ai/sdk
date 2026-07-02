@@ -26,7 +26,7 @@ export type { ChainRouter } from "./chains/router";
 export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
   EncryptResult,
-  EncryptParameters,
+  EncryptParams,
   EncryptInput,
   EncryptedValue,
   ClearValue,

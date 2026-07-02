@@ -1,10 +1,10 @@
-import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
-import type { EncryptParameters } from "../node";
+import type { EncryptParams } from "../node";
+import type { EncryptResult } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 
 export function encryptMutationOptions(
   sdk: ZamaSDK,
-): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParameters, EncryptValuesReturnType> {
+): MutationFactoryOptions<readonly ["zama.encrypt"], EncryptParams, EncryptResult> {
   return { mutationKey: ["zama.encrypt"], mutationFn: async (params) => sdk.encrypt(params) };
 }
