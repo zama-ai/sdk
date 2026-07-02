@@ -39,7 +39,7 @@ function ConfidentialRoundTrip() {
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
-      values: [{ value: 42n, type: "euint64" }],
+      values: [{ value: 42n, type: "uint64" }],
       contractAddress,
       userAddress: userAddress!,
     });
@@ -78,6 +78,55 @@ function ConfidentialRoundTrip() {
 
 {% endcode %}
 
+{% hint style="info" %}
+**Recommended: Cross-Origin headers for faster encryption**
+
+`useEncrypt` runs FHE WASM in a Web Worker. With `SharedArrayBuffer` available, it encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+{% tabs %}
+{% tab title="Next.js" %}
+
+```js
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+        ],
+      },
+    ];
+  },
+};
+```
+
+{% endtab %}
+{% tab title="Vite" %}
+
+```ts
+export default defineConfig({
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+  },
+});
+```
+
+{% endtab %}
+{% endtabs %}
+
+See the [security model](../concepts/security-model.md#coop-coep-headers) for details.
+{% endhint %}
+
 {% hint style="warning" %}
 **SSR: "window is not defined"**
 
@@ -109,7 +158,7 @@ function EncryptExample() {
 
   const handleEncrypt = async () => {
     const result = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "euint64" }],
+      values: [{ value: 1000n, type: "uint64" }],
       contractAddress: "0xYourConfidentialContract",
       userAddress: userAddress!,
     });
@@ -136,9 +185,9 @@ Pass multiple values in a single call. Each value needs its FHE type.
 ```tsx
 const result = await encrypt.mutateAsync({
   values: [
-    { value: 500n, type: "euint64" }, // amount
-    { value: true, type: "ebool" }, // flag
-    { value: 42n, type: "euint32" }, // parameter
+    { value: 500n, type: "uint64" }, // amount
+    { value: true, type: "bool" }, // flag
+    { value: 42n, type: "uint32" }, // parameter
   ],
   contractAddress: "0xYourContract",
   userAddress,
@@ -180,7 +229,7 @@ function ConfidentialAction() {
   const handleAction = async () => {
     // 1. Encrypt the value
     const { encryptedValues, inputProof } = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "euint64" }],
+      values: [{ value: 1000n, type: "uint64" }],
       contractAddress: "0xYourContract",
       userAddress: address!,
     });

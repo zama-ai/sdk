@@ -105,6 +105,21 @@ Disabling integrity checks in production removes a critical defense layer. A com
 
 ## Browser security headers
 
+### COOP/COEP headers
+
+Multi-threaded FHE uses `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. To enable multi-threaded encryption, your server must send these headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without them, `SharedArrayBuffer` is unavailable and the SDK falls back to single-threaded WASM execution — slower, but fully functional. When this happens, `@fhevm/sdk` logs a console warning naming the two headers.
+
+{% hint style="info" %}
+These headers are a performance setting, not a hard requirement. Encryption works without them in single-threaded mode. Only enable cross-origin isolation if you want the throughput of multi-threaded FHE.
+{% endhint %}
+
 ### Content Security Policy (CSP)
 
 The Web Worker loads and executes WASM from a CDN. Your CSP must allow:

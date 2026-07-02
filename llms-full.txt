@@ -4821,7 +4821,7 @@ function ConfidentialRoundTrip() {
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
-      values: [{ value: 42n, type: "euint64" }],
+      values: [{ value: 42n, type: "uint64" }],
       contractAddress,
       userAddress: userAddress!,
     });
@@ -4861,6 +4861,59 @@ function ConfidentialRoundTrip() {
 {% endcode %}
 
 
+> [!INFO]
+> **Recommended: Cross-Origin headers for faster encryption**
+>
+> `useEncrypt` runs FHE WASM in a Web Worker. With `SharedArrayBuffer` available, it encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
+>
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
+>
+>
+### Tab: Next.js
+
+>
+> ```js
+> const nextConfig = {
+>   async headers() {
+>     return [
+>       {
+>         source: "/(.*)",
+>         headers: [
+>           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+>           { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+>         ],
+>       },
+>     ];
+>   },
+> };
+> ```
+>
+>
+
+### Tab: Vite
+
+>
+> ```ts
+> export default defineConfig({
+>   server: {
+>     headers: {
+>       "Cross-Origin-Opener-Policy": "same-origin",
+>       "Cross-Origin-Embedder-Policy": "require-corp",
+>     },
+>   },
+> });
+> ```
+>
+>
+
+>
+> See the [security model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#coop-coep-headers) for details.
+
+
+
 > [!WARNING]
 > **SSR: "window is not defined"**
 >
@@ -4891,7 +4944,7 @@ function EncryptExample() {
 
   const handleEncrypt = async () => {
     const result = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "euint64" }],
+      values: [{ value: 1000n, type: "uint64" }],
       contractAddress: "0xYourConfidentialContract",
       userAddress: userAddress!,
     });
@@ -4918,9 +4971,9 @@ Pass multiple values in a single call. Each value needs its FHE type.
 ```tsx
 const result = await encrypt.mutateAsync({
   values: [
-    { value: 500n, type: "euint64" }, // amount
-    { value: true, type: "ebool" }, // flag
-    { value: 42n, type: "euint32" }, // parameter
+    { value: 500n, type: "uint64" }, // amount
+    { value: true, type: "bool" }, // flag
+    { value: 42n, type: "uint32" }, // parameter
   ],
   contractAddress: "0xYourContract",
   userAddress,
@@ -4962,7 +5015,7 @@ function ConfidentialAction() {
   const handleAction = async () => {
     // 1. Encrypt the value
     const { encryptedValues, inputProof } = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "euint64" }],
+      values: [{ value: 1000n, type: "uint64" }],
       contractAddress: "0xYourContract",
       userAddress: address!,
     });
@@ -13622,7 +13675,7 @@ function EncryptValue() {
 
   async function handleEncrypt() {
     const { encryptedValues, inputProof } = await encrypt({
-      values: [{ value: 1000n, type: "euint64" }],
+      values: [{ value: 1000n, type: "uint64" }],
       contractAddress: "0xContract",
       userAddress: "0xUser",
     });
@@ -15266,6 +15319,22 @@ const config = createConfig({
 
 
 ## Browser security headers
+
+### COOP/COEP headers
+
+Multi-threaded FHE uses `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. To enable multi-threaded encryption, your server must send these headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without them, `SharedArrayBuffer` is unavailable and the SDK falls back to single-threaded WASM execution — slower, but fully functional. When this happens, `@fhevm/sdk` logs a console warning naming the two headers.
+
+
+> [!INFO]
+> These headers are a performance setting, not a hard requirement. Encryption works without them in single-threaded mode. Only enable cross-origin isolation if you want the throughput of multi-threaded FHE.
+
 
 ### Content Security Policy (CSP)
 
