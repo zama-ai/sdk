@@ -6,6 +6,7 @@ import { DelegationNotPropagatedError } from "./delegation";
 import { NotEntitledError } from "./entitlement";
 import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
+import { WorkerRecycledError, WorkerTimeoutError } from "./timeout";
 import {
   extractHttpStatus,
   extractRetryAfter,
@@ -55,7 +56,9 @@ export function wrapDecryptError(
     error instanceof SigningRejectedError ||
     error instanceof SigningFailedError ||
     error instanceof NotEntitledError ||
-    error instanceof RpcRateLimitError
+    error instanceof RpcRateLimitError ||
+    error instanceof WorkerTimeoutError ||
+    error instanceof WorkerRecycledError
   ) {
     return error;
   }

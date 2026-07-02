@@ -8,11 +8,12 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
+import type { WorkerClientTimeoutConfig } from "./worker.base-client";
 import { getBrowserExtensionRuntime } from "./browser-extension";
 import { default as workerCode, filename as workerFilename } from "./relayer-sdk.worker.ts?iife";
 
 /** Configuration for the worker client */
-export interface WorkerClientConfig {
+export interface WorkerClientConfig extends WorkerClientTimeoutConfig {
   cdnUrl: string;
   chains: FheChain[];
   csrfToken: string;
@@ -32,7 +33,13 @@ export class RelayerWorkerClient extends BaseWorkerClient<Worker, WorkerClientCo
   protected readonly env: WorkerEnv = "web";
 
   constructor(config: WorkerClientConfig) {
-    super(config, config.logger);
+    // Recycling (terminate + re-init) is a Node pool recovery: there a hung
+    // worker keeps attracting least-connections work, cascading timeouts. The
+    // browser runs a single worker with no such pool, and `web()` exposes no
+    // timeout knobs, so a timeout here stays a typed reject without tearing
+    // down the worker. Force it off after the spread so the browser worker is
+    // never recycled, regardless of config.
+    super({ workerLabel: "web-worker", ...config, recycleWorkerOnTimeout: false }, config.logger);
   }
 
   protected createWorker(): Worker {

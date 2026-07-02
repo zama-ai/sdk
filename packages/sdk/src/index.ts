@@ -172,6 +172,8 @@ export {
   NotEntitledError,
   RpcRateLimitError,
   ConfigurationError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
   ChainMismatchError,
   SignerRequiredError,
   SignerNotConfiguredError,
