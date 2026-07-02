@@ -140,13 +140,19 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 
 ## DefaultRegistryAddresses
 
+{% hint style="warning" %}
+**Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
+{% endhint %}
+
 A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](./WrappersRegistry.md) class.
 
 ```ts
+// Deprecated
 import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
 
-// { 1: "0xeb5015fF...", 11155111: "0x2f0750Bb...", 560048: "0x1807aE2f..." }
-console.log(DefaultRegistryAddresses);
+// Preferred
+import { sepolia } from "@zama-fhe/sdk/chains";
+console.log(sepolia.registryAddress);
 ```
 
 {% hint style="info" %}

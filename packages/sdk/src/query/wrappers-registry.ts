@@ -19,9 +19,6 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
-/** Default registry TTL in milliseconds — matches {@link WrappersRegistry} default of 86400 s. */
-const DEFAULT_STALE_TIME_MS = 86400 * 1000;
-
 export interface WrappersRegistryQueryConfig {
   registryAddress: Address | undefined;
   query?: Record<string, unknown>;
@@ -45,7 +42,7 @@ export function tokenPairsQueryOptions(
       const [, { registryAddress }] = context.queryKey;
       return sdk.provider.readContract(getTokenPairsContract(registryAddress));
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -80,7 +77,7 @@ export function confidentialTokenAddressQueryOptions(
         getConfidentialTokenAddressContract(registryAddress, tokenAddress),
       );
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -115,7 +112,7 @@ export function tokenAddressQueryOptions(
         getTokenAddressContract(registryAddress, confidentialTokenAddress),
       );
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -140,7 +137,7 @@ export function tokenPairsLengthQueryOptions(
       const [, { registryAddress }] = context.queryKey;
       return sdk.provider.readContract(getTokenPairsLengthContract(registryAddress));
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -178,7 +175,7 @@ export function tokenPairsSliceQueryOptions(
         getTokenPairsSliceContract(registryAddress, BigInt(fromIndex), BigInt(toIndex)),
       );
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -211,7 +208,7 @@ export function tokenPairQueryOptions(
       const [, { registryAddress, index }] = context.queryKey;
       return sdk.provider.readContract(getTokenPairContract(registryAddress, BigInt(index)));
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
@@ -246,7 +243,7 @@ export function isConfidentialTokenValidQueryOptions(
         isConfidentialTokenValidContract(registryAddress, confidentialTokenAddress),
       );
     },
-    staleTime: DEFAULT_STALE_TIME_MS,
+    staleTime: sdk.registry.ttlMs,
     enabled,
   };
 }
