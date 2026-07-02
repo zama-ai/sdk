@@ -16,7 +16,7 @@ This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting,
 
 ## Example
 
-A complete delegation flow — grant, then decrypt as delegate (the SDK rides out gateway propagation for you):
+A complete delegation flow — grant, then decrypt as delegate (the SDK rides out ACL propagation for you):
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -78,9 +78,9 @@ The expiration date must be **at least 1 hour in the future**. Passing a closer 
 
 Each call grants delegation for a single `(contractAddress, delegateAddress)` pair and submits one on-chain transaction.
 
-### 2. Gateway propagation (handled for you)
+### 2. ACL propagation (handled for you)
 
-After the delegation transaction is mined, the gateway (on Arbitrum) syncs the ACL state via cross-chain event propagation — usually within ~10 blocks (a few seconds). You don't need to wait or poll: the delegated-decrypt path rides out that window with a bounded internal retry (~30s), so a decrypt issued right after granting simply waits for sync.
+After the delegation transaction is mined, the Zama Gateway (on Arbitrum) syncs the ACL state via cross-chain event propagation — usually within ~10 blocks (a few seconds). You don't need to wait or poll: the delegated-decrypt path rides out that window with a bounded internal retry (~30s), so a decrypt issued right after granting simply waits for sync.
 
 {% hint style="info" %}
 `DelegationNotPropagatedError` only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
