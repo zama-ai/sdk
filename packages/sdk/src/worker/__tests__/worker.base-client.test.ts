@@ -1,6 +1,8 @@
 import { describe, test, expect, vi, afterEach } from "../../test-fixtures";
 import { LoggerService } from "../../services/logger-service";
-import { BaseWorkerClient, DEFAULT_TIMEOUT_MS } from "../worker.base-client";
+import { BaseWorkerClient, DEFAULT_TIMEOUT_MS, INIT_TIMEOUT_MS } from "../worker.base-client";
+import type { WorkerClientTimeoutConfig } from "../worker.base-client";
+import { WorkerRecycledError, WorkerTimeoutError } from "../../errors";
 import type {
   GenericLogger,
   WorkerEnv,
@@ -20,7 +22,7 @@ interface TestWorker {
   terminate: ReturnType<typeof vi.fn<() => void>>;
 }
 
-interface TestConfig {
+interface TestConfig extends WorkerClientTimeoutConfig {
   initType: WorkerRequestType;
   logger?: LoggerService;
 }
@@ -193,16 +195,15 @@ describe("BaseWorkerClient", () => {
     );
   });
 
-  test("rejects with timeout when no response arrives", async () => {
+  test("rejects with a typed WorkerTimeoutError carrying operation/timeout/elapsed", async () => {
     vi.useFakeTimers();
 
     try {
-      const client = new TestWorkerClient();
+      const client = new TestWorkerClient({ workerLabel: "node-worker-1" });
       const worker: TestWorker = { postMessage: vi.fn(), terminate: vi.fn() };
       client.lastWorker = worker;
       vi.spyOn(client, "initWorker").mockResolvedValue(worker);
 
-      // Start the request and attach rejection handler before advancing timers
       let rejectedError: Error | undefined;
       const promise = client.generateKeypair({ chainId: 1 }).catch((error: Error) => {
         rejectedError = error;
@@ -211,8 +212,139 @@ describe("BaseWorkerClient", () => {
       await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
       await promise;
 
-      expect(rejectedError).toBeDefined();
-      expect(rejectedError!.message).toMatch(/timed out/);
+      expect(rejectedError).toBeInstanceOf(WorkerTimeoutError);
+      const e = rejectedError as WorkerTimeoutError;
+      expect(e.message).toMatch(/timed out/);
+      expect(e.operation).toBe("GENERATE_KEYPAIR");
+      expect(e.timeout).toBe(DEFAULT_TIMEOUT_MS / 1000);
+      expect(e.elapsed).toBeGreaterThanOrEqual(DEFAULT_TIMEOUT_MS / 1000);
+      // The configured worker label surfaces on the error end-to-end.
+      expect(e.worker).toBe("node-worker-1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("honors operationTimeout from config", async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new TestWorkerClient({ operationTimeout: 5 });
+      const worker: TestWorker = { postMessage: vi.fn(), terminate: vi.fn() };
+      client.lastWorker = worker;
+      vi.spyOn(client, "initWorker").mockResolvedValue(worker);
+
+      let err: Error | undefined;
+      const p = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        err = e;
+      });
+
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(err).toBeUndefined(); // not yet
+      await vi.advanceTimersByTimeAsync(1);
+      await p;
+      expect(err).toBeInstanceOf(WorkerTimeoutError);
+      expect((err as WorkerTimeoutError).timeout).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("an INIT timeout surfaces as a WorkerTimeoutError on the init bound", async () => {
+    vi.useFakeTimers();
+    try {
+      // createWorker() posts a no-op INIT, so init never resolves and times out.
+      const client = new TestWorkerClient();
+      let err: Error | undefined;
+      const p = client.initWorker().catch((e: Error) => {
+        err = e;
+      });
+      await vi.advanceTimersByTimeAsync(INIT_TIMEOUT_MS);
+      await p;
+
+      expect(err).toBeInstanceOf(WorkerTimeoutError);
+      expect((err as WorkerTimeoutError).operation).toBe("INIT");
+      expect((err as WorkerTimeoutError).timeout).toBe(INIT_TIMEOUT_MS / 1000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("recycles the stuck worker after a timeout (terminate + re-init on next call)", async () => {
+    const client = await initClient(); // real timers; #worker is set
+    const stuck = client.lastWorker!;
+    expect(client.createWorkerCount).toBe(1);
+
+    vi.useFakeTimers();
+    try {
+      // postMessage is a no-op after initClient → the request will time out.
+      let err: Error | undefined;
+      const p = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        err = e;
+      });
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+      await p;
+      expect(err).toBeInstanceOf(WorkerTimeoutError);
+      expect(stuck.terminate).toHaveBeenCalledOnce(); // recycled
+    } finally {
+      vi.useRealTimers();
+    }
+
+    // The worker was nulled, so the next init lazily spawns a fresh one
+    // (createAutoResolvingClient's mock auto-resolves the new worker's INIT).
+    await client.initWorker();
+    expect(client.createWorkerCount).toBe(2);
+  });
+
+  test("rejects sibling in-flight requests as a retryable WorkerRecycledError, not a fake timeout", async () => {
+    const client = await initClient({ workerLabel: "node-worker-1" }); // real timers; #worker is set
+
+    vi.useFakeTimers();
+    try {
+      // First request will time out at DEFAULT_TIMEOUT_MS and recycle the worker.
+      let firstErr: Error | undefined;
+      const first = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        firstErr = e;
+      });
+
+      // Sibling starts 1s later, so its own deadline is well after the first's.
+      await vi.advanceTimersByTimeAsync(1_000);
+      let siblingErr: Error | undefined;
+      const sibling = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        siblingErr = e;
+      });
+
+      // Advance to the first request's deadline → it times out and recycles.
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS - 1_000);
+      await Promise.all([first, sibling]);
+
+      // The operation that actually exceeded its bound gets a typed timeout.
+      expect(firstErr).toBeInstanceOf(WorkerTimeoutError);
+      // The sibling was aborted by the recycle, not timed out: it gets a typed,
+      // retryable WorkerRecycledError — crucially NOT a WorkerTimeoutError
+      // claiming it ran the full timeout, and not a bare Error that would
+      // degrade to terminal DecryptionFailedError through wrapDecryptError.
+      expect(siblingErr).toBeInstanceOf(WorkerRecycledError);
+      expect(siblingErr).not.toBeInstanceOf(WorkerTimeoutError);
+      expect((siblingErr as WorkerRecycledError).operation).toBe("GENERATE_KEYPAIR");
+      expect(siblingErr!.message).toMatch(/recycled/i);
+      // The recycle reason names the worker for diagnostics.
+      expect((siblingErr as WorkerRecycledError).worker).toBe("node-worker-1");
+      expect(siblingErr!.message).toContain("node-worker-1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("recycleWorkerOnTimeout: false leaves the worker in place", async () => {
+    const client = await initClient({ recycleWorkerOnTimeout: false });
+    const worker = client.lastWorker!;
+
+    vi.useFakeTimers();
+    try {
+      const p = client.generateKeypair({ chainId: 1 }).catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+      await p;
+      expect(worker.terminate).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -352,7 +484,7 @@ describe("BaseWorkerClient", () => {
     expect(lastCall.payload).toEqual(params);
   });
 
-  test("error response includes statusCode when present", async () => {
+  test("rebuilds the error and its scalar signal fields from the serialized envelope", async () => {
     const client = await initClient();
 
     client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
@@ -362,8 +494,8 @@ describe("BaseWorkerClient", () => {
           type: req.type,
           success: false,
           error: "rate limited",
-          statusCode: 429,
-        } as WorkerResponse<unknown> & { statusCode: number });
+          serialized: { name: "Error", message: "rate limited", statusCode: 429, retryAfter: 3 },
+        } as WorkerResponse<unknown>);
       });
     });
 
@@ -371,9 +503,57 @@ describe("BaseWorkerClient", () => {
       await client.generateKeypair({ chainId: 1 });
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as Error).message).toBe("rate limited");
-      expect((error as Error & { statusCode?: number }).statusCode).toBe(429);
+      const e = error as Error & { statusCode?: number; retryAfter?: number };
+      expect(e.message).toBe("rate limited");
+      expect(e.statusCode).toBe(429);
+      expect(e.retryAfter).toBe(3);
     }
+  });
+
+  test("rebuilds the cause chain so chain-walking classification keeps working", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "could not coalesce error",
+          serialized: {
+            name: "Error",
+            message: "could not coalesce error",
+            code: "SERVER_ERROR",
+            cause: { name: "Error", message: "Too Many Requests", code: -32005 },
+          },
+        } as WorkerResponse<unknown>);
+      });
+    });
+
+    try {
+      await client.generateKeypair({ chainId: 1 });
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      const cause = (error as Error & { cause?: { code?: number } }).cause;
+      expect(cause?.code).toBe(-32005);
+    }
+  });
+
+  test("falls back to a plain Error when the serialized envelope is absent", async () => {
+    const client = await initClient();
+
+    client.lastWorker!.postMessage.mockImplementation((req: WorkerRequest) => {
+      Promise.resolve().then(() => {
+        client.simulateResponse({
+          id: req.id,
+          type: req.type,
+          success: false,
+          error: "legacy error",
+        } as WorkerResponse<unknown>);
+      });
+    });
+
+    await expect(client.generateKeypair({ chainId: 1 })).rejects.toThrow("legacy error");
   });
 
   test("terminate is a no-op when no worker exists", () => {

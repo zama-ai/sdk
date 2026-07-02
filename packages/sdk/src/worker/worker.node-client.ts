@@ -11,8 +11,9 @@ import type {
   WorkerResponse,
 } from "./worker.types";
 import { BaseWorkerClient } from "./worker.base-client";
+import type { WorkerClientTimeoutConfig } from "./worker.base-client";
 
-export interface NodeWorkerClientConfig {
+export interface NodeWorkerClientConfig extends WorkerClientTimeoutConfig {
   chains: FheChain[];
   /** SDK-wide logger for tracing worker request lifecycle. */
   logger: GenericLogger;

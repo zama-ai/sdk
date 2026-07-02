@@ -225,5 +225,6 @@ ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEv
 
 ## Related
 
+- [Decrypt values from event logs](../../guides/decrypt-from-event-logs.md) — decrypt the encrypted amounts these decoders return
 - [Delegated Decryption](./delegation.md) — delegation API with on-chain event examples
 - [Token](./Token.md) — high-level API for token operations

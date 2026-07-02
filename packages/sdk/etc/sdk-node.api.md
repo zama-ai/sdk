@@ -59,7 +59,7 @@ export interface BaseRequest {
 }
 
 // @public
-export abstract class BaseWorkerClient<TWorker, TConfig> {
+export abstract class BaseWorkerClient<TWorker, TConfig extends WorkerClientTimeoutConfig> {
     constructor(config: TConfig, logger: GenericLogger);
     // (undocumented)
     protected readonly config: TConfig;
@@ -292,14 +292,12 @@ export type EncryptResult = {
     inputProof: Hex;
 };
 
-// @public (undocumented)
-export interface ErrorResponse extends BaseResponse {
-    // (undocumented)
-    error: string;
-    statusCode?: number;
-    // (undocumented)
+// @public
+export type ErrorResponse = BaseResponse & {
     success: false;
-}
+    error: string;
+    serialized?: SerializedError;
+};
 
 // @public (undocumented)
 export interface GenerateKeypairRequest extends BaseRequest {
@@ -449,8 +447,11 @@ export interface NodePoolOptions {
     fheArtifactCacheTTL?: number;
     // (undocumented)
     fheArtifactStorage?: GenericStorage;
+    initTimeout?: number;
+    operationTimeout?: number;
     // (undocumented)
     poolSize?: number;
+    recycleWorkerOnTimeout?: boolean;
 }
 
 // @public
@@ -464,7 +465,7 @@ export interface NodeRelayerConfig extends RelayerConfig {
 }
 
 // @public (undocumented)
-export interface NodeWorkerClientConfig {
+export interface NodeWorkerClientConfig extends WorkerClientTimeoutConfig {
     // (undocumented)
     chains: FheChain[];
     logger: GenericLogger;
@@ -547,6 +548,21 @@ export const sepolia: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
+
+// @public
+export interface SerializedError {
+    // (undocumented)
+    cause?: SerializedError;
+    code?: string | number;
+    // (undocumented)
+    message: string;
+    // (undocumented)
+    name: string;
+    responseStatus?: string;
+    retryAfter?: number;
+    status?: number;
+    statusCode?: number;
+}
 
 // @public (undocumented)
 export interface SuccessResponse<T> extends BaseResponse {

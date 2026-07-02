@@ -13,7 +13,6 @@ import type {
   DelegatedUserDecryptResponseData,
   EncryptRequest,
   EncryptResponseData,
-  ErrorResponse,
   GenerateKeypairRequest,
   GenerateKeypairResponseData,
   GetPublicKeyRequest,
@@ -29,7 +28,7 @@ import type {
   UserDecryptResponseData,
   WorkerRequest,
 } from "./worker.types";
-import { prefixHex, unprefixHex } from "../utils";
+import { prefixHex, serializeError, unprefixHex } from "../utils";
 
 if (!parentPort) {
   throw new Error("This script must be run as a worker thread");
@@ -96,9 +95,17 @@ function sendSuccess<T>(
   port.postMessage(response, transfer);
 }
 
-function sendError(id: string, type: WorkerRequest["type"], error: string): void {
-  const response: ErrorResponse = { id, type, success: false, error };
-  port.postMessage(response);
+function sendError(id: string, type: WorkerRequest["type"], error: unknown): void {
+  // The error and its cause chain are serialized into a structured-clone-safe
+  // envelope; the main thread rebuilds it and classifies it once in
+  // `wrapDecryptError`. The worker stays taxonomy-agnostic.
+  port.postMessage({
+    id,
+    type,
+    success: false,
+    error: error instanceof Error ? error.message : String(error),
+    serialized: serializeError(error),
+  });
 }
 
 /**
@@ -112,8 +119,7 @@ async function handleInit(request: InitRequest): Promise<void> {
     }
     sendSuccess(id, type, { initialized: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -181,8 +187,7 @@ async function handleEncrypt(request: EncryptRequest): Promise<void> {
 
     sendSuccess(id, type, response, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -212,8 +217,7 @@ async function handleUserDecrypt(request: UserDecryptRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -229,8 +233,7 @@ async function handlePublicDecrypt(request: PublicDecryptRequest): Promise<void>
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -249,8 +252,7 @@ async function handleGenerateKeypair(request: GenerateKeypairRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -269,8 +271,7 @@ async function handleCreateEIP712(request: CreateEIP712Request): Promise<void> {
 
     sendSuccess(id, type, eip712);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -290,8 +291,7 @@ async function handleCreateDelegatedEIP712(request: CreateDelegatedEIP712Request
 
     sendSuccess(id, type, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -322,8 +322,7 @@ async function handleDelegatedUserDecrypt(request: DelegatedUserDecryptRequest):
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -344,8 +343,7 @@ async function handleRequestZKProofVerification(
 
     sendSuccess(id, type, result, transferList);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -361,8 +359,7 @@ async function handleGetPublicKey(request: GetPublicKeyRequest): Promise<void> {
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -381,8 +378,7 @@ async function handleGetPublicParams(request: GetPublicParamsRequest): Promise<v
 
     sendSuccess(id, type, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(id, type, message);
+    sendError(id, type, error);
   }
 }
 
@@ -426,8 +422,7 @@ async function handleMessage(request: WorkerRequest): Promise<void> {
         throw new Error(`Unknown request type: ${(request as WorkerRequest).type}`);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    sendError(request.id, request.type, message);
+    sendError(request.id, request.type, error);
   }
 }
 

@@ -87,7 +87,10 @@ export class NodeWorkerPool {
 
   async #doInitPool(): Promise<void> {
     for (let i = 0; i < this.#poolSize; i++) {
-      this.#workers.push(new NodeWorkerClient(this.#config));
+      // Stamp a per-worker label so a WorkerTimeoutError names which worker stalled.
+      this.#workers.push(
+        new NodeWorkerClient({ ...this.#config, workerLabel: `node-worker-${i}` }),
+      );
       this.#activeCount.push(0);
     }
     try {

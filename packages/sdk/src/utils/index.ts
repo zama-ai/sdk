@@ -1,4 +1,15 @@
-export { toError, isContractCallError } from "./error";
+export {
+  toError,
+  isContractCallError,
+  isRpcRateLimitError,
+  isNotEntitledMessage,
+  parseHandleFromMessage,
+  extractRetryAfter,
+  extractHttpStatus,
+  serializeError,
+  deserializeError,
+  type SerializedError,
+} from "./error";
 export { prefixHex, unprefixHex } from "./hex";
 export {
   assertObject,

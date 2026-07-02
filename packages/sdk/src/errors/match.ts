@@ -26,6 +26,8 @@ import type {
   InsufficientERC20BalanceError,
 } from "./balance";
 import type { ConfigurationError, RelayerRequestFailedError } from "./relayer";
+import type { NotEntitledError } from "./entitlement";
+import type { RpcRateLimitError } from "./rpc";
 import type {
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
@@ -33,6 +35,7 @@ import type {
 } from "./signer";
 import type { SigningFailedError, SigningRejectedError } from "./signing";
 import type { TransactionRevertedError } from "./transaction";
+import type { WorkerRecycledError, WorkerTimeoutError } from "./timeout";
 
 /**
  * Identity type that fails to instantiate unless `T` maps every code to a `ZamaError`.
@@ -57,6 +60,10 @@ type ErrorForCode = Complete<{
   [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
   [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
   [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+  [ZamaErrorCode.NotEntitled]: NotEntitledError;
+  [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
+  [ZamaErrorCode.OperationTimeout]: WorkerTimeoutError;
+  [ZamaErrorCode.WorkerRecycled]: WorkerRecycledError;
   [ZamaErrorCode.Configuration]: ConfigurationError;
   [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
   [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
