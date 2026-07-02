@@ -12,9 +12,9 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**RelayerWeb**](RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
+🟨 Go to [**web() transport**](RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 
-🟨 Go to [**RelayerNode**](RelayerNode.md) for the `node()` transport factory and server-side FHE operations.
+🟨 Go to [**node() transport**](RelayerNode.md) for server-side FHE operations in Node.js.
 
 🟨 Go to [**Network presets**](network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 

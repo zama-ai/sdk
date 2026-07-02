@@ -343,7 +343,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -367,7 +367,7 @@ const config = createConfig({
   chains: [mySepolia],
   signer: wallet,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -376,7 +376,7 @@ const sdk = new ZamaSDK(config);
 
 
 > [!INFO]
-> **FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure it via the options passed to `web()` / `node()`. See [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
+> **FHE artifact caching** — Both `web()` and `node()` transports automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Caching is handled internally by `@fhevm/sdk` — no configuration is required.
 
 
 ## Your first confidential transfer
@@ -2148,14 +2148,14 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The relayer factory only accepts pool/worker options.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The transport factories take no arguments — call them bare.
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
 
-// Node.js — pool options only; chain data comes from the preset
-node({ poolSize: 4 });
+// Node.js — chain data comes from the preset
+node();
 
 // Local dev — no KMS, no gateway; executorAddress comes from the chain preset
 cleartext();
@@ -2306,7 +2306,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2331,7 +2331,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -3901,7 +3901,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
+The SDK works in Node.js with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
 
 
 > [!INFO]
@@ -3918,7 +3918,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` transport runs FHE operations through `@fhevm/sdk`. It takes no options — call it bare.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3944,7 +3944,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4029,7 +4029,7 @@ The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKe
 
 ### 7. Clean up on shutdown
 
-Terminate the worker pool when your process exits:
+Release the SDK's resources when your process exits:
 
 ```ts
 process.on("SIGTERM", () => {
@@ -4057,7 +4057,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4068,7 +4068,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 ## Next steps
 
 - [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- `node()` transport factory options
+- [node() transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- the `node()` transport factory reference
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and permit management
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
@@ -4300,7 +4300,7 @@ The FHE relayer runs encryption and decryption inside a Web Worker backed by a W
 
 This means:
 
-- You cannot import `RelayerWeb`, `ZamaProvider`, or any SDK hook in a Server Component
+- You cannot import `ZamaProvider`, the `web()` transport, or any SDK hook in a Server Component
 - You cannot create the relayer or signer at module level in a file that runs on the server
 
 ### 2. Mark SDK components with `"use client"`
@@ -4862,59 +4862,6 @@ function ConfidentialRoundTrip() {
 
 
 > [!WARNING]
-> **Required: Cross-Origin headers**
->
-> `useEncrypt` loads FHE WASM in a Web Worker, which requires `SharedArrayBuffer`. You must set these HTTP headers:
->
-> ```
-> Cross-Origin-Opener-Policy: same-origin
-> Cross-Origin-Embedder-Policy: require-corp
-> ```
->
->
-### Tab: Next.js
-
->
-> ```js
-> const nextConfig = {
->   async headers() {
->     return [
->       {
->         source: "/(.*)",
->         headers: [
->           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
->           { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
->         ],
->       },
->     ];
->   },
-> };
-> ```
->
->
-
-### Tab: Vite
-
->
-> ```ts
-> export default defineConfig({
->   server: {
->     headers: {
->       "Cross-Origin-Opener-Policy": "same-origin",
->       "Cross-Origin-Embedder-Policy": "require-corp",
->     },
->   },
-> });
-> ```
->
->
-
->
-> See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for full setup instructions.
-
-
-
-> [!WARNING]
 > **SSR: "window is not defined"**
 >
 > FHE operations use Web Workers and browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
@@ -5245,9 +5192,9 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**RelayerWeb**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
+🟨 Go to [**web() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
 
-🟨 Go to [**RelayerNode**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) for the `node()` transport factory and server-side FHE operations.
+🟨 Go to [**node() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) for server-side FHE operations in Node.js.
 
 🟨 Go to [**Network presets**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
@@ -5311,7 +5258,7 @@ const config = createConfig({
   signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -6342,32 +6289,24 @@ console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C259
 - [Contract Builders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/contract-builders.md) — low-level registry builders
 - [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) — built-in chain configurations
 
-## RelayerWeb
+## `web()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerWeb.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md
 - logical_path: reference/sdk/RelayerWeb
 
-# RelayerWeb
+# `web()` transport
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management in a Web Worker via WASM.
 
 ## Import
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
+import { web } from "@zama-fhe/sdk/web";
 ```
 
-
-> [!INFO]
-> For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for examples.
-
-
 ## Usage
-
-
-### Tab: Recommended (web transport)
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -6382,92 +6321,37 @@ const config = createConfig({
 });
 ```
 
-### Tab: Direct construction
+## Parameters
 
-```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
+`web()` takes no parameters. WASM execution and FHE-artifact caching are handled internally by `@fhevm/sdk` — no special cross-origin headers are required.
 
-const relayer = new RelayerWeb({ chain: sepolia, worker: relayerWorkerClient });
-```
+## Return Type
 
-
-## Constructor (`RelayerWebConfig`)
-
-### chain
-
-`FheChain`
-
-FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object.
-
-### worker
-
-`RelayerWorkerClient`
-
-Worker client that handles WASM operations off the main thread.
-
-### security
-
-`RelayerWebSecurityConfig | undefined`
-
-Security options for the WASM bundle and relayer requests.
-
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
-
-### threads
-
-`number | undefined`
-
-Number of WASM threads for parallel FHE operations inside the Web Worker. Default: `1` (single-threaded). The practical sweet spot is 4-8 threads; beyond that, diminishing returns and higher memory usage.
-
-
-> [!WARNING]
-> Multi-threading requires [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` access:
->
-> ```
-> Cross-Origin-Opener-Policy: same-origin
-> Cross-Origin-Embedder-Policy: require-corp
-> ```
->
-> Without these headers, the browser blocks `SharedArrayBuffer` and the relayer falls back to single-threaded mode.
-
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage for caching the FHE encryption key and params across sessions.
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-How long cached FHE artifacts remain valid, in seconds.
+`WebRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
-- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js variant using worker threads
+- [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — the Node.js variant, running FHE on the calling thread
+- [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the development variant, no FHE
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
-## RelayerNode
+## `node()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerNode.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md
 - logical_path: reference/sdk/RelayerNode
 
-# RelayerNode
+# `node()` transport
 
-Node.js relayer that runs FHE operations in native worker threads. The server-side counterpart to `RelayerWeb`.
+The `node()` transport factory configures a chain to run FHE operations in Node.js. It drives `@fhevm/sdk` directly on the calling thread — the server-side counterpart to [`web()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md).
 
+## Import
 
-> [!WARNING]
-> `RelayerNode`, `NodeWorkerClient`, and `NodeWorkerPool` are internal classes — they are no longer exported from `@zama-fhe/sdk/node`. Use the `node()` transport factory with `createConfig` instead.
-
+```ts
+import { node } from "@zama-fhe/sdk/node";
+```
 
 ## Usage
 
@@ -6483,64 +6367,46 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-## `node()` options
+## Parameters
 
-### poolSize
+`node()` takes no parameters. Parallelism and FHE-artifact caching are handled internally by `@fhevm/sdk`.
 
-`number | undefined`
+## Return Type
 
-Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage for caching the FHE encryption key and params.
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-How long cached FHE artifacts remain valid, in seconds. Must be a non-negative integer.
+`NodeRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
+- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — the browser variant, running FHE in a Web Worker via WASM
+- [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the development variant, no FHE
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser variant using Web Workers and WASM
+- [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) — server setup and per-request isolation
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
-## RelayerCleartext
+## `cleartext()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerCleartext.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md
 - logical_path: reference/sdk/RelayerCleartext
 
-# RelayerCleartext
+# `cleartext()` transport
 
-Development relayer that operates in cleartext mode. Values are stored as plaintext on-chain via the CleartextFHEVMExecutor contract. Implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`.
+The `cleartext()` transport factory configures a chain to run in cleartext mode for local development. Values are stored as plaintext on-chain via the `CleartextFHEVMExecutor` contract — no FHE, KMS, or gateway infrastructure is involved. It exposes the same API as [`web()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) and [`node()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md), so application code is identical across modes.
 
 ## Import
 
 ```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { cleartext } from "@zama-fhe/sdk";
 ```
 
-
-> [!INFO]
-> For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for examples.
-
-
 ## Usage
-
-
-### Tab: Recommended (cleartext transport)
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -6555,75 +6421,24 @@ const config = createConfig({
 });
 ```
 
-### Tab: Direct construction
+## Parameters
 
-```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import { hardhat } from "@zama-fhe/sdk/chains";
-
-const relayer = new RelayerCleartext(hardhat);
-```
+`cleartext()` takes no parameters. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
 
 
-## Constructor
-
-```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-
-const relayer = new RelayerCleartext(chain);
-```
-
-Takes a single `FheChain` object directly. Mainnet (1) and Sepolia (11155111) chain IDs are blocked — cleartext mode is for development only.
-
-The `FheChain` fields relevant to cleartext mode are:
-
-| Field                                       | Type                        | Description                                                |
-| ------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                       |
-| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state             |
-| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction           |
-| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                         |
-| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values   |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations          |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations          |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)   |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key) |
-
-Built-in chain presets (`hardhat`, `hoodi`) already include all required fields:
-
-```ts
-import { hardhat, hoodi } from "@zama-fhe/sdk/chains";
-
-const relayer = new RelayerCleartext(hardhat);
-```
-
-## Methods
-
-The cleartext relayer implements the full `RelayerSDK` interface:
-
-| Method                                  | Description                                                         |
-| --------------------------------------- | ------------------------------------------------------------------- |
-| `generateTransportKeyPair()`            | Returns a random mock transport key pair.                           |
-| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
-| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
-| `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
-| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
-| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
-| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
-| `fetchFheEncryptionKeyBytes()`          | Returns a mock FHE encryption key.                                  |
-| `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
-| `terminate()`                           | No-op — no resources to release.                                    |
+> [!WARNING]
+> The chain must define `executorAddress`, or `createRelayer` throws a `ConfigurationError`. Use a development chain preset that includes it (`hardhat`, `hoodi`) or set it yourself. Production presets (`mainnet`, `sepolia`) do not define it — cleartext mode is for development only.
 
 
-> [!INFO]
-> `requestZKProofVerification` throws a `ConfigurationError` — ZK proofs are not supported in cleartext mode.
+## Return Type
 
+`CleartextRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
 - [Local Development guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/local-development.md) — when and how to use cleartext mode
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer with real FHE
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer with real FHE
+- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser transport with real FHE
+- [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js transport with real FHE
 - [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) — production network configs
 
 ## GenericProvider
@@ -6667,7 +6482,7 @@ const config = createConfig({
   chains: [sepolia],
   provider: myCustomProvider,
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 const sdk = new ZamaSDK(config);
 ```
@@ -6788,7 +6603,7 @@ const config = createConfig({
   signer: mySigner,
   provider: myProvider,
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 const sdk = new ZamaSDK(config);
 ```
@@ -8206,210 +8021,6 @@ const { address, abi, functionName, args } = wrapContract(wrapperAddress, recipi
 - [Token](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Token.md) — high-level API that wraps these builders
 - [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) — decode on-chain logs into typed events
 
-## FheArtifactCache
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/FheArtifactCache.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/FheArtifactCache.md
-- logical_path: reference/sdk/FheArtifactCache
-
-# FheArtifactCache
-
-Persistent cache for the FHE encryption key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
-
-`web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
-
-
-> [!INFO]
-> **`web()`** defaults to IndexedDB — artifact caching persists across page reloads.
-> **`node()`** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
-
-
-## Import
-
-`FheArtifactCache` is an **internal class** — it is not exported from `@zama-fhe/sdk`, and you do not import or instantiate it directly. Configure artifact caching through the `web()` / `node()` transport factories (below); the constructor and methods are documented here only as internal reference.
-
-## Usage
-
-In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer transport factory:
-
-
-### Tab: Default (IndexedDB)
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-// web() uses IndexedDB artifact cache by default — no config needed
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web() },
-});
-```
-
-### Tab: Custom storage
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { IndexedDBStorage } from "@zama-fhe/sdk";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: {
-    [sepolia.id]: web({
-      // Custom IndexedDB database name
-      fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
-      // Revalidate every 12 hours instead of the default 24h
-      fheArtifactCacheTTL: 43_200,
-    }),
-  },
-});
-```
-
-### Tab: node() (default)
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { node } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-// node() defaults to MemoryStorage — artifacts are cached in-process
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
-});
-```
-
-
-> [!INFO]
-> The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
-
-
-## Constructor
-
-```ts
-new FheArtifactCache(opts);
-```
-
-| Field        | Type                  | Description                                                                                                                                |
-| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `storage`    | `GenericStorage`      | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                                                                   |
-| `chainId`    | `number`              | Chain ID to scope cache keys.                                                                                                              |
-| `relayerUrl` | `string`              | Relayer URL used to fetch the manifest during revalidation.                                                                                |
-| `ttl`        | `number \| undefined` | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation.                                            |
-| `logger`     | `GenericLogger`       | Logger for cache diagnostics (revalidation, storage degradation). Silent by default — the SDK threads its `createConfig({ logger })` here. |
-
-## Methods
-
-### fetchFheEncryptionKeyBytes
-
-```ts
-cache.fetchFheEncryptionKeyBytes(fetcher): Promise<PublicKeyResult>
-```
-
-Returns the cached FHE encryption key bytes, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
-
-**Parameters:**
-
-| Name      | Type                             | Description                                                                        |
-| --------- | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `fetcher` | `() => Promise<PublicKeyResult>` | Called when no cached value exists. Return `{ publicKeyId, publicKey }` or `null`. |
-
-**Returns:** `Promise<{ publicKeyId: string; publicKey: Uint8Array } | null>`
-
----
-
-### getPublicParams
-
-```ts
-cache.getPublicParams(bits, fetcher): Promise<PublicParamsResult>
-```
-
-Returns the cached CRS (public parameters) for a given bit size, calling `fetcher` only on a cache miss. Concurrent calls for the same bit size are deduplicated.
-
-**Parameters:**
-
-| Name      | Type                                | Description                                                                              |
-| --------- | ----------------------------------- | ---------------------------------------------------------------------------------------- |
-| `bits`    | `number`                            | Bit size of the CRS to fetch (e.g. `2048`).                                              |
-| `fetcher` | `() => Promise<PublicParamsResult>` | Called when no cached value exists. Return `{ publicParamsId, publicParams }` or `null`. |
-
-**Returns:** `Promise<{ publicParamsId: string; publicParams: Uint8Array } | null>`
-
----
-
-### revalidateIfDue
-
-```ts
-cache.revalidateIfDue(): Promise<boolean>
-```
-
-Checks whether cached artifacts are still fresh by issuing HTTP conditional requests (`ETag` / `If-None-Match`, `Last-Modified` / `If-Modified-Since`) against the artifact CDN URLs discovered from the relayer manifest.
-
-- Returns `true` if the cache was invalidated (caller should re-fetch).
-- Returns `false` if artifacts are still fresh or revalidation is not yet due.
-
-Concurrent calls are coalesced. On transient failures (network errors, 5xx), the cache fails open and retries after 5 minutes.
-
-## Relayer config options
-
-When using `web()` or `node()` transport factories, configure artifact caching with these options:
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage backend for caching FHE artifacts.
-
-- **`web()`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`node()`**: defaults to `new MemoryStorage()` — in-process caching.
-
-FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
-
-
-> [!WARNING]
-> **Not to be confused with `ZamaProvider.storage`** which stores credentials and decrypted balances.
-
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. Ignored when `fheArtifactStorage` is not set.
-
-## How it works
-
-1. **First load** — The SDK fetches the FHE encryption key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
-2. **Subsequent loads** — The SDK reads from storage (instant), skipping the multi-MB network download.
-3. **Revalidation** — Periodically (controlled by `ttl`), the cache issues `HEAD` requests with conditional headers to the artifact CDN. If the server returns 405 (Method Not Allowed), the cache falls back to a `GET` request. If artifacts haven't changed (304), only timestamps are updated. If they have changed (200), the entire cache is cleared and artifacts are re-fetched on next use.
-4. **Fail-open** — On network errors or malformed manifests, the cache continues serving stale data and retries revalidation after 5 minutes.
-
-## Storage keys
-
-Cache entries are scoped by chain ID:
-
-| Key pattern                   | Content                                                 |
-| ----------------------------- | ------------------------------------------------------- |
-| `fhe:pubkey:{chainId}`        | FHE encryption key (base64 + metadata)                  |
-| `fhe:params:{chainId}:{bits}` | Public parameters for a given bit size                  |
-| `fhe:params-index:{chainId}`  | Array of cached bit sizes (for cold-start revalidation) |
-
-## Related
-
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer that creates an `FheArtifactCache` internally
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer variant
-- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) — storage interface used by the cache
-- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — network presets and relayer setup
-
 ## Event decoders
 
 - source_type: official-doc
@@ -8975,7 +8586,7 @@ const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
 } as const satisfies FheChain;
-// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
+// Then in createConfig: relayers: { [mySepolia.id]: node() }
 ```
 
 ### Local development
@@ -15420,8 +15031,8 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk`           | Core SDK, `createConfig`, `cleartext()` factory, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem`      | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                                            |
 | `@zama-fhe/sdk/ethers`    | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`                                      |
-| `@zama-fhe/sdk/web`       | `web()` transport factory (and the `RelayerWeb` class)                                                 |
-| `@zama-fhe/sdk/cleartext` | `RelayerCleartext` class (prefer the root `cleartext()` factory)                                       |
+| `@zama-fhe/sdk/web`       | `web()` transport factory                                                                              |
+| `@zama-fhe/sdk/cleartext` | `cleartext()` transport factory (also re-exported from the root)                                       |
 | `@zama-fhe/sdk/node`      | `node()` transport factory, network presets, type-only exports                                         |
 | `@zama-fhe/sdk/query`     | Query/mutation option factories, query keys, invalidation helpers                                      |
 
@@ -15655,22 +15266,6 @@ const config = createConfig({
 
 
 ## Browser security headers
-
-### COOP/COEP headers
-
-Multi-threaded FHE requires `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. Your server must send these headers:
-
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
-
-Without these headers, `SharedArrayBuffer` is unavailable. The SDK falls back to single-threaded WASM execution, which is slower but functional.
-
-
-> [!INFO]
-> Single-threaded mode works without COOP/COEP headers. Only enable cross-origin isolation if you need the performance benefit of multi-threaded FHE.
-
 
 ### Content Security Policy (CSP)
 

@@ -47,7 +47,7 @@ const config = createConfig({
   signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);

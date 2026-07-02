@@ -48,14 +48,14 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The relayer factory only accepts pool/worker options.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The transport factories take no arguments — call them bare.
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
 
-// Node.js — pool options only; chain data comes from the preset
-node({ poolSize: 4 });
+// Node.js — chain data comes from the preset
+node();
 
 // Local dev — no KMS, no gateway; executorAddress comes from the chain preset
 cleartext();
@@ -213,7 +213,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -239,7 +239,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);

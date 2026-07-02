@@ -79,55 +79,6 @@ function ConfidentialRoundTrip() {
 {% endcode %}
 
 {% hint style="warning" %}
-**Required: Cross-Origin headers**
-
-`useEncrypt` loads FHE WASM in a Web Worker, which requires `SharedArrayBuffer`. You must set these HTTP headers:
-
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
-
-{% tabs %}
-{% tab title="Next.js" %}
-
-```js
-const nextConfig = {
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
-        ],
-      },
-    ];
-  },
-};
-```
-
-{% endtab %}
-{% tab title="Vite" %}
-
-```ts
-export default defineConfig({
-  server: {
-    headers: {
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp",
-    },
-  },
-});
-```
-
-{% endtab %}
-{% endtabs %}
-
-See [Configuration](./configuration.md) for full setup instructions.
-{% endhint %}
-
-{% hint style="warning" %}
 **SSR: "window is not defined"**
 
 FHE operations use Web Workers and browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:

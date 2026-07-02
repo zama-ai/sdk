@@ -39,8 +39,8 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk`           | Core SDK, `createConfig`, `cleartext()` factory, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem`      | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                                            |
 | `@zama-fhe/sdk/ethers`    | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`                                      |
-| `@zama-fhe/sdk/web`       | `web()` transport factory (and the `RelayerWeb` class)                                                 |
-| `@zama-fhe/sdk/cleartext` | `RelayerCleartext` class (prefer the root `cleartext()` factory)                                       |
+| `@zama-fhe/sdk/web`       | `web()` transport factory                                                                              |
+| `@zama-fhe/sdk/cleartext` | `cleartext()` transport factory (also re-exported from the root)                                       |
 | `@zama-fhe/sdk/node`      | `node()` transport factory, network presets, type-only exports                                         |
 | `@zama-fhe/sdk/query`     | Query/mutation option factories, query keys, invalidation helpers                                      |
 

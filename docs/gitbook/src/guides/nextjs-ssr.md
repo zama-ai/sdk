@@ -15,7 +15,7 @@ The FHE relayer runs encryption and decryption inside a Web Worker backed by a W
 
 This means:
 
-- You cannot import `RelayerWeb`, `ZamaProvider`, or any SDK hook in a Server Component
+- You cannot import `ZamaProvider`, the `web()` transport, or any SDK hook in a Server Component
 - You cannot create the relayer or signer at module level in a file that runs on the server
 
 ### 2. Mark SDK components with `"use client"`

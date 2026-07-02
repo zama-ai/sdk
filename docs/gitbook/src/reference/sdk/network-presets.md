@@ -87,7 +87,7 @@ const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
 } as const satisfies FheChain;
-// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
+// Then in createConfig: relayers: { [mySepolia.id]: node() }
 ```
 
 ### Local development

@@ -14,7 +14,7 @@ export type { RelayerConfig } from "../config/types";
 export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { GenericLogger } from "../types/logger";
 
-// Relayer types used in RelayerNode's public API
+// Relayer types used in the node transport's public API
 export type { ClearValue, EIP712TypedData, EncryptParameters } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";

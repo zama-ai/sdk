@@ -193,7 +193,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -218,7 +218,7 @@ const config = createConfig({
   chains: [mySepolia],
   signer: wallet,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -228,7 +228,7 @@ const sdk = new ZamaSDK(config);
 {% endtabs %}
 
 {% hint style="info" %}
-**FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure it via the options passed to `web()` / `node()`. See [FheArtifactCache](../reference/sdk/FheArtifactCache.md) for details.
+**FHE artifact caching** — Both `web()` and `node()` transports automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Caching is handled internally by `@fhevm/sdk` — no configuration is required.
 {% endhint %}
 
 ## Your first confidential transfer
