@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { cleartext } from "@zama-fhe/sdk";
-import { hardhat } from "@zama-fhe/sdk/chains";
+import { anvil as fheAnvil } from "@zama-fhe/sdk/chains";
 import { burner } from "@zama-fhe/test-components";
 import type { ReactNode } from "react";
 import { getAddress } from "viem";
@@ -20,15 +20,11 @@ const wagmiConfig = createConfig({
   transports: { [anvil.id]: http(rpcUrl) },
 });
 
-const customHardhat = {
-  ...hardhat,
-  network: rpcUrl,
-  registryAddress: getAddress(deployments.wrappersRegistry),
-};
-
 const zamaConfig = createZamaConfig({
-  chains: [customHardhat],
-  relayers: { [customHardhat.id]: cleartext() },
+  chains: [
+    { ...fheAnvil, network: rpcUrl, registryAddress: getAddress(deployments.wrappersRegistry) },
+  ],
+  relayers: { [fheAnvil.id]: cleartext() },
   wagmiConfig,
 });
 

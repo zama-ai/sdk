@@ -1,12 +1,12 @@
-import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import { useSearchParams } from "react-router";
 import { UnshieldForm } from "@zama-fhe/test-components";
 import { DEFAULTS } from "../constants";
 
 export default function UnshieldPage() {
   const [searchParams] = useSearchParams();
-  const token = (searchParams.get("token") as Address) ?? DEFAULTS.confidentialToken;
-  const wrapper = (searchParams.get("wrapper") as Address | undefined) ?? token;
+  const token = getAddress(searchParams.get("token") ?? DEFAULTS.confidentialToken);
+  const wrapper = getAddress(searchParams.get("wrapper") ?? token);
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Unshield Tokens</h1>

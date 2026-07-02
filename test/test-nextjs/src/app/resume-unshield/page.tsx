@@ -1,6 +1,6 @@
-import { ResumeUnshieldForm } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
 import { CONTRACTS } from "@/constants";
+import { ResumeUnshieldForm } from "@zama-fhe/test-components";
+import { getAddress } from "viem";
 
 export default async function ResumeUnshieldPage({
   searchParams,
@@ -8,8 +8,8 @@ export default async function ResumeUnshieldPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONTRACTS.cUSDT;
-  const wrapper = (params.wrapper as Address | undefined) ?? token;
+  const token = getAddress(params.token ?? CONTRACTS.cUSDT);
+  const wrapper = getAddress(params.wrapper ?? token);
 
   return (
     <div className="space-y-6">

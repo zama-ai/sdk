@@ -1,54 +1,35 @@
 "use client";
 
-import {
-  useConfidentialTransferFrom,
-  useConfidentialBalance,
-  useMetadata,
-} from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import { useConfidentialTransferFromAndCall, useMetadata } from "@zama-fhe/react-sdk";
+import type { Address, Hex } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
-import { useAccount } from "wagmi";
 
-export function TransferFromForm({
-  tokenAddress,
-  defaultFrom,
-}: {
-  tokenAddress: Address;
-  defaultFrom?: Address;
-}) {
-  const { address } = useAccount();
+export function TransferFromAndCallForm({ tokenAddress }: { tokenAddress: Address }) {
   const { data: metadata } = useMetadata(tokenAddress);
-  const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
-  const transferFrom = useConfidentialTransferFrom(tokenAddress);
+  const transferFromAndCall = useConfidentialTransferFromAndCall(tokenAddress);
 
   return (
     <form
       action={(formData) => {
-        transferFrom.mutate({
+        transferFromAndCall.mutate({
           from: getAddress(formData.get("from") as string),
           to: getAddress(formData.get("to") as string),
           amount: BigInt(formData.get("amount") as string),
+          data: formData.get("data") as Hex,
         });
       }}
       className="space-y-4"
-      data-testid="transfer-from-form"
+      data-testid="transfer-from-and-call-form"
     >
       <h2 className="text-xl font-semibold text-white">
-        Transfer From {metadata?.symbol ?? "..."}
+        Transfer From & Call {metadata?.symbol ?? "..."}
       </h2>
-
-      {balance !== undefined && (
-        <p className="text-sm text-zama-gray" data-testid="current-balance">
-          Balance: {balance.toString()}
-        </p>
-      )}
 
       <input
         type="text"
         name="from"
         placeholder="From address (0x...)"
         aria-label="From address"
-        defaultValue={defaultFrom ?? ""}
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="from-input"
@@ -57,8 +38,8 @@ export function TransferFromForm({
       <input
         type="text"
         name="to"
-        placeholder="To address (0x...)"
-        aria-label="To address"
+        placeholder="Recipient contract address (0x...)"
+        aria-label="Recipient address"
         required
         className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
         data-testid="to-input"
@@ -74,24 +55,34 @@ export function TransferFromForm({
         data-testid="amount-input"
       />
 
+      <input
+        type="text"
+        name="data"
+        placeholder="Receiver hook data (0x...)"
+        aria-label="Receiver hook data"
+        required
+        className="w-full px-3 py-2 bg-zama-surface border border-zama-border rounded outline-none text-white placeholder:text-zama-gray focus:border-zama-yellow focus:ring-1 focus:ring-zama-yellow"
+        data-testid="data-input"
+      />
+
       <button
         type="submit"
-        disabled={transferFrom.isPending}
+        disabled={transferFromAndCall.isPending}
         className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
-        data-testid="transfer-from-button"
+        data-testid="transfer-from-and-call-button"
       >
-        {transferFrom.isPending ? "Transferring..." : "Transfer From"}
+        {transferFromAndCall.isPending ? "Transferring..." : "Transfer From & Call"}
       </button>
 
-      {transferFrom.isSuccess && (
-        <p className="text-zama-success" data-testid="transfer-from-success">
-          Transfer successful! Tx: {transferFrom.data?.txHash}
+      {transferFromAndCall.isSuccess && (
+        <p className="text-zama-success" data-testid="transfer-from-and-call-success">
+          Transfer successful! Tx: {transferFromAndCall.data?.txHash}
         </p>
       )}
 
-      {transferFrom.isError && (
-        <p className="text-zama-error" data-testid="transfer-from-error">
-          Error: {transferFrom.error.message}
+      {transferFromAndCall.isError && (
+        <p className="text-zama-error" data-testid="transfer-from-and-call-error">
+          Error: {transferFromAndCall.error.message}
         </p>
       )}
     </form>

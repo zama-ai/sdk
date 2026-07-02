@@ -1,6 +1,7 @@
 export { filterQueryOptions, hashFn } from "./utils";
 export type { StrippedQueryOptionKeys } from "./utils";
 export type { QueryFactoryOptions, MutationFactoryOptions } from "./factory-types";
+export type { SignerQueryContext } from "./signer-query-context";
 export { zamaQueryKeys } from "./query-keys";
 
 export {

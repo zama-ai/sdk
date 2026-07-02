@@ -624,6 +624,12 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
+export interface SignerQueryContext {
+    // (undocumented)
+    walletAccount?: WalletAccount;
+}
+
+// @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
 
 // @public
