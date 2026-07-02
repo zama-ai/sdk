@@ -70,53 +70,80 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     parameters: DecryptPublicValueParameters,
   ): Promise<Awaited<ReturnType<FhevmClient["decryptPublicValue"]>>> => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptPublicValue(parameters);
+    return this.#fhevm.decryptPublicValue({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   decryptPublicValues = async (parameters: DecryptPublicValuesParameters) => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptPublicValues(parameters);
+    return this.#fhevm.decryptPublicValues({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   decryptPublicValuesWithSignatures = async (
     parameters: DecryptPublicValuesWithSignaturesParameters,
   ) => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptPublicValuesWithSignatures(parameters);
+    return this.#fhevm.decryptPublicValuesWithSignatures({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   encryptValue = async (parameters: EncryptValueParameters) => {
     await this.#fhevm.init();
-    return this.#fhevm.encryptValue(parameters);
+    return this.#fhevm.encryptValue({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   encryptValues = async (parameters: EncryptValuesParameters) => {
     await this.#fhevm.init();
-    return this.#fhevm.encryptValues(parameters);
+    return this.#fhevm.encryptValues({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   decryptValue = async (
     parameters: DecryptValueParameters,
   ): Promise<Awaited<ReturnType<FhevmClient["decryptValue"]>>> => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptValue(parameters);
+    return this.#fhevm.decryptValue({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   decryptValues = async (parameters: DecryptValuesParameters) => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptValues(parameters);
+    return this.#fhevm.decryptValues({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   decryptValuesFromPairs = async (parameters: DecryptValuesFromPairsParameters) => {
     await this.#fhevm.init();
-    return this.#fhevm.decryptValuesFromPairs(parameters);
+    return this.#fhevm.decryptValuesFromPairs({
+      ...parameters,
+      options: { ...parameters.options, auth: this.#chain.auth },
+    });
   };
 
   fetchFheEncryptionKeyBytes = async (
     parameters?: FetchFheEncryptionKeyBytesParameters,
   ): Promise<Awaited<ReturnType<FhevmClient["fetchFheEncryptionKeyBytes"]>>> => {
     await this.#fhevm.init();
-    return this.#fhevm.fetchFheEncryptionKeyBytes(parameters);
+    return this.#fhevm.fetchFheEncryptionKeyBytes({
+      ...parameters,
+      options: { ...parameters?.options, auth: this.#chain.auth },
+    });
   };
 
   // Non-network passthroughs — no relayer round-trip, so no `auth` to inject.
