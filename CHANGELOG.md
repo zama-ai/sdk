@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.5...v3.3.0-alpha.6) (2026-07-02)
+
+### Bug Fixes
+
+- **sdk:** configurable + diagnosable Node worker timeouts with self-healing [SDK-237] ([#494](https://github.com/zama-ai/sdk/issues/494)) ([e572582]())
+
 ## [3.3.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.4...v3.3.0-alpha.5) (2026-07-01)
 
 ### Features
