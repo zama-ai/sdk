@@ -25,6 +25,8 @@ Install once and your agent has all three; ask an SDK question and `zama-typescr
 /plugin install zama-protocol@zama-skills
 ```
 
+Update later with `/plugin marketplace update zama-skills`.
+
 {% endtab %}
 {% tab title="Other agents (npx)" %}
 
@@ -32,7 +34,7 @@ Install once and your agent has all three; ask an SDK question and `zama-typescr
 npx skills add zama-ai/skills
 ```
 
-Works with most skill-aware agents. Add `--list` to choose which skills to install.
+Works with most skill-aware agents. Add `--list` to choose which skills to install. Update later with `npx skills update` — there is no version to pin; any change merged to `zama-ai/skills` is picked up automatically.
 
 {% endtab %}
 {% endtabs %}
