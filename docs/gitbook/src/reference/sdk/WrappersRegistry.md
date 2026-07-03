@@ -10,7 +10,7 @@ High-level read interface for the on-chain `ConfidentialTokenWrappersRegistry` c
 ## Import
 
 ```ts
-import { WrappersRegistry, DefaultRegistryAddresses } from "@zama-fhe/sdk";
+import { WrappersRegistry } from "@zama-fhe/sdk";
 ```
 
 ## Usage
@@ -250,12 +250,16 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 
 `Record<number, Address>`
 
+{% hint style="warning" %}
+**Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress` from `@zama-fhe/sdk/chains`). This export will be removed in the next major version.
+{% endhint %}
+
 Exported map of built-in registry addresses for known chains. Includes Mainnet (`1`), Sepolia (`11155111`), and Hoodi (`560048`). Addresses are EIP-55 checksummed.
 
 ```ts
-import { DefaultRegistryAddresses } from "@zama-fhe/sdk";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
-console.log(DefaultRegistryAddresses[1]); // "0xeb5015fF021DB115aCe010f23F55C2591059bBA0"
+console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 ```
 
 ## Related

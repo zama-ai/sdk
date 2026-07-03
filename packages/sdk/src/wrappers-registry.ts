@@ -23,6 +23,9 @@ import { parseConfiguration } from "./validation";
 /**
  * Default wrappers registry addresses for known chains.
  * Only includes chains where a registry is deployed (excludes Hardhat).
+ *
+ * @deprecated Read `registryAddress` from the chain presets instead (e.g.
+ * `sepolia.registryAddress`). Will be removed in the next major version.
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,

@@ -548,6 +548,34 @@ describe("WrappersRegistry", () => {
       await expect(registry.getRegistryAddress()).resolves.toBe(CUSTOM_REGISTRY);
     });
 
+    test("inherits chain-derived registry addresses from the SDK", async ({
+      createSDK,
+      createMockChain,
+      provider,
+    }) => {
+      vi.mocked(provider.getChainId).mockResolvedValue(31337);
+      const sdk = createSDK({
+        chains: [createMockChain({ id: 31337, registryAddress: CUSTOM_REGISTRY })],
+      });
+      const registry = sdk.createWrappersRegistry();
+
+      await expect(registry.getRegistryAddress()).resolves.toBe(CUSTOM_REGISTRY);
+    });
+
+    test("overrides take precedence over chain-derived addresses", async ({
+      createSDK,
+      createMockChain,
+      provider,
+    }) => {
+      vi.mocked(provider.getChainId).mockResolvedValue(31337);
+      const sdk = createSDK({
+        chains: [createMockChain({ id: 31337, registryAddress: CUSTOM_REGISTRY })],
+      });
+      const registry = sdk.createWrappersRegistry({ [31337]: sepolia.registryAddress! });
+
+      await expect(registry.getRegistryAddress()).resolves.toBe(sepolia.registryAddress!);
+    });
+
     test("rejects invalid registryTTL from the SDK constructor", ({ createSDK }) => {
       expect(() => createSDK({ registryTTL: -1 })).toThrow();
     });

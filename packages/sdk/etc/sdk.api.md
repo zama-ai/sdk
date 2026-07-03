@@ -5429,8 +5429,8 @@ export class Decryption {
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
-    }): Promise<BatchDecryptResult>;
-    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    } & DelegatedDecryptOptions): Promise<BatchDecryptResult>;
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address, options?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -5458,8 +5458,13 @@ export interface DecryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
-// @public
+// @public @deprecated
 export const DefaultRegistryAddresses: Record<number, Address>;
+
+// @public
+export interface DelegatedDecryptOptions {
+    waitForPropagation?: boolean;
+}
 
 // @public
 export interface DelegatedForUserDecryptionEvent {

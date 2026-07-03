@@ -48,6 +48,7 @@ export class ZamaSDK {
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
   readonly #registryTTL: number;
+  readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #logger: GenericLogger;
   readonly #cachingService: CachingService;
@@ -83,6 +84,7 @@ export class ZamaSDK {
       registryAddresses,
       registryTTL: config.registryTTL,
     });
+    this.#registryAddresses = registryAddresses;
     this.#registryTTL = config.registryTTL;
 
     if (config.signer) {
@@ -190,14 +192,15 @@ export class ZamaSDK {
 
   /**
    * Create a {@link WrappersRegistry} instance bound to this SDK's provider.
-   * On Mainnet and Sepolia the registry address is resolved automatically.
+   * Inherits the registry addresses derived from the SDK's chain configs, so
+   * the result is consistent with {@link ZamaSDK.registry}.
    *
    * @param registryAddresses - Optional per-chain overrides for this registry instance.
    * @returns A {@link WrappersRegistry} instance.
    *
    * @example
    * ```ts
-   * // Mainnet / Sepolia — resolved automatically
+   * // Addresses resolved from the SDK's chain configs
    * const registry = sdk.createWrappersRegistry();
    *
    * // Hardhat or custom chain — override per chain for this registry instance
@@ -209,7 +212,7 @@ export class ZamaSDK {
   createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry {
     return new WrappersRegistry({
       provider: this.provider,
-      registryAddresses,
+      registryAddresses: { ...this.#registryAddresses, ...registryAddresses },
       registryTTL: this.#registryTTL,
     });
   }
