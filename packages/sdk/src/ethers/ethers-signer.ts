@@ -1,4 +1,10 @@
-import { BrowserProvider, Contract, type InterfaceAbi, type Signer } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  type InterfaceAbi,
+  type Signer,
+  type TypedDataDomain,
+} from "ethers";
 import {
   getAddress,
   isHex,
@@ -124,9 +130,9 @@ export class EthersSigner extends BaseSigner {
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const mutableSigTypes = Object.fromEntries(
-      Object.entries(sigTypes).map(([key, fields]) => [key, [...fields]]),
+      Object.entries(sigTypes).map(([name, fields]) => [name, [...fields]]),
     );
-    const sig = await signer.signTypedData(domain, mutableSigTypes, message);
+    const sig = await signer.signTypedData(domain as TypedDataDomain, mutableSigTypes, message);
     if (!isHex(sig)) {
       throw new TypeError(`Expected hex string, got: ${sig}`);
     }

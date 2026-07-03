@@ -1,8 +1,4 @@
-import type {
-  CreateKmsDelegatedUserDecryptEip712ReturnType,
-  CreateKmsUserDecryptEip712ReturnType,
-} from "@fhevm/sdk/actions/chain";
-import type { TypedValue } from "@fhevm/sdk/types";
+import type { Eip712Like, TypedValue } from "@fhevm/sdk/types";
 import type { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
@@ -56,9 +52,7 @@ export interface DecryptPublicValuesResult {
  * this typed data", independent of the specific KMS permit variant `@fhevm/sdk`
  * produces (which is versioned and evolves).
  */
-export type EIP712TypedData =
-  | CreateKmsUserDecryptEip712ReturnType
-  | CreateKmsDelegatedUserDecryptEip712ReturnType;
+export type EIP712TypedData = Eip712Like;
 
 /** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
 export type FhevmClient = ReturnType<typeof createFhevmClient>;

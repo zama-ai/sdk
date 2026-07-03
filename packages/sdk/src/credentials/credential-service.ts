@@ -241,11 +241,7 @@ export class CredentialService {
     const { chunk, keypair, scope } = input;
     const startTimestamp = nowSeconds();
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
-    // Resolve the backend live off the router: `signDecryptionPermit` projects the
-    // active chain's `gatewayChainId` / decryption verifying-contract into the
-    // EIP-712 domain, so a `CredentialService` that outlives a `switchChain` must
-    // sign against the current chain — never the one captured at construction.
-    const { relayer } = this.#router;
+    const relayer = this.#router.relayer;
     try {
       const transportKeyPair = await relayer.parseTransportKeyPair({
         publicKey: keypair.publicKey,
@@ -255,7 +251,7 @@ export class CredentialService {
         transportKeyPair,
         contractAddresses: chunk,
         startTimestamp,
-        durationDays: this.#permitTTL,
+        durationSeconds: this.#permitTTL * SECONDS_PER_DAY,
         signerAddress: scope.signerAddress,
         signer: this.#signer,
       };

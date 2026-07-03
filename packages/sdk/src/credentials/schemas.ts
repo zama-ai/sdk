@@ -45,6 +45,7 @@ export const Eip712Schema = z.object({
 });
 
 export const SerializedPermitSchema = z.object({
+  version: z.int().check(z.positive()),
   eip712: Eip712Schema,
   signature: hex,
   signerAddress: checksummedAddress,

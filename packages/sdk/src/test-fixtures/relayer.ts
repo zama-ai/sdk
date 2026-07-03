@@ -47,6 +47,7 @@ export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): Fhe
           };
           const signature = await params.signer.signTypedData(eip712);
           return {
+            version: 1,
             eip712,
             signature,
             signerAddress: params.signerAddress,
@@ -61,8 +62,14 @@ export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): Fhe
       .fn()
       .mockImplementation(
         (params: {
-          signedPermit: { eip712: unknown; signature: string; signerAddress: string };
+          signedPermit: {
+            version: number;
+            eip712: unknown;
+            signature: string;
+            signerAddress: string;
+          };
         }) => ({
+          version: params.signedPermit.version,
           eip712: params.signedPermit.eip712,
           signature: params.signedPermit.signature,
           signerAddress: params.signedPermit.signerAddress,

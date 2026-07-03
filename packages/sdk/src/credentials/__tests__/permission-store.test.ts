@@ -31,6 +31,7 @@ function makePermission(
     durationDays: 30,
     ...rest,
     serializedPermit: {
+      version: 1,
       eip712: { primaryType: "UserDecryptRequestVerification", domain: {}, types: {}, message: {} },
       signature,
       signerAddress: USER,

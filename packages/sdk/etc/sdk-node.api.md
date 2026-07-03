@@ -6,8 +6,6 @@
 
 import { Address } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
-import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
-import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { DecryptPublicValueParameters } from '@fhevm/sdk/actions/base';
 import { DecryptPublicValuesParameters } from '@fhevm/sdk/actions/base';
 import { DecryptPublicValuesReturnType } from '@fhevm/sdk/actions/base';
@@ -19,6 +17,7 @@ import { DecryptValuesFromPairsReturnType } from '@fhevm/sdk/actions/decrypt';
 import { DecryptValuesParameters } from '@fhevm/sdk/actions/decrypt';
 import { DecryptValuesReturnType } from '@fhevm/sdk/actions/decrypt';
 import { EIP1193Provider } from 'viem';
+import { Eip712Like } from '@fhevm/sdk/types';
 import { EncryptValueParameters } from '@fhevm/sdk/actions/encrypt';
 import { EncryptValueReturnType } from '@fhevm/sdk/actions/encrypt';
 import { EncryptValuesParameters } from '@fhevm/sdk/actions/encrypt';
@@ -99,7 +98,7 @@ export interface DecryptPublicValuesResult {
 }
 
 // @public
-export type EIP712TypedData = CreateKmsUserDecryptEip712ReturnType | CreateKmsDelegatedUserDecryptEip712ReturnType;
+export type EIP712TypedData = Eip712Like;
 
 // @public
 export interface EncryptParams {

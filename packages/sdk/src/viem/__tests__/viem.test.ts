@@ -163,7 +163,13 @@ describe("ViemSigner", () => {
             { name: "chainId", type: "uint256" },
             { name: "verifyingContract", type: "address" },
           ],
-          UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+          UserDecryptRequestVerification: [
+            { name: "publicKey", type: "bytes" },
+            { name: "contractAddresses", type: "address[]" },
+            { name: "startTimestamp", type: "uint256" },
+            { name: "durationDays", type: "uint256" },
+            { name: "extraData", type: "bytes" },
+          ],
         },
         primaryType: "UserDecryptRequestVerification",
         message: {

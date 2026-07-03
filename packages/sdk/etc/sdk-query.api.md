@@ -10,9 +10,8 @@ import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
-import { CreateKmsDelegatedUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
-import { CreateKmsUserDecryptEip712ReturnType } from '@fhevm/sdk/actions/chain';
 import { EIP1193Provider } from 'viem';
+import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
 import { MutationFunctionContext } from '@tanstack/query-core';
 import { QueryKey } from '@tanstack/query-core';
@@ -316,7 +315,7 @@ export interface DelegationSubmittedEvent extends BaseEvent {
 }
 
 // @public
-export type EIP712TypedData = CreateKmsUserDecryptEip712ReturnType | CreateKmsDelegatedUserDecryptEip712ReturnType;
+export type EIP712TypedData = Eip712Like;
 
 // @public
 export type EncryptedValue = Hex;
