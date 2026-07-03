@@ -87,5 +87,7 @@ if [ "$empty_uups" != "0x0000000000000000000000000000000000000000" ]; then
   cast rpc anvil_setBalance "$empty_uups" "$balance_hex" --rpc-url "$RPC_URL" >/dev/null
 fi
 
+# --slow serializes the broadcast txs. Without it forge occasionally wedges
+# forever mid-broadcast (upstream fhevm-deploy.sh carries the same workaround).
 env "${FORGE_ENV[@]}" forge script "${DEPLOY_SCRIPT}:Deploy" \
-  --rpc-url "$RPC_URL" --broadcast --non-interactive
+  --rpc-url "$RPC_URL" --broadcast --non-interactive --slow

@@ -1,21 +1,3 @@
-import type {
-  DecryptPublicValueParameters,
-  DecryptPublicValuesParameters,
-  DecryptPublicValuesWithSignaturesParameters,
-} from "@fhevm/sdk/actions/base";
-import type {
-  FetchFheEncryptionKeyBytesParameters,
-  ParseSignedDecryptionPermitParameters,
-  ParseTransportKeyPairParameters,
-  SerializeSignedDecryptionPermitParameters,
-  SerializeTransportKeyPairParameters,
-} from "@fhevm/sdk/actions/chain";
-import type {
-  DecryptValueParameters,
-  DecryptValuesFromPairsParameters,
-  DecryptValuesParameters,
-} from "@fhevm/sdk/actions/decrypt";
-import type { EncryptValueParameters, EncryptValuesParameters } from "@fhevm/sdk/actions/encrypt";
 import { createFhevmClient } from "@fhevm/sdk/viem";
 import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
@@ -66,9 +48,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     return this.#chain;
   }
 
-  decryptPublicValue = async (
-    parameters: DecryptPublicValueParameters,
-  ): Promise<Awaited<ReturnType<FhevmClient["decryptPublicValue"]>>> => {
+  decryptPublicValue: FhevmClient["decryptPublicValue"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValue({
       ...parameters,
@@ -76,7 +56,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  decryptPublicValues = async (parameters: DecryptPublicValuesParameters) => {
+  decryptPublicValues: FhevmClient["decryptPublicValues"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValues({
       ...parameters,
@@ -84,8 +64,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  decryptPublicValuesWithSignatures = async (
-    parameters: DecryptPublicValuesWithSignaturesParameters,
+  decryptPublicValuesWithSignatures: FhevmClient["decryptPublicValuesWithSignatures"] = async (
+    parameters,
   ) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValuesWithSignatures({
@@ -94,7 +74,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  encryptValue = async (parameters: EncryptValueParameters) => {
+  encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.encryptValue({
       ...parameters,
@@ -102,7 +82,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  encryptValues = async (parameters: EncryptValuesParameters) => {
+  encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.encryptValues({
       ...parameters,
@@ -110,9 +90,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  decryptValue = async (
-    parameters: DecryptValueParameters,
-  ): Promise<Awaited<ReturnType<FhevmClient["decryptValue"]>>> => {
+  decryptValue: FhevmClient["decryptValue"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptValue({
       ...parameters,
@@ -120,7 +98,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  decryptValues = async (parameters: DecryptValuesParameters) => {
+  decryptValues: FhevmClient["decryptValues"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptValues({
       ...parameters,
@@ -128,7 +106,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  decryptValuesFromPairs = async (parameters: DecryptValuesFromPairsParameters) => {
+  decryptValuesFromPairs: FhevmClient["decryptValuesFromPairs"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.decryptValuesFromPairs({
       ...parameters,
@@ -136,9 +114,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
-  fetchFheEncryptionKeyBytes = async (
-    parameters?: FetchFheEncryptionKeyBytesParameters,
-  ): Promise<Awaited<ReturnType<FhevmClient["fetchFheEncryptionKeyBytes"]>>> => {
+  fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
     await this.#fhevm.init();
     return this.#fhevm.fetchFheEncryptionKeyBytes({
       ...parameters,
@@ -146,27 +122,26 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
+    await this.#fhevm.init();
+    return this.#fhevm.signDecryptionPermit(parameters);
+  };
+
   // Non-network passthroughs — no relayer round-trip, so no `auth` to inject.
 
-  get signDecryptionPermit(): FhevmClient["signDecryptionPermit"] {
-    return this.#fhevm.signDecryptionPermit;
-  }
-
-  serializeTransportKeyPair = (parameters: SerializeTransportKeyPairParameters) =>
+  serializeTransportKeyPair: FhevmClient["serializeTransportKeyPair"] = (parameters) =>
     this.#fhevm.serializeTransportKeyPair(parameters);
 
-  serializeSignedDecryptionPermit = (parameters: SerializeSignedDecryptionPermitParameters) =>
+  serializeSignedDecryptionPermit: FhevmClient["serializeSignedDecryptionPermit"] = (parameters) =>
     this.#fhevm.serializeSignedDecryptionPermit(parameters);
 
-  parseTransportKeyPair = (parameters: ParseTransportKeyPairParameters) =>
+  parseTransportKeyPair: FhevmClient["parseTransportKeyPair"] = (parameters) =>
     this.#fhevm.parseTransportKeyPair(parameters);
 
-  parseSignedDecryptionPermit = (
-    parameters: ParseSignedDecryptionPermitParameters,
-  ): ReturnType<FhevmClient["parseSignedDecryptionPermit"]> =>
+  parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = (parameters) =>
     this.#fhevm.parseSignedDecryptionPermit(parameters);
 
-  generateTransportKeyPair = async () => {
+  generateTransportKeyPair: FhevmClient["generateTransportKeyPair"] = async () => {
     await this.#fhevm.init();
     return this.#fhevm.generateTransportKeyPair();
   };
