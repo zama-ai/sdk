@@ -43,7 +43,7 @@ const sdk = new ZamaSDK(config);
 
 ## Related
 
-- [`web()` transport](./RelayerWeb.md) — the browser variant, running FHE in a Web Worker via WASM
+- [`web()` transport](./RelayerWeb.md) — the browser variant, running FHE via bundled WASM
 - [`cleartext()` transport](./RelayerCleartext.md) — the development variant, no FHE
 - [ZamaSDK](./ZamaSDK.md) — pass the config to the SDK constructor
 - [Node.js backend guide](../../guides/node-js-backend.md) — server setup and per-request isolation

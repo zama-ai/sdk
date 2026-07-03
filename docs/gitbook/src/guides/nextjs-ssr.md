@@ -5,13 +5,13 @@ description: How to use the SDK with Next.js and server-side rendering framework
 
 # Next.js / SSR
 
-The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
+The SDK's browser stack relies on APIs -- IndexedDB, wallet connections, and the browser WASM runtime -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
 
 ## Steps
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR.
 
 This means:
 
@@ -112,7 +112,7 @@ A common mistake is initializing the relayer or signer in a shared module that g
 import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
-// This runs during SSR and crashes — Web Worker is not available
+// This runs during SSR, where browser storage and wallet APIs don't exist
 export const config = createConfig({ ... });
 ```
 
@@ -121,7 +121,7 @@ Instead, keep all SDK initialization inside a `"use client"` file (like the `Pro
 ```ts
 // lib/sdk.ts — safe alternative
 export async function getConfig() {
-  const { web } = await import("@zama-fhe/sdk");
+  const { web } = await import("@zama-fhe/sdk/web");
   const { createConfig } = await import("@zama-fhe/sdk/viem");
   return createConfig({ ... });
 }

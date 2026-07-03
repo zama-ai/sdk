@@ -82,26 +82,9 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 ## WASM bundle integrity
 
-The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
-});
-```
-
-{% hint style="warning" %}
-Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
-{% endhint %}
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
 
 ## Browser security headers
 
@@ -122,18 +105,18 @@ These headers are a performance setting, not a hard requirement. Encryption work
 
 ### Content Security Policy (CSP)
 
-The Web Worker loads and executes WASM from a CDN. Your CSP must allow:
+The SDK compiles and executes the bundled WASM in the page, and — in multi-threaded mode — spawns its worker pool from embedded source. Your CSP must allow:
 
-| Directive     | Value                  | Reason                                        |
-| ------------- | ---------------------- | --------------------------------------------- |
-| `worker-src`  | `blob:`                | Workers are created from blob URLs            |
-| `script-src`  | `'wasm-unsafe-eval'`   | Required for WASM execution inside the worker |
-| `connect-src` | `https://cdn.zama.org` | CDN fetch for the WASM bundle                 |
+| Directive     | Value                | Reason                                                     |
+| ------------- | -------------------- | ---------------------------------------------------------- |
+| `script-src`  | `'wasm-unsafe-eval'` | Required for WASM compilation and execution                |
+| `worker-src`  | `blob:`              | Multi-threaded mode creates its worker pool from blob URLs |
+| `connect-src` | your relayer URL     | Encrypt/decrypt requests go to the relayer (or your proxy) |
 
 Example CSP header:
 
 ```
-Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.com;
+Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://relayer.testnet.zama.org https://your-relayer-proxy.com;
 ```
 
 <details>

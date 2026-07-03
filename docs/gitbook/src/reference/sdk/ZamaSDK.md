@@ -421,7 +421,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and terminates the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
+Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
 
 ```ts
 sdk.terminate();

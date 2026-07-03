@@ -38,8 +38,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 
 | Relayer       | Environment | Description                                  |
 | ------------- | ----------- | -------------------------------------------- |
-| `web()`       | Browser     | Runs WASM in a Web Worker via CDN            |
-| `node()`      | Node.js     | Uses native worker threads                   |
+| `web()`       | Browser     | Runs FHE via bundled WASM in the browser     |
+| `node()`      | Node.js     | Same FHE runtime, server-side                |
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
@@ -299,7 +299,7 @@ const config = createConfig({
 });
 ```
 
-When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
 

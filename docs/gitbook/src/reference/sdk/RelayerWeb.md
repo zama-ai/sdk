@@ -1,11 +1,11 @@
 ---
 title: web() transport
-description: Browser relayer transport that runs FHE operations in a Web Worker via WASM.
+description: Browser relayer transport that runs FHE operations via bundled WASM.
 ---
 
 # `web()` transport
 
-The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management in a Web Worker via WASM.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available.
 
 ## Import
 

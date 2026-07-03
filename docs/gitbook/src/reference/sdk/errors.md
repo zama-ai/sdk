@@ -80,7 +80,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                                                           |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -187,7 +187,7 @@ matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing err
 
 **Code:** `ENCRYPTION_FAILED`
 
-FHE encryption failed inside the Web Worker. Usually caused by missing WASM support or restrictive CSP headers.
+FHE encryption failed inside the WASM runtime. Usually caused by missing WASM support or restrictive CSP headers.
 
 ```ts
 matchZamaError(error, {

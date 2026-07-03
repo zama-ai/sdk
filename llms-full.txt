@@ -172,7 +172,7 @@ Ask technical questions, discuss with the community, or report a bug.
 
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 
-The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they use native worker threads instead of a Web Worker and store keys in memory.
+The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they run the same FHE runtime server-side and store keys in memory.
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
@@ -523,7 +523,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
@@ -546,7 +546,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
@@ -2138,8 +2138,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 
 | Relayer       | Environment | Description                                  |
 | ------------- | ----------- | -------------------------------------------- |
-| `web()`       | Browser     | Runs WASM in a Web Worker via CDN            |
-| `node()`      | Node.js     | Uses native worker threads                   |
+| `web()`       | Browser     | Runs FHE via bundled WASM in the browser     |
+| `node()`      | Node.js     | Same FHE runtime, server-side                |
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
@@ -2388,7 +2388,7 @@ const config = createConfig({
 });
 ```
 
-When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
 
@@ -3709,7 +3709,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | --------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                             |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                       |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                        |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                      |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                          |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                 |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                       |
@@ -3800,7 +3800,7 @@ Here is a quick reference for the most common errors and how to respond:
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                                    |
 | `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                                                      |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                                      |
 | `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                                                             |
 | `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                                       |
 | `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                    |
@@ -4290,13 +4290,13 @@ const sdk = new ZamaSDK(config);
 
 # Next.js / SSR
 
-The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
+The SDK's browser stack relies on APIs -- IndexedDB, wallet connections, and the browser WASM runtime -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
 
 ## Steps
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR.
 
 This means:
 
@@ -4397,7 +4397,7 @@ A common mistake is initializing the relayer or signer in a shared module that g
 import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
-// This runs during SSR and crashes — Web Worker is not available
+// This runs during SSR, where browser storage and wallet APIs don't exist
 export const config = createConfig({ ... });
 ```
 
@@ -4406,7 +4406,7 @@ Instead, keep all SDK initialization inside a `"use client"` file (like the `Pro
 ```ts
 // lib/sdk.ts — safe alternative
 export async function getConfig() {
-  const { web } = await import("@zama-fhe/sdk");
+  const { web } = await import("@zama-fhe/sdk/web");
   const { createConfig } = await import("@zama-fhe/sdk/viem");
   return createConfig({ ... });
 }
@@ -4866,7 +4866,7 @@ function ConfidentialRoundTrip() {
 > [!INFO]
 > **Recommended: Cross-Origin headers for faster encryption**
 >
-> `useEncrypt` runs FHE WASM in a Web Worker. With `SharedArrayBuffer` available, it encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
+> `useEncrypt` runs FHE WASM in the browser. With `SharedArrayBuffer` available, the runtime spawns a worker pool and encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
 >
 > ```
 > Cross-Origin-Opener-Policy: same-origin
@@ -4919,7 +4919,7 @@ function ConfidentialRoundTrip() {
 > [!WARNING]
 > **SSR: "window is not defined"**
 >
-> FHE operations use Web Workers and browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
+> FHE operations use browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
 >
 > ```tsx
 > "use client"; // Required at the top of the file
@@ -5041,7 +5041,7 @@ function ConfidentialAction() {
 
 
 > [!INFO]
-> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.userDecrypt`, which makes you build the credential bundle by hand, is an escape hatch — reach for it only when you genuinely need that control.
+> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.decryptValuesFromPairs`, which makes you supply the transport key pair and signed permit yourself, is an escape hatch — reach for it only when you genuinely need that control.
 
 
 Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
@@ -5247,7 +5247,7 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**web() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
+🟨 Go to [**web() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via bundled WASM.
 
 🟨 Go to [**node() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) for server-side FHE operations in Node.js.
 
@@ -5684,7 +5684,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and terminates the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
+Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
 
 ```ts
 sdk.terminate();
@@ -6358,7 +6358,7 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 
 # `web()` transport
 
-The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management in a Web Worker via WASM.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available.
 
 ## Import
 
@@ -6443,7 +6443,7 @@ const sdk = new ZamaSDK(config);
 
 ## Related
 
-- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — the browser variant, running FHE in a Web Worker via WASM
+- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — the browser variant, running FHE via bundled WASM
 - [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the development variant, no FHE
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
 - [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) — server setup and per-request isolation
@@ -7343,7 +7343,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                                                           |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -7450,7 +7450,7 @@ matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing err
 
 **Code:** `ENCRYPTION_FAILED`
 
-FHE encryption failed inside the Web Worker. Usually caused by missing WASM support or restrictive CSP headers.
+FHE encryption failed inside the WASM runtime. Usually caused by missing WASM support or restrictive CSP headers.
 
 ```ts
 matchZamaError(error, {
@@ -13723,7 +13723,7 @@ import { type EncryptParams } from "@zama-fhe/sdk";
 
 `EncryptInput[]`
 
-Array of typed inputs. Each entry specifies a plaintext value and its FHE type (`ebool`, `euint64`, `eaddress`, etc.).
+Array of typed inputs. Each entry specifies a plaintext value and its encrypted type as a Solidity-style name (`bool`, `uint64`, `address`, etc.).
 
 ### contractAddress
 
@@ -13799,16 +13799,18 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Supported FHE Types
 
-| Type       | JS value type       | Range                 |
-| ---------- | ------------------- | --------------------- |
-| `ebool`    | `boolean \| bigint` | `true`/`false` or 0/1 |
-| `euint8`   | `bigint`            | 0–255                 |
-| `euint16`  | `bigint`            | 0–65535               |
-| `euint32`  | `bigint`            | 0–2³²−1               |
-| `euint64`  | `bigint`            | 0–2⁶⁴−1               |
-| `euint128` | `bigint`            | 0–2¹²⁸−1              |
-| `euint256` | `bigint`            | 0–2²⁵⁶−1              |
-| `eaddress` | `` `0x${string}` `` | Ethereum address      |
+Types use Solidity-style names — the value is encrypted to the matching FHE type (`uint64` → `euint64`) on-chain.
+
+| Type      | JS value type         | Range                     |
+| --------- | --------------------- | ------------------------- |
+| `bool`    | `boolean \| 0n \| 1n` | `true`/`false` or `0`/`1` |
+| `uint8`   | `bigint`              | 0–255                     |
+| `uint16`  | `bigint`              | 0–65535                   |
+| `uint32`  | `bigint`              | 0–2³²−1                   |
+| `uint64`  | `bigint`              | 0–2⁶⁴−1                   |
+| `uint128` | `bigint`              | 0–2¹²⁸−1                  |
+| `uint256` | `bigint`              | 0–2²⁵⁶−1                  |
+| `address` | `` `0x${string}` ``   | Ethereum address          |
 
 ## Related
 
@@ -15067,17 +15069,17 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ![Zama SDK Architecture Layers](../images/layers.svg)
 
-| Layer                          | Responsibility                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                                                            |
-| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                                                |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                                                         |
-| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                                                       |
-| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                                                |
-| **Relayer**                    | `web()` (browser WASM), `node()` (server), `cleartext()` (cleartext chains) — selected by factory, routed per chain by `RelayerDispatcher` |
-| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                                                            |
-| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage)                                 |
-| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                                                 |
+| Layer                          | Responsibility                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                                                      |
+| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                                          |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                                                   |
+| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                                                 |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                                          |
+| **Relayer**                    | `web()` (browser WASM), `node()` (server), `cleartext()` (cleartext chains) — selected by factory, routed per chain by `ChainRouter` |
+| **FHE runtime**                | `@fhevm/sdk` with bundled WASM; spawns an internal worker pool for multi-threaded encryption where the environment allows            |
+| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage)                           |
+| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                                           |
 
 ## `createConfig` pattern
 
@@ -15312,27 +15314,9 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 ## WASM bundle integrity
 
-The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
-});
-```
-
-
-> [!WARNING]
-> Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
-
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
 
 ## Browser security headers
 
@@ -15354,18 +15338,18 @@ Without them, `SharedArrayBuffer` is unavailable and the SDK falls back to singl
 
 ### Content Security Policy (CSP)
 
-The Web Worker loads and executes WASM from a CDN. Your CSP must allow:
+The SDK compiles and executes the bundled WASM in the page, and — in multi-threaded mode — spawns its worker pool from embedded source. Your CSP must allow:
 
-| Directive     | Value                  | Reason                                        |
-| ------------- | ---------------------- | --------------------------------------------- |
-| `worker-src`  | `blob:`                | Workers are created from blob URLs            |
-| `script-src`  | `'wasm-unsafe-eval'`   | Required for WASM execution inside the worker |
-| `connect-src` | `https://cdn.zama.org` | CDN fetch for the WASM bundle                 |
+| Directive     | Value                | Reason                                                     |
+| ------------- | -------------------- | ---------------------------------------------------------- |
+| `script-src`  | `'wasm-unsafe-eval'` | Required for WASM compilation and execution                |
+| `worker-src`  | `blob:`              | Multi-threaded mode creates its worker pool from blob URLs |
+| `connect-src` | your relayer URL     | Encrypt/decrypt requests go to the relayer (or your proxy) |
 
 Example CSP header:
 
 ```
-Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.com;
+Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://relayer.testnet.zama.org https://your-relayer-proxy.com;
 ```
 
 <details>
@@ -18378,10 +18362,10 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 ### Packages
 
-| Package                                        | Description                                                                                                                |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
+| Package                                        | Description                                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                     |
 
 ### Main features
 

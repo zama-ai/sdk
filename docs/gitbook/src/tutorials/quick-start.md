@@ -13,7 +13,7 @@ This is the new default SDK for building on the Zama Protocol. The legacy `@zama
 
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 
-The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they use native worker threads instead of a Web Worker and store keys in memory.
+The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they run the same FHE runtime server-side and store keys in memory.
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
@@ -378,7 +378,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
@@ -402,7 +402,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
