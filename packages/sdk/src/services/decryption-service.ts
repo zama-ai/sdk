@@ -8,6 +8,7 @@ import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
 import {
   type DecryptErrorContext,
   DecryptionFailedError,
+  DelegationNotPropagatedError,
   isFatalBatchError,
   RpcRateLimitError,
   wrapDecryptError,
@@ -23,6 +24,29 @@ import { isEncryptedValueZero } from "../utils/handles";
 import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
+
+/**
+ * How long the delegated-decrypt path keeps retrying while a freshly granted
+ * delegation propagates to the gateway. Propagation usually completes within
+ * ~10 blocks (a few seconds); this ceiling absorbs a briefly lagging gateway
+ * without turning a genuine outage into a long hang.
+ */
+const DELEGATION_PROPAGATION_RETRY_BUDGET_MS = 30_000;
+/** Delay between propagation retries. */
+const DELEGATION_PROPAGATION_RETRY_INTERVAL_MS = 2_000;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Options shared by the delegated-decrypt entry points. */
+export interface DelegatedDecryptOptions {
+  /**
+   * Ride out the gateway propagation window: when a just-granted delegation
+   * has not yet synced, the delegated decrypt is retried (bounded, ~30s) until
+   * it lands instead of throwing {@link DelegationNotPropagatedError}. Defaults
+   * to `true`. Pass `false` to fail fast on the first not-propagated response.
+   */
+  waitForPropagation?: boolean;
+}
 
 interface DecryptionStrategy {
   requesterAddress: Address;
@@ -104,35 +128,75 @@ export class DecryptionService {
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
+    options?: DelegatedDecryptOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#decrypt(encryptedValues, {
-      requesterAddress: getAddress(accountAddress),
-      aclActorAddress: normalizedDelegator,
-      resolveCredentials: (contractAddresses) =>
-        this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
-      validate: (contractAddresses) =>
-        this.#assertAllDelegationsActive(contractAddresses, {
-          delegatorAddress: normalizedDelegator,
-          delegateAddress: normalizedDelegate,
-        }),
-      decryptContract: async ({
-        credentials,
-        contractAddress,
-        // oxlint-disable-next-line no-shadow
-        encryptedValues,
-      }) => {
-        return this.#relayer.delegatedUserDecrypt({
-          encryptedValues: encryptedValues,
+    return this.#withPropagationRetry(options?.waitForPropagation ?? true, () =>
+      this.#decrypt(encryptedValues, {
+        requesterAddress: getAddress(accountAddress),
+        aclActorAddress: normalizedDelegator,
+        resolveCredentials: (contractAddresses) =>
+          this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
+        validate: (contractAddresses) =>
+          this.#assertAllDelegationsActive(contractAddresses, {
+            delegatorAddress: normalizedDelegator,
+            delegateAddress: normalizedDelegate,
+          }),
+        decryptContract: async ({
+          credentials,
           contractAddress,
-          ...resolveDelegatedDecryptPermit(credentials, contractAddress),
-          delegateAddress: normalizedDelegate,
-        });
-      },
-      errorMessage: "Failed to decrypt delegated encrypted values",
-      delegated: true,
-    });
+          // oxlint-disable-next-line no-shadow
+          encryptedValues,
+        }) => {
+          return this.#relayer.delegatedUserDecrypt({
+            encryptedValues: encryptedValues,
+            contractAddress,
+            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
+            delegateAddress: normalizedDelegate,
+          });
+        },
+        errorMessage: "Failed to decrypt delegated encrypted values",
+        delegated: true,
+      }),
+    );
+  }
+
+  /**
+   * Absorb the gateway propagation window on the delegated path: retry `attempt`
+   * (bounded by {@link DELEGATION_PROPAGATION_RETRY_BUDGET_MS}) while it fails
+   * with a transient {@link DelegationNotPropagatedError}. Every other error —
+   * including a missing/expired grant surfaced by the pre-check — throws
+   * immediately, and passing `waitForPropagation: false` disables the retry so
+   * the first not-propagated response propagates unchanged.
+   */
+  async #withPropagationRetry<T>(
+    waitForPropagation: boolean,
+    attempt: () => Promise<T>,
+  ): Promise<T> {
+    // Fixed-interval polling across the budget: e.g. 30s / 2s = 15 gaps, so 16
+    // attempts. Bounded (no open-ended loop) and deterministic under fake timers.
+    const maxAttempts =
+      Math.floor(
+        DELEGATION_PROPAGATION_RETRY_BUDGET_MS / DELEGATION_PROPAGATION_RETRY_INTERVAL_MS,
+      ) + 1;
+    let lastError: unknown;
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        return await attempt();
+      } catch (error) {
+        lastError = error;
+        const canRetry =
+          i < maxAttempts - 1 &&
+          waitForPropagation &&
+          error instanceof DelegationNotPropagatedError;
+        if (!canRetry) {
+          throw error;
+        }
+        await sleep(DELEGATION_PROPAGATION_RETRY_INTERVAL_MS);
+      }
+    }
+    throw lastError;
   }
 
   async delegatedBatchDecryptHandlesAs({
@@ -141,12 +205,14 @@ export class DecryptionService {
     delegateAddress,
     accountAddress,
     maxConcurrency = 5,
+    waitForPropagation = true,
   }: {
     encryptedInputs: EncryptedInput[];
     delegatorAddress: Address;
     delegateAddress: Address;
     accountAddress: Address;
     maxConcurrency?: number;
+    waitForPropagation?: boolean;
   }): Promise<BatchDecryptResult> {
     const items: BatchDecryptItem[] = encryptedInputs.map((h) => ({
       encryptedValue: h.encryptedValue,
@@ -163,6 +229,7 @@ export class DecryptionService {
         delegatorAddress,
         delegateAddress,
         normalizedAccount,
+        { waitForPropagation },
       );
       for (const item of items) {
         this.#setHandleResult(item, decrypted);
@@ -194,11 +261,15 @@ export class DecryptionService {
           return;
         }
         try {
+          // The batch attempt above already rode out the propagation window for
+          // the whole set; fail fast here so a still-unsynced delegation records
+          // a per-item error instead of each item re-spending the full budget.
           const decrypted = await this.delegatedUserDecrypt(
             [{ encryptedValue: item.encryptedValue, contractAddress: item.contractAddress }],
             delegatorAddress,
             delegateAddress,
             normalizedAccount,
+            { waitForPropagation: false },
           );
           this.#setHandleResult(item, decrypted);
         } catch (error) {

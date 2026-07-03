@@ -311,10 +311,134 @@ describe("DecryptionService", () => {
           delegatorAddress,
           delegateAddress,
           userAddress,
+          // Assert the mapping only — opt out of the propagation retry so the
+          // first not-propagated response surfaces immediately.
+          { waitForPropagation: false },
         )
         .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(DelegationNotPropagatedError);
       expect(error).not.toBeInstanceOf(NotEntitledError);
+    });
+
+    const notPropagatedEip712 = (delegatorAddress: Address) =>
+      ({
+        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
+        types: { DelegatedUserDecryptRequestVerification: [] },
+        message: {
+          publicKey: TEST_PUBLIC_KEY,
+          contractAddresses: [CONTRACT_A],
+          delegatorAddress,
+          startTimestamp: 1000n,
+          durationDays: 1n,
+          extraData: "0x",
+        },
+      }) as never;
+
+    test("delegatedUserDecrypt rides out the propagation window and resolves once the delegation syncs", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+        vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
+          notPropagatedEip712(delegatorAddress),
+        );
+        const notPropagated = new Error(
+          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
+        );
+        vi.mocked(relayer.delegatedUserDecrypt)
+          .mockRejectedValueOnce(notPropagated)
+          .mockRejectedValueOnce(notPropagated)
+          .mockResolvedValueOnce({ [HANDLE_A]: 7n });
+
+        const promise = decryptionService.delegatedUserDecrypt(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+        );
+        // Two 2s retries, then success on the third attempt.
+        await vi.advanceTimersByTimeAsync(4000);
+
+        await expect(promise).resolves.toEqual({ [HANDLE_A]: 7n });
+        expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("delegatedUserDecrypt gives up with DelegationNotPropagatedError after the retry budget", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+        vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
+          notPropagatedEip712(delegatorAddress),
+        );
+        vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
+          new Error(
+            `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
+          ),
+        );
+
+        const settled = decryptionService
+          .delegatedUserDecrypt(
+            handles([[HANDLE_A, CONTRACT_A]]),
+            delegatorAddress,
+            delegateAddress,
+            userAddress,
+          )
+          .catch((e: unknown) => e);
+        // Exhaust the ~30s budget.
+        await vi.advanceTimersByTimeAsync(30_000);
+
+        expect(await settled).toBeInstanceOf(DelegationNotPropagatedError);
+        // It retried rather than giving up on the first response.
+        expect(vi.mocked(relayer.delegatedUserDecrypt).mock.calls.length).toBeGreaterThan(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("delegatedUserDecrypt with waitForPropagation:false fails fast on the first response", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
+        notPropagatedEip712(delegatorAddress),
+      );
+      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
+        new Error(
+          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
+        ),
+      );
+
+      await expect(
+        decryptionService.delegatedUserDecrypt(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+          { waitForPropagation: false },
+        ),
+      ).rejects.toBeInstanceOf(DelegationNotPropagatedError);
+      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
     });
 
     test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({

@@ -12,8 +12,9 @@ import { requireConfigured } from "../errors";
  * actual work to the internal {@link DelegationService}.
  *
  * Delegation operations write to the host chain ACL; after a delegation is mined,
- * allow **1–2 minutes** before attempting delegated decryption to let the gateway
- * sync the ACL state via cross-chain event propagation.
+ * the gateway syncs the ACL state via cross-chain event propagation — usually
+ * within ~10 blocks (a few seconds). Delegated decryption rides out that window
+ * with a bounded internal retry, so callers can decrypt right after granting.
  */
 export class Delegations {
   readonly #signer: GenericSigner | undefined;
@@ -39,9 +40,11 @@ export class Delegations {
    * Delegate decryption rights for a confidential contract to another address.
    * Calls `ACL.delegateForUserDecryption()` on-chain.
    *
-   * **Important:** After the transaction is mined, allow **1–2 minutes** before
-   * attempting delegated decryption. The delegation is recorded on L1 immediately,
-   * but the gateway must sync the ACL state via cross-chain event propagation.
+   * The delegation is recorded on L1 immediately, but the gateway must sync the
+   * ACL state via cross-chain event propagation — usually within ~10 blocks (a
+   * few seconds). You do not need to wait: delegated decryption rides out that
+   * window with a bounded internal retry, so you can decrypt right after this
+   * resolves.
    *
    * @param contractAddress - The confidential contract address to delegate on.
    * @param delegateAddress - Address to delegate decryption rights to.
