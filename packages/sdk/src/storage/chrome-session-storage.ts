@@ -21,13 +21,17 @@ declare const chrome: {
  * @example
  * ```ts
  * import { ZamaSDK, indexedDBStorage, chromeSessionStorage } from "@zama-fhe/sdk";
+ * import { createConfig } from "@zama-fhe/sdk/viem";
  *
- * const sdk = new ZamaSDK({
- *   relayer,
- *   signer,
- *   storage: indexedDBStorage,
- *   sessionStorage: chromeSessionStorage,
+ * const config = createConfig({
+ *   chains: [mySepolia],
+ *   publicClient,
+ *   walletClient,
+ *   relayers: { [mySepolia.id]: web() },
+ *   storage: indexedDBStorage, // encrypted transport key pair — persistent
+ *   permitStorage: chromeSessionStorage, // signed permits — ephemeral
  * });
+ * const sdk = new ZamaSDK(config);
  * ```
  */
 export class ChromeSessionStorage implements GenericStorage {

@@ -15867,7 +15867,7 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 
-> **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
+> **Separate IndexedDB instances** for `storage` and `permitStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the permit entry to overwrite the encrypted transport key pair, forcing a re-sign on every balance decryption.
 
 > **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
 
@@ -18400,7 +18400,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 ```
 
@@ -18410,8 +18410,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
-credentials and wallet signatures survive page reloads during local development.
+`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
+the transport key pair and signed permits survive page reloads during local development.
 
 ---
 

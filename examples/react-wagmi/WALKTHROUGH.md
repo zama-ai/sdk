@@ -46,7 +46,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 ```
 
@@ -56,8 +56,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
-credentials and wallet signatures survive page reloads during local development.
+`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
+the transport key pair and signed permits survive page reloads during local development.
 
 ---
 
