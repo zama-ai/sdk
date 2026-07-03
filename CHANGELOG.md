@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2026-07-03)
+
+### Code Refactoring
+
+- **sdk:** absorb the delegation-propagation window internally [SDK-241] ([#486](https://github.com/zama-ai/sdk/issues/486)) ([1bd102f]()), closes [#489]()
+
 ## [3.3.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.6...v3.3.0-alpha.7) (2026-07-02)
 
 ### Code Refactoring
