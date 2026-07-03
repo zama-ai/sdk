@@ -624,15 +624,17 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_PROPAGATED`
 
-Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
+Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync usually completes within ~10 blocks (a few seconds) — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
+
+The delegated-decrypt path rides out this window with a bounded internal retry (~30s), so you rarely see this error — it surfaces only when propagation outlasts the retry budget, or when you opt out with `waitForPropagation: false`.
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry in 1–2 minutes"),
+  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry shortly"),
 });
 ```
 
-**How to handle:** Wait 1–2 minutes after the delegation transaction is mined, then retry. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
+**How to handle:** Retry shortly — propagation normally completes within seconds. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
 
 ### AclPausedError
 

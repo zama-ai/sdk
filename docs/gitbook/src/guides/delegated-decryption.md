@@ -16,7 +16,7 @@ This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting,
 
 ## Example
 
-A complete delegation flow — grant, wait for propagation, then decrypt as delegate:
+A complete delegation flow — grant, then decrypt as delegate (the SDK rides out ACL propagation for you):
 
 {% tabs %}
 {% tab title="SDK" %}
@@ -34,9 +34,9 @@ const { txHash } = await sdk.delegations.delegateDecryption({
   delegateAddress: "0xDelegate",
 });
 
-// 2. Wait 1–2 minutes for gateway propagation
-
-// 3. Delegate reads the delegator's balance
+// 2. Delegate reads the delegator's balance — no wait needed. Propagation
+//    usually completes within ~10 blocks (a few seconds), and the SDK retries
+//    across that window internally.
 const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
@@ -78,10 +78,12 @@ The expiration date must be **at least 1 hour in the future**. Passing a closer 
 
 Each call grants delegation for a single `(contractAddress, delegateAddress)` pair and submits one on-chain transaction.
 
-### 2. Wait for gateway propagation
+### 2. ACL propagation (handled for you)
 
-{% hint style="warning" %}
-After the delegation transaction is mined, wait **1–2 minutes** before calling `decryptBalanceAs`. The delegation is recorded on L1 immediately, but the gateway (on Arbitrum) must sync the ACL state via cross-chain event propagation. Attempting delegated decryption before propagation completes throws `DelegationNotPropagatedError`.
+After the delegation transaction is mined, the Zama Gateway (on Arbitrum) syncs the ACL state via cross-chain event propagation — usually within ~10 blocks (a few seconds). You don't need to wait or poll: the delegated-decrypt path rides out that window with a bounded internal retry (~30s), so a decrypt issued right after granting simply waits for sync.
+
+{% hint style="info" %}
+`DelegationNotPropagatedError` only surfaces if propagation outlasts the retry budget (rare) — or if you opt out of the wait with `waitForPropagation: false` on `sdk.decryption.delegatedDecryptValues` to fail fast instead.
 {% endhint %}
 
 ### 3. Decrypt as delegate
@@ -189,7 +191,7 @@ try {
   if (error instanceof SigningRejectedError) {
     // user cancelled the wallet prompt — do not retry automatically
   } else if (error instanceof DelegationNotPropagatedError) {
-    // delegation hasn't synced to the gateway yet — retry after 1–2 minutes
+    // delegation still hadn't synced after the SDK's internal retry — rare; retry shortly
   } else if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }

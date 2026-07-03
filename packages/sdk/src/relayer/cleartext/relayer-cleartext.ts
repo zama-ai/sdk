@@ -55,7 +55,6 @@ import type { FheChain } from "../../chains/types";
 import {
   ConfigurationError,
   DecryptionFailedError,
-  DelegationNotPropagatedError,
   EncryptionFailedError,
   NotEntitledError,
 } from "../../errors";
@@ -462,9 +461,13 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
     // Parity with the relayer/worker path: a delegated handle still requires the
     // *delegator* to hold the ACL grant (`persistAllowed`). Without this check,
     // the same condition surfaces differently in local cleartext dev than in
-    // production — exactly where integrators wire up their error handling. On the
-    // delegated path this is a *transient* propagation/lag window, so it maps to
-    // DelegationNotPropagatedError (retryable), matching `wrapDecryptError`.
+    // production — exactly where integrators wire up their error handling.
+    // Cleartext is host-chain-only: `#persistAllowed` reads the ACL directly on
+    // the local chain, with no gateway and no cross-chain sync. A failed check
+    // here can never be a propagation lag — it is authoritative and permanent —
+    // so it maps to the terminal NotEntitledError, not the retryable
+    // DelegationNotPropagatedError (which would make the delegated-decrypt retry
+    // loop spin its full budget on a local misconfig before failing).
     const delegatorAllowed = await Promise.all(
       encryptedValues.map((encryptedValue) =>
         this.#persistAllowed(encryptedValue, delegatorAddress),
@@ -473,11 +476,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     for (let i = 0; i < encryptedValues.length; i++) {
       if (!delegatorAllowed[i]) {
-        throw new DelegationNotPropagatedError(
-          `Delegated decryption of encrypted value ${encryptedValues[i]!} was denied by the on-chain ` +
-            `ACL check for delegator ${delegatorAddress}. This is most commonly a propagation/lag window — ` +
-            `allow 1–2 minutes after granting before retrying.`,
-        );
+        throw new NotEntitledError({
+          encryptedValue: encryptedValues[i]!,
+          contractAddress,
+          account: delegatorAddress,
+        });
       }
     }
   }

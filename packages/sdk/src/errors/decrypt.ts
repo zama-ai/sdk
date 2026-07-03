@@ -73,7 +73,7 @@ export function wrapDecryptError(
     // *delegator's* `persistAllowed` L1 read, which has no staleness tolerance:
     // it returns false *transiently* when the delegation has just landed or the
     // consumer's RPC serves a lagging block. Terminal `NotEntitledError` ("never
-    // retry") would be the wrong signal for that 1–2 min window, so — mirroring
+    // retry") would be the wrong signal for that propagation window, so — mirroring
     // the delegated-500 branch below — surface the retryable
     // `DelegationNotPropagatedError` instead. A direct signer denial (non-
     // delegated) stays terminal `NotEntitledError`.
@@ -81,9 +81,10 @@ export function wrapDecryptError(
       return new DelegationNotPropagatedError(
         "Delegated decryption was denied by the on-chain ACL check. " +
           "This is most commonly caused by the delegation not having propagated yet, or by the " +
-          "RPC node serving a stale block — after granting delegation, allow 1–2 minutes (and prefer " +
-          "a fresh, low-lag RPC endpoint) before retrying. If it persists, the delegator may genuinely " +
-          "lack the on-chain ACL grant.",
+          "RPC node serving a stale block. Propagation usually completes within ~10 blocks (a few " +
+          "seconds) and the SDK retries across that window; seeing this means it did not sync in time. " +
+          "Retry shortly (and prefer a fresh, low-lag RPC endpoint). If it persists, the delegator may " +
+          "genuinely lack the on-chain ACL grant.",
         { cause: error },
       );
     }
@@ -124,8 +125,9 @@ export function wrapDecryptError(
   if (ctx.isDelegated && statusCode === 500) {
     return new DelegationNotPropagatedError(
       "Delegated decryption failed with a server error. " +
-        "This is most commonly caused by the delegation not having propagated to the gateway yet — " +
-        "after granting delegation, allow 1–2 minutes for cross-chain synchronization before retrying. " +
+        "This is most commonly caused by the delegation not having propagated to the gateway yet. " +
+        "Cross-chain sync usually completes within ~10 blocks (a few seconds) and the SDK retries " +
+        "across that window; seeing this means it did not sync in time — retry shortly. " +
         "If the error persists, the gateway or relayer may be experiencing an unrelated issue.",
       { cause: error },
     );
