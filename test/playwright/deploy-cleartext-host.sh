@@ -13,7 +13,7 @@
 # CleartextInputVerifier (adds inputProof), CleartextFHEVMExecutor/ACL/KMS/HCU.
 #
 # The env block below mirrors the canonical defaults in
-# contracts/lib/fhevm/sdk/js-sdk/contracts/script/fhevm-deploy.sh. The
+# contracts/lib/fhevm/sdk/js-sdk/contracts/scripts/fhevm-deploy.sh. The
 # coprocessor/KMS mnemonic + derivation paths MUST match @fhevm/sdk's
 # signers.ts (FHEVM_TEST_MNEMONIC, coprocessor path 0'/2/, kms path 0'/3/) so
 # the signatures the SDK produces verify on-chain.
@@ -65,7 +65,7 @@ FORGE_ENV=(
   "INPUT_VERIFICATION_ADDRESS=0x6189F6c0c3E40B4a3c72ec86262295D78d845297"
 )
 
-DEPLOY_SCRIPT="script/v0.13.0/DeployCleartextFHEVMHost.s.sol"
+DEPLOY_SCRIPT="scripts/v0.13.0/DeployCleartextFHEVMHost.s.sol"
 
 cd "$FHEVM_CONTRACTS_DIR"
 
