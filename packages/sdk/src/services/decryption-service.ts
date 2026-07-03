@@ -332,7 +332,7 @@ export class DecryptionService {
           // requested `encryptedValues`; zip them back into the handle→value map.
           for (let i = 0; i < encryptedValues.length; i++) {
             const encryptedValue = encryptedValues[i];
-            const value = decrypted[i]?.value as ClearValue | undefined;
+            const value = decrypted[i]?.value;
             if (encryptedValue === undefined || value === undefined) {
               continue;
             }
@@ -342,6 +342,26 @@ export class DecryptionService {
               contractAddress,
               encryptedValue,
               value,
+            );
+          }
+
+          const missing = encryptedValues.filter(
+            (encryptedValue) => result[encryptedValue] === undefined,
+          );
+          if (missing.length > 0) {
+            throw new DecryptionFailedError(
+              `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
+              {
+                cause: new AggregateError(
+                  missing.map(
+                    (encryptedValue) =>
+                      new DecryptionFailedError(
+                        `No clear value for handle ${encryptedValue} on ${contractAddress}`,
+                      ),
+                  ),
+                  `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
+                ),
+              },
             );
           }
         }),

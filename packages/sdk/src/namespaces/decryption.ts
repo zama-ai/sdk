@@ -12,7 +12,7 @@ import { assertNonNullable } from "../utils";
  * Public namespace for FHE decryption — the canonical way to decrypt.
  *
  * Exposed as `sdk.decryption`. Prefer these methods over the low-level
- * `sdk.relayer.userDecrypt` / `delegatedUserDecrypt` / `publicDecrypt`: they
+ * `sdk.relayer.decryptValues` / `decryptPublicValues`: they
  * assemble the credential bundle (transport key pair, EIP-712 permit) for you,
  * cache results, and wrap relayer errors. Reach for `sdk.relayer.*` only when
  * you must control credential assembly by hand.

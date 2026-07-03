@@ -18,7 +18,6 @@ import { createMockRouter } from "./router";
 import type { SignerFixtures } from "./signer";
 import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
-import type { RelayerSDK } from "..";
 
 export type CreateCredentialServiceFn = (
   config?: Partial<CredentialServiceConfig>,
@@ -26,7 +25,7 @@ export type CreateCredentialServiceFn = (
 
 export type CreateDelegationServiceFn = (overrides?: {
   provider?: GenericProvider;
-  relayer?: RelayerSDK;
+  router?: ChainRouter;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => DelegationService;
 
@@ -34,12 +33,12 @@ export type CreateDecryptionServiceFn = (overrides?: {
   cache?: CachingService;
   credentialService?: CredentialService;
   delegationService?: DelegationService;
-  relayer?: RelayerSDK;
+  router?: ChainRouter;
   emitEvent?: (input: ZamaSDKEventInput) => void;
 }) => DecryptionService;
 
 export type CreateEncryptionServiceFn = (overrides?: {
-  relayer?: RelayerSDK;
+  router?: ChainRouter;
   emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }) => EncryptionService;
 
@@ -89,7 +88,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     const factory: CreateDelegationServiceFn = (overrides = {}) =>
       new DelegationService({
         provider: overrides.provider ?? provider,
-        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
+        router: overrides.router ?? createMockRouter({ relayer }),
         emitEvent: overrides.emitEvent,
         logger: new LoggerService(),
       });
@@ -107,7 +106,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         cache: overrides.cache ?? cachingService,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
-        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
+        router: overrides.router ?? createMockRouter({ relayer }),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
@@ -118,7 +117,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   createEncryptionService: async ({ relayer }, use) => {
     const factory: CreateEncryptionServiceFn = (overrides = {}) =>
       new EncryptionService({
-        router: createMockRouter({ relayer: overrides.relayer ?? relayer }),
+        router: overrides.router ?? createMockRouter({ relayer }),
         emitEvent: overrides.emitEvent ?? vi.fn(),
       });
     await use(factory);
