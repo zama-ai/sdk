@@ -1,5 +1,5 @@
 import { ConfigurationError } from "../errors";
-import { FhevmRelayer } from "../relayer/fhevm-relayer";
+import { CleartextRelayer } from "../relayer/cleartext/cleartext-relayer";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
@@ -25,7 +25,7 @@ export function cleartext(): CleartextRelayerConfig {
             `or set it on the chain definition.`,
         );
       }
-      return new FhevmRelayer({ chain, cleartext: true });
+      return new CleartextRelayer(chain);
     },
   };
 }

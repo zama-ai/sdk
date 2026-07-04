@@ -100,16 +100,21 @@ export const bscTestnet = {
  *
  * The addresses in this configuration must match those of your deployment.
  */
+// Cleartext local-dev preset — addresses match the `forge-fhevm` Foundry
+// library's `deploy-local.sh` (gateway id 10901; decryption/input-verification
+// verifying contracts; the ACL/executor/KMS/input-verifier host constants). The
+// `CleartextRelayer` signs input proofs / public-decrypt results under this
+// domain, so they verify against a forge-fhevm deployment's registered signers.
 export const hardhat = {
   id: 31337,
-  gatewayChainId: 654321,
+  gatewayChainId: 10901,
   relayerUrl: "",
   network: "http://127.0.0.1:8545",
   aclContractAddress: "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
   kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
-  verifyingContractAddressDecryption: "0xEaaA2FC6BC259dF015Aa7Dc8e59e0B67df622721",
-  verifyingContractAddressInputVerification: "0x6189F6c0c3E40B4a3c72ec86262295D78d845297",
+  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
+  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: undefined,
   executorAddress: "0xe3a9105a3a932253A70F126eb1E3b589C643dD24",
 } as const satisfies FheChain;
