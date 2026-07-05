@@ -17547,7 +17547,7 @@ const config = createConfig({
 
 `createConfig` comes from `@zama-fhe/sdk/ethers`. The injected EIP-1193 wallet powers signatures and writes; the ethers `JsonRpcProvider` powers chain reads and receipt polling. `web()` is the browser FHE relayer factory from `@zama-fhe/sdk/web`.
 
-`storage` and `permitStorage` use separate IndexedDB instances. They store different SDK state and should remain isolated.
+`storage` and `permitStorage` use separate IndexedDB instances here for clarity, but sharing one is safe — the SDK namespaces the keys internally (and defaults `permitStorage` to `storage` when omitted).
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
