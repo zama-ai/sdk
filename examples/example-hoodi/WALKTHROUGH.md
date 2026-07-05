@@ -323,9 +323,9 @@ import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_R
 const ethereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
 const provider = new JsonRpcProvider(HOODI_RPC_URL);
 
-// IMPORTANT: use a separate IndexedDBStorage instance for permitStorage.
-// Both storage and permitStorage use the same key internally — sharing one database
-// overwrites the encrypted keypair and forces the user to re-sign on every decryption.
+// A separate IndexedDBStorage instance for permitStorage is optional — the SDK
+// namespaces its keys internally, so storage and permitStorage can safely share one
+// database. Kept separate here for clarity between the two storage responsibilities.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 // `hoodi` is the shipped Hoodi cleartext chain preset (chain 560048). cleartext() is the

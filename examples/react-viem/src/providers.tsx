@@ -46,9 +46,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // Two extra layers handle wallet reactivity:
 //
-// 1. Separate IndexedDB instances for storage and permitStorage — both use the
-//    same internal key; sharing one DB instance can overwrite credential data,
-//    forcing re-signing on every balance decrypt.
+// 1. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 2. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
 //    fresh ViemSigner bound to the new account, while ignoring spurious

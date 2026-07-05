@@ -328,8 +328,8 @@ const zamaBscTestnetCleartext = {
   executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54",
 } as const;
 
-// Separate IndexedDB DBs for credentials vs. EIP-712 permits — they share an internal
-// key, so a single DB would let the permit entry corrupt the stored keypair.
+// Separate IndexedDB DBs for credentials vs. EIP-712 permits — optional, since the SDK
+// namespaces its keys internally so one shared DB is safe; kept separate here for clarity.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 const config = createConfig({
