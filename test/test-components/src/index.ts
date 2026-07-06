@@ -9,6 +9,7 @@ export { TransferFromForm } from "./transfer-from-form";
 export { UnshieldForm } from "./unshield-form";
 export { UnshieldAllForm } from "./unshield-all-form";
 export { UnwrapManualForm } from "./unwrap-manual-form";
+export { WrapManualForm } from "./wrap-manual-form";
 export { WrapperDiscoveryPanel } from "./wrapper-discovery-panel";
 export { TokenTable } from "./token-table";
 export { ResumeUnshieldForm } from "./resume-unshield-form";
