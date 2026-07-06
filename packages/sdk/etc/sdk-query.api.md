@@ -491,6 +491,9 @@ export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tok
 export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
+export function invalidateAfterWrap(queryClient: QueryClientLike, tokenAddress: Address): void;
+
+// @public (undocumented)
 export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
@@ -957,6 +960,17 @@ export interface WrapEvent {
     readonly to: Address;
 }
 
+// @public (undocumented)
+export function wrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.wrap", Address], WrapParams, TransactionResult>;
+
+// @public
+export interface WrapParams {
+    // (undocumented)
+    amount: bigint;
+    // (undocumented)
+    to?: Address;
+}
+
 // @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
@@ -971,6 +985,7 @@ export class WrappedToken extends Token {
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
+    wrap(amount: bigint, options?: WrapOptions): Promise<TransactionResult>;
 }
 
 // @public (undocumented)

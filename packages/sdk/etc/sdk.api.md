@@ -9621,6 +9621,14 @@ export const ingenTestnet: {
 export { InputProofBytesType }
 
 // @public
+export class InsufficientAllowanceError extends ZamaError {
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: Address;
+}
+
+// @public
 export class InsufficientConfidentialBalanceError extends ZamaError {
     constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
     readonly available: bigint;
@@ -19435,6 +19443,12 @@ export interface WrapEvent {
 }
 
 // @public
+export interface WrapOptions {
+    onWrapSubmitted?: (txHash: Hex) => void;
+    to?: Address;
+}
+
+// @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
@@ -19448,6 +19462,7 @@ export class WrappedToken extends Token {
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<TransactionResult>;
     unwrapAll(): Promise<TransactionResult>;
+    wrap(amount: bigint, options?: WrapOptions): Promise<TransactionResult>;
 }
 
 // @public
@@ -19593,7 +19608,8 @@ export const ZamaErrorCode: {
     readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
     readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
-    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** ERC-20 allowance granted to the wrapper is insufficient for the requested wrap amount. */
+    readonly InsufficientAllowance: "INSUFFICIENT_ALLOWANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
     readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
     readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The new expiration date equals the current one — no on-chain change needed. */
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */

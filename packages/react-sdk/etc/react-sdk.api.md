@@ -45,6 +45,7 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
+import { WrapParams } from '@zama-fhe/sdk/query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
@@ -301,6 +302,9 @@ export function useUnwrap(address: Address, options?: UseMutationOptions<Transac
 
 // @public
 export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
+
+// @public
+export function useWrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, WrapParams, Address>): UseMutationResult<TransactionResult, Error, WrapParams, `0x${string}`>;
 
 // @public
 export function useWrappedToken(address: Address): WrappedToken;
