@@ -10,25 +10,24 @@ import type { ConfidentialOperation } from "../types.js";
 const publicAbi = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
 
 /**
- * Declares an ERC-7984 confidential transfer as an auto-rewritable operation:
- * caller sends a plaintext `transfer(to, amount)`, the wrapper encrypts
- * `amount` and rewrites it into the real `confidentialTransfer(to, encryptedAmount, inputProof)`
- * call before forwarding.
+ * Declares ERC-7984's `confidentialTransfer` as an auto-rewritable
+ * operation: caller sends a plaintext `transfer(to, amount)`, the wrapper
+ * encrypts `amount` and rewrites it into the real
+ * `confidentialTransfer(to, encryptedAmount, inputProof)` call before
+ * forwarding.
  *
- * `amount` is encrypted as euint64 — matches the ERC-7984 reference tokens
- * (6-decimal stablecoin-style balances) used for this POC. A token using a
- * different FHE width would need its own operation entry.
+ * Not bound to a specific token address — `IERC7984.sol` fixes this exact
+ * signature (and the `euint64` amount width) for every conforming
+ * confidential token, so this one entry covers all of them. Which `to`
+ * addresses actually are valid confidential tokens is resolved dynamically
+ * per-request (see `src/zama/rewriter.ts`), not declared here.
  */
-export function confidentialTransferOperation(params: {
-  chainId: number;
-  tokenAddress: Address;
-}): ConfidentialOperation {
-  const { chainId, tokenAddress } = params;
+export function confidentialTransferOperation(params: { chainId: number }): ConfidentialOperation {
+  const { chainId } = params;
 
   return {
     chainId,
-    address: tokenAddress,
-    name: `confidentialTransfer @ ${tokenAddress}`,
+    name: "confidentialTransfer (ERC-7984 standard)",
     publicAbi,
     publicFunctionName: "transfer",
 
@@ -37,9 +36,9 @@ export function confidentialTransferOperation(params: {
       return { value: amount, type: "euint64" };
     },
 
-    buildRealCall({ publicArgs, encryptedValue, inputProof }) {
+    buildRealCall({ contractAddress, publicArgs, encryptedValue, inputProof }) {
       const [to] = publicArgs as [Address, bigint];
-      const call = confidentialTransferContract(tokenAddress, to, encryptedValue, inputProof);
+      const call = confidentialTransferContract(contractAddress, to, encryptedValue, inputProof);
       return { abi: call.abi, functionName: call.functionName, args: call.args };
     },
   };

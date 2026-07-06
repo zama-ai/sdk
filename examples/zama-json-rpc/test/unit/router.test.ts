@@ -7,13 +7,12 @@ import { handleJsonRpc, handleSingleRequest, type RouterDeps } from "../../src/r
 import { success } from "../../src/rpc/jsonrpc.js";
 
 const CHAIN_ID = 11155111;
-const TOKEN = "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639" as const;
 
 function makeDeps(overrides: Partial<RouterDeps> = {}): RouterDeps {
   return {
     sdk: {} as unknown as ZamaSDK,
     registry: new ConfidentialOperationRegistry([
-      confidentialTransferOperation({ chainId: CHAIN_ID, tokenAddress: TOKEN }),
+      confidentialTransferOperation({ chainId: CHAIN_ID }),
     ]),
     chainId: CHAIN_ID,
     logger: createLogger({ quiet: true, verbose: false }),

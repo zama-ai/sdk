@@ -41,13 +41,16 @@ zama-json-rpc (this project)
     │
     ├─ eth_sendTransaction
     │     │
-    │     ├─ (to, selector) matches the registry?
-    │     │     ├─ decode plaintext args (viem, using a "public" ABI —
-    │     │     │  e.g. standard ERC-20 transfer(address,uint256))
-    │     │     ├─ ZamaSDK.encrypt() → real ciphertext handle + inputProof
-    │     │     ├─ rebuild real calldata (e.g. confidentialTransfer(to, bytes32, bytes))
-    │     │     └─ forward the rewritten, still-UNSIGNED transaction upstream
-    │     └─ no match → forward unchanged
+    │     ├─ selector matches a known operation (e.g. transfer(address,uint256))?
+    │     │     ├─ is `to` a genuine confidential token? — ON-CHAIN check via
+    │     │     │  sdk.registry.isConfidentialTokenValid() (Zama's wrappers
+    │     │     │  registry contract; NOT a locally configured address list)
+    │     │     │     ├─ yes → decode plaintext args, ZamaSDK.encrypt() → real
+    │     │     │     │        ciphertext + inputProof, rebuild real calldata,
+    │     │     │     │        forward the rewritten, still-UNSIGNED transaction
+    │     │     │     ├─ no  → forward unchanged (probably a real ERC-20)
+    │     │     │     └─ lookup failed → reject (fail closed, never guess)
+    │     └─ no selector match → forward unchanged
     │
     └─ everything else → forward unchanged to the upstream RPC
 ```
@@ -56,7 +59,7 @@ Components (`src/`):
 
 | Module                                | Responsibility                                                                 |
 | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `registry/` (`types.ts`, `index.ts`, `operations/`) | Declarative extension point: contract + public ABI → real call. The only place you touch to support more operations. |
+| `registry/` (`types.ts`, `index.ts`, `operations/`) | Declarative extension point for *operations* (public ABI → real call). Matches by (chainId, selector) only — no address. The only place you touch to support more operations; supporting more tokens needs no change here at all (see "Dynamic token discovery" below). |
 | `zama/rewriter.ts`                     | Decode → encrypt → re-encode. Emits an audit log entry for every decision (rewritten / passthrough / rejected). |
 | `zama/introspection.ts`                | Secondary, explicit `zama_*` namespace — debug/introspection only, not the primary flow. |
 | `rpc/router.ts`, `rpc/passthrough.ts`, `rpc/jsonrpc.ts`, `rpc/errors.ts` | JSON-RPC plumbing: batch/single dispatch, upstream forwarding, SDK-error → JSON-RPC-error mapping via the SDK's own `matchZamaError`. |
@@ -66,20 +69,60 @@ Components (`src/`):
 
 ## Key design decisions
 
-### 1. Auto-rewrite, bounded by an explicit registry
+### 1. Auto-rewrite, bounded by an explicit operation registry + an on-chain identity check
 
-The wrapper detects confidential operations by (chainId, contract address, function
-selector) matching a **declared** registry entry — never by inferring intent from
-arbitrary calldata. This is what keeps the "magic" auditable: every request hits exactly
-one of `rewritten` / `passthrough` / `rejected` in the audit log
-(`logger.audit(...)`, see `src/logging/logger.ts` and `src/zama/rewriter.ts`), so an
-operator can verify the rewrite never applies outside what's declared. This also gives a
-direct, concrete answer to the post-LayerZero/KelpDAO "does this RPC middleware tamper
-with the feed silently" concern that motivates the ticket's Epic in the first place —
-without needing to fall back to a fully explicit, non-magic API that wouldn't satisfy
-H1's actual value proposition.
+The wrapper only ever rewrites a request that clears **two** independent gates: (a) the
+calldata's selector matches a **declared** operation shape (`ConfidentialOperationRegistry`,
+matched by chainId + selector, no address involved), and (b) `tx.to` is confirmed, live,
+to be a genuine registered confidential token via `sdk.registry.isConfidentialTokenValid()`.
+Neither gate alone is "guessing": (a) is a fixed, standard function shape; (b) is a read
+against Zama's own on-chain source of truth, not a heuristic. This is what keeps the
+"magic" auditable: every request hits exactly one of `rewritten` / `passthrough` /
+`rejected` in the audit log (`logger.audit(...)`, see `src/logging/logger.ts` and
+`src/zama/rewriter.ts`), so an operator can verify the rewrite never applies to
+anything but a real confidential token. This also gives a direct, concrete answer to the
+post-LayerZero/KelpDAO "does this RPC middleware tamper with the feed silently" concern
+that motivates the ticket's Epic in the first place.
 
-### 2. "ERC-20-like UX" is literal, not aspirational
+### 2. Dynamic token discovery, not a configured address list
+
+**v1 originally shipped with a `--confidentialToken <address>` CLI flag** wiring exactly
+one token address into the registry — a design that was then challenged (correctly)
+during review: a normal ERC-20-aware RPC doesn't need to know which token address you're
+calling ahead of time, so why should this wrapper? The fix uses a mechanism the SDK
+already exposes for exactly this: `sdk.registry` (`WrappersRegistry`,
+`packages/sdk/src/wrappers-registry.ts`) wraps Zama's on-chain wrappers-registry
+contract, and `isConfidentialTokenValid(address): Promise<boolean>` answers "is this a
+genuine registered confidential token" directly, for any address, with no local
+configuration. This works because ERC-7984 fixes the real function signature
+(`confidentialTransfer(address,externalEuint64,bytes)`) **and** the `euint64` amount
+width as part of the standard interface itself — confirmed by reading the actual
+standard, `IERC7984.sol`
+(`contracts/lib/forge-fhevm/dependencies/@openzeppelin-confidential-contracts-7ac7cee/contracts/interfaces/IERC7984.sol`):
+
+```solidity
+import {euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+interface IERC7984 is IERC165 {
+    function confidentialTransfer(address to, externalEuint64 encryptedAmount, bytes calldata inputProof)
+        external returns (euint64);
+    ...
+}
+```
+
+So one `ConfidentialOperation` entry (the operation's *shape*) genuinely covers every
+conforming token — there was never a real need to parameterize it by address. The
+result: adding support for a new token is now free (any token registered in Zama's
+ecosystem works immediately); only adding a new *operation* (a different function
+shape) still requires a code change. **This on-chain check was run for real, against
+the live Sepolia registry, in this session** — see "Verified during this work".
+
+**Fail-closed policy**: if the registry lookup itself fails (network error, RPC issue),
+the request is rejected with a clear error — never silently treated as "not a
+confidential token" (which could let a real confidential-transfer-shaped call go out as
+plaintext) nor as "assume it's valid" (which could rewrite a call to an unrelated
+contract). Never guess in either direction.
+
+### 3. "ERC-20-like UX" is literal, not aspirational
 
 The registry entry for `confidentialTransfer` (`src/registry/operations/confidential-transfer.ts`)
 declares a **public-looking ABI** — an ordinary `transfer(address,uint256)`, the same
@@ -90,7 +133,7 @@ constructs an encrypted input, and never writes Zama-specific code — this is t
 mechanism behind the ticket's "ERC-20-like UX ... while the chain continues to store
 only ciphertexts" framing, not just a metaphor.
 
-### 3. No private-key custody — verified, not just asserted
+### 4. No private-key custody — verified, not just asserted
 
 `src/sdk.ts` constructs the `ZamaSDK` instance with an **accountless** viem
 `walletClient` (no `account`, no private key anywhere in the process). This is safe
@@ -100,7 +143,7 @@ in the SDK source) only calls the relayer — it never touches the configured si
 wrapper never needs to hold that address's key. This was checked against SDK source
 before writing the code, not assumed — see "Verified during this work" below.
 
-### 4. Positioning: before signing, not instead of it
+### 5. Positioning: before signing, not instead of it
 
 The wrapper only rewrites **unsigned** `eth_sendTransaction` requests (never
 `eth_sendRawTransaction` — rewriting calldata after a signature would invalidate it). It
@@ -114,9 +157,11 @@ failure mode against a public Sepolia RPC.
 
 - HTTP JSON-RPC server, single + batch requests, pass-through for every non-matched
   method.
-- One wired confidential operation: `confidentialTransfer` on cUSDC (Sepolia,
-  `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` — same token used by
-  `examples/react-wagmi`'s vault demo), encrypted as `euint64`.
+- One operation, working for **any** confidential token: `confidentialTransfer`
+  (ERC-7984 standard, `euint64` amount), dynamically validated per-request via
+  `sdk.registry.isConfidentialTokenValid()` — no per-token configuration. Tested
+  live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`, same
+  token used by `examples/react-wagmi`'s vault demo), but not specific to it.
 - `zama_getCapabilities`, `zama_getNetworkConfig`, `zama_listConfidentialOperations`.
 - SDK-error → JSON-RPC-error mapping via `matchZamaError`, including relayer
   back-pressure (`retryable` / `retryAfter` from `RelayerRequestFailedError` — see
@@ -130,7 +175,8 @@ failure mode against a public Sepolia RPC.
   piece of this design — and asserts the rewritten calldata decodes as a valid
   `confidentialTransfer(address,bytes32,bytes)` call with a real ciphertext handle and a
   real ZK input proof. **This test passed against live infrastructure during this
-  session** (not just planned/written — actually executed, see transcript below).
+  session** (not just planned/written — actually executed, see transcript below), both
+  before and after the dynamic-discovery refactor.
 
 ### Verified during this work (not assumed)
 
@@ -139,6 +185,14 @@ failure mode against a public Sepolia RPC.
   relying on it, then proven by the real e2e test succeeding.
 - `getAbiItem(...)` can return non-function ABI members; `toFunctionSelector` needs a
   `type === "function"` narrowing the SDK's own types don't do for you automatically.
+- **`euint64` is mandated by the ERC-7984 standard itself, not a per-token convention** —
+  confirmed by reading `IERC7984.sol` directly (see "Dynamic token discovery" above),
+  which settled a real open question from this session's review rather than leaving it
+  as a hedge.
+- **`sdk.registry.isConfidentialTokenValid(cUSDC address)` returned `true` against the
+  live Sepolia registry** in this session's e2e run — the dynamic-discovery mechanism
+  isn't just theoretically sound, it was confirmed working end-to-end against real
+  on-chain infrastructure, not only against the relayer.
 - **Published-package lag, again** (same lesson as prior sessions — see
   `skills-zama-typescript-3.1-update` note): this package initially depended on published
   `@zama-fhe/sdk@^3.2.0`, which does **not** have `retryAfter`/`retryable`/`statusCode`
@@ -152,11 +206,11 @@ failure mode against a public Sepolia RPC.
 ### Live-tested, not just unit-tested
 
 Running the server locally (`npm start -- --http --rpcUrl https://ethereum-sepolia-rpc.publicnode.com --chainId 11155111 --verbose`)
-and sending a plaintext `transfer(to, amount)` against the wired cUSDC address produced:
+and sending a plaintext `transfer(to, amount)` against cUSDC on Sepolia produced:
 
 ```text
-[debug] Matched "confidentialTransfer @ 0x7c5BF...639" for 0x7c5BF...639 — decoded public args: ["0x2222...2222","<redacted>"]
-[audit] {"decision":"rewritten","method":"eth_sendTransaction","contractAddress":"0x7c5BF...639","operation":"confidentialTransfer @ 0x7c5BF...639"}
+[debug] Matched "confidentialTransfer (ERC-7984 standard)" for 0x7c5BF...639 — decoded public args: ["0x2222...2222","<redacted>"]
+[audit] {"decision":"rewritten","method":"eth_sendTransaction","contractAddress":"0x7c5BF...639","operation":"confidentialTransfer (ERC-7984 standard)"}
 ```
 
 ...followed by the upstream (a public Sepolia RPC node) rejecting the forwarded,
@@ -186,24 +240,32 @@ for this session, and no funded test key was available) — see "Known limitatio
    as-is. Same underlying registry/rewriter could extend to these; not done in v1.
 4. **`data` field only**, not `input` (some clients send calldata under `input` instead
    of `data` for `eth_sendTransaction`). Documented, not handled.
-5. **One operation, one token, wired in v1** — by design, extensible (see below), not
-   generalized preemptively.
-6. **No auth, no rate limiting, no TEE.** Explicitly out of scope for a POC; `config.ts`
+5. **One *operation* wired in v1** (`confidentialTransfer` only — not wrap/unwrap/
+   transferFrom/transferAndCall). Any *token* is already supported dynamically (see
+   "Dynamic token discovery"); adding more operations is still a code change, by design.
+6. **On-chain registry lookup adds latency per matched-selector transaction** — one
+   extra read before the (already more expensive) relayer `encrypt()` call. The SDK's
+   `WrappersRegistry` caches results (`registryTTL`, default 24h), so repeat calls to
+   the same token are amortized; a cold first call per token is not.
+7. **No auth, no rate limiting, no TEE.** Explicitly out of scope for a POC; `config.ts`
    avoids hardcoding `localhost`-only assumptions so this isn't an architecture rewrite
    later, but nothing beyond the `0.0.0.0` bind warning is implemented.
-7. **The SDK-236 relayer back-pressure fields (`retryAfter`) may still change name**
+8. **The SDK-236 relayer back-pressure fields (`retryAfter`) may still change name**
    before that work lands in `prerelease` — see the note above.
 
 ## Extensibility
 
-Adding another confidential operation (a different token, or another function like
-`wrap`/`transferFrom`) means adding one file under `src/registry/operations/`
-implementing `ConfidentialOperation` (`src/registry/types.ts`) and registering it in
-`src/cli.ts`. `ConfidentialOperationRegistry` (`src/registry/index.ts`) does the
-selector-matching generically — nothing else changes. This was a specific requirement
-for this iteration (v1 wires exactly one operation, but the next step is expected to be
-"other operations, other tokens" — the registry is designed for that now, not
-retrofitted later).
+- **Another token**: zero code change. Any address `sdk.registry.isConfidentialTokenValid()`
+  confirms is a genuine confidential token is auto-rewritten immediately.
+- **Another operation** (`wrap`, `unwrap`, `transferFrom`, `confidentialTransferAndCall`,
+  ...): one new file under `src/registry/operations/` implementing `ConfidentialOperation`
+  (`src/registry/types.ts`), registered in `src/cli.ts`. `ConfidentialOperationRegistry`
+  (`src/registry/index.ts`) does the selector-matching generically — nothing else
+  changes.
+
+This split (token axis: dynamic/free, operation axis: declarative/code) is a direct
+result of the dynamic-discovery refactor — the original v1 required a code change for
+both axes.
 
 ## Relationship to the SDK-149 ticket
 
@@ -218,8 +280,8 @@ drift. Concretely:
 - This should not be read as a signal that a build/no-build decision has been made. It
   exists to de-risk the technical design so that *if* the Epic's gating criteria are
   met, there's a working reference implementation rather than a blank page.
-- This work sits on a dedicated branch, in an isolated worktree, not merged to `main` or
-  `prerelease`.
+- This work sits on a dedicated branch (`feat/sdk-149-json-rpc-write-poc`, based on
+  `prerelease`), not merged to `main` or `prerelease`.
 
 ## Open questions for whoever picks this up next
 

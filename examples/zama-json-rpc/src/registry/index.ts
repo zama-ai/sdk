@@ -1,4 +1,4 @@
-import { getAbiItem, toFunctionSelector, type Address, type Hex } from "viem";
+import { getAbiItem, toFunctionSelector, type Hex } from "viem";
 import type { ConfidentialOperation } from "./types.js";
 
 interface IndexedOperation {
@@ -7,12 +7,14 @@ interface IndexedOperation {
 }
 
 /**
- * In-memory registry of confidential operations, keyed by (chainId, address, selector).
+ * In-memory registry of confidential *operations*, keyed by (chainId, selector).
  *
- * This is deliberately declarative and additive: nothing outside this file
- * needs to change to register more contracts or operations later. Only
- * requests matching a registered entry are rewritten — everything else is
- * untouched pass-through, so the "magic" stays bounded to what's declared here.
+ * Not keyed by contract address — see `types.ts` for why: ERC-7984 fixes the
+ * function signature and `euint64` width by standard, so one entry per
+ * operation covers every conforming token. Whether a specific `to` address
+ * is actually a genuine confidential token is a separate, dynamic check
+ * (`sdk.registry.isConfidentialTokenValid`) performed by the rewriter, not
+ * by this class.
  */
 export class ConfidentialOperationRegistry {
   readonly #entries: IndexedOperation[];
@@ -29,14 +31,10 @@ export class ConfidentialOperationRegistry {
     });
   }
 
-  find(chainId: number, address: Address, data: Hex): ConfidentialOperation | undefined {
+  find(chainId: number, data: Hex): ConfidentialOperation | undefined {
     const selector = data.slice(0, 10).toLowerCase();
-    const normalizedAddress = address.toLowerCase();
     return this.#entries.find(
-      (entry) =>
-        entry.operation.chainId === chainId &&
-        entry.operation.address.toLowerCase() === normalizedAddress &&
-        entry.selector.toLowerCase() === selector,
+      (entry) => entry.operation.chainId === chainId && entry.selector.toLowerCase() === selector,
     )?.operation;
   }
 

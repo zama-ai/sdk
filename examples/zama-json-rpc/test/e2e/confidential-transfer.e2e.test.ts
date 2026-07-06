@@ -12,8 +12,9 @@ import { buildZamaHandlers } from "../../src/zama/introspection.js";
 import { createHttpServer } from "../../src/server.js";
 
 /**
- * Real end-to-end test: hits the real Sepolia relayer/KMS via `sdk.encrypt()`
- * — no mocking of the one genuinely novel, unverified piece of this POC.
+ * Real end-to-end test: hits the real Sepolia relayer/KMS via `sdk.encrypt()`,
+ * and the real on-chain wrappers registry via `sdk.registry.isConfidentialTokenValid()`
+ * — no mocking of the two genuinely novel, unverified pieces of this POC.
  *
  * The upstream RPC is a local echo stub, not a real signer-capable node: this
  * wrapper's rewrite only ever needs a "from" address string (never its
@@ -81,13 +82,12 @@ describe("zama-json-rpc e2e — real Sepolia relayer", () => {
       host: "127.0.0.1",
       port: 0,
       httpPath: "/",
-      confidentialTokenAddress: TOKEN,
       relayerApiKey: process.env.RELAYER_API_KEY,
       verbose: false,
       quiet: true,
     });
     const registry = new ConfidentialOperationRegistry([
-      confidentialTransferOperation({ chainId: CHAIN_ID, tokenAddress: TOKEN }),
+      confidentialTransferOperation({ chainId: CHAIN_ID }),
     ]);
     const logger = createLogger({ quiet: true, verbose: false });
 
@@ -114,7 +114,7 @@ describe("zama-json-rpc e2e — real Sepolia relayer", () => {
   });
 
   it("encrypts a real amount via the Sepolia relayer and forwards a valid confidentialTransfer call", async () => {
-    const operation = confidentialTransferOperation({ chainId: CHAIN_ID, tokenAddress: TOKEN });
+    const operation = confidentialTransferOperation({ chainId: CHAIN_ID });
     const plaintextData = encodeFunctionData({
       abi: operation.publicAbi,
       functionName: "transfer",

@@ -2,10 +2,12 @@
 
 A local JSON-RPC server powered by `@zama-fhe/sdk`. It forwards standard
 Ethereum JSON-RPC methods to an upstream RPC provider unchanged, and
-transparently rewrites plaintext calls to a small set of registered
-confidential-token operations into their real, encrypted ERC-7984 calls —
-so callers write ordinary-looking calldata (`transfer(to, amount)`) and
-never touch FHE encryption directly.
+transparently rewrites plaintext calls to known confidential-token
+operations into their real, encrypted ERC-7984 calls — so callers write
+ordinary-looking calldata (`transfer(to, amount)`) and never touch FHE
+encryption directly. Works against **any** confidential token — there is no
+per-token configuration; validity is checked on-chain, per request, via
+Zama's own wrappers registry.
 
 Inspired by [fireblocks-json-rpc](https://github.com/fireblocks/fireblocks-json-rpc)
 in form (CLI shape, pass-through model), not in target audience — see
@@ -25,12 +27,15 @@ Client request
     v
 zama-json-rpc
     |
-    |-- method is a registered confidential operation (currently:
-    |   confidentialTransfer on one ERC-7984 token)
-    |       -> decode the plaintext args
-    |       -> encrypt the marked argument via ZamaSDK.encrypt()
-    |       -> rebuild the real on-chain calldata
-    |       -> forward the rewritten, still-unsigned transaction
+    |-- calldata shape matches a known confidential operation
+    |   (currently: confidentialTransfer, i.e. a plain transfer(to, amount))
+    |       -> is "to" a genuine confidential token? (on-chain check via
+    |          Zama's wrappers registry, sdk.registry.isConfidentialTokenValid)
+    |             yes -> decode plaintext args, encrypt the marked argument
+    |                    via ZamaSDK.encrypt(), rebuild the real on-chain
+    |                    calldata, forward the rewritten, still-unsigned tx
+    |             no  -> forward unchanged (probably a real ERC-20)
+    |             lookup failed -> reject (fail closed, never guess)
     |
     |-- method is zama_* (introspection only)
     |       -> handled locally, no chain interaction
@@ -70,7 +75,7 @@ Expected output:
 
 ```text
 Zama JSON-RPC server listening on http://127.0.0.1:8545/
-Auto-rewriting confidential operations: confidentialTransfer @ 0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639
+Auto-rewriting confidential operations: confidentialTransfer (ERC-7984 standard)
 ```
 
 ### Use it as a normal RPC endpoint
@@ -94,7 +99,8 @@ curl -X POST http://127.0.0.1:8545/ \
 ### Send a plaintext confidential transfer
 
 The caller writes a completely ordinary-looking `transfer(to, amount)` call
-against the confidential token address — no Zama-specific code:
+against any confidential token address — no Zama-specific code, no
+per-token setup on the server:
 
 ```bash
 curl -X POST http://127.0.0.1:8545/ \
@@ -127,7 +133,6 @@ account", which is expected and explained there).
 | `--host <host>`              | `ZAMA_HOST`                | `127.0.0.1`                 |
 | `--port <port>`              | `ZAMA_PORT`                | `8545`                      |
 | `--httpPath <path>`          | `ZAMA_HTTP_PATH`           | `/`                          |
-| `--confidentialToken <addr>` | `ZAMA_CONFIDENTIAL_TOKEN`  | cUSDC on Sepolia            |
 | `--relayerApiKey <key>`      | `ZAMA_RELAYER_API_KEY`     | *(optional on testnet)*    |
 | `-v, --verbose`              | `ZAMA_VERBOSE`             | `false`                      |
 | `-q, --quiet`                 | `ZAMA_QUIET`               | `false`                      |
@@ -154,11 +159,13 @@ npm run test:e2e  # hits the real Sepolia relayer — see WALKTHROUGH.md
 
 ## Extending
 
-Adding another confidential operation (another token, another function) is
-one new file under `src/registry/operations/` implementing
-`ConfidentialOperation` (see `src/registry/types.ts`), plus one line
-registering it in `src/cli.ts`. Nothing else changes — see
-`WALKTHROUGH.md` for what's deliberately *not* generalized yet in v1.
+Supporting another *token* needs no code change at all — any address Zama's
+on-chain wrappers registry confirms as a valid confidential token is
+auto-rewritten. Supporting another *operation* (wrap, transferFrom,
+confidentialTransferAndCall, ...) is one new file under
+`src/registry/operations/` implementing `ConfidentialOperation` (see
+`src/registry/types.ts`), plus one line registering it in `src/cli.ts`.
+Nothing else changes — see `WALKTHROUGH.md`.
 
 ## Non-goals (this POC)
 

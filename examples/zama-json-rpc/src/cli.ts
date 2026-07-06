@@ -15,10 +15,7 @@ async function main() {
 
   const sdk = createSdk(config);
   const registry = new ConfidentialOperationRegistry([
-    confidentialTransferOperation({
-      chainId: config.chainId,
-      tokenAddress: config.confidentialTokenAddress,
-    }),
+    confidentialTransferOperation({ chainId: config.chainId }),
   ]);
   const zamaHandlers = buildZamaHandlers({ registry, chain: sepolia });
   const forwardToUpstream = createUpstreamForwarder(config.rpcUrl);

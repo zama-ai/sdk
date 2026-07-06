@@ -38,8 +38,8 @@ export function buildZamaHandlers(params: {
         .map((operation) => ({
           name: operation.name,
           chainId: operation.chainId,
-          address: operation.address,
           publicFunction: operation.publicFunctionName,
+          note: "applies to any token confirmed valid via the on-chain wrappers registry",
         })),
   };
 }

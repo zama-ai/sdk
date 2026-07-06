@@ -12,15 +12,17 @@ export interface RewriteResult {
 }
 
 /**
- * The core auto-magic: if `tx` targets a registered confidential operation,
- * decode the plaintext args, encrypt the marked argument via the Zama SDK,
- * and re-encode the real on-chain calldata. Otherwise, pass the calldata
+ * The core auto-magic: if `tx` matches a known confidential *operation*
+ * shape (by selector) AND `tx.to` is a genuine, on-chain-registered
+ * confidential token (`sdk.registry.isConfidentialTokenValid` — Zama's own
+ * wrappers registry, not a locally configured address list), decode the
+ * plaintext args, encrypt the marked argument via the Zama SDK, and
+ * re-encode the real on-chain calldata. Otherwise, pass the calldata
  * through unchanged.
  *
- * Every request that reaches here — matched or not — hits exactly one of
- * the two `logger.audit(...)` calls, so operators (and interview
- * candidates) can verify the rewrite never applies outside what's declared
- * in the registry.
+ * Every request that reaches here hits exactly one `logger.audit(...)`
+ * call, so operators can verify the rewrite never applies outside a
+ * confirmed confidential token.
  */
 export async function maybeRewriteTransaction(params: {
   sdk: ZamaSDK;
@@ -36,8 +38,30 @@ export async function maybeRewriteTransaction(params: {
     return { rewritten: false, data: tx.data ?? "0x" };
   }
 
-  const operation = registry.find(chainId, tx.to, tx.data);
+  const operation = registry.find(chainId, tx.data);
   if (!operation) {
+    logger.audit({ decision: "passthrough", method: "eth_sendTransaction" });
+    return { rewritten: false, data: tx.data };
+  }
+
+  let isValidConfidentialToken: boolean;
+  try {
+    isValidConfidentialToken = await sdk.registry.isConfidentialTokenValid(tx.to);
+  } catch (error) {
+    logger.audit({
+      decision: "rejected",
+      method: "eth_sendTransaction",
+      reason: "registry lookup failed",
+    });
+    // Fail closed: never guess. A lookup failure must not silently fall
+    // through as either a rewrite or a pass-through.
+    throw new InvalidRewriteRequestError(
+      `Could not verify whether ${tx.to} is a registered confidential token — registry lookup ` +
+        `failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  if (!isValidConfidentialToken) {
     logger.audit({ decision: "passthrough", method: "eth_sendTransaction" });
     return { rewritten: false, data: tx.data };
   }
@@ -49,7 +73,7 @@ export async function maybeRewriteTransaction(params: {
       reason: "missing 'from' address",
     });
     throw new InvalidRewriteRequestError(
-      `Cannot auto-encrypt for "${operation.name}": the request has no "from" address. ` +
+      `Cannot auto-encrypt for "${operation.name}" on ${tx.to}: the request has no "from" address. ` +
         'Encrypted inputs are bound to the sender for the FHE input proof — see WALKTHROUGH.md ("known limitations").',
     );
   }
@@ -75,7 +99,12 @@ export async function maybeRewriteTransaction(params: {
     throw new Error(`sdk.encrypt() returned no encrypted value for "${operation.name}"`);
   }
 
-  const realCall = operation.buildRealCall({ publicArgs, encryptedValue, inputProof });
+  const realCall = operation.buildRealCall({
+    contractAddress: tx.to,
+    publicArgs,
+    encryptedValue,
+    inputProof,
+  });
   const rewrittenData = encodeFunctionData({
     abi: realCall.abi,
     functionName: realCall.functionName,
