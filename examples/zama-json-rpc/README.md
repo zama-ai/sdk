@@ -48,6 +48,13 @@ zama-json-rpc
             -> forwarded to the upstream RPC unchanged
 ```
 
+The same rewrite applies to `eth_sendTransaction`, `eth_call`, and
+`eth_estimateGas` alike — a client that simulates or estimates gas against
+the plaintext-looking calldata before sending sees the *real* operation,
+not a call to a function that doesn't actually exist on-chain (which would
+otherwise revert, or silently under-estimate gas — the real operations use
+significantly more gas than a plain ERC-20 transfer, see `WALKTHROUGH.md`).
+
 The server never holds a private key and never signs or submits anything
 itself — it only rewrites calldata before an unsigned `eth_sendTransaction`
 reaches whatever already signs it upstream (a wallet, a custodian signer, a
@@ -56,8 +63,9 @@ local dev node). See `WALKTHROUGH.md` for why that positioning matters.
 ## Prerequisites
 
 - Node.js >= 22
-- A Sepolia RPC endpoint (any public node works for read/pass-through
-  methods; see `WALKTHROUGH.md` for the `eth_sendTransaction` caveat)
+- A Sepolia RPC endpoint (any public node works for `eth_call`/`eth_estimateGas`
+  and pass-through reads; actually broadcasting `eth_sendTransaction` needs
+  a signer-capable upstream behind it — see `WALKTHROUGH.md`)
 
 ## Setup
 

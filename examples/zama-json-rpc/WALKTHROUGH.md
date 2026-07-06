@@ -333,18 +333,23 @@ broadcast to the live network — no mocking, no fork, anywhere.
    `userAddress` and a vault/AA contract is the actual on-chain sender, the auto-rewrite
    as designed would not be usable by ICP candidates whose custody model routes through
    a smart-contract signer. Worth re-checking if/when this becomes in-scope.
-3. **`eth_sendTransaction` only, and callers must set an explicit `gas` field.**
-   `eth_call`/`eth_estimateGas` against a registered operation are passed through
-   unchanged, not rewritten. Confirmed concretely (not just argued): a real
-   `confidentialTransfer` on cUSDC used **448,188 gas** — far above a plain ERC-20
-   transfer (~50k) — because of nested ACL/ZK verification calls (`verifyInput`,
-   `fheGe`, `fheSub`, `fheIfThenElse`, ...). A caller that omits `gas` and relies on
-   the upstream's own estimation (which only sees the *rewritten* calldata) may get an
-   estimate that's too low and the transaction reverts with `OutOfGas` — reproduced
-   live in this session (see "Live-tested" below). Same underlying registry/rewriter
-   could extend to `eth_estimateGas`; not done in v1.
-4. **`data` field only**, not `input` (some clients send calldata under `input` instead
-   of `data` for `eth_sendTransaction`). Documented, not handled.
+3. ~~`eth_sendTransaction` only.~~ **Resolved.** `eth_call` and `eth_estimateGas`
+   against a registered operation are now rewritten identically (same
+   `maybeRewriteTransaction`, `REWRITABLE_METHODS` in `rpc/router.ts`), so a client
+   that estimates gas or simulates before sending sees the *real* operation, not the
+   plaintext-looking one. This directly fixes the root cause of the `OutOfGas`
+   failure found earlier: a real `confidentialTransfer` uses **448,188 gas** (nested
+   ACL/ZK verification calls) vs. ~50k for a plain ERC-20 transfer — a client that
+   estimates gas against the fake `transfer(address,uint256)` selector (which doesn't
+   exist on the real contract) before this fix would get a wrong/reverted estimate and
+   then fail with `OutOfGas` on the real send. Verified live against the real Sepolia
+   relayer and a real public node: `eth_estimateGas` returned `0x6fba6` (457,638 gas,
+   the right ballpark), and `eth_call` returned a real ciphertext handle instead of
+   reverting.
+4. ~~`data` field only, not `input`.~~ **Resolved.** `parseEthTransactionParams`
+   accepts calldata under either field now (`data` wins if both are present); the
+   rewritten output keeps both in sync if the caller used `input`. Verified live with
+   a real `eth_estimateGas` call using `input` instead of `data`.
 5. **Five operations wired**, including the full two-phase unwrap
    (`confidentialTransfer`, `confidentialTransferFrom`, `confidentialTransferAndCall`,
    `unwrap`, `finalizeUnwrap`). `decryptBalanceOf`-style reads of a still-confidential

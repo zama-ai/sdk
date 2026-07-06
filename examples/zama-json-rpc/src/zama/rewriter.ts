@@ -37,11 +37,13 @@ export async function maybeRewriteTransaction(params: {
   chainId: number;
   tx: EthTransactionParams;
   logger: Logger;
+  /** The actual JSON-RPC method being handled — `eth_sendTransaction`, `eth_call`, or `eth_estimateGas` — used only for audit logging. */
+  method: string;
 }): Promise<RewriteResult> {
-  const { sdk, registry, chainId, tx, logger } = params;
+  const { sdk, registry, chainId, tx, logger, method } = params;
 
   if (!tx.to || !tx.data || tx.data === "0x") {
-    logger.audit({ decision: "passthrough", method: "eth_sendTransaction" });
+    logger.audit({ decision: "passthrough", method });
     return { rewritten: false, data: tx.data ?? "0x" };
   }
   const to: Address = tx.to;
@@ -49,7 +51,7 @@ export async function maybeRewriteTransaction(params: {
 
   const operation = registry.find(chainId, data);
   if (!operation) {
-    logger.audit({ decision: "passthrough", method: "eth_sendTransaction" });
+    logger.audit({ decision: "passthrough", method });
     return { rewritten: false, data };
   }
 
@@ -57,11 +59,7 @@ export async function maybeRewriteTransaction(params: {
   try {
     isValidConfidentialToken = await sdk.registry.isConfidentialTokenValid(to);
   } catch (error) {
-    logger.audit({
-      decision: "rejected",
-      method: "eth_sendTransaction",
-      reason: "registry lookup failed",
-    });
+    logger.audit({ decision: "rejected", method, reason: "registry lookup failed" });
     // Fail closed: never guess. A lookup failure must not silently fall
     // through as either a rewrite or a pass-through.
     throw new InvalidRewriteRequestError(
@@ -71,18 +69,14 @@ export async function maybeRewriteTransaction(params: {
   }
 
   if (!isValidConfidentialToken) {
-    logger.audit({ decision: "passthrough", method: "eth_sendTransaction" });
+    logger.audit({ decision: "passthrough", method });
     return { rewritten: false, data };
   }
 
   // Only "encrypt" operations bind the FHE input proof to a sender — public
   // decryption ("decrypt" operations) needs no signer and no "from" at all.
   if (operation.kind === "encrypt" && !tx.from) {
-    logger.audit({
-      decision: "rejected",
-      method: "eth_sendTransaction",
-      reason: "missing 'from' address",
-    });
+    logger.audit({ decision: "rejected", method, reason: "missing 'from' address" });
     throw new InvalidRewriteRequestError(
       `Cannot auto-encrypt for "${operation.name}" on ${to}: the request has no "from" address. ` +
         'Encrypted inputs are bound to the sender for the FHE input proof — see WALKTHROUGH.md ("known limitations").',
@@ -133,12 +127,7 @@ export async function maybeRewriteTransaction(params: {
     args: realCall.args,
   });
 
-  logger.audit({
-    decision: "rewritten",
-    method: "eth_sendTransaction",
-    contractAddress: to,
-    operation: operation.name,
-  });
+  logger.audit({ decision: "rewritten", method, contractAddress: to, operation: operation.name });
 
   return { rewritten: true, data: rewrittenData };
 }

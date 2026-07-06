@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { encodeFunctionData } from "viem";
 import type { ZamaSDK } from "@zama-fhe/sdk";
 import { ConfidentialOperationRegistry } from "../../src/registry/index.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
@@ -7,6 +8,11 @@ import { handleJsonRpc, handleSingleRequest, type RouterDeps } from "../../src/r
 import { success } from "../../src/rpc/jsonrpc.js";
 
 const CHAIN_ID = 11155111;
+const TOKEN = "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639" as const;
+const FROM = "0x2222222222222222222222222222222222222222" as const;
+const TO = "0x1111111111111111111111111111111111111111" as const;
+const ENCRYPTED_VALUE =
+  "0xdeadbeef00000000000000000000000000000000000000000000000000000000" as const;
 
 function makeDeps(overrides: Partial<RouterDeps> = {}): RouterDeps {
   return {
@@ -20,6 +26,23 @@ function makeDeps(overrides: Partial<RouterDeps> = {}): RouterDeps {
     zamaHandlers: {},
     ...overrides,
   };
+}
+
+function fakeMatchingSdk(): ZamaSDK {
+  return {
+    encrypt: vi
+      .fn()
+      .mockResolvedValue({ encryptedValues: [ENCRYPTED_VALUE], inputProof: "0xcafebabe" }),
+    registry: { isConfidentialTokenValid: vi.fn().mockResolvedValue(true) },
+  } as unknown as ZamaSDK;
+}
+
+function transferCalldata(amount = 10n): `0x${string}` {
+  return encodeFunctionData({
+    abi: confidentialTransferOperation({ chainId: CHAIN_ID }).publicAbi,
+    functionName: "transfer",
+    args: [TO, amount],
+  });
 }
 
 describe("handleSingleRequest", () => {
@@ -72,6 +95,61 @@ describe("handleSingleRequest", () => {
     await handleSingleRequest(request, deps);
 
     expect(forwardToUpstream).toHaveBeenCalledWith(request);
+  });
+
+  it("rewrites eth_call the same way as eth_sendTransaction, preserving the block tag", async () => {
+    const forwardToUpstream = vi.fn().mockResolvedValue(success(1, "0x1"));
+    const deps = makeDeps({ sdk: fakeMatchingSdk(), forwardToUpstream });
+    const data = transferCalldata();
+    const request = {
+      jsonrpc: "2.0" as const,
+      id: 1,
+      method: "eth_call",
+      params: [{ from: FROM, to: TOKEN, data }, "latest"],
+    };
+
+    await handleSingleRequest(request, deps);
+
+    const forwarded = forwardToUpstream.mock.calls[0]?.[0];
+    expect(forwarded.method).toBe("eth_call");
+    expect(forwarded.params[0].data).not.toBe(data);
+    expect(forwarded.params[1]).toBe("latest"); // block tag preserved
+  });
+
+  it("rewrites eth_estimateGas the same way", async () => {
+    const forwardToUpstream = vi.fn().mockResolvedValue(success(1, "0x1"));
+    const deps = makeDeps({ sdk: fakeMatchingSdk(), forwardToUpstream });
+    const data = transferCalldata();
+    const request = {
+      jsonrpc: "2.0" as const,
+      id: 1,
+      method: "eth_estimateGas",
+      params: [{ from: FROM, to: TOKEN, data }],
+    };
+
+    await handleSingleRequest(request, deps);
+
+    const forwarded = forwardToUpstream.mock.calls[0]?.[0];
+    expect(forwarded.method).toBe("eth_estimateGas");
+    expect(forwarded.params[0].data).not.toBe(data);
+  });
+
+  it("accepts calldata under `input` and keeps `input`/`data` in sync after rewriting", async () => {
+    const forwardToUpstream = vi.fn().mockResolvedValue(success(1, "0x1"));
+    const deps = makeDeps({ sdk: fakeMatchingSdk(), forwardToUpstream });
+    const data = transferCalldata();
+    const request = {
+      jsonrpc: "2.0" as const,
+      id: 1,
+      method: "eth_sendTransaction",
+      params: [{ from: FROM, to: TOKEN, input: data }],
+    };
+
+    await handleSingleRequest(request, deps);
+
+    const forwarded = forwardToUpstream.mock.calls[0]?.[0];
+    expect(forwarded.params[0].data).not.toBe(data);
+    expect(forwarded.params[0].input).toBe(forwarded.params[0].data);
   });
 });
 

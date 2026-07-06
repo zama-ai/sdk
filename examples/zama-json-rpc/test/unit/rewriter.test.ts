@@ -40,6 +40,7 @@ describe("maybeRewriteTransaction", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data: "0x12345678" },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(false);
@@ -55,6 +56,7 @@ describe("maybeRewriteTransaction", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(false);
@@ -77,6 +79,7 @@ describe("maybeRewriteTransaction", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: NOT_A_TOKEN, data: plaintextData },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(false);
@@ -100,6 +103,7 @@ describe("maybeRewriteTransaction", () => {
         chainId: CHAIN_ID,
         tx: { from: FROM, to: TOKEN, data: plaintextData },
         logger,
+        method: "eth_sendTransaction",
       }),
     ).rejects.toBeInstanceOf(InvalidRewriteRequestError);
   });
@@ -125,6 +129,7 @@ describe("maybeRewriteTransaction", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data: plaintextData },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(true);
@@ -162,6 +167,7 @@ describe("maybeRewriteTransaction", () => {
         chainId: CHAIN_ID,
         tx: { to: TOKEN, data: plaintextData },
         logger,
+        method: "eth_sendTransaction",
       }),
     ).rejects.toBeInstanceOf(InvalidRewriteRequestError);
   });

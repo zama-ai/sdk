@@ -24,6 +24,17 @@ export interface RouterDeps {
   zamaHandlers: Record<string, (rpcParams: unknown[]) => unknown>;
 }
 
+/**
+ * Every method whose first param is a tx-shaped object (`{from, to, data}`)
+ * that can target a confidential operation. Not just `eth_sendTransaction`:
+ * a client that estimates gas or simulates against the plaintext-looking
+ * shape before sending would get a bogus estimate/revert against the real
+ * contract (which has no `transfer(address,uint256)` selector) — the same
+ * rewrite has to apply to all three for the plaintext-looking call to
+ * behave consistently end-to-end.
+ */
+const REWRITABLE_METHODS = new Set(["eth_sendTransaction", "eth_call", "eth_estimateGas"]);
+
 export async function handleSingleRequest(
   request: unknown,
   deps: RouterDeps,
@@ -50,7 +61,7 @@ export async function handleSingleRequest(
     });
   }
 
-  if (request.method === "eth_sendTransaction") {
+  if (REWRITABLE_METHODS.has(request.method)) {
     const txParams = parseEthTransactionParams(request.params?.[0]);
     try {
       const { data } = await maybeRewriteTransaction({
@@ -59,8 +70,15 @@ export async function handleSingleRequest(
         chainId: deps.chainId,
         tx: txParams,
         logger: deps.logger,
+        method: request.method,
       });
-      return deps.forwardToUpstream({ ...request, params: [{ ...txParams, data }] });
+      const rewrittenTx: Record<string, unknown> = { ...txParams, data };
+      // Some clients (and upstream nodes) key off `input` instead of `data` —
+      // keep both in sync when the caller used `input`, rather than silently
+      // dropping their field name.
+      if (txParams.input !== undefined) rewrittenTx.input = data;
+      const otherParams = request.params?.slice(1) ?? [];
+      return deps.forwardToUpstream({ ...request, params: [rewrittenTx, ...otherParams] });
     } catch (error) {
       if (error instanceof InvalidRewriteRequestError) {
         return failure(request.id, { code: RpcErrorCode.InvalidParams, message: error.message });

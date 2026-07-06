@@ -99,6 +99,7 @@ describe("confidentialTransferFrom", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(true);
@@ -140,6 +141,7 @@ describe("confidentialTransferAndCall", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(true);
@@ -178,6 +180,7 @@ describe("unwrap (phase 1)", () => {
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(true);
@@ -219,6 +222,7 @@ describe("finalizeUnwrap (phase 2, decrypt-kind)", () => {
       chainId: CHAIN_ID,
       tx: { to: TOKEN, data },
       logger,
+      method: "eth_sendTransaction",
     });
 
     expect(result.rewritten).toBe(true);
@@ -256,6 +260,7 @@ describe("finalizeUnwrap (phase 2, decrypt-kind)", () => {
         chainId: CHAIN_ID,
         tx: { to: TOKEN, data },
         logger,
+        method: "eth_sendTransaction",
       }),
     ).rejects.toThrow("not ready");
   });
