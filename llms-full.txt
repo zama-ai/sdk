@@ -2880,6 +2880,36 @@ const { txHash } = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
+## Manual approve + wrap (escape hatch)
+
+`shield()` bundles approval and wrapping into one call and is what almost every app should use. If you need to split the `approve` + `wrap` path across two separately-triggered signatures — for example to render distinct "approve" and "shield" steps in your own UI, or to approve well ahead of the wrap — call `approveUnderlying()` and `wrap()` directly.
+
+This applies only to the `approve` + `wrap` path. Don't use it to recreate `shield()` by hand: `wrap()` never sends `transferAndCall`, so you lose automatic ERC-1363 routing along with the `approvalStrategy` handling.
+
+
+### Tab: Core SDK
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+### Tab: React
+
+```tsx
+const approve = useApproveUnderlying("0xWrapperAddress");
+const wrap = useWrap("0xWrapperAddress");
+
+await approve.mutateAsync({ amount: 1000n });
+await wrap.mutateAsync({ amount: 1000n });
+```
+
+
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+
 ## Next steps
 
 - [Transfer Privately](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md) — send confidential tokens to another address
@@ -3720,7 +3750,8 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                 |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                          |
-| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                              |
+| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                             |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                   |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                   |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                          |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                  |
@@ -3814,6 +3845,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically.               |
 | `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).                 |
 | `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                                |
 | `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                               |
@@ -5978,6 +6010,26 @@ await wrappedToken.approveUnderlying();
 await wrappedToken.approveUnderlying(1000n);
 ```
 
+### wrap
+
+`(amount: bigint, options?: WrapOptions) => Promise<TransactionResult>`
+
+Wraps already-approved underlying ERC-20 into confidential tokens — the second half of the manual `approve` + `wrap` flow. Validates the ERC-20 balance and the wrapper's allowance before submitting: throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the allowance is below `amount` (call `approveUnderlying()` first).
+
+Most apps should use `shield()`, which routes ERC-1363 tokens through `transferAndCall` and manages approval automatically. Reach for `wrap()` only when you need the `approve` and `wrap` signatures as separate, independently-triggered steps — see [Shield tokens → Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch).
+
+```ts
+await wrappedToken.approveUnderlying(1000n);
+const { txHash, receipt } = await wrappedToken.wrap(1000n);
+```
+
+Options:
+
+| Option            | Type                    | Default | Description                           |
+| ----------------- | ----------------------- | ------- | ------------------------------------- |
+| `to`              | `Address`               | signer  | Recipient of the confidential balance |
+| `onWrapSubmitted` | `(txHash: Hex) => void` | —       | Called after the wrap tx is submitted |
+
 ## Unshield
 
 ### unshield
@@ -7443,6 +7495,7 @@ import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
@@ -7510,6 +7563,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                       |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                                                                 |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                                                             |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                                                                  |
@@ -7893,6 +7947,34 @@ try {
 ```
 
 **How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### InsufficientAllowanceError
+
+**Code:** `INSUFFICIENT_ALLOWANCE`
+
+The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this — it manages approval internally.
+
+| Property    | Type      | Description                                     |
+| ----------- | --------- | ----------------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to wrap             |
+| `available` | `bigint`  | Allowance approved to the wrapper at check time |
+| `token`     | `Address` | Underlying ERC-20 token contract address        |
+
+```ts
+import { InsufficientAllowanceError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.wrap(1000n);
+} catch (error) {
+  if (error instanceof InsufficientAllowanceError) {
+    // Approve the wrapper first, then retry the wrap.
+    await wrappedToken.approveUnderlying(1000n);
+    await wrappedToken.wrap(1000n);
+  }
+}
+```
+
+**How to handle:** Call `approveUnderlying()` (or `useApproveUnderlying`) for at least the wrap amount before calling `wrap()`. Most apps avoid this entirely by using `shield()`, which approves and wraps in one call.
 
 ### BalanceCheckUnavailableError
 

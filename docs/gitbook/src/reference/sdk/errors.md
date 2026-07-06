@@ -29,6 +29,7 @@ import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
@@ -96,6 +97,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                       |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                                                                 |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                                                             |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                                                                  |
@@ -479,6 +481,34 @@ try {
 ```
 
 **How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### InsufficientAllowanceError
+
+**Code:** `INSUFFICIENT_ALLOWANCE`
+
+The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this — it manages approval internally.
+
+| Property    | Type      | Description                                     |
+| ----------- | --------- | ----------------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to wrap             |
+| `available` | `bigint`  | Allowance approved to the wrapper at check time |
+| `token`     | `Address` | Underlying ERC-20 token contract address        |
+
+```ts
+import { InsufficientAllowanceError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.wrap(1000n);
+} catch (error) {
+  if (error instanceof InsufficientAllowanceError) {
+    // Approve the wrapper first, then retry the wrap.
+    await wrappedToken.approveUnderlying(1000n);
+    await wrappedToken.wrap(1000n);
+  }
+}
+```
+
+**How to handle:** Call `approveUnderlying()` (or `useApproveUnderlying`) for at least the wrap amount before calling `wrap()`. Most apps avoid this entirely by using `shield()`, which approves and wraps in one call.
 
 ### BalanceCheckUnavailableError
 
