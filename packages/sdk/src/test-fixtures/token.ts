@@ -136,6 +136,7 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         allowance: vi.fn().mockResolvedValue(0n),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
+        wrap: vi.fn().mockResolvedValue(txResult),
         unwrap: vi.fn().mockResolvedValue(txResult),
         unwrapAll: vi.fn().mockResolvedValue(txResult),
         finalizeUnwrap: vi.fn().mockResolvedValue(txResult),
