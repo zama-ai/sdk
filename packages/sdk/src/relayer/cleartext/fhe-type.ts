@@ -3,6 +3,8 @@
 // and the SDK's Solidity-style value-type names (`bool` / `uint*` / `address`)
 // that the new `@fhevm/sdk` interface speaks.
 
+import { DecryptionFailedError, EncryptionFailedError } from "../../errors";
+
 export type FheTypeId = 0 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /** SDK value-type name as used by `EncryptInput` / `TypedValue`. */
@@ -59,21 +61,21 @@ export function isValueTypeName(value: unknown): value is ValueTypeName {
 
 export function fheTypeIdFromValueTypeName(name: string): FheTypeId {
   if (!isValueTypeName(name)) {
-    throw new Error(`Unsupported FHE type '${name}'`);
+    throw new EncryptionFailedError(`Unsupported FHE type '${name}'`);
   }
   return ValueTypeNameToId[name];
 }
 
 export function valueTypeNameFromFheTypeId(id: number): ValueTypeName {
   if (!isFheTypeId(id)) {
-    throw new Error(`Invalid FHE type id '${id}'`);
+    throw new DecryptionFailedError(`Invalid FHE type id '${id}'`);
   }
   return FheTypeIdToValueTypeName[id];
 }
 
 export function encryptionBitsFromFheTypeId(id: number): number {
   if (!isFheTypeId(id)) {
-    throw new Error(`Invalid FHE type id '${id}'`);
+    throw new EncryptionFailedError(`Invalid FHE type id '${id}'`);
   }
   return FheTypeIdToEncryptionBits[id];
 }

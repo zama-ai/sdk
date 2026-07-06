@@ -24,7 +24,7 @@ import {
   EncryptionFailedError,
   NotEntitledError,
 } from "../../errors";
-import type { FhevmClient, FhevmClientOptions, FhevmRelayerSDK } from "../types";
+import type { EncryptedValue, FhevmClient, FhevmClientOptions, FhevmRelayerSDK } from "../types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "./constants";
 import { INPUT_VERIFICATION_EIP712, KMS_DECRYPTION_EIP712 } from "./eip712";
 import {
@@ -34,6 +34,7 @@ import {
   type FheTypeId,
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
+import { assertNonNullable } from "@zama-fhe/sdk/utils";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -56,8 +57,12 @@ type DecryptPublicWithSignaturesReturn = Awaited<
 
 /** Coerce any `EncryptedValueLike` down to a 0x bytes32 handle string. */
 function toHandleHex(value: unknown): Hex {
-  if (typeof value === "string") return value as Hex;
-  if (value instanceof Uint8Array) return toHex(value);
+  if (typeof value === "string") {
+    return value as Hex;
+  }
+  if (value instanceof Uint8Array) {
+    return toHex(value);
+  }
   if (value && typeof value === "object" && "bytes32Hex" in value) {
     return (value as { bytes32Hex: string }).bytes32Hex as Hex;
   }
@@ -97,8 +102,7 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     }
     this.#chain = chain;
     this.#client = createPublicClient({
-      transport:
-        typeof chain.network === "string" ? http(chain.network) : custom(chain.network),
+      transport: typeof chain.network === "string" ? http(chain.network) : custom(chain.network),
     });
     this.#inner = createFhevmCleartextClient({
       publicClient: this.#client,
@@ -154,7 +158,8 @@ export class CleartextRelayer implements FhevmRelayerSDK {
       parameters.contractAddress,
       parameters.userAddress,
     );
-    return { encryptedValue: encryptedValues[0]!, inputProof } as unknown as EncryptValueReturn;
+
+    return { encryptedValue: encryptedValues[0], inputProof } as unknown as EncryptValueReturn;
   };
 
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
@@ -168,13 +173,21 @@ export class CleartextRelayer implements FhevmRelayerSDK {
 
   decryptValue: FhevmClient["decryptValue"] = async (parameters) => {
     const handle = toHandleHex(parameters.encryptedValue);
-    await this.#assertUserDecryptAuth([handle], parameters.signedPermit, getAddress(parameters.contractAddress));
+    await this.#assertUserDecryptAuth(
+      [handle],
+      parameters.signedPermit,
+      getAddress(parameters.contractAddress),
+    );
     return this.#readTypedValue(handle);
   };
 
   decryptValues: FhevmClient["decryptValues"] = async (parameters) => {
     const handles = parameters.encryptedValues.map(toHandleHex);
-    await this.#assertUserDecryptAuth(handles, parameters.signedPermit, getAddress(parameters.contractAddress));
+    await this.#assertUserDecryptAuth(
+      handles,
+      parameters.signedPermit,
+      getAddress(parameters.contractAddress),
+    );
     return Promise.all(handles.map((h) => this.#readTypedValue(h)));
   };
 
@@ -185,7 +198,11 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     }));
     // Authorize per contract, then read positionally.
     for (const pair of pairs) {
-      await this.#assertUserDecryptAuth([pair.handle], parameters.signedPermit, pair.contractAddress);
+      await this.#assertUserDecryptAuth(
+        [pair.handle],
+        parameters.signedPermit,
+        pair.contractAddress,
+      );
     }
     return Promise.all(pairs.map((p) => this.#readTypedValue(p.handle)));
   };
@@ -222,7 +239,11 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     });
     const decryptionProof = concat([toHex(new Uint8Array([1])), signature]);
 
-    const clearValues = handles.map((h, i) => this.#decodeTypedValue(h, rawValues[i]!));
+    const clearValues = handles.map((h, i) => {
+      const rawValue = rawValues[i];
+      assertNonNullable(rawValue, "rawValues[i]");
+      return this.#decodeTypedValue(h, rawValue);
+    });
 
     return {
       clearValues,
@@ -236,7 +257,7 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     values: readonly { readonly type: string; readonly value: unknown }[],
     contractAddressRaw: string,
     userAddressRaw: string,
-  ): Promise<{ encryptedValues: Hex[]; inputProof: Hex }> {
+  ): Promise<{ encryptedValues: EncryptedValue[]; inputProof: Hex }> {
     const entries = values.map((v) => this.#normalizeEncryptValue(v));
     const contractAddress = getAddress(contractAddressRaw);
     const userAddress = getAddress(userAddressRaw);
@@ -295,9 +316,13 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     let value: bigint;
     if (entry.type === "bool") {
       const v = entry.value;
-      if (v === true || v === 1n || v === 1 || v === "1") value = 1n;
-      else if (v === false || v === 0n || v === 0 || v === "0") value = 0n;
-      else throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
+      if (v === true || v === 1n || v === 1 || v === "1") {
+        value = 1n;
+      } else if (v === false || v === 0n || v === 0 || v === "0") {
+        value = 0n;
+      } else {
+        throw new EncryptionFailedError("Bool value must be 0, 1, true, or false");
+      }
     } else if (entry.type === "address") {
       value = BigInt(getAddress(String(entry.value)));
     } else {
@@ -310,7 +335,9 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     const bits = encryptionBitsFromFheTypeId(fheType);
     const maxValue = (1n << BigInt(bits)) - 1n;
     if (value > maxValue) {
-      throw new EncryptionFailedError(`Value ${value} exceeds max ${maxValue} for FheType ${fheType}`);
+      throw new EncryptionFailedError(
+        `Value ${value} exceeds max ${maxValue} for FheType ${fheType}`,
+      );
     }
 
     return { fheType, value };
@@ -318,7 +345,11 @@ export class CleartextRelayer implements FhevmRelayerSDK {
 
   async #assertUserDecryptAuth(
     handles: Hex[],
-    signedPermit: { readonly encryptedDataOwnerAddress: string; readonly signerAddress: string; readonly isDelegated: boolean },
+    signedPermit: {
+      readonly encryptedDataOwnerAddress: string;
+      readonly signerAddress: string;
+      readonly isDelegated: boolean;
+    },
     contractAddress: Address,
   ): Promise<void> {
     const owner = getAddress(signedPermit.encryptedDataOwnerAddress);
@@ -330,16 +361,18 @@ export class CleartextRelayer implements FhevmRelayerSDK {
       );
       const ownerAllowed = await Promise.all(handles.map((h) => this.#persistAllowed(h, owner)));
       for (let i = 0; i < handles.length; i++) {
+        const handle = handles[i];
+        assertNonNullable(handle, "handles[i]");
         if (!delegated[i]) {
           throw new DecryptionFailedError(
-            `Encrypted value ${handles[i]!} is not delegated for user decryption`,
+            `Encrypted value ${handle} is not delegated for user decryption`,
           );
         }
         // Local ACL is authoritative here (no gateway/propagation lag), so a
         // failed grant is terminal — map to NotEntitledError, not the retryable
         // DelegationNotPropagatedError.
         if (!ownerAllowed[i]) {
-          throw new NotEntitledError({ encryptedValue: handles[i]!, contractAddress, account: owner });
+          throw new NotEntitledError({ encryptedValue: handle, contractAddress, account: owner });
         }
       }
       return;
@@ -351,15 +384,20 @@ export class CleartextRelayer implements FhevmRelayerSDK {
       );
     }
     const results = await Promise.all(
-      handles.flatMap((h) => [this.#persistAllowed(h, owner), this.#persistAllowed(h, contractAddress)]),
+      handles.flatMap((h) => [
+        this.#persistAllowed(h, owner),
+        this.#persistAllowed(h, contractAddress),
+      ]),
     );
     for (let i = 0; i < handles.length; i++) {
+      const handle = handles[i];
+      assertNonNullable(handle, "handles[i]");
       if (!results[i * 2]) {
-        throw new NotEntitledError({ encryptedValue: handles[i]!, contractAddress, account: owner });
+        throw new NotEntitledError({ encryptedValue: handle, contractAddress, account: owner });
       }
       if (!results[i * 2 + 1]) {
         throw new DecryptionFailedError(
-          `Contract ${contractAddress} is not authorized for user decrypt of ${handles[i]!}`,
+          `Contract ${contractAddress} is not authorized for user decrypt of ${handle}`,
         );
       }
     }
@@ -369,8 +407,10 @@ export class CleartextRelayer implements FhevmRelayerSDK {
     const allowed = await Promise.all(handles.map((h) => this.#isAllowedForDecryption(h)));
     const bad = allowed.findIndex((a) => !a);
     if (bad !== -1) {
+      const handle = handles[bad];
+      assertNonNullable(handle, "handles[bad]");
       throw new DecryptionFailedError(
-        `Encrypted value ${handles[bad]!} is not allowed for public decryption`,
+        `Encrypted value ${handle} is not allowed for public decryption`,
       );
     }
   }
@@ -382,9 +422,13 @@ export class CleartextRelayer implements FhevmRelayerSDK {
   #decodeTypedValue(handle: Hex, rawValue: bigint): TypedValue {
     const typeName = valueTypeNameFromFheTypeId(Number((BigInt(handle) >> 8n) & 0xffn));
     let value: boolean | bigint | Address;
-    if (typeName === "bool") value = rawValue !== 0n;
-    else if (typeName === "address") value = getAddress(toHex(rawValue, { size: 20 }));
-    else value = rawValue;
+    if (typeName === "bool") {
+      value = rawValue !== 0n;
+    } else if (typeName === "address") {
+      value = getAddress(toHex(rawValue, { size: 20 }));
+    } else {
+      value = rawValue;
+    }
     return { type: typeName, value } as unknown as TypedValue;
   }
 

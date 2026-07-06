@@ -28,7 +28,9 @@ const FORGE_KMS_SIGNER = getAddress("0x0971C80fF03B428fD2094dd5354600ab103201C5"
 // ── Function selectors the relayer reads on-chain ──
 const SEL = {
   plaintexts: toFunctionSelector("function plaintexts(bytes32) view returns (uint256)"),
-  persistAllowed: toFunctionSelector("function persistAllowed(bytes32,address) view returns (bool)"),
+  persistAllowed: toFunctionSelector(
+    "function persistAllowed(bytes32,address) view returns (bool)",
+  ),
   isAllowedForDecryption: toFunctionSelector(
     "function isAllowedForDecryption(bytes32) view returns (bool)",
   ),
@@ -50,7 +52,9 @@ interface MockState {
 function makeChain(state: MockState, id = 31337): FheChain {
   const provider = {
     request: async ({ method, params }: { method: string; params?: unknown[] }) => {
-      if (method === "eth_chainId") return toHex(id);
+      if (method === "eth_chainId") {
+        return toHex(id);
+      }
       if (method === "eth_call") {
         const { data } = params![0] as { data: Hex };
         const selector = slice(data, 0, 4);
