@@ -6,6 +6,19 @@ const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
 describe("WrappedToken.wrap", () => {
+  test("wrapMutationOptions forwards options to token.wrap", async ({ mockWrappedToken }) => {
+    const { wrapMutationOptions } = await import("../../query/wrap");
+    const options = wrapMutationOptions(mockWrappedToken);
+
+    await options.mutationFn({ amount: 1n });
+    expect(mockWrappedToken.wrap).toHaveBeenCalledWith(1n, undefined);
+
+    await options.mutationFn({ amount: 2n, to: "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" });
+    expect(mockWrappedToken.wrap).toHaveBeenLastCalledWith(2n, {
+      to: "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b",
+    });
+  });
+
   test("submits wrap when balance and allowance are sufficient", async ({
     wrappedToken: token,
     signer,
