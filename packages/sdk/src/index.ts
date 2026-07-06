@@ -195,6 +195,8 @@ export {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
   ConfigurationError,
   ChainMismatchError,
   SignerRequiredError,

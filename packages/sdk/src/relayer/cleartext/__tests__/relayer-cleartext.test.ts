@@ -16,6 +16,7 @@ import { hardhat } from "../../../chains";
 import type { EncryptedValue } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { RelayerCleartext } from "../relayer-cleartext";
+import { DelegationNotPropagatedError, NotEntitledError } from "../../../errors";
 
 const hardhatCleartextConfig = hardhat;
 
@@ -392,13 +393,13 @@ describe("RelayerCleartext", () => {
     ).rejects.toThrow(/must be 0, 1, true, or false/i);
   });
 
-  test("userDecrypt throws when ACL.persistAllowed returns false", async () => {
+  test("userDecrypt throws NotEntitledError when ACL.persistAllowed returns false", async () => {
     const handle = asHandle("0x" + "12".repeat(32));
     const { fhevm } = createInstance({ persistAllowed: () => false });
 
     await expect(
       fhevm.userDecrypt(createUserDecryptParams({ encryptedValues: [handle] })),
-    ).rejects.toThrow(/not authorized/i);
+    ).rejects.toBeInstanceOf(NotEntitledError);
   });
 
   test("userDecrypt returns cleartext values when ACL allows access", async () => {
@@ -677,6 +678,38 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
+  test("delegatedUserDecrypt throws transient DelegationNotPropagatedError when the delegator lacks the ACL grant", async () => {
+    // Parity with the relayer/worker path: a handle can be delegated yet the
+    // *delegator* not (yet) hold `persistAllowed`. In production this surfaces as
+    // the transient DelegationNotPropagatedError (delegated ACL denial = lag);
+    // local cleartext dev must classify it identically, not as a generic failure.
+    const handle = asHandle("0x" + "12".repeat(32));
+    const delegateAddress = "0x3000000000000000000000000000000000000003";
+    const { fhevm, calls } = createInstance({
+      isHandleDelegatedForUserDecryption: () => true,
+      persistAllowed: () => false,
+    });
+
+    await expect(
+      fhevm.delegatedUserDecrypt({
+        encryptedValues: [handle],
+        contractAddress: CONTRACT_ADDRESS,
+        signedContractAddresses: [CONTRACT_ADDRESS],
+        privateKey: `0x${"01".repeat(32)}`,
+        publicKey: `0x${"02".repeat(32)}`,
+        signature: `0x${"03".repeat(65)}`,
+        delegatorAddress: USER_ADDRESS,
+        delegateAddress,
+        startTimestamp: 1,
+        durationDays: 1,
+      }),
+    ).rejects.toBeInstanceOf(DelegationNotPropagatedError);
+
+    // Never reaches plaintext read — denied at the ACL pre-check.
+    const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);
+    expect(plaintextCalls).toHaveLength(0);
+  });
+
   test("delegatedUserDecrypt calls isHandleDelegatedForUserDecryption per handle", async () => {
     const handleA = asHandle("0x" + "01".repeat(32));
     const handleB = asHandle("0x" + "02".repeat(32));
@@ -721,6 +754,9 @@ describe("RelayerCleartext", () => {
     expect(callNames).toEqual([
       "isHandleDelegatedForUserDecryption",
       "isHandleDelegatedForUserDecryption",
+      // delegator ACL-grant parity check (persistAllowed) before reading plaintext
+      "persistAllowed",
+      "persistAllowed",
       "plaintexts",
       "plaintexts",
     ]);

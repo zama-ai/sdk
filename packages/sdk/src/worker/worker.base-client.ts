@@ -26,6 +26,7 @@ import type {
   WorkerRequestType,
   WorkerResponse,
 } from "./worker.types";
+import { deserializeError } from "../utils/error";
 
 /** Pending request tracker */
 interface PendingRequest<T> {
@@ -169,10 +170,12 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         elapsed,
         error: response.error,
       });
-      const err = new Error(response.error);
-      if ("statusCode" in response && typeof response.statusCode === "number") {
-        (err as Error & { statusCode?: number }).statusCode = response.statusCode;
-      }
+      // Rebuild the error (and its cause chain) from the structured-clone-safe
+      // envelope the worker serialized. Classification happens once on the main
+      // thread (`wrapDecryptError`) — the worker stays taxonomy-agnostic.
+      const err = response.serialized
+        ? deserializeError(response.serialized)
+        : new Error(response.error);
       pending.reject(err);
     }
   }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.4...v3.3.0-alpha.5) (2026-07-01)
+
+### Features
+
+- **sdk:** typed decryption error causes — not-entitled, RPC rate-limit, relayer back-pressure [SDK-239][SDK-236] ([#489](https://github.com/zama-ai/sdk/issues/489)) ([09d244d]()), closes [#482]() [#492]() [#488]() [#482]() [#492]()
+
 ## [3.3.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.3...v3.3.0-alpha.4) (2026-07-01)
 
 ### Features
