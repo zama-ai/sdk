@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { handleJsonRpc, type RouterDeps } from "./rpc/router.js";
 import { RpcErrorCode, failure } from "./rpc/jsonrpc.js";
+import { isAuthorized } from "./rpc/auth.js";
 import type { Logger } from "./logging/logger.js";
 
 const MAX_BODY_BYTES = 1_000_000;
@@ -8,14 +9,23 @@ const MAX_BODY_BYTES = 1_000_000;
 export function createHttpServer(params: {
   routerDeps: RouterDeps;
   httpPath: string;
+  apiKey: string | undefined;
   logger: Logger;
 }): Server {
-  const { routerDeps, httpPath, logger } = params;
+  const { routerDeps, httpPath, apiKey, logger } = params;
 
   return createServer((req, res) => {
     if (req.method !== "POST" || req.url !== httpPath) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "Not Found" }));
+      return;
+    }
+
+    if (!isAuthorized(req, apiKey)) {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify(failure(null, { code: RpcErrorCode.ServerError, message: "Unauthorized" })),
+      );
       return;
     }
 

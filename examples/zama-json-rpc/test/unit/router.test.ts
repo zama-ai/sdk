@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionData } from "viem";
 import type { ZamaSDK } from "@zama-fhe/sdk";
 import { ConfidentialOperationRegistry } from "../../src/registry/index.js";
+import { TokenValidityCache } from "../../src/registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
 import { createLogger } from "../../src/logging/logger.js";
 import { handleJsonRpc, handleSingleRequest, type RouterDeps } from "../../src/rpc/router.js";
@@ -20,6 +21,7 @@ function makeDeps(overrides: Partial<RouterDeps> = {}): RouterDeps {
     registry: new ConfidentialOperationRegistry([
       confidentialTransferOperation({ chainId: CHAIN_ID }),
     ]),
+    tokenValidityCache: new TokenValidityCache(),
     chainId: CHAIN_ID,
     logger: createLogger({ quiet: true, verbose: false }),
     forwardToUpstream: vi.fn().mockResolvedValue(success(1, "0xupstream")),

@@ -5,6 +5,7 @@ import { decodeFunctionData, encodeFunctionData, parseAbi } from "viem";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { createSdk } from "../../src/sdk.js";
 import { ConfidentialOperationRegistry } from "../../src/registry/index.js";
+import { TokenValidityCache } from "../../src/registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
 import { createLogger } from "../../src/logging/logger.js";
 import { createUpstreamForwarder } from "../../src/rpc/passthrough.js";
@@ -83,6 +84,8 @@ describe("zama-json-rpc e2e — real Sepolia relayer", () => {
       port: 0,
       httpPath: "/",
       relayerApiKey: process.env.RELAYER_API_KEY,
+      apiKey: undefined,
+      tokenValidityTtlSeconds: 86_400,
       verbose: false,
       quiet: true,
     });
@@ -95,12 +98,14 @@ describe("zama-json-rpc e2e — real Sepolia relayer", () => {
       routerDeps: {
         sdk,
         registry,
+        tokenValidityCache: new TokenValidityCache(),
         chainId: CHAIN_ID,
         logger,
         forwardToUpstream: createUpstreamForwarder(echo.url),
         zamaHandlers: buildZamaHandlers({ registry, chain: sepolia }),
       },
       httpPath: "/",
+      apiKey: undefined,
       logger,
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeFunctionData } from "viem";
 import type { ZamaSDK } from "@zama-fhe/sdk";
 import { ConfidentialOperationRegistry } from "../../src/registry/index.js";
+import { TokenValidityCache } from "../../src/registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
 import { maybeRewriteTransaction } from "../../src/zama/rewriter.js";
 import { InvalidRewriteRequestError } from "../../src/zama/errors.js";
@@ -37,6 +38,7 @@ describe("maybeRewriteTransaction", () => {
     const result = await maybeRewriteTransaction({
       sdk: fakeSdk({ encrypt, isConfidentialTokenValid }),
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data: "0x12345678" },
       logger,
@@ -53,6 +55,7 @@ describe("maybeRewriteTransaction", () => {
     const result = await maybeRewriteTransaction({
       sdk: fakeSdk({ encrypt }),
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN },
       logger,
@@ -76,6 +79,7 @@ describe("maybeRewriteTransaction", () => {
     const result = await maybeRewriteTransaction({
       sdk: fakeSdk({ encrypt, isConfidentialTokenValid }),
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: NOT_A_TOKEN, data: plaintextData },
       logger,
@@ -100,6 +104,7 @@ describe("maybeRewriteTransaction", () => {
       maybeRewriteTransaction({
         sdk: fakeSdk({ isConfidentialTokenValid }),
         registry,
+        tokenValidityCache: new TokenValidityCache(),
         chainId: CHAIN_ID,
         tx: { from: FROM, to: TOKEN, data: plaintextData },
         logger,
@@ -126,6 +131,7 @@ describe("maybeRewriteTransaction", () => {
     const result = await maybeRewriteTransaction({
       sdk: fakeSdk({ encrypt }),
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data: plaintextData },
       logger,
@@ -164,8 +170,52 @@ describe("maybeRewriteTransaction", () => {
       maybeRewriteTransaction({
         sdk: fakeSdk({}),
         registry,
+        tokenValidityCache: new TokenValidityCache(),
         chainId: CHAIN_ID,
         tx: { to: TOKEN, data: plaintextData },
+        logger,
+        method: "eth_sendTransaction",
+      }),
+    ).rejects.toBeInstanceOf(InvalidRewriteRequestError);
+  });
+
+  it("rejects an amount that doesn't fit euint64, rather than letting it silently truncate", async () => {
+    const operation = confidentialTransferOperation({ chainId: CHAIN_ID });
+    const tooLarge = 2n ** 64n; // exactly one past euint64's max
+    const plaintextData = encodeFunctionData({
+      abi: operation.publicAbi,
+      functionName: "transfer",
+      args: [TO, tooLarge],
+    });
+    const encrypt = vi.fn();
+
+    await expect(
+      maybeRewriteTransaction({
+        sdk: fakeSdk({ encrypt }),
+        registry,
+        tokenValidityCache: new TokenValidityCache(),
+        chainId: CHAIN_ID,
+        tx: { from: FROM, to: TOKEN, data: plaintextData },
+        logger,
+        method: "eth_sendTransaction",
+      }),
+    ).rejects.toBeInstanceOf(InvalidRewriteRequestError);
+    expect(encrypt).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed calldata that matches the selector but fails to decode, with a clear error", async () => {
+    // Real transfer(address,uint256) selector, but truncated/garbage body —
+    // decodeFunctionData should throw; the rewriter must turn that into a
+    // clear InvalidRewriteRequestError, not an opaque generic failure.
+    const malformedData = "0xa9059cbb1234" as const;
+
+    await expect(
+      maybeRewriteTransaction({
+        sdk: fakeSdk({}),
+        registry,
+        tokenValidityCache: new TokenValidityCache(),
+        chainId: CHAIN_ID,
+        tx: { from: FROM, to: TOKEN, data: malformedData },
         logger,
         method: "eth_sendTransaction",
       }),

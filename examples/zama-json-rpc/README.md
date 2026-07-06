@@ -180,11 +180,21 @@ already plaintext by design, so it already works as plain pass-through.
 | `--port <port>`              | `ZAMA_PORT`                | `8545`                      |
 | `--httpPath <path>`          | `ZAMA_HTTP_PATH`           | `/`                          |
 | `--relayerApiKey <key>`      | `ZAMA_RELAYER_API_KEY`     | *(optional on testnet)*    |
+| `--apiKey <key>`              | `ZAMA_API_KEY`             | *(unset — unauthenticated)* |
+| `--tokenValidityTtlSeconds <s>` | `ZAMA_TOKEN_VALIDITY_TTL_SECONDS` | `86400` |
 | `-v, --verbose`              | `ZAMA_VERBOSE`             | `false`                      |
 | `-q, --quiet`                 | `ZAMA_QUIET`               | `false`                      |
 
-Binding `--host 0.0.0.0` prints a warning — this POC has no production auth
-model (see `WALKTHROUGH.md`).
+`--apiKey` gates the whole JSON-RPC surface behind a shared bearer token
+(`Authorization: Bearer <key>`) — separate from `--relayerApiKey`, which
+authenticates *this wrapper* to the Zama relayer, not callers to this
+wrapper. Without it, a startup warning fires: anyone reaching this server
+can trigger real relayer `encrypt()` calls and probe which addresses are
+confidential tokens.
+
+Binding `--host 0.0.0.0` without `--apiKey` prints an additional warning —
+this POC has no production auth model beyond the shared bearer token (see
+`WALKTHROUGH.md`).
 
 ## Docker
 

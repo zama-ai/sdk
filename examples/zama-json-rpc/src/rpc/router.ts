@@ -1,5 +1,6 @@
 import type { ZamaSDK } from "@zama-fhe/sdk";
 import type { ConfidentialOperationRegistry } from "../registry/index.js";
+import type { TokenValidityCache } from "../registry/token-validity-cache.js";
 import type { Logger } from "../logging/logger.js";
 import { maybeRewriteTransaction } from "../zama/rewriter.js";
 import { parseEthTransactionParams } from "../zama/eth-transaction.js";
@@ -18,6 +19,7 @@ import type { createUpstreamForwarder } from "./passthrough.js";
 export interface RouterDeps {
   sdk: ZamaSDK;
   registry: ConfidentialOperationRegistry;
+  tokenValidityCache: TokenValidityCache;
   chainId: number;
   logger: Logger;
   forwardToUpstream: ReturnType<typeof createUpstreamForwarder>;
@@ -67,6 +69,7 @@ export async function handleSingleRequest(
       const { data } = await maybeRewriteTransaction({
         sdk: deps.sdk,
         registry: deps.registry,
+        tokenValidityCache: deps.tokenValidityCache,
         chainId: deps.chainId,
         tx: txParams,
         logger: deps.logger,

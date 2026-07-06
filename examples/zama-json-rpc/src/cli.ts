@@ -3,6 +3,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 import { parseConfig } from "./config.js";
 import { createSdk } from "./sdk.js";
 import { ConfidentialOperationRegistry } from "./registry/index.js";
+import { TokenValidityCache } from "./registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "./registry/operations/confidential-transfer.js";
 import { confidentialTransferFromOperation } from "./registry/operations/confidential-transfer-from.js";
 import { confidentialTransferAndCallOperation } from "./registry/operations/confidential-transfer-and-call.js";
@@ -17,6 +18,14 @@ async function main() {
   const config = parseConfig(process.argv.slice(2));
   const logger = createLogger({ quiet: config.quiet, verbose: config.verbose });
 
+  if (!config.apiKey) {
+    logger.warn(
+      "No --apiKey configured: this server is unauthenticated. Anyone who can reach it can " +
+        "trigger real relayer encrypt() calls and probe which addresses are confidential " +
+        "tokens. Fine for local exploration, not for anything beyond that — see WALKTHROUGH.md.",
+    );
+  }
+
   const sdk = createSdk(config);
   const registry = new ConfidentialOperationRegistry([
     confidentialTransferOperation({ chainId: config.chainId }),
@@ -25,12 +34,24 @@ async function main() {
     unwrapOperation({ chainId: config.chainId }),
     finalizeUnwrapOperation({ chainId: config.chainId }),
   ]);
+  const tokenValidityCache = new TokenValidityCache({
+    positiveTtlMs: config.tokenValidityTtlSeconds * 1000,
+  });
   const zamaHandlers = buildZamaHandlers({ registry, chain: sepolia });
   const forwardToUpstream = createUpstreamForwarder(config.rpcUrl);
 
   const server = createHttpServer({
-    routerDeps: { sdk, registry, chainId: config.chainId, logger, forwardToUpstream, zamaHandlers },
+    routerDeps: {
+      sdk,
+      registry,
+      tokenValidityCache,
+      chainId: config.chainId,
+      logger,
+      forwardToUpstream,
+      zamaHandlers,
+    },
     httpPath: config.httpPath,
+    apiKey: config.apiKey,
     logger,
   });
 

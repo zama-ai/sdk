@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeFunctionData } from "viem";
 import type { ZamaSDK } from "@zama-fhe/sdk";
 import { ConfidentialOperationRegistry } from "../../src/registry/index.js";
+import { TokenValidityCache } from "../../src/registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
 import { confidentialTransferFromOperation } from "../../src/registry/operations/confidential-transfer-from.js";
 import { confidentialTransferAndCallOperation } from "../../src/registry/operations/confidential-transfer-and-call.js";
@@ -96,6 +97,7 @@ describe("confidentialTransferFrom", () => {
     const result = await maybeRewriteTransaction({
       sdk,
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
@@ -138,6 +140,7 @@ describe("confidentialTransferAndCall", () => {
     const result = await maybeRewriteTransaction({
       sdk,
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
@@ -177,6 +180,7 @@ describe("unwrap (phase 1)", () => {
     const result = await maybeRewriteTransaction({
       sdk,
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { from: FROM, to: TOKEN, data },
       logger,
@@ -219,6 +223,7 @@ describe("finalizeUnwrap (phase 2, decrypt-kind)", () => {
     const result = await maybeRewriteTransaction({
       sdk,
       registry,
+      tokenValidityCache: new TokenValidityCache(),
       chainId: CHAIN_ID,
       tx: { to: TOKEN, data },
       logger,
@@ -257,6 +262,7 @@ describe("finalizeUnwrap (phase 2, decrypt-kind)", () => {
       maybeRewriteTransaction({
         sdk,
         registry,
+        tokenValidityCache: new TokenValidityCache(),
         chainId: CHAIN_ID,
         tx: { to: TOKEN, data },
         logger,

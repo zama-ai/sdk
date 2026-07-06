@@ -357,15 +357,39 @@ broadcast to the live network — no mocking, no fork, anywhere.
    signer-independent public-decrypt path `finalizeUnwrap` uses (see "Key design
    decisions" #6). Any *token* is already supported dynamically (see "Dynamic token
    discovery"); adding more *operations* is still a code change, by design.
-6. **On-chain registry lookup adds latency per matched-selector transaction** — one
-   extra read before the (already more expensive) relayer `encrypt()` call. The SDK's
-   `WrappersRegistry` caches results (`registryTTL`, default 24h), so repeat calls to
-   the same token are amortized; a cold first call per token is not.
-7. **No auth, no rate limiting, no TEE.** Explicitly out of scope for a POC; `config.ts`
-   avoids hardcoding `localhost`-only assumptions so this isn't an architecture rewrite
-   later, but nothing beyond the `0.0.0.0` bind warning is implemented.
+6. ~~On-chain registry lookup adds latency per matched-selector transaction, amortized
+   by the SDK's own cache.~~ **Corrected, then resolved.** The "amortized by the SDK's
+   own cache" half of that claim was **wrong** — stated from assumption, not checked.
+   Actually verifying it against SDK source
+   (`packages/sdk/src/wrappers-registry.ts`) found `isConfidentialTokenValid` — the
+   exact method this wrapper calls — has **no caching at all**, unlike its sibling
+   `getConfidentialToken` (which does cache, with a 5-minute negative TTL). Combined
+   with the registry matching by selector only, this means every plain ERC-20
+   `transfer(address,uint256)` — the single most common selector on Ethereum, and the
+   exact shape `confidentialTransfer` reuses for transparency — triggered a fresh
+   uncached on-chain read on *every* request. Fixed with a local `TokenValidityCache`
+   (`registry/token-validity-cache.ts`, `--tokenValidityTtlSeconds`/
+   `ZAMA_TOKEN_VALIDITY_TTL_SECONDS`, default 24h positive / 5min negative, mirroring
+   the SDK's own convention for `getConfidentialToken`) — verified live: a repeat
+   request to the same non-confidential address measurably speeds up. Worth reporting
+   the SDK inconsistency upstream.
+7. ~~No auth, no rate limiting, no TEE.~~ **Auth partially resolved**, rate
+   limiting/TEE still explicitly out of scope for a POC. `--apiKey`/`ZAMA_API_KEY`
+   gates the whole JSON-RPC surface behind a shared bearer token (mirrors
+   `confidential-indexer`'s app-level auth) — without it, anyone reaching this server
+   could trigger real relayer `encrypt()` calls (a cost/DoS surface) and probe which
+   addresses are registered confidential tokens. This is a single shared secret, not a
+   real multi-tenant auth model — a CLI warning fires at startup if it's unset.
 8. **The SDK-236 relayer back-pressure fields (`retryAfter`) may still change name**
    before that work lands in `prerelease` — see the note above.
+9. **Hardening found during a critical review pass, fixed:** a selector match can
+   still fail to decode (malformed calldata sharing a real selector by coincidence) —
+   now a clear `InvalidRewriteRequestError` instead of an opaque generic failure; and a
+   plaintext amount larger than `2^64-1` is now rejected explicitly before reaching
+   `sdk.encrypt()`, rather than risking silent truncation into a much smaller
+   `euint64` value (this session did not find an explicit bounds check in the SDK's
+   own encrypt path, but didn't exhaustively verify one doesn't exist deeper in the
+   relayer/WASM layer either — the wrapper's own check is defense in depth regardless).
 
 ## Extensibility
 

@@ -7,11 +7,27 @@ export interface AppConfig {
   port: number;
   httpPath: string;
   relayerApiKey: string | undefined;
+  /** Shared-secret bearer token gating this server's own JSON-RPC surface — separate from `relayerApiKey`. */
+  apiKey: string | undefined;
+  /**
+   * TTL (seconds) for this wrapper's own cache of `isConfidentialTokenValid()`
+   * results — NOT an SDK setting. That method has no caching in the SDK
+   * itself (verified against source — unlike its sibling
+   * `getConfidentialToken`), so this wrapper caches it locally; see
+   * `registry/token-validity-cache.ts`.
+   */
+  tokenValidityTtlSeconds: number;
   verbose: boolean;
   quiet: boolean;
 }
 
-const DEFAULTS = { host: "127.0.0.1", port: 8545, httpPath: "/", chainId: 11155111 } as const;
+const DEFAULTS = {
+  host: "127.0.0.1",
+  port: 8545,
+  httpPath: "/",
+  chainId: 11155111,
+  tokenValidityTtlSeconds: 86_400,
+} as const;
 
 function env(name: string): string | undefined {
   return process.env[name];
@@ -43,6 +59,16 @@ export function parseConfig(argv: string[]): AppConfig {
       "Zama relayer API key (optional on testnet)",
       env("ZAMA_RELAYER_API_KEY"),
     )
+    .option(
+      "--apiKey <key>",
+      "Shared-secret bearer token required to call this server (separate from --relayerApiKey)",
+      env("ZAMA_API_KEY"),
+    )
+    .option(
+      "--tokenValidityTtlSeconds <seconds>",
+      "TTL for this wrapper's own confidential-token validity cache (not an SDK setting)",
+      env("ZAMA_TOKEN_VALIDITY_TTL_SECONDS"),
+    )
     .option("-v, --verbose", "Print requests/responses for debugging", Boolean(env("ZAMA_VERBOSE")))
     .option("-q, --quiet", "Only print fatal errors", Boolean(env("ZAMA_QUIET")))
     .allowExcessArguments(true)
@@ -62,6 +88,10 @@ export function parseConfig(argv: string[]): AppConfig {
     port: opts.port ? Number(opts.port) : DEFAULTS.port,
     httpPath: opts.httpPath ?? DEFAULTS.httpPath,
     relayerApiKey: opts.relayerApiKey,
+    apiKey: opts.apiKey,
+    tokenValidityTtlSeconds: opts.tokenValidityTtlSeconds
+      ? Number(opts.tokenValidityTtlSeconds)
+      : DEFAULTS.tokenValidityTtlSeconds,
     verbose: Boolean(opts.verbose),
     quiet: Boolean(opts.quiet),
   };
