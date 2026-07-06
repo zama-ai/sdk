@@ -216,16 +216,38 @@ and sending a plaintext `transfer(to, amount)` against cUSDC on Sepolia produced
 ...followed by the upstream (a public Sepolia RPC node) rejecting the forwarded,
 rewritten, still-unsigned transaction with `"unknown account"` — because a public node
 has no unlocked signer. That failure is **expected and correct**: it's the "positioning"
-limitation above, demonstrated live rather than just argued. This POC does not include a
-signer-capable upstream to demonstrate a full broadcast (no Foundry/anvil was installed
-for this session, and no funded test key was available) — see "Known limitations".
+limitation above, demonstrated live rather than just argued.
+
+### Full broadcast, verified via Anvil fork + impersonation (no real private key used)
+
+To prove a real broadcast without needing a funded key or exposing a real private key
+anywhere, Foundry was installed in this session and Anvil was run forked from live
+Sepolia (`anvil --fork-url <sepolia-rpc> --fork-block-number latest`), then
+`anvil_impersonateAccount` was used to act as a real Sepolia address holding real cUSDC
+— no key material involved, since Anvil accepts unsigned `eth_sendTransaction` from
+impersonated accounts directly. Pointing the wrapper's `--rpcUrl` at this local fork
+(instead of a public node) makes Anvil play the "signer-capable upstream" role the
+wrapper expects.
+
+Result: `sdk.registry.isConfidentialTokenValid` and `sdk.encrypt()` both still hit the
+**real** Sepolia relayer/registry (only the final broadcast is local), the rewritten
+`confidentialTransfer` call executed on-chain, and the receipt came back
+**`status 1 (success)`**, with a real `ConfidentialTransfer(from, to, encryptedAmount)`
+event emitted by the token contract. First attempt (no explicit `gas` field) failed with
+`OutOfGas` — see limitation #3 below; retried with `gas: 2_000_000` and succeeded using
+448,188 gas. This also settles a real open question from earlier in this session: Zama's
+FHE operations on Sepolia are implemented as ordinary Solidity contracts (ACL,
+input-verifier, coprocessor-like contracts, all forked normally), not native
+EVM-level precompiles Anvil can't emulate — there was no fundamental fork
+incompatibility, only a gas-estimation gap.
 
 ## Known limitations
 
-1. **Needs a signer-capable upstream to actually broadcast.** Demonstrated live (above).
-   A follow-up could add a local Anvil-fork + `anvil_impersonateAccount` test to prove a
-   full broadcast without needing a funded real key — not done here for time/scope
-   reasons (would also require installing Foundry, not currently on this machine).
+1. **Needs a signer-capable upstream to actually broadcast.** True broadcast on real
+   Sepolia still needs a real signer (custodian/wallet) behind the wrapper — not
+   provided by this POC, by design (see "No private-key custody"). Demonstrated
+   end-to-end via an Anvil fork + impersonation instead (above), which needs no real
+   key but settles on a local fork, not real Sepolia.
 2. **Smart-contract-wallet / account-abstraction senders are out of scope** — per
    explicit instruction for this work, not investigated further. This is a **current
    Zama protocol limitation**, not something this wrapper works around: if it turns out
@@ -233,11 +255,16 @@ for this session, and no funded test key was available) — see "Known limitatio
    `userAddress` and a vault/AA contract is the actual on-chain sender, the auto-rewrite
    as designed would not be usable by ICP candidates whose custody model routes through
    a smart-contract signer. Worth re-checking if/when this becomes in-scope.
-3. **`eth_sendTransaction` only.** `eth_call` and `eth_estimateGas` against a registered
-   operation are passed through unchanged, not rewritten — a client trying to simulate or
-   estimate gas for a confidential transfer before sending will get a revert or wrong
-   estimate against the real contract, since it'll submit the plaintext-shaped calldata
-   as-is. Same underlying registry/rewriter could extend to these; not done in v1.
+3. **`eth_sendTransaction` only, and callers must set an explicit `gas` field.**
+   `eth_call`/`eth_estimateGas` against a registered operation are passed through
+   unchanged, not rewritten. Confirmed concretely (not just argued): a real
+   `confidentialTransfer` on cUSDC used **448,188 gas** — far above a plain ERC-20
+   transfer (~50k) — because of nested ACL/ZK verification calls (`verifyInput`,
+   `fheGe`, `fheSub`, `fheIfThenElse`, ...). A caller that omits `gas` and relies on
+   the upstream's own estimation (which only sees the *rewritten* calldata) may get an
+   estimate that's too low and the transaction reverts with `OutOfGas` — reproduced
+   live in this session (see "Live-tested" below). Same underlying registry/rewriter
+   could extend to `eth_estimateGas`; not done in v1.
 4. **`data` field only**, not `input` (some clients send calldata under `input` instead
    of `data` for `eth_sendTransaction`). Documented, not handled.
 5. **One *operation* wired in v1** (`confidentialTransfer` only — not wrap/unwrap/
