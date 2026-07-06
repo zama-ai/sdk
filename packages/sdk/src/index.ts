@@ -116,6 +116,7 @@ export type {
   ShieldPath,
   TransferCallbacks,
   TransferOptions,
+  WrapOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
 export { ZamaSDKEvents } from "./events";
@@ -172,6 +173,7 @@ export {
   DelegationExpiredError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   type BalanceErrorDetails,

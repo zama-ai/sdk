@@ -34,6 +34,7 @@ export {
 export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   type BalanceErrorDetails,

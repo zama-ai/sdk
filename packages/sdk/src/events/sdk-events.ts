@@ -244,6 +244,13 @@ export const transactionOperationMetadata = {
       shieldPath: "approveAndWrap" as const,
     }),
   },
+  wrap: {
+    submittedEvent: (txHash: Hex) => ({
+      type: ZamaSDKEvents.ShieldSubmitted,
+      txHash,
+      shieldPath: "approveAndWrap" as const,
+    }),
+  },
   transfer: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
   },
