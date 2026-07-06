@@ -157,11 +157,16 @@ failure mode against a public Sepolia RPC.
 
 - HTTP JSON-RPC server, single + batch requests, pass-through for every non-matched
   method.
-- One operation, working for **any** confidential token: `confidentialTransfer`
-  (ERC-7984 standard, `euint64` amount), dynamically validated per-request via
-  `sdk.registry.isConfidentialTokenValid()` — no per-token configuration. Tested
-  live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`, same
-  token used by `examples/react-wagmi`'s vault demo), but not specific to it.
+- Four operations, each working for **any** confidential token (no per-token
+  configuration): `confidentialTransfer`, `confidentialTransferFrom`,
+  `confidentialTransferAndCall`, and `unwrap` (**phase 1 only** — see
+  "Known limitations"). All ERC-7984 standard, `euint64` amount, dynamically
+  validated per-request via `sdk.registry.isConfidentialTokenValid()`. Tested
+  live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`,
+  same token used by `examples/react-wagmi`'s vault demo), but not specific
+  to it. `wrap` needs no operation entry at all — its amount is plaintext by
+  design (see "Operations" in README.md), so it already works as
+  pass-through.
 - `zama_getCapabilities`, `zama_getNetworkConfig`, `zama_listConfidentialOperations`.
 - SDK-error → JSON-RPC-error mapping via `matchZamaError`, including relayer
   back-pressure (`retryable` / `retryAfter` from `RelayerRequestFailedError` — see
@@ -193,6 +198,18 @@ failure mode against a public Sepolia RPC.
   live Sepolia registry** in this session's e2e run — the dynamic-discovery mechanism
   isn't just theoretically sound, it was confirmed working end-to-end against real
   on-chain infrastructure, not only against the relayer.
+- **`confidentialTransferAndCallContract` is a real gap in the SDK's public export
+  surface**: it's defined in `packages/sdk/src/contracts/confidential-wrapper.ts` and
+  re-exported from `contracts/index.ts`, but not from the SDK root (`@zama-fhe/sdk`),
+  and there is no `./contracts` subpath export in `package.json` either — confirmed by
+  grepping both, not assumed from a missing autocomplete. Worked around here by
+  inlining the (fixed-by-standard) real ABI fragment directly
+  (`src/registry/operations/confidential-transfer-and-call.ts`); worth reporting
+  upstream so real consumers don't hit the same wall.
+- **`unwrap`'s registry+encrypt path was also run live against the real Sepolia
+  relayer** (not just unit-mocked) in this session, matching, encrypting, and
+  rewriting correctly — same live check applied to `confidentialTransfer` earlier,
+  repeated for the newest/least-similar operation rather than assumed to generalize.
 - **Published-package lag, again** (same lesson as prior sessions — see
   `skills-zama-typescript-3.1-update` note): this package initially depended on published
   `@zama-fhe/sdk@^3.2.0`, which does **not** have `retryAfter`/`retryable`/`statusCode`
@@ -267,9 +284,12 @@ incompatibility, only a gas-estimation gap.
    could extend to `eth_estimateGas`; not done in v1.
 4. **`data` field only**, not `input` (some clients send calldata under `input` instead
    of `data` for `eth_sendTransaction`). Documented, not handled.
-5. **One *operation* wired in v1** (`confidentialTransfer` only — not wrap/unwrap/
-   transferFrom/transferAndCall). Any *token* is already supported dynamically (see
-   "Dynamic token discovery"); adding more operations is still a code change, by design.
+5. **Four operations wired** (`confidentialTransfer`, `confidentialTransferFrom`,
+   `confidentialTransferAndCall`, `unwrap` phase 1). `finalizeUnwrap` (phase 2) is not,
+   and doesn't fit this architecture — it needs async operation tracking (poll/track a
+   pending KMS decryption), a genuinely different feature, not just another registry
+   entry. Any *token* is already supported dynamically (see "Dynamic token discovery");
+   adding more *operations* is still a code change, by design.
 6. **On-chain registry lookup adds latency per matched-selector transaction** — one
    extra read before the (already more expensive) relayer `encrypt()` call. The SDK's
    `WrappersRegistry` caches results (`registryTTL`, default 24h), so repeat calls to
@@ -284,11 +304,14 @@ incompatibility, only a gas-estimation gap.
 
 - **Another token**: zero code change. Any address `sdk.registry.isConfidentialTokenValid()`
   confirms is a genuine confidential token is auto-rewritten immediately.
-- **Another operation** (`wrap`, `unwrap`, `transferFrom`, `confidentialTransferAndCall`,
-  ...): one new file under `src/registry/operations/` implementing `ConfidentialOperation`
-  (`src/registry/types.ts`), registered in `src/cli.ts`. `ConfidentialOperationRegistry`
-  (`src/registry/index.ts`) does the selector-matching generically — nothing else
-  changes.
+- **Another operation** (`finalizeUnwrap` once async tracking exists, or any future
+  ERC-7984 method): one new file under `src/registry/operations/` implementing
+  `ConfidentialOperation` (`src/registry/types.ts`), registered in `src/cli.ts`.
+  `ConfidentialOperationRegistry` (`src/registry/index.ts`) does the selector-matching
+  generically — nothing else changes. Demonstrated three times over (`confidentialTransferFrom`,
+  `confidentialTransferAndCall`, `unwrap`), each a small, independent addition with its
+  own "public-looking" ABI and its own real-call builder, no changes needed to the
+  router, rewriter, or registry class itself.
 
 This split (token axis: dynamic/free, operation axis: declarative/code) is a direct
 result of the dynamic-discovery refactor — the original v1 required a code change for

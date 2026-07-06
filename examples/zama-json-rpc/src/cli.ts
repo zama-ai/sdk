@@ -4,6 +4,9 @@ import { parseConfig } from "./config.js";
 import { createSdk } from "./sdk.js";
 import { ConfidentialOperationRegistry } from "./registry/index.js";
 import { confidentialTransferOperation } from "./registry/operations/confidential-transfer.js";
+import { confidentialTransferFromOperation } from "./registry/operations/confidential-transfer-from.js";
+import { confidentialTransferAndCallOperation } from "./registry/operations/confidential-transfer-and-call.js";
+import { unwrapOperation } from "./registry/operations/unwrap.js";
 import { createLogger } from "./logging/logger.js";
 import { createUpstreamForwarder } from "./rpc/passthrough.js";
 import { buildZamaHandlers } from "./zama/introspection.js";
@@ -16,6 +19,9 @@ async function main() {
   const sdk = createSdk(config);
   const registry = new ConfidentialOperationRegistry([
     confidentialTransferOperation({ chainId: config.chainId }),
+    confidentialTransferFromOperation({ chainId: config.chainId }),
+    confidentialTransferAndCallOperation({ chainId: config.chainId }),
+    unwrapOperation({ chainId: config.chainId }),
   ]);
   const zamaHandlers = buildZamaHandlers({ registry, chain: sepolia });
   const forwardToUpstream = createUpstreamForwarder(config.rpcUrl);

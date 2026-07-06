@@ -28,7 +28,8 @@ Client request
 zama-json-rpc
     |
     |-- calldata shape matches a known confidential operation
-    |   (currently: confidentialTransfer, i.e. a plain transfer(to, amount))
+    |   (confidentialTransfer, confidentialTransferFrom,
+    |    confidentialTransferAndCall, or unwrap — see "Operations" below)
     |       -> is "to" a genuine confidential token? (on-chain check via
     |          Zama's wrappers registry, sdk.registry.isConfidentialTokenValid)
     |             yes -> decode plaintext args, encrypt the marked argument
@@ -75,7 +76,7 @@ Expected output:
 
 ```text
 Zama JSON-RPC server listening on http://127.0.0.1:8545/
-Auto-rewriting confidential operations: confidentialTransfer (ERC-7984 standard)
+Auto-rewriting confidential operations: confidentialTransfer (ERC-7984 standard), confidentialTransferFrom (ERC-7984 standard), confidentialTransferAndCall (ERC-7984 standard), unwrap (ERC-7984 standard, phase 1/2 — request only)
 ```
 
 ### Use it as a normal RPC endpoint
@@ -124,6 +125,32 @@ happens next (this specific example needs a signer-capable upstream to
 actually broadcast — a public RPC node will reject it with "unknown
 account", which is expected and explained there).
 
+## Operations
+
+All four use the same mechanism: send the plaintext-looking call below
+against any address the on-chain wrappers registry confirms is a real
+confidential token; the amount gets encrypted and the real ERC-7984 call is
+forwarded instead.
+
+| Send this (plaintext)                                        | Wrapper forwards this (real, encrypted)                              |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `transfer(address to, uint256 amount)`                         | `confidentialTransfer(to, encryptedAmount, inputProof)`                  |
+| `transferFrom(address from, address to, uint256 amount)`       | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`        |
+| `transferAndCall(address to, uint256 amount, bytes data)`      | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`     |
+| `unwrap(address from, address to, uint256 amount)`              | `unwrap(from, to, encryptedAmount, inputProof)` — **request only**, see below |
+
+`transferFrom` requires the request's `from` (the actual on-chain caller) to
+already be an approved operator for the logical `from` (the token holder) —
+enforced on-chain via `setOperator`, not by this wrapper.
+
+`unwrap` is **phase 1 of 2** of ERC-7984's unwrap flow: it only requests the
+conversion back to the underlying ERC-20. The funds aren't released until a
+second call, `finalizeUnwrap`, once the KMS has asynchronously decrypted the
+amount — that part needs async operation tracking and is **not implemented**
+in this POC (see `WALKTHROUGH.md`). `wrap` (ERC-20 → confidential) needs no
+rewrite at all: its amount is already plaintext by design, so it already
+works as plain pass-through.
+
 ## CLI options
 
 | Flag                       | Env var                  | Default                  |
@@ -161,15 +188,15 @@ npm run test:e2e  # hits the real Sepolia relayer — see WALKTHROUGH.md
 
 Supporting another *token* needs no code change at all — any address Zama's
 on-chain wrappers registry confirms as a valid confidential token is
-auto-rewritten. Supporting another *operation* (wrap, transferFrom,
-confidentialTransferAndCall, ...) is one new file under
+auto-rewritten. Supporting another *operation* is one new file under
 `src/registry/operations/` implementing `ConfidentialOperation` (see
 `src/registry/types.ts`), plus one line registering it in `src/cli.ts`.
 Nothing else changes — see `WALKTHROUGH.md`.
 
 ## Non-goals (this POC)
 
-- ERC-20 ↔ ERC-7984 wrap/unwrap
+- `finalizeUnwrap` (phase 2 of unwrap — needs async operation tracking, not
+  a single-request rewrite)
 - Signing, custody, or transaction submission
 - Smart-contract-wallet / account-abstraction senders (current Zama protocol
   limitation, not specific to this wrapper)
