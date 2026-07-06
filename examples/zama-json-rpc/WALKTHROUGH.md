@@ -153,16 +153,44 @@ of a public read-only RPC node. This is empirically confirmed, not theoretical: 
 "Live-tested, not just unit-tested" below for a real transcript showing exactly this
 failure mode against a public Sepolia RPC.
 
+### 6. `ConfidentialOperation` generalized to `"encrypt"` | `"decrypt"` — for `finalizeUnwrap`
+
+`finalizeUnwrap` was initially assessed as needing genuinely new async operation-tracking
+machinery (poll a pending KMS decryption over minutes) — deferred out of v1 for that
+reason. On closer inspection of the SDK source, that assessment was wrong: `finalizeUnwrap`'s
+real parameters (`unwrapAmountCleartext`, `decryptionProof`) are fetched via
+`sdk.decryption.decryptPublicValues(handles)`, documented in the SDK itself as
+**"signer-independent: works without a configured signer"** — the exact same no-custody
+property as `sdk.encrypt()`, and a single request/response call, not a polling loop. If the
+KMS hasn't finished yet, the call just fails and the caller retries — no different from any
+other transient failure this wrapper already surfaces.
+
+The one real difference from the four `"encrypt"` operations: the wrapper **decrypts** a
+handle instead of **encrypting** an argument. `ConfidentialOperation` (`src/registry/types.ts`)
+is now a discriminated union — `EncryptOperation` (`extractEncryptedInput` +
+`sdk.encrypt()`) and `DecryptOperation` (`extractHandlesToDecrypt` +
+`sdk.decryption.decryptPublicValues()`) — so `src/zama/rewriter.ts` branches once on
+`operation.kind` and each operation file still only declares its own shape. This also
+made the `tx.from` requirement explicit and correct per-kind: only `"encrypt"` operations
+need a sender (the FHE proof binds to it); `"decrypt"` operations need no `from` at all,
+enforced by the same branch rather than a blanket check.
+
+Only fits handles the **protocol itself** discloses as part of a defined flow (see
+`AmountDisclosed` in `IERC7984.sol`) — never a still-confidential user balance, which
+needs `userDecrypt`/`delegatedUserDecrypt` and a real signer. That distinction is why
+`decryptBalanceOf`-style reads are still out of scope here — see "Open questions".
+
 ## What's implemented (v1)
 
 - HTTP JSON-RPC server, single + batch requests, pass-through for every non-matched
   method.
-- Four operations, each working for **any** confidential token (no per-token
+- Five operations, each working for **any** confidential token (no per-token
   configuration): `confidentialTransfer`, `confidentialTransferFrom`,
-  `confidentialTransferAndCall`, and `unwrap` (**phase 1 only** — see
-  "Known limitations"). All ERC-7984 standard, `euint64` amount, dynamically
-  validated per-request via `sdk.registry.isConfidentialTokenValid()`. Tested
-  live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`,
+  `confidentialTransferAndCall`, `unwrap`, and `finalizeUnwrap` — the full
+  two-phase unwrap flow, not just phase 1 (see "Key design decisions" for
+  how `finalizeUnwrap` fits). All ERC-7984 standard, `euint64` amount,
+  dynamically validated per-request via `sdk.registry.isConfidentialTokenValid()`.
+  Tested live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`,
   same token used by `examples/react-wagmi`'s vault demo), but not specific
   to it. `wrap` needs no operation entry at all — its amount is plaintext by
   design (see "Operations" in README.md), so it already works as
@@ -170,10 +198,12 @@ failure mode against a public Sepolia RPC.
 - `zama_getCapabilities`, `zama_getNetworkConfig`, `zama_listConfidentialOperations`.
 - SDK-error → JSON-RPC-error mapping via `matchZamaError`, including relayer
   back-pressure (`retryable` / `retryAfter` from `RelayerRequestFailedError` — see
-  SDK-236, on a separate branch not yet in `prerelease` at time of writing).
+  SDK-236, on a separate branch not yet in `prerelease` at time of writing) and
+  public-decryption failures (`DECRYPTION_FAILED`, marked retryable — the KMS
+  may simply not have finished yet, see `finalizeUnwrap` below).
 - CLI (commander) + env vars mirroring fireblocks-json-rpc's flag naming; Dockerfile.
 - Audit logging of every routing decision; plaintext redaction in verbose logs.
-- Unit tests (registry, rewriter, router, pass-through, error mapping) — all mocked, 21
+- Unit tests (registry, rewriter, router, pass-through, error mapping) — all mocked, 27
   passing.
 - One real end-to-end test (`test/e2e/confidential-transfer.e2e.test.ts`) that hits the
   **actual Sepolia relayer/KMS** via `sdk.encrypt()` — the one genuinely novel, highest-risk
@@ -210,6 +240,12 @@ failure mode against a public Sepolia RPC.
   relayer** (not just unit-mocked) in this session, matching, encrypting, and
   rewriting correctly — same live check applied to `confidentialTransfer` earlier,
   repeated for the newest/least-similar operation rather than assumed to generalize.
+- **`finalizeUnwrap` was run live too**, without a `from` field at all: matched, called
+  the real `sdk.decryption.decryptPublicValues()` over the network (with a fabricated,
+  non-existent request id, since no real pending unwrap was available), and got back a
+  clean `DECRYPTION_FAILED` JSON-RPC error rather than a crash — confirming both the
+  live connectivity of the decrypt path and that the `"decrypt"`-kind branch genuinely
+  skips the sender requirement, not just in mocked tests.
 - **Published-package lag, again** (same lesson as prior sessions — see
   `skills-zama-typescript-3.1-update` note): this package initially depended on published
   `@zama-fhe/sdk@^3.2.0`, which does **not** have `retryAfter`/`retryable`/`statusCode`
@@ -284,12 +320,13 @@ incompatibility, only a gas-estimation gap.
    could extend to `eth_estimateGas`; not done in v1.
 4. **`data` field only**, not `input` (some clients send calldata under `input` instead
    of `data` for `eth_sendTransaction`). Documented, not handled.
-5. **Four operations wired** (`confidentialTransfer`, `confidentialTransferFrom`,
-   `confidentialTransferAndCall`, `unwrap` phase 1). `finalizeUnwrap` (phase 2) is not,
-   and doesn't fit this architecture — it needs async operation tracking (poll/track a
-   pending KMS decryption), a genuinely different feature, not just another registry
-   entry. Any *token* is already supported dynamically (see "Dynamic token discovery");
-   adding more *operations* is still a code change, by design.
+5. **Five operations wired**, including the full two-phase unwrap
+   (`confidentialTransfer`, `confidentialTransferFrom`, `confidentialTransferAndCall`,
+   `unwrap`, `finalizeUnwrap`). `decryptBalanceOf`-style reads of a still-confidential
+   balance are still out of scope — that needs `userDecrypt`/a real signer, not the
+   signer-independent public-decrypt path `finalizeUnwrap` uses (see "Key design
+   decisions" #6). Any *token* is already supported dynamically (see "Dynamic token
+   discovery"); adding more *operations* is still a code change, by design.
 6. **On-chain registry lookup adds latency per matched-selector transaction** — one
    extra read before the (already more expensive) relayer `encrypt()` call. The SDK's
    `WrappersRegistry` caches results (`registryTTL`, default 24h), so repeat calls to
@@ -304,14 +341,16 @@ incompatibility, only a gas-estimation gap.
 
 - **Another token**: zero code change. Any address `sdk.registry.isConfidentialTokenValid()`
   confirms is a genuine confidential token is auto-rewritten immediately.
-- **Another operation** (`finalizeUnwrap` once async tracking exists, or any future
-  ERC-7984 method): one new file under `src/registry/operations/` implementing
-  `ConfidentialOperation` (`src/registry/types.ts`), registered in `src/cli.ts`.
+- **Another operation** (any future ERC-7984 method): one new file under
+  `src/registry/operations/` implementing either the `"encrypt"` or `"decrypt"` variant
+  of `ConfidentialOperation` (`src/registry/types.ts`), registered in `src/cli.ts`.
   `ConfidentialOperationRegistry` (`src/registry/index.ts`) does the selector-matching
-  generically — nothing else changes. Demonstrated three times over (`confidentialTransferFrom`,
-  `confidentialTransferAndCall`, `unwrap`), each a small, independent addition with its
-  own "public-looking" ABI and its own real-call builder, no changes needed to the
-  router, rewriter, or registry class itself.
+  generically regardless of kind — nothing else changes. Demonstrated four times over
+  (`confidentialTransferFrom`, `confidentialTransferAndCall`, `unwrap`, `finalizeUnwrap`),
+  each a small, independent addition with its own "public-looking" ABI and its own
+  real-call builder, no changes needed to the router or registry class itself
+  (the rewriter needed exactly one new branch, for the `"decrypt"` kind — see "Key
+  design decisions" #6).
 
 This split (token axis: dynamic/free, operation axis: declarative/code) is a direct
 result of the dynamic-discovery refactor — the original v1 required a code change for
@@ -349,3 +388,10 @@ drift. Concretely:
 4. What does "signer-capable upstream" look like for each real ICP candidate — do they
    even have a step in their pipeline where an unsigned `eth_sendTransaction` is
    reachable before signing, or does their architecture sign earlier than that?
+5. Is a `decryptBalanceOf`-style read (a still-confidential user balance, not a
+   protocol-disclosed value like `finalizeUnwrap`'s amount) wanted on this write-side
+   surface at all, or does it belong entirely to the ticket's separate read-side
+   indexer (H2)? It needs a real signer/EIP-712 permit either way — either relayed
+   per-request from the caller's own wallet (stays no-custody, but the caller still
+   needs a wallet-signing step) or via a persistently delegated key held by the
+   service (matches the indexer's model, but reintroduces real custody).

@@ -7,6 +7,7 @@ import { confidentialTransferOperation } from "./registry/operations/confidentia
 import { confidentialTransferFromOperation } from "./registry/operations/confidential-transfer-from.js";
 import { confidentialTransferAndCallOperation } from "./registry/operations/confidential-transfer-and-call.js";
 import { unwrapOperation } from "./registry/operations/unwrap.js";
+import { finalizeUnwrapOperation } from "./registry/operations/finalize-unwrap.js";
 import { createLogger } from "./logging/logger.js";
 import { createUpstreamForwarder } from "./rpc/passthrough.js";
 import { buildZamaHandlers } from "./zama/introspection.js";
@@ -22,6 +23,7 @@ async function main() {
     confidentialTransferFromOperation({ chainId: config.chainId }),
     confidentialTransferAndCallOperation({ chainId: config.chainId }),
     unwrapOperation({ chainId: config.chainId }),
+    finalizeUnwrapOperation({ chainId: config.chainId }),
   ]);
   const zamaHandlers = buildZamaHandlers({ registry, chain: sepolia });
   const forwardToUpstream = createUpstreamForwarder(config.rpcUrl);

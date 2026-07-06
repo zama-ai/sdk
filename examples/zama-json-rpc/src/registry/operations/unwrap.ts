@@ -1,6 +1,6 @@
 import { parseAbi, type Address } from "viem";
 import { unwrapContract } from "@zama-fhe/sdk";
-import type { ConfidentialOperation } from "../types.js";
+import type { EncryptOperation } from "../types.js";
 
 /**
  * The "public-looking" surface for unwrap. Unlike `transfer`/`transferFrom`,
@@ -30,10 +30,11 @@ const publicAbi = parseAbi([
  * single-request auto-rewrite this registry does. Deliberately not
  * implemented here — see WALKTHROUGH.md.
  */
-export function unwrapOperation(params: { chainId: number }): ConfidentialOperation {
+export function unwrapOperation(params: { chainId: number }): EncryptOperation {
   const { chainId } = params;
 
   return {
+    kind: "encrypt",
     chainId,
     name: "unwrap (ERC-7984 standard, phase 1/2 — request only)",
     publicAbi,

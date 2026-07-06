@@ -30,6 +30,16 @@ export function mapSdkErrorToJsonRpc(error: unknown): JsonRpcError {
       message: "Zama SDK encryption failed",
       data: { reason: e.message },
     }),
+    DECRYPTION_FAILED: (e) => ({
+      code: RpcErrorCode.ServerError,
+      message: "Zama SDK public decryption failed",
+      data: {
+        reason: e.message,
+        // Most common cause for finalizeUnwrap: the KMS hasn't finished
+        // decrypting yet. Not guaranteed, but a reasonable retry hint.
+        retryable: true,
+      },
+    }),
     CONFIGURATION: (e) => ({
       code: RpcErrorCode.InternalError,
       message: "Zama SDK misconfiguration",

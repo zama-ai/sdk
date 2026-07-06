@@ -1,5 +1,5 @@
 import { parseAbi, type Address, type Hex } from "viem";
-import type { ConfidentialOperation } from "../types.js";
+import type { EncryptOperation } from "../types.js";
 
 /**
  * The "public-looking" surface: ERC-1363's `transferAndCall` — a
@@ -34,10 +34,11 @@ const realAbi = parseAbi([
  */
 export function confidentialTransferAndCallOperation(params: {
   chainId: number;
-}): ConfidentialOperation {
+}): EncryptOperation {
   const { chainId } = params;
 
   return {
+    kind: "encrypt",
     chainId,
     name: "confidentialTransferAndCall (ERC-7984 standard)",
     publicAbi,

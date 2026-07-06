@@ -1,6 +1,6 @@
 import { parseAbi, type Address } from "viem";
 import { confidentialTransferContract } from "@zama-fhe/sdk";
-import type { ConfidentialOperation } from "../types.js";
+import type { EncryptOperation } from "../types.js";
 
 /**
  * The "public-looking" surface callers use: a standard ERC-20 `transfer`.
@@ -22,10 +22,11 @@ const publicAbi = parseAbi(["function transfer(address to, uint256 amount) retur
  * addresses actually are valid confidential tokens is resolved dynamically
  * per-request (see `src/zama/rewriter.ts`), not declared here.
  */
-export function confidentialTransferOperation(params: { chainId: number }): ConfidentialOperation {
+export function confidentialTransferOperation(params: { chainId: number }): EncryptOperation {
   const { chainId } = params;
 
   return {
+    kind: "encrypt",
     chainId,
     name: "confidentialTransfer (ERC-7984 standard)",
     publicAbi,
