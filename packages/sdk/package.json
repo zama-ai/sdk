@@ -157,6 +157,7 @@
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.web.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json && api-extractor run --local -c api-extractor.query.json",
     "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json"
   },
   "dependencies": {
