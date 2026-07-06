@@ -6,6 +6,7 @@ import { TokenValidityCache } from "../../src/registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "../../src/registry/operations/confidential-transfer.js";
 import { confidentialTransferFromOperation } from "../../src/registry/operations/confidential-transfer-from.js";
 import { confidentialTransferAndCallOperation } from "../../src/registry/operations/confidential-transfer-and-call.js";
+import { confidentialTransferFromAndCallOperation } from "../../src/registry/operations/confidential-transfer-from-and-call.js";
 import { unwrapOperation } from "../../src/registry/operations/unwrap.js";
 import { finalizeUnwrapOperation } from "../../src/registry/operations/finalize-unwrap.js";
 import { maybeRewriteTransaction } from "../../src/zama/rewriter.js";
@@ -48,11 +49,12 @@ describe("registered operations don't collide on selector", () => {
       confidentialTransferOperation({ chainId: CHAIN_ID }),
       confidentialTransferFromOperation({ chainId: CHAIN_ID }),
       confidentialTransferAndCallOperation({ chainId: CHAIN_ID }),
+      confidentialTransferFromAndCallOperation({ chainId: CHAIN_ID }),
       unwrapOperation({ chainId: CHAIN_ID }),
       finalizeUnwrapOperation({ chainId: CHAIN_ID }),
     ]);
 
-    expect(registry.list()).toHaveLength(5);
+    expect(registry.list()).toHaveLength(6);
 
     const transferData = encodeFunctionData({
       abi: confidentialTransferOperation({ chainId: CHAIN_ID }).publicAbi,
@@ -164,6 +166,50 @@ describe("confidentialTransferAndCall", () => {
     expect(decoded.functionName).toBe("confidentialTransferAndCall");
     expect(decoded.args?.[0]).toBe(TO);
     expect(decoded.args?.[3]).toBe(opaquePayload);
+  });
+});
+
+describe("confidentialTransferFromAndCall", () => {
+  it("rewrites transferFromAndCall(from, to, amount, data) and forwards `data` unchanged", async () => {
+    const registry = new ConfidentialOperationRegistry([
+      confidentialTransferFromAndCallOperation({ chainId: CHAIN_ID }),
+    ]);
+    const opaquePayload = "0x1234abcd" as const;
+    const data = encodeFunctionData({
+      abi: confidentialTransferFromAndCallOperation({ chainId: CHAIN_ID }).publicAbi,
+      functionName: "transferFromAndCall",
+      args: [HOLDER, TO, 15n, opaquePayload],
+    });
+    const sdk = fakeSdk();
+
+    const result = await maybeRewriteTransaction({
+      sdk,
+      registry,
+      tokenValidityCache: new TokenValidityCache(),
+      chainId: CHAIN_ID,
+      tx: { from: FROM, to: TOKEN, data },
+      logger,
+      method: "eth_sendTransaction",
+    });
+
+    expect(result.rewritten).toBe(true);
+    expect(sdk.encrypt).toHaveBeenCalledWith({
+      values: [{ value: 15n, type: "euint64" }],
+      contractAddress: TOKEN,
+      userAddress: FROM, // the operator (msg.sender), not the token holder
+    });
+
+    const realAbi = confidentialTransferFromAndCallOperation({ chainId: CHAIN_ID }).buildRealCall({
+      contractAddress: TOKEN,
+      publicArgs: [HOLDER, TO, 15n, opaquePayload],
+      encryptedValue: ENCRYPTED_VALUE,
+      inputProof: INPUT_PROOF,
+    }).abi;
+    const decoded = decodeFunctionData({ abi: realAbi, data: result.data });
+    expect(decoded.functionName).toBe("confidentialTransferFromAndCall");
+    expect(decoded.args?.[0]).toBe(HOLDER);
+    expect(decoded.args?.[1]).toBe(TO);
+    expect(decoded.args?.[4]).toBe(opaquePayload);
   });
 });
 

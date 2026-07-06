@@ -49,4 +49,19 @@ describe("ConfidentialOperationRegistry", () => {
 
     expect(registry.list()).toHaveLength(1);
   });
+
+  it("fails fast at construction if two operations share a (chainId, selector)", () => {
+    const duplicate = {
+      ...confidentialTransferOperation({ chainId: CHAIN_ID }),
+      name: "duplicate",
+    };
+
+    expect(
+      () =>
+        new ConfidentialOperationRegistry([
+          confidentialTransferOperation({ chainId: CHAIN_ID }),
+          duplicate,
+        ]),
+    ).toThrow(/share the same selector/);
+  });
 });

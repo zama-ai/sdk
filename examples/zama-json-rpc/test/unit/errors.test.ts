@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigurationError, RelayerRequestFailedError } from "@zama-fhe/sdk";
+import { ConfigurationError, RelayerRequestFailedError, RpcRateLimitError } from "@zama-fhe/sdk";
 import { mapSdkErrorToJsonRpc } from "../../src/rpc/errors.js";
 
 describe("mapSdkErrorToJsonRpc", () => {
@@ -8,6 +8,13 @@ describe("mapSdkErrorToJsonRpc", () => {
     const mapped = mapSdkErrorToJsonRpc(error);
 
     expect(mapped.data).toMatchObject({ statusCode: 429, retryable: true, retryAfter: 30 });
+  });
+
+  it("propagates retryAfter for upstream RPC rate-limiting too, not just the relayer's", () => {
+    const error = new RpcRateLimitError("rpc rate limited", { retryAfter: 5 });
+    const mapped = mapSdkErrorToJsonRpc(error);
+
+    expect(mapped.data).toMatchObject({ retryable: true, retryAfter: 5 });
   });
 
   it("maps ConfigurationError to an internal error", () => {

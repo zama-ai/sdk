@@ -17,13 +17,22 @@ const publicAbi = parseAbi(["function finalizeUnwrap(bytes32 unwrapRequestId) re
  * decryptionProof)` call.
  *
  * This is a `"decrypt"`-kind operation, not `"encrypt"`: `unwrapRequestId`
- * doubles as the ciphertext handle for the pending amount.
- * `sdk.decryption.decryptPublicValues()` publicly discloses it — the
- * ERC-7984 protocol's own design (see `AmountDisclosed` in `IERC7984.sol`),
- * not something this wrapper invents — and needs no signer, same
- * no-custody property as `sdk.encrypt()`. If the KMS hasn't finished the
- * decryption yet, the call fails and the caller just retries later; no
- * polling loop needed here.
+ * doubles as the ciphertext handle for the pending amount. This was a
+ * genuine risk worth checking rather than assuming (the reference
+ * implementation also exposes a separate `unwrapAmount(unwrapRequestId)`
+ * getter, which could have meant a lookup was needed) — verified against
+ * `ERC7984ERC20Wrapper.sol` (openzeppelin-confidential-contracts, vendored
+ * under `contracts/lib/forge-fhevm/dependencies/`): `unwrapRequestId` is
+ * assigned as `euint64.unwrap(unwrapAmount_)` at request time, and
+ * `unwrapAmount(id)` is defined as `euint64.wrap(id)` — a pure, bit-identical
+ * type cast in both directions, not a separate stored value. So the two
+ * really are the same handle. `sdk.decryption.decryptPublicValues()`
+ * publicly discloses it — the ERC-7984 protocol's own design (see
+ * `UnwrapFinalized`/`FHE.checkSignatures` in the same contract), not
+ * something this wrapper invents — and needs no signer, same no-custody
+ * property as `sdk.encrypt()`. If the KMS hasn't finished the decryption
+ * yet, the call fails and the caller just retries later; no polling loop
+ * needed here.
  */
 export function finalizeUnwrapOperation(params: { chainId: number }): DecryptOperation {
   const { chainId } = params;

@@ -184,17 +184,23 @@ needs `userDecrypt`/`delegatedUserDecrypt` and a real signer. That distinction i
 
 - HTTP JSON-RPC server, single + batch requests, pass-through for every non-matched
   method.
-- Five operations, each working for **any** confidential token (no per-token
+- Six operations, each working for **any** confidential token (no per-token
   configuration): `confidentialTransfer`, `confidentialTransferFrom`,
-  `confidentialTransferAndCall`, `unwrap`, and `finalizeUnwrap` — the full
-  two-phase unwrap flow, not just phase 1 (see "Key design decisions" for
-  how `finalizeUnwrap` fits). All ERC-7984 standard, `euint64` amount,
-  dynamically validated per-request via `sdk.registry.isConfidentialTokenValid()`.
-  Tested live against cUSDC on Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`,
-  same token used by `examples/react-wagmi`'s vault demo), but not specific
-  to it. `wrap` needs no operation entry at all — its amount is plaintext by
-  design (see "Operations" in README.md), so it already works as
-  pass-through.
+  `confidentialTransferAndCall`, `confidentialTransferFromAndCall`, `unwrap`,
+  and `finalizeUnwrap` — the full two-phase unwrap flow, not just phase 1
+  (see "Key design decisions" for how `finalizeUnwrap` fits).
+  `confidentialTransferFromAndCall` (the operator-initiated counterpart to
+  `confidentialTransferAndCall`) was found missing during the critical
+  review pass below and added — it maps onto ERC-1363's real
+  `transferFromAndCall(address,address,uint256,bytes)`, verified live
+  against the real relayer (`0xc34cd` = 799,949 gas, a real successful
+  estimate against the real on-chain function). All ERC-7984 standard,
+  `euint64` amount, dynamically validated per-request via
+  `sdk.registry.isConfidentialTokenValid()`. Tested live against cUSDC on
+  Sepolia (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`, same token used by
+  `examples/react-wagmi`'s vault demo), but not specific to it. `wrap` needs
+  no operation entry at all — its amount is plaintext by design (see
+  "Operations" in README.md), so it already works as pass-through.
 - `zama_getCapabilities`, `zama_getNetworkConfig`, `zama_listConfidentialOperations`.
 - SDK-error → JSON-RPC-error mapping via `matchZamaError`, including relayer
   back-pressure (`retryable` / `retryAfter` from `RelayerRequestFailedError` — see
@@ -350,10 +356,12 @@ broadcast to the live network — no mocking, no fork, anywhere.
    accepts calldata under either field now (`data` wins if both are present); the
    rewritten output keeps both in sync if the caller used `input`. Verified live with
    a real `eth_estimateGas` call using `input` instead of `data`.
-5. **Five operations wired**, including the full two-phase unwrap
-   (`confidentialTransfer`, `confidentialTransferFrom`, `confidentialTransferAndCall`,
-   `unwrap`, `finalizeUnwrap`). `decryptBalanceOf`-style reads of a still-confidential
-   balance are still out of scope — that needs `userDecrypt`/a real signer, not the
+5. **Six operations wired** (a sixth, `confidentialTransferFromAndCall`, was found
+   missing and added during the critical review pass — see below), including the full
+   two-phase unwrap (`confidentialTransfer`, `confidentialTransferFrom`,
+   `confidentialTransferAndCall`, `confidentialTransferFromAndCall`, `unwrap`,
+   `finalizeUnwrap`). `decryptBalanceOf`-style reads of a still-confidential balance are
+   still out of scope — that needs `userDecrypt`/a real signer, not the
    signer-independent public-decrypt path `finalizeUnwrap` uses (see "Key design
    decisions" #6). Any *token* is already supported dynamically (see "Dynamic token
    discovery"); adding more *operations* is still a code change, by design.
@@ -391,6 +399,65 @@ broadcast to the live network — no mocking, no fork, anywhere.
    own encrypt path, but didn't exhaustively verify one doesn't exist deeper in the
    relayer/WASM layer either — the wrapper's own check is defense in depth regardless).
 
+## Critical review pass
+
+After the write-side limitations above were closed, a dedicated pass re-read every
+source file adversarially, hunting for bugs/design issues rather than confirming what
+was already believed correct — verifying claims against actual SDK/contract source
+wherever possible instead of re-trusting earlier assumptions. Findings, in order of how
+much they mattered:
+
+1. **A previously-shipped design assumption turned out to be right, but had never
+   actually been checked against source — now it has.** `finalizeUnwrap` assumes
+   `unwrapRequestId` doubles as the ciphertext handle for the pending amount. The
+   reference contract also exposes a separate `unwrapAmount(unwrapRequestId)` getter,
+   which *could* have meant a real lookup was needed (a genuine bug, if so — decrypting
+   the wrong value). Checked against the vendored contract source
+   (`ERC7984ERC20Wrapper.sol`): `unwrapRequestId` is assigned as
+   `euint64.unwrap(unwrapAmount_)` and the getter is defined as `euint64.wrap(id)` — a
+   pure, bit-identical type cast both ways, not a stored lookup. The assumption was
+   correct; it just hadn't been verified until this pass. See `finalize-unwrap.ts`.
+2. **A missing operation, found by reading `IERC7984.sol` end to end rather than working
+   from the original brainstorm list.** `confidentialTransferFromAndCall` (operator-
+   initiated transfer + callback) exists in the real interface and was never wired up.
+   Added as a sixth operation, mapped onto ERC-1363's real `transferFromAndCall`
+   selector (verified against `IERC1363.sol`, same reasoning as the existing
+   `confidentialTransferAndCall`), and verified live against the real relayer.
+3. **The uncached `isConfidentialTokenValid` finding** (see limitation #6 above) — the
+   single highest-value finding of this pass, since it was a genuine performance bug
+   affecting *all* traffic sharing a common selector, not a hypothetical.
+4. **`RPC_RATE_LIMITED` dropped `retryAfter`** in `rpc/errors.ts` — `RpcRateLimitError`
+   does carry that field (checked against `errors/rpc.ts`), same shape as
+   `RelayerRequestFailedError`, but the mapping only hardcoded `retryable: true` and
+   silently dropped it. Fixed; both error paths now surface it consistently.
+5. **No guard against two operations silently colliding on the same selector.**
+   `ConfidentialOperationRegistry`'s constructor didn't check for duplicate
+   `(chainId, selector)` pairs — `find()`'s `.find()` would have silently let the first
+   match shadow the second forever. Astronomically unlikely in practice (all operation
+   names are deliberately chosen and distinct), but cheap to guard at construction time
+   rather than leave as a silent footgun. Fixed with a fail-fast check.
+6. **Selector-only matching means `transfer(address,uint256)` — the single most common
+   selector on Ethereum — gets checked against the on-chain registry on every plain
+   ERC-20 transfer that happens to be routed through this wrapper**, not just
+   confidential-token traffic. This is inherent to the "reuse a real standard shape for
+   transparency" design (see "Key design decisions"), not a bug — a dedicated,
+   non-colliding Zama-specific selector would avoid it, but would also undermine the
+   entire "ERC-20-like UX, zero required config" value proposition the ticket asks for
+   (that alternative was considered and rejected for that reason). The `TokenValidityCache`
+   fix (finding #3) removes the *repeated* cost; the first-touch cost per address is
+   accepted as the cost of the transparency design, not something to re-architect around
+   for a POC. An opt-in allowlist/fast-path for operators who know their tokens in
+   advance was considered as a further mitigation and rejected for now — it would add
+   config surface without changing the *required-config-free* default, and the cache
+   already addresses the concrete cost.
+7. **Nothing found that would change the core architecture.** The
+   logical-ABI-shape-plus-dynamic-registry-check design, and the `"encrypt"`/`"decrypt"`
+   discriminated union for operations, both held up under scrutiny — the issues found
+   were implementation gaps and a missing cache, not evidence the approach itself is
+   wrong. If a third operation *kind* ever appears (needing both encryption and
+   decryption, or neither), the discriminated union would need revisiting; that hasn't
+   happened yet.
+
 ## Extensibility
 
 - **Another token**: zero code change. Any address `sdk.registry.isConfidentialTokenValid()`
@@ -399,10 +466,11 @@ broadcast to the live network — no mocking, no fork, anywhere.
   `src/registry/operations/` implementing either the `"encrypt"` or `"decrypt"` variant
   of `ConfidentialOperation` (`src/registry/types.ts`), registered in `src/cli.ts`.
   `ConfidentialOperationRegistry` (`src/registry/index.ts`) does the selector-matching
-  generically regardless of kind — nothing else changes. Demonstrated four times over
-  (`confidentialTransferFrom`, `confidentialTransferAndCall`, `unwrap`, `finalizeUnwrap`),
-  each a small, independent addition with its own "public-looking" ABI and its own
-  real-call builder, no changes needed to the router or registry class itself
+  generically regardless of kind — nothing else changes. Demonstrated five times over
+  (`confidentialTransferFrom`, `confidentialTransferAndCall`,
+  `confidentialTransferFromAndCall`, `unwrap`, `finalizeUnwrap`), each a small,
+  independent addition with its own "public-looking" ABI and its own real-call builder,
+  no changes needed to the router or registry class itself
   (the rewriter needed exactly one new branch, for the `"decrypt"` kind — see "Key
   design decisions" #6).
 

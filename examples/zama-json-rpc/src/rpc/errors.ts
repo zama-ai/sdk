@@ -23,7 +23,7 @@ export function mapSdkErrorToJsonRpc(error: unknown): JsonRpcError {
     RPC_RATE_LIMITED: (e) => ({
       code: RpcErrorCode.ServerError,
       message: "Upstream RPC rate-limited the request",
-      data: { reason: e.message, retryable: true },
+      data: { reason: e.message, retryable: true, retryAfter: e.retryAfter },
     }),
     ENCRYPTION_FAILED: (e) => ({
       code: RpcErrorCode.ServerError,

@@ -7,6 +7,7 @@ import { TokenValidityCache } from "./registry/token-validity-cache.js";
 import { confidentialTransferOperation } from "./registry/operations/confidential-transfer.js";
 import { confidentialTransferFromOperation } from "./registry/operations/confidential-transfer-from.js";
 import { confidentialTransferAndCallOperation } from "./registry/operations/confidential-transfer-and-call.js";
+import { confidentialTransferFromAndCallOperation } from "./registry/operations/confidential-transfer-from-and-call.js";
 import { unwrapOperation } from "./registry/operations/unwrap.js";
 import { finalizeUnwrapOperation } from "./registry/operations/finalize-unwrap.js";
 import { createLogger } from "./logging/logger.js";
@@ -31,6 +32,7 @@ async function main() {
     confidentialTransferOperation({ chainId: config.chainId }),
     confidentialTransferFromOperation({ chainId: config.chainId }),
     confidentialTransferAndCallOperation({ chainId: config.chainId }),
+    confidentialTransferFromAndCallOperation({ chainId: config.chainId }),
     unwrapOperation({ chainId: config.chainId }),
     finalizeUnwrapOperation({ chainId: config.chainId }),
   ]);

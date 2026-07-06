@@ -29,6 +29,23 @@ export class ConfidentialOperationRegistry {
       }
       return { operation, selector: toFunctionSelector(abiItem) };
     });
+
+    // Two operations sharing a (chainId, selector) would silently shadow one
+    // another in `find()` (first match wins) — fail fast at construction
+    // instead of leaving the second operation silently unreachable.
+    const seen = new Map<string, string>();
+    for (const entry of this.#entries) {
+      const key = `${entry.operation.chainId}:${entry.selector.toLowerCase()}`;
+      const existing = seen.get(key);
+      if (existing) {
+        throw new Error(
+          `Registry misconfiguration: "${entry.operation.name}" and "${existing}" share the same ` +
+            `selector (${entry.selector}) on chain ${entry.operation.chainId} — one would silently ` +
+            "shadow the other.",
+        );
+      }
+      seen.set(key, entry.operation.name);
+    }
   }
 
   find(chainId: number, data: Hex): ConfidentialOperation | undefined {

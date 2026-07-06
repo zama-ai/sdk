@@ -29,8 +29,8 @@ zama-json-rpc
     |
     |-- calldata shape matches a known confidential operation
     |   (confidentialTransfer, confidentialTransferFrom,
-    |    confidentialTransferAndCall, unwrap, or finalizeUnwrap —
-    |    see "Operations" below)
+    |    confidentialTransferAndCall, confidentialTransferFromAndCall,
+    |    unwrap, or finalizeUnwrap — see "Operations" below)
     |       -> is "to" a genuine confidential token? (on-chain check via
     |          Zama's wrappers registry, sdk.registry.isConfidentialTokenValid)
     |             yes -> decode plaintext args, then either encrypt the
@@ -87,7 +87,7 @@ Expected output:
 
 ```text
 Zama JSON-RPC server listening on http://127.0.0.1:8545/
-Auto-rewriting confidential operations: confidentialTransfer (ERC-7984 standard), confidentialTransferFrom (ERC-7984 standard), confidentialTransferAndCall (ERC-7984 standard), unwrap (ERC-7984 standard, phase 1/2 — request only), finalizeUnwrap (ERC-7984 standard, phase 2/2 — completes unwrap)
+Auto-rewriting confidential operations: confidentialTransfer (ERC-7984 standard), confidentialTransferFrom (ERC-7984 standard), confidentialTransferAndCall (ERC-7984 standard), confidentialTransferFromAndCall (ERC-7984 standard), unwrap (ERC-7984 standard, phase 1/2 — request only), finalizeUnwrap (ERC-7984 standard, phase 2/2 — completes unwrap)
 ```
 
 ### Use it as a normal RPC endpoint
@@ -154,6 +154,7 @@ registry confirms is a real confidential token:
 | `transfer(address to, uint256 amount)`                       | `confidentialTransfer(to, encryptedAmount, inputProof)`                    | encrypt |
 | `transferFrom(address from, address to, uint256 amount)`     | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`          | encrypt |
 | `transferAndCall(address to, uint256 amount, bytes data)`    | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`       | encrypt |
+| `transferFromAndCall(address from, address to, uint256 amount, bytes data)` | `confidentialTransferFromAndCall(from, to, encryptedAmount, inputProof, data)` | encrypt |
 | `unwrap(address from, address to, uint256 amount)`            | `unwrap(from, to, encryptedAmount, inputProof)` — phase 1/2                | encrypt |
 | `finalizeUnwrap(bytes32 unwrapRequestId)`                     | `finalizeUnwrap(unwrapRequestId, unwrapAmountCleartext, decryptionProof)` — phase 2/2 | decrypt |
 
