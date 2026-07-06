@@ -204,16 +204,26 @@ than failing immediately on the first not-yet-propagated response.
   worst case documented for `examples/node-viem`'s retry loop — that retry
   logic is kept regardless, since this was one observation, not a
   guarantee.
+- **Transfer-history decrypt path verified for real too** (closing limitation
+  #1 below), in a later session: a fresh delegation was granted (the earlier
+  one had long since expired), and `GET /transfers/...` correctly decrypted
+  three real `ConfidentialTransfer` events for the delegated holder — two
+  1 cUSDC transfers (`clearAmount: "1000000"`) matching real broadcasts made
+  by the sibling `zama-json-rpc` project in the same session (tx
+  `0xeb63a79a...` and tx `0x945f7298...`, a deposit into the
+  `ConfidentialVault` example contract), and a third, `0`-amount transfer
+  from the vault back to the holder (the vault's own internal accept/refund
+  accounting for that same deposit — a real `0`, not an error). The
+  `GET /balances/...` figure at the same time, `95001021` (95.001021 cUSDC),
+  is exactly `97.001021 − 1 − 1`, consistent with both real transfers —
+  balance and transfer-history agree with each other and with the
+  independently-known ground truth.
 
 ## Known limitations
 
-1. **Transfer-history decrypt path not independently live-tested.** The
-   balance path (`confidentialBalanceOf` → `delegatedDecryptValues`) was
-   verified for real (see above); `transfer-tracker.ts` calls the exact
-   same `DecryptCache.resolve()` with a handle sourced from a
-   `ConfidentialTransfer` log topic instead of a fresh contract read, so
-   the risk is low, but it wasn't separately exercised against a real
-   transfer amount handle in this session.
+1. ~~Transfer-history decrypt path not independently live-tested.~~
+   **Resolved** — see "Verified during this work" above: three real transfer
+   amounts decrypted, matching known ground truth exactly.
 2. **In-memory only.** Restarting the process loses all cached balances
    and transfers (delegations get rediscovered from chain on next poll,
    using `--fromBlock` as the floor — anything before that block is
@@ -262,10 +272,8 @@ with the "two separate products" decision.
    deployed ACL address (Sepolia's `sepolia.aclContractAddress`); worth
    confirming before assuming this generalizes to other networks.
 3. ~~Should this be validated with a real, live delegate identity...~~
-   **Done** — a real delegation was granted on live Sepolia (tx
-   `0xdf5d592aecc59c78c7ce832eeff5c51717c2c41c74ca5715c783b13e56cffb83`)
-   and this service correctly discovered and decrypted through it. Worth
-   doing again for the transfer-history path specifically (limitation #1).
+   **Done**, for both balance and transfer-history — see "Verified during
+   this work" above.
 4. Persistent storage (swap the in-memory stores for Redis/Postgres) is
    the obvious next step if this moves beyond exploration — deliberately
    not done here to keep the POC's surface small.
