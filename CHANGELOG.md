@@ -15,6 +15,12 @@ The FHE runtime moved from the legacy `@zama-fhe/relayer-sdk` to the high-level 
 - **sdk:** types are renamed or re-sourced from `@fhevm/sdk`: `EncryptedValue` is `Hex` (was `Bytes32Hex`), `EIP712TypedData` is the structural `Eip712Like` (was a KMS union), `EncryptParameters` → `EncryptParams`, `TransportKeyPair` → `SerializedTransportKeyPair` (the live keypair is opaque; its private key is no longer readable). Removed: `ZKProofLike`, `InputProofBytesType`, `FhevmInstanceConfig`, `KmsDelegatedDecryptEIP712Type`, `PublicParamsData`, `NetworkType`, `RelayerSDKStatus`, `FheEncryptionKey`, `DecryptValuesParams`, `DelegatedDecryptValuesParams`, `ClearValueType` (use `ClearValue`).
 - **sdk:** serialized decryption permits carry a required `version` discriminator and are signed with second-granularity validity (`durationSeconds`). Permits cached by earlier versions fail validation and are transparently re-signed on next use.
 
+## [3.3.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2026-07-06)
+
+### Features
+
+- **sdk:** persist pending unshield state internally ([#497](https://github.com/zama-ai/sdk/issues/497)) ([3523b53]())
+
 ## [3.3.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2026-07-03)
 
 ### Code Refactoring

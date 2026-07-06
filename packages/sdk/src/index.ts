@@ -69,17 +69,7 @@ export type {
 } from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
-export {
-  Token,
-  WrappedToken,
-  type BatchBalancesResult,
-  type BatchDecryptAsOptions,
-  savePendingUnshield,
-  loadPendingUnshield,
-  loadPendingUnshieldRequest,
-  clearPendingUnshield,
-  type PendingUnshieldRequest,
-} from "./token";
+export { Token, WrappedToken, type BatchBalancesResult, type BatchDecryptAsOptions } from "./token";
 export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,

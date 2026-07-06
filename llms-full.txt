@@ -3200,32 +3200,31 @@ await wrappedToken.unshieldAll();
 
 ### 4. Handle interrupted unshields
 
-If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. You can detect and resume this state on the next page load.
+If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash automatically when phase 1 is submitted and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
 
 
 ### Tab: SDK
 
 ```ts
-import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
-
-// Before finalization, persist the unwrap tx hash
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
-
-// On next page load, check for pending unshields
-const pending = await loadPendingUnshield(storage, wrapperAddress);
+// On next page load, check for a pending unshield
+const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
   await wrappedToken.resumeUnshield(pending);
-  await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
 
 
 The flow is:
 
-1. **`savePendingUnshield`** -- write the unwrap transaction hash to storage before the finalize step. The SDK does not do this automatically.
-2. **`loadPendingUnshield`** -- on mount, check if there is an incomplete unshield.
-3. **`resumeUnshield`** -- pick up where the SDK left off by polling for the proof and submitting the finalize transaction.
-4. **`clearPendingUnshield`** -- clean up storage once finalization is confirmed.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1.
+2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
+
+Resuming is intentionally caller-driven: surface a "resume" prompt rather than finalizing on load, so you never trigger a wallet transaction the user did not initiate.
+
+
+> [!INFO]
+> The SDK persists and clears the pending-unshield state for you — there are no storage helpers to call by hand. `getPendingUnshield()` (read) and `unshield()` / `resumeUnshield()` (orchestrated write) are the full surface. If you orchestrate `unwrap` + `finalizeUnwrap` yourself, manage your own persistence between the two phases.
+
 
 ### 5. Use unshield hooks in React
 
@@ -3260,17 +3259,18 @@ await unshieldAll();
 ### Tab: useResumeUnshield
 
 ```tsx
-import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrapper";
-const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
-// On mount
-const pending = await loadPendingUnshield(storage, WRAPPER);
-if (pending) {
-  await resumeUnshield({ unwrapTxHash: pending });
-  await clearPendingUnshield(storage, WRAPPER);
+// The SDK persisted the unwrap tx hash during phase 1 and clears it
+// automatically once the resume finalizes; the query invalidates on success.
+const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
+const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
+
+if (unwrapTxHash) {
+  // Render a "resume" prompt — finalize on user action, not on load.
+  return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
 }
 ```
 
@@ -3801,7 +3801,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                                    |
 | `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                                 |
 | `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                                      |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `loadPendingUnshield()`.                                                             |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                             |
 | `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                                       |
 | `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                    |
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
@@ -3876,15 +3876,15 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                              | Why                                         | Fix                                                                                                 |
-| ----------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                             |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.              |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                      |
-| `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `loadPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.               |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If already finalized, clear the pending state with `clearPendingUnshield()`.   |
-| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.       |
+| What you see                              | Why                                         | Fix                                                                                                     |
+| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.     |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                 |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.                  |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                          |
+| `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |
 
 ## Next steps
 
@@ -6018,10 +6018,25 @@ await wrappedToken.unshieldAll({
 
 `(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`.
+Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`. On success it clears the persisted pending state.
 
 ```ts
-const pending = await loadPendingUnshield(storage, wrappedToken.address);
+const pending = await wrappedToken.getPendingUnshield();
+if (pending) {
+  await wrappedToken.resumeUnshield(pending);
+}
+```
+
+### getPendingUnshield
+
+`() => Promise<Hex | null>`
+
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+
+Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
+
+```ts
+const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
   await wrappedToken.resumeUnshield(pending);
 }
@@ -7470,7 +7485,7 @@ FHE decryption failed. Can occur after an interrupted unshield or when the trans
 matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing") });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
+**How to handle:** If this happens after a page reload during unshield, use `getPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
 
 ### TransactionRevertedError
 
@@ -7868,21 +7883,21 @@ matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily d
 
 ## Common problems
 
-| Symptom                                   | Cause                                        | Fix                                                                                        |
-| ----------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                         |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                |
-| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
-| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
-| `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.        |
-| `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.         |
-| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
-| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check          | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
-| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                 | Check network connectivity and RPC endpoint. Retry the shield.                             |
+| Symptom                                   | Cause                                        | Fix                                                                                             |
+| ----------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                              |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
+| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.         |
+| `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.             |
+| `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.              |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more.      |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                     |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check          | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.        |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                 | Check network connectivity and RPC endpoint. Retry the shield.                                  |
 
 ## Related
 
@@ -10468,8 +10483,7 @@ Mutation hook that resumes an unshield interrupted between the unwrap and finali
 ## Import
 
 ```ts
-import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -10478,28 +10492,27 @@ import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 ### Tab: component.tsx
 
 ```tsx
-import { useEffect } from "react";
-import { useResumeUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
-const TOKEN = "0xToken" as const;
+function ResumeUnshieldGuard({
+  wrapperAddress,
+  children,
+}: {
+  wrapperAddress: Address;
+  children: React.ReactNode;
+}) {
+  // The SDK persisted the unwrap tx hash during phase 1 and clears it
+  // automatically once the resume finalizes; the query invalidates on success.
+  const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
+  const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
-function ResumeUnshieldGuard() {
-  const sdk = useZamaSDK();
-  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
+  if (unwrapTxHash) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
+  }
 
-  useEffect(() => {
-    async function checkPending() {
-      const pending = await loadPendingUnshield(sdk.storage, TOKEN);
-      if (!pending) return;
-
-      await resumeUnshield({ unwrapTxHash: pending });
-      await clearPendingUnshield(sdk.storage, TOKEN);
-    }
-    checkPending();
-  }, []);
-
-  return null;
+  return children;
 }
 ```
 
@@ -10578,7 +10591,7 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 `Hex`
 
-Transaction hash of the original unwrap transaction. Retrieved via `loadPendingUnshield`.
+Transaction hash of the original unwrap transaction. Retrieved via `WrappedToken.getPendingUnshield()` (see [useWrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrappedToken.md)).
 
 ```ts
 await resumeUnshield({ unwrapTxHash: "0xabc..." });
@@ -10586,13 +10599,17 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 ## Recovery pattern
 
-The full recovery flow uses three utilities together:
+The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **`loadPendingUnshield(storage, tokenAddress)`** — reads the stored unwrap tx hash (returns `null` if none).
-2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt.
-3. **`clearPendingUnshield(storage, tokenAddress)`** — removes the pending record after finalize succeeds.
+1. **[`usePendingUnshield(tokenAddress)`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
-Run this check on mount to handle any session that was interrupted.
+Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
+
+
+> [!INFO]
+> The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
+
 
 ## Return Type
 
@@ -10651,9 +10668,146 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Related
 
+- [usePendingUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md) — detect an interrupted unshield to resume
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md) — unshield the entire balance
 - [WrappedToken.resumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md#resumeunshield) — imperative equivalent on the `WrappedToken` class
+
+## usePendingUnshield
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/usePendingUnshield.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md
+- logical_path: reference/react/usePendingUnshield
+
+# usePendingUnshield
+
+Read the unwrap transaction hash of an unshield that was interrupted between its two phases (returns `null` if none is pending for the wrapper).
+
+The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
+
+## Import
+
+```ts
+import { usePendingUnshield } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: ResumeUnshieldGuard.tsx
+
+```tsx
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/react-sdk";
+
+function ResumeUnshieldGuard({
+  wrapperAddress,
+  children,
+}: {
+  wrapperAddress: Address;
+  children: React.ReactNode;
+}) {
+  const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
+  const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
+
+  if (unwrapTxHash) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
+  }
+
+  return children;
+}
+```
+
+
+## Parameters
+
+### tokenAddress
+
+`Address`
+
+Address of the confidential wrapper contract. Passed positionally as the first argument.
+
+```ts
+const { data: unwrapTxHash } = usePendingUnshield("0xWrapper");
+```
+
+## Return Type
+
+`data` is `Hex | null` — the unwrap transaction hash of an interrupted unshield, or `null` when none is pending.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Suspense
+
+Use `usePendingUnshieldSuspense` inside a `<Suspense>` boundary. The hook throws a promise while loading, so `data` is always defined (`Hex | null`).
+
+```tsx
+import { usePendingUnshieldSuspense } from "@zama-fhe/react-sdk";
+
+const { data: unwrapTxHash } = usePendingUnshieldSuspense("0xWrapper");
+```
+
+## Related
+
+- [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md) — resume the interrupted unshield from the returned hash
+- [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) — standard unshield (persists/clears pending state automatically)
+- [`WrappedToken.getPendingUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md#getpendingunshield) — imperative equivalent on the `WrappedToken` class
+- [`zamaQueryKeys.pendingUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) — cache keys for manual invalidation
 
 ## useUnwrap
 
@@ -15461,7 +15615,7 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 
 > **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
 
-> **Separate IndexedDB instances** for `storage` and `sessionStorage` in `ZamaProvider`: both use the same key internally, so sharing a single `IndexedDBStorage` instance causes the session entry to overwrite the encrypted keypair, forcing a re-sign on every balance decryption.
+> **Separate IndexedDB instances** for `storage` and `permitStorage` in `ZamaProvider`: not required for correctness — the SDK namespaces transport-key-pair and permit keys internally, and defaults `permitStorage` to `storage` when omitted. This example keeps them as separate `IndexedDBStorage` instances for clarity between the two storage responsibilities.
 
 > **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
 
@@ -15670,7 +15824,7 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
 
 To ensure ethers' `PollingBlockSubscriber` checks for new receipts on every poll interval (4 s rather than once per block at ~12 s), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the returned block number has not advanced, the counter increments by 1.
 
-**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `ethers adapter` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `ethers adapter` is created with the live account ref already populated. An EIP-712 session credential is persisted in IndexedDB and survives page reloads within the 30-day TTL.
+**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `ethers adapter` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `ethers adapter` is created with the live account ref already populated. An EIP-712 permit is persisted in IndexedDB and survives page reloads within the 30-day TTL.
 
 ---
 
@@ -15883,9 +16037,9 @@ import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_R
 const ethereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
 const provider = new JsonRpcProvider(HOODI_RPC_URL);
 
-// IMPORTANT: use a separate IndexedDBStorage instance for permitStorage.
-// Both storage and permitStorage use the same key internally — sharing one database
-// overwrites the encrypted keypair and forces the user to re-sign on every decryption.
+// A separate IndexedDBStorage instance for permitStorage is optional — the SDK
+// namespaces its keys internally, so storage and permitStorage can safely share one
+// database. Kept separate here for clarity between the two storage responsibilities.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 // `hoodi` is the shipped Hoodi cleartext chain preset (chain 560048). cleartext() is the
@@ -16049,31 +16203,31 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 
 ## Troubleshooting
 
-| Symptom                                                   | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                                                        |
-| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                                                                                  | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                                                        |
-| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                     |
-| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                                                                                                        | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                                                                                                                                                                                                                                            |
-| Wrong network screen appears                              | Wallet switched away from Hoodi                                                                                                                          | Click **Switch to Hoodi** to switch back to Hoodi                                                                                                                                                                                                                                                                                                                |
-| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                                                                                       | Wait for the connection to complete                                                                                                                                                                                                                                                                                                                              |
-| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                               |
-| Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                                            |
-| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                                                                                   | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                                                      |
-| Asked to sign an EIP-712 message after each action        | Session not yet cached (first use — expected)                                                                                                            | Approve once — subsequent decryptions reuse the IndexedDB-persisted session credential (30-day TTL). If the prompt recurs every time, make sure `storage` and `permitStorage` in `ZamaProvider` point to **different** `IndexedDBStorage` instances — sharing the same instance corrupts the stored credentials (see Providers setup)                            |
-| Shield fails right after the approval transaction         | The approval reverted or was rejected before the wrap step                                                                                               | Retry — useShield re-reads the allowance and re-approves only if needed                                                                                                                                                                                                                                                                                          |
-| Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                         |
-| Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                  |
-| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                |
-| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                     |
-| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                              |
-| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                        |
-| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                         |
-| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; decimals are available from `pair.underlying.decimals` / `pair.confidential.decimals` via `useListPairs`                                                                                                                                                    |
-| Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally. |
-| Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                     |
-| Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                        |
-| Revoke Access reverts with `NotDelegatedYet`              | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                         |
+| Symptom                                                   | Likely cause                                                                                                                                             | Fix                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "No wallet found" on connect                              | No EIP-1193 wallet extension installed                                                                                                                   | Install an EIP-1193 browser wallet ([Rabby](https://rabby.io) recommended; MetaMask or Phantom also work)                                                                                                                                                                                                                                                             |
+| Phantom shows a multi-chain connect dialog                | Phantom's generic picker — app auto-selects Phantom's Ethereum provider                                                                                  | Proceed normally; only Ethereum accounts are used. For a cleaner experience use [Rabby](https://rabby.io)                                                                                                                                                                                                                                                             |
+| Stuck on "Connect Wallet" after clicking                  | Wallet popup was dismissed or blocked                                                                                                                    | Open your wallet manually and approve the connection request                                                                                                                                                                                                                                                                                                          |
+| Network switch fails with error                           | Wallet cannot reach the Hoodi RPC                                                                                                                        | Check `NEXT_PUBLIC_HOODI_RPC_URL`; try the default `https://rpc.hoodi.ethpandaops.io`                                                                                                                                                                                                                                                                                 |
+| Wrong network screen appears                              | Wallet switched away from Hoodi                                                                                                                          | Click **Switch to Hoodi** to switch back to Hoodi                                                                                                                                                                                                                                                                                                                     |
+| ERC-20 balance shows `—`                                  | Not yet connected or query pending                                                                                                                       | Wait for the connection to complete                                                                                                                                                                                                                                                                                                                                   |
+| ERC-20 balance shows `0`                                  | Tokens not yet minted                                                                                                                                    | Click the **Mint** button or use one of the methods in [Minting test tokens](#minting-test-tokens)                                                                                                                                                                                                                                                                    |
+| Confidential balance shows `—` immediately after connect  | No shielded balance yet — no encrypted handle to read                                                                                                    | Shield some tokens first; the balance will display once there is something to decrypt                                                                                                                                                                                                                                                                                 |
+| "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed (small notification badge)                                                                                   | Open your wallet and approve the pending signature request; balance will update immediately                                                                                                                                                                                                                                                                           |
+| Asked to sign an EIP-712 message after each action        | Permit not yet cached (first use — expected)                                                                                                             | Approve once — subsequent decryptions reuse the IndexedDB-persisted permit (30-day TTL). Sharing one `IndexedDBStorage` instance for `storage` and `permitStorage` is safe (the SDK namespaces the keys internally); if the prompt still recurs every time, check that both point at a storage backend that actually persists across page loads (see Providers setup) |
+| Shield fails right after the approval transaction         | The approval reverted or was rejected before the wrap step                                                                                               | Retry — useShield re-reads the allowance and re-approves only if needed                                                                                                                                                                                                                                                                                               |
+| Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                              |
+| Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                       |
+| Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                     |
+| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                          |
+| "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                                   |
+| Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                             |
+| Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                              |
+| Amounts displayed as very large or very small numbers     | Raw units displayed without decimal conversion                                                                                                           | Always use `formatUnits(balance, decimals)` for display and `parseUnits(input, decimals)` for input; decimals are available from `pair.underlying.decimals` / `pair.confidential.decimals` via `useListPairs`                                                                                                                                                         |
+| Delegate can still decrypt after revocation               | Expected behavior — decrypted values are cached in IndexedDB keyed by `(token, owner, handle)`; the cache is served without re-checking the on-chain ACL | This is by design: the SDK uses the on-chain encrypted handle as the cache key (no TTL). Revocation takes effect for the delegate as soon as the owner's balance changes (via shield, transfer, or unshield), which produces a new handle and automatically invalidates the cache entry. Until then, the previously decrypted value is still accessible locally.      |
+| Grant Access reverts with `ExpirationDateBeforeOneHour`   | Expiration date is less than 1 hour in the future (ACL contract requirement)                                                                             | Set the expiry to at least 1 hour from now. The contract compares against `block.timestamp` (UTC), not your local clock — account for any clock skew. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                          |
+| Grant Access reverts with `SenderCannotBeDelegate`        | Attempted to delegate decryption access to your own address                                                                                              | Enter a different wallet address. The ACL contract does not allow self-delegation. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                                                             |
+| Revoke Access reverts with `NotDelegatedYet`              | No active delegation exists for the entered address and token                                                                                            | Verify the delegate address is correct and that a grant was previously confirmed on-chain for the selected token. A future SDK release will validate this client-side before submitting the transaction.                                                                                                                                                              |
 
 ---
 
@@ -17141,7 +17295,7 @@ const config = createConfig({
 
 `createConfig` comes from `@zama-fhe/sdk/ethers`. The injected EIP-1193 wallet powers signatures and writes; the ethers `JsonRpcProvider` powers chain reads and receipt polling. `web()` is the browser FHE relayer factory from `@zama-fhe/sdk/web`.
 
-`storage` and `permitStorage` use separate IndexedDB instances. They store different SDK state and should remain isolated.
+`storage` and `permitStorage` use separate IndexedDB instances here for clarity, but sharing one is safe — the SDK namespaces the keys internally (and defaults `permitStorage` to `storage` when omitted).
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
@@ -17527,8 +17681,8 @@ const zamaConfig = createConfig({
 <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
 ```
 
-`storage` and `permitStorage` use separate IndexedDB databases. Sharing the same instance
-can overwrite credential data and force the user to re-sign on every decrypt.
+`storage` and `permitStorage` use separate IndexedDB databases here for clarity, but sharing
+one instance is safe — the SDK namespaces the keys internally.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
@@ -17994,7 +18148,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 ```
 
@@ -18004,8 +18158,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
-credentials and wallet signatures survive page reloads during local development.
+`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
+the transport key pair and signed permits survive page reloads during local development.
 
 ---
 

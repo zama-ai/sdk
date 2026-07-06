@@ -22,7 +22,7 @@ import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnsh
 //     wagmiConfig,
 //     relayers: { [mySepolia.id]: web() },
 //     storage: indexedDBStorage,
-//     sessionStorage: indexedDBStorage,
+//     permitStorage: indexedDBStorage,
 //   });
 //   <ZamaProvider config={zamaConfig}>
 //

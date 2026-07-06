@@ -78,6 +78,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md): Mutation hook that unshields confidential tokens back to public ERC-20.
 - [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md): Mutation hook that unshields the entire confidential balance.
 - [useResumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md): Mutation hook that resumes an unshield interrupted between unwrap and finalize steps.
+- [usePendingUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md): Read the unwrap tx hash of an unshield interrupted between its two phases.
 - [useUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrap.md): Low-level mutation hook that requests an unwrap for a specific amount.
 - [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
 - [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.

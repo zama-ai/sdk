@@ -34,9 +34,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //    nonce (eth_getTransactionCount), and receipt polling to the injected wallet
 //    to avoid stale data from the Hoodi load balancer. See WALLET_METHODS below.
 //
-// 2. Separate IndexedDB instances for storage and permitStorage — both use the
-//    same internal key; sharing one DB instance causes the session entry to
-//    overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+// 2. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 3. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
 //    fresh ethers adapter bound to the new account, while ignoring spurious
@@ -46,9 +46,8 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Separate IndexedDB database for permit storage (EIP-712 wallet signatures that authorize
-// decryption). Must be distinct from indexedDBStorage ("CredentialStore") because both use
-// the same storage key — sharing one DB would overwrite the encrypted keypair and corrupt
-// credentials on the next decrypt attempt.
+// decryption) — not required for correctness (storage keys are namespaced internally), kept
+// as its own database for clarity between the two storage responsibilities.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 /**

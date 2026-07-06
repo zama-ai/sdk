@@ -93,12 +93,13 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterUnshield invalidates balance keys, wagmi, and underlyingAllowance", () => {
+  test("invalidateAfterUnshield invalidates balance keys, wagmi, underlyingAllowance, and pendingUnshield", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      zamaQueryKeys.pendingUnshield.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -147,6 +148,7 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      zamaQueryKeys.pendingUnshield.token(TOKEN),
     ];
 
     for (const key of keys) {

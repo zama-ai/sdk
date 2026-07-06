@@ -442,6 +442,9 @@ export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddre
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
+export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tokenAddress: Address): void;
+
+// @public (undocumented)
 export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
@@ -502,6 +505,15 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
+
+// @public (undocumented)
+export interface PendingUnshieldQueryConfig {
+    // (undocumented)
+    query?: Record<string, unknown>;
+}
+
+// @public
+export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: PendingUnshieldQueryConfig): QueryFactoryOptions<Hex | null, Error, Hex | null, ReturnType<typeof zamaQueryKeys.pendingUnshield.token>>;
 
 // @public (undocumented)
 export interface QueryClientLike {
@@ -913,6 +925,7 @@ export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
+    getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
@@ -1045,6 +1058,12 @@ export const zamaQueryKeys: {
     readonly totalSupply: {
         readonly all: readonly ["zama.totalSupply"];
         readonly token: (tokenAddress: Address) => readonly ["zama.totalSupply", {
+            readonly tokenAddress: `0x${string}`;
+        }];
+    };
+    readonly pendingUnshield: {
+        readonly all: readonly ["zama.pendingUnshield"];
+        readonly token: (tokenAddress: Address) => readonly ["zama.pendingUnshield", {
             readonly tokenAddress: `0x${string}`;
         }];
     };

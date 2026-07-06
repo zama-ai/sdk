@@ -25,6 +25,7 @@ import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
+import { Hex } from '@zama-fhe/sdk';
 import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
@@ -211,6 +212,12 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 
 // @public
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
+
+// @public
+export function usePendingUnshield(tokenAddress: Address, options?: Omit<UseQueryOptions<Hex | null>, "queryKey" | "queryFn">): UseQueryResult<`0x${string}` | null, Error>;
+
+// @public
+export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQueryResult<`0x${string}` | null, Error>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
