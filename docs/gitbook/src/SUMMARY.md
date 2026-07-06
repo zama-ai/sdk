@@ -65,6 +65,7 @@
   - [useUnshield](reference/react/useUnshield.md)
   - [useUnshieldAll](reference/react/useUnshieldAll.md)
   - [useResumeUnshield](reference/react/useResumeUnshield.md)
+  - [usePendingUnshield](reference/react/usePendingUnshield.md)
   - [useUnwrap](reference/react/useUnwrap.md)
   - [useUnwrapAll](reference/react/useUnwrapAll.md)
   - [useFinalizeUnwrap](reference/react/useFinalizeUnwrap.md)

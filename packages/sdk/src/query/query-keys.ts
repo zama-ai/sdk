@@ -123,6 +123,12 @@ export const zamaQueryKeys = {
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
+  pendingUnshield: {
+    all: ["zama.pendingUnshield"] as const,
+    token: (tokenAddress: Address) =>
+      ["zama.pendingUnshield", { tokenAddress: getAddress(tokenAddress) }] as const,
+  },
+
   hasPermit: {
     all: ["zama.hasPermit"] as const,
     scope: (contractAddresses: Address[], walletAccount?: WalletAccount) =>

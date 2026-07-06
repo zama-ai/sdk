@@ -10,6 +10,7 @@ export {
   invalidateAfterTransfer,
   invalidateAfterUnwrap,
   invalidateAfterUnshield,
+  invalidateAfterUnshieldSettled,
   invalidateBalanceQueries,
   invalidateWagmiBalanceQueries,
   invalidateWalletLifecycleQueries,
@@ -35,6 +36,7 @@ export {
   underlyingAllowanceQueryOptions,
   type UnderlyingAllowanceQueryConfig,
 } from "./underlying-allowance";
+export { pendingUnshieldQueryOptions, type PendingUnshieldQueryConfig } from "./pending-unshield";
 export {
   confidentialIsOperatorQueryOptions,
   type ConfidentialIsOperatorQueryConfig,

@@ -60,6 +60,7 @@ export { useFinalizeUnwrap } from "./unwrap/use-finalize-unwrap";
 export { useUnshield } from "./unshield/use-unshield";
 export { useUnshieldAll } from "./unshield/use-unshield-all";
 export { useResumeUnshield } from "./unshield/use-resume-unshield";
+export { usePendingUnshield, usePendingUnshieldSuspense } from "./unshield/use-pending-unshield";
 export {
   useUnderlyingAllowance,
   useUnderlyingAllowanceSuspense,
