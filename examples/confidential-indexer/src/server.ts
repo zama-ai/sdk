@@ -2,10 +2,29 @@ import { createServer, type Server } from "node:http";
 import { handleRequest, type RouterDeps } from "./api/router.js";
 import type { Logger } from "./logging/logger.js";
 
+/**
+ * Permissive, dev-only CORS: lets a local browser app (e.g. `examples/rpc-demo-app`)
+ * query this REST API directly cross-origin. Not something to expose as-is beyond
+ * local development.
+ */
+function setCorsHeaders(res: import("node:http").ServerResponse): void {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "authorization");
+}
+
 export function createHttpServer(params: { routerDeps: RouterDeps; logger: Logger }): Server {
   const { routerDeps, logger } = params;
 
   return createServer((req, res) => {
+    setCorsHeaders(res);
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     void (async () => {
       try {
         const url = new URL(req.url ?? "/", "http://localhost");
