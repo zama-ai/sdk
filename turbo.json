@@ -10,6 +10,33 @@
       "dependsOn": ["@zama-fhe/sdk#build", "@zama-fhe/react-sdk#build"],
       "inputs": [".size-limit.json", "packages/sdk/dist/**", "packages/react-sdk/dist/**"],
       "outputs": []
+    },
+    "//#contracts:build": {
+      "inputs": [
+        "contracts/src/**",
+        "contracts/test/**",
+        "contracts/script/**",
+        "contracts/foundry.toml",
+        "contracts/remappings.txt",
+        "contracts/soldeer.lock",
+        "contracts/dependencies/**",
+        "contracts/lib/**"
+      ],
+      "outputs": ["contracts/out/**", "contracts/cache/**"]
+    },
+    "//#contracts:test": {
+      "dependsOn": ["//#contracts:build"],
+      "inputs": [
+        "contracts/src/**",
+        "contracts/test/**",
+        "contracts/script/**",
+        "contracts/foundry.toml",
+        "contracts/remappings.txt",
+        "contracts/soldeer.lock",
+        "contracts/dependencies/**",
+        "contracts/lib/**"
+      ],
+      "outputs": []
     }
   }
 }
