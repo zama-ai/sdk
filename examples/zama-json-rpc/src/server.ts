@@ -6,6 +6,17 @@ import type { Logger } from "./logging/logger.js";
 
 const MAX_BODY_BYTES = 1_000_000;
 
+/**
+ * Permissive, dev-only CORS: lets a local browser app (e.g. `examples/rpc-demo-app`)
+ * call this server directly from a different origin/port. Not something to expose
+ * as-is beyond local development — same posture as the `0.0.0.0` bind warning.
+ */
+function setCorsHeaders(res: import("node:http").ServerResponse): void {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "content-type, authorization");
+}
+
 export function createHttpServer(params: {
   routerDeps: RouterDeps;
   httpPath: string;
@@ -15,6 +26,14 @@ export function createHttpServer(params: {
   const { routerDeps, httpPath, apiKey, logger } = params;
 
   return createServer((req, res) => {
+    setCorsHeaders(res);
+
+    if (req.method === "OPTIONS" && req.url === httpPath) {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     if (req.method !== "POST" || req.url !== httpPath) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "Not Found" }));
