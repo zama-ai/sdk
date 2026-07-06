@@ -58,13 +58,11 @@ export async function handleRequest(
       status: 200,
       body: {
         delegations: toJsonSafe(
-          deps.delegationStore
-            .list()
-            .map((d) => ({
-              delegator: d.delegator,
-              contractAddress: d.contractAddress,
-              expirationDate: d.expirationDate,
-            })),
+          (await deps.delegationStore.list()).map((d) => ({
+            delegator: d.delegator,
+            contractAddress: d.contractAddress,
+            expirationDate: d.expirationDate,
+          })),
         ),
       },
     };
@@ -83,10 +81,10 @@ export async function handleRequest(
     const contractAddress = getAddress(contractAddressRaw);
     const account = getAddress(accountRaw);
 
-    if (!deps.delegationStore.isKnownActive(account, contractAddress)) {
+    if (!(await deps.delegationStore.isKnownActive(account, contractAddress))) {
       return { status: 403, body: { error: "No known active delegation for this account/token" } };
     }
-    const snapshot = deps.balanceStore.get(account, contractAddress);
+    const snapshot = await deps.balanceStore.get(account, contractAddress);
     if (!snapshot) {
       return {
         status: 202,
@@ -109,12 +107,12 @@ export async function handleRequest(
     const contractAddress = getAddress(contractAddressRaw);
     const account = getAddress(accountRaw);
 
-    if (!deps.delegationStore.isKnownActive(account, contractAddress)) {
+    if (!(await deps.delegationStore.isKnownActive(account, contractAddress))) {
       return { status: 403, body: { error: "No known active delegation for this account/token" } };
     }
     return {
       status: 200,
-      body: { transfers: toJsonSafe(deps.transferStore.listFor(contractAddress, account)) },
+      body: { transfers: toJsonSafe(await deps.transferStore.listFor(contractAddress, account)) },
     };
   }
 

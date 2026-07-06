@@ -66,6 +66,7 @@ Components (`src/`):
 | `indexer/transfer-tracker.ts`, `indexer/transfer-store.ts` | Decrypted transfer-amount history per delegated account. |
 | `api/router.ts`, `api/auth.ts` | REST query API + app-level bearer-token auth, decoupled from `node:http` for testability (same pattern as `zama-json-rpc`'s router). |
 | `sdk.ts` | `ZamaSDK` instance with a **real** configured signer — the opposite of `zama-json-rpc`'s accountless design. |
+| `storage/kv-store.ts`, `storage/clear-value-codec.ts` | Async key-value abstraction (in-memory or Redis) the four stores above are built on — see "Persistent storage" below. |
 
 ## Key design decisions
 
@@ -224,10 +225,11 @@ than failing immediately on the first not-yet-propagated response.
 1. ~~Transfer-history decrypt path not independently live-tested.~~
    **Resolved** — see "Verified during this work" above: three real transfer
    amounts decrypted, matching known ground truth exactly.
-2. **In-memory only.** Restarting the process loses all cached balances
-   and transfers (delegations get rediscovered from chain on next poll,
-   using `--fromBlock` as the floor — anything before that block is
-   invisible to a fresh instance).
+2. ~~In-memory only.~~ **Resolved.** `--redisUrl`/`INDEXER_REDIS_URL` makes
+   all four stores (delegations, balances, transfers, decrypt cache)
+   Redis-backed instead — see "Persistent storage" below. Still opt-in, not
+   the default: without it, behavior is exactly as before (in-memory, lost
+   on restart, delegations rediscovered from `--fromBlock`).
 3. **No reorg handling.** A re-org that changes delegation state or
    transfer history within the recently-scanned window isn't detected or
    corrected.
@@ -243,6 +245,43 @@ than failing immediately on the first not-yet-propagated response.
    WALKTHROUGH.md ("open questions") for why that's a materially different
    feature (needs a fresh signer/EIP-712 interaction per request or a
    different custody model entirely), not an extension of this project.
+
+## Persistent storage
+
+All four stores (`DelegationStore`, `BalanceStore`, `TransferStore`,
+`DecryptCache`) are built on a small async `KeyValueStore` interface
+(`src/storage/kv-store.ts` — `get`/`set`/`getAll`) instead of managing their
+own `Map` directly. Two implementations: in-memory (today's default,
+unchanged behavior) and Redis (`--redisUrl`/`INDEXER_REDIS_URL`), one
+connection shared across four Redis *hashes* (one per store). Not a partial
+option — all four persist together or none do, so a restart's data loss (or
+lack of it) is predictable everywhere, not store-by-store.
+
+Chose Redis over Postgres: every store's access pattern is already a plain
+map (point lookups, upserts, full scans for `list()`/`listFor()`) with no
+relational structure or need to join across stores — Redis hashes map onto
+that directly with no schema/migration overhead, matching the "keep the
+POC's surface small" philosophy. `bigint` fields (blocks, amounts) don't
+survive `JSON.stringify` on their own, so each store's `serialize`/
+`deserialize` pair round-trips them explicitly; `ClearValue` (which can be a
+`bigint`, `boolean`, or address `string`, depending on the FHE type
+decrypted) goes through a small shared codec
+(`src/storage/clear-value-codec.ts`) that tags the runtime type before
+storing.
+
+Verified against a **real** local Redis (`docker run -d -p 6379:6379
+redis:7-alpine`), not a mock, consistent with this project's preference for
+exercising real dependencies: `test/integration/redis-store.integration.test.ts`
+round-trips a raw key, confirms `DelegationStore` survives a fresh instance
+pointed at the same Redis (simulating a restart), and confirms
+`BalanceStore`'s `bigint clearValue` survives the same round-trip with its
+type intact. Beyond the isolated store tests, the full service was also run
+live end-to-end against real Sepolia with `--redisUrl` pointed at that same
+Redis: the real delegation and real balance (`95001021`, matching the figure
+from "Verified during this work" above) were confirmed present via direct
+`redis-cli HGETALL` inspection (not just through the API), and killing and
+restarting the process showed the same data immediately available again —
+a real restart, not a simulated one.
 
 ## Relationship to `zama-json-rpc` (write-side)
 
@@ -274,6 +313,7 @@ with the "two separate products" decision.
 3. ~~Should this be validated with a real, live delegate identity...~~
    **Done**, for both balance and transfer-history — see "Verified during
    this work" above.
-4. Persistent storage (swap the in-memory stores for Redis/Postgres) is
-   the obvious next step if this moves beyond exploration — deliberately
-   not done here to keep the POC's surface small.
+4. ~~Persistent storage...~~ **Done** — see "Persistent storage" above.
+   Still opt-in (`--redisUrl`); a real production deployment would also want
+   TLS/auth on the Redis connection itself, not just reachability, which this
+   POC doesn't configure.

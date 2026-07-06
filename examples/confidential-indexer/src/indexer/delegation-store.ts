@@ -1,13 +1,39 @@
 import type { Address } from "viem";
 import type { DelegationRecord } from "../acl/types.js";
+import type { KeyValueStore } from "../storage/kv-store.js";
 
 function key(delegator: Address, contractAddress: Address): string {
   return `${delegator.toLowerCase()}:${contractAddress.toLowerCase()}`;
 }
 
+interface SerializedRecord extends Omit<DelegationRecord, "expirationDate" | "blockNumber"> {
+  expirationDate: string;
+  blockNumber: string;
+}
+
+function serialize(record: DelegationRecord): string {
+  const serialized: SerializedRecord = {
+    ...record,
+    expirationDate: record.expirationDate.toString(),
+    blockNumber: record.blockNumber.toString(),
+  };
+  return JSON.stringify(serialized);
+}
+
+function deserialize(json: string): DelegationRecord {
+  const raw = JSON.parse(json) as SerializedRecord;
+  return {
+    ...raw,
+    expirationDate: BigInt(raw.expirationDate),
+    blockNumber: BigInt(raw.blockNumber),
+  };
+}
+
 /**
- * In-memory view of which (delegator, contractAddress) pairs currently
- * delegate to this service, built from `delegation-log.ts` events.
+ * View of which (delegator, contractAddress) pairs currently delegate to
+ * this service, built from `delegation-log.ts` events. Persisted via the
+ * injected `KeyValueStore` — in-memory by default, Redis-backed if
+ * `--redisUrl` is configured (see `cli.ts`).
  *
  * Deliberately keys active/revoked state off which event type (`granted` /
  * `revoked`) was seen most recently for a pair — not off the numeric
@@ -17,23 +43,32 @@ function key(delegator: Address, contractAddress: Address): string {
  * `sdk.delegations.isActive()` before ever actually decrypting anything.
  */
 export class DelegationStore {
-  readonly #entries = new Map<string, DelegationRecord>();
+  readonly #store: KeyValueStore;
 
-  apply(records: readonly DelegationRecord[]): void {
+  constructor(store: KeyValueStore) {
+    this.#store = store;
+  }
+
+  async apply(records: readonly DelegationRecord[]): Promise<void> {
     for (const record of records) {
       const k = key(record.delegator, record.contractAddress);
-      const existing = this.#entries.get(k);
+      const existingJson = await this.#store.get(k);
+      const existing = existingJson ? deserialize(existingJson) : undefined;
       if (existing && isNewerOrEqual(existing, record)) continue;
-      this.#entries.set(k, record);
+      await this.#store.set(k, serialize(record));
     }
   }
 
-  isKnownActive(delegator: Address, contractAddress: Address): boolean {
-    return this.#entries.get(key(delegator, contractAddress))?.action === "granted";
+  async isKnownActive(delegator: Address, contractAddress: Address): Promise<boolean> {
+    const json = await this.#store.get(key(delegator, contractAddress));
+    return json !== undefined && deserialize(json).action === "granted";
   }
 
-  list(): DelegationRecord[] {
-    return [...this.#entries.values()].filter((entry) => entry.action === "granted");
+  async list(): Promise<DelegationRecord[]> {
+    const all = await this.#store.getAll();
+    return Object.values(all)
+      .map(deserialize)
+      .filter((entry) => entry.action === "granted");
   }
 }
 

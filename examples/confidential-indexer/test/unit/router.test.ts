@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DelegationStore } from "../../src/indexer/delegation-store.js";
 import { BalanceStore } from "../../src/indexer/balance-store.js";
 import { TransferStore } from "../../src/indexer/transfer-store.js";
+import { createInMemoryStore } from "../../src/storage/kv-store.js";
 import { handleRequest, type RouterDeps } from "../../src/api/router.js";
 
 const CONTRACT = "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639" as const;
@@ -10,9 +11,9 @@ const DELEGATE = "0x89c4580764f8e31B5c1B045392fE3B7f2C083584" as const;
 
 function makeDeps(overrides: Partial<RouterDeps> = {}): RouterDeps {
   return {
-    delegationStore: new DelegationStore(),
-    balanceStore: new BalanceStore(),
-    transferStore: new TransferStore(),
+    delegationStore: new DelegationStore(createInMemoryStore()),
+    balanceStore: new BalanceStore(createInMemoryStore()),
+    transferStore: new TransferStore(createInMemoryStore()),
     apiKey: undefined,
     ...overrides,
   };
@@ -62,8 +63,8 @@ describe("handleRequest — balances", () => {
   });
 
   it("returns 202 pending when delegated but not yet decrypted", async () => {
-    const delegationStore = new DelegationStore();
-    delegationStore.apply([
+    const delegationStore = new DelegationStore(createInMemoryStore());
+    await delegationStore.apply([
       {
         delegator: DELEGATOR,
         delegate: DELEGATE,
@@ -83,8 +84,8 @@ describe("handleRequest — balances", () => {
   });
 
   it("returns the cached balance once decrypted", async () => {
-    const delegationStore = new DelegationStore();
-    delegationStore.apply([
+    const delegationStore = new DelegationStore(createInMemoryStore());
+    await delegationStore.apply([
       {
         delegator: DELEGATOR,
         delegate: DELEGATE,
@@ -96,8 +97,8 @@ describe("handleRequest — balances", () => {
         action: "granted",
       },
     ]);
-    const balanceStore = new BalanceStore();
-    balanceStore.upsert({
+    const balanceStore = new BalanceStore(createInMemoryStore());
+    await balanceStore.upsert({
       delegator: DELEGATOR,
       contractAddress: CONTRACT,
       handle: "0xhandle",

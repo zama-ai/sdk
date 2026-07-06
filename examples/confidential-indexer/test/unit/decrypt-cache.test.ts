@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DelegationNotPropagatedError, type ZamaSDK } from "@zama-fhe/sdk";
 import { createLogger } from "../../src/logging/logger.js";
 import { DecryptCache } from "../../src/indexer/decrypt-cache.js";
+import { createInMemoryStore } from "../../src/storage/kv-store.js";
 
 const HANDLE = "0xhandle00000000000000000000000000000000000000000000000000000000" as const;
 const CONTRACT = "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639" as const;
@@ -16,7 +17,11 @@ function fakeSdk(delegatedDecryptValues: ZamaSDK["decryption"]["delegatedDecrypt
 describe("DecryptCache", () => {
   it("decrypts once and caches by handle (not by account)", async () => {
     const delegatedDecryptValues = vi.fn().mockResolvedValue({ [HANDLE]: 97_001021n });
-    const cache = new DecryptCache({ sdk: fakeSdk(delegatedDecryptValues), logger });
+    const cache = new DecryptCache({
+      store: createInMemoryStore(),
+      sdk: fakeSdk(delegatedDecryptValues),
+      logger,
+    });
 
     const first = await cache.resolve({
       handle: HANDLE,
@@ -46,6 +51,7 @@ describe("DecryptCache", () => {
       .mockRejectedValueOnce(new DelegationNotPropagatedError("not propagated yet"))
       .mockResolvedValueOnce({ [HANDLE]: 5n });
     const cache = new DecryptCache({
+      store: createInMemoryStore(),
       sdk: fakeSdk(delegatedDecryptValues),
       logger,
       maxRetries: 3,
@@ -68,6 +74,7 @@ describe("DecryptCache", () => {
       .fn()
       .mockRejectedValue(new DelegationNotPropagatedError("still not there"));
     const cache = new DecryptCache({
+      store: createInMemoryStore(),
       sdk: fakeSdk(delegatedDecryptValues),
       logger,
       maxRetries: 2,
@@ -88,6 +95,7 @@ describe("DecryptCache", () => {
   it("does not retry on a non-propagation error", async () => {
     const delegatedDecryptValues = vi.fn().mockRejectedValue(new Error("something else entirely"));
     const cache = new DecryptCache({
+      store: createInMemoryStore(),
       sdk: fakeSdk(delegatedDecryptValues),
       logger,
       maxRetries: 5,

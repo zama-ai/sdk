@@ -39,7 +39,7 @@ export async function trackTransfers(params: {
     params;
   const currentBlock = await publicClient.getBlockNumber();
 
-  for (const delegation of store.list()) {
+  for (const delegation of await store.list()) {
     const lastScanned =
       scanState.get(delegation.delegator, delegation.contractAddress) || fromBlockFloor;
     if (currentBlock <= lastScanned) continue;
@@ -60,7 +60,7 @@ export async function trackTransfers(params: {
           delegatorAddress: delegation.delegator,
           atBlock: transfer.blockNumber,
         });
-        transferStore.upsert({
+        await transferStore.upsert({
           contractAddress: transfer.contractAddress,
           from: transfer.from,
           to: transfer.to,

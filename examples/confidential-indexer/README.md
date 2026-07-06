@@ -123,9 +123,17 @@ decrypted — fine for local exploration, not beyond that.
 | `--relayerApiKey <key>`       | `INDEXER_RELAYER_API_KEY`            | *(optional on testnet)*  |
 | `--apiKey <key>`              | `INDEXER_API_KEY`                    | *(unauthenticated)*      |
 | `--fromBlock <block>`         | `INDEXER_FROM_BLOCK`                 | *(required)*              |
+| `--redisUrl <url>`            | `INDEXER_REDIS_URL`                  | *(unset — in-memory)*    |
 | `--pollIntervalMs <ms>`       | `INDEXER_POLL_INTERVAL_MS`           | `60000`                   |
 | `-v, --verbose`               | `INDEXER_VERBOSE`                    | `false`                   |
 | `-q, --quiet`                 | `INDEXER_QUIET`                      | `false`                   |
+
+Without `--redisUrl`, all four stores (delegations, balances, transfers,
+decrypt cache) are in-memory and lost on restart — delegations get
+rediscovered from `--fromBlock`, but decrypted balances/transfers do not, and
+already-decrypted handles get re-decrypted (a real relayer round-trip) rather
+than served from cache. With `--redisUrl`, all four persist together — see
+`src/storage/kv-store.ts` and WALKTHROUGH.md.
 
 ## Docker
 
@@ -136,20 +144,22 @@ docker run --rm -p 8787:8787 \
   -e INDEXER_CHAIN_ID=11155111 \
   -e INDEXER_OPERATIONAL_PRIVATE_KEY=0xYourDelegateKey \
   -e INDEXER_FROM_BLOCK=11200000 \
+  -e INDEXER_REDIS_URL=redis://host.docker.internal:6379 \
   confidential-indexer
 ```
+
+For local Redis to test against: `docker run -d -p 6379:6379 redis:7-alpine`.
 
 ## Tests
 
 ```bash
-npm test        # unit tests, fully mocked
-npm run test:e2e  # queries real historical logs on live Sepolia — see WALKTHROUGH.md
+npm test               # unit tests, fully mocked
+npm run test:integration  # real local Redis — see "docker run" above (REDIS_URL env var to override the port)
+npm run test:e2e         # queries real historical logs on live Sepolia — see WALKTHROUGH.md
 ```
 
 ## Non-goals (this POC)
 
-- Persistent storage (in-memory only — restarting loses the cache, not the
-  on-chain delegations, which get rediscovered)
 - `userDecrypt` / per-request signature relay (still-confidential balances
   a consumer hasn't been delegated — see WALKTHROUGH.md)
 - Production auth, TEE deployment, multi-tenant hosting, HSM-backed key storage

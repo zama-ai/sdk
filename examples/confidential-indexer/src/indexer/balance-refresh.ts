@@ -31,7 +31,7 @@ export async function refreshBalances(params: {
   const atBlock = await publicClient.getBlockNumber();
   const snapshots: BalanceSnapshot[] = [];
 
-  for (const delegation of store.list()) {
+  for (const delegation of await store.list()) {
     try {
       const handle = await publicClient.readContract({
         address: delegation.contractAddress,
@@ -52,7 +52,7 @@ export async function refreshBalances(params: {
         clearValue,
         decryptedAtBlock: atBlock,
       };
-      balanceStore.upsert(snapshot);
+      await balanceStore.upsert(snapshot);
       snapshots.push(snapshot);
     } catch (error) {
       logger.warn(

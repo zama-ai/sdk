@@ -12,6 +12,8 @@ export interface AppConfig {
   apiKey: string | undefined;
   /** Block to start delegation-log scanning from. Defaults to a recent window, not genesis. */
   fromBlock: bigint;
+  /** Redis connection URL for persistent stores. Undefined = in-memory (lost on restart). */
+  redisUrl: string | undefined;
   pollIntervalMs: number;
   verbose: boolean;
   quiet: boolean;
@@ -68,6 +70,11 @@ export function parseConfig(argv: string[]): AppConfig {
       "Polling interval for new logs",
       env("INDEXER_POLL_INTERVAL_MS"),
     )
+    .option(
+      "--redisUrl <url>",
+      "Redis connection URL for persistent stores (default: in-memory, lost on restart)",
+      env("INDEXER_REDIS_URL"),
+    )
     .option("-v, --verbose", "Verbose logging", Boolean(env("INDEXER_VERBOSE")))
     .option("-q, --quiet", "Only print fatal errors", Boolean(env("INDEXER_QUIET")))
     .allowExcessArguments(true)
@@ -101,6 +108,7 @@ export function parseConfig(argv: string[]): AppConfig {
     relayerApiKey: opts.relayerApiKey,
     apiKey: opts.apiKey,
     fromBlock: BigInt(opts.fromBlock),
+    redisUrl: opts.redisUrl,
     pollIntervalMs: opts.pollIntervalMs ? Number(opts.pollIntervalMs) : DEFAULTS.pollIntervalMs,
     verbose: Boolean(opts.verbose),
     quiet: Boolean(opts.quiet),

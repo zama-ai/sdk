@@ -2,10 +2,12 @@
 import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia as viemSepolia } from "viem/chains";
+import { Redis } from "ioredis";
 import { sepolia } from "@zama-fhe/sdk/chains";
 import { parseConfig } from "./config.js";
 import { createSdk } from "./sdk.js";
 import { createLogger } from "./logging/logger.js";
+import { createInMemoryStore, createRedisStore, type KeyValueStore } from "./storage/kv-store.js";
 import { DelegationStore } from "./indexer/delegation-store.js";
 import { BalanceStore } from "./indexer/balance-store.js";
 import { TransferStore } from "./indexer/transfer-store.js";
@@ -34,10 +36,26 @@ async function main() {
   const delegateAddress = privateKeyToAccount(config.operationalPrivateKey).address;
   const publicClient = createPublicClient({ chain: viemSepolia, transport: http(config.rpcUrl) });
 
-  const delegationStore = new DelegationStore();
-  const balanceStore = new BalanceStore();
-  const transferStore = new TransferStore();
-  const decryptCache = new DecryptCache({ sdk, logger });
+  // One Redis connection, one hash per store, if --redisUrl is set; otherwise
+  // every store keeps today's default (in-memory, lost on restart). Not a
+  // partial option — all four stores persist together or none do, so a
+  // restart's data loss (or lack of it) is predictable everywhere.
+  const redis = config.redisUrl ? new Redis(config.redisUrl) : undefined;
+  if (redis) {
+    logger.info(`Persisting to Redis at ${config.redisUrl}`);
+  } else {
+    logger.warn(
+      "No --redisUrl configured: all state is in-memory and lost on restart " +
+        "(delegations get rediscovered from --fromBlock; decrypted balances/transfers do not).",
+    );
+  }
+  const store = (name: string): KeyValueStore =>
+    redis ? createRedisStore(redis, name) : createInMemoryStore();
+
+  const delegationStore = new DelegationStore(store("delegations"));
+  const balanceStore = new BalanceStore(store("balances"));
+  const transferStore = new TransferStore(store("transfers"));
+  const decryptCache = new DecryptCache({ store: store("decrypt-cache"), sdk, logger });
   const discoveryState: DelegationDiscoveryState = { lastScannedBlock: config.fromBlock - 1n };
   const transferScanState = new TransferScanState();
 
@@ -87,7 +105,10 @@ async function main() {
   const shutdown = () => {
     stopped = true;
     logger.info("Shutting down...");
-    server.close(() => process.exit(0));
+    server.close(() => {
+      redis?.disconnect();
+      process.exit(0);
+    });
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);

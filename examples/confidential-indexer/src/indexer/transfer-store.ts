@@ -1,5 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { ClearValue } from "@zama-fhe/sdk";
+import type { KeyValueStore } from "../storage/kv-store.js";
+import { deserializeClearValue, serializeClearValue } from "../storage/clear-value-codec.js";
 
 export interface DecryptedTransfer {
   contractAddress: Address;
@@ -15,20 +17,46 @@ function key(contractAddress: Address, transactionHash: Hex, amountHandle: Hex):
   return `${contractAddress.toLowerCase()}:${transactionHash}:${amountHandle}`;
 }
 
-/** Cache of decrypted confidential transfers, queryable per (token, account). */
-export class TransferStore {
-  readonly #entries = new Map<string, DecryptedTransfer>();
+function serialize(transfer: DecryptedTransfer): string {
+  return JSON.stringify({
+    ...transfer,
+    clearAmount: serializeClearValue(transfer.clearAmount),
+    blockNumber: transfer.blockNumber.toString(),
+  });
+}
 
-  upsert(transfer: DecryptedTransfer): void {
-    this.#entries.set(
+function deserialize(json: string): DecryptedTransfer {
+  const raw = JSON.parse(json);
+  return {
+    ...raw,
+    clearAmount: deserializeClearValue(raw.clearAmount),
+    blockNumber: BigInt(raw.blockNumber),
+  };
+}
+
+/**
+ * Cache of decrypted confidential transfers, queryable per (token, account).
+ * Persisted via the injected `KeyValueStore`.
+ */
+export class TransferStore {
+  readonly #store: KeyValueStore;
+
+  constructor(store: KeyValueStore) {
+    this.#store = store;
+  }
+
+  async upsert(transfer: DecryptedTransfer): Promise<void> {
+    await this.#store.set(
       key(transfer.contractAddress, transfer.transactionHash, transfer.amountHandle),
-      transfer,
+      serialize(transfer),
     );
   }
 
-  listFor(contractAddress: Address, account: Address): DecryptedTransfer[] {
+  async listFor(contractAddress: Address, account: Address): Promise<DecryptedTransfer[]> {
     const normalized = account.toLowerCase();
-    return [...this.#entries.values()]
+    const all = await this.#store.getAll();
+    return Object.values(all)
+      .map(deserialize)
       .filter(
         (t) =>
           t.contractAddress.toLowerCase() === contractAddress.toLowerCase() &&

@@ -35,7 +35,7 @@ export async function discoverDelegations(params: {
   });
 
   if (records.length > 0) {
-    store.apply(records);
+    await store.apply(records);
     for (const record of records) {
       logger.info(
         `Delegation ${record.action}: ${record.delegator} -> ${delegateAddress} on ` +
