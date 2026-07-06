@@ -188,19 +188,32 @@ than failing immediately on the first not-yet-propagated response.
   empirically confirmed in the sibling `zama-json-rpc` project's own
   Anvil-fork test (`0x67500e8d0ed826d2194f514dd0d8124f35648ab6e3fb5e6ed867134cffe661e9`,
   3 indexed topics, empty data) — reused here rather than re-deriving it.
+- **Full decrypt-via-delegation round trip, done for real on live Sepolia**
+  (not a fork, not a mock): a fresh throwaway keypair was generated as a
+  test delegate identity; the real holder of cUSDC
+  (`0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8`) sent a real
+  `delegateForUserDecryption` transaction (tx
+  `0xdf5d592aecc59c78c7ce832eeff5c51717c2c41c74ca5715c783b13e56cffb83`,
+  block `11215472`, 2-hour expiry — not permanent, self-expires) naming the
+  fresh address as delegate. Running this service with that fresh key as
+  `--operationalPrivateKey` discovered the delegation on the very next poll
+  and `GET /balances/...` returned `clearValue: "97001021"` (97.001021
+  cUSDC) at block `11215474` — decrypted via a genuine
+  `delegatedDecryptValues()` call, no mocking anywhere in the chain.
+  Propagation was near-instant here (2 blocks), faster than the ~1-2 minute
+  worst case documented for `examples/node-viem`'s retry loop — that retry
+  logic is kept regardless, since this was one observation, not a
+  guarantee.
 
 ## Known limitations
 
-1. **No live-verified decrypt-via-delegation round trip.** Everything
-   downstream of "a delegation is known" (balance/transfer decryption) is
-   verified by unit test (mocked SDK) and by the `zama-json-rpc` project's
-   own live `sdk.encrypt()`/`sdk.decryption.decryptPublicValues()` checks,
-   but **not** by an actual `delegatedDecryptValues()` call against a real
-   delegation in this project specifically — that needs either the real
-   private key for an existing delegate (`0x89c4580764f8e31B5c1B045392fE3B7f2C083584`,
-   not available in this session) or granting a **fresh, real, on-chain**
-   delegation (real gas, irreversible), which wasn't done without explicit
-   authorization. Flagged rather than glossed over.
+1. **Transfer-history decrypt path not independently live-tested.** The
+   balance path (`confidentialBalanceOf` → `delegatedDecryptValues`) was
+   verified for real (see above); `transfer-tracker.ts` calls the exact
+   same `DecryptCache.resolve()` with a handle sourced from a
+   `ConfidentialTransfer` log topic instead of a fresh contract read, so
+   the risk is low, but it wasn't separately exercised against a real
+   transfer amount handle in this session.
 2. **In-memory only.** Restarting the process loses all cached balances
    and transfers (delegations get rediscovered from chain on next poll,
    using `--fromBlock` as the floor — anything before that block is
@@ -248,10 +261,11 @@ with the "two separate products" decision.
    emit something else? These topics were captured against one specific
    deployed ACL address (Sepolia's `sepolia.aclContractAddress`); worth
    confirming before assuming this generalizes to other networks.
-3. Should this be validated with a real, live delegate identity (not a
-   throwaway key) before going further — i.e., is it worth asking for
-   access to an existing delegate's key, or granting a fresh real
-   delegation, to close the one remaining unverified gap (limitation #1)?
+3. ~~Should this be validated with a real, live delegate identity...~~
+   **Done** — a real delegation was granted on live Sepolia (tx
+   `0xdf5d592aecc59c78c7ce832eeff5c51717c2c41c74ca5715c783b13e56cffb83`)
+   and this service correctly discovered and decrypted through it. Worth
+   doing again for the transfer-history path specifically (limitation #1).
 4. Persistent storage (swap the in-memory stores for Redis/Postgres) is
    the obvious next step if this moves beyond exploration — deliberately
    not done here to keep the POC's surface small.
