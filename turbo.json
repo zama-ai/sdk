@@ -4,6 +4,11 @@
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "typecheck": { "dependsOn": ["^build"], "outputs": [] },
-    "api-report:check": { "dependsOn": ["build"], "outputs": [] }
+    "api-report:check": { "dependsOn": ["build"], "outputs": [] },
+    "//#size": {
+      "dependsOn": ["@zama-fhe/sdk#build", "@zama-fhe/react-sdk#build"],
+      "inputs": [".size-limit.json", "packages/sdk/dist/**", "packages/react-sdk/dist/**"],
+      "outputs": []
+    }
   }
 }
