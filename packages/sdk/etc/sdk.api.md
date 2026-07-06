@@ -11635,17 +11635,20 @@ export interface PreparedDecryptionPermit {
 }
 
 // @public
-export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+    // (undocumented)
     readonly kind: K;
+    // (undocumented)
     readonly request: Extract<TransactionPrepareRequest, {
         kind: K;
     }>;
-};
+}
 
 // @public
-export type PreparedPermitFor<K extends PermitKind> = PreparedDecryptionPermit & {
+export interface PreparedPermitFor<K extends PermitKind> extends PreparedDecryptionPermit {
+    // (undocumented)
     readonly kind: K;
-};
+}
 
 // @public
 export interface PreparedTransaction {

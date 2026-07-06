@@ -1,5 +1,5 @@
 import type { Hex } from "viem";
-import type { PreparedTransaction } from "../types/offline";
+import type { PreparedTransaction } from "../types/offline-signing";
 import type { TransactionResult } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";

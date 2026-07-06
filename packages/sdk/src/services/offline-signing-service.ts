@@ -83,6 +83,13 @@ export interface OfflineSigningServiceConfig {
  * through to {@link GenericProvider.prepareTransaction} so custodians with
  * their own nonce/fee managers can pin values at prepare time. Omitted
  * fields fall back to the provider's default (live chain state).
+ *
+ * The nonce and fees are part of the RLP that gets signed, so a custodian
+ * that signs the bytes you hand it (rather than assembling the tx itself)
+ * cannot fill or change them afterwards — own the `nonce` here when signing
+ * through such a path. For long-latency ceremonies (air-gapped HSM signing,
+ * slow multi-party approval) the signed payload is frozen once exported, so
+ * pin generous fee bounds up front rather than expecting to re-stamp later.
  */
 export interface OfflineSigningOptions {
   readonly signal?: AbortSignal;
@@ -313,11 +320,18 @@ export class OfflineSigningService {
    * process submitted `preparedTx.unsignedTx` directly via
    * `eth_sendRawTransaction` and this process needs to refresh its caches.
    *
+   * @remarks
    * **Trust model:** the SDK takes the caller's word that `txHash`
    * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
    * the broadcaster signed *this* payload rather than a different one from
-   * the same `from`. Callers who need a stronger guarantee can refetch the
+   * the same account. Callers who need a stronger guarantee can refetch the
    * tx via the provider and compare its serialized form.
+   *
+   * **Prefer {@link broadcast} wherever the custodian can return signed
+   * bytes.** There the tx hash is `keccak256(signedTx)` — derived from the
+   * exact bytes the SDK submits — so the payload↔hash binding holds with no
+   * trust in the caller. `resume` exists for custodians that must broadcast
+   * themselves (e.g. import-and-broadcast HSM ceremonies).
    */
   async resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(preparedTx, "resume");
@@ -333,24 +347,32 @@ export class OfflineSigningService {
    * `prepare` and `sign` was long enough for values to drift (custodian
    * ceremony, multi-party approval, etc.).
    *
-   * **Identity is not stable across refresh** — the returned `unsignedTx`
-   * bytes (and therefore the eventual tx hash) differ from the input's.
-   * Callers that key external approvals by the unsigned-tx bytes (custodian
-   * queues, policy engines) must treat the refreshed payload as a new
-   * submission and discard any pending approval against the prior one.
-   *
    * Signer-optional: works without a configured signer. The original
    * `preparedTx` is left untouched (immutable); the returned value is a fresh
    * `PreparedFor<K>` built from the original `request`.
+   *
+   * @remarks
+   * **Identity is not stable across refresh** — the returned `unsignedTx`
+   * bytes (and therefore the eventual tx hash) differ from the input's.
+   * Custodian policy engines typically key an approval by their own request
+   * id (not by the payload bytes), so a refresh does not mutate a pending
+   * approval: it is a *new* submission needing its own approval, and the
+   * prior one stays pending until it expires or you explicitly cancel it.
+   * Supersede by cancel-then-resubmit — a new request does not implicitly
+   * replace the old one.
+   *
+   * **Air-gapped ceremonies:** once a payload is exported for offline signing
+   * its bytes are frozen — nonce and fees live inside what gets signed and
+   * cannot change after export, so `refresh` there means a *fresh export*,
+   * not an in-place update. For hours-to-days signing gaps, pin generous fee
+   * bounds up front (via {@link OfflineSigningOptions}) rather than relying on
+   * a late refresh.
    */
   refresh<K extends TransactionKind>(
     preparedTx: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
-    return this.#prepareTransaction(
-      preparedTx.request as Extract<TransactionPrepareRequest, { kind: K }>,
-      options,
-    );
+    return this.#prepareTransaction(preparedTx.request, options);
   }
 
   // ── registerPermit ─────────────────────────────────────────────────────

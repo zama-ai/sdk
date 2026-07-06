@@ -7,7 +7,7 @@ import type {
   PreparedTransaction,
   TransactionKind,
   PrepareTransactionRequest,
-} from "../types/offline";
+} from "../types/offline-signing";
 import type { OfflineSigningOptions } from "../services/offline-signing-service";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";

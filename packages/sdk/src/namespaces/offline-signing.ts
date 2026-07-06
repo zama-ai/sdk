@@ -60,6 +60,17 @@ export class OfflineSigning {
    * cross-process custody — the back-end signer service consumes
    * `prepared.unsignedTx` and returns signed bytes).
    *
+   * @remarks
+   * **`from` authority (signer-less path):** with no configured signer,
+   * `request.from` is only a declaration — the SDK does not prove the caller
+   * controls it, and an EIP-1559 unsigned tx carries no `from` field at all
+   * (the on-chain sender is whichever key signs the bytes). Point `from` at
+   * the account the custodian will sign with; custodians enforce key-control
+   * at sign time — a signing request for a key the credential can't use fails
+   * there — so a mismatched `from` cannot make the custodian sign from an
+   * account you don't control. Verifying control of `from` up front is still
+   * the application's responsibility.
+   *
    * @throws if a signer IS configured and its connected wallet address differs
    *   from `request.from`. {@link SignerAddressMismatchError}
    * @throws if a signer IS configured and its chain disagrees with the
@@ -140,11 +151,19 @@ export class OfflineSigning {
    * the broadcast happens in a custody control plane or via
    * `eth_sendRawTransaction` outside this process.
    *
+   * @remarks
    * **Trust model:** the SDK takes the caller's word that `txHash`
    * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
    * the broadcaster signed *this* payload rather than a different one from
-   * the same `from`. Callers who need a stronger guarantee can refetch the
+   * the same account. Callers who need a stronger guarantee can refetch the
    * tx via the provider and compare its serialized form.
+   *
+   * **Prefer {@link broadcast} wherever the custodian can return signed
+   * bytes.** There the tx hash is `keccak256(signedTx)` — derived from the
+   * exact bytes the SDK submits — so the payload↔hash binding holds with no
+   * trust in the caller. `resume` exists for custodians that must broadcast
+   * themselves (e.g. import-and-broadcast HSM ceremonies); it trades that
+   * binding for the ability to rejoin the lifecycle from a hash alone.
    */
   resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.resume(preparedTx, txHash);
@@ -157,13 +176,24 @@ export class OfflineSigning {
    * (custodian approval ceremonies, multi-party signing, etc.). The
    * original `preparedTx` is left untouched (immutable).
    *
+   * Signer-optional: works without a configured signer.
+   *
+   * @remarks
    * **Identity is not stable across refresh** — the returned `unsignedTx`
    * bytes (and therefore the eventual tx hash) differ from the input's.
-   * Callers that key external approvals by the unsigned-tx bytes (custodian
-   * queues, policy engines) must treat the refreshed payload as a new
-   * submission and discard any pending approval against the prior one.
+   * Custodian policy engines typically key an approval by their own request
+   * id (not by the payload bytes), so a refresh does not mutate a pending
+   * approval: it is a *new* submission needing its own approval, and the
+   * prior one stays pending until it expires or you explicitly cancel it.
+   * Supersede by cancel-then-resubmit — a new request does not implicitly
+   * replace the old one.
    *
-   * Signer-optional: works without a configured signer.
+   * **Air-gapped ceremonies:** once a payload is exported for offline signing
+   * its bytes are frozen — nonce and fees live inside what gets signed and
+   * cannot change after export, so `refresh` there means a *fresh export*,
+   * not an in-place update. For hours-to-days signing gaps, pin generous
+   * `maxFeePerGas` / `maxPriorityFeePerGas` bounds up front (via
+   * {@link OfflineSigningOptions}) rather than relying on a late refresh.
    */
   refresh<K extends TransactionKind>(
     preparedTx: PreparedFor<K>,

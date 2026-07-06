@@ -91,7 +91,7 @@ export interface FinalizeUnwrapRequest {
  *
  * For USDT-style tokens that revert on a non-zero → non-zero approval,
  * callers must issue two `ApproveUnderlying` requests in sequence
- * (`amount: 0n` then `amount: N`). {@link Token.prepareShield} does not detect
+ * (`amount: 0n` then `amount: N`). {@link WrappedToken.prepareShield} does not detect
  * this case; check existing allowance first when integrating with USDT-like
  * underlyings.
  */
@@ -150,9 +150,9 @@ export interface RevokeDelegationRequest {
  * FHE decryption permit request. Unlike the transaction-kind requests, this
  * produces an EIP-712 typed-data envelope (no on-chain transaction). Pair
  * `prepare` with an external `signTypedData`, then call
- * {@link ZamaSDK.registerPermit} to register the signature.
+ * {@link Offline.registerPermit} to register the signature.
  *
- * @see {@link ExecuteRequest} — the union accepted by `sdk.offlineSigning.execute(...)`.
+ * @see {@link ExecuteRequest} — the request union {@link Offline.prepare} accepts.
  */
 export interface DecryptionPermitRequest {
   readonly kind: "DecryptionPermit";
@@ -201,7 +201,7 @@ export type PrepareTransactionRequest =
   | DelegateDecryptionRequest
   | RevokeDelegationRequest;
 
-/** Anything accepted by {@link ZamaSDK.execute}. */
+/** Union of every request {@link Offline.prepare} accepts. */
 export type ExecuteRequest = PrepareTransactionRequest | DecryptionPermitRequest;
 
 // ─── Prepared payloads ──────────────────────────────────────────────────
@@ -209,8 +209,8 @@ export type ExecuteRequest = PrepareTransactionRequest | DecryptionPermitRequest
 /**
  * RLP-encoded unsigned transaction plus the originating request and the
  * minimal context (from, to, chainId) callers need to forward across a
- * process boundary or feed back into {@link ZamaSDK.broadcast} /
- * {@link ZamaSDK.resume}.
+ * process boundary or feed back into {@link Offline.broadcast} /
+ * {@link Offline.resume}.
  *
  * Non-generic so any `PreparedX` is assignable to the wide form. Use
  * {@link PreparedFor} for kind-specific narrowing (e.g. on Token-level
@@ -235,25 +235,22 @@ export interface PreparedTransaction {
 /**
  * {@link PreparedTransaction} narrowed by `kind` — return type of
  * `sdk.offlineSigning.prepare(request)` and the Token-level `prepareX` sugar methods.
- * Always a subtype of {@link PreparedTransaction}.
  *
- * Modeled as an intersection (not a standalone interface) so kind-narrowed
- * values stay assignable to the wide `PreparedTransaction` despite
- * `Extract<…, { kind: K }>` being invariant in `K` — a separate
- * `interface PreparedFor<K>` would reject `PreparedFor<"X">` where the
- * wide form is expected.
+ * An interface extending {@link PreparedTransaction} that pins `kind` and
+ * `request` to the requested kind `K`, so every `PreparedFor<K>` remains
+ * assignable to the wide {@link PreparedTransaction}.
  */
-export type PreparedFor<K extends TransactionKind> = PreparedTransaction & {
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
   readonly kind: K;
   readonly request: Extract<PrepareTransactionRequest, { kind: K }>;
-};
+}
 
 // ─── Prepared permit (typed-data) payloads ─────────────────────────────
 
 /**
  * The opaque per-prepare context the credential service stashes on a
  * {@link PreparedDecryptionPermit}. Callers should never construct or
- * mutate this; pass it back into {@link ZamaSDK.registerPermit} alongside
+ * mutate this; pass it back into {@link Offline.registerPermit} alongside
  * the external signature.
  *
  * @internal
@@ -268,10 +265,10 @@ export interface DecryptionPermitContext {
 }
 
 /**
- * Result of {@link ZamaSDK.prepare} for the `DecryptionPermit` kind. Unlike
+ * Result of {@link Offline.prepare} for the `DecryptionPermit` kind. Unlike
  * {@link PreparedTransaction} this is a typed-data envelope (no
  * `unsignedTx`/`to`) — feed `typedData` to an external `signTypedData`,
- * then call {@link ZamaSDK.registerPermit} with the signature.
+ * then call {@link Offline.registerPermit} with the signature.
  *
  * `typedData` is `null` when the requested contracts are already covered
  * by an existing permit (no signature needed). Callers can short-circuit
@@ -283,7 +280,7 @@ export interface PreparedDecryptionPermit {
   readonly from: Address;
   readonly chainId: number;
   readonly typedData: EIP712TypedData | null;
-  /** @internal — pass to {@link ZamaSDK.registerPermit}; do not mutate. */
+  /** @internal — pass to {@link Offline.registerPermit}; do not mutate. */
   readonly context: DecryptionPermitContext;
 }
 
@@ -291,11 +288,11 @@ export interface PreparedDecryptionPermit {
  * {@link PreparedDecryptionPermit} narrowed by `kind` (currently a single
  * kind). Mirrors {@link PreparedFor} for transaction kinds.
  */
-export type PreparedPermitFor<K extends PermitKind> = PreparedDecryptionPermit & {
+export interface PreparedPermitFor<K extends PermitKind> extends PreparedDecryptionPermit {
   readonly kind: K;
-};
+}
 
-/** Outcome of {@link ZamaSDK.registerPermit}. */
+/** Outcome of {@link Offline.registerPermit}. */
 export interface DecryptionPermitResult {
   /** The newly persisted permit chunk's contract addresses. */
   readonly contracts: readonly Address[];
