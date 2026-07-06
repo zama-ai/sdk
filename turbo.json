@@ -3,6 +3,7 @@
   "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "typecheck": { "dependsOn": ["^build"], "outputs": [] }
+    "typecheck": { "dependsOn": ["^build"], "outputs": [] },
+    "api-report:check": { "dependsOn": ["build"], "outputs": [] }
   }
 }

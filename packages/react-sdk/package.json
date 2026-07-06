@@ -54,7 +54,8 @@
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
