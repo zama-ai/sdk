@@ -40,10 +40,10 @@ import { toAccount } from "viem/accounts";
 import { serializeSignature } from "@turnkey/viem";
 import { zamaConfig as zamaChainPreset, viemChain, RPC_URL } from "@/lib/config";
 
-// Separate IndexedDB instance for session/permit signatures — sharing one instance
-// with indexedDBStorage causes the permit entry to overwrite the encrypted keypair,
-// forcing a re-signing prompt on every balance decrypt.
-const sessionDBStorage = new IndexedDBStorage("SessionStore");
+// Separate IndexedDB instance for permit signatures — not required for correctness
+// (storage keys are namespaced internally), kept separate here for clarity between
+// the two storage responsibilities.
+const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 const queryClient = new QueryClient();
 const turnkeyConfig = {
@@ -299,7 +299,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       provider: new ViemProvider({ publicClient }),
       signer: new ViemSigner({ walletClient }),
       storage: indexedDBStorage,
-      permitStorage: sessionDBStorage,
+      permitStorage: permitDBStorage,
       relayers: { [chain.id]: web() },
       onEvent: (event) => {
         // Re-dispatch SDK events on window so per-component listeners (e.g.

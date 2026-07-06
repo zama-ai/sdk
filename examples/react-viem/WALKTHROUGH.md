@@ -57,8 +57,8 @@ const zamaConfig = createConfig({
 <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
 ```
 
-`storage` and `permitStorage` use separate IndexedDB databases. Sharing the same instance
-can overwrite credential data and force the user to re-sign on every decrypt.
+`storage` and `permitStorage` use separate IndexedDB databases here for clarity, but sharing
+one instance is safe — the SDK namespaces the keys internally.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 

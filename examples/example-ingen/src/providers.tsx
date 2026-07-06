@@ -33,8 +33,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // Two extra layers handle wallet reactivity:
 //
-// 1. Separate IndexedDB instances for storage and permitStorage — distinct SDK
-//    persistence responsibilities, must not overwrite each other.
+// 1. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 2. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with fresh
 //    ethers adapter state bound to the new account, while ignoring spurious
