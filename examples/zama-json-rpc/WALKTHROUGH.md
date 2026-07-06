@@ -294,13 +294,38 @@ input-verifier, coprocessor-like contracts, all forked normally), not native
 EVM-level precompiles Anvil can't emulate — there was no fundamental fork
 incompatibility, only a gas-estimation gap.
 
+### Full broadcast, done for real on live Sepolia (not a fork)
+
+With a real private key made available (the same cUSDC-holding account used
+throughout, `0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8`), the remaining gap was
+closed directly rather than only simulated. A minimal "dev signer" was built —
+deliberately **not** part of this project, kept as an ephemeral external script and
+never committed — that holds the real key, receives the wrapper's rewritten
+(still-unsigned) `eth_sendTransaction`, and actually signs + broadcasts it via
+`eth_sendRawTransaction`. This stands in for exactly the piece the wrapper is
+designed to sit in front of (a custodian/wallet's own signing infrastructure), not
+a feature the wrapper itself should ever provide.
+
+Pointing `--rpcUrl` at this dev signer instead of a public node or a fork, the
+same 1 cUSDC `confidentialTransfer` used in the fork test above was sent again —
+this time signed and broadcast for real. Receipt on live Sepolia:
+**`status 1 (success)`**, tx
+`0xeb63a79ac2eb5ed950be952ca8fa81cd1573e1704f9519945ad8cb3701bdc022`, block
+`11215537`, 448,188 gas (matching the fork test exactly), with the real
+`ConfidentialTransfer(from: 0x7205...b4f8, to: 0x3357...09dD)` event emitted by the
+token contract. Every step in the chain was real: encryption via the live relayer,
+registry validation via the live wrappers registry, signing via a real private key,
+broadcast to the live network — no mocking, no fork, anywhere.
+
 ## Known limitations
 
-1. **Needs a signer-capable upstream to actually broadcast.** True broadcast on real
-   Sepolia still needs a real signer (custodian/wallet) behind the wrapper — not
-   provided by this POC, by design (see "No private-key custody"). Demonstrated
-   end-to-end via an Anvil fork + impersonation instead (above), which needs no real
-   key but settles on a local fork, not real Sepolia.
+1. ~~Needs a signer-capable upstream to actually broadcast.~~ **Resolved** — a real
+   broadcast was completed end-to-end on live Sepolia (above). The wrapper itself
+   still deliberately holds no key and never signs anything (see "No private-key
+   custody") — what changed is that a stand-in for "the custodian's own
+   infrastructure" was built and used for this test, not that the wrapper's design
+   changed. That stand-in is not part of this project and shouldn't become one:
+   its whole value was being disposable, one-off tooling.
 2. **Smart-contract-wallet / account-abstraction senders are out of scope** — per
    explicit instruction for this work, not investigated further. This is a **current
    Zama protocol limitation**, not something this wrapper works around: if it turns out
@@ -387,7 +412,10 @@ drift. Concretely:
    `eth_sendTransaction`-only sufficient for whatever comes after this POC?
 4. What does "signer-capable upstream" look like for each real ICP candidate — do they
    even have a step in their pipeline where an unsigned `eth_sendTransaction` is
-   reachable before signing, or does their architecture sign earlier than that?
+   reachable before signing, or does their architecture sign earlier than that? The
+   mechanism itself is now proven (a real broadcast was done end-to-end, see above);
+   what's still unknown is whether each real candidate's actual signing
+   infrastructure exposes the right seam for it.
 5. Is a `decryptBalanceOf`-style read (a still-confidential user balance, not a
    protocol-disclosed value like `finalizeUnwrap`'s amount) wanted on this write-side
    surface at all, or does it belong entirely to the ticket's separate read-side
