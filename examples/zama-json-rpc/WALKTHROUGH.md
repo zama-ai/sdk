@@ -323,6 +323,45 @@ token contract. Every step in the chain was real: encryption via the live relaye
 registry validation via the live wrappers registry, signing via a real private key,
 broadcast to the live network — no mocking, no fork, anywhere.
 
+### Full broadcast of the operator-based flow, real `setOperator` included
+
+The broadcast above only exercised a self-initiated transfer. `confidentialTransferFrom`
+and `confidentialTransferFromAndCall` have a materially different on-chain
+precondition — `msg.sender` must be an approved **operator** for the token holder,
+via a real `setOperator` call — which had never been exercised end-to-end before.
+This was done for real:
+
+1. The holder (`0x7205...b4f8`) called the real `setOperator(operator, until)` on
+   cUSDC for a freshly generated operator keypair (tx `0xcc71a01d...`, confirmed
+   on-chain via `isOperator()` afterward).
+2. The operator submitted a plaintext-looking
+   `transferFromAndCall(from: holder, to: ConfidentialVault, amount, data)` through
+   the wrapper (same dev-signer stand-in pattern, this time holding the operator's
+   key, not the holder's) — `to` was the real `ConfidentialVault` example contract
+   (`0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7`, from `examples/react-wagmi`'s
+   SDK-244 deposit demo, bound to the same cUSDC), since `confidentialTransferAndCall`-
+   family operations invoke a receiver callback that reverts against a plain EOA — a
+   plain EOA (`0x3357...09dD`) had been used for the *non*-`AndCall` broadcast above
+   precisely because it doesn't need a receiver.
+3. First attempt **reverted** (`status 0`, ~98% of the gas limit consumed — a real
+   `OutOfGas`). Root cause: the gas estimate used to size the transaction had been
+   measured earlier against a plain EOA `to` (a callback to a non-contract address is
+   a cheap no-op), not the real vault — which runs actual FHE operations inside
+   `onConfidentialTransferReceived` (`FHE.add`, `FHE.allowThis`, `FHE.allow`, an
+   event emit). Re-estimating against the real vault gave 921,199 gas, noticeably
+   above the 799,949 measured earlier against the EOA — confirming the callback
+   target's own logic materially changes the cost, not just the operation shape.
+4. Retried with a corrected gas limit: **`status 1 (success)`**, tx
+   `0x945f7298...`, 903,738 gas, the real `ConfidentialTransfer` events on cUSDC and
+   the vault's own real `Deposit(from: holder, beneficiary: holder)` event (topic0
+   verified to equal `keccak256("Deposit(address,address)")`), confirming the vault
+   genuinely credited the confidential share balance.
+
+Takeaway: a gas estimate is only representative of the *specific* call graph it was
+measured against — for `...AndCall` operations, that includes whatever contract sits
+at `to`, not just the token itself. Worth calling out explicitly since it's easy to
+reuse a "close enough" earlier estimate and get a real, paid-for revert instead.
+
 ## Known limitations
 
 1. ~~Needs a signer-capable upstream to actually broadcast.~~ **Resolved** — a real
