@@ -108,6 +108,19 @@ curl -X POST http://127.0.0.1:8545/ \
   -d '{"jsonrpc":"2.0","id":1,"method":"zama_getCapabilities","params":[]}'
 ```
 
+### Check the audit trail over HTTP
+
+Every routing decision (`rewritten` / `passthrough` / `rejected`) is written
+to stdout, and also kept in an in-memory ring buffer (last 200, by default)
+queryable at `GET /audit` — gated behind `--apiKey` like everything else when
+configured. Built for `examples/rpc-demo-app`'s trace log, but useful for any
+UI or script that wants to show real rewrite decisions without tailing the
+process's own log:
+
+```bash
+curl http://127.0.0.1:8545/audit
+```
+
 ### Send a plaintext confidential transfer
 
 The caller writes a completely ordinary-looking `transfer(to, amount)` call
@@ -196,6 +209,11 @@ confidential tokens.
 Binding `--host 0.0.0.0` without `--apiKey` prints an additional warning —
 this POC has no production auth model beyond the shared bearer token (see
 `WALKTHROUGH.md`).
+
+CORS is permissive and always on (`Access-Control-Allow-Origin: *`) — dev-only,
+so a browser app (like `examples/rpc-demo-app`) can call this server directly
+cross-origin. Same posture as the `0.0.0.0` warning: fine for local
+development, not something to expose as-is.
 
 ## Docker
 

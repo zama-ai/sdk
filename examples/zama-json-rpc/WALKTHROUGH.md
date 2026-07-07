@@ -153,6 +153,22 @@ of a public read-only RPC node. This is empirically confirmed, not theoretical: 
 "Live-tested, not just unit-tested" below for a real transcript showing exactly this
 failure mode against a public Sepolia RPC.
 
+A second, sharper confirmation came later, building `examples/rpc-demo-app`: a real
+browser wallet (MetaMask, Rabby) signs `eth_sendTransaction` **client-side, inside the
+extension, before making any network call at all** — it only ever sends the network the
+already-signed transaction, via `eth_sendRawTransaction`. This holds regardless of which
+RPC URL the wallet is configured to use, since the wallet's own configured endpoint is
+never consulted for the *unsigned* request in the first place. First attempted by
+pointing the wallet's own Sepolia RPC setting at the wrapper (a reasonable-seeming
+approach that turned out to be a dead end) — the real broadcast bypassed the wrapper
+entirely and reverted (plain `transfer()` calldata sent directly to a contract that
+doesn't implement it), confirmed by the wrapper's own log showing only
+`eth_sendRawTransaction` pass-throughs, never an `eth_sendTransaction`. The fix (a
+persistent signer relay positioned as the wrapper's upstream, holding the real key and
+completing sign+broadcast for the *rewritten* request) is documented in
+`examples/rpc-demo-app/WALKTHROUGH.md` — it's the concrete shape "whatever actually
+signs" takes when the real signer is a browser wallet rather than a backend service.
+
 ### 6. `ConfidentialOperation` generalized to `"encrypt"` | `"decrypt"` — for `finalizeUnwrap`
 
 `finalizeUnwrap` was initially assessed as needing genuinely new async operation-tracking
@@ -208,7 +224,12 @@ needs `userDecrypt`/`delegatedUserDecrypt` and a real signer. That distinction i
   public-decryption failures (`DECRYPTION_FAILED`, marked retryable — the KMS
   may simply not have finished yet, see `finalizeUnwrap` below).
 - CLI (commander) + env vars mirroring fireblocks-json-rpc's flag naming; Dockerfile.
-- Audit logging of every routing decision; plaintext redaction in verbose logs.
+- Audit logging of every routing decision; plaintext redaction in verbose logs. Also
+  queryable over HTTP (`GET /audit`, an in-memory ring buffer) — added for
+  `examples/rpc-demo-app`'s trace log, but generally useful for any UI/script wanting
+  real rewrite decisions without tailing the process's own stdout.
+- Permissive, dev-only CORS on every response — lets a browser app call this server
+  directly cross-origin (needed for `examples/rpc-demo-app`).
 - Unit tests (registry, rewriter, router, pass-through, error mapping) — all mocked, 27
   passing.
 - One real end-to-end test (`test/e2e/confidential-transfer.e2e.test.ts`) that hits the
