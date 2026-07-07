@@ -19,6 +19,11 @@ the relayer round-trip cost on every single lookup.
 
 > **Status: proof of concept.** Not a maintained product.
 
+> **Integrating this into your own app?** See
+> [`HOW-TO-USE.md`](./HOW-TO-USE.md) for an integrator-focused guide
+> (execution diagram, a real end-to-end delegate-then-query walkthrough,
+> where you fit in). This README is the full CLI/reference doc.
+
 ---
 
 ## How it works
