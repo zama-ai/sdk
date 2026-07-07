@@ -1,5 +1,7 @@
 import type { Address } from "viem";
+import type { EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
+import type { TransactionResult } from "./transaction";
 
 /** Options for {@link ConfidentialToken.confidentialTransfer}. */
 export interface TransferOptions extends TransferCallbacks {
@@ -40,4 +42,17 @@ export interface ShieldOptions extends ShieldCallbacks {
 export interface UnshieldOptions extends UnshieldCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
   skipBalanceCheck?: boolean;
+}
+
+/**
+ * Result of {@link WrappedToken.unwrap} / {@link WrappedToken.unwrapAll}: a
+ * {@link TransactionResult} plus the `unwrapRequestId` decoded from the
+ * `UnwrapRequested` event.
+ *
+ * Pass the whole result (or just its `unwrapRequestId`) straight to
+ * {@link WrappedToken.finalizeUnwrap} — no manual receipt decoding needed.
+ */
+export interface UnwrapResult extends TransactionResult {
+  /** The `unwrapRequestId` to hand to `finalizeUnwrap`. */
+  unwrapRequestId: EncryptedValue;
 }

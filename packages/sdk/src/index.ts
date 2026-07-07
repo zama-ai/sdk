@@ -116,6 +116,7 @@ export type {
   ApprovalStrategy,
   UnshieldCallbacks,
   UnshieldOptions,
+  UnwrapResult,
   ShieldCallbacks,
   ShieldOptions,
   ShieldPath,

@@ -110,20 +110,9 @@ describe("Integration: multi-step workflows", () => {
       userAddress,
       provider,
     }) => {
-      // Step 1: Execute unwrap (encrypts amount, sends tx)
-      const unwrapResult = await wrappedToken.unwrap(500n);
-      expect(unwrapResult.txHash).toBe("0xtxhash");
-
-      // Verify encryption happened
-      expect(relayer.encrypt).toHaveBeenCalledWith({
-        values: [{ value: 500n, type: "euint64" }],
-        contractAddress: wrapperAddress,
-        userAddress,
-      });
-
-      // Step 2: Wait for receipt and finalize
-      // Mock receipt with UnwrapRequested event
-      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce({
+      // Mock receipt with UnwrapRequested event so unwrap() can surface the
+      // unwrapRequestId (and the later finalize can decode it).
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
           {
             topics: [
@@ -136,6 +125,18 @@ describe("Integration: multi-step workflows", () => {
         ],
       });
 
+      // Step 1: Execute unwrap (encrypts amount, sends tx)
+      const unwrapResult = await wrappedToken.unwrap(500n);
+      expect(unwrapResult.txHash).toBe("0xtxhash");
+
+      // Verify encryption happened
+      expect(relayer.encrypt).toHaveBeenCalledWith({
+        values: [{ value: 500n, type: "euint64" }],
+        contractAddress: wrapperAddress,
+        userAddress,
+      });
+
+      // Step 2: Wait for receipt and finalize
       // Reset writeContract mock to track finalize call
       vi.mocked(signer.writeContract).mockClear();
       vi.mocked(signer.writeContract).mockResolvedValue("0xfinalizetx");

@@ -37,6 +37,7 @@ import type {
   TransactionResult,
   UnshieldCallbacks,
   UnshieldOptions,
+  UnwrapResult,
 } from "../types";
 
 /**
@@ -371,17 +372,19 @@ export class WrappedToken extends Token {
 
   /**
    * Request an unwrap for a specific amount. Encrypts the amount first.
-   * Call {@link finalizeUnwrap} after the request is processed on-chain.
+   * Pass the result's `unwrapRequestId` to {@link finalizeUnwrap} once the
+   * request is processed on-chain.
    *
    * @param amount - The plaintext amount to unwrap (encrypted automatically).
-   * @returns The transaction hash and mined receipt.
+   * @returns The tx hash, mined receipt, and the `unwrapRequestId` for `finalizeUnwrap`.
    *
    * @example
    * ```ts
-   * const txHash = await wrappedToken.unwrap(500n);
+   * const result = await wrappedToken.unwrap(500n);
+   * await wrappedToken.finalizeUnwrap(result.unwrapRequestId);
    * ```
    */
-  async unwrap(amount: bigint): Promise<TransactionResult> {
+  async unwrap(amount: bigint): Promise<UnwrapResult> {
     this.#requireSigner("unwrap");
     const account = await requireAlignedWalletAccount("unwrap", this.sdk.signer, this.sdk.provider);
     const userAddress = getAddress(account.address);
@@ -397,10 +400,12 @@ export class WrappedToken extends Token {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
-    return this.submitTransaction({
-      operation: "unwrap",
-      config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
-    });
+    return this.#withUnwrapRequestId(
+      await this.submitTransaction({
+        operation: "unwrap",
+        config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
+      }),
+    );
   }
 
   /**
@@ -408,15 +413,16 @@ export class WrappedToken extends Token {
    * Uses the on-chain encrypted balance directly (no encryption needed).
    * Throws if the balance is zero.
    *
-   * @returns The transaction hash and mined receipt.
+   * @returns The tx hash, mined receipt, and the `unwrapRequestId` for `finalizeUnwrap`.
    * @throws if the balance is zero. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
-   * const txHash = await wrappedToken.unwrapAll();
+   * const result = await wrappedToken.unwrapAll();
+   * await wrappedToken.finalizeUnwrap(result.unwrapRequestId);
    * ```
    */
-  async unwrapAll(): Promise<TransactionResult> {
+  async unwrapAll(): Promise<UnwrapResult> {
     this.#requireSigner("unwrapAll");
     const account = await requireAlignedWalletAccount(
       "unwrapAll",
@@ -430,23 +436,28 @@ export class WrappedToken extends Token {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
-    return this.submitTransaction({
-      operation: "unwrapAll",
-      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
-    });
+    return this.#withUnwrapRequestId(
+      await this.submitTransaction({
+        operation: "unwrapAll",
+        config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
+      }),
+    );
   }
 
   /**
-   * Complete an unwrap by providing the public decryption proof.
-   * Call this after an unshield request has been processed on-chain.
+   * Complete an unwrap by fetching the public decryption proof and finalizing.
+   * Call this once the unwrap request has been processed on-chain.
    *
-   * @param unwrapRequestId - `unwrapRequestId` from the `UnwrapRequested` event.
+   * @param unwrapRequestId - The `unwrapRequestId` from an {@link UnwrapResult}
+   *   (`result.unwrapRequestId`) returned by {@link unwrap} / {@link unwrapAll},
+   *   or one decoded from an `UnwrapRequested` event (e.g. when finalizing
+   *   across sessions).
    * @returns The transaction hash and mined receipt.
    *
    * @example
    * ```ts
-   * const event = findUnwrapRequested(receipt.logs);
-   * const txHash = await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
+   * const { unwrapRequestId } = await wrappedToken.unwrap(500n);
+   * await wrappedToken.finalizeUnwrap(unwrapRequestId);
    * ```
    */
   async finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult> {
@@ -467,6 +478,20 @@ export class WrappedToken extends Token {
   }
 
   // PRIVATE HELPERS
+
+  /**
+   * Attach the `unwrapRequestId` decoded from an unwrap receipt so callers can
+   * hand the result straight to {@link finalizeUnwrap}. Falls back to the
+   * event's `encryptedAmount` on protocol versions that don't emit a dedicated
+   * `unwrapRequestId`.
+   */
+  #withUnwrapRequestId(result: TransactionResult): UnwrapResult {
+    const event = findUnwrapRequested(result.receipt.logs);
+    if (!event) {
+      throw new TransactionRevertedError("No UnwrapRequested event found in unwrap receipt");
+    }
+    return { ...result, unwrapRequestId: event.unwrapRequestId ?? event.encryptedAmount };
+  }
 
   async #getUnderlying(): Promise<Address> {
     if (this.#underlying !== undefined) {

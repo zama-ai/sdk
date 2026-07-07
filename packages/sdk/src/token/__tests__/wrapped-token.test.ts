@@ -259,13 +259,28 @@ describe("WrappedToken", () => {
   });
 
   describe("unwrap / unwrapAll", () => {
-    test("unwrap encrypts amount and sends transaction", async ({
+    test("unwrap encrypts amount, sends transaction, and returns the unwrapRequestId", async ({
       relayer,
       signer,
       userAddress,
       wrappedToken,
       wrapperAddress,
+      provider,
     }) => {
+      const unwrapRequestId = `0x${"cd".repeat(32)}` as const;
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              unwrapRequestId,
+            ],
+            data: `0x${"00".repeat(32)}`,
+          },
+        ],
+      });
+
       const result = await wrappedToken.unwrap(50n);
 
       expect(relayer.encrypt).toHaveBeenCalledWith({
@@ -277,6 +292,18 @@ describe("WrappedToken", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(result.txHash).toBe("0xtxhash");
+      expect(result.unwrapRequestId).toBe(unwrapRequestId);
+    });
+
+    test("unwrap throws when the receipt has no UnwrapRequested event", async ({
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+
+      await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
     });
 
     test("unwrap throws EncryptionFailed when encrypt returns empty encrypted values", async ({
@@ -300,6 +327,18 @@ describe("WrappedToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              `0x${"cd".repeat(32)}`,
+            ],
+            data: `0x${"00".repeat(32)}`,
+          },
+        ],
+      });
 
       await wrappedToken.unwrapAll();
 
@@ -428,7 +467,7 @@ describe("WrappedToken", () => {
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
-        "No UnwrapRequested event found in unshield receipt",
+        "No UnwrapRequested event found in unwrap receipt",
       );
     });
 

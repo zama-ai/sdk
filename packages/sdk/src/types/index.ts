@@ -24,5 +24,6 @@ export type {
   TransferOptions,
   ShieldOptions,
   UnshieldOptions,
+  UnwrapResult,
   ShieldPath,
 } from "./token";
