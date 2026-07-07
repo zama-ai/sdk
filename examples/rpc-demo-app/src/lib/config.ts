@@ -17,11 +17,8 @@ export const ZAMA_RPC_URL = process.env.NEXT_PUBLIC_ZAMA_RPC_URL || "http://127.
 export const INDEXER_URL = process.env.NEXT_PUBLIC_INDEXER_URL || "http://127.0.0.1:8787";
 
 // Same real Sepolia deployment used throughout the zama-json-rpc /
-// confidential-indexer verification work: cUSDC and its ConfidentialVault
-// (examples/react-wagmi's SDK-244 deposit demo).
+// confidential-indexer verification work.
 export const CUSDC_ADDRESS = (process.env.NEXT_PUBLIC_CUSDC_ADDRESS ||
   "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as `0x${string}`;
-export const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-  "0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7") as `0x${string}`;
 export const CUSDC_DECIMALS = 6;
 export const CUSDC_SYMBOL = "cUSDC";

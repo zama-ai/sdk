@@ -5,16 +5,22 @@ A small demo dApp for recording a video of `zama-json-rpc` (write-side) and
 app **never imports `@zama-fhe/sdk` or `@zama-fhe/react-sdk`** — that's the whole
 point. It only ever:
 
-- sends ordinary-looking, plain calldata (`transfer`, `transferAndCall`)
-  directly to the wrapper, and
+- sends ordinary-looking, plain calldata (`transfer`) directly to the wrapper, and
 - reads decrypted balance/history data from `confidential-indexer`'s REST API.
 
 Everything FHE-related happens invisibly, in the two backend servers — not here.
 
+`zama-json-rpc` itself supports six operations (see its own README), but this
+demo deliberately only exercises one write path — `confidentialTransfer`, via a
+plain `transfer(to, amount)` — to keep the recording focused. An earlier version
+also had a vault-deposit card (`transferAndCall`); removed as a scope decision
+(didn't add enough for the video to justify the extra screen time), not because
+anything about it was broken — see `WALKTHROUGH.md`.
+
 ## How it works
 
 ```text
-This app (Send / Deposit)
+This app (Send)
     │  eth_sendTransaction, plain calldata, sent directly via fetch
     ▼
 zama-json-rpc  ──►  scripts/signer-relay.mjs  ──►  real Sepolia
@@ -32,7 +38,7 @@ This app (History, reads)
 confidential-indexer  (decrypted, delegation-scoped)
 ```
 
-**Why Send/Deposit don't use the connected wallet to sign, and why that's not
+**Why Send doesn't use the connected wallet to sign, and why that's not
 a shortcut**: a real EIP-1193 wallet (MetaMask, Rabby, ...) signs
 `eth_sendTransaction` client-side, inside the extension, *before* making any
 network call — it only ever sends the network the already-signed transaction,
@@ -45,7 +51,7 @@ demo key and completes the sign+broadcast step for the *rewritten* request the
 wrapper forwards to it — the same role a custodian's own signing
 infrastructure plays sitting behind the wrapper in production. The connected
 wallet is still real and still shown on screen; it's just not the one signing
-the write actions.
+the write action.
 
 ## Prerequisites
 
@@ -112,25 +118,25 @@ the relay, not directly at a public RPC), the indexer, and this app.
    not directly observable from the browser), then each real receipt poll until
    mined. After confirmation, open the Etherscan link — the real mined call is
    `confidentialTransfer(to, encryptedAmount, inputProof)`.
-2. **Deposit into vault** — same idea, `transferAndCall`, real deposit into the
-   `ConfidentialVault` example contract, same trace log underneath.
-3. **Delegation badge + History** — point out the badge explaining *why* the
+2. **Delegation badge + History** — point out the badge explaining *why* the
    balance/history below are visible at all (an on-chain delegation to this one
    indexer, not a public view), then show the decrypted balance and transfer list
    updating from confidential-indexer's REST API.
 
 ## Trace log
 
-Every Send/Deposit shows a step-by-step trace underneath: each request/response
-this browser genuinely exchanges with the wrapper (full JSON payloads,
-expandable), the wrapper's own real audit-log entry for the same action
-(polled from its `GET /audit`), and one *inferred* step for the hop this
-browser can't directly observe. Nothing fabricated — entries are either a real
-captured payload or explicitly marked "inferred". See
-`src/lib/useRelayedSend.ts` and `src/components/TraceLog.tsx`.
+Send shows a step-by-step trace underneath: each request/response this browser
+genuinely exchanges with the wrapper (full JSON payloads, expandable), the
+wrapper's own real audit-log entry for the same action (polled from its
+`GET /audit`), and one *inferred* step for the hop this browser can't directly
+observe. Nothing fabricated — entries are either a real captured payload or
+explicitly marked "inferred". See `src/lib/useRelayedSend.ts` and
+`src/components/TraceLog.tsx`.
 
 ## Non-goals
 
-- No support for multiple tokens/networks — hardcoded to the same cUSDC + vault
+- No support for multiple tokens/networks — hardcoded to the same cUSDC
   used throughout `zama-json-rpc`/`confidential-indexer`'s own verification work.
+- No vault-deposit (`confidentialTransferAndCall`) card — removed as a scope
+  decision, see `WALKTHROUGH.md`. The wrapper itself still supports it.
 - No production auth — this is a demo recording aid, not a reference integration.

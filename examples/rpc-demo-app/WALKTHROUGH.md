@@ -97,13 +97,12 @@ one that's architecturally possible for this demo's requirements.
 ## What's implemented
 
 - **Send** (`src/components/SendCard.tsx`) — plain `transfer(to, amount)`
-  calldata (viem, no SDK), sent via the relay path above.
-- **Deposit into vault** (`src/components/VaultDepositCard.tsx`) — same
-  pattern, `transferAndCall(vault, amount, data)`, real deposit into the
-  `ConfidentialVault` example contract (`0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7`,
-  from `examples/react-wagmi`'s SDK-244 demo).
+  calldata (viem, no SDK), sent via the relay path above. The only write path
+  in the UI, by design — `zama-json-rpc` supports six operations (see its own
+  WALKTHROUGH.md), this demo deliberately exercises one
+  (`confidentialTransfer`) to keep the recording focused.
 - **Trace log** (`src/components/TraceLog.tsx`, `src/lib/useRelayedSend.ts`) —
-  a step-by-step timeline for every Send/Deposit: every request/response this
+  a step-by-step timeline for every Send: every request/response this
   browser genuinely exchanges with the wrapper (including its own
   `eth_getTransactionReceipt` polling, done via `fetch` rather than wagmi's
   opaque internal polling so every hop is capturable), the wrapper's own real
@@ -121,6 +120,15 @@ one that's architecturally possible for this demo's requirements.
   wallet's permanent delegation to the indexer's dedicated demo identity (real
   tx `0xd92ec15763149b8064f5533de12b1cc36845b5f2fe2faa7a1f68cf49db33af21`,
   block `11217368`).
+
+**Removed: a vault-deposit card.** A `VaultDepositCard.tsx` (`transferAndCall`
+into the `ConfidentialVault` example contract) was built and verified working
+alongside `SendCard` — see "Verified for real" below for the evidence, kept
+for the record. Removed afterward as a scope decision (didn't add enough to
+the recording to justify the extra screen time covering a second write path
+that exercises the same underlying mechanism), not because anything about it
+was broken. `zama-json-rpc` still supports `confidentialTransferAndCall`
+regardless.
 
 ## Verified for real
 
@@ -142,7 +150,8 @@ one that's architecturally possible for this demo's requirements.
     `0x2fef254ec26788f108e6d06e06719f4b9860872d739ce3a62b66276360440836`
     — status success, real selector `0x2fb74e62` (not the plaintext
     `0xa9059cbb`), confirming the calldata really was rewritten.
-  - A real vault deposit (`transferAndCall`), also user-confirmed successful.
+  - A real vault deposit (`transferAndCall`), also user-confirmed successful,
+    via the since-removed `VaultDepositCard` (see above).
   - The trace log's full 12-step timeline was captured on a real send and
     matches the design exactly (request → response → server audit entry →
     inferred relay step → receipt polls → confirmed).
@@ -152,9 +161,9 @@ one that's architecturally possible for this demo's requirements.
 1. **Requires manual multi-process setup** (signer relay, wrapper, indexer,
    this app) — no orchestration script, by design (keeps each piece legible
    for a demo/video context rather than hidden behind a compose file).
-2. **Single hardcoded token + vault** — not a general-purpose token explorer,
-   mirrors exactly what `zama-json-rpc`/`confidential-indexer` were verified
-   against this session.
+2. **Single hardcoded token** — not a general-purpose token explorer, mirrors
+   exactly what `zama-json-rpc`/`confidential-indexer` were verified against
+   this session.
 3. **The demo private key is held by a local script and in `.env`/CLI args**
    — fine for a Sepolia-only burner wallet, never do this with a real key.
 4. **Trace log's audit-entry correlation is time-window based, not ID-based**

@@ -5,7 +5,6 @@ import { useAccount, useBalance, useConnect, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { sepolia } from "wagmi/chains";
 import { SendCard } from "@/components/SendCard";
-import { VaultDepositCard } from "@/components/VaultDepositCard";
 import { HistoryCard } from "@/components/HistoryCard";
 import { DelegationStatusBadge } from "@/components/DelegationStatusBadge";
 import { SEPOLIA_CHAIN_ID } from "@/lib/config";
@@ -31,7 +30,7 @@ export default function Home() {
         <p className="subtitle">
           Connect your wallet. This app never imports the Zama SDK — see README.md before
           connecting: MetaMask's Sepolia RPC needs to point at the local zama-json-rpc wrapper for
-          Send/Deposit to actually go through it.
+          Send to actually go through it.
         </p>
         <button
           type="button"
@@ -96,7 +95,6 @@ export default function Home() {
       {address && (
         <>
           <SendCard connectedAddress={address} />
-          <VaultDepositCard connectedAddress={address} />
 
           <div className="card">
             <div className="card-title">Delegation</div>
