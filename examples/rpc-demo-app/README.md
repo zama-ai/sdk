@@ -105,14 +105,29 @@ the relay, not directly at a public RPC), the indexer, and this app.
 
 1. **Send** — fill in an amount + any recipient, hit Send. Point out the raw
    `eth_sendTransaction` payload shown on screen: `transfer(to, amount)`, nothing
-   FHE about it. After confirmation, open the Etherscan link — the real mined
-   call is `confidentialTransfer(to, encryptedAmount, inputProof)`.
+   FHE about it. Let the **trace log** play out underneath — it shows, in order,
+   the real request sent to the wrapper, the wrapper's own real audit-log entry
+   ("matched confidentialTransfer, encrypted via the real relayer"), one clearly
+   labeled *inferred* step for the signer-relay's sign+broadcast (the only hop
+   not directly observable from the browser), then each real receipt poll until
+   mined. After confirmation, open the Etherscan link — the real mined call is
+   `confidentialTransfer(to, encryptedAmount, inputProof)`.
 2. **Deposit into vault** — same idea, `transferAndCall`, real deposit into the
-   `ConfidentialVault` example contract.
+   `ConfidentialVault` example contract, same trace log underneath.
 3. **Delegation badge + History** — point out the badge explaining *why* the
    balance/history below are visible at all (an on-chain delegation to this one
    indexer, not a public view), then show the decrypted balance and transfer list
    updating from confidential-indexer's REST API.
+
+## Trace log
+
+Every Send/Deposit shows a step-by-step trace underneath: each request/response
+this browser genuinely exchanges with the wrapper (full JSON payloads,
+expandable), the wrapper's own real audit-log entry for the same action
+(polled from its `GET /audit`), and one *inferred* step for the hop this
+browser can't directly observe. Nothing fabricated — entries are either a real
+captured payload or explicitly marked "inferred". See
+`src/lib/useRelayedSend.ts` and `src/components/TraceLog.tsx`.
 
 ## Non-goals
 
