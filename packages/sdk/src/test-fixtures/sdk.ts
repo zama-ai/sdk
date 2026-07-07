@@ -9,12 +9,17 @@ import { ZamaSDK } from "../zama-sdk";
 import type { ChainFixtures } from "./chain";
 import type { ProviderFixtures } from "./provider";
 import type { RelayerFixtures } from "./relayer";
+import { createMockRouter } from "./router";
 import type { SignerFixtures } from "./signer";
 import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
 
-/** Overrides accepted by createSDK. Extends ZamaConfig with a test-only `relayer` shorthand. */
-export type CreateSDKOverrides = Partial<ZamaConfig> & { relayer?: FhevmRelayerSDK };
+/**
+ * Overrides accepted by createSDK — a partial {@link ZamaConfig}. To swap the
+ * relayer backend, pass a `router` built with {@link createMockRouter}
+ * (e.g. `createSDK({ router: createMockRouter({ relayer }) })`).
+ */
+export type CreateSDKOverrides = Partial<ZamaConfig>;
 export type CreateSDKFn = (overrides?: CreateSDKOverrides) => ZamaSDK;
 
 export interface SdkFixtures {
@@ -25,18 +30,19 @@ export interface SdkFixtures {
 
 function buildSDK(
   chain: FheChain,
-  defaultRelayer: FhevmRelayerSDK,
+  relayer: FhevmRelayerSDK,
   provider: GenericProvider,
   signer: GenericSigner,
   storage: GenericStorage,
   overrides?: CreateSDKOverrides,
 ): ZamaSDK {
-  // Allow tests to inject a custom relayer via the `relayer` shorthand.
-  const { relayer: relayerOverride, ...restOverrides } = overrides ?? {};
-  const relayer = relayerOverride ?? defaultRelayer;
+  // A real ChainRouter (via createMockRouter) so the fixture matches the
+  // ZamaConfig shape; tests override the backend by passing their own `router`.
+  const { router: routerOverride, ...restOverrides } = overrides ?? {};
+  const router = routerOverride ?? createMockRouter({ relayer, chains: [chain] });
   return new ZamaSDK({
     chains: [chain],
-    router: { relayer },
+    router,
     provider,
     signer,
     storage,
