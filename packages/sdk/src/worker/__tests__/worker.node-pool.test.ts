@@ -128,9 +128,9 @@ describe("NodeWorkerPool", () => {
     await pool.generateKeypair({ chainId: 1 });
     await pool.generateKeypair({ chainId: 1 });
 
-    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(3);
-    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(0);
-    expect(instances[2].generateKeypair).toHaveBeenCalledTimes(0);
+    expect(instances[0]!.generateKeypair).toHaveBeenCalledTimes(3);
+    expect(instances[1]!.generateKeypair).toHaveBeenCalledTimes(0);
+    expect(instances[2]!.generateKeypair).toHaveBeenCalledTimes(0);
   });
 
   test("dispatches to least-busy worker when workers are occupied", async () => {
@@ -141,7 +141,7 @@ describe("NodeWorkerPool", () => {
 
     // Make worker 0's generateKeypair block until we resolve it
     let resolveWorker0!: (v: unknown) => void;
-    instances[0].generateKeypair.mockReturnValueOnce(
+    instances[0]!.generateKeypair.mockReturnValueOnce(
       new Promise((r) => {
         resolveWorker0 = r;
       }),
@@ -152,7 +152,7 @@ describe("NodeWorkerPool", () => {
 
     // Now worker 0 has 1 active request, worker 1 has 0 — should go to worker 1
     await pool.generateKeypair({ chainId: 1 });
-    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(1);
+    expect(instances[1]!.generateKeypair).toHaveBeenCalledTimes(1);
 
     // Resolve worker 0 to clean up
     resolveWorker0({ publicKey: "pk", privateKey: "sk" });
@@ -271,7 +271,7 @@ describe("NodeWorkerPool", () => {
     const newInstances = getInstances(2);
 
     await pool.generateKeypair({ chainId: 1 });
-    expect(newInstances[0].generateKeypair).toHaveBeenCalledTimes(1);
+    expect(newInstances[0]!.generateKeypair).toHaveBeenCalledTimes(1);
   });
 
   test("decrements active count even when the task rejects", async () => {
@@ -279,13 +279,13 @@ describe("NodeWorkerPool", () => {
     await pool.initPool();
 
     const instances = getInstances();
-    instances[0].generateKeypair.mockRejectedValueOnce(new Error("boom"));
+    instances[0]!.generateKeypair.mockRejectedValueOnce(new Error("boom"));
 
     await pool.generateKeypair({ chainId: 1 }).catch(() => {});
 
     // Active count for worker 0 should be back to 0, so next call goes to worker 0 again
     await pool.generateKeypair({ chainId: 1 });
-    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(2);
+    expect(instances[0]!.generateKeypair).toHaveBeenCalledTimes(2);
   });
 
   test("throws when dispatching without init", async () => {

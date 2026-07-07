@@ -4,6 +4,14 @@ import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
 import type { RelayerSDK } from "../relayer-sdk";
+import type { GenericLogger } from "../../worker/worker.types";
+
+const logger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+} as unknown as GenericLogger;
 
 function makeMockWorker(): WorkerLike {
   return { terminate: vi.fn<() => void>() };
@@ -12,7 +20,7 @@ function makeMockWorker(): WorkerLike {
 describe("RelayerDispatcher", () => {
   describe("constructor", () => {
     test("throws ConfigurationError on empty chains", () => {
-      expect(() => new RelayerDispatcher([] as any, {})).toThrow(ConfigurationError);
+      expect(() => new RelayerDispatcher([] as any, {}, logger)).toThrow(ConfigurationError);
     });
 
     test("throws ConfigurationError when chain has no matching relayer config", ({
@@ -23,9 +31,11 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       expect(
         () =>
-          new RelayerDispatcher([chainA, chainB], {
-            [1]: { type: "web", createRelayer: () => createMockRelayer() },
-          }),
+          new RelayerDispatcher(
+            [chainA, chainB],
+            { [1]: { type: "web", createRelayer: () => createMockRelayer() } },
+            logger,
+          ),
       ).toThrow("Chain 2 has no relayer configured");
     });
   });
@@ -37,6 +47,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        logger,
       );
       expect(dispatcher.chains).toEqual([chainA, chainB]);
     });
@@ -47,6 +58,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        logger,
       );
       expect(dispatcher.chain).toEqual(chainA);
     });
@@ -57,6 +69,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        logger,
       );
       dispatcher.switchChain(2);
       expect(dispatcher.chain).toEqual(chainB);
@@ -70,6 +83,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA, chainB],
         relayerConfigs([chainA, chainB], createMockRelayer),
+        logger,
       );
       dispatcher.switchChain(2);
       expect(dispatcher.chain).toEqual(chainB);
@@ -83,6 +97,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA],
         relayerConfigs([chainA], createMockRelayer),
+        logger,
       );
       expect(() => dispatcher.switchChain(999)).toThrow(ConfigurationError);
     });
@@ -97,10 +112,14 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createRelayer: () => relayerA },
+          [2]: { type: "web", createRelayer: () => relayerB },
+        },
+        logger,
+      );
 
       await dispatcher.encrypt({ values: [] } as any);
       expect(relayerA.encrypt).toHaveBeenCalled();
@@ -115,10 +134,14 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createRelayer: () => relayerA },
+          [2]: { type: "web", createRelayer: () => relayerB },
+        },
+        logger,
+      );
 
       dispatcher.switchChain(2);
       await dispatcher.encrypt({ values: [] } as any);
@@ -145,9 +168,11 @@ describe("RelayerDispatcher", () => {
       async ([method, args], { createMockChain, createMockRelayer }) => {
         const chainA = createMockChain({ id: 1 });
         const relayer = createMockRelayer();
-        const dispatcher = new RelayerDispatcher([chainA], {
-          [1]: { type: "web", createRelayer: () => relayer },
-        });
+        const dispatcher = new RelayerDispatcher(
+          [chainA],
+          { [1]: { type: "web", createRelayer: () => relayer } },
+          logger,
+        );
         await (dispatcher[method] as Function)(...args);
         expect(relayer[method]).toHaveBeenCalled();
       },
@@ -161,9 +186,17 @@ describe("RelayerDispatcher", () => {
     }) => {
       const chainA = createMockChain({ id: 1 });
       const worker = makeMockWorker();
-      const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: { type: "web", createWorker: () => worker, createRelayer: () => createMockRelayer() },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        {
+          [1]: {
+            type: "web",
+            createWorker: () => worker,
+            createRelayer: () => createMockRelayer(),
+          },
+        },
+        logger,
+      );
       dispatcher.terminate();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
     });
@@ -176,10 +209,14 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       const w1 = makeMockWorker();
       const w2 = makeMockWorker();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createWorker: () => w1, createRelayer: () => createMockRelayer() },
-        [2]: { type: "web", createWorker: () => w2, createRelayer: () => createMockRelayer() },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createWorker: () => w1, createRelayer: () => createMockRelayer() },
+          [2]: { type: "web", createWorker: () => w2, createRelayer: () => createMockRelayer() },
+        },
+        logger,
+      );
       dispatcher.terminate();
       expect(w1.terminate).toHaveBeenCalledTimes(1);
       expect(w2.terminate).toHaveBeenCalledTimes(1);
@@ -191,10 +228,11 @@ describe("RelayerDispatcher", () => {
       const shared = createMockRelayer();
       // Same config object → same group → one worker, one createRelayer call per chain but same mock
       const sharedConfig: RelayerConfig = { type: "web", createRelayer: () => shared };
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: sharedConfig,
-        [2]: sharedConfig,
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        { [1]: sharedConfig, [2]: sharedConfig },
+        logger,
+      );
       dispatcher.terminate();
       // shared relayer returned for both chains, but Set dedupes
       expect(shared.terminate).toHaveBeenCalledTimes(1);
@@ -205,10 +243,14 @@ describe("RelayerDispatcher", () => {
       const chainB = createMockChain({ id: 2 });
       const relayerA = createMockRelayer();
       const relayerB = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA, chainB], {
-        [1]: { type: "web", createRelayer: () => relayerA },
-        [2]: { type: "web", createRelayer: () => relayerB },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA, chainB],
+        {
+          [1]: { type: "web", createRelayer: () => relayerA },
+          [2]: { type: "web", createRelayer: () => relayerB },
+        },
+        logger,
+      );
       dispatcher.terminate();
       expect(relayerA.terminate).toHaveBeenCalledTimes(1);
       expect(relayerB.terminate).toHaveBeenCalledTimes(1);
@@ -224,18 +266,22 @@ describe("RelayerDispatcher", () => {
           throw new Error("worker fail");
         }),
       };
-      const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: {
-          type: "web",
-          createWorker: () => failWorker,
-          createRelayer: () =>
-            createMockRelayer({
-              terminate: vi.fn(() => {
-                throw new Error("relayer fail");
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        {
+          [1]: {
+            type: "web",
+            createWorker: () => failWorker,
+            createRelayer: () =>
+              createMockRelayer({
+                terminate: vi.fn(() => {
+                  throw new Error("relayer fail");
+                }),
               }),
-            }),
+          },
         },
-      });
+        logger,
+      );
       expect(() => dispatcher.terminate()).toThrow("Failed to terminate relayer resources");
     });
 
@@ -244,6 +290,7 @@ describe("RelayerDispatcher", () => {
       const dispatcher = new RelayerDispatcher(
         [chainA],
         relayerConfigs([chainA], createMockRelayer),
+        logger,
       );
       expect(() => dispatcher.terminate()).not.toThrow();
     });
@@ -254,9 +301,11 @@ describe("RelayerDispatcher", () => {
       const chainA = createMockChain({ id: 1 });
       const worker = makeMockWorker();
       const relayer = createMockRelayer();
-      const dispatcher = new RelayerDispatcher([chainA], {
-        [1]: { type: "web", createWorker: () => worker, createRelayer: () => relayer },
-      });
+      const dispatcher = new RelayerDispatcher(
+        [chainA],
+        { [1]: { type: "web", createWorker: () => worker, createRelayer: () => relayer } },
+        logger,
+      );
       dispatcher[Symbol.dispose]();
       expect(worker.terminate).toHaveBeenCalledTimes(1);
       expect(relayer.terminate).toHaveBeenCalledTimes(1);

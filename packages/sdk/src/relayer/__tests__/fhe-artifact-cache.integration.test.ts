@@ -4,6 +4,14 @@ import http from "node:http";
 import { test as base, describe, expect } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
+import type { GenericLogger } from "../../worker/worker.types";
+
+const noopLogger: GenericLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
 
 // ── Test HTTP server ────────────────────────────────────────
 
@@ -124,6 +132,7 @@ const test = base.extend<CacheFixtures>({
           chainId: CHAIN_ID,
           relayerUrl: opts?.relayerUrl ?? testServer.baseUrl,
           ttl: opts?.ttl ?? 1,
+          logger: noopLogger,
         }),
     );
   },

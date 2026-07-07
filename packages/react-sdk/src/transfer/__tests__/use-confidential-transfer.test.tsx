@@ -251,7 +251,7 @@ describe("useConfidentialTransfer", () => {
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
     vi.mocked(relayer.userDecrypt).mockImplementation(
       async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
-        [encryptedValues[0]]: encryptedValues[0] === handle ? 1000n : 500n,
+        [encryptedValues[0]!]: encryptedValues[0] === handle ? 1000n : 500n,
       }),
     );
     vi.mocked(signer.writeContract).mockImplementation(async () => {
@@ -328,8 +328,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
 
     await act(async () => {
@@ -447,8 +447,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
@@ -475,15 +475,17 @@ describe("useConfidentialTransfer optimistic updates", () => {
     // Sabotage setQueryData after the optimistic write so rollback throws
     const originalSetQueryData = queryClient.setQueryData.bind(queryClient);
     let callCount = 0;
-    vi.spyOn(queryClient, "setQueryData").mockImplementation((key: string, value: any) => {
-      callCount++;
-      // First call is the optimistic subtract, let it through.
-      // Second call (rollback) should throw.
-      if (callCount <= 1) {
-        return originalSetQueryData(key, value);
-      }
-      throw new Error("rollback boom");
-    });
+    vi.spyOn(queryClient, "setQueryData").mockImplementation(
+      (key: readonly unknown[], value: unknown) => {
+        callCount++;
+        // First call is the optimistic subtract, let it through.
+        // Second call (rollback) should throw.
+        if (callCount <= 1) {
+          return originalSetQueryData(key, value);
+        }
+        throw new Error("rollback boom");
+      },
+    );
 
     // Suppress the expected unhandled rejection from the rollback error
     // propagating through the mutation executor.
