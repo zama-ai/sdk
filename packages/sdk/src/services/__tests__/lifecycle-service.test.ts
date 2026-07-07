@@ -161,7 +161,7 @@ describe("LifecycleService", () => {
       createMockSigner,
     }) => {
       const clearForRequester = vi.fn();
-      const cache = { clearForRequester } as unknown as CachingService;
+      const cachingService = { clearForRequester } as unknown as CachingService;
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
         walletAccount: {
@@ -173,7 +173,7 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cache });
+      const service = createLifecycleService({ signer, cachingService });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 

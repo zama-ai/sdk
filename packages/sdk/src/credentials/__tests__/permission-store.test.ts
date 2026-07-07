@@ -36,7 +36,12 @@ function makePermission(
 const test = baseTest.extend<{ store: PermissionStore }>({
   // eslint-disable-next-line no-empty-pattern
   store: async ({}, use) => {
-    await use(new PermissionStore({ storage: new MemoryStorage() }));
+    await use(
+      new PermissionStore({
+        storage: new MemoryStorage(),
+        logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+      }),
+    );
   },
 });
 

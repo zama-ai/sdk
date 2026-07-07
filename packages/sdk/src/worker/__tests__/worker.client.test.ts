@@ -175,7 +175,7 @@ function flush(): Promise<void> {
 }
 
 function getFirstPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {
-  return worker.postMessage.mock.calls[0][0] as WorkerRequest;
+  return worker.postMessage.mock.calls[0]![0] as WorkerRequest;
 }
 
 function getLastPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {

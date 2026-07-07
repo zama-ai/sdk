@@ -2,6 +2,7 @@ import { describe, test, expect } from "../../test-fixtures";
 import { checksum } from "../utils";
 import { findPermitToWiden, sortedUnion } from "../permissions";
 import type { Permission } from "../types";
+import type { ChecksummedAddress } from "../../schemas/primitives";
 
 const A = checksum("0x1111111111111111111111111111111111111111");
 const B = checksum("0x2222222222222222222222222222222222222222");
@@ -31,7 +32,20 @@ const ADDRS = Array.from({ length: 12 }, (_, i) => {
   const hex = (i + 1).toString(16).padStart(40, "0");
   return checksum(`0x${hex}`);
 });
-const [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = ADDRS;
+const [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = ADDRS as [
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+  ChecksummedAddress,
+];
 
 function makePermission(
   signedContractAddresses: Permission["signedContractAddresses"],
