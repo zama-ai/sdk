@@ -27,7 +27,7 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * const unwrapAll = useUnwrapAll("0xWrapper");
  * const finalize = useFinalizeUnwrap("0xWrapper");
  *
- * async function unshield() {
+ * async function unshieldAll() {
  *  const result = await unwrapAll.mutateAsync();
  *  await finalize.mutateASync(result);
  * }
