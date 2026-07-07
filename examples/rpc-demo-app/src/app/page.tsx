@@ -95,7 +95,7 @@ export default function Home() {
 
       {address && (
         <>
-          <SendCard />
+          <SendCard connectedAddress={address} />
           <VaultDepositCard connectedAddress={address} />
 
           <div className="card">

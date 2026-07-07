@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { encodeAbiParameters, encodeFunctionData, isAddress, parseAbi, type Address } from "viem";
-import { useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { useRelayedSend } from "@/lib/useRelayedSend";
 import { parseAmount } from "@/lib/parseAmount";
 import {
   CUSDC_ADDRESS,
@@ -41,12 +41,11 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
         })
       : undefined;
 
-  const send = useSendTransaction();
-  const receipt = useWaitForTransactionReceipt({ hash: send.data });
+  const { sendTransaction, hash, isPending, sendError, receipt } = useRelayedSend();
 
   function handleDeposit() {
     if (!data) return;
-    send.sendTransaction({ to: CUSDC_ADDRESS, data });
+    void sendTransaction({ from: connectedAddress, to: CUSDC_ADDRESS, data });
   }
 
   return (
@@ -74,23 +73,46 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleDeposit}
-        disabled={!data || send.isPending || receipt.isLoading}
+        disabled={!data || isPending || receipt.isLoading}
       >
-        {send.isPending ? "Confirm in wallet…" : receipt.isLoading ? "Confirming…" : "Deposit"}
+        {isPending ? "Sending…" : receipt.isLoading ? "Confirming…" : "Deposit"}
       </button>
 
       {data && (
         <>
           <div className="raw-request-label">Raw eth_sendTransaction payload</div>
-          <pre className="raw-request">{JSON.stringify({ to: CUSDC_ADDRESS, data }, null, 2)}</pre>
+          <pre className="raw-request">
+            {JSON.stringify({ from: connectedAddress, to: CUSDC_ADDRESS, data }, null, 2)}
+          </pre>
         </>
       )}
 
-      {send.isError && <div className="alert alert-error card-status">{send.error?.message}</div>}
-      {receipt.isSuccess && send.data && (
+      {sendError && <div className="alert alert-error card-status">{sendError}</div>}
+      {receipt.isError && (
+        <div className="alert alert-error card-status">
+          Failed to confirm: {receipt.error?.message}
+          {hash && (
+            <>
+              {" — "}
+              <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
+                check on Etherscan
+              </a>
+            </>
+          )}
+        </div>
+      )}
+      {receipt.isSuccess && hash && receipt.data?.status === "reverted" && (
+        <div className="alert alert-error card-status">
+          Transaction reverted —{" "}
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
+            {hash.slice(0, 10)}…
+          </a>
+        </div>
+      )}
+      {receipt.isSuccess && hash && receipt.data?.status !== "reverted" && (
         <div className="alert alert-success card-status">
           Confirmed — real{" "}
-          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${send.data}`} target="_blank" rel="noreferrer">
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
             confidentialTransferAndCall
           </a>{" "}
           into the vault.

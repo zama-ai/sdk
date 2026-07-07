@@ -5,8 +5,8 @@ A small demo dApp for recording a video of `zama-json-rpc` (write-side) and
 app **never imports `@zama-fhe/sdk` or `@zama-fhe/react-sdk`** — that's the whole
 point. It only ever:
 
-- sends ordinary-looking, plain calldata (`transfer`, `transferAndCall`) via
-  real MetaMask, and
+- sends ordinary-looking, plain calldata (`transfer`, `transferAndCall`)
+  directly to the wrapper, and
 - reads decrypted balance/history data from `confidential-indexer`'s REST API.
 
 Everything FHE-related happens invisibly, in the two backend servers — not here.
@@ -14,69 +14,92 @@ Everything FHE-related happens invisibly, in the two backend servers — not her
 ## How it works
 
 ```text
-MetaMask (real wallet, unmodified)
-    │  eth_sendTransaction — signs + broadcasts via ITS OWN configured RPC
+This app (Send / Deposit)
+    │  eth_sendTransaction, plain calldata, sent directly via fetch
     ▼
-zama-json-rpc  ──►  real Sepolia   (transparently rewrites into a confidential call)
+zama-json-rpc  ──►  scripts/signer-relay.mjs  ──►  real Sepolia
+    (rewrites into the        (signs + broadcasts
+     real confidential call)   the rewritten call)
 
-This app (reads only)
-    │  eth_call / eth_getBalance / ...           │  GET /balances, /transfers, /delegations
-    ▼                                             ▼
-zama-json-rpc  ──►  real Sepolia          confidential-indexer  (decrypted, delegation-scoped)
+MetaMask/Rabby (connected, display only)
+    │  eth_requestAccounts, eth_chainId — no signing involved
+    ▼
+This app shows the connected address + ETH balance
+
+This app (History, reads)
+    │  GET /balances, /transfers, /delegations
+    ▼
+confidential-indexer  (decrypted, delegation-scoped)
 ```
 
-The one thing that makes the write path actually go through the wrapper:
-**MetaMask's own Sepolia RPC setting**, not anything this app's code does (wagmi's
-`transports` config only backs this app's own read client — an injected wallet
-signs+broadcasts via its own provider, verified while building this). See Setup.
+**Why Send/Deposit don't use the connected wallet to sign, and why that's not
+a shortcut**: a real EIP-1193 wallet (MetaMask, Rabby, ...) signs
+`eth_sendTransaction` client-side, inside the extension, *before* making any
+network call — it only ever sends the network the already-signed transaction,
+via `eth_sendRawTransaction`. The wrapper can only rewrite the *unsigned*
+request (rewriting calldata after signing would invalidate the signature), so
+positioning it "in front of" a wallet's own signing step doesn't work no
+matter which RPC URL the wallet is configured to use — this was tried and
+confirmed while building this demo. `scripts/signer-relay.mjs` holds the real
+demo key and completes the sign+broadcast step for the *rewritten* request the
+wrapper forwards to it — the same role a custodian's own signing
+infrastructure plays sitting behind the wrapper in production. The connected
+wallet is still real and still shown on screen; it's just not the one signing
+the write actions.
 
 ## Prerequisites
 
-- Node.js >= 22, MetaMask (or another injected EIP-1193 wallet) installed.
+- Node.js >= 22, MetaMask (or another injected EIP-1193 wallet) installed —
+  for displaying the connected address, not for signing.
 - `examples/zama-json-rpc` running locally (see its own README).
 - `confidential-indexer` running locally (separate branch/worktree — see its README).
-- A funded Sepolia wallet holding some cUSDC
-  (`0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639`) connected in MetaMask.
+- The demo wallet's private key (same one connected in your browser wallet) —
+  needed by `scripts/signer-relay.mjs`.
 
 ## Setup
 
-1. **Start the write-side wrapper**, pointed at a real Sepolia RPC:
+You need **four** things running: the signer relay, the wrapper (pointed at
+the relay, not directly at a public RPC), the indexer, and this app.
+
+1. **Start the signer relay**, pointed at a real Sepolia RPC:
+   ```bash
+   cd examples/rpc-demo-app
+   SIGNER_PK=<your demo wallet's private key> \
+     UPSTREAM_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com \
+     node scripts/signer-relay.mjs
+   ```
+   Confirm the printed account address matches your connected wallet's address.
+2. **Start the write-side wrapper**, pointed at the relay (not at a public RPC):
    ```bash
    cd examples/zama-json-rpc
-   npx tsx src/cli.ts --http --rpcUrl https://ethereum-sepolia-rpc.publicnode.com --chainId 11155111
+   npx tsx src/cli.ts --http --rpcUrl http://127.0.0.1:8546 --chainId 11155111 --verbose
    ```
-2. **Start the read-side indexer**, using the demo's dedicated operational key (a
-   delegation to this specific address needs to exist first — see step 3):
+3. **Start the read-side indexer**, pointed directly at a real Sepolia RPC (it
+   never sends transactions, so it doesn't need the relay), using the demo's
+   dedicated operational key (a delegation to this address needs to exist
+   first — see step 4):
    ```bash
    cd examples/confidential-indexer
    INDEXER_OPERATIONAL_PRIVATE_KEY=<demo delegate key> \
      npx tsx src/cli.ts --rpcUrl https://sepolia.gateway.tenderly.co --chainId 11155111 \
      --fromBlock <a recent block> --pollIntervalMs 15000
    ```
-3. **One-time**: grant that operational address a (permanent) decrypt delegation
+4. **One-time**: grant that operational address a (permanent) decrypt delegation
    from your demo wallet, if you haven't already:
    ```bash
    cd examples/rpc-demo-app
    HOLDER_PK=<your demo wallet's key> DELEGATE_ADDRESS=<indexer's operational address> \
      node scripts/grant-delegation.mjs
    ```
-4. **Point MetaMask's Sepolia RPC at the wrapper** — this is the step that makes
-   Send/Deposit actually flow through `zama-json-rpc`:
-   - MetaMask → Settings → Networks → Sepolia → edit the RPC URL to
-     `http://127.0.0.1:8545` (or add it as a second "Sepolia (demo)" network,
-     same chain ID, so you can switch back easily afterward).
-5. **Run this app**:
+5. **Run this app** (MetaMask/Rabby can stay on its normal Sepolia RPC — no
+   wallet network reconfiguration needed):
    ```bash
    cd examples/rpc-demo-app
    cp .env.example .env.local   # adjust ports if needed
    npm install
    npm run dev
    ```
-   Open `http://localhost:3000`, connect MetaMask.
-
-Revert MetaMask's Sepolia RPC to a normal public endpoint when you're done —
-leaving it pointed at a local dev server will break MetaMask for that network
-once the wrapper isn't running.
+   Open `http://localhost:3000`, connect your wallet.
 
 ## Suggested recording flow
 
@@ -95,5 +118,4 @@ once the wrapper isn't running.
 
 - No support for multiple tokens/networks — hardcoded to the same cUSDC + vault
   used throughout `zama-json-rpc`/`confidential-indexer`'s own verification work.
-- No production auth, no wallet other than MetaMask injected — this is a demo
-  recording aid, not a reference integration.
+- No production auth — this is a demo recording aid, not a reference integration.
