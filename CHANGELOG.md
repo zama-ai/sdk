@@ -1,20 +1,5 @@
 # Changelog
 
-## ⚠ 4.0.0 breaking changes — `@fhevm/sdk` backend migration
-
-The FHE runtime moved from the legacy `@zama-fhe/relayer-sdk` to the high-level [`@fhevm/sdk`](https://www.npmjs.com/package/@fhevm/sdk). The `Token` / `WrappedToken` APIs and the React hooks are unchanged — the breaking changes concentrate in the low-level relayer, config, and type surface. See [`MIGRATION-relayer-to-fhevm-sdk.md`](MIGRATION-relayer-to-fhevm-sdk.md) for the full mapping.
-
-### ⚠ BREAKING CHANGES
-
-- **sdk:** `@zama-fhe/relayer-sdk` is replaced by `@fhevm/sdk` as the FHE backend. WASM ships with the package — CDN loading, version pinning (`RELAYER_SDK_VERSION`, `CDN_URL`) and integrity/CSRF configuration are gone.
-- **sdk:** encrypt input `type` values are Solidity-style: `'euint64'` → `'uint64'`, `'ebool'` → `'bool'`, and so on. `FheTypeName` is no longer exported.
-- **sdk:** `web()` and `node()` no longer take options — the worker, thread-pool, security, and FHE-artifact-cache settings (`threads`, `security`, `fheArtifactStorage`, `fheArtifactCacheTTL`, `NodePoolOptions`) are removed; `@fhevm/sdk` owns WASM loading and key caching.
-- **sdk:** the worker layer is removed. `RelayerWeb`, `RelayerWebConfig`, `RelayerWebSecurityConfig`, `RelayerNodeConfig`, `BaseWorkerClient`, `NodeWorkerClientConfig`, `NodeWorkerPoolConfig`, the worker protocol types (`WorkerRequest`, `WorkerResponse`, …), `WorkerTimeoutError`, and `WorkerRecycledError` are no longer exported. COOP/COEP headers are now a performance optimization, not a requirement.
-- **sdk:** the `@zama-fhe/sdk/cleartext` entry point is removed — use the `cleartext()` transport from the main entry.
-- **sdk:** `RelayerDispatcher` is replaced by `ChainRouter`, and `RelayerSDK` now mirrors the `@fhevm/sdk` client surface (`encryptValues`, `decryptValues`, `decryptPublicValues`, `decryptValuesFromPairs`, `signDecryptionPermit`, …). `requestZKProofVerification` and `getPublicParams` are removed — ZK proof generation is internal to encrypt.
-- **sdk:** types are renamed or re-sourced from `@fhevm/sdk`: `EncryptedValue` is `Hex` (was `Bytes32Hex`), `EIP712TypedData` is the structural `Eip712Like` (was a KMS union), `EncryptParameters` → `EncryptParams`, `TransportKeyPair` → `SerializedTransportKeyPair` (the live keypair is opaque; its private key is no longer readable). Removed: `ZKProofLike`, `InputProofBytesType`, `FhevmInstanceConfig`, `KmsDelegatedDecryptEIP712Type`, `PublicParamsData`, `NetworkType`, `RelayerSDKStatus`, `FheEncryptionKey`, `DecryptValuesParams`, `DelegatedDecryptValuesParams`, `ClearValueType` (use `ClearValue`).
-- **sdk:** serialized decryption permits carry a required `version` discriminator and are signed with second-granularity validity (`durationSeconds`). Permits cached by earlier versions fail validation and are transparently re-signed on next use.
-
 ## [3.3.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2026-07-06)
 
 ### Features
