@@ -292,8 +292,8 @@ describe("useShield optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
 
     await act(async () => {
@@ -335,8 +335,8 @@ describe("useShield optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3500n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3000n);

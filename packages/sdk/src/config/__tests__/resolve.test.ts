@@ -30,7 +30,9 @@ describe("resolveChainRelayers", () => {
       expected: "Chain 999999 has no relayer configured",
     },
   ])("throws when $label", ({ chains, relayers, expected }) => {
-    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
+    expect(() =>
+      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
+    ).toThrow(expected);
   });
 
   test.each([
@@ -57,7 +59,9 @@ describe("resolveChainRelayers", () => {
       expected: "Relayer entries for chain(s) [888, 999]",
     },
   ])("throws for orphaned relayer keys ($label)", ({ chains, relayers, expected }) => {
-    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
+    expect(() =>
+      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
+    ).toThrow(expected);
   });
 
   test("resolves multiple chains and binds each to its relayer config", () => {

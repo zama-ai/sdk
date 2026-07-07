@@ -1,7 +1,7 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
+import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { FixturesOf } from "./types";
 import {
   ACL,
@@ -11,11 +11,12 @@ import {
   VALID_ENCRYPTED_VALUE,
   VALID_INPUT_PROOF,
 } from "./constants";
+import { anvil } from "../chains";
 
-export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
+export function createMockRelayer(overrides: Partial<RelayerDispatcher> = {}): RelayerDispatcher {
   return {
-    chains: [{ id: 31337 }],
-    activeChain: { id: 31337 },
+    chains: [anvil],
+    chain: anvil,
     switchChain: vi.fn(),
     generateTransportKeyPair: vi
       .fn()
@@ -69,11 +70,11 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
       .mockResolvedValue({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" }),
     terminate: vi.fn(),
     ...overrides,
-  } as unknown as RelayerSDK;
+  } as unknown as RelayerDispatcher;
 }
 
 export interface RelayerFixtures {
-  relayer: RelayerSDK;
+  relayer: RelayerDispatcher;
   createMockRelayer: typeof createMockRelayer;
 }
 

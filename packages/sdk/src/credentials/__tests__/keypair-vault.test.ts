@@ -10,6 +10,8 @@ const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const TTL_SECONDS = 86400;
 
+const makeLogger = () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() });
+
 function makeGenerator(): () => Promise<TransportKeyPair> {
   // Each call generates a unique keypair so cache hits/misses are observable
   // via equality without poking the generator's call count.
@@ -31,6 +33,7 @@ const test = baseTest.extend<{ vault: TransportKeyPairVault }>({
         generator: makeGenerator(),
         storage: new MemoryStorage(),
         ttl: TTL_SECONDS,
+        logger: makeLogger(),
       }),
     );
   },
@@ -84,6 +87,7 @@ describe("TransportKeyPairVault", () => {
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
+      logger: makeLogger(),
     });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.
