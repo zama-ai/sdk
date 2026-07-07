@@ -50,17 +50,26 @@ jobs:
             contracts/dependencies
             contracts/lib/forge-fhevm/out
             contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
+            contracts/lib/fhevm/sdk/js-sdk/contracts/out
+            contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
 
       - name: Install Soldeer dependencies
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: |
           cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
+          cd "$GITHUB_WORKSPACE/contracts/lib/fhevm/sdk/js-sdk/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
           cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
 
       - name: Build forge-fhevm contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
         run: cd contracts/lib/forge-fhevm && forge build
+
+      # Mirrors the `fhevm:build` package.json script. turbo's contracts:build
+      # runs this same step, so its soldeer deps must be installed (above) and cached.
+      - name: Build fhevm host contracts
+        if: steps.forge-build-cache.outputs.cache-hit != 'true'
+        run: cd contracts/lib/fhevm/sdk/js-sdk/contracts && FOUNDRY_PROFILE=v13 forge build scripts/v0.13.0/DeployCleartextFHEVMHost.s.sol
 
       - name: Build contracts
         if: steps.forge-build-cache.outputs.cache-hit != 'true'
