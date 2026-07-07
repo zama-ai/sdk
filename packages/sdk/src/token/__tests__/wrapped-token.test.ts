@@ -271,7 +271,7 @@ describe("WrappedToken", () => {
       const result = await wrappedToken.unwrap(50n);
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 50n, type: "euint64" }],
+        values: [{ value: 50n, type: "uint64" }],
         contractAddress: wrapperAddress,
         userAddress,
       });

@@ -29,7 +29,10 @@ describe("EncryptionService", () => {
 
     expect(result.encryptedValues).toEqual([handle]);
     expect(result.inputProof).toBe(inputProof);
-    expect(relayer.encryptValues).toHaveBeenCalledWith(ENCRYPT_PARAMS);
+    expect(relayer.encryptValues).toHaveBeenCalledWith({
+      ...ENCRYPT_PARAMS,
+      values: [{ value: 100n, type: "uint64" }],
+    });
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },
       ENCRYPT_PARAMS.contractAddress,
