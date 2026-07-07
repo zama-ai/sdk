@@ -233,9 +233,9 @@ describe("decodeOnChainEvents", () => {
     ];
     const events = decodeOnChainEvents(logs);
     expect(events).toHaveLength(3);
-    expect(events[0].eventName).toBe("UnwrapRequested");
-    expect(events[1].eventName).toBe("ConfidentialTransfer");
-    expect(events[2].eventName).toBe("UnwrapFinalized");
+    expect(events[0]!.eventName).toBe("UnwrapRequested");
+    expect(events[1]!.eventName).toBe("ConfidentialTransfer");
+    expect(events[2]!.eventName).toBe("UnwrapFinalized");
   });
 });
 
@@ -425,8 +425,8 @@ describe("decodeAclEvents", () => {
     ];
     const events = decodeAclEvents(logs);
     expect(events).toHaveLength(2);
-    expect(events[0].eventName).toBe("DelegatedForUserDecryption");
-    expect(events[1].eventName).toBe("RevokedDelegationForUserDecryption");
+    expect(events[0]!.eventName).toBe("DelegatedForUserDecryption");
+    expect(events[1]!.eventName).toBe("RevokedDelegationForUserDecryption");
   });
 });
 

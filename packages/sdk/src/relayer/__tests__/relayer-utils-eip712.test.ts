@@ -53,7 +53,11 @@ const MOCK_EIP712 = {
 };
 
 function createRelayer() {
-  return new RelayerWeb({ chain: { chainId: 1 } as any, worker: mockWorkerClient as any });
+  return new RelayerWeb({
+    chain: { chainId: 1 } as any,
+    worker: mockWorkerClient as any,
+    logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  });
 }
 
 describe("createEIP712 includes EIP712Domain type", () => {
@@ -90,7 +94,7 @@ describe("createEIP712 includes EIP712Domain type", () => {
       7,
     );
 
-    expect(result.types.UserDecryptRequestVerification).toEqual(
+    expect((result.types as any).UserDecryptRequestVerification).toEqual(
       MOCK_EIP712.types.UserDecryptRequestVerification,
     );
 

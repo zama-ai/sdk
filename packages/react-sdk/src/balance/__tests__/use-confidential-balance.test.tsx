@@ -138,7 +138,7 @@ describe("useConfidentialBalance", () => {
       vi.mocked(relayer.userDecrypt).mockImplementation(
         async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
           const value = encryptedValues[0] === handleA ? 111n : 222n;
-          return { [encryptedValues[0]]: value };
+          return { [encryptedValues[0]!]: value };
         },
       );
 

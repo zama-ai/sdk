@@ -1,5 +1,6 @@
 import { describe, expect, test } from "../../test-fixtures";
 import { mainnet, sepolia, hardhat, hoodi, ingenTestnet, bscTestnet, chains } from "../../chains";
+import type { FheChain } from "../../chains/types";
 
 describe("Chain presets", () => {
   test("mainnet has id 1", () => {
@@ -34,8 +35,8 @@ describe("Chain presets", () => {
   });
 
   test("mainnet and sepolia have no executorAddress", () => {
-    expect(mainnet.executorAddress).toBeUndefined();
-    expect(sepolia.executorAddress).toBeUndefined();
+    expect((mainnet as FheChain).executorAddress).toBeUndefined();
+    expect((sepolia as FheChain).executorAddress).toBeUndefined();
   });
 
   test("chains maps all chain ids", () => {
