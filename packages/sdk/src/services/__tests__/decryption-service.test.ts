@@ -7,6 +7,8 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { LoggerService } from "../logger-service";
 
 import { CachingService } from "../caching-service";
+import type { TypedValue } from "@fhevm/sdk/types";
+import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
 
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
@@ -41,8 +43,8 @@ describe("DecryptionService", () => {
     const emitEvent = vi.fn();
     const service = createDecryptionService({ emitEvent });
     vi.mocked(relayer.decryptValues)
-      .mockResolvedValueOnce([{ type: "uint64", value: 10n }])
-      .mockResolvedValueOnce([{ type: "uint64", value: 20n }]);
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 20n } as TypedValue]);
 
     const result = await service.decryptValues(
       handles([
@@ -85,7 +87,9 @@ describe("DecryptionService", () => {
     relayer,
     userAddress,
   }) => {
-    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 20n }]);
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 20n } as TypedValue,
+    ]);
 
     await expect(
       decryptionService.decryptValues(
@@ -162,7 +166,7 @@ describe("DecryptionService", () => {
     vi.mocked(relayer.decryptValues)
       .mockRejectedValueOnce(new Error("batch failed"))
       .mockRejectedValueOnce(new Error("batch failed"))
-      .mockResolvedValueOnce([{ type: "uint64", value: 10n }])
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
       .mockRejectedValueOnce(new Error("handle failed"));
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
@@ -226,7 +230,9 @@ describe("DecryptionService", () => {
     const service = createDecryptionService({
       cache: new CachingService(storage, new LoggerService()),
     });
-    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 10n }]);
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 10n } as TypedValue,
+    ]);
 
     await expect(
       service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
@@ -307,7 +313,7 @@ describe("DecryptionService", () => {
         vi.mocked(relayer.decryptValues)
           .mockRejectedValueOnce(notPropagated)
           .mockRejectedValueOnce(notPropagated)
-          .mockResolvedValueOnce([{ type: "uint64", value: 7n }]);
+          .mockResolvedValueOnce([{ type: "uint64", value: 7n } as TypedValue]);
 
         const promise = decryptionService.delegatedDecryptValues(
           handles([[HANDLE_A, CONTRACT_A]]),
@@ -434,7 +440,7 @@ describe("DecryptionService", () => {
         resolveAFailed = r;
       });
       vi.mocked(relayer.decryptValues).mockImplementation(
-        async ({ encryptedValues }: { encryptedValues: EncryptedValue[] }) => {
+        async ({ encryptedValues }: DecryptValuesParameters) => {
           // Bulk phase: one call per contract, all reject non-fatally.
           if (bulkCalls < 3) {
             bulkCalls++;
@@ -451,9 +457,9 @@ describe("DecryptionService", () => {
             // a macrotask hop so the freed worker re-enters the loop afterwards.
             await aFailed;
             await new Promise((r) => setTimeout(r, 5));
-            return [{ type: "uint64", value: 20n }];
+            return [{ type: "uint64", value: 20n } as TypedValue];
           }
-          return [{ type: "uint64", value: 30n }];
+          return [{ type: "uint64", value: 30n } as TypedValue];
         },
       );
 

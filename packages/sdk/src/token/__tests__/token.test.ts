@@ -1,3 +1,5 @@
+import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
+import type { TypedValue } from "@fhevm/sdk/types";
 import { getAddress, type Address } from "viem";
 import {
   DecryptionFailedError,
@@ -5,8 +7,8 @@ import {
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
-import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 import { describe, expect, test, vi } from "../../test-fixtures";
+import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 
 describe("Token", () => {
   describe("balanceOf", () => {
@@ -135,7 +137,7 @@ describe("Token", () => {
       );
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 100n, type: "uint64" }],
+        values: [{ value: 100n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
       });
@@ -150,7 +152,10 @@ describe("Token", () => {
       token,
       inputProof,
     }) => {
-      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({
+        encryptedValues: [],
+        inputProof,
+      } as unknown as EncryptValuesReturnType);
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -200,7 +205,7 @@ describe("Token", () => {
       const result = await token.confidentialTransferFrom(from, to, 200n);
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 200n, type: "uint64" }],
+        values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress: getAddress(from),
       });
@@ -244,7 +249,7 @@ describe("Token", () => {
       });
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 100n, type: "uint64" }],
+        values: [{ value: 100n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress,
       });
@@ -263,7 +268,10 @@ describe("Token", () => {
       token,
       inputProof,
     }) => {
-      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({
+        encryptedValues: [],
+        inputProof,
+      } as unknown as EncryptValuesReturnType);
 
       await expect(
         token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
@@ -318,7 +326,7 @@ describe("Token", () => {
       const result = await token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA);
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 200n, type: "uint64" }],
+        values: [{ value: 200n, type: "euint64" }],
         contractAddress: tokenAddress,
         userAddress: getAddress(FROM),
       });
@@ -425,7 +433,9 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 50n }]);
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 50n } as TypedValue,
+      ]);
 
       await expect(token.confidentialTransfer(RECIPIENT, 100n)).rejects.toMatchObject({
         code: ZamaErrorCode.InsufficientConfidentialBalance,
@@ -440,7 +450,9 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 200n }]);
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 200n } as TypedValue,
+      ]);
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -453,7 +465,9 @@ describe("Token", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 100n }]);
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 100n } as TypedValue,
+      ]);
 
       const result = await token.confidentialTransfer(RECIPIENT, 100n);
       expect(result.txHash).toBe("0xtxhash");
@@ -568,7 +582,9 @@ describe("Token", () => {
       vi.mocked(provider.readContract)
         .mockResolvedValueOnce(handle) // confidentialBalanceOf
         .mockResolvedValueOnce(2n ** 64n - 1n); // getDelegationExpiry → permanent
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 1234n }]);
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 1234n } as TypedValue,
+      ]);
 
       const balance = await token.decryptBalanceAs({ delegatorAddress: DELEGATOR });
 

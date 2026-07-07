@@ -1,4 +1,5 @@
 import type { Address } from "@zama-fhe/sdk";
+import type { TypedValue } from "@fhevm/sdk/types";
 import { waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
@@ -11,8 +12,8 @@ import { describe, expect, test, vi } from "../test-fixtures";
 describe("useDecryptValues", () => {
   test("decrypts encrypted values", async ({ relayer, tokenAddress, renderWithProviders }) => {
     vi.mocked(relayer.decryptValues).mockResolvedValue([
-      { type: "uint64", value: 100n },
-      { type: "bool", value: true },
+      { type: "uint64", value: 100n } as TypedValue,
+      { type: "bool", value: true } as TypedValue,
     ]);
 
     const { result } = renderWithProviders(() =>
@@ -35,8 +36,8 @@ describe("useDecryptValues", () => {
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
     vi.mocked(relayer.decryptValues)
-      .mockResolvedValueOnce([{ type: "uint64", value: 10n }])
-      .mockResolvedValueOnce([{ type: "uint64", value: 20n }]);
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 20n } as TypedValue]);
 
     const { result } = renderWithProviders(() =>
       useDecryptValues(
@@ -112,7 +113,9 @@ describe("useDecryptValues", () => {
     // SDK-80 row 17: when credentials are already authorized for the contract,
     // useHasPermit resolves to true and useDecryptValues fires automatically —
     // no extra signature prompt should be triggered by the decrypt itself.
-    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 42n }]);
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 42n } as TypedValue,
+    ]);
 
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();

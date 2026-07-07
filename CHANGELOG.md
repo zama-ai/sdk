@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2026-07-07)
+
+### Build System
+
+- integrate Turborepo for cached build/typecheck/api-report/size ([#523](https://github.com/zama-ai/sdk/issues/523)) ([fb5c6b7]())
+
+## [3.3.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.9...v3.3.0-alpha.10) (2026-07-07)
+
+### Code Refactoring
+
+- **examples:** migrate off pending-unshield helpers [SDK-251] ([#531](https://github.com/zama-ai/sdk/issues/531)) ([848d61f]()), closes [#497]() [#497]() [#497]() [#497]()
+
 ## [3.3.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2026-07-06)
 
 ### Features

@@ -11,8 +11,7 @@ import { TransactionRevertedError } from "../../errors";
 import type { Address } from "viem";
 import type { GenericProvider } from "../../types";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
-
-const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
+import type { TypedValue } from "@fhevm/sdk/types";
 
 /**
  * Build a ZamaSDK with an event listener wired up, together with a fresh
@@ -129,7 +128,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    relayer.decryptValues = vi.fn().mockRejectedValue(new Error("decrypt boom"));
+    vi.mocked(relayer.decryptValues).mockRejectedValue(new Error("decrypt boom"));
     const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
@@ -163,7 +162,6 @@ describe("Token.decryptBalanceAs event emissions", () => {
   test("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({
     createSDK,
     relayer,
-    signer,
     tokenAddress,
     handle,
     delegatorAddress,
@@ -174,22 +172,9 @@ describe("Token.decryptBalanceAs event emissions", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle)
       .mockResolvedValue(2n ** 64n - 1n);
-    relayer.createDelegatedUserDecryptEIP712 = vi
-      .fn()
-      .mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [tokenAddress],
-          delegatorAddress,
-          delegateAddress: signer.walletAccount.getSnapshot()!.address,
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
-        },
-      });
-    relayer.delegatedDecryptValues = vi.fn().mockResolvedValue({ [handle]: 42n });
+    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+      { type: "uint64", value: 42n } as TypedValue,
+    ]);
 
     await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
@@ -260,7 +245,7 @@ describe("Token event emissions", () => {
       relayer,
       tokenAddress,
     }) => {
-      relayer.encryptValues = vi.fn().mockRejectedValue(new Error("encrypt boom"));
+      vi.mocked(relayer.encryptValues).mockRejectedValue(new Error("encrypt boom"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(

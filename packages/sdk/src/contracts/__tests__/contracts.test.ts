@@ -263,20 +263,20 @@ describe("confidentialWrapperAbi version smoke test (protocol-apps@71611c624ddc)
   test("finalizeUnwrap first param is bytes32 unwrapRequestId (not euint64 amount)", () => {
     const f = fn("finalizeUnwrap");
     expect(f).toBeDefined();
-    expect(f!.inputs[0].name).toBe("unwrapRequestId");
-    expect(f!.inputs[0].type).toBe("bytes32");
+    expect(f!.inputs[0]!.name).toBe("unwrapRequestId");
+    expect(f!.inputs[0]!.type).toBe("bytes32");
   });
 
   test("unwrapAmount exists with bytes32 param", () => {
     const f = fn("unwrapAmount");
     expect(f).toBeDefined();
-    expect(f!.inputs[0].type).toBe("bytes32");
+    expect(f!.inputs[0]!.type).toBe("bytes32");
   });
 
   test("unwrapRequester exists with bytes32 param", () => {
     const f = fn("unwrapRequester");
     expect(f).toBeDefined();
-    expect(f!.inputs[0].type).toBe("bytes32");
+    expect(f!.inputs[0]!.type).toBe("bytes32");
   });
 
   test("includes upgraded unwrap event signatures in the exported wrapper ABI", () => {

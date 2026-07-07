@@ -1,4 +1,5 @@
 import { waitFor } from "@testing-library/react";
+import type { TypedValue } from "@fhevm/sdk/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegatedDecryptValues } from "../use-delegated-decrypt";
 
@@ -8,7 +9,9 @@ describe("useDelegatedDecryptValues", () => {
     relayer,
     handle,
   }) => {
-    vi.mocked(relayer.decryptValues).mockResolvedValue([{ type: "uint64", value: 300n }]);
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 300n } as TypedValue,
+    ]);
 
     const tokenAddress = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as `0x${string}`;
     const delegatorAddress = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as `0x${string}`;

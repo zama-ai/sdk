@@ -94,6 +94,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerA = createMockSigner({
         walletAccount: {
           getSnapshot: vi.fn().mockReturnValue(signerAAccount),
+          isReady: vi.fn().mockReturnValue(true),
           subscribe: vi.fn((listener) => {
             listener({ previous: undefined, next: signerAAccount });
             return () => {};
@@ -118,6 +119,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerB = createMockSigner({
         walletAccount: {
           getSnapshot: vi.fn().mockReturnValue(signerBAccount),
+          isReady: vi.fn().mockReturnValue(true),
           subscribe: vi.fn((listener) => {
             listener({ previous: undefined, next: signerBAccount });
             return () => {};
@@ -138,6 +140,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerA2 = createMockSigner({
         walletAccount: {
           getSnapshot: vi.fn().mockReturnValue(signerAAccount),
+          isReady: vi.fn().mockReturnValue(true),
           subscribe: vi.fn((listener) => {
             listener({ previous: undefined, next: signerAAccount });
             return () => {};

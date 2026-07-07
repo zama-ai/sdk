@@ -4,6 +4,7 @@ import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
 import type { EncryptedValue } from "../../relayer/types";
 import type { ZamaSDK } from "../../zama-sdk";
+import type { TypedValue } from "@fhevm/sdk/types";
 
 const TOKEN_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
@@ -60,8 +61,8 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.decryptValues)
-      .mockResolvedValueOnce([{ type: "uint64", value: 100n }])
-      .mockResolvedValueOnce([{ type: "uint64", value: 200n }]);
+      .mockResolvedValueOnce([{ type: "uint64", value: 100n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 200n } as TypedValue]);
 
     const tokenA = new Token(delegateSdk, TOKEN_A);
     const tokenB = new Token(delegateSdk, TOKEN_B);

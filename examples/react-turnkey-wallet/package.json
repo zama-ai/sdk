@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
-    "@turnkey/react-wallet-kit": "^1.11.1",
+    "@turnkey/react-wallet-kit": "^2.1.1",
     "@turnkey/viem": "^0.14.31",
-    "@zama-fhe/react-sdk": "^3.2.0",
-    "@zama-fhe/sdk": "^3.2.0",
+    "@zama-fhe/react-sdk": "3.3.0-alpha.9",
+    "@zama-fhe/sdk": "3.3.0-alpha.9",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

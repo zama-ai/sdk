@@ -64,11 +64,19 @@ jobs:
       - name: Install dependencies
         run: pnpm ci
 
+      - name: Cache turbo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Check internal doc links
-        run: pnpm docs:check-links
+        run: pnpm exec turbo run docs:check-links
 
       - name: Verify LLM corpus artifacts are up to date
-        run: pnpm llm:check
+        run: pnpm exec turbo run llm:check
 
       # Doc URLs are branch-specific (raw.githubusercontent .../main|prerelease, and
       # docs.zama.org .../stable|alpha). `github.base_ref` is the branch this PR lands

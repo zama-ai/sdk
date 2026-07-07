@@ -1,15 +1,17 @@
+import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
+import type { TypedValue } from "@fhevm/sdk/types";
 import type { Address } from "viem";
-import { Topics } from "../../events";
 import {
   DecryptionFailedError,
   TransactionRevertedError,
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
+import { Topics } from "../../events";
+import { describe, expect, test, vi } from "../../test-fixtures";
+import type { TransactionReceipt } from "../../types/transaction";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 import { savePendingUnshield } from "../pending-unshield";
-import type { TransactionReceipt } from "../../types/transaction";
-import { describe, expect, test, vi } from "../../test-fixtures";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
@@ -269,7 +271,7 @@ describe("WrappedToken", () => {
       const result = await wrappedToken.unwrap(50n);
 
       expect(relayer.encryptValues).toHaveBeenCalledWith({
-        values: [{ value: 50n, type: "uint64" }],
+        values: [{ value: 50n, type: "euint64" }],
         contractAddress: wrapperAddress,
         userAddress,
       });
@@ -284,7 +286,10 @@ describe("WrappedToken", () => {
       wrappedToken,
       inputProof,
     }) => {
-      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({
+        encryptedValues: [],
+        inputProof,
+      } as unknown as EncryptValuesReturnType);
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
@@ -499,8 +504,9 @@ describe("WrappedToken", () => {
         receiptWithUnwrapRequested(userAddress),
       );
       // Interrupt phase 2: public decryption (finalize) fails after the unwrap landed.
-      relayer.publicDecrypt = vi.fn().mockRejectedValue(new Error("finalize boom"));
-
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValue(
+        new Error("finalize boom"),
+      );
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow();
 
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
@@ -575,7 +581,9 @@ describe("WrappedToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 100n }]);
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 100n } as TypedValue,
+      ]);
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [

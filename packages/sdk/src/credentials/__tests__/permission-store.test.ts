@@ -4,7 +4,6 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
 import type { Permission } from "../types";
 import { checksum } from "../utils";
-import { LoggerService } from "../../services/logger-service";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 const DELEGATOR = checksum("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC");
@@ -42,7 +41,12 @@ function makePermission(
 const test = baseTest.extend<{ store: PermissionStore }>({
   // eslint-disable-next-line no-empty-pattern
   store: async ({}, use) => {
-    await use(new PermissionStore({ storage: new MemoryStorage(), logger: new LoggerService() }));
+    await use(
+      new PermissionStore({
+        storage: new MemoryStorage(),
+        logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+      }),
+    );
   },
 });
 

@@ -15,7 +15,7 @@ describe("useDecryptPublicValues", () => {
         abiEncodedCleartexts: "0x",
         decryptionProof: "0xproof",
       },
-    });
+    } as any);
 
     const { result, queryClient } = renderWithProviders(() => useDecryptPublicValues());
 

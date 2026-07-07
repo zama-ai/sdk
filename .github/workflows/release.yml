@@ -154,25 +154,16 @@ jobs:
             exit 1
           fi
 
-  lint:
+  # build + lint + typecheck + format + size + vitest + api-report, sharing one build
+  ci:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/lint.yml
-
-  vitest:
-    needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/vitest.yml
+    uses: ./.github/workflows/ci.yml
 
   playwright:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/playwright.yml
-
-  api-report:
-    needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/api-report.yml
 
   docs:
     needs: [validate-branch]
@@ -180,7 +171,7 @@ jobs:
     uses: ./.github/workflows/docs.yml
 
   release:
-    needs: [lint, vitest, playwright, api-report, docs]
+    needs: [ci, playwright, docs]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
     steps:

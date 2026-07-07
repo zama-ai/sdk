@@ -27,9 +27,16 @@ export class EncryptionService {
   async encryptValues(params: EncryptParams): Promise<EncryptResult> {
     const t0 = Date.now();
     const normalizedContractAddress = getAddress(params.contractAddress);
+    const normalizedValues = params.values.map((v) => ({
+      type: v.type.replace(/^e/, ""),
+      value: v.value,
+    }));
     try {
       this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, normalizedContractAddress);
-      const result = await this.#router.relayer.encryptValues(params);
+      const result = await this.#router.relayer.encryptValues({
+        ...params,
+        values: normalizedValues,
+      });
       this.#emitEvent(
         { type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 },
         normalizedContractAddress,

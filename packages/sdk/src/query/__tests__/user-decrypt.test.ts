@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { decryptValuesQueryOptions } from "../user-decrypt";
 import type { Address } from "viem";
+import type { TypedValue } from "@fhevm/sdk/types";
 
 const CONTRACT = "0x1111111111111111111111111111111111111111" as Address;
 
@@ -8,7 +9,9 @@ describe("decryptValuesQueryOptions", () => {
   test("decrypts encrypted values via sdk.decryption", async ({ sdk, relayer, signer }) => {
     const handle = ("0x" + "01".repeat(32)) as `0x${string}`;
 
-    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([{ type: "uint64", value: 100n }]);
+    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+      { type: "uint64", value: 100n } as TypedValue,
+    ]);
 
     const options = decryptValuesQueryOptions(
       sdk,

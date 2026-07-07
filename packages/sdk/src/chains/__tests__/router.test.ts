@@ -3,7 +3,7 @@ import { ChainRouter } from "../../chains/router";
 import { ConfigurationError } from "../../errors";
 import type { FheChain } from "../../chains/types";
 import type { RelayerConfig } from "../../config/types";
-import type { RelayerSDK } from "../../relayer/types";
+import type { FhevmRelayerSDK } from "../../relayer/types";
 
 describe("ChainRouter", () => {
   describe("constructor", () => {
@@ -115,7 +115,7 @@ describe("ChainRouter", () => {
 /** Build a default `Record<number, RelayerConfig>` keyed by each chain's id. */
 function relayerConfigs(
   chains: FheChain[],
-  createRelayer: () => RelayerSDK,
+  createRelayer: () => FhevmRelayerSDK,
 ): Record<number, RelayerConfig> {
   return Object.fromEntries(chains.map((c) => [c.id, { type: "web", createRelayer }]));
 }

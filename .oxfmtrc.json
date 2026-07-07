@@ -6,7 +6,7 @@
   "printWidth": 100,
   "tabWidth": 2,
   "objectWrap": "collapse",
-  "sortPackageJson": false,
+  "sortPackageJson": true,
   "ignorePatterns": [
     "dist",
     "node_modules",

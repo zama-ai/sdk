@@ -162,8 +162,8 @@ describe("createConfig", () => {
       expect(result.createRelayer).toBeTypeOf("function");
     });
 
-    test("returns tagged config when called with options", () => {
-      const result = web({});
+    test("returns tagged config when called with no args (options test)", () => {
+      const result = web();
       expect(result.type).toBe("web");
       expect(result.createRelayer).toBeTypeOf("function");
     });

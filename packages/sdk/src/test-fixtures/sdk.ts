@@ -13,7 +13,9 @@ import type { SignerFixtures } from "./signer";
 import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
 
-export type CreateSDKFn = (overrides?: Partial<ZamaConfig>) => ZamaSDK;
+/** Overrides accepted by createSDK. Extends ZamaConfig with a test-only `relayer` shorthand. */
+export type CreateSDKOverrides = Partial<ZamaConfig> & { relayer?: FhevmRelayerSDK };
+export type CreateSDKFn = (overrides?: CreateSDKOverrides) => ZamaSDK;
 
 export interface SdkFixtures {
   sdk: ZamaSDK;
@@ -23,12 +25,15 @@ export interface SdkFixtures {
 
 function buildSDK(
   chain: FheChain,
-  relayer: FhevmRelayerSDK,
+  defaultRelayer: FhevmRelayerSDK,
   provider: GenericProvider,
   signer: GenericSigner,
   storage: GenericStorage,
-  overrides?: Partial<ZamaConfig>,
+  overrides?: CreateSDKOverrides,
 ): ZamaSDK {
+  // Allow tests to inject a custom relayer via the `relayer` shorthand.
+  const { relayer: relayerOverride, ...restOverrides } = overrides ?? {};
+  const relayer = relayerOverride ?? defaultRelayer;
   return new ZamaSDK({
     chains: [chain],
     router: { relayer },
@@ -43,7 +48,7 @@ function buildSDK(
     // Resolved configs always carry a LoggerService (buildZamaConfig guarantees
     // it); the silent default mirrors a consumer who configured no logger.
     logger: new LoggerService(),
-    ...overrides,
+    ...restOverrides,
   } as unknown as ZamaConfig);
 }
 
