@@ -18215,6 +18215,11 @@ export interface UnwrapRequestedEvent {
     readonly unwrapRequestId?: EncryptedValue;
 }
 
+// @public
+export interface UnwrapResult extends TransactionResult {
+    unwrapRequestId: EncryptedValue;
+}
+
 // @public (undocumented)
 export interface UnwrapSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -19446,8 +19451,8 @@ export class WrappedToken extends Token {
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<UnwrapResult>;
+    unwrapAll(): Promise<UnwrapResult>;
 }
 
 // @public

@@ -891,7 +891,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
+export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, UnwrapResult>;
 
 // @public
 export interface UnwrapFinalizedEvent {
@@ -904,7 +904,7 @@ export interface UnwrapFinalizedEvent {
 }
 
 // @public (undocumented)
-export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
+export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, UnwrapResult>;
 
 // @public
 export interface UnwrapParams {
@@ -969,8 +969,8 @@ export class WrappedToken extends Token {
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<UnwrapResult>;
+    unwrapAll(): Promise<UnwrapResult>;
 }
 
 // @public (undocumented)
