@@ -4,6 +4,7 @@ import { useState } from "react";
 import { encodeAbiParameters, encodeFunctionData, isAddress, parseAbi, type Address } from "viem";
 import { useRelayedSend } from "@/lib/useRelayedSend";
 import { parseAmount } from "@/lib/parseAmount";
+import { TraceLog } from "@/components/TraceLog";
 import {
   CUSDC_ADDRESS,
   CUSDC_DECIMALS,
@@ -41,7 +42,8 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
         })
       : undefined;
 
-  const { sendTransaction, hash, isPending, sendError, receipt } = useRelayedSend();
+  const { sendTransaction, hash, status, sendError, receiptStatus, trace } = useRelayedSend();
+  const isBusy = status === "sending" || status === "confirming";
 
   function handleDeposit() {
     if (!data) return;
@@ -73,9 +75,9 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleDeposit}
-        disabled={!data || isPending || receipt.isLoading}
+        disabled={!data || isBusy}
       >
-        {isPending ? "Sending…" : receipt.isLoading ? "Confirming…" : "Deposit"}
+        {status === "sending" ? "Sending…" : status === "confirming" ? "Confirming…" : "Deposit"}
       </button>
 
       {data && (
@@ -88,20 +90,7 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
       )}
 
       {sendError && <div className="alert alert-error card-status">{sendError}</div>}
-      {receipt.isError && (
-        <div className="alert alert-error card-status">
-          Failed to confirm: {receipt.error?.message}
-          {hash && (
-            <>
-              {" — "}
-              <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
-                check on Etherscan
-              </a>
-            </>
-          )}
-        </div>
-      )}
-      {receipt.isSuccess && hash && receipt.data?.status === "reverted" && (
+      {status === "reverted" && hash && (
         <div className="alert alert-error card-status">
           Transaction reverted —{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
@@ -109,7 +98,7 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
           </a>
         </div>
       )}
-      {receipt.isSuccess && hash && receipt.data?.status !== "reverted" && (
+      {status === "confirmed" && hash && receiptStatus === "success" && (
         <div className="alert alert-success card-status">
           Confirmed — real{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
@@ -118,6 +107,8 @@ export function VaultDepositCard({ connectedAddress }: VaultDepositCardProps) {
           into the vault.
         </div>
       )}
+
+      <TraceLog trace={trace} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { encodeFunctionData, isAddress, parseAbi, type Address } from "viem";
 import { useRelayedSend } from "@/lib/useRelayedSend";
 import { parseAmount } from "@/lib/parseAmount";
+import { TraceLog } from "@/components/TraceLog";
 import { CUSDC_ADDRESS, CUSDC_DECIMALS, CUSDC_SYMBOL, SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 // The exact same "public-looking" ABI zama-json-rpc's confidentialTransfer
@@ -30,7 +31,8 @@ export function SendCard({ connectedAddress }: SendCardProps) {
         })
       : undefined;
 
-  const { sendTransaction, hash, isPending, sendError, receipt } = useRelayedSend();
+  const { sendTransaction, hash, status, sendError, receiptStatus, trace } = useRelayedSend();
+  const isBusy = status === "sending" || status === "confirming";
 
   function handleSend() {
     if (!data) return;
@@ -62,9 +64,9 @@ export function SendCard({ connectedAddress }: SendCardProps) {
         type="button"
         className="btn btn-primary btn-full"
         onClick={handleSend}
-        disabled={!data || isPending || receipt.isLoading}
+        disabled={!data || isBusy}
       >
-        {isPending ? "Sending…" : receipt.isLoading ? "Confirming…" : "Send"}
+        {status === "sending" ? "Sending…" : status === "confirming" ? "Confirming…" : "Send"}
       </button>
 
       {data && (
@@ -77,20 +79,7 @@ export function SendCard({ connectedAddress }: SendCardProps) {
       )}
 
       {sendError && <div className="alert alert-error card-status">{sendError}</div>}
-      {receipt.isError && (
-        <div className="alert alert-error card-status">
-          Failed to confirm: {receipt.error?.message}
-          {hash && (
-            <>
-              {" — "}
-              <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
-                check on Etherscan
-              </a>
-            </>
-          )}
-        </div>
-      )}
-      {receipt.isSuccess && hash && receipt.data?.status === "reverted" && (
+      {status === "reverted" && hash && (
         <div className="alert alert-error card-status">
           Transaction reverted —{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
@@ -98,7 +87,7 @@ export function SendCard({ connectedAddress }: SendCardProps) {
           </a>
         </div>
       )}
-      {receipt.isSuccess && hash && receipt.data?.status !== "reverted" && (
+      {status === "confirmed" && hash && receiptStatus === "success" && (
         <div className="alert alert-success card-status">
           Confirmed — check Etherscan for the real (encrypted) call this became:{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
@@ -106,6 +95,8 @@ export function SendCard({ connectedAddress }: SendCardProps) {
           </a>
         </div>
       )}
+
+      <TraceLog trace={trace} />
     </div>
   );
 }

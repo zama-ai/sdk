@@ -317,3 +317,72 @@ body {
 .history-row a:hover {
   text-decoration: underline;
 }
+
+/* Trace log — step-by-step, per hop, of a single write action */
+.trace-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trace-entry {
+  border-left: 3px solid #e2e8f0;
+  padding: 6px 0 6px 12px;
+}
+.trace-entry-server-audit {
+  border-left-color: #2563eb;
+}
+.trace-entry-inferred {
+  border-left-color: #cbd5e1;
+  opacity: 0.85;
+}
+.trace-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.trace-hop {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
+}
+.trace-kind {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #94a3b8;
+}
+.trace-kind-server-audit {
+  color: #2563eb;
+}
+.trace-kind-inferred {
+  color: #94a3b8;
+  font-style: italic;
+}
+.trace-summary {
+  font-size: 13px;
+  margin-top: 2px;
+}
+.trace-detail {
+  margin-top: 4px;
+}
+.trace-detail summary {
+  font-size: 11px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.trace-detail pre {
+  background: #0f172a;
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-top: 6px;
+}
