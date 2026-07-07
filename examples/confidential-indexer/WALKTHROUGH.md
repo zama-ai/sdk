@@ -144,7 +144,11 @@ than failing immediately on the first not-yet-propagated response.
   amount is itself an indexed event topic, so no extra on-chain read is
   needed to get the handle.
 - REST query API (`/health`, `/delegations`, `/balances/:token/:account`,
-  `/transfers/:token/:account`) with app-level bearer-token auth.
+  `/transfers/:token/:account`) with app-level bearer-token auth. Permissive,
+  dev-only CORS on every response so a browser app can call it directly —
+  added for, and now exercised by, `examples/rpc-demo-app`'s History card and
+  delegation-status badge (real decrypted data rendered in an actual browser,
+  not just curl — see that project's WALKTHROUGH.md).
 - CLI (commander) + env vars, Dockerfile, structured similarly to
   `zama-json-rpc` for consistency across the two sibling projects.
 - 19 unit tests (delegation store, decrypt cache incl. retry behavior,

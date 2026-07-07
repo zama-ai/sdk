@@ -111,6 +111,10 @@ decrypt; `--apiKey` controls who is allowed to read the results back out.
 Without it, anyone who can reach the service can read anything it has ever
 decrypted — fine for local exploration, not beyond that.
 
+CORS is permissive and always on (`Access-Control-Allow-Origin: *`) — dev-only,
+so a browser app (like `examples/rpc-demo-app`) can query this REST API
+directly cross-origin. Not something to expose as-is beyond local development.
+
 ## CLI options
 
 | Flag                        | Env var                            | Default                |
