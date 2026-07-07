@@ -19,7 +19,7 @@ export function EncryptPanel({ tokenAddress }: { tokenAddress: Address }) {
             return;
           }
           encrypt({
-            values: [{ value: 7n, type: "uint64" }],
+            values: [{ value: 7n, type: "euint64" }],
             contractAddress: tokenAddress,
             userAddress: address,
           });

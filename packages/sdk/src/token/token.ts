@@ -533,7 +533,7 @@ export class Token {
     }
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "uint64" }],
+      values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
@@ -585,7 +585,7 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "uint64" }],
+      values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });
@@ -662,7 +662,7 @@ export class Token {
     }
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "uint64" }],
+      values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: getAddress(account.address),
     });
@@ -729,7 +729,7 @@ export class Token {
     const normalizedTo = getAddress(to);
 
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
-      values: [{ value: amount, type: "uint64" }],
+      values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
       userAddress: normalizedFrom,
     });

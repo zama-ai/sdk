@@ -20,9 +20,9 @@ export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 /** A single value to encrypt with its FHE type. */
 export type EncryptInput =
-  | { readonly type: Exclude<TypedValue["type"], "bool" | "address">; readonly value: bigint }
-  | { readonly type: "bool"; readonly value: boolean | 1n | 0n }
-  | { readonly type: "address"; readonly value: Address };
+  | { readonly type: `e${Exclude<TypedValue["type"], "bool" | "address">}`; readonly value: bigint }
+  | { readonly type: `e${Extract<TypedValue["type"], "bool">}`; readonly value: boolean | 1n | 0n }
+  | { readonly type: `e${Extract<TypedValue["type"], "address">}`; readonly value: Address };
 
 /** Parameters for encryption */
 export interface EncryptParams {
