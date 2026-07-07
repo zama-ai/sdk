@@ -14,6 +14,7 @@ import {
 import { findUnwrapRequested } from "../events/onchain-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { RawLog } from "../types/transaction";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -400,12 +401,12 @@ export class WrappedToken extends Token {
       throw new EncryptionFailedError("Encryption returned no encrypted values");
     }
 
-    return this.#withUnwrapRequestId(
-      await this.submitTransaction({
-        operation: "unwrap",
-        config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
-      }),
-    );
+    const result = await this.submitTransaction({
+      operation: "unwrap",
+      config: unwrapContract(this.address, userAddress, userAddress, encryptedAmount, inputProof),
+    });
+
+    return { ...result, unwrapRequestId: this.#extractUnwrapRequestId(result.receipt.logs) };
   }
 
   /**
@@ -436,12 +437,12 @@ export class WrappedToken extends Token {
       throw new DecryptionFailedError("Cannot unshield: balance is zero");
     }
 
-    return this.#withUnwrapRequestId(
-      await this.submitTransaction({
-        operation: "unwrapAll",
-        config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
-      }),
-    );
+    const result = await this.submitTransaction({
+      operation: "unwrapAll",
+      config: unwrapFromBalanceContract(this.address, userAddress, userAddress, encryptedValue),
+    });
+
+    return { ...result, unwrapRequestId: this.#extractUnwrapRequestId(result.receipt.logs) };
   }
 
   /**
@@ -480,17 +481,17 @@ export class WrappedToken extends Token {
   // PRIVATE HELPERS
 
   /**
-   * Attach the `unwrapRequestId` decoded from an unwrap receipt so callers can
-   * hand the result straight to {@link finalizeUnwrap}. Falls back to the
-   * event's `encryptedAmount` on protocol versions that don't emit a dedicated
-   * `unwrapRequestId`.
+   * Decode the `unwrapRequestId` from an unwrap/unshield receipt's logs.
+   * Falls back to the event's `encryptedAmount` on protocol versions that
+   * don't emit a dedicated `unwrapRequestId`. Throws when the receipt lacks
+   * the `UnwrapRequested` event entirely.
    */
-  #withUnwrapRequestId(result: TransactionResult): UnwrapResult {
-    const event = findUnwrapRequested(result.receipt.logs);
+  #extractUnwrapRequestId(logs: readonly RawLog[]): EncryptedValue {
+    const event = findUnwrapRequested(logs);
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unwrap receipt");
     }
-    return { ...result, unwrapRequestId: event.unwrapRequestId ?? event.encryptedAmount };
+    return event.unwrapRequestId ?? event.encryptedAmount;
   }
 
   async #getUnderlying(): Promise<Address> {
@@ -533,15 +534,10 @@ export class WrappedToken extends Token {
       }
       throw new TransactionRevertedError("Failed to get unshield receipt", { cause: error });
     }
-    const event = findUnwrapRequested(receipt.logs);
-    if (!event) {
-      throw new TransactionRevertedError("No UnwrapRequested event found in unshield receipt");
-    }
+    const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
-    const finalizeResult = await this.finalizeUnwrap(
-      event.unwrapRequestId ?? event.encryptedAmount,
-    );
+    const finalizeResult = await this.finalizeUnwrap(unwrapRequestId);
     this.emit({
       type: ZamaSDKEvents.UnshieldPhase2Submitted,
       txHash: finalizeResult.txHash,
