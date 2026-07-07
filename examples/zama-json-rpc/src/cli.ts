@@ -11,13 +11,15 @@ import { confidentialTransferFromAndCallOperation } from "./registry/operations/
 import { unwrapOperation } from "./registry/operations/unwrap.js";
 import { finalizeUnwrapOperation } from "./registry/operations/finalize-unwrap.js";
 import { createLogger } from "./logging/logger.js";
+import { AuditBuffer } from "./logging/audit-buffer.js";
 import { createUpstreamForwarder } from "./rpc/passthrough.js";
 import { buildZamaHandlers } from "./zama/introspection.js";
 import { createHttpServer } from "./server.js";
 
 async function main() {
   const config = parseConfig(process.argv.slice(2));
-  const logger = createLogger({ quiet: config.quiet, verbose: config.verbose });
+  const auditBuffer = new AuditBuffer();
+  const logger = createLogger({ quiet: config.quiet, verbose: config.verbose, auditBuffer });
 
   if (!config.apiKey) {
     logger.warn(
@@ -55,6 +57,7 @@ async function main() {
     httpPath: config.httpPath,
     apiKey: config.apiKey,
     logger,
+    auditBuffer,
   });
 
   if (config.host === "0.0.0.0") {

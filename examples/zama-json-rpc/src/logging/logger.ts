@@ -1,3 +1,5 @@
+import type { AuditBuffer } from "./audit-buffer.js";
+
 export type AuditEntry =
   | { decision: "passthrough"; method: string }
   | { decision: "rewritten"; method: string; contractAddress: string; operation: string }
@@ -17,7 +19,11 @@ export interface Logger {
   audit(entry: AuditEntry): void;
 }
 
-export function createLogger(options: { quiet: boolean; verbose: boolean }): Logger {
+export function createLogger(options: {
+  quiet: boolean;
+  verbose: boolean;
+  auditBuffer?: AuditBuffer;
+}): Logger {
   const write = (stream: NodeJS.WriteStream, message: string) => {
     if (options.quiet) return;
     stream.write(`${new Date().toISOString()} ${message}\n`);
@@ -33,6 +39,7 @@ export function createLogger(options: { quiet: boolean; verbose: boolean }): Log
     },
     audit: (entry) => {
       process.stdout.write(`${new Date().toISOString()} [audit] ${JSON.stringify(entry)}\n`);
+      options.auditBuffer?.push(entry);
     },
   };
 }
