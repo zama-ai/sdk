@@ -5791,13 +5791,13 @@ export interface EncryptErrorEvent extends BaseEvent {
 
 // @public
 export type EncryptInput = {
-    readonly type: Exclude<TypedValue["type"], "bool" | "address">;
+    readonly type: `e${Exclude<TypedValue["type"], "bool" | "address">}`;
     readonly value: bigint;
 } | {
-    readonly type: "bool";
+    readonly type: `e${Extract<TypedValue["type"], "bool">}`;
     readonly value: boolean | 1n | 0n;
 } | {
-    readonly type: "address";
+    readonly type: `e${Extract<TypedValue["type"], "address">}`;
     readonly value: Address;
 };
 
