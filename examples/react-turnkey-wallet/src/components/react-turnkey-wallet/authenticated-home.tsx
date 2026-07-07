@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useZamaSDK } from "@zama-fhe/react-sdk";
+import { useZamaSDK, usePendingUnshield } from "@zama-fhe/react-sdk";
 import type { Address, Hex } from "viem";
 import { BalancesCard } from "./balances-card";
 import { ResumeUnshieldCard, UnshieldCard } from "./unshield-card";
@@ -13,7 +13,6 @@ import { useTurnkeyZama } from "@/components/providers";
 import { explorerUrl, isTestnet, viemChain } from "@/lib/config";
 import { MINT_ABI, ZERO_ADDRESS, shortAddr } from "@/lib/react-turnkey-wallet/utils";
 import { useEthBalance } from "@/hooks/react-turnkey-wallet/use-eth-balance";
-import { usePendingUnshield } from "@/hooks/react-turnkey-wallet/use-pending-unshield";
 import { usePublicTokenBalance } from "@/hooks/react-turnkey-wallet/use-public-token-balance";
 import { useTokenPairs } from "@/hooks/react-turnkey-wallet/use-token-pairs";
 
@@ -33,10 +32,11 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
     selectedPair,
     walletAddress,
   );
-  const { pendingUnshieldHash, setPendingUnshieldHash, clearStoredPendingUnshield } =
-    usePendingUnshield(selectedPair);
 
   const tokenAddress = selectedPair?.confidentialTokenAddress ?? ZERO_ADDRESS;
+  const { data: pendingUnshieldHash } = usePendingUnshield(tokenAddress, {
+    enabled: !!selectedPair,
+  });
 
   const walletAddressLabel = useMemo(
     () => (
@@ -79,9 +79,8 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
   }, [sdk, selectedPair, refetchPublicBalance, waitForTransactionReceipt, walletAddress]);
 
   const handleUnshieldSuccess = useCallback(() => {
-    void clearStoredPendingUnshield();
     void refetchPublicBalance();
-  }, [clearStoredPendingUnshield, refetchPublicBalance]);
+  }, [refetchPublicBalance]);
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 space-y-4 font-sans">
@@ -98,7 +97,6 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
         onSelect={(address) => {
           setSelectedTokenAddress(address);
           setIsBalanceRequested(false);
-          setPendingUnshieldHash(null);
         }}
       />
 
