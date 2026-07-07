@@ -17,6 +17,11 @@ in form (CLI shape, pass-through model), not in target audience — see
 > `WALKTHROUGH.md` for known limitations before relying on this for
 > anything beyond exploration.
 
+> **Integrating this into your own app?** See
+> [`HOW-TO-USE.md`](./HOW-TO-USE.md) for a five-minute integrator-focused
+> guide (execution diagram, copy-pasteable test calls, where you fit in).
+> This README is the full CLI/reference doc.
+
 ---
 
 ## How it works
