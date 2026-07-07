@@ -90,22 +90,16 @@ await wrappedToken.unshieldAll();
 
 ### 4. Handle interrupted unshields
 
-If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. You can detect and resume this state on the next page load.
+If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash automatically when phase 1 is submitted and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
 
 {% tabs %}
 {% tab title="SDK" %}
 
 ```ts
-import { savePendingUnshield, loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
-
-// Before finalization, persist the unwrap tx hash
-await savePendingUnshield(storage, wrapperAddress, unwrapTxHash);
-
-// On next page load, check for pending unshields
-const pending = await loadPendingUnshield(storage, wrapperAddress);
+// On next page load, check for a pending unshield
+const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
   await wrappedToken.resumeUnshield(pending);
-  await clearPendingUnshield(storage, wrapperAddress);
 }
 ```
 
@@ -114,10 +108,14 @@ if (pending) {
 
 The flow is:
 
-1. **`savePendingUnshield`** -- write the unwrap transaction hash to storage before the finalize step. The SDK does not do this automatically.
-2. **`loadPendingUnshield`** -- on mount, check if there is an incomplete unshield.
-3. **`resumeUnshield`** -- pick up where the SDK left off by polling for the proof and submitting the finalize transaction.
-4. **`clearPendingUnshield`** -- clean up storage once finalization is confirmed.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1.
+2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
+
+Resuming is intentionally caller-driven: surface a "resume" prompt rather than finalizing on load, so you never trigger a wallet transaction the user did not initiate.
+
+{% hint style="info" %}
+The SDK persists and clears the pending-unshield state for you — there are no storage helpers to call by hand. `getPendingUnshield()` (read) and `unshield()` / `resumeUnshield()` (orchestrated write) are the full surface. If you orchestrate `unwrap` + `finalizeUnwrap` yourself, manage your own persistence between the two phases.
+{% endhint %}
 
 ### 5. Use unshield hooks in React
 
@@ -154,17 +152,18 @@ await unshieldAll();
 {% tab title="useResumeUnshield" %}
 
 ```tsx
-import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrapper";
-const { mutateAsync: resumeUnshield } = useResumeUnshield(WRAPPER);
 
-// On mount
-const pending = await loadPendingUnshield(storage, WRAPPER);
-if (pending) {
-  await resumeUnshield({ unwrapTxHash: pending });
-  await clearPendingUnshield(storage, WRAPPER);
+// The SDK persisted the unwrap tx hash during phase 1 and clears it
+// automatically once the resume finalizes; the query invalidates on success.
+const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
+const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
+
+if (unwrapTxHash) {
+  // Render a "resume" prompt — finalize on user action, not on load.
+  return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
 }
 ```
 

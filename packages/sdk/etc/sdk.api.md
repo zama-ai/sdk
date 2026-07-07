@@ -628,9 +628,6 @@ export class ChromeSessionStorage implements GenericStorage {
 export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
-export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
-
-// @public
 export function cleartext(): CleartextRelayerConfig;
 
 // @public
@@ -11230,12 +11227,6 @@ export interface ListPairsOptions {
 }
 
 // @public
-export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
-
-// @public
-export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
-
-// @public
 export const mainnet: {
     readonly id: 1;
     readonly gatewayChainId: 261131;
@@ -11453,12 +11444,6 @@ export interface PaginatedResult<T> {
     readonly pageSize: number;
     // (undocumented)
     readonly total: number;
-}
-
-// @public
-export interface PendingUnshieldRequest {
-    readonly unwrapRequestId?: EncryptedValue;
-    readonly unwrapTxHash: Hex;
 }
 
 // @public
@@ -12962,9 +12947,6 @@ export class RpcRateLimitError extends ZamaError {
     });
     readonly retryAfter: number | undefined;
 }
-
-// @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
 export const sepolia: {
@@ -19457,6 +19439,7 @@ export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
+    getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;

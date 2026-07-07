@@ -25,9 +25,19 @@ function invalidateUnderlyingAllowanceQueries(
   });
 }
 
+function invalidatePendingUnshieldQueries(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: zamaQueryKeys.pendingUnshield.token(tokenAddress),
+  });
+}
+
 export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
+  invalidatePendingUnshieldQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
 }
 
@@ -50,7 +60,15 @@ export function invalidateAfterShield(queryClient: QueryClientLike, tokenAddress
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void {
   invalidateBalanceQueries(queryClient, tokenAddress);
   invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
+  invalidatePendingUnshieldQueries(queryClient, tokenAddress);
   invalidateWagmiBalanceQueries(queryClient);
+}
+
+export function invalidateAfterUnshieldSettled(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+): void {
+  invalidatePendingUnshieldQueries(queryClient, tokenAddress);
 }
 
 export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddress: Address): void {

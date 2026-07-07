@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2026-07-06)
+
+### Features
+
+- **sdk:** persist pending unshield state internally ([#497](https://github.com/zama-ai/sdk/issues/497)) ([3523b53]())
+
 ## [3.3.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2026-07-03)
 
 ### Code Refactoring

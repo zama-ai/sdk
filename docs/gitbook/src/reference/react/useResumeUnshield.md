@@ -10,8 +10,7 @@ Mutation hook that resumes an unshield interrupted between the unwrap and finali
 ## Import
 
 ```ts
-import { useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { useResumeUnshield, useWrappedToken } from "@zama-fhe/react-sdk";
 ```
 
 ## Usage
@@ -20,28 +19,27 @@ import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
 {% tab title="component.tsx" %}
 
 ```tsx
-import { useEffect } from "react";
-import { useResumeUnshield, useZamaSDK } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
+import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
-const TOKEN = "0xToken" as const;
+function ResumeUnshieldGuard({
+  wrapperAddress,
+  children,
+}: {
+  wrapperAddress: Address;
+  children: React.ReactNode;
+}) {
+  // The SDK persisted the unwrap tx hash during phase 1 and clears it
+  // automatically once the resume finalizes; the query invalidates on success.
+  const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
+  const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
-function ResumeUnshieldGuard() {
-  const sdk = useZamaSDK();
-  const { mutateAsync: resumeUnshield } = useResumeUnshield(TOKEN);
+  if (unwrapTxHash) {
+    // Finalize on user action, not on load — never trigger a wallet tx unprompted.
+    return <button onClick={() => resumeUnshield({ unwrapTxHash })}>Resume unshield</button>;
+  }
 
-  useEffect(() => {
-    async function checkPending() {
-      const pending = await loadPendingUnshield(sdk.storage, TOKEN);
-      if (!pending) return;
-
-      await resumeUnshield({ unwrapTxHash: pending });
-      await clearPendingUnshield(sdk.storage, TOKEN);
-    }
-    checkPending();
-  }, []);
-
-  return null;
+  return children;
 }
 ```
 
@@ -100,7 +98,7 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 `Hex`
 
-Transaction hash of the original unwrap transaction. Retrieved via `loadPendingUnshield`.
+Transaction hash of the original unwrap transaction. Retrieved via `WrappedToken.getPendingUnshield()` (see [useWrappedToken](./useWrappedToken.md)).
 
 ```ts
 await resumeUnshield({ unwrapTxHash: "0xabc..." });
@@ -108,13 +106,16 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 ## Recovery pattern
 
-The full recovery flow uses three utilities together:
+The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
 
-1. **`loadPendingUnshield(storage, tokenAddress)`** — reads the stored unwrap tx hash (returns `null` if none).
-2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt.
-3. **`clearPendingUnshield(storage, tokenAddress)`** — removes the pending record after finalize succeeds.
+1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
-Run this check on mount to handle any session that was interrupted.
+Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
+
+{% hint style="info" %}
+The SDK persists and clears the pending-unshield state for you. If you bypass `resumeUnshield` and orchestrate `unwrap` + `finalizeUnwrap` (via the `useUnwrap` / `useFinalizeUnwrap` hooks) yourself, manage your own persistence between the two phases.
+{% endhint %}
 
 ## Return Type
 
@@ -126,6 +127,7 @@ Auto-invalidates the `confidentialBalance` cache on success.
 
 ## Related
 
+- [usePendingUnshield](./usePendingUnshield.md) — detect an interrupted unshield to resume
 - [useUnshield](./useUnshield.md) — standard unshield (handles both steps automatically)
 - [useUnshieldAll](./useUnshieldAll.md) — unshield the entire balance
 - [WrappedToken.resumeUnshield](../sdk/WrappedToken.md#resumeunshield) — imperative equivalent on the `WrappedToken` class
