@@ -32,9 +32,10 @@ export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingU
   }
 
   // Keep the card mounted when resume.isSuccess so the "Unshielded!" alert is
-  // visible. React 18 batches setPendingTxHash(null) with the mutation's isSuccess
-  // state change — without this guard, the null check would unmount the card on
-  // the very same render that sets isSuccess, hiding the success message.
+  // visible. pendingTxHash comes from usePendingUnshield's query cache, which is
+  // invalidated (not synchronously cleared) on resume success — without this
+  // guard, a null pendingTxHash from a completed refetch would unmount the card
+  // before the success message has had a chance to be seen.
   if (!pendingTxHash && !resume.isSuccess) return null;
 
   return (
