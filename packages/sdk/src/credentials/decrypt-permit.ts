@@ -1,7 +1,11 @@
 import type { Address, Hex } from "viem";
 import { DecryptionFailedError } from "../errors";
 import { checksum } from "../schemas/primitives";
-import type { Permission, ResolvedCredentials, SerializedPermit } from "./types";
+import type {
+  Permission,
+  SerializedTransportKeyPairWithPermissions,
+  SerializedPermit,
+} from "./types";
 
 /**
  * The minimal permit material the decrypt seam needs. Delegation is already
@@ -25,7 +29,7 @@ export interface ResolvedPermit {
  * @throws if no stored permit covers `contractAddress`. {@link DecryptionFailedError}
  */
 export function resolvePermit(
-  credentials: ResolvedCredentials,
+  credentials: SerializedTransportKeyPairWithPermissions,
   contractAddress: Address,
 ): ResolvedPermit {
   const permission = findPermissionFor(credentials, contractAddress);
@@ -40,7 +44,7 @@ export function resolvePermit(
 }
 
 function findPermissionFor(
-  credentials: ResolvedCredentials,
+  credentials: SerializedTransportKeyPairWithPermissions,
   contractAddress: Address,
 ): Permission | undefined {
   const target = checksum(contractAddress);

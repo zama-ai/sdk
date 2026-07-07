@@ -1,5 +1,5 @@
 export type {
-  ResolvedCredentials,
+  SerializedTransportKeyPairWithPermissions,
   SerializedTransportKeyPair,
   StoredTransportKeyPair,
   Permission,

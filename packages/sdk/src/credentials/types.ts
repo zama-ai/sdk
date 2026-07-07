@@ -40,7 +40,7 @@ export type Permission = z.infer<typeof PermissionSchema>;
  * storage record. {@link resolvePermit} extracts one {@link ResolvedPermit} from
  * it per contract.
  */
-export interface ResolvedCredentials {
+export interface SerializedTransportKeyPairWithPermissions {
   readonly keypair: SerializedTransportKeyPair;
   readonly permissions: readonly Permission[];
 }

@@ -11,7 +11,11 @@ import { PermissionStore } from "./permission-store";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { SerializedPermitSchema } from "./schemas";
 import type { PermissionScope } from "./storage-keys";
-import type { Permission, ResolvedCredentials, StoredTransportKeyPair } from "./types";
+import type {
+  Permission,
+  SerializedTransportKeyPairWithPermissions,
+  StoredTransportKeyPair,
+} from "./types";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -80,7 +84,7 @@ export class CredentialService {
   async grantPermit(
     contracts: readonly Address[],
     delegator?: Address,
-  ): Promise<ResolvedCredentials> {
+  ): Promise<SerializedTransportKeyPairWithPermissions> {
     const account = this.#signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);

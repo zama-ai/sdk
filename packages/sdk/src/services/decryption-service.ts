@@ -3,7 +3,7 @@ import { getAddress, type Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import type { CredentialService } from "../credentials/credential-service";
 import { resolvePermit } from "../credentials/decrypt-permit";
-import type { ResolvedCredentials } from "../credentials/types";
+import type { SerializedTransportKeyPairWithPermissions } from "../credentials/types";
 import {
   type DecryptErrorContext,
   DecryptionFailedError,
@@ -50,10 +50,12 @@ interface DecryptionStrategy {
   requesterAddress: Address;
   /** The ACL actor whose entitlement is checked (signer, or delegator when delegated). */
   aclActorAddress: Address;
-  resolveCredentials: (contractAddresses: Address[]) => Promise<ResolvedCredentials>;
+  resolveCredentials: (
+    contractAddresses: Address[],
+  ) => Promise<SerializedTransportKeyPairWithPermissions>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
-    credentials: ResolvedCredentials;
+    credentials: SerializedTransportKeyPairWithPermissions;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
   }) => Promise<DecryptValuesReturnType>;
@@ -278,7 +280,7 @@ export class DecryptionService {
    * share this call. Returns the positional clear values for `encryptedValues`.
    */
   async #decryptValues(
-    credentials: ResolvedCredentials,
+    credentials: SerializedTransportKeyPairWithPermissions,
     contractAddress: Address,
     encryptedValues: EncryptedValue[],
   ): Promise<DecryptValuesReturnType> {
