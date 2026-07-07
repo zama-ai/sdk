@@ -301,12 +301,6 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
       relayers: { [chain.id]: web() },
-      onEvent: (event) => {
-        // Re-dispatch SDK events on window so per-component listeners (e.g.
-        // unshield-card's UnshieldPhase1Submitted handler) can react without
-        // having to thread an onEvent callback through props.
-        window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
-      },
     });
   }, [walletClient, publicClient]);
 
