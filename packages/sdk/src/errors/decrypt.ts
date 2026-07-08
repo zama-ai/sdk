@@ -39,6 +39,11 @@ export interface DecryptErrorContext {
  * `errors.test.ts` "every typed cause passes through unchanged" test — so a
  * class dropped from this array is caught by that test instead of silently
  * falling through to the generic fallback.
+ *
+ * This is a fixed, decrypt-scoped subset of the taxonomy maintained by hand
+ * (unlike {@link RETRYABLE_BY_CODE} in `base.ts`, it has no `Complete<>` tie
+ * to `ZamaErrorCode`) — a new decrypt-path error class must be added here
+ * explicitly, since there's no compiler check forcing it.
  */
 export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   DecryptionFailedError,

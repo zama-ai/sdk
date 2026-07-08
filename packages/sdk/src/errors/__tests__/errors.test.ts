@@ -24,6 +24,7 @@ import {
   DelegationContractIsSelfError,
   AclPausedError,
   DelegationExpirationTooSoonError,
+  WalletAccountNotReadyError,
 } from "..";
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
@@ -166,6 +167,18 @@ describe("ZamaError.retryable / isRetryable", () => {
 
   test("is true for DelegationNotPropagatedError", () => {
     const err = new DelegationNotPropagatedError("not synced");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationCooldownError — a next-block retry resolves it", () => {
+    const err = new DelegationCooldownError("cooldown");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for WalletAccountNotReadyError — wallet account discovery is still resolving", () => {
+    const err = new WalletAccountNotReadyError("decrypt");
     expect(err.retryable).toBe(true);
     expect(isRetryable(err)).toBe(true);
   });

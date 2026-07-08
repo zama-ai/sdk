@@ -115,13 +115,13 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.WorkerRecycled]: true,
   [ZamaErrorCode.Configuration]: false,
   [ZamaErrorCode.DelegationSelfNotAllowed]: false,
-  [ZamaErrorCode.DelegationCooldown]: false,
+  [ZamaErrorCode.DelegationCooldown]: true, // per-block timing gate, resolves on next-block retry
   [ZamaErrorCode.DelegationNotFound]: false,
   [ZamaErrorCode.DelegationExpired]: false,
   [ZamaErrorCode.InsufficientConfidentialBalance]: false,
   [ZamaErrorCode.InsufficientERC20Balance]: false,
   [ZamaErrorCode.BalanceCheckUnavailable]: false,
-  [ZamaErrorCode.ERC20ReadFailed]: false,
+  [ZamaErrorCode.ERC20ReadFailed]: false, // conservative: conflates network (transient) and contract (terminal) faults, see class doc
   [ZamaErrorCode.DelegationExpiryUnchanged]: false,
   [ZamaErrorCode.DelegationDelegateEqualsContract]: false,
   [ZamaErrorCode.DelegationContractIsSelf]: false,
@@ -131,7 +131,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.ChainMismatch]: false,
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
-  [ZamaErrorCode.WalletAccountNotReady]: false,
+  [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
 };
 
 /**
@@ -167,8 +167,9 @@ export class ZamaError extends Error {
 
 /**
  * True if `error` is a {@link ZamaError} whose failure is transient and safe to
- * retry (rate-limited, back-pressured, a recycled/timed-out worker op, or a
- * delegation still propagating). Compiler-guaranteed to stay in sync with the
+ * retry (rate-limited, back-pressured, a recycled/timed-out worker op, a
+ * delegation still propagating or in its per-block cooldown, or a wallet
+ * account still resolving). Compiler-guaranteed to stay in sync with the
  * taxonomy: every {@link ZamaError} subclass declares its own retryability via
  * {@link ZamaError.retryable}, so a consumer never has to hardcode a set of
  * retryable codes.
