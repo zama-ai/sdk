@@ -2432,6 +2432,40 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 
 The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
 
+### 8. (Optional) Tune the FHE runtime
+
+The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — threading, WASM asset loading, and module versions. It is process-global: it applies once per process, not per chain or per relayer.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  runtime: {
+    numberOfThreads: 4, // parallelise FHE work across Web Workers
+  },
+});
+```
+
+The knob most apps reach for is thread count:
+
+| Field             | Effect                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| `numberOfThreads` | Number of Web Workers used to parallelise FHE encryption/decryption |
+| `singleThread`    | `true` forces a single thread — no `SharedArrayBuffer` required     |
+
+
+> [!WARNING]
+> Multi-threaded FHE relies on `SharedArrayBuffer`, which browsers only expose to [cross-origin isolated](https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) pages. To run more than one thread, serve your app with both headers:
+>
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
+>
+> If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
+
+
 ## Shared relayer options
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
@@ -2439,7 +2473,7 @@ When multiple chains use the same relayer, create it once and reference that sin
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedWeb = web({ threads: 8 });
+const sharedWeb = web({ batchRpcCalls: true });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
