@@ -30,7 +30,7 @@ const config = createConfig({
 
 ## Parameters
 
-`web()` takes no parameters. WASM execution and FHE-artifact caching are handled internally by `@fhevm/sdk` — no special cross-origin headers are required.
+`web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
 
 ## Return Type
 

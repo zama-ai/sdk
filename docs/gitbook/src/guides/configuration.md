@@ -48,7 +48,7 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The transport factories take no arguments — call them bare.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`).
 
 ```ts
 // Browser — uses relayerUrl from the chain preset

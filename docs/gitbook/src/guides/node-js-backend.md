@@ -21,7 +21,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` transport runs FHE operations through `@fhevm/sdk`. It takes no options — call it bare.
+The `node()` transport runs FHE operations through `@fhevm/sdk`. Chain data comes from the preset, so a bare call is all you need; it also accepts an optional `@fhevm/sdk` options object (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";

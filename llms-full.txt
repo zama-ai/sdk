@@ -2148,7 +2148,7 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The transport factories take no arguments — call them bare.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`).
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
@@ -3918,7 +3918,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` transport runs FHE operations through `@fhevm/sdk`. It takes no options — call it bare.
+The `node()` transport runs FHE operations through `@fhevm/sdk`. Chain data comes from the preset, so a bare call is all you need; it also accepts an optional `@fhevm/sdk` options object (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -6398,7 +6398,7 @@ const config = createConfig({
 
 ## Parameters
 
-`web()` takes no parameters. WASM execution and FHE-artifact caching are handled internally by `@fhevm/sdk` — no special cross-origin headers are required.
+`web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
 
 ## Return Type
 
@@ -6450,7 +6450,7 @@ const sdk = new ZamaSDK(config);
 
 ## Parameters
 
-`node()` takes no parameters. Parallelism and FHE-artifact caching are handled internally by `@fhevm/sdk`.
+`node()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `node()` bare; parallelism and FHE-artifact caching are handled internally.
 
 ## Return Type
 
@@ -6498,7 +6498,7 @@ const config = createConfig({
 
 ## Parameters
 
-`cleartext()` takes no parameters. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
+`cleartext()` accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (`batchRpcCalls`, `fheEncryptionKey`); most apps call it bare. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
 
 
 > [!WARNING]

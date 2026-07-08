@@ -35,7 +35,7 @@ const sdk = new ZamaSDK(config);
 
 ## Parameters
 
-`node()` takes no parameters. Parallelism and FHE-artifact caching are handled internally by `@fhevm/sdk`.
+`node()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `node()` bare; parallelism and FHE-artifact caching are handled internally.
 
 ## Return Type
 

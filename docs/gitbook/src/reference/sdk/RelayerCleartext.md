@@ -30,7 +30,7 @@ const config = createConfig({
 
 ## Parameters
 
-`cleartext()` takes no parameters. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
+`cleartext()` accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (`batchRpcCalls`, `fheEncryptionKey`); most apps call it bare. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
 
 {% hint style="warning" %}
 The chain must define `executorAddress`, or `createRelayer` throws a `ConfigurationError`. Use a development chain preset that includes it (`hardhat`, `hoodi`) or set it yourself. Production presets (`mainnet`, `sepolia`) do not define it — cleartext mode is for development only.
