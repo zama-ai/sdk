@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "3.3.0-alpha.9",
+  "version": "3.3.0-alpha.11",
   "description": "React hooks for Zama SDK",
   "keywords": [
     "confidential",
@@ -55,7 +55,9 @@
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.wagmi.json",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
@@ -63,7 +65,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
-    "@zama-fhe/sdk": "^3.3.0-alpha.9",
+    "@zama-fhe/sdk": "^3.3.0-alpha.11",
     "react": ">=18",
     "viem": ">=2",
     "wagmi": ">=2"
