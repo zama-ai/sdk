@@ -66,11 +66,11 @@ export class LifecycleService {
     const prev = change.previous;
     const next = change.next;
     // switchChain runs first so credential cleanup, decrypt-cache invalidation,
-    // and external listeners observe the dispatcher on next.chainId. Downstream
+    // and external listeners observe the router on next.chainId. Downstream
     // keypair warming (driven by listeners — see ZamaProvider) therefore
     // dispatches against the wallet chain rather than chains[0]. `swallow`
     // suspends one microtask for error containment, not for I/O —
-    // RelayerRouter.switchChain is synchronous.
+    // ChainRouter.switchChain is synchronous.
     const nextChainId = next?.chainId;
     if (nextChainId !== undefined) {
       await swallow(

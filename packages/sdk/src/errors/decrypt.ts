@@ -18,11 +18,8 @@ import {
 
 /**
  * Context the caller supplies so a not-entitled / delegation failure can be
- * mapped precisely. The classifier runs on both worker-origin errors (rebuilt
- * from the serialized envelope) and main-thread-origin ones (cleartext relayer,
- * delegation pre-check) — the request context (`contractAddress` / `account`)
- * only exists on the main thread, so it is injected here rather than threaded
- * across the worker boundary.
+ * mapped precisely. The request context (`contractAddress` / `account`) is not
+ * present on the raw error, so it is injected here.
  */
 export interface DecryptErrorContext {
   isDelegated?: boolean;
@@ -40,8 +37,7 @@ export interface DecryptErrorContext {
  *
  * Errors that are already typed SDK errors are returned as-is so callers can
  * still match the original cause. All structured signals (codes, status, cause
- * chain) are read from the error itself — worker-origin errors are first rebuilt
- * by {@link deserializeError}, so this runs identically regardless of origin.
+ * chain) are read from the error itself.
  */
 export function wrapDecryptError(
   error: unknown,
@@ -63,9 +59,9 @@ export function wrapDecryptError(
 
   const message = error instanceof Error ? error.message : fallbackMessage;
 
-  // Actor not entitled (ACL). The relayer throws a message-only Error whose text
-  // survives the worker boundary; the handle is parseable from it and the
-  // contract/account come from the request context the caller holds.
+  // Actor not entitled (ACL). The relayer throws a message-only Error; the handle
+  // is parseable from it and the contract/account come from the request context
+  // the caller holds.
   if (error instanceof Error && isNotEntitledMessage(error.message)) {
     // On the delegated path the "not entitled" verdict comes from the
     // *delegator's* `persistAllowed` L1 read, which has no staleness tolerance:

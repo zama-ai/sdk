@@ -41,7 +41,7 @@ export class ChainRouter {
 
   get chain(): FheChain {
     const chain = this.#chains.get(this.#chainId);
-    assertNonNullable(chain, "RelayerRouter: chain");
+    assertNonNullable(chain, "ChainRouter: chain");
     return chain;
   }
 
@@ -57,7 +57,7 @@ export class ChainRouter {
   /** The single-chain backend for the currently active chain. */
   get relayer(): FhevmRelayerSDK {
     const relayer = this.#relayers.get(this.#chainId);
-    assertNonNullable(relayer, "RelayerRouter: relayer");
+    assertNonNullable(relayer, "ChainRouter: relayer");
     return relayer;
   }
 }

@@ -1,4 +1,5 @@
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
+import type { FhevmClientOptions } from "../relayer/types";
 import type { WebRelayerConfig } from "./types";
 
 /**
@@ -12,6 +13,6 @@ import type { WebRelayerConfig } from "./types";
  * }
  * ```
  */
-export function web(): WebRelayerConfig {
-  return { type: "web", createRelayer: (chain) => new FhevmRelayer({ chain }) };
+export function web(options?: FhevmClientOptions): WebRelayerConfig {
+  return { type: "web", createRelayer: (chain) => new FhevmRelayer({ chain, options }) };
 }

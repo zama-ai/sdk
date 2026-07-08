@@ -14,8 +14,6 @@ import {
   parseHandleFromMessage,
   extractRetryAfter,
   parseRetryAfterHeader,
-  serializeError,
-  deserializeError,
 } from "../error";
 
 describe("toError", () => {
@@ -385,120 +383,6 @@ describe("parseRetryAfterHeader", () => {
     expect(parseRetryAfterHeader(undefined)).toBeUndefined();
     expect(parseRetryAfterHeader("")).toBeUndefined();
     expect(parseRetryAfterHeader("not-a-date")).toBeUndefined();
-  });
-});
-
-describe("serializeError / deserializeError", () => {
-  test("round-trips message, name, and the scalar signal fields", () => {
-    const err = Object.assign(new Error("boom"), {
-      name: "WeirdError",
-      code: -32005,
-      status: 429,
-      statusCode: 503,
-      retryAfter: 2,
-    });
-    const rebuilt = deserializeError(serializeError(err)) as Error & Record<string, unknown>;
-    expect(rebuilt).toBeInstanceOf(Error);
-    expect(rebuilt.message).toBe("boom");
-    expect(rebuilt.name).toBe("WeirdError");
-    expect(rebuilt.code).toBe(-32005);
-    expect(rebuilt.status).toBe(429);
-    expect(rebuilt.statusCode).toBe(503);
-    expect(rebuilt.retryAfter).toBe(2);
-  });
-
-  test("captures a `Retry-After` header into a numeric retryAfter (seconds) so it survives the boundary", () => {
-    // The header lives on a non-cloneable `Headers`; serializeError must parse it
-    // at the source, else the relayer/consumer back-off is lost across the worker.
-    const relayer429 = Object.assign(new Error("relayer 429"), {
-      statusCode: 429,
-      cause: { response: { headers: new Headers({ "Retry-After": "300" }) } },
-    });
-    const rebuilt = deserializeError(serializeError(relayer429));
-    expect(extractRetryAfter(rebuilt)).toBe(300);
-  });
-
-  test("round-trips an ethers 429 whose status lives only in info.responseStatus", () => {
-    // The worker's relayer-sdk read (persistAllowed) goes through ethers; an
-    // edge/Cloudflare 429 surfaces as `code: "SERVER_ERROR"` + a *string*
-    // `info.responseStatus`. Structured clone drops the nested `info`, so
-    // without lifting it the round-tripped error loses the rate-limit signal and
-    // wrapDecryptError mis-classifies it as terminal DecryptionFailedError.
-    const ethers429 = Object.assign(new Error("could not coalesce error"), {
-      code: "SERVER_ERROR",
-      info: { responseStatus: "429 Too Many Requests" },
-    });
-    // Same verdict directly and after the worker round-trip (the invariant).
-    expect(isRpcRateLimitError(ethers429)).toBe(true);
-    expect(hasStructuredRpcRateLimitSignal(ethers429)).toBe(true);
-    const rebuilt = deserializeError(serializeError(ethers429));
-    expect(isRpcRateLimitError(rebuilt)).toBe(true);
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
-  });
-
-  test("does not invent a rate-limit for a non-429 ethers info.responseStatus", () => {
-    // A 503 must stay non-rate-limit after the round-trip too — parsing the
-    // status to a numeric `status` would have diverged here; preserving the
-    // string keeps direct and round-tripped classification identical.
-    const ethers503 = Object.assign(new Error("bad gateway"), {
-      code: "SERVER_ERROR",
-      info: { responseStatus: "503 Service Unavailable" },
-    });
-    const rebuilt = deserializeError(serializeError(ethers503));
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(
-      hasStructuredRpcRateLimitSignal(ethers503),
-    );
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(false);
-    expect(extractHttpStatus(rebuilt)).toBeUndefined();
-  });
-
-  test("keeps a signal carried on a later branch than the first (walks all links)", () => {
-    // ethers puts the underlying fault on `error` (walked first) and the HTTP
-    // status on `info` — dropping every branch but the first would lose the 429.
-    const err = Object.assign(new Error("server response"), {
-      code: "SERVER_ERROR",
-      error: new Error("underlying transport"),
-      info: { responseStatus: "429 Too Many Requests" },
-    });
-    const rebuilt = deserializeError(serializeError(err));
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
-  });
-
-  test("preserves the cause chain so chain-walking detectors keep working", () => {
-    // ethers-style nested provider error: structured clone would drop the chain.
-    const err = Object.assign(new Error("could not coalesce error"), {
-      code: "SERVER_ERROR",
-      info: { error: { code: -32005, message: "Too Many Requests" } },
-    });
-    const rebuilt = deserializeError(serializeError(err));
-    // `info` is normalized to `cause`, but the signal is still reachable.
-    expect(isRpcRateLimitError(rebuilt)).toBe(true);
-  });
-
-  test("preserves an @fhevm/sdk relayer error's name/status (stays excluded from rate-limit)", () => {
-    // @fhevm/sdk relayer errors are Error instances whose `name` carries the
-    // Relayer* prefix and whose `status` is a numeric field — both survive the
-    // serialize→deserialize round-trip, so the SDK-236 exclusion holds.
-    const relayerError = Object.assign(
-      new Error("User decryption: Relayer returned unexpected response status: 429"),
-      { name: "RelayerResponseStatusError", status: 429 },
-    );
-    const rebuilt = deserializeError(serializeError(relayerError));
-    expect(isRelayerError(rebuilt)).toBe(true);
-    expect(isRpcRateLimitError(rebuilt)).toBe(false);
-    expect(extractHttpStatus(rebuilt)).toBe(429);
-  });
-
-  test("is depth-bounded and does not throw on deep/cyclic chains", () => {
-    const cyclic = new Error("loop") as Error & { cause?: unknown };
-    cyclic.cause = cyclic;
-    expect(() => serializeError(cyclic)).not.toThrow();
-  });
-
-  test("coerces a non-Error value", () => {
-    const serialized = serializeError("plain string");
-    expect(serialized.message).toBe("plain string");
-    expect(deserializeError(serialized).message).toBe("plain string");
   });
 });
 

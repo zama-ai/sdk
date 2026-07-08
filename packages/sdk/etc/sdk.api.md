@@ -631,7 +631,7 @@ export class ChromeSessionStorage implements GenericStorage {
 export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
-export function cleartext(): CleartextRelayerConfig;
+export function cleartext(options?: FhevmClientOptions): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {

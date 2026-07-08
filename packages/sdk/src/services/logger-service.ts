@@ -14,7 +14,7 @@ import type { GenericLogger } from "../types";
  * their own message (and optional component tag) without repeating the prefix.
  *
  * `LoggerService` itself satisfies `GenericLogger`, so it can be passed
- * anywhere a logger is expected (e.g. the worker client).
+ * anywhere a logger is expected.
  */
 export class LoggerService implements GenericLogger {
   readonly #logger: GenericLogger | undefined;

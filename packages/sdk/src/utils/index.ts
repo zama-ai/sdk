@@ -6,9 +6,6 @@ export {
   parseHandleFromMessage,
   extractRetryAfter,
   extractHttpStatus,
-  serializeError,
-  deserializeError,
-  type SerializedError,
 } from "./error";
 export { prefixHex, unprefixHex } from "./hex";
 export {

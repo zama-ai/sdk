@@ -14,8 +14,8 @@ import { RelayerRequestFailedError } from "./relayer";
  * Errors that are already typed SDK errors are returned as-is so callers can
  * still match the original cause.
  *
- * The worker boundary normalizes the relayer SDK's `cause.status` onto a
- * top-level `statusCode`, so reading `statusCode` here mirrors
+ * The relayer's HTTP status may surface as `status` or `statusCode` anywhere in
+ * the cause chain; {@link extractHttpStatus} walks the chain for either, mirroring
  * {@link wrapDecryptError}.
  */
 export function wrapEncryptError(error: unknown, fallbackMessage: string): ZamaError {

@@ -1,8 +1,9 @@
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
+import type { FhevmClientOptions } from "../relayer/types";
 
-/** Node transport — drives the FHE backend directly (no worker pool). */
+/** Node transport — drives the FHE backend directly on the calling thread. */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
   readonly createRelayer: (chain: FheChain) => FhevmRelayer;
@@ -19,6 +20,6 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * }
  * ```
  */
-export function node(): NodeRelayerConfig {
-  return { type: "node", createRelayer: (chain) => new FhevmRelayer({ chain }) };
+export function node(options?: FhevmClientOptions): NodeRelayerConfig {
+  return { type: "node", createRelayer: (chain) => new FhevmRelayer({ chain, options }) };
 }

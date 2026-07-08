@@ -1,5 +1,6 @@
 import { ConfigurationError } from "../errors";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
+import type { FhevmClientOptions } from "../relayer/types";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
@@ -14,7 +15,7 @@ import type { CleartextRelayerConfig } from "./types";
  * relayers: { [hardhat.id]: cleartext() }
  * ```
  */
-export function cleartext(): CleartextRelayerConfig {
+export function cleartext(options?: FhevmClientOptions): CleartextRelayerConfig {
   return {
     type: "cleartext",
     createRelayer: (chain) => {
@@ -25,7 +26,7 @@ export function cleartext(): CleartextRelayerConfig {
             `or set it on the chain definition.`,
         );
       }
-      return new FhevmRelayer({ chain, cleartext: true });
+      return new FhevmRelayer({ chain, options, cleartext: true });
     },
   };
 }

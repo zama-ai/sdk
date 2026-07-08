@@ -12,7 +12,6 @@ import {
   ZamaError,
   wrapDecryptError,
 } from "../index";
-import { deserializeError, serializeError } from "../../utils/error";
 
 describe("wrapDecryptError", () => {
   describe("passthrough for already-typed SDK errors", () => {
@@ -194,14 +193,13 @@ describe("wrapDecryptError", () => {
       expect((wrapped as { cause?: unknown }).cause).toBe(relayerError);
     });
 
-    test("maps a rebuilt worker rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
-      // After deserializeError rebuilds the worker error, the structured signal
-      // (-32005) and retryAfter are read directly — no separate worker taxonomy.
-      const workerError = Object.assign(new Error("Too Many Requests"), {
+    test("maps a structured rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
+      // The structured signal (-32005) and retryAfter are read directly off the error.
+      const rpcError = Object.assign(new Error("Too Many Requests"), {
         code: -32005,
         retryAfter: 2,
       });
-      const wrapped = wrapDecryptError(workerError, "fallback");
+      const wrapped = wrapDecryptError(rpcError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
       expect((wrapped as RpcRateLimitError).retryAfter).toBe(2);
     });
@@ -238,22 +236,6 @@ describe("wrapDecryptError", () => {
         info: { responseStatus: "429 Too Many Requests" },
       });
       expect(wrapDecryptError(ethers429, "fallback")).toBeInstanceOf(RpcRateLimitError);
-    });
-
-    test("keeps the ethers 429 verdict after the worker round-trip (serialize → deserialize)", () => {
-      // The real worker path: an ethers 429 raised inside the worker is serialized
-      // across `postMessage` and rebuilt on the main thread before classification.
-      // Structured clone drops the nested `info`, so unless `info.responseStatus`
-      // is lifted the rebuilt error loses the signal and collapses to terminal
-      // DecryptionFailedError — the throttle-amplification the fatal-batch flag
-      // exists to prevent. It must classify identically to the direct error.
-      const ethers429 = Object.assign(new Error("server response error (eth_call)"), {
-        code: "SERVER_ERROR",
-        error: new Error("underlying transport"),
-        info: { responseStatus: "429 Too Many Requests" },
-      });
-      const rebuilt = deserializeError(serializeError(ethers429));
-      expect(wrapDecryptError(rebuilt, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
     test("maps a viem JSON-RPC `code: 429` to RpcRateLimitError", () => {

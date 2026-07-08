@@ -67,12 +67,6 @@ export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient
  */
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
-/** Serialized transport key pair as it crosses the signer / worker boundary. */
-export interface SerializedTransportKeyPair {
-  publicKey: Hex;
-  privateKey: Hex;
-}
-
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.

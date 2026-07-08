@@ -339,9 +339,9 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
 | `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
 | `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
-| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+| `debug` | Verbose diagnostics — relayer request timing, orchestration progress                         |
 
-The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
 
 ## Shared relayer options
 
@@ -363,7 +363,7 @@ const config = createConfig({
 });
 ```
 
-Chains that reference the _same_ relayer object — the result of a single `web()` call — share one worker, reducing memory usage.
+Chains that reference the _same_ relayer object — the result of a single `web()` call — share one FHE backend instance, reducing memory usage.
 
 ## Next steps
 

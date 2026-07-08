@@ -24,6 +24,7 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   if (!hasFhevmRuntimeConfig()) {
+    const { runtime = {} } = params;
     setFhevmRuntimeConfig({
       wasmAssetLoadMode: "auto",
       moduleVersions: "auto",
@@ -32,7 +33,7 @@ export function buildZamaConfig(
         warn: (message) => params.logger?.warn(message),
         debug: (message) => params.logger?.debug(message),
       },
-      ...params.runtime,
+      ...runtime,
     });
   }
 
