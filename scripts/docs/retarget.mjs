@@ -112,18 +112,26 @@ function main() {
       : "No URL changes — sources already target this branch.",
   );
 
-  console.log("\nRebuilding the LLM corpus...");
-  const build = spawnSync("pnpm", ["llm:build"], { stdio: "inherit" });
-  if (build.status !== 0) {
-    process.exit(build.status ?? 1);
-  }
-
-  // Keep the result commit-clean (oxfmt also formats Markdown + JSON).
+  // Format the rewritten sources BEFORE building the corpus. oxfmt reflows
+  // Markdown tables to the content width, and changing a URL's length (e.g.
+  // inserting/removing the `alpha/` segment) changes the width of any table
+  // whose cells hold that URL. llm:build inlines these sources into
+  // llms-full.txt, so it must read the *formatted* version — otherwise the
+  // corpus captures the pre-reflow widths while the committed source has the
+  // post-reflow ones, and a fresh build (as `llm:check` runs in CI) no longer
+  // matches. (oxfmt also formats the JSON config; llms.txt/llms-full.txt are
+  // plain text and left as build emits them.)
   if (changed.length > 0) {
     const fmt = spawnSync("pnpm", ["exec", "oxfmt", ...changed], { stdio: "inherit" });
     if (fmt.status !== 0) {
       process.exit(fmt.status ?? 1);
     }
+  }
+
+  console.log("\nRebuilding the LLM corpus...");
+  const build = spawnSync("pnpm", ["llm:build"], { stdio: "inherit" });
+  if (build.status !== 0) {
+    process.exit(build.status ?? 1);
   }
 
   console.log(
