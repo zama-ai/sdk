@@ -46,7 +46,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 ```
 
@@ -56,8 +56,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
-credentials and wallet signatures survive page reloads during local development.
+`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
+the transport key pair and signed permits survive page reloads during local development.
 
 ---
 
@@ -210,9 +210,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once to useGrantPermit — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();
@@ -264,19 +262,67 @@ limiting with a private node.
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
 
-1. `onEvent` in `ZamaProvider` intercepts `ZamaSDKEvents.UnshieldPhase1Submitted` and
-   calls `savePendingUnshield(indexedDBStorage, wrapperAddress, txHash)`.
+1. `WrappedToken` persists the unwrap tx hash automatically once Phase 1 is mined —
+   no app-level wiring needed.
 2. On the next page load, `PendingUnshieldCard` reads the pending hash via
-   `loadPendingUnshield(storage, tokenAddress)`.
-3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2.
-
-The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvider`
-**must always reference the same `indexedDBStorage` instance**. If you ever change the
-`storage` prop, update `onEvent` to match.
+   `usePendingUnshield(tokenAddress)`.
+3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2, which clears the
+   pending state automatically on success.
 
 ---
 
-## 10. Running locally
+## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
+
+The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
+`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
+recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
+value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
+
+The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
+deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
+that token is selected. Configure the addresses via `NEXT_PUBLIC_VAULT_ADDRESS` and
+`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN` (see `src/lib/config.ts`); deploy your own with
+[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
+
+**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
+beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
+
+```ts
+const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
+
+// The vault decodes `data` as the beneficiary address to credit.
+const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
+deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
+```
+
+**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
+beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
+permit scoped to the **vault** address — distinct from the confidential-token permits the main
+page grants:
+
+```ts
+const { data: handle } = useReadContract({
+  address: vaultAddress,
+  abi: VAULT_ABI,
+  functionName: "sharesOf",
+  args: [connectedAddress],
+});
+
+await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
+const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
+```
+
+Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
+contract method, not part of the `Token` surface. The vault transfers the caller's full
+confidential balance back via `confidentialTransfer`.
+
+> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
+> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
+> receiver-callback pattern.
+
+---
+
+## 11. Running locally
 
 ```bash
 cd examples/react-wagmi

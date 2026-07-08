@@ -9,10 +9,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 ```
 
 ### ethers

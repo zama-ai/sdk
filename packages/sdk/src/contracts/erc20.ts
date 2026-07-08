@@ -9,12 +9,7 @@ import { erc20Abi, type Address } from "viem";
  * ```
  */
 export function nameContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: erc20Abi,
-    functionName: "name",
-    args: [],
-  } as const;
+  return { address: tokenAddress, abi: erc20Abi, functionName: "name", args: [] } as const;
 }
 
 /**
@@ -26,12 +21,7 @@ export function nameContract(tokenAddress: Address) {
  * ```
  */
 export function symbolContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: erc20Abi,
-    functionName: "symbol",
-    args: [],
-  } as const;
+  return { address: tokenAddress, abi: erc20Abi, functionName: "symbol", args: [] } as const;
 }
 
 /**
@@ -43,12 +33,7 @@ export function symbolContract(tokenAddress: Address) {
  * ```
  */
 export function decimalsContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: erc20Abi,
-    functionName: "decimals",
-    args: [],
-  } as const;
+  return { address: tokenAddress, abi: erc20Abi, functionName: "decimals", args: [] } as const;
 }
 
 /**
@@ -60,12 +45,7 @@ export function decimalsContract(tokenAddress: Address) {
  * ```
  */
 export function erc20TotalSupplyContract(tokenAddress: Address) {
-  return {
-    address: tokenAddress,
-    abi: erc20Abi,
-    functionName: "totalSupply",
-    args: [],
-  } as const;
+  return { address: tokenAddress, abi: erc20Abi, functionName: "totalSupply", args: [] } as const;
 }
 
 /**

@@ -7,6 +7,10 @@ description: How to use the SDK in a Node.js server environment with worker thre
 
 The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
 
+{% hint style="info" %}
+The `auth` / `RELAYER_API_KEY` shown below is for the Zama-hosted **mainnet** relayer. The **Sepolia testnet** relayer needs no key — omit `auth` on testnet.
+{% endhint %}
+
 ## Steps
 
 ### 1. Install packages
@@ -17,7 +21,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -30,11 +34,7 @@ import { sepolia as sepoliaViem } from "viem/chains";
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
 const publicClient = createPublicClient({ chain: sepoliaViem, transport: http() });
-const walletClient = createWalletClient({
-  account,
-  chain: sepoliaViem,
-  transport: http(),
-});
+const walletClient = createWalletClient({ account, chain: sepoliaViem, transport: http() });
 
 const mySepolia = {
   ...sepolia,
@@ -47,9 +47,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -79,9 +77,7 @@ app.post("/api/transfer", (req, res) => {
       publicClient,
       walletClient,
       storage: asyncLocalStorage,
-      relayers: {
-        [mySepolia.id]: node(),
-      },
+      relayers: { [mySepolia.id]: node() },
     });
     const sdk = new ZamaSDK(config);
     const token = sdk.createToken("0xTokenAddress");
@@ -164,9 +160,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -176,6 +170,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
+- [Decrypt values from event logs](./decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
 - [RelayerNode](../reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management

@@ -1,5 +1,75 @@
 # Changelog
 
+## [3.3.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2026-07-07)
+
+### Build System
+
+- integrate Turborepo for cached build/typecheck/api-report/size ([#523](https://github.com/zama-ai/sdk/issues/523)) ([fb5c6b7]())
+
+## [3.3.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.9...v3.3.0-alpha.10) (2026-07-07)
+
+### Code Refactoring
+
+- **examples:** migrate off pending-unshield helpers [SDK-251] ([#531](https://github.com/zama-ai/sdk/issues/531)) ([848d61f]()), closes [#497]() [#497]() [#497]() [#497]()
+
+## [3.3.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2026-07-06)
+
+### Features
+
+- **sdk:** persist pending unshield state internally ([#497](https://github.com/zama-ai/sdk/issues/497)) ([3523b53]())
+
+## [3.3.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2026-07-03)
+
+### Code Refactoring
+
+- **sdk:** absorb the delegation-propagation window internally [SDK-241] ([#486](https://github.com/zama-ai/sdk/issues/486)) ([1bd102f]()), closes [#489]()
+
+## [3.3.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.6...v3.3.0-alpha.7) (2026-07-02)
+
+### Code Refactoring
+
+- **sdk:** single source of truth for WrappersRegistry config [SDK-127] ([#517](https://github.com/zama-ai/sdk/issues/517)) ([e7feeb0]())
+
+## [3.3.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.5...v3.3.0-alpha.6) (2026-07-02)
+
+### Bug Fixes
+
+- **sdk:** configurable + diagnosable Node worker timeouts with self-healing [SDK-237] ([#494](https://github.com/zama-ai/sdk/issues/494)) ([e572582]())
+
+## [3.3.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.4...v3.3.0-alpha.5) (2026-07-01)
+
+### Features
+
+- **sdk:** typed decryption error causes — not-entitled, RPC rate-limit, relayer back-pressure [SDK-239][SDK-236] ([#489](https://github.com/zama-ai/sdk/issues/489)) ([09d244d]()), closes [#482]() [#492]() [#488]() [#482]() [#492]()
+
+## [3.3.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.3...v3.3.0-alpha.4) (2026-07-01)
+
+### Features
+
+- **examples:** demonstrate confidentialTransferAndCall vault deposit [SDK-244] ([#495](https://github.com/zama-ai/sdk/issues/495)) ([f2af503]())
+
+### Reverts
+
+- pin conventional-changelog-conventionalcommits back to ^9.3.1 ([#514](https://github.com/zama-ai/sdk/issues/514)) ([c5db065]()), closes [#505]() [#495]()
+
+## [3.3.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2026-06-29)
+
+### Code Refactoring
+
+- **sdk:** type matchZamaError handlers by matched error subclass [SDK-231] ([#488](https://github.com/zama-ai/sdk/issues/488)) ([9c98fbc]())
+
+## [3.3.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2026-06-26)
+
+### Bug Fixes
+
+- **sdk:** resolve node worker without import.meta.resolve for SSR bundlers [SDK-235] ([#490](https://github.com/zama-ai/sdk/issues/490)) ([7ce975b]()), closes [#285]()
+
+## [3.3.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0-alpha.1) (2026-06-25)
+
+### Features
+
+- **sdk:** add confidentialTransferAndCall to Token methods [SDK-168] ([#423](https://github.com/zama-ai/sdk/issues/423)) ([7b2b916]())
+
 ## [3.2.0](https://github.com/zama-ai/sdk/compare/v3.1.0...v3.2.0) (2026-06-24)
 
 ### Features

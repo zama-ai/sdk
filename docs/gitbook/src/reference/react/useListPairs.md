@@ -24,11 +24,7 @@ import { useListPairs } from "@zama-fhe/react-sdk";
 import { useListPairs } from "@zama-fhe/react-sdk";
 
 function TokenPairList() {
-  const { data, isLoading, error } = useListPairs({
-    page: 1,
-    pageSize: 20,
-    metadata: true,
-  });
+  const { data, isLoading, error } = useListPairs({ page: 1, pageSize: 20, metadata: true });
 
   if (isLoading) return <p>Loading pairs...</p>;
   if (error) return <p>Error: {error.message}</p>;

@@ -23,6 +23,9 @@ import { parseConfiguration } from "./validation";
 /**
  * Default wrappers registry addresses for known chains.
  * Only includes chains where a registry is deployed (excludes Hardhat).
+ *
+ * @deprecated Read `registryAddress` from the chain presets instead (e.g.
+ * `sepolia.registryAddress`). Will be removed in the next major version.
  */
 export const DefaultRegistryAddresses: Record<number, Address> = {
   [mainnet.id]: mainnet.registryAddress,
@@ -161,10 +164,7 @@ export class WrappersRegistry {
   }
 
   #setCached<T>(key: string, data: T, ttlMs = this.#ttlMs): T {
-    this.#cache.set(key, {
-      data,
-      expiresAt: Date.now() + ttlMs,
-    });
+    this.#cache.set(key, { data, expiresAt: Date.now() + ttlMs });
     return data;
   }
 
@@ -297,12 +297,7 @@ export class WrappersRegistry {
           ? result.value
           : Object.assign({}, items[i], {
               metadataFailed: true as const,
-              underlying: {
-                name: "Unknown",
-                symbol: "???",
-                decimals: 0,
-                totalSupply: 0n,
-              },
+              underlying: { name: "Unknown", symbol: "???", decimals: 0, totalSupply: 0n },
               confidential: { name: "Unknown", symbol: "???", decimals: 0 },
             }),
       );
@@ -330,12 +325,7 @@ export class WrappersRegistry {
 
     return {
       ...pair,
-      underlying: {
-        name: uName,
-        symbol: uSymbol,
-        decimals: uDecimals,
-        totalSupply: uTotalSupply,
-      },
+      underlying: { name: uName, symbol: uSymbol, decimals: uDecimals, totalSupply: uTotalSupply },
       confidential: { name: cName, symbol: cSymbol, decimals: cDecimals },
     };
   }
@@ -368,10 +358,9 @@ export class WrappersRegistry {
     const normalized = getAddress(tokenAddress);
 
     const cacheKey = `ct:${registry}:${normalized}`;
-    const cached = this.#getCached<{
-      confidentialTokenAddress: Address;
-      isValid: boolean;
-    } | null>(cacheKey);
+    const cached = this.#getCached<{ confidentialTokenAddress: Address; isValid: boolean } | null>(
+      cacheKey,
+    );
     if (cached !== undefined) {
       return cached;
     }
@@ -410,10 +399,7 @@ export class WrappersRegistry {
     const normalized = getAddress(confidentialTokenAddress);
 
     const cacheKey = `ut:${registry}:${normalized}`;
-    const cached = this.#getCached<{
-      tokenAddress: Address;
-      isValid: boolean;
-    } | null>(cacheKey);
+    const cached = this.#getCached<{ tokenAddress: Address; isValid: boolean } | null>(cacheKey);
     if (cached !== undefined) {
       return cached;
     }

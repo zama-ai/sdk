@@ -5,8 +5,5 @@ import type { MutationFactoryOptions } from "./factory-types";
 export function clearCredentialsMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void> {
-  return {
-    mutationKey: ["zama.clearCredentials"],
-    mutationFn: () => sdk.permits.clear(),
-  };
+  return { mutationKey: ["zama.clearCredentials"], mutationFn: () => sdk.permits.clear() };
 }

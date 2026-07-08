@@ -160,10 +160,25 @@ await wrappedToken.unshieldAll({
 
 `(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`.
+Resumes an interrupted unshield after the unwrap transaction has already been submitted. The SDK reads the unwrap receipt, extracts the unwrap request id, waits for the proof, and submits `finalizeUnwrap`. On success it clears the persisted pending state.
 
 ```ts
-const pending = await loadPendingUnshield(storage, wrappedToken.address);
+const pending = await wrappedToken.getPendingUnshield();
+if (pending) {
+  await wrappedToken.resumeUnshield(pending);
+}
+```
+
+### getPendingUnshield
+
+`() => Promise<Hex | null>`
+
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+
+Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
+
+```ts
+const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
   await wrappedToken.resumeUnshield(pending);
 }

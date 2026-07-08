@@ -52,7 +52,12 @@ import {
 } from "./fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { FheChain } from "../../chains/types";
-import { ConfigurationError, DecryptionFailedError, EncryptionFailedError } from "../../errors";
+import {
+  ConfigurationError,
+  DecryptionFailedError,
+  EncryptionFailedError,
+  NotEntitledError,
+} from "../../errors";
 
 const ACL_ABI = parseAbi([
   "function persistAllowed(bytes32 handle, address account) view returns (bool)",
@@ -230,9 +235,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         this.#config.gatewayChainId,
         this.#config.verifyingContractAddressInputVerification as Address,
       ),
-      types: {
-        CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification,
-      },
+      types: { CiphertextVerification: INPUT_VERIFICATION_EIP712.types.CiphertextVerification },
       primaryType: "CiphertextVerification",
       message: {
         ctHandles: handles,
@@ -309,11 +312,7 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
 
     const decryptionProof = concat([toHex(new Uint8Array([1])), signature]);
 
-    return {
-      clearValues,
-      abiEncodedClearValues,
-      decryptionProof,
-    };
+    return { clearValues, abiEncodedClearValues, decryptionProof };
   }
 
   async createDelegatedUserDecryptEIP712(
@@ -361,17 +360,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
   }
 
   async fetchFheEncryptionKeyBytes(): Promise<FheEncryptionKey | null> {
-    return {
-      publicKeyId: "mock-public-key-id",
-      publicKey: new Uint8Array([32]),
-    };
+    return { publicKeyId: "mock-public-key-id", publicKey: new Uint8Array([32]) };
   }
 
   async getPublicParams(_bits: number): Promise<PublicParamsData | null> {
-    return {
-      publicParams: new Uint8Array([32]),
-      publicParamsId: "mock-public-params-id",
-    };
+    return { publicParams: new Uint8Array([32]), publicParamsId: "mock-public-params-id" };
   }
 
   async getAclAddress(): Promise<Address> {
@@ -426,9 +419,11 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
       const actorAllowed = results[i * 2];
       const contractAllowed = results[i * 2 + 1];
       if (!actorAllowed) {
-        throw new DecryptionFailedError(
-          `${actorLabel} ${actorAddress} is not authorized for ${operationLabel} of encrypted value ${normalizedEncryptedValues[i]!}`,
-        );
+        throw new NotEntitledError({
+          encryptedValue: normalizedEncryptedValues[i]!,
+          contractAddress,
+          account: actorAddress,
+        });
       }
       if (!contractAllowed) {
         throw new DecryptionFailedError(
@@ -460,6 +455,32 @@ export class RelayerCleartext implements RelayerSDK, Disposable {
         throw new DecryptionFailedError(
           `Encrypted value ${encryptedValues[i]!} is not delegated for user decryption`,
         );
+      }
+    }
+
+    // Parity with the relayer/worker path: a delegated handle still requires the
+    // *delegator* to hold the ACL grant (`persistAllowed`). Without this check,
+    // the same condition surfaces differently in local cleartext dev than in
+    // production — exactly where integrators wire up their error handling.
+    // Cleartext is host-chain-only: `#persistAllowed` reads the ACL directly on
+    // the local chain, with no gateway and no cross-chain sync. A failed check
+    // here can never be a propagation lag — it is authoritative and permanent —
+    // so it maps to the terminal NotEntitledError, not the retryable
+    // DelegationNotPropagatedError (which would make the delegated-decrypt retry
+    // loop spin its full budget on a local misconfig before failing).
+    const delegatorAllowed = await Promise.all(
+      encryptedValues.map((encryptedValue) =>
+        this.#persistAllowed(encryptedValue, delegatorAddress),
+      ),
+    );
+
+    for (let i = 0; i < encryptedValues.length; i++) {
+      if (!delegatorAllowed[i]) {
+        throw new NotEntitledError({
+          encryptedValue: encryptedValues[i]!,
+          contractAddress,
+          account: delegatorAddress,
+        });
       }
     }
   }

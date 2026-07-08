@@ -13,9 +13,7 @@ describe("useConfidentialBalance", () => {
       useConfidentialBalance({ address: tokenAddress, account: userAddress }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
     expect(result.current.data).toBe(123n);
     expect(provider.readContract).toHaveBeenCalledWith(
@@ -67,9 +65,7 @@ describe("useConfidentialBalance", () => {
       useConfidentialBalance({ address: tokenAddress, account: OTHER }),
     );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-      timeout: 5_000,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
     expect(result.current.data).toBe(456n);
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "confidentialBalanceOf", args: [OTHER] }),
@@ -92,9 +88,7 @@ describe("useConfidentialBalance", () => {
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
       );
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-        timeout: 5_000,
-      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
       const { data, dataUpdatedAt, ...state } = result.current;
       const { promise: statePromise, ...stableState } = state;
@@ -144,7 +138,7 @@ describe("useConfidentialBalance", () => {
       vi.mocked(relayer.userDecrypt).mockImplementation(
         async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
           const value = encryptedValues[0] === handleA ? 111n : 222n;
-          return { [encryptedValues[0]]: value };
+          return { [encryptedValues[0]!]: value };
         },
       );
 
@@ -152,9 +146,7 @@ describe("useConfidentialBalance", () => {
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
       );
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-        timeout: 5_000,
-      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
       expect(result.current.data).toBe(111n);
 
       currentHandle = handleB;
@@ -162,9 +154,7 @@ describe("useConfidentialBalance", () => {
         await result.current.refetch();
       });
 
-      await waitFor(() => expect(result.current.data).toBe(222n), {
-        timeout: 5_000,
-      });
+      await waitFor(() => expect(result.current.data).toBe(222n), { timeout: 5_000 });
       expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ encryptedValues: [handleA] }),
@@ -189,9 +179,7 @@ describe("useConfidentialBalance", () => {
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
       );
 
-      await waitFor(() => expect(result.current.isSuccess).toBe(true), {
-        timeout: 5_000,
-      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
       const firstData = result.current.data;
 
       rerender();

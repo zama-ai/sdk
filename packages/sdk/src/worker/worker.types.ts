@@ -6,6 +6,7 @@ import type {
 } from "@zama-fhe/relayer-sdk/bundle";
 import type { ClearValue, EncryptInput, EncryptedValue } from "../relayer/relayer-sdk.types";
 import type { FheChain } from "../chains/types";
+import type { SerializedError } from "../utils/error";
 import type { Address, Hex } from "viem";
 
 // ============================================================================
@@ -79,9 +80,7 @@ export interface InitRequest extends BaseRequest {
 
 export interface UpdateCsrfRequest extends BaseRequest {
   type: "UPDATE_CSRF";
-  payload: {
-    csrfToken: string;
-  };
+  payload: { csrfToken: string };
 }
 
 export interface EncryptRequest extends BaseRequest {
@@ -112,10 +111,7 @@ export interface UserDecryptRequest extends BaseRequest {
 
 export interface PublicDecryptRequest extends BaseRequest {
   type: "PUBLIC_DECRYPT";
-  payload: {
-    chainId: number;
-    encryptedValues: EncryptedValue[];
-  };
+  payload: { chainId: number; encryptedValues: EncryptedValue[] };
 }
 
 export interface GenerateKeypairRequest extends BaseRequest {
@@ -165,10 +161,7 @@ export interface DelegatedUserDecryptRequest extends BaseRequest {
 
 export interface RequestZKProofVerificationRequest extends BaseRequest {
   type: "REQUEST_ZK_PROOF_VERIFICATION";
-  payload: {
-    chainId: number;
-    zkProof: ZKProofLike;
-  };
+  payload: { chainId: number; zkProof: ZKProofLike };
 }
 
 export interface GetPublicKeyRequest extends BaseRequest {
@@ -178,10 +171,7 @@ export interface GetPublicKeyRequest extends BaseRequest {
 
 export interface GetPublicParamsRequest extends BaseRequest {
   type: "GET_PUBLIC_PARAMS";
-  payload: {
-    chainId: number;
-    bits: number;
-  };
+  payload: { chainId: number; bits: number };
 }
 
 export type WorkerRequest =
@@ -223,12 +213,17 @@ export interface SuccessResponse<T> extends BaseResponse {
   data: T;
 }
 
-export interface ErrorResponse extends BaseResponse {
+/**
+ * A failed worker response. The error and its cause chain are serialized into a
+ * structured-clone-safe {@link SerializedError} (structured clone strips
+ * prototypes/codes/causes across the boundary); the main thread rebuilds it
+ * ({@link deserializeError}) and classifies it once in `wrapDecryptError`.
+ */
+export type ErrorResponse = BaseResponse & {
   success: false;
   error: string;
-  /** HTTP status code from the relayer, when available. */
-  statusCode?: number;
-}
+  serialized?: SerializedError;
+};
 
 export type WorkerResponse<T> = SuccessResponse<T> | ErrorResponse;
 

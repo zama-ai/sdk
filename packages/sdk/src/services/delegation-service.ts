@@ -103,9 +103,7 @@ export class DelegationService {
         delegateAddress: normalizedDelegate,
       });
     } catch (error) {
-      this.#logger.warn("delegateDecryption: pre-flight expiry check failed", {
-        error,
-      });
+      this.#logger.warn("delegateDecryption: pre-flight expiry check failed", { error });
       currentExpiry = -1n;
     }
     if (currentExpiry === expDate) {
@@ -133,11 +131,7 @@ export class DelegationService {
       contractAddress,
       delegateAddress,
       delegatorAddress,
-    }: {
-      contractAddress: Address;
-      delegateAddress: Address;
-      delegatorAddress: Address;
-    },
+    }: { contractAddress: Address; delegateAddress: Address; delegatorAddress: Address },
   ): Promise<TransactionResult> {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);

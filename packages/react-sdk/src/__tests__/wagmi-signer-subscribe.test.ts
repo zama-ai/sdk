@@ -1,8 +1,9 @@
 // oxlint-disable no-empty-pattern
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
 import { test as base, describe, expect } from "../test-fixtures";
-import { WalletNotConnectedError, type Address } from "@zama-fhe/sdk";
+import { WalletNotConnectedError, type Address, type WalletAccountListener } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
+import type * as WagmiActions from "wagmi/actions";
 
 const ADDR_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
 const ADDR_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
@@ -20,19 +21,23 @@ type OnChange = (connection: Connection, prevConnection: Connection) => void;
 
 let capturedOnChange: OnChange | undefined;
 
-vi.mock(import("wagmi/actions"), () => ({
-  getChainId: vi.fn().mockReturnValue(31337),
-  getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
-  getConnection: mockGetConnection,
-  readContract: vi.fn(),
-  signTypedData: vi.fn(),
-  waitForTransactionReceipt: vi.fn(),
-  writeContract: vi.fn(),
-  watchConnection: vi.fn((_config: unknown, opts: { onChange: OnChange }) => {
-    capturedOnChange = opts.onChange;
-    return mockUnsubscribe;
-  }),
-}));
+vi.mock(
+  import("wagmi/actions"),
+  () =>
+    ({
+      getChainId: vi.fn().mockReturnValue(31337),
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
+      getConnection: mockGetConnection,
+      readContract: vi.fn(),
+      signTypedData: vi.fn(),
+      waitForTransactionReceipt: vi.fn(),
+      writeContract: vi.fn(),
+      watchConnection: vi.fn((_config: unknown, opts: { onChange: OnChange }) => {
+        capturedOnChange = opts.onChange;
+        return mockUnsubscribe;
+      }),
+    }) as unknown as typeof WagmiActions,
+);
 
 import { WagmiSigner } from "../wagmi/wagmi-signer";
 import { WagmiProvider } from "../wagmi/wagmi-provider";
@@ -41,7 +46,7 @@ interface WagmiFixtures {
   wagmiConfig: Config;
   wagmiSigner: WagmiSigner;
   wagmiProvider: WagmiProvider;
-  onWalletAccountChange: ReturnType<typeof vi.fn>;
+  onWalletAccountChange: Mock<WalletAccountListener>;
 }
 
 const test = base.extend<WagmiFixtures>({
@@ -57,7 +62,7 @@ const test = base.extend<WagmiFixtures>({
   wagmiProvider: async ({ wagmiConfig }, use) => {
     await use(new WagmiProvider({ config: wagmiConfig }));
   },
-  onWalletAccountChange: async ({}, use: (v: ReturnType<typeof vi.fn>) => Promise<void>) => {
+  onWalletAccountChange: async ({}, use: (v: Mock<WalletAccountListener>) => Promise<void>) => {
     await use(vi.fn());
   },
 });
@@ -250,11 +255,7 @@ describe("WagmiSigner.subscribe", () => {
     onWalletAccountChange.mockClear();
 
     capturedOnChange!(
-      {
-        status: "connected",
-        address: ADDR_A.toLowerCase() as Address,
-        chainId: 1,
-      },
+      { status: "connected", address: ADDR_A.toLowerCase() as Address, chainId: 1 },
       { status: "connected", address: ADDR_A, chainId: 1 },
     );
     expect(onWalletAccountChange).not.toHaveBeenCalled();

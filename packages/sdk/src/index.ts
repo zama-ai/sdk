@@ -77,20 +77,14 @@ export {
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
 export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
-export type { BatchDecryptItem, BatchDecryptResult } from "./services/decryption-service";
+export type {
+  BatchDecryptItem,
+  BatchDecryptResult,
+  DelegatedDecryptOptions,
+} from "./services/decryption-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
-export {
-  Token,
-  WrappedToken,
-  type BatchBalancesResult,
-  type BatchDecryptAsOptions,
-  savePendingUnshield,
-  loadPendingUnshield,
-  loadPendingUnshieldRequest,
-  clearPendingUnshield,
-  type PendingUnshieldRequest,
-} from "./token";
+export { Token, WrappedToken, type BatchBalancesResult, type BatchDecryptAsOptions } from "./token";
 export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,
@@ -169,7 +163,11 @@ export {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
   ConfigurationError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
   ChainMismatchError,
   SignerRequiredError,
   SignerNotConfiguredError,

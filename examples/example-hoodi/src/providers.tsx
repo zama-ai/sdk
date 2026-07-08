@@ -2,20 +2,13 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ZamaSDKEvents,
-  IndexedDBStorage,
-  indexedDBStorage,
-  savePendingUnshield,
-  cleartext,
-} from "@zama-fhe/sdk";
+import { IndexedDBStorage, indexedDBStorage, cleartext } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import type { EIP1193Provider } from "@zama-fhe/sdk/ethers";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { hoodi } from "@zama-fhe/sdk/chains";
 import { JsonRpcProvider } from "ethers";
 import { HOODI_RPC_URL } from "@/lib/config";
-import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
@@ -34,9 +27,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //    nonce (eth_getTransactionCount), and receipt polling to the injected wallet
 //    to avoid stale data from the Hoodi load balancer. See WALLET_METHODS below.
 //
-// 2. Separate IndexedDB instances for storage and permitStorage — both use the
-//    same internal key; sharing one DB instance causes the session entry to
-//    overwrite the encrypted keypair, forcing re-signing on every balance decrypt.
+// 2. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 3. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
 //    fresh ethers adapter bound to the new account, while ignoring spurious
@@ -46,9 +39,8 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Separate IndexedDB database for permit storage (EIP-712 wallet signatures that authorize
-// decryption). Must be distinct from indexedDBStorage ("CredentialStore") because both use
-// the same storage key — sharing one DB would overwrite the encrypted keypair and corrupt
-// credentials on the next decrypt attempt.
+// decryption) — not required for correctness (storage keys are namespaced internally), kept
+// as its own database for clarity between the two storage responsibilities.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 /**
@@ -246,21 +238,6 @@ export function Providers({ children }: { children: ReactNode }) {
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
       relayers: { [hoodi.id]: cleartext() },
-      onEvent: (event) => {
-        // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK awaits
-        // the receipt before emitting). Saving here ensures the pending state survives a tab
-        // close between Phase 1 and Phase 2. See activeUnshield.ts for why wrapperAddress is
-        // passed via a module-level ref.
-        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-          const wrapperAddress = getActiveUnshieldToken();
-          if (wrapperAddress) {
-            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-              console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-            );
-            setActiveUnshieldToken(null);
-          }
-        }
-      },
     });
   }, [walletKey]);
 

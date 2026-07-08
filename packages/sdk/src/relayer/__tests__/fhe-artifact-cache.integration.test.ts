@@ -4,6 +4,14 @@ import http from "node:http";
 import { test as base, describe, expect } from "vitest";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { FheArtifactCache } from "../fhe-artifact-cache";
+import type { GenericLogger } from "../../worker/worker.types";
+
+const noopLogger: GenericLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
 
 // ── Test HTTP server ────────────────────────────────────────
 
@@ -16,10 +24,7 @@ interface TestServer {
 /** Size of fake binary artifacts served by the test server (bytes). */
 const FAKE_BIN_SIZE = 1024;
 
-function createTestServer(): {
-  server: http.Server;
-  start: () => Promise<TestServer>;
-} {
+function createTestServer(): { server: http.Server; start: () => Promise<TestServer> } {
   let pkEtag = '"pk-etag-v1"';
   let crsEtag = '"crs-etag-v1"';
   let pkBody = randomBytes(FAKE_BIN_SIZE);
@@ -104,10 +109,7 @@ interface CacheFixtures {
   /** Create a fresh cache instance sharing the same storage (simulates app restart). */
   createCache: (opts?: { ttl?: number; relayerUrl?: string }) => FheArtifactCache;
   pkFetcher: () => Promise<{ publicKeyId: string; publicKey: Uint8Array }>;
-  paramsFetcher: () => Promise<{
-    publicParamsId: string;
-    publicParams: Uint8Array;
-  }>;
+  paramsFetcher: () => Promise<{ publicParamsId: string; publicParams: Uint8Array }>;
 }
 
 const test = base.extend<CacheFixtures>({
@@ -130,6 +132,7 @@ const test = base.extend<CacheFixtures>({
           chainId: CHAIN_ID,
           relayerUrl: opts?.relayerUrl ?? testServer.baseUrl,
           ttl: opts?.ttl ?? 1,
+          logger: noopLogger,
         }),
     );
   },
@@ -139,10 +142,7 @@ const test = base.extend<CacheFixtures>({
   },
 
   pkFetcher: async ({}, use) => {
-    await use(async () => ({
-      publicKeyId: "pk-id-1",
-      publicKey: new Uint8Array([1, 2, 3]),
-    }));
+    await use(async () => ({ publicKeyId: "pk-id-1", publicKey: new Uint8Array([1, 2, 3]) }));
   },
 
   paramsFetcher: async ({}, use) => {

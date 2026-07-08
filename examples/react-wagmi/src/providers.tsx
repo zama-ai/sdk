@@ -7,11 +7,10 @@ import { sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
-import { ZamaSDKEvents, indexedDBStorage, savePendingUnshield } from "@zama-fhe/sdk";
+import { indexedDBStorage } from "@zama-fhe/sdk";
 import { sepolia as fheSepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { web } from "@zama-fhe/sdk/web";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
-import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 
 // ── What this file does ────────────────────────────────────────────────────────
 //
@@ -22,7 +21,7 @@ import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnsh
 //     wagmiConfig,
 //     relayers: { [mySepolia.id]: web() },
 //     storage: indexedDBStorage,
-//     sessionStorage: indexedDBStorage,
+//     permitStorage: indexedDBStorage,
 //   });
 //   <ZamaProvider config={zamaConfig}>
 //
@@ -54,22 +53,6 @@ const zamaConfig = createZamaConfig({
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
-  onEvent: (event) => {
-    // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
-    // awaits the receipt before emitting). Saving here ensures the pending state
-    // survives a tab close between Phase 1 completion and Phase 2 completion.
-    // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-    // NOTE: indexedDBStorage must be the same instance as the `storage` config above.
-    if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-      const wrapperAddress = getActiveUnshieldToken();
-      if (wrapperAddress) {
-        savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-          console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-        );
-        setActiveUnshieldToken(null);
-      }
-    }
-  },
 });
 
 export function Providers({ children }: { children: ReactNode }) {

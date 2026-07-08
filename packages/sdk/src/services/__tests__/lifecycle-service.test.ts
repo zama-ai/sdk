@@ -69,9 +69,7 @@ describe("LifecycleService", () => {
         await Promise.resolve();
         calls.push("credential");
       });
-      const credentialService = {
-        handleWalletAccountChange,
-      } as unknown as CredentialService;
+      const credentialService = { handleWalletAccountChange } as unknown as CredentialService;
       const clearForRequester = vi.fn(async () => {
         calls.push("cache");
       });
@@ -105,10 +103,7 @@ describe("LifecycleService", () => {
         address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         chainId: 31337,
       } as const;
-      const next = {
-        address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        chainId: 1,
-      } as const;
+      const next = { address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", chainId: 1 } as const;
       dispatch!({ previous: prev, next });
 
       await vi.waitFor(() => {
@@ -166,7 +161,7 @@ describe("LifecycleService", () => {
       createMockSigner,
     }) => {
       const clearForRequester = vi.fn();
-      const cache = { clearForRequester } as unknown as CachingService;
+      const cachingService = { clearForRequester } as unknown as CachingService;
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
         walletAccount: {
@@ -178,16 +173,13 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cache });
+      const service = createLifecycleService({ signer, cachingService });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
       dispatch!({
         previous: undefined,
-        next: {
-          address: "0x1111111111111111111111111111111111111111",
-          chainId: 31337,
-        },
+        next: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
       });
 
       await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
@@ -217,10 +209,7 @@ describe("LifecycleService", () => {
       service.onWalletAccountChange(listener);
 
       dispatch!({
-        previous: {
-          address: "0x1111111111111111111111111111111111111111",
-          chainId: 31337,
-        },
+        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
         next: undefined,
       });
 
@@ -265,14 +254,8 @@ describe("LifecycleService", () => {
       service.onWalletAccountChange(listener);
 
       dispatch!({
-        previous: {
-          address: "0x1111111111111111111111111111111111111111",
-          chainId: 31337,
-        },
-        next: {
-          address: "0x2222222222222222222222222222222222222222",
-          chainId: 1,
-        },
+        previous: { address: "0x1111111111111111111111111111111111111111", chainId: 31337 },
+        next: { address: "0x2222222222222222222222222222222222222222", chainId: 1 },
       });
 
       await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());

@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach, type Mock } from "../../test-fixtures";
 import type { WorkerRequest, WorkerResponse } from "../worker.types";
 import { LoggerService } from "../../services/logger-service";
+import { DEFAULT_TIMEOUT_MS } from "../worker.base-client";
+import { WorkerTimeoutError } from "../../errors";
 import { vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Hoisted mocks — vi.mock factories are hoisted above imports, so any
@@ -73,9 +75,7 @@ let uuidCounter = 0;
 
 vi.stubGlobal(
   "crypto",
-  Object.create(globalThis.crypto, {
-    randomUUID: { value: () => `uuid-${++uuidCounter}` },
-  }),
+  Object.create(globalThis.crypto, { randomUUID: { value: () => `uuid-${++uuidCounter}` } }),
 );
 
 // ---------------------------------------------------------------------------
@@ -124,10 +124,7 @@ function defaultWebConfig() {
 }
 
 function defaultNodeConfig() {
-  return {
-    chains: [{ chainId: 1 } as never],
-    logger: new LoggerService(),
-  };
+  return { chains: [{ chainId: 1 } as never], logger: new LoggerService() };
 }
 
 /** Simulate a successful response for any request posted to a mock browser Worker. */
@@ -136,12 +133,7 @@ function autoResolveWebWorker(worker: MockWorker): void {
     Promise.resolve().then(() => {
       worker.onmessage?.(
         new MessageEvent("message", {
-          data: {
-            id: req.id,
-            type: req.type,
-            success: true,
-            data: { initialized: true },
-          },
+          data: { id: req.id, type: req.type, success: true, data: { initialized: true } },
         }),
       );
     });
@@ -153,12 +145,7 @@ function autoResolveNodeWorker(worker: MockNodeWorker): void {
   worker.postMessage.mockImplementation((req: WorkerRequest) => {
     Promise.resolve().then(() => {
       const handler = worker.listeners["message"]?.[0];
-      handler?.({
-        id: req.id,
-        type: req.type,
-        success: true,
-        data: { initialized: true },
-      });
+      handler?.({ id: req.id, type: req.type, success: true, data: { initialized: true } });
     });
   });
 }
@@ -188,7 +175,7 @@ function flush(): Promise<void> {
 }
 
 function getFirstPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {
-  return worker.postMessage.mock.calls[0][0] as WorkerRequest;
+  return worker.postMessage.mock.calls[0]![0] as WorkerRequest;
 }
 
 function getLastPostedRequest(worker: MockWorker | MockNodeWorker): WorkerRequest {
@@ -317,12 +304,7 @@ describe("RelayerWorkerClient", () => {
       warn: vi.fn(),
       error: vi.fn(),
     });
-    const config = {
-      ...defaultWebConfig(),
-      logger,
-      integrity: "sha384-abc",
-      thread: 4,
-    };
+    const config = { ...defaultWebConfig(), logger, integrity: "sha384-abc", thread: 4 };
     const client = new RelayerWorkerClient(config);
     await client.initWorker();
 
@@ -354,6 +336,33 @@ describe("RelayerWorkerClient", () => {
     expect(req.payload).toEqual({ env: "web", ...payloadConfig });
 
     client.terminate();
+  });
+
+  test("a timed-out request rejects with WorkerTimeoutError but does NOT recycle the web worker", async () => {
+    setupAutoResolvingWebWorker();
+    const client = new RelayerWorkerClient(defaultWebConfig());
+    await client.initWorker();
+    const worker = lastMockWorker!;
+    // No-op subsequent requests so the operation hangs and times out.
+    worker.postMessage.mockImplementation(() => {});
+
+    vi.useFakeTimers();
+    try {
+      let err: Error | undefined;
+      const p = client.generateKeypair({ chainId: 1 }).catch((e: Error) => {
+        err = e;
+      });
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+      await p;
+
+      // The timeout is still typed/diagnosable (the SDK-237 improvement)...
+      expect(err).toBeInstanceOf(WorkerTimeoutError);
+      expect((err as WorkerTimeoutError).worker).toBe("web-worker");
+      // ...but recycling is a Node-pool recovery: the browser worker stays put.
+      expect(worker.terminate).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("onmessage handler dispatches response to handleResponse", async () => {
@@ -428,12 +437,7 @@ describe("RelayerWorkerClient", () => {
       Promise.resolve().then(() => {
         worker.onmessage?.(
           new MessageEvent("message", {
-            data: {
-              id: req.id,
-              type: req.type,
-              success: true,
-              data: { updated: true },
-            },
+            data: { id: req.id, type: req.type, success: true, data: { updated: true } },
           }),
         );
       });
@@ -466,7 +470,7 @@ describe("RelayerWorkerClient", () => {
       type: req.type,
       success: false,
       error: "relayer returned 400",
-      statusCode: 400,
+      serialized: { name: "Error", message: "relayer returned 400", statusCode: 400 },
     };
     worker.onmessage?.(new MessageEvent("message", { data: errorResponse }));
 

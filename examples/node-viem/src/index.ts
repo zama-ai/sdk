@@ -57,9 +57,7 @@ async function main() {
   const zamaSepolia = {
     ...sepolia,
     network: SEPOLIA_RPC_URL,
-    ...(RELAYER_API_KEY && {
-      auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY },
-    }),
+    ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
   } as const satisfies FheChain;
 
   // A single public client is shared for read operations.
@@ -80,9 +78,7 @@ async function main() {
       publicClient,
       walletClient: walletClientA,
       storage: new MemoryStorage(),
-      relayers: {
-        [zamaSepolia.id]: node(),
-      },
+      relayers: { [zamaSepolia.id]: node() },
     }),
   );
   using sdkB = new ZamaSDK(
@@ -91,9 +87,7 @@ async function main() {
       publicClient,
       walletClient: walletClientB,
       storage: new MemoryStorage(),
-      relayers: {
-        [zamaSepolia.id]: node(),
-      },
+      relayers: { [zamaSepolia.id]: node() },
     }),
   );
 

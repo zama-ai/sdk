@@ -99,9 +99,7 @@ function SelectedTokenPanel({
   const queryClient = useQueryClient();
   const sdk = useZamaSDK();
 
-  const { data: isAllowed } = useHasPermit({
-    contractAddresses: [token.confidentialTokenAddress],
-  });
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 
   const decimals = token.confidential.decimals;
   const erc20Decimals = token.underlying.decimals;
@@ -361,9 +359,7 @@ export default function Home() {
     setConnectError(null);
     setIsConnecting(true);
     try {
-      const accounts = (await ethereum.request({
-        method: "eth_requestAccounts",
-      })) as string[];
+      const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
 
       await handleSwitchToIngen();
       setAddress(accounts[0] ?? null);

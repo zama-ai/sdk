@@ -242,7 +242,7 @@ describe("DelegationService", () => {
 
     expect(thrown).toBeInstanceOf(DelegationCooldownError);
     expect(thrown).toMatchObject({ code: "DELEGATION_COOLDOWN" });
-    expect(thrown.cause).toBeInstanceOf(TransactionRevertedError);
-    expect((thrown.cause as Error).cause).toBe(rootCause);
+    expect((thrown as Error).cause).toBeInstanceOf(TransactionRevertedError);
+    expect(((thrown as Error).cause as Error).cause).toBe(rootCause);
   });
 });

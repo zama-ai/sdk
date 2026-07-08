@@ -26,6 +26,26 @@ import type {
   WorkerRequestType,
   WorkerResponse,
 } from "./worker.types";
+import { deserializeError } from "../utils/error";
+import { WorkerRecycledError, WorkerTimeoutError } from "../errors/timeout";
+
+/**
+ * Timeout / recovery knobs shared by every worker client (node + web), so the
+ * base class can read them generically off `config`.
+ */
+export interface WorkerClientTimeoutConfig {
+  /** Per-operation timeout in **seconds**. Defaults to 30. */
+  operationTimeout?: number;
+  /** WASM-init timeout in **seconds**. Defaults to 60. */
+  initTimeout?: number;
+  /**
+   * Recycle (terminate + lazily re-init) the worker after an operation timeout,
+   * so a hung thread can't keep serving requests. Defaults to `true`.
+   */
+  recycleWorkerOnTimeout?: boolean;
+  /** Diagnostic label surfaced on {@link WorkerTimeoutError} (e.g. `node-worker-2`). */
+  workerLabel?: string;
+}
 
 /** Pending request tracker */
 interface PendingRequest<T> {
@@ -47,7 +67,7 @@ export const INIT_TIMEOUT_MS = 60_000;
  * Encapsulates all shared logic: pending request tracking, timeouts, init dedup, domain methods.
  * Subclasses implement the abstract hooks for platform-specific worker creation and messaging.
  */
-export abstract class BaseWorkerClient<TWorker, TConfig> {
+export abstract class BaseWorkerClient<TWorker, TConfig extends WorkerClientTimeoutConfig> {
   #worker: TWorker | null = null;
   #pendingRequests = new Map<string, PendingRequest<unknown>>();
   #initPromise: Promise<TWorker> | null = null;
@@ -114,7 +134,12 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
 
     try {
       const { type, payload } = this.getInitPayload();
-      await this.sendRequestTo<InitResponseData>(worker, type, payload, INIT_TIMEOUT_MS);
+      await this.sendRequestTo<InitResponseData>(
+        worker,
+        type,
+        payload,
+        this.config.initTimeout !== undefined ? this.config.initTimeout * 1000 : INIT_TIMEOUT_MS,
+      );
       this.onWorkerReady?.(worker);
       this.#worker = worker;
     } catch (error) {
@@ -147,9 +172,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     const pending = this.#pendingRequests.get(response.id);
 
     if (!pending) {
-      this.logger.warn("[WorkerClient] Received response for unknown request", {
-        id: response.id,
-      });
+      this.logger.warn("[WorkerClient] Received response for unknown request", { id: response.id });
       return;
     }
 
@@ -159,10 +182,7 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
     this.#pendingRequests.delete(response.id);
 
     if (response.success) {
-      this.logger.debug(`[WorkerClient] ← ${pending.type} OK`, {
-        id: response.id,
-        elapsed,
-      });
+      this.logger.debug(`[WorkerClient] ← ${pending.type} OK`, { id: response.id, elapsed });
       pending.resolve(response.data);
     } else {
       // A failed worker response is a handled operation failure: it is
@@ -174,10 +194,12 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         elapsed,
         error: response.error,
       });
-      const err = new Error(response.error);
-      if ("statusCode" in response && typeof response.statusCode === "number") {
-        (err as Error & { statusCode?: number }).statusCode = response.statusCode;
-      }
+      // Rebuild the error (and its cause chain) from the structured-clone-safe
+      // envelope the worker serialized. Classification happens once on the main
+      // thread (`wrapDecryptError`) — the worker stays taxonomy-agnostic.
+      const err = response.serialized
+        ? deserializeError(response.serialized)
+        : new Error(response.error);
       pending.reject(err);
     }
   }
@@ -222,11 +244,21 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
         const elapsed = Math.round(performance.now() - startTime);
         // A timeout is surfaced via the rejected promise below, so it is a
         // handled failure and stays at `debug` rather than `error`.
-        this.logger.debug(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, {
-          id,
-          elapsed,
-        });
-        reject(new Error(`Request ${type} timed out after ${timeoutMs}ms`));
+        this.logger.debug(`[WorkerClient] ${type} timed out after ${timeoutMs}ms`, { id, elapsed });
+        reject(
+          new WorkerTimeoutError({
+            operation: type,
+            timeout: timeoutMs / 1000,
+            elapsed: elapsed / 1000,
+            worker: this.config.workerLabel,
+          }),
+        );
+        // Self-heal: the worker is presumed stuck, so recycle it (terminate +
+        // lazy re-init) — otherwise the hung thread keeps attracting work (the
+        // pool's least-connections sees it idle once this request settles).
+        if (this.config.recycleWorkerOnTimeout !== false) {
+          this.#recycleStuckWorker();
+        }
       }, timeoutMs);
 
       this.#pendingRequests.set(id, {
@@ -245,10 +277,50 @@ export abstract class BaseWorkerClient<TWorker, TConfig> {
   protected async sendRequest<T>(
     type: WorkerRequestType,
     payload: WorkerRequest["payload"],
-    timeoutMs: number = DEFAULT_TIMEOUT_MS,
+    timeoutMs?: number,
   ): Promise<T> {
     const worker = await this.initWorker();
-    return this.sendRequestTo<T>(worker, type, payload, timeoutMs);
+    return this.sendRequestTo<T>(
+      worker,
+      type,
+      payload,
+      timeoutMs ??
+        (this.config.operationTimeout !== undefined
+          ? this.config.operationTimeout * 1000
+          : DEFAULT_TIMEOUT_MS),
+    );
+  }
+
+  /**
+   * Terminate the (presumed-stuck) active worker after a timeout and reject any
+   * other in-flight requests on it, so the next call lazily re-inits a fresh
+   * worker. Mirrors {@link handleWorkerError}'s crash-recovery shape.
+   */
+  #recycleStuckWorker(): void {
+    const worker = this.#worker;
+    if (!worker) {
+      return;
+    }
+    this.#worker = null;
+    this.#initPromise = null;
+    // The sibling requests still in flight did not time out — they are aborted
+    // collateral of recycling the worker. Reject them with a typed, retryable
+    // `WorkerRecycledError` (not their own `WorkerTimeoutError`, since they never
+    // exceeded a bound) so consumers can retry them instead of receiving a
+    // terminal `DecryptionFailedError` — the fate of a bare `Error` through
+    // `wrapDecryptError`. Only the operation that actually exceeded its bound
+    // gets a `WorkerTimeoutError`.
+    for (const [id, pending] of this.#pendingRequests) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(
+        new WorkerRecycledError({ operation: pending.type, worker: this.config.workerLabel }),
+      );
+      this.#pendingRequests.delete(id);
+    }
+    this.logger.warn("[WorkerClient] recycled worker after a timeout", {
+      worker: this.config.workerLabel,
+    });
+    this.terminateWorker(worker);
   }
 
   // ===========================================================================

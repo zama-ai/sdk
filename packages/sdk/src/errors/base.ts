@@ -32,6 +32,14 @@ export const ZamaErrorCode = {
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
   RelayerRequestFailed: "RELAYER_REQUEST_FAILED",
+  /** The configured signer/account is not entitled (ACL) to decrypt this encrypted value. Don't retry — wait for a grant. */
+  NotEntitled: "NOT_ENTITLED",
+  /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
+  RpcRateLimited: "RPC_RATE_LIMITED",
+  /** A worker operation exceeded its configured timeout; the worker is recycled by default. Retryable. */
+  OperationTimeout: "OPERATION_TIMEOUT",
+  /** An in-flight worker operation was aborted as collateral of another operation's timeout recycle. Retryable. */
+  WorkerRecycled: "WORKER_RECYCLED",
   /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
   Configuration: "CONFIGURATION",
   /** Delegation cannot target self (delegate === msg.sender). */
@@ -90,33 +98,4 @@ export class ZamaError extends Error {
     this.name = "ZamaError";
     this.code = code;
   }
-}
-
-/**
- * Pattern-match on a {@link ZamaError} by its error code.
- * Falls through to the `_` wildcard handler if no specific handler matches.
- * Returns `undefined` if the error is not a `ZamaError` and no `_` handler is provided.
- *
- * @example
- * ```ts
- * matchZamaError(error, {
- *   SIGNING_REJECTED: () => toast("Please approve in wallet"),
- *   TRANSACTION_REVERTED: (e) => toast(`Tx failed: ${e.message}`),
- *   _: () => toast("Unknown error"),
- * });
- * ```
- */
-export function matchZamaError<R>(
-  error: unknown,
-  handlers: Partial<Record<ZamaErrorCode, (error: ZamaError) => R>> & {
-    _?: (error: unknown) => R;
-  },
-): R | undefined {
-  if (error instanceof ZamaError) {
-    const handler = handlers[error.code];
-    if (handler) {
-      return handler(error);
-    }
-  }
-  return handlers._?.(error);
 }

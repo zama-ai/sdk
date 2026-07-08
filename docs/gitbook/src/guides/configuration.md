@@ -28,6 +28,10 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
+{% hint style="info" %}
+The Sepolia testnet relayer needs **no API key** — presets like `sepolia` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](authentication.md).
+{% endhint %}
+
 ### 2. Pick a relayer
 
 Relayers tell the SDK how to run FHE operations on each chain.
@@ -90,10 +94,7 @@ const publicClient = createPublicClient({
   chain: sepolia,
   transport: http("https://sepolia.infura.io/v3/YOUR_KEY"),
 });
-const walletClient = createWalletClient({
-  chain: sepolia,
-  transport: custom(window.ethereum!),
-});
+const walletClient = createWalletClient({ chain: sepolia, transport: custom(window.ethereum!) });
 ```
 
 {% endtab %}
@@ -138,10 +139,7 @@ const myMainnet = {
 const zamaConfig = createZamaConfig({
   chains: [mySepolia, myMainnet],
   wagmiConfig,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 ```
 
@@ -167,10 +165,7 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: web(),
-    [myMainnet.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web(), [myMainnet.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -193,9 +188,7 @@ const mySepolia = {
 const config = createConfig({
   chains: [mySepolia],
   ethereum: window.ethereum!,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -220,9 +213,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -248,9 +239,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: {
-    [mySepolia.id]: node({ poolSize: 4 }),
-  },
+  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
 });
 
 const sdk = new ZamaSDK(config);
@@ -280,9 +269,7 @@ const config = createConfig({
   walletClient,
   storage: indexedDBStorage,
   permitStorage: chromeSessionStorage,
-  relayers: {
-    [mySepolia.id]: web(),
-  },
+  relayers: { [mySepolia.id]: web() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -372,10 +359,7 @@ const config = createConfig({
   chains: [mySepolia, myMainnet],
   publicClient,
   walletClient,
-  relayers: {
-    [mySepolia.id]: sharedWeb,
-    [myMainnet.id]: sharedWeb,
-  },
+  relayers: { [mySepolia.id]: sharedWeb, [myMainnet.id]: sharedWeb },
 });
 ```
 

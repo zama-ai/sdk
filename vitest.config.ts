@@ -32,10 +32,7 @@ const sharedResolve = {
       find: /^@zama-fhe\/sdk\/(.+)/,
       replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
     },
-    {
-      find: "@zama-fhe/sdk",
-      replacement: path.resolve(__dirname, "./packages/sdk/src"),
-    },
+    { find: "@zama-fhe/sdk", replacement: path.resolve(__dirname, "./packages/sdk/src") },
     {
       find: /^@zama-fhe\/react-sdk\/(.+)/,
       replacement: path.resolve(__dirname, "./packages/react-sdk/src/$1"),
@@ -81,10 +78,7 @@ export default defineConfig({
         test: {
           name: "typecheck",
           include: ["packages/sdk/**/*.test-d.ts"],
-          typecheck: {
-            enabled: true,
-            tsconfig: "./packages/sdk/tsconfig.json",
-          },
+          typecheck: { enabled: true, tsconfig: "./packages/sdk/tsconfig.json" },
         },
         resolve: sharedResolve,
       },
@@ -131,11 +125,7 @@ export default defineConfig({
         "**/worker/relayer-sdk.worker.ts",
         "**/worker/relayer-sdk.node-worker.ts",
       ],
-      thresholds: {
-        lines: 80,
-        branches: 80,
-        functions: 80,
-      },
+      thresholds: { lines: 80, branches: 80, functions: 80 },
     },
   },
 });

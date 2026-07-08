@@ -10,7 +10,9 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
   const hex = i.toString(16).padStart(40, "0");
   return `0x${hex}` as const;
 });
-const [A, B, C] = ADDRS;
+const A = ADDRS[0]!;
+const B = ADDRS[1]!;
+const C = ADDRS[2]!;
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({
@@ -176,11 +178,7 @@ describe("CredentialService.allow signing-error wrapping", () => {
       reject: () => new Error("network unreachable"),
       expected: SigningFailedError,
     },
-    {
-      label: "non-Error throw",
-      reject: () => "boom",
-      expected: SigningFailedError,
-    },
+    { label: "non-Error throw", reject: () => "boom", expected: SigningFailedError },
   ])(
     "$label is wrapped via SigningError taxonomy",
     async ({ reject, expected }, { credentialService, signer }) => {

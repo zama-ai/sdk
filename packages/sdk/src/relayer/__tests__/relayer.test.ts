@@ -47,22 +47,23 @@ const { mockWorkerClient, mockPool } = vi.hoisted(() => {
 
 import { RelayerNode } from "../relayer-node";
 import { RelayerWeb } from "../relayer-web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const CHAIN_CONFIG = {
-  id: 11155111,
-  relayerUrl: "https://relayer.example.com",
-} as any;
+const CHAIN_CONFIG = { id: 11155111, relayerUrl: "https://relayer.example.com" } as any;
+
+const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 function createWebRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerWeb>[0]> = {},
 ): RelayerWeb {
   return new RelayerWeb({
-    chain: CHAIN_CONFIG,
+    chain: sepolia,
     worker: mockWorkerClient as any,
+    logger,
     // Override default IndexedDBStorage with per-test MemoryStorage for isolation
     fheArtifactStorage: new MemoryStorage(),
     ...overrides,
@@ -72,11 +73,7 @@ function createWebRelayer(
 function createNodeRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerNode>[0]> = {},
 ): RelayerNode {
-  return new RelayerNode({
-    chain: CHAIN_CONFIG,
-    pool: mockPool as any,
-    ...overrides,
-  });
+  return new RelayerNode({ chain: CHAIN_CONFIG, pool: mockPool as any, logger, ...overrides });
 }
 
 function resetMocks(): void {
@@ -94,9 +91,7 @@ const MOCK_EIP712 = {
     chainId: 11155111,
     verifyingContract: "0xABC" as `0x${string}`,
   },
-  types: {
-    UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
-  },
+  types: { UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }] },
   message: {
     publicKey: "0xpub",
     contractAddresses: ["0x123"],
@@ -122,10 +117,7 @@ describe("RelayerWeb", () => {
   describe("terminate", () => {
     test("does not terminate the worker (lifecycle not owned)", async () => {
       const relayer = createWebRelayer();
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
+      mockWorkerClient.generateKeypair.mockResolvedValue({ publicKey: "pk", privateKey: "sk" });
 
       await relayer.generateTransportKeyPair();
       relayer.terminate();
@@ -140,10 +132,7 @@ describe("RelayerWeb", () => {
 
     test("[Symbol.dispose] delegates to terminate", async () => {
       const relayer = createWebRelayer();
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
+      mockWorkerClient.generateKeypair.mockResolvedValue({ publicKey: "pk", privateKey: "sk" });
       await relayer.generateTransportKeyPair();
 
       relayer[Symbol.dispose]();
@@ -159,10 +148,7 @@ describe("RelayerWeb", () => {
     test("refreshes CSRF token before encrypt", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("csrf-token-123");
       const relayer = createWebRelayer({ security: { getCsrfToken } });
-      mockWorkerClient.encrypt.mockResolvedValue({
-        handles: [],
-        inputProof: new Uint8Array(),
-      });
+      mockWorkerClient.encrypt.mockResolvedValue({ handles: [], inputProof: new Uint8Array() });
 
       await relayer.encrypt({
         values: [{ value: 100n, type: "euint64" as const }],
@@ -175,10 +161,7 @@ describe("RelayerWeb", () => {
 
     test("skips CSRF refresh when getCsrfToken is not provided", async () => {
       const relayer = createWebRelayer();
-      mockWorkerClient.encrypt.mockResolvedValue({
-        handles: [],
-        inputProof: new Uint8Array(),
-      });
+      mockWorkerClient.encrypt.mockResolvedValue({ handles: [], inputProof: new Uint8Array() });
 
       await relayer.encrypt({
         values: [{ value: 100n, type: "euint64" as const }],
@@ -192,10 +175,7 @@ describe("RelayerWeb", () => {
     test("skips CSRF refresh when token is empty", async () => {
       const getCsrfToken = vi.fn().mockReturnValue("");
       const relayer = createWebRelayer({ security: { getCsrfToken } });
-      mockWorkerClient.encrypt.mockResolvedValue({
-        handles: [],
-        inputProof: new Uint8Array(),
-      });
+      mockWorkerClient.encrypt.mockResolvedValue({ handles: [], inputProof: new Uint8Array() });
 
       await relayer.encrypt({
         values: [{ value: 100n, type: "euint64" as const }],
@@ -214,10 +194,7 @@ describe("RelayerWeb", () => {
   describe("method delegation", () => {
     test("generateKeypair delegates to worker", async () => {
       const relayer = createWebRelayer();
-      mockWorkerClient.generateKeypair.mockResolvedValue({
-        publicKey: "pub",
-        privateKey: "priv",
-      });
+      mockWorkerClient.generateKeypair.mockResolvedValue({ publicKey: "pub", privateKey: "priv" });
 
       const result = await relayer.generateTransportKeyPair();
 
@@ -276,10 +253,7 @@ describe("RelayerWeb", () => {
       const result = await relayer.userDecrypt(params);
 
       expect(result).toEqual(clearValues);
-      expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith({
-        chainId: 11155111,
-        ...params,
-      });
+      expect(mockWorkerClient.userDecrypt).toHaveBeenCalledWith({ chainId: 11155111, ...params });
     });
 
     test("publicDecrypt delegates to worker and returns structured result", async () => {
@@ -329,9 +303,7 @@ describe("RelayerWeb", () => {
 
     test("delegatedUserDecrypt delegates to worker and returns clearValues", async () => {
       const relayer = createWebRelayer();
-      mockWorkerClient.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { [HANDLE]: 200n },
-      });
+      mockWorkerClient.delegatedUserDecrypt.mockResolvedValue({ clearValues: { [HANDLE]: 200n } });
 
       const params = {
         encryptedValues: [HANDLE],
@@ -420,10 +392,7 @@ describe("RelayerWeb", () => {
 
     test("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
-      const pp = {
-        publicParamsId: "pp-1",
-        publicParams: new Uint8Array([4, 5]),
-      };
+      const pp = { publicParamsId: "pp-1", publicParams: new Uint8Array([4, 5]) };
       mockWorkerClient.getPublicParams.mockResolvedValue({ result: pp });
 
       const relayer = createWebRelayer({ fheArtifactStorage: storage });
@@ -483,10 +452,7 @@ describe("RelayerNode", () => {
   describe("terminate", () => {
     test("does not terminate the pool (lifecycle not owned)", async () => {
       const relayer = createNodeRelayer();
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
+      mockPool.generateKeypair.mockResolvedValue({ publicKey: "pk", privateKey: "sk" });
 
       await relayer.generateTransportKeyPair();
       relayer.terminate();
@@ -501,10 +467,7 @@ describe("RelayerNode", () => {
 
     test("[Symbol.dispose] delegates to terminate", async () => {
       const relayer = createNodeRelayer();
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pk",
-        privateKey: "sk",
-      });
+      mockPool.generateKeypair.mockResolvedValue({ publicKey: "pk", privateKey: "sk" });
       await relayer.generateTransportKeyPair();
 
       relayer[Symbol.dispose]();
@@ -519,10 +482,7 @@ describe("RelayerNode", () => {
   describe("method delegation", () => {
     test("generateKeypair delegates to pool", async () => {
       const relayer = createNodeRelayer();
-      mockPool.generateKeypair.mockResolvedValue({
-        publicKey: "pub",
-        privateKey: "priv",
-      });
+      mockPool.generateKeypair.mockResolvedValue({ publicKey: "pub", privateKey: "priv" });
 
       const result = await relayer.generateTransportKeyPair();
 
@@ -581,10 +541,7 @@ describe("RelayerNode", () => {
       const result = await relayer.userDecrypt(params);
 
       expect(result).toEqual(clearValues);
-      expect(mockPool.userDecrypt).toHaveBeenCalledWith({
-        chainId: 11155111,
-        ...params,
-      });
+      expect(mockPool.userDecrypt).toHaveBeenCalledWith({ chainId: 11155111, ...params });
     });
 
     test("publicDecrypt delegates to pool and returns structured result", async () => {
@@ -634,9 +591,7 @@ describe("RelayerNode", () => {
 
     test("delegatedUserDecrypt delegates to pool and returns clearValues", async () => {
       const relayer = createNodeRelayer();
-      mockPool.delegatedUserDecrypt.mockResolvedValue({
-        clearValues: { [HANDLE]: 200n },
-      });
+      mockPool.delegatedUserDecrypt.mockResolvedValue({ clearValues: { [HANDLE]: 200n } });
 
       const params = {
         encryptedValues: [HANDLE],
@@ -695,10 +650,7 @@ describe("RelayerNode", () => {
       const result = await relayer.getPublicParams(2048);
 
       expect(result).toEqual(pp);
-      expect(mockPool.getPublicParams).toHaveBeenCalledWith({
-        chainId: 11155111,
-        bits: 2048,
-      });
+      expect(mockPool.getPublicParams).toHaveBeenCalledWith({ chainId: 11155111, bits: 2048 });
     });
   });
 
@@ -725,10 +677,7 @@ describe("RelayerNode", () => {
 
     test("caches getPublicParams when storage is provided", async () => {
       const storage = new MemoryStorage();
-      const pp = {
-        publicParamsId: "pp-1",
-        publicParams: new Uint8Array([4, 5]),
-      };
+      const pp = { publicParamsId: "pp-1", publicParams: new Uint8Array([4, 5]) };
       mockPool.getPublicParams.mockResolvedValue({ result: pp });
 
       const relayer = createNodeRelayer({ fheArtifactStorage: storage });

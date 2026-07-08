@@ -6,10 +6,7 @@ import type { RelayerSDK } from "../../relayer/relayer-sdk";
 
 /** Stub the public RelayerConfig seam — no internal-module mocking. */
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
-  return {
-    type,
-    createRelayer: () => ({}) as unknown as RelayerSDK,
-  };
+  return { type, createRelayer: () => ({}) as unknown as RelayerSDK };
 }
 
 describe("resolveChainRelayers", () => {
@@ -33,7 +30,9 @@ describe("resolveChainRelayers", () => {
       expected: "Chain 999999 has no relayer configured",
     },
   ])("throws when $label", ({ chains, relayers, expected }) => {
-    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
+    expect(() =>
+      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
+    ).toThrow(expected);
   });
 
   test.each([
@@ -60,7 +59,9 @@ describe("resolveChainRelayers", () => {
       expected: "Relayer entries for chain(s) [888, 999]",
     },
   ])("throws for orphaned relayer keys ($label)", ({ chains, relayers, expected }) => {
-    expect(() => resolveChainRelayers(chains, relayers)).toThrow(expected);
+    expect(() =>
+      resolveChainRelayers(chains, relayers as Readonly<Record<number, RelayerConfig>>),
+    ).toThrow(expected);
   });
 
   test("resolves multiple chains and binds each to its relayer config", () => {
@@ -71,10 +72,7 @@ describe("resolveChainRelayers", () => {
       [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-    expect(result.get(11155111)).toEqual({
-      chain: sepolia,
-      relayer: sepoliaCfg,
-    });
+    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
     expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
   });
 });

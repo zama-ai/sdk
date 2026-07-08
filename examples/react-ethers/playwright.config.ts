@@ -3,10 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
-  use: {
-    baseURL: "http://localhost:3000",
-    trace: "on-first-retry",
-  },
+  use: { baseURL: "http://localhost:3000", trace: "on-first-retry" },
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",
@@ -16,10 +13,5 @@ export default defineConfig({
     // Without this, a dev's .env.local override would bypass the route mock.
     env: { NEXT_PUBLIC_SEPOLIA_RPC_URL: "" },
   },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

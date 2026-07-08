@@ -256,11 +256,7 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
         const [tx = {}] = (req.params ?? []) as Array<{ to?: string; data?: string }>;
         return { jsonrpc: "2.0", id: req.id ?? 1, result: resolveEthCall(tx) };
       }
-      return {
-        jsonrpc: "2.0",
-        id: req.id ?? 1,
-        result: staticResults[req.method ?? ""] ?? null,
-      };
+      return { jsonrpc: "2.0", id: req.id ?? 1, result: staticResults[req.method ?? ""] ?? null };
     }
 
     await route.fulfill({

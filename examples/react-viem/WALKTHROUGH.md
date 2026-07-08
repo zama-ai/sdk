@@ -37,11 +37,7 @@ const zamaSepolia = {
   network: SEPOLIA_RPC_URL,
 } as const;
 
-const walletClient = createWalletClient({
-  account,
-  chain: sepolia,
-  transport: custom(ethereum),
-});
+const walletClient = createWalletClient({ account, chain: sepolia, transport: custom(ethereum) });
 const signer = ethereum ? new ViemSigner({ walletClient, ethereum }) : undefined;
 
 const zamaConfig = createConfig({
@@ -61,8 +57,8 @@ const zamaConfig = createConfig({
 <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
 ```
 
-`storage` and `permitStorage` use separate IndexedDB databases. Sharing the same instance
-can overwrite credential data and force the user to re-sign on every decrypt.
+`storage` and `permitStorage` use separate IndexedDB databases here for clarity, but sharing
+one instance is safe — the SDK namespaces the keys internally.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
@@ -208,11 +204,7 @@ required.
 
 ```ts
 const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -232,27 +224,22 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires after Phase 1 is mined (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
 ## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
-If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
+If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB automatically by `WrappedToken`. On next load:
 
 ```ts
-const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
+const { data: pendingTxHash } = usePendingUnshield(tokenAddress);
 // → non-null: show a "Finalize" button
 const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
-The `activeUnshield.ts` module-level bridge is needed because `ZamaSDKEvents.UnshieldPhase1Submitted` (fired in `providers.tsx`) carries only the txHash — not the token address. The bridge associates them:
-
-```
-UnshieldCard: setActiveUnshieldToken(tokenAddress) → mutate()
-providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage, wrapperAddress, txHash)
-```
+`usePendingUnshield` and the unshield/resume mutations share a query key, so finalizing automatically clears the pending state — no manual save/load/clear wiring needed.
 
 ---
 
@@ -320,9 +307,7 @@ shows a "Decrypt Balance" button rather than a balance value. This avoids blind-
 prompts on mount.
 
 ```ts
-const { data: hasPermit } = useHasPermit({
-  contractAddresses: [token.confidentialTokenAddress],
-});
+const { data: hasPermit } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
 // All registry pairs are passed at once — one signature covers all tokens,
 // so switching tokens does not prompt the wallet again.
 const grantPermits = useGrantPermit();

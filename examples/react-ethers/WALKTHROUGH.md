@@ -50,7 +50,7 @@ const config = createConfig({
 
 `createConfig` comes from `@zama-fhe/sdk/ethers`. The injected EIP-1193 wallet powers signatures and writes; the ethers `JsonRpcProvider` powers chain reads and receipt polling. `web()` is the browser FHE relayer factory from `@zama-fhe/sdk/web`.
 
-`storage` and `permitStorage` use separate IndexedDB instances. They store different SDK state and should remain isolated.
+`storage` and `permitStorage` use separate IndexedDB instances here for clarity, but sharing one is safe — the SDK namespaces the keys internally (and defaults `permitStorage` to `storage` when omitted).
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
@@ -143,11 +143,7 @@ shield.mutate({
 
 ```ts
 const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
-transfer.mutate({
-  to: recipient,
-  amount: parsedAmount,
-  onEncryptComplete: () => setStep(2),
-});
+transfer.mutate({ to: recipient, amount: parsedAmount, onEncryptComplete: () => setStep(2) });
 ```
 
 Two phases: encrypting the amount locally (step 1), then submitting the transaction (step 2). `onEncryptComplete` fires between them so the UI can update the button label.
@@ -167,27 +163,22 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires **after Phase 1 is mined** (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
 ## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
-If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
+If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB automatically by `WrappedToken`. On next load:
 
 ```ts
-const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
+const { data: pendingTxHash } = usePendingUnshield(tokenAddress);
 // → non-null: show a "Finalize" button
 const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
-The `activeUnshield.ts` module-level bridge is needed because `ZamaSDKEvents.UnshieldPhase1Submitted` (fired in `providers.tsx`) carries only the txHash — not the token address. The bridge associates them:
-
-```
-UnshieldCard: setActiveUnshieldToken(tokenAddress) → mutate()
-providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage, wrapperAddress, txHash)
-```
+`usePendingUnshield` and the unshield/resume mutations share a query key, so finalizing automatically clears the pending state — no manual save/load/clear wiring needed.
 
 ---
 

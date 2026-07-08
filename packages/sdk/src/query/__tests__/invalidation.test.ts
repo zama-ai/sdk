@@ -18,10 +18,7 @@ const OTHER_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 
 function createQueryClient(): QueryClient {
   return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: Infinity },
-      mutations: { retry: false },
-    },
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
   });
 }
 
@@ -96,12 +93,13 @@ describe("invalidation", () => {
     }
   });
 
-  test("invalidateAfterUnshield invalidates balance keys, wagmi, and underlyingAllowance", () => {
+  test("invalidateAfterUnshield invalidates balance keys, wagmi, underlyingAllowance, and pendingUnshield", () => {
     const qc = createQueryClient();
     const keys = [
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      zamaQueryKeys.pendingUnshield.token(TOKEN),
     ];
 
     for (const key of keys) {
@@ -150,6 +148,7 @@ describe("invalidation", () => {
       zamaQueryKeys.confidentialBalance.token(TOKEN),
       zamaQueryKeys.confidentialBalances.all,
       zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      zamaQueryKeys.pendingUnshield.token(TOKEN),
     ];
 
     for (const key of keys) {

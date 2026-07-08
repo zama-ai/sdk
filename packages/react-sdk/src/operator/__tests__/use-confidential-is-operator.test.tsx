@@ -63,10 +63,7 @@ describe("useConfidentialIsOperator", () => {
     const { result, rerender } = renderHook(
       ({ spender }) =>
         useConfidentialIsOperator({ address: tokenAddress, spender, holder: HOLDER }),
-      {
-        wrapper: ctx.Wrapper,
-        initialProps: { spender: undefined as Address | undefined },
-      },
+      { wrapper: ctx.Wrapper, initialProps: { spender: undefined as Address | undefined } },
     );
 
     expect(result.current.isPending).toBe(true);
@@ -95,10 +92,7 @@ describe("useConfidentialIsOperator", () => {
           spender: spenderAddress,
           holder: HOLDER,
         }),
-      {
-        wrapper: ctx.Wrapper,
-        initialProps: { address: undefined as Address | undefined },
-      },
+      { wrapper: ctx.Wrapper, initialProps: { address: undefined as Address | undefined } },
     );
 
     expect(result.current.isPending).toBe(true);
@@ -120,11 +114,7 @@ describe("useConfidentialIsOperator", () => {
 
     const { result } = renderWithProviders(() =>
       useConfidentialIsOperator(
-        {
-          address: tokenAddress,
-          spender: spenderAddress,
-          holder: HOLDER,
-        },
+        { address: tokenAddress, spender: spenderAddress, holder: HOLDER },
         { enabled: false },
       ),
     );

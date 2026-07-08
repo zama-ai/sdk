@@ -37,10 +37,7 @@ import {
 Decodes an array of raw log entries into typed event objects. Each returned event has an `.eventName` discriminator.
 
 ```ts
-const logs = await publicClient.getLogs({
-  address: tokenAddress,
-  topics: [TOKEN_TOPICS],
-});
+const logs = await publicClient.getLogs({ address: tokenAddress, topics: [TOKEN_TOPICS] });
 
 const events = decodeOnChainEvents(logs);
 
@@ -228,5 +225,6 @@ ACL delegation events are **not** included in `TOKEN_TOPICS` or `decodeOnChainEv
 
 ## Related
 
+- [Decrypt values from event logs](../../guides/decrypt-from-event-logs.md) — decrypt the encrypted amounts these decoders return
 - [Delegated Decryption](./delegation.md) — delegation API with on-chain event examples
 - [Token](./Token.md) — high-level API for token operations

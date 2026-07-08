@@ -18,9 +18,7 @@ export function useDecryptValues(
 ) {
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
-  const queryOpts = decryptValuesQueryOptions(sdk, encryptedInputs, {
-    walletAccount,
-  });
+  const queryOpts = decryptValuesQueryOptions(sdk, encryptedInputs, { walletAccount });
   return useQuery<DecryptResult>({
     ...queryOpts,
     ...options,

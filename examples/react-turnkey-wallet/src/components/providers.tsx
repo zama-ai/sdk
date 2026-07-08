@@ -40,10 +40,10 @@ import { toAccount } from "viem/accounts";
 import { serializeSignature } from "@turnkey/viem";
 import { zamaConfig as zamaChainPreset, viemChain, RPC_URL } from "@/lib/config";
 
-// Separate IndexedDB instance for session/permit signatures — sharing one instance
-// with indexedDBStorage causes the permit entry to overwrite the encrypted keypair,
-// forcing a re-signing prompt on every balance decrypt.
-const sessionDBStorage = new IndexedDBStorage("SessionStore");
+// Separate IndexedDB instance for permit signatures — not required for correctness
+// (storage keys are namespaced internally), kept separate here for clarity between
+// the two storage responsibilities.
+const permitDBStorage = new IndexedDBStorage("PermitStore");
 
 const queryClient = new QueryClient();
 const turnkeyConfig = {
@@ -65,10 +65,7 @@ function signatureToHex(signature: { r: string; s: string; v: string }): `0x${st
   return serializeSignature(signature, "hex") as `0x${string}`;
 }
 
-type EmbeddedEthereumAccount = WalletAccount & {
-  address: Address;
-  organizationId?: string;
-};
+type EmbeddedEthereumAccount = WalletAccount & { address: Address; organizationId?: string };
 
 function buildTurnkeyAccount(input: {
   walletAccount: EmbeddedEthereumAccount;
@@ -165,9 +162,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TurnkeyProvider
         config={turnkeyConfig}
-        callbacks={{
-          onError: (error) => console.error("Turnkey error:", error),
-        }}
+        callbacks={{ onError: (error) => console.error("Turnkey error:", error) }}
       >
         <TurnkeyZamaBridge>{children}</TurnkeyZamaBridge>
       </TurnkeyProvider>
@@ -257,10 +252,7 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
           transport: http(RPC_URL),
         }) as WalletClient;
 
-        const nextPublicClient = createPublicClient({
-          chain: viemChain,
-          transport: http(RPC_URL),
-        });
+        const nextPublicClient = createPublicClient({ chain: viemChain, transport: http(RPC_URL) });
 
         if (!cancelled) {
           setWalletAddress(ethAccount.address as Address);
@@ -307,14 +299,8 @@ function TurnkeyZamaBridge({ children }: { children: ReactNode }) {
       provider: new ViemProvider({ publicClient }),
       signer: new ViemSigner({ walletClient }),
       storage: indexedDBStorage,
-      permitStorage: sessionDBStorage,
+      permitStorage: permitDBStorage,
       relayers: { [chain.id]: web() },
-      onEvent: (event) => {
-        // Re-dispatch SDK events on window so per-component listeners (e.g.
-        // unshield-card's UnshieldPhase1Submitted handler) can react without
-        // having to thread an onEvent callback through props.
-        window.dispatchEvent(new CustomEvent(event.type, { detail: event }));
-      },
     });
   }, [walletClient, publicClient]);
 

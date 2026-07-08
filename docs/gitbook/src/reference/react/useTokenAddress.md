@@ -22,9 +22,7 @@ import { useTokenAddress } from "@zama-fhe/react-sdk";
 import { useTokenAddress } from "@zama-fhe/react-sdk";
 
 function ReverseLookup({ confidentialTokenAddress }: { confidentialTokenAddress: `0x${string}` }) {
-  const { data, isLoading, error } = useTokenAddress({
-    confidentialTokenAddress,
-  });
+  const { data, isLoading, error } = useTokenAddress({ confidentialTokenAddress });
 
   if (isLoading) return <p>Looking up...</p>;
   if (error) return <p>Error: {error.message}</p>;

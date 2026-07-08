@@ -9,12 +9,19 @@ import type {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   RelayerRequestFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
   DelegationExpiredError,
   DelegationNotPropagatedError,
+  InsufficientConfidentialBalanceError,
+  InsufficientERC20BalanceError,
+  ChainMismatchError,
 } from "..";
 import { ZamaError, ZamaErrorCode, matchZamaError } from "..";
 
@@ -67,6 +74,11 @@ describe("RelayerRequestFailedError", () => {
   test("has optional statusCode", () => {
     expectTypeOf<RelayerRequestFailedError["statusCode"]>().toEqualTypeOf<number | undefined>();
   });
+
+  test("exposes back-pressure: retryAfter and retryable", () => {
+    expectTypeOf<RelayerRequestFailedError["retryAfter"]>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RelayerRequestFailedError["retryable"]>().toEqualTypeOf<boolean>();
+  });
 });
 
 describe("matchZamaError", () => {
@@ -85,5 +97,60 @@ describe("matchZamaError", () => {
       },
     });
     expectTypeOf(result).toEqualTypeOf<"fallback" | undefined>();
+  });
+
+  test("a code-keyed handler receives that code's error subclass", () => {
+    matchZamaError(new Error("any"), {
+      INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientConfidentialBalanceError>();
+        // subclass fields are reachable without a cast
+        expectTypeOf(e.available).toEqualTypeOf<bigint>();
+        expectTypeOf(e.requested).toEqualTypeOf<bigint>();
+      },
+      INSUFFICIENT_ERC20_BALANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientERC20BalanceError>();
+      },
+      RELAYER_REQUEST_FAILED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
+        expectTypeOf(e.statusCode).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
+        expectTypeOf(e.retryable).toEqualTypeOf<boolean>();
+      },
+      NOT_ENTITLED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<NotEntitledError>();
+        expectTypeOf(e.encryptedValue).toEqualTypeOf<string>();
+      },
+      RPC_RATE_LIMITED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
+        expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
+      },
+      OPERATION_TIMEOUT: (e) => {
+        expectTypeOf(e).toEqualTypeOf<WorkerTimeoutError>();
+        expectTypeOf(e.operation).toEqualTypeOf<string>();
+        expectTypeOf(e.timeout).toEqualTypeOf<number>();
+        expectTypeOf(e.elapsed).toEqualTypeOf<number>();
+      },
+      WORKER_RECYCLED: (e) => {
+        expectTypeOf(e).toEqualTypeOf<WorkerRecycledError>();
+        expectTypeOf(e.operation).toEqualTypeOf<string>();
+        expectTypeOf(e.worker).toEqualTypeOf<string | undefined>();
+      },
+      CHAIN_MISMATCH: (e) => {
+        expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();
+        expectTypeOf(e.signerChainId).toEqualTypeOf<number>();
+        expectTypeOf(e.providerChainId).toEqualTypeOf<number>();
+      },
+    });
+  });
+
+  test("narrowing is additive: base-typed and base-field handlers still compile", () => {
+    // a handler reading only base fields still compiles and infers the return type
+    const fromBaseField = matchZamaError(new Error("any"), { SIGNING_REJECTED: (e) => e.message });
+    expectTypeOf(fromBaseField).toEqualTypeOf<string | undefined>();
+
+    // a handler annotated with the base type stays assignable (params are contravariant)
+    const baseHandler = (e: ZamaError) => e.code;
+    const fromBaseHandler = matchZamaError(new Error("any"), { SIGNING_REJECTED: baseHandler });
+    expectTypeOf(fromBaseHandler).toEqualTypeOf<ZamaErrorCode | undefined>();
   });
 });

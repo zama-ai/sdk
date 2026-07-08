@@ -53,9 +53,7 @@ Pass exactly one of the two parameters below.
 Pre-built ethers provider (e.g. `JsonRpcProvider`, `WebSocketProvider`).
 
 ```ts
-const provider = new EthersProvider({
-  provider: new JsonRpcProvider(rpcUrl),
-});
+const provider = new EthersProvider({ provider: new JsonRpcProvider(rpcUrl) });
 ```
 
 ---
@@ -67,9 +65,7 @@ const provider = new EthersProvider({
 Raw EIP-1193 provider from the browser wallet. The adapter wraps it in a `BrowserProvider` internally.
 
 ```ts
-const provider = new EthersProvider({
-  ethereum: window.ethereum!,
-});
+const provider = new EthersProvider({ ethereum: window.ethereum! });
 ```
 
 ## Methods

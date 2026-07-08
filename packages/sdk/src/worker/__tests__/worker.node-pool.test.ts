@@ -15,11 +15,9 @@ vi.mock(import("../worker.node-client"), () => {
       createEIP712: vi.fn().mockResolvedValue({}),
       encrypt: vi.fn().mockResolvedValue({ handles: [], inputProof: "0x" }),
       userDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
-      publicDecrypt: vi.fn().mockResolvedValue({
-        clearValues: {},
-        abiEncodedClearValues: "0x",
-        decryptionProof: "0x",
-      }),
+      publicDecrypt: vi
+        .fn()
+        .mockResolvedValue({ clearValues: {}, abiEncodedClearValues: "0x", decryptionProof: "0x" }),
       createDelegatedUserDecryptEIP712: vi.fn().mockResolvedValue({}),
       delegatedUserDecrypt: vi.fn().mockResolvedValue({ clearValues: {} }),
       requestZKProofVerification: vi.fn().mockResolvedValue("0x"),
@@ -33,9 +31,7 @@ vi.mock(import("../worker.node-client"), () => {
 // Must import after mock so the mock is in place
 const { NodeWorkerClient } = await import("../worker.node-client");
 
-const baseConfig = {
-  chains: [{ chainId: 1 }],
-} as unknown as NodeWorkerPoolConfig;
+const baseConfig = { chains: [{ chainId: 1 }] } as unknown as NodeWorkerPoolConfig;
 
 type MockClientInstance = Record<
   | "initWorker"
@@ -57,9 +53,7 @@ describe("NodeWorkerPool", () => {
   /** Get mock instances created by NodeWorkerClient constructor. */
   function getInstances(offset = 0): MockClientInstance[] {
     return (
-      NodeWorkerClient as unknown as {
-        mock: { results: { value: MockClientInstance }[] };
-      }
+      NodeWorkerClient as unknown as { mock: { results: { value: MockClientInstance }[] } }
     ).mock.results
       .slice(offset)
       .map((r) => r.value);
@@ -91,6 +85,38 @@ describe("NodeWorkerPool", () => {
     }
   });
 
+  test("stamps each worker with a node-worker-N label for timeout diagnostics", async () => {
+    const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
+    await pool.initPool();
+
+    const calls = vi.mocked(NodeWorkerClient).mock.calls;
+    expect(calls.map((c) => (c[0] as { workerLabel?: string }).workerLabel)).toEqual([
+      "node-worker-0",
+      "node-worker-1",
+      "node-worker-2",
+    ]);
+  });
+
+  test("threads the timeout knobs through to each worker client", async () => {
+    const pool = new NodeWorkerPool({
+      ...baseConfig,
+      poolSize: 1,
+      operationTimeout: 7,
+      initTimeout: 90,
+      recycleWorkerOnTimeout: false,
+    });
+    await pool.initPool();
+
+    const config = vi.mocked(NodeWorkerClient).mock.calls[0]![0] as {
+      operationTimeout?: number;
+      initTimeout?: number;
+      recycleWorkerOnTimeout?: boolean;
+    };
+    expect(config.operationTimeout).toBe(7);
+    expect(config.initTimeout).toBe(90);
+    expect(config.recycleWorkerOnTimeout).toBe(false);
+  });
+
   test("sends sequential calls to worker 0 when all are idle", async () => {
     const pool = new NodeWorkerPool({ ...baseConfig, poolSize: 3 });
     await pool.initPool();
@@ -102,9 +128,9 @@ describe("NodeWorkerPool", () => {
     await pool.generateKeypair({ chainId: 1 });
     await pool.generateKeypair({ chainId: 1 });
 
-    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(3);
-    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(0);
-    expect(instances[2].generateKeypair).toHaveBeenCalledTimes(0);
+    expect(instances[0]!.generateKeypair).toHaveBeenCalledTimes(3);
+    expect(instances[1]!.generateKeypair).toHaveBeenCalledTimes(0);
+    expect(instances[2]!.generateKeypair).toHaveBeenCalledTimes(0);
   });
 
   test("dispatches to least-busy worker when workers are occupied", async () => {
@@ -115,7 +141,7 @@ describe("NodeWorkerPool", () => {
 
     // Make worker 0's generateKeypair block until we resolve it
     let resolveWorker0!: (v: unknown) => void;
-    instances[0].generateKeypair.mockReturnValueOnce(
+    instances[0]!.generateKeypair.mockReturnValueOnce(
       new Promise((r) => {
         resolveWorker0 = r;
       }),
@@ -126,7 +152,7 @@ describe("NodeWorkerPool", () => {
 
     // Now worker 0 has 1 active request, worker 1 has 0 — should go to worker 1
     await pool.generateKeypair({ chainId: 1 });
-    expect(instances[1].generateKeypair).toHaveBeenCalledTimes(1);
+    expect(instances[1]!.generateKeypair).toHaveBeenCalledTimes(1);
 
     // Resolve worker 0 to clean up
     resolveWorker0({ publicKey: "pk", privateKey: "sk" });
@@ -198,10 +224,7 @@ describe("NodeWorkerPool", () => {
     expect(instance.userDecrypt).toHaveBeenCalled();
 
     await pool.publicDecrypt({ chainId: 1, encryptedValues: [HANDLE] });
-    expect(instance.publicDecrypt).toHaveBeenCalledWith({
-      chainId: 1,
-      encryptedValues: [HANDLE],
-    });
+    expect(instance.publicDecrypt).toHaveBeenCalledWith({ chainId: 1, encryptedValues: [HANDLE] });
 
     await pool.createDelegatedUserDecryptEIP712({
       chainId: 1,
@@ -228,23 +251,14 @@ describe("NodeWorkerPool", () => {
     });
     expect(instance.delegatedUserDecrypt).toHaveBeenCalled();
 
-    await pool.requestZKProofVerification({
-      chainId: 1,
-      zkProof: {} as unknown as ZKProofLike,
-    });
-    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({
-      chainId: 1,
-      zkProof: {},
-    });
+    await pool.requestZKProofVerification({ chainId: 1, zkProof: {} as unknown as ZKProofLike });
+    expect(instance.requestZKProofVerification).toHaveBeenCalledWith({ chainId: 1, zkProof: {} });
 
     await pool.getPublicKey({ chainId: 1 });
     expect(instance.getPublicKey).toHaveBeenCalledWith({ chainId: 1 });
 
     await pool.getPublicParams({ chainId: 1, bits: 2048 });
-    expect(instance.getPublicParams).toHaveBeenCalledWith({
-      chainId: 1,
-      bits: 2048,
-    });
+    expect(instance.getPublicParams).toHaveBeenCalledWith({ chainId: 1, bits: 2048 });
   });
 
   test("clears workers and active counts on terminate", async () => {
@@ -257,7 +271,7 @@ describe("NodeWorkerPool", () => {
     const newInstances = getInstances(2);
 
     await pool.generateKeypair({ chainId: 1 });
-    expect(newInstances[0].generateKeypair).toHaveBeenCalledTimes(1);
+    expect(newInstances[0]!.generateKeypair).toHaveBeenCalledTimes(1);
   });
 
   test("decrements active count even when the task rejects", async () => {
@@ -265,13 +279,13 @@ describe("NodeWorkerPool", () => {
     await pool.initPool();
 
     const instances = getInstances();
-    instances[0].generateKeypair.mockRejectedValueOnce(new Error("boom"));
+    instances[0]!.generateKeypair.mockRejectedValueOnce(new Error("boom"));
 
     await pool.generateKeypair({ chainId: 1 }).catch(() => {});
 
     // Active count for worker 0 should be back to 0, so next call goes to worker 0 again
     await pool.generateKeypair({ chainId: 1 });
-    expect(instances[0].generateKeypair).toHaveBeenCalledTimes(2);
+    expect(instances[0]!.generateKeypair).toHaveBeenCalledTimes(2);
   });
 
   test("throws when dispatching without init", async () => {

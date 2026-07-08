@@ -8,10 +8,7 @@ const normalizeAddress = (address?: Address): Address | undefined =>
   address === undefined ? undefined : getAddress(address);
 const walletAccountKey = (walletAccount?: WalletAccount) =>
   walletAccount
-    ? {
-        walletAddress: getAddress(walletAccount.address),
-        walletChainId: walletAccount.chainId,
-      }
+    ? { walletAddress: getAddress(walletAccount.address), walletChainId: walletAccount.chainId }
     : {};
 
 /**
@@ -95,10 +92,7 @@ export const zamaQueryKeys = {
     scope: (tokenAddress: Address, owner?: Address) =>
       [
         "zama.underlyingAllowance",
-        {
-          tokenAddress: getAddress(tokenAddress),
-          ...(owner ? { owner: getAddress(owner) } : {}),
-        },
+        { tokenAddress: getAddress(tokenAddress), ...(owner ? { owner: getAddress(owner) } : {}) },
       ] as const,
   },
 
@@ -127,6 +121,12 @@ export const zamaQueryKeys = {
     all: ["zama.totalSupply"] as const,
     token: (tokenAddress: Address) =>
       ["zama.totalSupply", { tokenAddress: getAddress(tokenAddress) }] as const,
+  },
+
+  pendingUnshield: {
+    all: ["zama.pendingUnshield"] as const,
+    token: (tokenAddress: Address) =>
+      ["zama.pendingUnshield", { tokenAddress: getAddress(tokenAddress) }] as const,
   },
 
   hasPermit: {
@@ -175,10 +175,7 @@ export const zamaQueryKeys = {
         },
       ] as const,
     encryptedInputs: (
-      encryptedInputs: readonly {
-        encryptedValue: string;
-        contractAddress: Address;
-      }[],
+      encryptedInputs: readonly { encryptedValue: string; contractAddress: Address }[],
       walletAccount?: WalletAccount,
     ) =>
       [
@@ -201,10 +198,7 @@ export const zamaQueryKeys = {
     tokenPairs: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPairs",
-          registryAddress: getAddress(registryAddress),
-        },
+        { type: "tokenPairs", registryAddress: getAddress(registryAddress) },
       ] as const,
     confidentialTokenAddress: (registryAddress: Address, tokenAddress: Address) =>
       [
@@ -227,10 +221,7 @@ export const zamaQueryKeys = {
     tokenPairsLength: (registryAddress: Address) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPairsLength",
-          registryAddress: getAddress(registryAddress),
-        },
+        { type: "tokenPairsLength", registryAddress: getAddress(registryAddress) },
       ] as const,
     tokenPairsSlice: (registryAddress: Address, fromIndex: string, toIndex: string) =>
       [
@@ -245,11 +236,7 @@ export const zamaQueryKeys = {
     tokenPair: (registryAddress: Address, index: string) =>
       [
         "zama.wrappersRegistry",
-        {
-          type: "tokenPair",
-          registryAddress: getAddress(registryAddress),
-          index,
-        },
+        { type: "tokenPair", registryAddress: getAddress(registryAddress), index },
       ] as const,
     isConfidentialTokenValid: (registryAddress: Address, confidentialTokenAddress: Address) =>
       [
