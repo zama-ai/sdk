@@ -33,7 +33,7 @@ describe("CachingService logging", () => {
     const cache = new CachingService(throwingStorage(), new LoggerService(sink));
     await expect(cache.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBeNull();
     expect(sink.warn).toHaveBeenCalledOnce();
-    expect(sink.warn.mock.calls[0][0]).toMatch(/^\[zama-sdk\] /);
+    expect(sink.warn.mock.calls[0]![0]).toMatch(/^\[zama-sdk\] /);
     expect(sink.error).not.toHaveBeenCalled();
   });
 });

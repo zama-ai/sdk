@@ -93,5 +93,18 @@ jobs:
       - name: Install dependencies
         run: pnpm ci --ignore-scripts
 
+      - name: Cache turbo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # turbo run abi:check chains //#contracts:build -> //#abi:build -> //#abi:check.
+      # The forge build/cache above already materialises contracts/out + dependencies,
+      # so contracts:build is a cheap no-op (forge is incremental) when turbo misses,
+      # and the whole chain is skipped when abi inputs are unchanged (e.g. a dep bump
+      # triggered this run via package.json but no .sol/abi source moved).
       - name: Verify SDK ABIs are up to date
-        run: pnpm abi:check
+        run: pnpm exec turbo run abi:check

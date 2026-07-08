@@ -105,8 +105,6 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
        └─ produces mock KMS signatures locally (no external call)
 ```
 
-**`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
-
 **Reads vs writes:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` pointed at `BSC_TESTNET_RPC_URL` for fast, wallet-independent reads, while wallet writes and EIP-712 signing go through the injected EIP-1193 provider. This split is configured by passing both `provider` and `ethereum` to `createConfig` in `src/providers.tsx`.
 
 **Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts (via an incrementing `walletKey`) with a fresh ethers adapter bound to the new account. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. An EIP-712 permit is persisted in IndexedDB and survives page reloads within its TTL.

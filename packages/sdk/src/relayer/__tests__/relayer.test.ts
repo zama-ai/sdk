@@ -47,6 +47,7 @@ const { mockWorkerClient, mockPool } = vi.hoisted(() => {
 
 import { RelayerNode } from "../relayer-node";
 import { RelayerWeb } from "../relayer-web";
+import { sepolia } from "@zama-fhe/sdk/chains";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -54,12 +55,15 @@ import { RelayerWeb } from "../relayer-web";
 
 const CHAIN_CONFIG = { id: 11155111, relayerUrl: "https://relayer.example.com" } as any;
 
+const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
 function createWebRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerWeb>[0]> = {},
 ): RelayerWeb {
   return new RelayerWeb({
-    chain: CHAIN_CONFIG,
+    chain: sepolia,
     worker: mockWorkerClient as any,
+    logger,
     // Override default IndexedDBStorage with per-test MemoryStorage for isolation
     fheArtifactStorage: new MemoryStorage(),
     ...overrides,
@@ -69,7 +73,7 @@ function createWebRelayer(
 function createNodeRelayer(
   overrides: Partial<ConstructorParameters<typeof RelayerNode>[0]> = {},
 ): RelayerNode {
-  return new RelayerNode({ chain: CHAIN_CONFIG, pool: mockPool as any, ...overrides });
+  return new RelayerNode({ chain: CHAIN_CONFIG, pool: mockPool as any, logger, ...overrides });
 }
 
 function resetMocks(): void {
