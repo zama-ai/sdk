@@ -66,7 +66,7 @@ import { type EncryptParams } from "@zama-fhe/sdk";
 
 `EncryptInput[]`
 
-Array of typed inputs. Each entry specifies a plaintext value and its encrypted type as a Solidity-style name (`bool`, `uint64`, `address`, etc.).
+Array of typed inputs. Each entry specifies a plaintext value and its encrypted FHE type — the `e`-prefixed type names (`ebool`, `euint64`, `eaddress`, etc.).
 
 ### contractAddress
 
@@ -95,18 +95,18 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 ## Supported FHE Types
 
-Types use Solidity-style names — the value is encrypted to the matching FHE type (`uint64` → `euint64`) on-chain.
+Types use the encrypted (`e`-prefixed) FHE type names — a value tagged `euint64` is encrypted to a `euint64` ciphertext on-chain.
 
-| Type      | JS value type         | Range                     |
-| --------- | --------------------- | ------------------------- |
-| `bool`    | `boolean \| 0n \| 1n` | `true`/`false` or `0`/`1` |
-| `uint8`   | `bigint`              | 0–255                     |
-| `uint16`  | `bigint`              | 0–65535                   |
-| `uint32`  | `bigint`              | 0–2³²−1                   |
-| `uint64`  | `bigint`              | 0–2⁶⁴−1                   |
-| `uint128` | `bigint`              | 0–2¹²⁸−1                  |
-| `uint256` | `bigint`              | 0–2²⁵⁶−1                  |
-| `address` | `` `0x${string}` ``   | Ethereum address          |
+| Type       | JS value type         | Range                     |
+| ---------- | --------------------- | ------------------------- |
+| `ebool`    | `boolean \| 0n \| 1n` | `true`/`false` or `0`/`1` |
+| `euint8`   | `bigint`              | 0–255                     |
+| `euint16`  | `bigint`              | 0–65535                   |
+| `euint32`  | `bigint`              | 0–2³²−1                   |
+| `euint64`  | `bigint`              | 0–2⁶⁴−1                   |
+| `euint128` | `bigint`              | 0–2¹²⁸−1                  |
+| `euint256` | `bigint`              | 0–2²⁵⁶−1                  |
+| `eaddress` | `` `0x${string}` ``   | Ethereum address          |
 
 ## Related
 
