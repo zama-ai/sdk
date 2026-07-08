@@ -7,14 +7,15 @@ export interface DecryptedTransfer {
   contractAddress: Address;
   from: Address;
   to: Address;
-  amountHandle: Hex;
+  /** The ciphertext handle for the transferred amount, exposed on the public query API as `encryptedAmount`. */
+  encryptedAmount: Hex;
   clearAmount: ClearValue;
   blockNumber: bigint;
   transactionHash: Hex;
 }
 
-function key(contractAddress: Address, transactionHash: Hex, amountHandle: Hex): string {
-  return `${contractAddress.toLowerCase()}:${transactionHash}:${amountHandle}`;
+function key(contractAddress: Address, transactionHash: Hex, encryptedAmount: Hex): string {
+  return `${contractAddress.toLowerCase()}:${transactionHash}:${encryptedAmount}`;
 }
 
 function serialize(transfer: DecryptedTransfer): string {
@@ -47,7 +48,7 @@ export class TransferStore {
 
   async upsert(transfer: DecryptedTransfer): Promise<void> {
     await this.#store.set(
-      key(transfer.contractAddress, transfer.transactionHash, transfer.amountHandle),
+      key(transfer.contractAddress, transfer.transactionHash, transfer.encryptedAmount),
       serialize(transfer),
     );
   }

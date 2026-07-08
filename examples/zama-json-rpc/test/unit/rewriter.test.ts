@@ -203,6 +203,36 @@ describe("maybeRewriteTransaction", () => {
     expect(encrypt).not.toHaveBeenCalled();
   });
 
+  it("audits and rethrows when sdk.encrypt() fails, rather than silently dropping the request", async () => {
+    const operation = confidentialTransferOperation({ chainId: CHAIN_ID });
+    const plaintextData = encodeFunctionData({
+      abi: operation.publicAbi,
+      functionName: "transfer",
+      args: [TO, 42n],
+    });
+    const encrypt = vi.fn().mockRejectedValue(new Error("relayer unreachable"));
+    const auditSpy = vi.spyOn(logger, "audit");
+
+    await expect(
+      maybeRewriteTransaction({
+        sdk: fakeSdk({ encrypt }),
+        registry,
+        tokenValidityCache: new TokenValidityCache(),
+        chainId: CHAIN_ID,
+        tx: { from: FROM, to: TOKEN, data: plaintextData },
+        logger,
+        method: "eth_sendTransaction",
+      }),
+    ).rejects.toThrow("relayer unreachable");
+
+    expect(auditSpy).toHaveBeenCalledWith({
+      decision: "rejected",
+      method: "eth_sendTransaction",
+      reason: "encrypt failed",
+    });
+    auditSpy.mockRestore();
+  });
+
   it("rejects malformed calldata that matches the selector but fails to decode, with a clear error", async () => {
     // Real transfer(address,uint256) selector, but truncated/garbage body —
     // decodeFunctionData should throw; the rewriter must turn that into a

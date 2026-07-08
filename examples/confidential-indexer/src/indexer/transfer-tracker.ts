@@ -41,7 +41,7 @@ export async function trackTransfers(params: {
 
   for (const delegation of await store.list()) {
     const lastScanned =
-      scanState.get(delegation.delegator, delegation.contractAddress) || fromBlockFloor;
+      scanState.get(delegation.delegator, delegation.contractAddress) || fromBlockFloor - 1n;
     if (currentBlock <= lastScanned) continue;
 
     try {
@@ -64,7 +64,7 @@ export async function trackTransfers(params: {
           contractAddress: transfer.contractAddress,
           from: transfer.from,
           to: transfer.to,
-          amountHandle: transfer.amountHandle,
+          encryptedAmount: transfer.amountHandle,
           clearAmount: clearValue,
           blockNumber: transfer.blockNumber,
           transactionHash: transfer.transactionHash,

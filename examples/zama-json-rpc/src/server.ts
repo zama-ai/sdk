@@ -79,8 +79,23 @@ export function createHttpServer(params: {
 
     req.on("end", () => {
       void (async () => {
+        let parsed: unknown;
         try {
-          const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        } catch (error) {
+          logger.error(
+            `Failed to parse request body: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify(
+              failure(null, { code: RpcErrorCode.ParseError, message: "Parse error" }),
+            ),
+          );
+          return;
+        }
+
+        try {
           const result = await handleJsonRpc(parsed, routerDeps);
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify(result));
@@ -91,7 +106,7 @@ export function createHttpServer(params: {
           res.writeHead(200, { "content-type": "application/json" });
           res.end(
             JSON.stringify(
-              failure(null, { code: RpcErrorCode.ParseError, message: "Parse error" }),
+              failure(null, { code: RpcErrorCode.ServerError, message: "Internal error" }),
             ),
           );
         }

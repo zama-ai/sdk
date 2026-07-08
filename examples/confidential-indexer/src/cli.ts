@@ -42,6 +42,7 @@ async function main() {
   // restart's data loss (or lack of it) is predictable everywhere.
   const redis = config.redisUrl ? new Redis(config.redisUrl) : undefined;
   if (redis) {
+    redis.on("error", (error) => logger.error(`Redis connection error: ${error.message}`));
     logger.info(`Persisting to Redis at ${config.redisUrl}`);
   } else {
     logger.warn(
@@ -63,6 +64,10 @@ async function main() {
     routerDeps: { delegationStore, balanceStore, transferStore, apiKey: config.apiKey },
     logger,
   });
+  server.on("error", (error) => {
+    logger.error(`HTTP server error: ${error.message}`);
+    process.exit(1);
+  });
   server.listen(config.port, config.host, () => {
     logger.info(`Confidential indexer listening on http://${config.host}:${config.port}`);
     logger.info(`Operational (delegate) address: ${delegateAddress}`);
@@ -79,8 +84,15 @@ async function main() {
         state: discoveryState,
         logger,
       });
+    } catch (error) {
+      logger.error(
+        `Delegation discovery failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    try {
       await refreshBalances({
         publicClient,
+        sdk,
         store: delegationStore,
         balanceStore,
         decryptCache,

@@ -30,10 +30,10 @@ extension, before making any network call at all.** It never forwards
 `eth_sendTransaction` itself over the wire — the only network call it ever
 makes is `eth_sendRawTransaction`, carrying an already-signed transaction. This
 holds true regardless of which RPC URL the wallet is configured to use, since
-that configured endpoint is never consulted for the *unsigned* request in the
+that configured endpoint is never consulted for the _unsigned_ request in the
 first place — there is no request to intercept.
 
-Since the wrapper's entire rewrite trick depends on modifying the *unsigned*
+Since the wrapper's entire rewrite trick depends on modifying the _unsigned_
 calldata before it's signed (rewriting after signing would invalidate the
 signature), and a wallet's signing always happens before any RPC involvement,
 **no wallet RPC reconfiguration can make this work** — this isn't a
@@ -44,7 +44,7 @@ misconfiguration, it's how EIP-1193 wallets are built.
 1. First attempt: pointed Rabby's Sepolia RPC at the wrapper, sent a transfer.
    The UI hung on "Confirming..." then silently reset — traced to a real gap in
    this app's own error handling (`useWaitForTransactionReceipt`'s error/revert
-   states weren't rendered at all), fixed first so the *real* failure would be
+   states weren't rendered at all), fixed first so the _real_ failure would be
    visible.
 2. Retried: got `"Unsupported method: eth_sendTransaction"` — traced to the
    wrapper's own `--rpcUrl` still pointing directly at Alchemy instead of
@@ -52,8 +52,8 @@ misconfiguration, it's how EIP-1193 wallets are built.
 3. Retried again, now with the RPC chain actually connected end to end: the
    wrapper's own log showed `eth_sendRawTransaction` being forwarded, but
    **never an `eth_sendTransaction`** — and the one `eth_call` that did arrive
-   (from viem's automatic revert-reason simulation) carried the *original,
-   unrewritten* `transfer(to,amount)` selector, with `sdk.encrypt()` failing on
+   (from viem's automatic revert-reason simulation) carried the _original,
+   unrewritten_ `transfer(to,amount)` selector, with `sdk.encrypt()` failing on
    it. That combination — raw pre-signed broadcasts only, the plaintext
    selector still present post-signature — is what pinned down the real cause:
    the wallet had already signed the original calldata before the wrapper ever
@@ -107,14 +107,14 @@ one that's architecturally possible for this demo's requirements.
   `eth_getTransactionReceipt` polling, done via `fetch` rather than wagmi's
   opaque internal polling so every hop is capturable), the wrapper's own real
   audit-log entry for the same action (polled from its `GET /audit`, added to
-  `zama-json-rpc` for this), and one entry clearly marked *inferred* for the
+  `zama-json-rpc` for this), and one entry clearly marked _inferred_ for the
   signer-relay → chain hop, which isn't observable from the browser. Nothing
   fabricated: every entry is either a real captured payload or explicitly
   labeled "inferred".
 - **History + delegation badge** (`src/components/HistoryCard.tsx`,
   `DelegationStatusBadge.tsx`) — plain REST reads against
   `confidential-indexer`, showing the real decrypted balance and transfer
-  history, and explaining *why* they're visible (an active on-chain
+  history, and explaining _why_ they're visible (an active on-chain
   delegation to this specific indexer identity, not a public view).
 - `scripts/grant-delegation.mjs` — one-time setup utility granting the demo
   wallet's permanent delegation to the indexer's dedicated demo identity (real
@@ -132,7 +132,7 @@ regardless.
 
 ## Verified for real
 
-- **Headless-browser tests** (Playwright, mocked wallet *connection* only —
+- **Headless-browser tests** (Playwright, mocked wallet _connection_ only —
   no real extension available headless; every subsequent network call is
   real) confirm: the connect screen and its error paths render with zero
   console errors; the connected dashboard renders real data end-to-end

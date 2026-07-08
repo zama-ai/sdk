@@ -26,6 +26,15 @@ export function DelegationStatusBadge({ connectedAddress }: DelegationStatusBadg
     return <p className="delegation-status delegation-status-checking">Checking delegation…</p>;
   }
 
+  if (query.isError) {
+    console.error("Failed to reach confidential-indexer for /delegations:", query.error);
+    return (
+      <p className="delegation-status delegation-status-none">
+        ⚠ Couldn&apos;t reach confidential-indexer — delegation status unknown
+      </p>
+    );
+  }
+
   const active = query.data?.body.delegations.some(
     (d) =>
       d.delegator.toLowerCase() === connectedAddress.toLowerCase() &&

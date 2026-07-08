@@ -40,14 +40,14 @@ confidential-indexer  (decrypted, delegation-scoped)
 
 **Why Send doesn't use the connected wallet to sign, and why that's not
 a shortcut**: a real EIP-1193 wallet (MetaMask, Rabby, ...) signs
-`eth_sendTransaction` client-side, inside the extension, *before* making any
+`eth_sendTransaction` client-side, inside the extension, _before_ making any
 network call — it only ever sends the network the already-signed transaction,
-via `eth_sendRawTransaction`. The wrapper can only rewrite the *unsigned*
+via `eth_sendRawTransaction`. The wrapper can only rewrite the _unsigned_
 request (rewriting calldata after signing would invalidate the signature), so
 positioning it "in front of" a wallet's own signing step doesn't work no
 matter which RPC URL the wallet is configured to use — this was tried and
 confirmed while building this demo. `scripts/signer-relay.mjs` holds the real
-demo key and completes the sign+broadcast step for the *rewritten* request the
+demo key and completes the sign+broadcast step for the _rewritten_ request the
 wrapper forwards to it — the same role a custodian's own signing
 infrastructure plays sitting behind the wrapper in production. The connected
 wallet is still real and still shown on screen; it's just not the one signing
@@ -114,11 +114,11 @@ the relay, not directly at a public RPC), the indexer, and this app.
    FHE about it. Let the **trace log** play out underneath — it shows, in order,
    the real request sent to the wrapper, the wrapper's own real audit-log entry
    ("matched confidentialTransfer, encrypted via the real relayer"), one clearly
-   labeled *inferred* step for the signer-relay's sign+broadcast (the only hop
+   labeled _inferred_ step for the signer-relay's sign+broadcast (the only hop
    not directly observable from the browser), then each real receipt poll until
    mined. After confirmation, open the Etherscan link — the real mined call is
    `confidentialTransfer(to, encryptedAmount, inputProof)`.
-2. **Delegation badge + History** — point out the badge explaining *why* the
+2. **Delegation badge + History** — point out the badge explaining _why_ the
    balance/history below are visible at all (an on-chain delegation to this one
    indexer, not a public view), then show the decrypted balance and transfer list
    updating from confidential-indexer's REST API.
@@ -128,7 +128,7 @@ the relay, not directly at a public RPC), the indexer, and this app.
 Send shows a step-by-step trace underneath: each request/response this browser
 genuinely exchanges with the wrapper (full JSON payloads, expandable), the
 wrapper's own real audit-log entry for the same action (polled from its
-`GET /audit`), and one *inferred* step for the hop this browser can't directly
+`GET /audit`), and one _inferred_ step for the hop this browser can't directly
 observe. Nothing fabricated — entries are either a real captured payload or
 explicitly marked "inferred". See `src/lib/useRelayedSend.ts` and
 `src/components/TraceLog.tsx`.

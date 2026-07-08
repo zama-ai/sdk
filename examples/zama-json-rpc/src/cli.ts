@@ -42,7 +42,7 @@ async function main() {
     positiveTtlMs: config.tokenValidityTtlSeconds * 1000,
   });
   const zamaHandlers = buildZamaHandlers({ registry, chain: sepolia });
-  const forwardToUpstream = createUpstreamForwarder(config.rpcUrl);
+  const forwardToUpstream = createUpstreamForwarder(config.rpcUrl, logger);
 
   const server = createHttpServer({
     routerDeps: {
@@ -67,6 +67,10 @@ async function main() {
     );
   }
 
+  server.on("error", (error) => {
+    logger.error(`HTTP server error: ${error.message}`);
+    process.exit(1);
+  });
   server.listen(config.port, config.host, () => {
     logger.info(
       `Zama JSON-RPC server listening on http://${config.host}:${config.port}${config.httpPath}`,

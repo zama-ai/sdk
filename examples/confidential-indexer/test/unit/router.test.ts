@@ -101,7 +101,7 @@ describe("handleRequest — balances", () => {
     await balanceStore.upsert({
       delegator: DELEGATOR,
       contractAddress: CONTRACT,
-      handle: "0xhandle",
+      encryptedValue: "0xhandle",
       clearValue: 97_001021n,
       decryptedAtBlock: 42n,
     });

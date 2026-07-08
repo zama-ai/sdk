@@ -33,6 +33,20 @@ function env(name: string): string | undefined {
   return process.env[name];
 }
 
+function envBool(name: string): boolean {
+  const value = env(name);
+  return value === "true" || value === "1";
+}
+
+function parseIntOption(name: string, cliValue: string | undefined, fallback: number): number {
+  if (!cliValue) return fallback;
+  const parsed = Number(cliValue);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid ${name}: "${cliValue}" is not a number`);
+  }
+  return parsed;
+}
+
 export function parseConfig(argv: string[]): AppConfig {
   const program = new Command();
 
@@ -69,8 +83,8 @@ export function parseConfig(argv: string[]): AppConfig {
       "TTL for this wrapper's own confidential-token validity cache (not an SDK setting)",
       env("ZAMA_TOKEN_VALIDITY_TTL_SECONDS"),
     )
-    .option("-v, --verbose", "Print requests/responses for debugging", Boolean(env("ZAMA_VERBOSE")))
-    .option("-q, --quiet", "Only print fatal errors", Boolean(env("ZAMA_QUIET")))
+    .option("-v, --verbose", "Print requests/responses for debugging", envBool("ZAMA_VERBOSE"))
+    .option("-q, --quiet", "Only print fatal errors", envBool("ZAMA_QUIET"))
     .allowExcessArguments(true)
     .allowUnknownOption(false);
 
@@ -83,15 +97,17 @@ export function parseConfig(argv: string[]): AppConfig {
 
   return {
     rpcUrl: opts.rpcUrl,
-    chainId: opts.chainId ? Number(opts.chainId) : DEFAULTS.chainId,
+    chainId: parseIntOption("--chainId", opts.chainId, DEFAULTS.chainId),
     host: opts.host ?? DEFAULTS.host,
-    port: opts.port ? Number(opts.port) : DEFAULTS.port,
+    port: parseIntOption("--port", opts.port, DEFAULTS.port),
     httpPath: opts.httpPath ?? DEFAULTS.httpPath,
     relayerApiKey: opts.relayerApiKey,
     apiKey: opts.apiKey,
-    tokenValidityTtlSeconds: opts.tokenValidityTtlSeconds
-      ? Number(opts.tokenValidityTtlSeconds)
-      : DEFAULTS.tokenValidityTtlSeconds,
+    tokenValidityTtlSeconds: parseIntOption(
+      "--tokenValidityTtlSeconds",
+      opts.tokenValidityTtlSeconds,
+      DEFAULTS.tokenValidityTtlSeconds,
+    ),
     verbose: Boolean(opts.verbose),
     quiet: Boolean(opts.quiet),
   };

@@ -103,7 +103,7 @@ curl -s http://127.0.0.1:8545/ \
 ```
 
 ```json
-{"jsonrpc":"2.0","result":"0xaa36a7","id":1}
+{ "jsonrpc": "2.0", "result": "0xaa36a7", "id": 1 }
 ```
 
 Ordinary pass-through — `0xaa36a7` is just Sepolia's chain ID (11155111),
@@ -119,10 +119,17 @@ curl -s http://127.0.0.1:8545/ \
 
 ```json
 {
-  "jsonrpc": "2.0", "id": 1,
+  "jsonrpc": "2.0",
+  "id": 1,
   "result": {
-    "name": "zama-json-rpc", "chainId": 11155111,
-    "features": { "passThrough": true, "autoRewrite": true, "signing": false, "sendTransaction": false },
+    "name": "zama-json-rpc",
+    "chainId": 11155111,
+    "features": {
+      "passThrough": true,
+      "autoRewrite": true,
+      "signing": false,
+      "sendTransaction": false
+    },
     "confidentialOperations": ["confidentialTransfer (ERC-7984 standard)", "..."]
   }
 }
@@ -152,7 +159,7 @@ curl -s http://127.0.0.1:8545/ \
 ```
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":"0x75f31"}
+{ "jsonrpc": "2.0", "id": 1, "result": "0x75f31" }
 ```
 
 `0x75f31` is `482,097` — the real gas cost of a `confidentialTransfer`, not
@@ -160,7 +167,7 @@ of a plain ERC-20 transfer (~50,000 gas). The server didn't just accept the
 call: it recognized `transfer(to, amount)`, confirmed on-chain that
 `0x7c5B...3639` is a genuine confidential token, encrypted `10` (the amount
 in the calldata above) through the real Zama relayer, and estimated gas
-against the *real* rewritten call. `eth_sendTransaction` with the same
+against the _real_ rewritten call. `eth_sendTransaction` with the same
 payload goes through the identical rewrite — the only difference is what
 happens next requires a real signer (see below).
 
@@ -171,11 +178,19 @@ curl -s http://127.0.0.1:8545/audit
 ```
 
 ```json
-{"entries":[{"timestamp":"...","entry":{
-  "decision":"rewritten","method":"eth_estimateGas",
-  "contractAddress":"0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
-  "operation":"confidentialTransfer (ERC-7984 standard)"
-}}]}
+{
+  "entries": [
+    {
+      "timestamp": "...",
+      "entry": {
+        "decision": "rewritten",
+        "method": "eth_estimateGas",
+        "contractAddress": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+        "operation": "confidentialTransfer (ERC-7984 standard)"
+      }
+    }
+  ]
+}
 ```
 
 Every routing decision the server makes — `rewritten`, `passthrough`, or
@@ -203,13 +218,13 @@ as it is today. You are still responsible for:
 
 **One case worth flagging explicitly.** If signing happens inside a
 self-contained browser wallet extension (MetaMask, Rabby, ...), that
-extension signs `eth_sendTransaction` internally, *before* it makes any
+extension signs `eth_sendTransaction` internally, _before_ it makes any
 network call — pointing the wallet's own RPC setting at this server only
-affects where the *already-signed* transaction gets broadcast, which is too
+affects where the _already-signed_ transaction gets broadcast, which is too
 late for a rewrite to apply. If your integration's signing step is opaque
 like this, the unsigned request needs to reach the wrapper directly — your
 own code submits the plain `eth_sendTransaction` to it, and whatever signs
-on your behalf completes signing on the *rewritten* result. This has nothing
+on your behalf completes signing on the _rewritten_ result. This has nothing
 to do with the wrapper's design; it's simply how browser wallets are built.
 If you already control the signing step end-to-end (a backend service, a
 custodian API, anything that isn't a black-box extension), none of this
@@ -217,14 +232,14 @@ applies — you just repoint your existing RPC calls at this server.
 
 ## Supported operations
 
-| Send this (plain, ERC-20-shaped)                                            | Becomes this (real, on-chain)                                                       |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `transfer(address to, uint256 amount)`                                         | `confidentialTransfer(to, encryptedAmount, inputProof)`                               |
-| `transferFrom(address from, address to, uint256 amount)`                       | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`                     |
-| `transferAndCall(address to, uint256 amount, bytes data)`                      | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`                  |
-| `transferFromAndCall(address from, address to, uint256 amount, bytes data)`    | `confidentialTransferFromAndCall(from, to, encryptedAmount, inputProof, data)`        |
-| `unwrap(address from, address to, uint256 amount)`                             | `unwrap(from, to, encryptedAmount, inputProof)` — phase 1 of 2                        |
-| `finalizeUnwrap(bytes32 unwrapRequestId)`                                       | `finalizeUnwrap(unwrapRequestId, clearAmount, decryptionProof)` — phase 2 of 2        |
+| Send this (plain, ERC-20-shaped)                                            | Becomes this (real, on-chain)                                                  |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `transfer(address to, uint256 amount)`                                      | `confidentialTransfer(to, encryptedAmount, inputProof)`                        |
+| `transferFrom(address from, address to, uint256 amount)`                    | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`              |
+| `transferAndCall(address to, uint256 amount, bytes data)`                   | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`           |
+| `transferFromAndCall(address from, address to, uint256 amount, bytes data)` | `confidentialTransferFromAndCall(from, to, encryptedAmount, inputProof, data)` |
+| `unwrap(address from, address to, uint256 amount)`                          | `unwrap(from, to, encryptedAmount, inputProof)` — phase 1 of 2                 |
+| `finalizeUnwrap(bytes32 unwrapRequestId)`                                   | `finalizeUnwrap(unwrapRequestId, clearAmount, decryptionProof)` — phase 2 of 2 |
 
 `transferFrom`/`transferFromAndCall` require the caller to already be an
 approved operator for the token holder (`setOperator`, enforced on-chain —

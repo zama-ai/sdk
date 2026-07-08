@@ -72,7 +72,7 @@ describe("Redis-backed stores (real Redis)", () => {
     await store.upsert({
       delegator: DELEGATOR,
       contractAddress: CONTRACT,
-      handle: "0xhandle00000000000000000000000000000000000000000000000000000000",
+      encryptedValue: "0xhandle00000000000000000000000000000000000000000000000000000000",
       clearValue: 97_001021n,
       decryptedAtBlock: 42n,
     });

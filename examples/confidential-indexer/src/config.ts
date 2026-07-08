@@ -30,6 +30,20 @@ function env(name: string): string | undefined {
   return process.env[name];
 }
 
+function envBool(name: string): boolean {
+  const value = env(name);
+  return value === "true" || value === "1";
+}
+
+function parseIntOption(name: string, cliValue: string | undefined, fallback: number): number {
+  if (!cliValue) return fallback;
+  const parsed = Number(cliValue);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid ${name}: "${cliValue}" is not a number`);
+  }
+  return parsed;
+}
+
 export function parseConfig(argv: string[]): AppConfig {
   const program = new Command();
 
@@ -75,8 +89,8 @@ export function parseConfig(argv: string[]): AppConfig {
       "Redis connection URL for persistent stores (default: in-memory, lost on restart)",
       env("INDEXER_REDIS_URL"),
     )
-    .option("-v, --verbose", "Verbose logging", Boolean(env("INDEXER_VERBOSE")))
-    .option("-q, --quiet", "Only print fatal errors", Boolean(env("INDEXER_QUIET")))
+    .option("-v, --verbose", "Verbose logging", envBool("INDEXER_VERBOSE"))
+    .option("-q, --quiet", "Only print fatal errors", envBool("INDEXER_QUIET"))
     .allowExcessArguments(true)
     .allowUnknownOption(false);
 
@@ -101,15 +115,19 @@ export function parseConfig(argv: string[]): AppConfig {
 
   return {
     rpcUrl: opts.rpcUrl,
-    chainId: opts.chainId ? Number(opts.chainId) : DEFAULTS.chainId,
+    chainId: parseIntOption("--chainId", opts.chainId, DEFAULTS.chainId),
     host: opts.host ?? DEFAULTS.host,
-    port: opts.port ? Number(opts.port) : DEFAULTS.port,
+    port: parseIntOption("--port", opts.port, DEFAULTS.port),
     operationalPrivateKey: opts.operationalPrivateKey,
     relayerApiKey: opts.relayerApiKey,
     apiKey: opts.apiKey,
     fromBlock: BigInt(opts.fromBlock),
     redisUrl: opts.redisUrl,
-    pollIntervalMs: opts.pollIntervalMs ? Number(opts.pollIntervalMs) : DEFAULTS.pollIntervalMs,
+    pollIntervalMs: parseIntOption(
+      "--pollIntervalMs",
+      opts.pollIntervalMs,
+      DEFAULTS.pollIntervalMs,
+    ),
     verbose: Boolean(opts.verbose),
     quiet: Boolean(opts.quiet),
   };

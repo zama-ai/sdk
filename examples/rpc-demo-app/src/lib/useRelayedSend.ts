@@ -6,6 +6,9 @@ import { traceEntry, type TraceEntry } from "@/lib/trace";
 const WRAPPER_HOP = "Browser → zama-json-rpc (localhost:8545)";
 const WRAPPER_RESPONSE_HOP = "zama-json-rpc → Browser";
 const RELAY_HOP = "zama-json-rpc → signer-relay → real Sepolia";
+const POLL_INTERVAL_MS = 2000;
+/** ~2 minutes — generous for Sepolia, but bounded so the UI never gets stuck forever. */
+const MAX_POLL_ATTEMPTS = 60;
 
 interface AuditEntry {
   decision: "passthrough" | "rewritten" | "rejected";
@@ -24,12 +27,13 @@ async function fetchRecentAudit(sinceMs: number): Promise<AuditEntry[]> {
     return body.entries
       .filter((e) => new Date(e.timestamp).getTime() >= sinceMs)
       .map((e) => e.entry);
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch recent audit entries:", error);
     return [];
   }
 }
 
-type Status = "idle" | "sending" | "confirming" | "confirmed" | "reverted" | "error";
+type Status = "idle" | "sending" | "confirming" | "confirmed" | "reverted" | "error" | "timeout";
 
 /**
  * Sends `eth_sendTransaction` directly to the zama-json-rpc wrapper via
@@ -63,7 +67,18 @@ export function useRelayedSend() {
     setStatus("confirming");
     stopPolling.current = false;
     for (let attempt = 1; !stopPolling.current; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (attempt > MAX_POLL_ATTEMPTS) {
+        append({
+          hop: WRAPPER_RESPONSE_HOP,
+          kind: "response",
+          summary:
+            `Gave up after ${MAX_POLL_ATTEMPTS} attempts (~${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000}s) ` +
+            "— the transaction may still be pending. Retry to keep polling.",
+        });
+        setStatus("timeout");
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
       const body = {
         jsonrpc: "2.0",
         id: Date.now(),
@@ -82,6 +97,19 @@ export function useRelayedSend() {
         body: JSON.stringify(body),
       });
       const json = await response.json();
+
+      if (json.error) {
+        append({
+          hop: WRAPPER_RESPONSE_HOP,
+          kind: "response",
+          summary: `Receipt poll failed: ${json.error.message}`,
+          detail: json,
+        });
+        setSendError(json.error.message ?? "Failed to poll for the transaction receipt");
+        setStatus("error");
+        return;
+      }
+
       const receipt = json.result;
       if (!receipt) {
         append({
@@ -102,6 +130,10 @@ export function useRelayedSend() {
       setStatus(receipt.status === "0x1" ? "confirmed" : "reverted");
       return;
     }
+  }
+
+  function retryPolling() {
+    if (hash) void pollReceipt(hash);
   }
 
   async function sendTransaction(params: { from: Address; to: Address; data: Hex }) {
@@ -180,5 +212,5 @@ export function useRelayedSend() {
     }
   }
 
-  return { sendTransaction, hash, status, sendError, receiptStatus, trace };
+  return { sendTransaction, retryPolling, hash, status, sendError, receiptStatus, trace };
 }

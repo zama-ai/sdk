@@ -66,7 +66,7 @@ export async function handleSingleRequest(
   if (REWRITABLE_METHODS.has(request.method)) {
     const txParams = parseEthTransactionParams(request.params?.[0]);
     try {
-      const { data } = await maybeRewriteTransaction({
+      const { data, rewritten } = await maybeRewriteTransaction({
         sdk: deps.sdk,
         registry: deps.registry,
         tokenValidityCache: deps.tokenValidityCache,
@@ -81,7 +81,19 @@ export async function handleSingleRequest(
       // dropping their field name.
       if (txParams.input !== undefined) rewrittenTx.input = data;
       const otherParams = request.params?.slice(1) ?? [];
-      return deps.forwardToUpstream({ ...request, params: [rewrittenTx, ...otherParams] });
+      const forwarded = await deps.forwardToUpstream({
+        ...request,
+        params: [rewrittenTx, ...otherParams],
+      });
+      if (rewritten && "error" in forwarded) {
+        // The audit log already recorded "rewritten" for this request (calldata
+        // transformation succeeded) — this only covers the separate step of
+        // actually forwarding it onward, which just failed.
+        deps.logger.error(
+          `Rewritten ${request.method} for ${txParams.to} failed to forward: ${forwarded.error.message}`,
+        );
+      }
+      return forwarded;
     } catch (error) {
       if (error instanceof InvalidRewriteRequestError) {
         return failure(request.id, { code: RpcErrorCode.InvalidParams, message: error.message });

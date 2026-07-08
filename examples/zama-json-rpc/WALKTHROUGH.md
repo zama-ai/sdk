@@ -10,7 +10,7 @@ product idea:
   transactions, hiding Zama-specific pre-transaction operations from the consumer.
 - **Read-side**: a confidential indexer (out of scope here).
 
-The Epic's own scope calls for a *minimal architecture spike* — enough to reason about
+The Epic's own scope calls for a _minimal architecture spike_ — enough to reason about
 the design, explicitly **not** an implementation. This project deliberately goes further
 than that: it's a working reference implementation of the write-side wrapper, built to
 de-risk the technical design (not to pre-empt any build/no-build decision, which the
@@ -57,15 +57,15 @@ zama-json-rpc (this project)
 
 Components (`src/`):
 
-| Module                                | Responsibility                                                                 |
-| -------------------------------------- | -------------------------------------------------------------------------------- |
-| `registry/` (`types.ts`, `index.ts`, `operations/`) | Declarative extension point for *operations* (public ABI → real call). Matches by (chainId, selector) only — no address. The only place you touch to support more operations; supporting more tokens needs no change here at all (see "Dynamic token discovery" below). |
-| `zama/rewriter.ts`                     | Decode → encrypt → re-encode. Emits an audit log entry for every decision (rewritten / passthrough / rejected). |
-| `zama/introspection.ts`                | Secondary, explicit `zama_*` namespace — debug/introspection only, not the primary flow. |
-| `rpc/router.ts`, `rpc/passthrough.ts`, `rpc/jsonrpc.ts`, `rpc/errors.ts` | JSON-RPC plumbing: batch/single dispatch, upstream forwarding, SDK-error → JSON-RPC-error mapping via the SDK's own `matchZamaError`. |
-| `sdk.ts`                               | Builds the single `ZamaSDK` instance — see "No custody, verified" below. |
-| `config.ts`, `cli.ts`, `server.ts`     | CLI flags/env vars (mirrors fireblocks-json-rpc naming), HTTP server, wiring. |
-| `logging/logger.ts`, `logging/redact.ts` | Audit trail + plaintext redaction in verbose logs. |
+| Module                                                                   | Responsibility                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `registry/` (`types.ts`, `index.ts`, `operations/`)                      | Declarative extension point for _operations_ (public ABI → real call). Matches by (chainId, selector) only — no address. The only place you touch to support more operations; supporting more tokens needs no change here at all (see "Dynamic token discovery" below). |
+| `zama/rewriter.ts`                                                       | Decode → encrypt → re-encode. Emits an audit log entry for every decision (rewritten / passthrough / rejected).                                                                                                                                                         |
+| `zama/introspection.ts`                                                  | Secondary, explicit `zama_*` namespace — debug/introspection only, not the primary flow.                                                                                                                                                                                |
+| `rpc/router.ts`, `rpc/passthrough.ts`, `rpc/jsonrpc.ts`, `rpc/errors.ts` | JSON-RPC plumbing: batch/single dispatch, upstream forwarding, SDK-error → JSON-RPC-error mapping via the SDK's own `matchZamaError`.                                                                                                                                   |
+| `sdk.ts`                                                                 | Builds the single `ZamaSDK` instance — see "No custody, verified" below.                                                                                                                                                                                                |
+| `config.ts`, `cli.ts`, `server.ts`                                       | CLI flags/env vars (mirrors fireblocks-json-rpc naming), HTTP server, wiring.                                                                                                                                                                                           |
+| `logging/logger.ts`, `logging/redact.ts`                                 | Audit trail + plaintext redaction in verbose logs.                                                                                                                                                                                                                      |
 
 ## Key design decisions
 
@@ -109,10 +109,10 @@ interface IERC7984 is IERC165 {
 }
 ```
 
-So one `ConfidentialOperation` entry (the operation's *shape*) genuinely covers every
+So one `ConfidentialOperation` entry (the operation's _shape_) genuinely covers every
 conforming token — there was never a real need to parameterize it by address. The
 result: adding support for a new token is now free (any token registered in Zama's
-ecosystem works immediately); only adding a new *operation* (a different function
+ecosystem works immediately); only adding a new _operation_ (a different function
 shape) still requires a code change. **This on-chain check was run for real, against
 the live Sepolia registry, in this session** — see "Verified during this work".
 
@@ -127,7 +127,7 @@ contract). Never guess in either direction.
 The registry entry for `confidentialTransfer` (`src/registry/operations/confidential-transfer.ts`)
 declares a **public-looking ABI** — an ordinary `transfer(address,uint256)`, the same
 shape any ERC-20 token uses — as the surface callers write calldata against. The
-wrapper decodes that, encrypts the amount, and rebuilds the *real* on-chain call
+wrapper decodes that, encrypts the amount, and rebuilds the _real_ on-chain call
 (`confidentialTransfer(address,bytes32,bytes)`). The caller never imports the SDK, never
 constructs an encrypted input, and never writes Zama-specific code — this is the literal
 mechanism behind the ticket's "ERC-20-like UX ... while the chain continues to store
@@ -158,14 +158,14 @@ browser wallet (MetaMask, Rabby) signs `eth_sendTransaction` **client-side, insi
 extension, before making any network call at all** — it only ever sends the network the
 already-signed transaction, via `eth_sendRawTransaction`. This holds regardless of which
 RPC URL the wallet is configured to use, since the wallet's own configured endpoint is
-never consulted for the *unsigned* request in the first place. First attempted by
+never consulted for the _unsigned_ request in the first place. First attempted by
 pointing the wallet's own Sepolia RPC setting at the wrapper (a reasonable-seeming
 approach that turned out to be a dead end) — the real broadcast bypassed the wrapper
 entirely and reverted (plain `transfer()` calldata sent directly to a contract that
 doesn't implement it), confirmed by the wrapper's own log showing only
 `eth_sendRawTransaction` pass-throughs, never an `eth_sendTransaction`. The fix (a
 persistent signer relay positioned as the wrapper's upstream, holding the real key and
-completing sign+broadcast for the *rewritten* request) is documented in
+completing sign+broadcast for the _rewritten_ request) is documented in
 `examples/rpc-demo-app/WALKTHROUGH.md` — it's the concrete shape "whatever actually
 signs" takes when the real signer is a browser wallet rather than a backend service.
 
@@ -362,7 +362,7 @@ This was done for real:
    (`0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7`, from `examples/react-wagmi`'s
    SDK-244 deposit demo, bound to the same cUSDC), since `confidentialTransferAndCall`-
    family operations invoke a receiver callback that reverts against a plain EOA — a
-   plain EOA (`0x3357...09dD`) had been used for the *non*-`AndCall` broadcast above
+   plain EOA (`0x3357...09dD`) had been used for the _non_-`AndCall` broadcast above
    precisely because it doesn't need a receiver.
 3. First attempt **reverted** (`status 0`, ~98% of the gas limit consumed — a real
    `OutOfGas`). Root cause: the gas estimate used to size the transaction had been
@@ -378,7 +378,7 @@ This was done for real:
    verified to equal `keccak256("Deposit(address,address)")`), confirming the vault
    genuinely credited the confidential share balance.
 
-Takeaway: a gas estimate is only representative of the *specific* call graph it was
+Takeaway: a gas estimate is only representative of the _specific_ call graph it was
 measured against — for `...AndCall` operations, that includes whatever contract sits
 at `to`, not just the token itself. Worth calling out explicitly since it's easy to
 reuse a "close enough" earlier estimate and get a real, paid-for revert instead.
@@ -402,7 +402,7 @@ reuse a "close enough" earlier estimate and get a real, paid-for revert instead.
 3. ~~`eth_sendTransaction` only.~~ **Resolved.** `eth_call` and `eth_estimateGas`
    against a registered operation are now rewritten identically (same
    `maybeRewriteTransaction`, `REWRITABLE_METHODS` in `rpc/router.ts`), so a client
-   that estimates gas or simulates before sending sees the *real* operation, not the
+   that estimates gas or simulates before sending sees the _real_ operation, not the
    plaintext-looking one. This directly fixes the root cause of the `OutOfGas`
    failure found earlier: a real `confidentialTransfer` uses **448,188 gas** (nested
    ACL/ZK verification calls) vs. ~50k for a plain ERC-20 transfer — a client that
@@ -423,8 +423,8 @@ reuse a "close enough" earlier estimate and get a real, paid-for revert instead.
    `finalizeUnwrap`). `decryptBalanceOf`-style reads of a still-confidential balance are
    still out of scope — that needs `userDecrypt`/a real signer, not the
    signer-independent public-decrypt path `finalizeUnwrap` uses (see "Key design
-   decisions" #6). Any *token* is already supported dynamically (see "Dynamic token
-   discovery"); adding more *operations* is still a code change, by design.
+   decisions" #6). Any _token_ is already supported dynamically (see "Dynamic token
+   discovery"); adding more _operations_ is still a code change, by design.
 6. ~~On-chain registry lookup adds latency per matched-selector transaction, amortized
    by the SDK's own cache.~~ **Corrected, then resolved.** The "amortized by the SDK's
    own cache" half of that claim was **wrong** — stated from assumption, not checked.
@@ -435,7 +435,7 @@ reuse a "close enough" earlier estimate and get a real, paid-for revert instead.
    with the registry matching by selector only, this means every plain ERC-20
    `transfer(address,uint256)` — the single most common selector on Ethereum, and the
    exact shape `confidentialTransfer` reuses for transparency — triggered a fresh
-   uncached on-chain read on *every* request. Fixed with a local `TokenValidityCache`
+   uncached on-chain read on _every_ request. Fixed with a local `TokenValidityCache`
    (`registry/token-validity-cache.ts`, `--tokenValidityTtlSeconds`/
    `ZAMA_TOKEN_VALIDITY_TTL_SECONDS`, default 24h positive / 5min negative, mirroring
    the SDK's own convention for `getConfidentialToken`) — verified live: a repeat
@@ -471,7 +471,7 @@ much they mattered:
    actually been checked against source — now it has.** `finalizeUnwrap` assumes
    `unwrapRequestId` doubles as the ciphertext handle for the pending amount. The
    reference contract also exposes a separate `unwrapAmount(unwrapRequestId)` getter,
-   which *could* have meant a real lookup was needed (a genuine bug, if so — decrypting
+   which _could_ have meant a real lookup was needed (a genuine bug, if so — decrypting
    the wrong value). Checked against the vendored contract source
    (`ERC7984ERC20Wrapper.sol`): `unwrapRequestId` is assigned as
    `euint64.unwrap(unwrapAmount_)` and the getter is defined as `euint64.wrap(id)` — a
@@ -485,7 +485,7 @@ much they mattered:
    `confidentialTransferAndCall`), and verified live against the real relayer.
 3. **The uncached `isConfidentialTokenValid` finding** (see limitation #6 above) — the
    single highest-value finding of this pass, since it was a genuine performance bug
-   affecting *all* traffic sharing a common selector, not a hypothetical.
+   affecting _all_ traffic sharing a common selector, not a hypothetical.
 4. **`RPC_RATE_LIMITED` dropped `retryAfter`** in `rpc/errors.ts` — `RpcRateLimitError`
    does carry that field (checked against `errors/rpc.ts`), same shape as
    `RelayerRequestFailedError`, but the mapping only hardcoded `retryable: true` and
@@ -504,17 +504,17 @@ much they mattered:
    non-colliding Zama-specific selector would avoid it, but would also undermine the
    entire "ERC-20-like UX, zero required config" value proposition the ticket asks for
    (that alternative was considered and rejected for that reason). The `TokenValidityCache`
-   fix (finding #3) removes the *repeated* cost; the first-touch cost per address is
+   fix (finding #3) removes the _repeated_ cost; the first-touch cost per address is
    accepted as the cost of the transparency design, not something to re-architect around
    for a POC. An opt-in allowlist/fast-path for operators who know their tokens in
    advance was considered as a further mitigation and rejected for now — it would add
-   config surface without changing the *required-config-free* default, and the cache
+   config surface without changing the _required-config-free_ default, and the cache
    already addresses the concrete cost.
 7. **Nothing found that would change the core architecture.** The
    logical-ABI-shape-plus-dynamic-registry-check design, and the `"encrypt"`/`"decrypt"`
    discriminated union for operations, both held up under scrutiny — the issues found
    were implementation gaps and a missing cache, not evidence the approach itself is
-   wrong. If a third operation *kind* ever appears (needing both encryption and
+   wrong. If a third operation _kind_ ever appears (needing both encryption and
    decryption, or neither), the discriminated union would need revisiting; that hasn't
    happened yet.
 
@@ -549,7 +549,7 @@ drift. Concretely:
 - The ICP validation interviews referenced in the ticket are a separate, parallel
   workstream — not blocked on, and not blocking, this code.
 - This should not be read as a signal that a build/no-build decision has been made. It
-  exists to de-risk the technical design so that *if* the Epic's gating criteria are
+  exists to de-risk the technical design so that _if_ the Epic's gating criteria are
   met, there's a working reference implementation rather than a blank page.
 - This work sits on a dedicated branch (`feat/sdk-149-json-rpc-write-poc`, based on
   `prerelease`), not merged to `main` or `prerelease`.

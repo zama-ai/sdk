@@ -4,7 +4,7 @@ import { INDEXER_URL } from "@/lib/config";
 export interface BalanceResponse {
   delegator: string;
   contractAddress: string;
-  handle: string;
+  encryptedValue: string;
   clearValue: string;
   decryptedAtBlock: string;
 }
@@ -12,7 +12,7 @@ export interface TransferEntry {
   contractAddress: string;
   from: string;
   to: string;
-  amountHandle: string;
+  encryptedAmount: string;
   clearAmount: string;
   blockNumber: string;
   transactionHash: string;

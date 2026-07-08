@@ -122,20 +122,20 @@ directly cross-origin. Not something to expose as-is beyond local development.
 
 ## CLI options
 
-| Flag                        | Env var                            | Default                |
-| ----------------------------- | ------------------------------------ | ------------------------ |
-| `--rpcUrl <url>`              | `INDEXER_RPC_URL`                    | *(required)*             |
-| `--chainId <id>`              | `INDEXER_CHAIN_ID`                   | `11155111` (Sepolia)      |
-| `--host <host>`               | `INDEXER_HOST`                       | `127.0.0.1`               |
-| `--port <port>`               | `INDEXER_PORT`                       | `8787`                    |
-| `--operationalPrivateKey <key>` | `INDEXER_OPERATIONAL_PRIVATE_KEY`  | *(required)*              |
-| `--relayerApiKey <key>`       | `INDEXER_RELAYER_API_KEY`            | *(optional on testnet)*  |
-| `--apiKey <key>`              | `INDEXER_API_KEY`                    | *(unauthenticated)*      |
-| `--fromBlock <block>`         | `INDEXER_FROM_BLOCK`                 | *(required)*              |
-| `--redisUrl <url>`            | `INDEXER_REDIS_URL`                  | *(unset — in-memory)*    |
-| `--pollIntervalMs <ms>`       | `INDEXER_POLL_INTERVAL_MS`           | `60000`                   |
-| `-v, --verbose`               | `INDEXER_VERBOSE`                    | `false`                   |
-| `-q, --quiet`                 | `INDEXER_QUIET`                      | `false`                   |
+| Flag                            | Env var                           | Default                 |
+| ------------------------------- | --------------------------------- | ----------------------- |
+| `--rpcUrl <url>`                | `INDEXER_RPC_URL`                 | _(required)_            |
+| `--chainId <id>`                | `INDEXER_CHAIN_ID`                | `11155111` (Sepolia)    |
+| `--host <host>`                 | `INDEXER_HOST`                    | `127.0.0.1`             |
+| `--port <port>`                 | `INDEXER_PORT`                    | `8787`                  |
+| `--operationalPrivateKey <key>` | `INDEXER_OPERATIONAL_PRIVATE_KEY` | _(required)_            |
+| `--relayerApiKey <key>`         | `INDEXER_RELAYER_API_KEY`         | _(optional on testnet)_ |
+| `--apiKey <key>`                | `INDEXER_API_KEY`                 | _(unauthenticated)_     |
+| `--fromBlock <block>`           | `INDEXER_FROM_BLOCK`              | _(required)_            |
+| `--redisUrl <url>`              | `INDEXER_REDIS_URL`               | _(unset — in-memory)_   |
+| `--pollIntervalMs <ms>`         | `INDEXER_POLL_INTERVAL_MS`        | `60000`                 |
+| `-v, --verbose`                 | `INDEXER_VERBOSE`                 | `false`                 |
+| `-q, --quiet`                   | `INDEXER_QUIET`                   | `false`                 |
 
 Without `--redisUrl`, all four stores (delegations, balances, transfers,
 decrypt cache) are in-memory and lost on restart — delegations get

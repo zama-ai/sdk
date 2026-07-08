@@ -1,3 +1,4 @@
+import type { Logger } from "../logging/logger.js";
 import { RpcErrorCode, failure, type JsonRpcRequest, type JsonRpcResponse } from "./jsonrpc.js";
 
 /**
@@ -6,7 +7,7 @@ import { RpcErrorCode, failure, type JsonRpcRequest, type JsonRpcResponse } from
  * must behave like a normal RPC endpoint for everything it doesn't
  * explicitly rewrite.
  */
-export function createUpstreamForwarder(rpcUrl: string) {
+export function createUpstreamForwarder(rpcUrl: string, logger?: Logger) {
   return async function forwardToUpstream(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
       const response = await fetch(rpcUrl, {
@@ -14,9 +15,20 @@ export function createUpstreamForwarder(rpcUrl: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(request),
       });
+      if (!response.ok) {
+        logger?.error(`Upstream RPC returned HTTP ${response.status} for ${request.method}`);
+        return failure(request.id, {
+          code: RpcErrorCode.ServerError,
+          message: `Upstream RPC returned HTTP ${response.status}`,
+          data: { status: response.status, statusText: response.statusText },
+        });
+      }
       const body = (await response.json()) as JsonRpcResponse;
       return body;
     } catch (error) {
+      logger?.error(
+        `Failed to reach upstream RPC for ${request.method}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return failure(request.id, {
         code: RpcErrorCode.ServerError,
         message: "Failed to reach upstream RPC",

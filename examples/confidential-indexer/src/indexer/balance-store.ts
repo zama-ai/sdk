@@ -6,7 +6,8 @@ import { deserializeClearValue, serializeClearValue } from "../storage/clear-val
 export interface BalanceSnapshot {
   delegator: Address;
   contractAddress: Address;
-  handle: Hex;
+  /** The ciphertext handle, exposed on the public query API as `encryptedValue`. */
+  encryptedValue: Hex;
   clearValue: ClearValue;
   decryptedAtBlock: bigint;
 }

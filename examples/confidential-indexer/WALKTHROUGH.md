@@ -7,9 +7,9 @@ Companion project to `examples/zama-json-rpc` (write-side), same
 "Privacy Service" into two halves:
 
 - **Write-side**: auto-encrypt + rewrite transactions (built in `zama-json-rpc`).
-- **Read-side** (this project): *"a service that decrypts and caches handle
+- **Read-side** (this project): _"a service that decrypts and caches handle
   values via the consumer's ACL rights, avoiding repeated KMS calls per
-  query"* — originally motivated by an Elliptic/Merkle analytics-tooling
+  query"_ — originally motivated by an Elliptic/Merkle analytics-tooling
   conversation (Profile B in the ticket).
 
 **Explicit product decision** (not an engineering default): write and
@@ -57,16 +57,16 @@ query API (REST, app-level auth) ──► reads BalanceStore / TransferStore / 
 
 Components (`src/`):
 
-| Module | Responsibility |
-| --- | --- |
+| Module                                                            | Responsibility                                                                                                                                          |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `acl/delegation-log.ts`, `acl/transfer-log.ts`, `acl/raw-logs.ts` | Raw `eth_getLogs` (bypassing viem's ABI-driven typed action — no source available for these events, see below), parsing grant/revoke and transfer logs. |
-| `indexer/delegation-store.ts` | Cache of which (delegator, contractAddress) pairs currently delegate to this service — a *hint*, not authoritative (see "fail closed" below). |
-| `indexer/decrypt-cache.ts` | Decrypt-once-cache-by-handle layer over `sdk.decryption.delegatedDecryptValues()`, with propagation retry. |
-| `indexer/balance-refresh.ts`, `indexer/balance-store.ts` | Current decrypted balance per delegated account. |
-| `indexer/transfer-tracker.ts`, `indexer/transfer-store.ts` | Decrypted transfer-amount history per delegated account. |
-| `api/router.ts`, `api/auth.ts` | REST query API + app-level bearer-token auth, decoupled from `node:http` for testability (same pattern as `zama-json-rpc`'s router). |
-| `sdk.ts` | `ZamaSDK` instance with a **real** configured signer — the opposite of `zama-json-rpc`'s accountless design. |
-| `storage/kv-store.ts`, `storage/clear-value-codec.ts` | Async key-value abstraction (in-memory or Redis) the four stores above are built on — see "Persistent storage" below. |
+| `indexer/delegation-store.ts`                                     | Cache of which (delegator, contractAddress) pairs currently delegate to this service — a _hint_, not authoritative (see "fail closed" below).           |
+| `indexer/decrypt-cache.ts`                                        | Decrypt-once-cache-by-handle layer over `sdk.decryption.delegatedDecryptValues()`, with propagation retry.                                              |
+| `indexer/balance-refresh.ts`, `indexer/balance-store.ts`          | Current decrypted balance per delegated account.                                                                                                        |
+| `indexer/transfer-tracker.ts`, `indexer/transfer-store.ts`        | Decrypted transfer-amount history per delegated account.                                                                                                |
+| `api/router.ts`, `api/auth.ts`                                    | REST query API + app-level bearer-token auth, decoupled from `node:http` for testability (same pattern as `zama-json-rpc`'s router).                    |
+| `sdk.ts`                                                          | `ZamaSDK` instance with a **real** configured signer — the opposite of `zama-json-rpc`'s accountless design.                                            |
+| `storage/kv-store.ts`, `storage/clear-value-codec.ts`             | Async key-value abstraction (in-memory or Redis) the four stores above are built on — see "Persistent storage" below.                                   |
 
 ## Key design decisions
 
@@ -76,7 +76,7 @@ Components (`src/`):
 (`requireAlignedWalletAccount` throws `SignerNotConfiguredError` without
 one — verified against SDK source during the write-side project's
 `decryptBalanceOf` discussion). This service's whole reason to exist is to
-*be* a delegate, so it must hold a real, continuously-available private
+_be_ a delegate, so it must hold a real, continuously-available private
 key — genuine custody, not a POC simplification to fix later. Production
 would need HSM/vault-backed storage; a plain env var here is POC-only.
 
@@ -102,15 +102,15 @@ more conservative reading: trusting an unverified numeric field could
 silently mis-classify a delegation's state.
 
 **This is a cache hint, not an authorization decision.** `DelegationStore`
-tells the indexing loop what to *try* decrypting; it is never the last word
+tells the indexing loop what to _try_ decrypting; it is never the last word
 on whether a decrypt is actually allowed. Same "fail closed, never guess"
 principle as `zama-json-rpc`'s registry lookup.
 
 ### 3. Two separate authorization layers
 
 - **On-chain ACL delegation** — controls what this service's operational
-  key is *able* to decrypt. Protocol-level, not our concern to redesign.
-- **App-level `--apiKey`** — controls who is allowed to *query* this
+  key is _able_ to decrypt. Protocol-level, not our concern to redesign.
+- **App-level `--apiKey`** — controls who is allowed to _query_ this
   service afterward. New concern, absent from the write-side entirely: the
   write-side never reveals anything sensitive (it only rewrites calldata
   the caller already intended to send); this service's entire output is
@@ -121,10 +121,10 @@ principle as `zama-json-rpc`'s registry lookup.
 ### 4. Cache by ciphertext handle, not by account
 
 A ciphertext handle's cleared value never changes — a new transfer
-produces a *new* handle, it never mutates an old one (same fact already
+produces a _new_ handle, it never mutates an old one (same fact already
 relied on in `zama-json-rpc`'s "no wrap needed" reasoning). So
 `DecryptCache` needs no TTL or invalidation logic: once a handle is
-decrypted, the result is valid forever. What *does* need refreshing on a
+decrypted, the result is valid forever. What _does_ need refreshing on a
 poll interval is which handle currently represents "the balance" for a
 given account — that's `balance-refresh.ts`'s job, not the cache's.
 
@@ -257,7 +257,7 @@ All four stores (`DelegationStore`, `BalanceStore`, `TransferStore`,
 (`src/storage/kv-store.ts` — `get`/`set`/`getAll`) instead of managing their
 own `Map` directly. Two implementations: in-memory (today's default,
 unchanged behavior) and Redis (`--redisUrl`/`INDEXER_REDIS_URL`), one
-connection shared across four Redis *hashes* (one per store). Not a partial
+connection shared across four Redis _hashes_ (one per store). Not a partial
 option — all four persist together or none do, so a restart's data loss (or
 lack of it) is predictable everywhere, not store-by-store.
 

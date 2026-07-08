@@ -42,17 +42,39 @@ const walletClient = createWalletClient({ account, chain: sepolia, transport: ht
 console.log(`Signer relay account: ${account.address}`);
 console.log(`Forwarding everything else to: ${RPC_URL}`);
 
+function sendJsonRpcError(res, id, code, message) {
+  res.writeHead(200, { "content-type": "application/json" });
+  res.end(JSON.stringify({ jsonrpc: "2.0", id: id ?? null, error: { code, message } }));
+}
+
 const server = createServer((req, res) => {
+  // This relay holds a real private key and must never be reachable from a
+  // browser tab — a same-origin-policy-exempt "simple" fetch/POST can't read
+  // the response, but that doesn't stop it from being signed and broadcast.
+  if (req.headers.origin) {
+    console.error(`Rejected request with browser Origin header: ${req.headers.origin}`);
+    sendJsonRpcError(res, null, -32000, "signer-relay does not accept browser-originated requests");
+    return;
+  }
+
   const chunks = [];
   req.on("data", (c) => chunks.push(c));
   req.on("end", async () => {
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (body.method === "eth_sendTransaction") {
-      try {
+    let body;
+    try {
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    } catch (error) {
+      console.error(`Malformed JSON body: ${String(error?.message ?? error)}`);
+      sendJsonRpcError(res, null, -32700, "Parse error");
+      return;
+    }
+
+    try {
+      if (body.method === "eth_sendTransaction") {
         const tx = body.params[0];
-        if (tx.from && tx.from.toLowerCase() !== account.address.toLowerCase()) {
+        if (!tx.from || tx.from.toLowerCase() !== account.address.toLowerCase()) {
           throw new Error(
-            `signer-relay holds ${account.address}, but the request's "from" is ${tx.from} — ` +
+            `signer-relay only signs for ${account.address}, got from=${tx.from ?? "(missing)"} — ` +
               "point the demo wallet at the same key this relay uses.",
           );
         }
@@ -63,26 +85,21 @@ const server = createServer((req, res) => {
         });
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: hash }));
-      } catch (error) {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: body.id,
-            error: { code: -32000, message: String(error?.message ?? error) },
-          }),
-        );
+        return;
       }
-      return;
+
+      const upstream = await fetch(RPC_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await upstream.json();
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(json));
+    } catch (error) {
+      console.error(`Request failed (method=${body.method}): ${String(error?.message ?? error)}`);
+      sendJsonRpcError(res, body.id, -32000, String(error?.message ?? error));
     }
-    const upstream = await fetch(RPC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = await upstream.json();
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(json));
   });
 });
 

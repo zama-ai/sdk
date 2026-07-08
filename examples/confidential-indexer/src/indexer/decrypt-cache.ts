@@ -65,10 +65,10 @@ export class DecryptCache {
 
   /**
    * Resolves `handle` to its cleartext value on behalf of `delegatorAddress`.
-   * Callers must have already confirmed the delegation is active (see
-   * `DelegationStore.isKnownActive` + a live `sdk.delegations.isActive()`
-   * check) — this method does not check authorization itself, it only
-   * decrypts and caches.
+   * Callers must have already confirmed the delegation is at least known-active
+   * (see `DelegationStore.isKnownActive`) — actual authorization is enforced
+   * protocol-side by `delegatedDecryptValues` itself (relayer/KMS-checked ACL
+   * state), not by a client-side check in this method.
    */
   async resolve(params: {
     handle: Hex;
@@ -86,6 +86,11 @@ export class DecryptCache {
           [{ encryptedValue: params.handle, contractAddress: params.contractAddress }],
           params.delegatorAddress,
         );
+        if (!(params.handle in values)) {
+          throw new Error(
+            `delegatedDecryptValues response is missing handle ${params.handle} — refusing to cache an undefined value`,
+          );
+        }
         const resolved: CachedValue = {
           clearValue: values[params.handle],
           decryptedAtBlock: params.atBlock,

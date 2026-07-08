@@ -92,6 +92,23 @@ describe("DecryptCache", () => {
     expect(delegatedDecryptValues).toHaveBeenCalledTimes(2);
   });
 
+  it("throws instead of caching undefined when the response is missing the requested handle", async () => {
+    const delegatedDecryptValues = vi.fn().mockResolvedValue({}); // no entry for HANDLE
+    const store = createInMemoryStore();
+    const cache = new DecryptCache({ store, sdk: fakeSdk(delegatedDecryptValues), logger });
+
+    await expect(
+      cache.resolve({
+        handle: HANDLE,
+        contractAddress: CONTRACT,
+        delegatorAddress: DELEGATOR,
+        atBlock: 1n,
+      }),
+    ).rejects.toThrow(/missing handle/);
+
+    expect(await store.get(HANDLE)).toBeUndefined();
+  });
+
   it("does not retry on a non-propagation error", async () => {
     const delegatedDecryptValues = vi.fn().mockRejectedValue(new Error("something else entirely"));
     const cache = new DecryptCache({

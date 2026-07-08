@@ -55,7 +55,7 @@ zama-json-rpc
 
 The same rewrite applies to `eth_sendTransaction`, `eth_call`, and
 `eth_estimateGas` alike — a client that simulates or estimates gas against
-the plaintext-looking calldata before sending sees the *real* operation,
+the plaintext-looking calldata before sending sees the _real_ operation,
 not a call to a function that doesn't actually exist on-chain (which would
 otherwise revert, or silently under-estimate gas — the real operations use
 significantly more gas than a plain ERC-20 transfer, see `WALKTHROUGH.md`).
@@ -167,14 +167,14 @@ registry confirms is a real confidential token:
   ERC-7984 protocol itself discloses, like a pending unwrap amount) and
   forwards the real call with the clear value + proof.
 
-| Send this (plaintext)                                      | Wrapper forwards this (real)                                          | Kind    |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------- | --------- |
-| `transfer(address to, uint256 amount)`                       | `confidentialTransfer(to, encryptedAmount, inputProof)`                    | encrypt |
-| `transferFrom(address from, address to, uint256 amount)`     | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`          | encrypt |
-| `transferAndCall(address to, uint256 amount, bytes data)`    | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`       | encrypt |
-| `transferFromAndCall(address from, address to, uint256 amount, bytes data)` | `confidentialTransferFromAndCall(from, to, encryptedAmount, inputProof, data)` | encrypt |
-| `unwrap(address from, address to, uint256 amount)`            | `unwrap(from, to, encryptedAmount, inputProof)` — phase 1/2                | encrypt |
-| `finalizeUnwrap(bytes32 unwrapRequestId)`                     | `finalizeUnwrap(unwrapRequestId, unwrapAmountCleartext, decryptionProof)` — phase 2/2 | decrypt |
+| Send this (plaintext)                                                       | Wrapper forwards this (real)                                                          | Kind    |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
+| `transfer(address to, uint256 amount)`                                      | `confidentialTransfer(to, encryptedAmount, inputProof)`                               | encrypt |
+| `transferFrom(address from, address to, uint256 amount)`                    | `confidentialTransferFrom(from, to, encryptedAmount, inputProof)`                     | encrypt |
+| `transferAndCall(address to, uint256 amount, bytes data)`                   | `confidentialTransferAndCall(to, encryptedAmount, inputProof, data)`                  | encrypt |
+| `transferFromAndCall(address from, address to, uint256 amount, bytes data)` | `confidentialTransferFromAndCall(from, to, encryptedAmount, inputProof, data)`        | encrypt |
+| `unwrap(address from, address to, uint256 amount)`                          | `unwrap(from, to, encryptedAmount, inputProof)` — phase 1/2                           | encrypt |
+| `finalizeUnwrap(bytes32 unwrapRequestId)`                                   | `finalizeUnwrap(unwrapRequestId, unwrapAmountCleartext, decryptionProof)` — phase 2/2 | decrypt |
 
 `transferFrom` requires the request's `from` (the actual on-chain caller) to
 already be an approved operator for the logical `from` (the token holder) —
@@ -191,22 +191,22 @@ already plaintext by design, so it already works as plain pass-through.
 
 ## CLI options
 
-| Flag                       | Env var                  | Default                  |
-| --------------------------- | ------------------------- | ------------------------- |
-| `--rpcUrl <url>`            | `ZAMA_RPC_URL`             | *(required)*               |
-| `--chainId <id>`             | `ZAMA_CHAIN_ID`            | `11155111` (Sepolia)       |
-| `--host <host>`              | `ZAMA_HOST`                | `127.0.0.1`                 |
-| `--port <port>`              | `ZAMA_PORT`                | `8545`                      |
-| `--httpPath <path>`          | `ZAMA_HTTP_PATH`           | `/`                          |
-| `--relayerApiKey <key>`      | `ZAMA_RELAYER_API_KEY`     | *(optional on testnet)*    |
-| `--apiKey <key>`              | `ZAMA_API_KEY`             | *(unset — unauthenticated)* |
-| `--tokenValidityTtlSeconds <s>` | `ZAMA_TOKEN_VALIDITY_TTL_SECONDS` | `86400` |
-| `-v, --verbose`              | `ZAMA_VERBOSE`             | `false`                      |
-| `-q, --quiet`                 | `ZAMA_QUIET`               | `false`                      |
+| Flag                            | Env var                           | Default                     |
+| ------------------------------- | --------------------------------- | --------------------------- |
+| `--rpcUrl <url>`                | `ZAMA_RPC_URL`                    | _(required)_                |
+| `--chainId <id>`                | `ZAMA_CHAIN_ID`                   | `11155111` (Sepolia)        |
+| `--host <host>`                 | `ZAMA_HOST`                       | `127.0.0.1`                 |
+| `--port <port>`                 | `ZAMA_PORT`                       | `8545`                      |
+| `--httpPath <path>`             | `ZAMA_HTTP_PATH`                  | `/`                         |
+| `--relayerApiKey <key>`         | `ZAMA_RELAYER_API_KEY`            | _(optional on testnet)_     |
+| `--apiKey <key>`                | `ZAMA_API_KEY`                    | _(unset — unauthenticated)_ |
+| `--tokenValidityTtlSeconds <s>` | `ZAMA_TOKEN_VALIDITY_TTL_SECONDS` | `86400`                     |
+| `-v, --verbose`                 | `ZAMA_VERBOSE`                    | `false`                     |
+| `-q, --quiet`                   | `ZAMA_QUIET`                      | `false`                     |
 
 `--apiKey` gates the whole JSON-RPC surface behind a shared bearer token
 (`Authorization: Bearer <key>`) — separate from `--relayerApiKey`, which
-authenticates *this wrapper* to the Zama relayer, not callers to this
+authenticates _this wrapper_ to the Zama relayer, not callers to this
 wrapper. Without it, a startup warning fires: anyone reaching this server
 can trigger real relayer `encrypt()` calls and probe which addresses are
 confidential tokens.
@@ -239,9 +239,9 @@ npm run test:e2e  # hits the real Sepolia relayer — see WALKTHROUGH.md
 
 ## Extending
 
-Supporting another *token* needs no code change at all — any address Zama's
+Supporting another _token_ needs no code change at all — any address Zama's
 on-chain wrappers registry confirms as a valid confidential token is
-auto-rewritten. Supporting another *operation* is one new file under
+auto-rewritten. Supporting another _operation_ is one new file under
 `src/registry/operations/` implementing either the `"encrypt"` or
 `"decrypt"` variant of `ConfidentialOperation` (see `src/registry/types.ts`),
 plus one line registering it in `src/cli.ts`. Nothing else changes — see

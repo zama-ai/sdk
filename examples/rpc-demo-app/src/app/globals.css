@@ -209,6 +209,16 @@ body {
   color: inherit;
   font-weight: 600;
 }
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* Spacing helpers for action cards */
 .card-gap {

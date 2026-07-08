@@ -26,7 +26,7 @@ for exactly those accounts, caches the results, and serves them over a small
 REST API.
 
 > **Not a public block explorer.** This service can only ever decrypt and
-> show what its *own* delegate identity has actually been granted by the
+> show what its _own_ delegate identity has actually been granted by the
 > account owner. No delegation, no data — see "Try it yourself" below for
 > exactly what that looks like.
 
@@ -60,7 +60,7 @@ Two authorization layers, deliberately not conflated: the **on-chain ACL
 delegation** controls what this service is even capable of decrypting; the
 service's own **`--apiKey`** controls who is allowed to read the results back
 out afterward. Granting the delegation does not, by itself, make your data
-public — it only makes it decryptable *by this one service*, for whoever it
+public — it only makes it decryptable _by this one service_, for whoever it
 lets query it.
 
 ## Try it yourself
@@ -72,7 +72,7 @@ cloned (branch `feat/sdk-149-privacy-service-poc`,
 ### 1. Start your own instance
 
 You need your own operational (delegate) identity — any fresh private key
-works, it just needs a little Sepolia ETH later if *you* end up granting
+works, it just needs a little Sepolia ETH later if _you_ end up granting
 delegations from it for testing:
 
 ```bash
@@ -120,7 +120,7 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 // sdk configured with the holder's own signer — see packages/sdk docs
 await sdk.delegations.delegateDecryption({
   contractAddress: "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639", // the token
-  delegateAddress: "0xYourOperationalAddress",                    // your indexer
+  delegateAddress: "0xYourOperationalAddress", // your indexer
 });
 ```
 
@@ -135,7 +135,15 @@ curl -s http://127.0.0.1:8787/delegations
 ```
 
 ```json
-{"delegations":[{"delegator":"0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8","contractAddress":"0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639","expirationDate":"18446744073709551615"}]}
+{
+  "delegations": [
+    {
+      "delegator": "0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8",
+      "contractAddress": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+      "expirationDate": "18446744073709551615"
+    }
+  ]
+}
 ```
 
 ```bash
@@ -143,7 +151,13 @@ curl -s http://127.0.0.1:8787/balances/0x7c5BF43B851c1dff1a4feE8dB225b87f2C22363
 ```
 
 ```json
-{"delegator":"0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8","contractAddress":"0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639","handle":"0x0edc9283039c7be0e8797100ab42a08cb104ba4f27ff0000000000aa36a70500","clearValue":"87317021","decryptedAtBlock":"11223389"}
+{
+  "delegator": "0x72059F5569B6c7ab165Bf05a280f2F870C73b4f8",
+  "contractAddress": "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+  "encryptedValue": "0x0edc9283039c7be0e8797100ab42a08cb104ba4f27ff0000000000aa36a70500",
+  "clearValue": "87317021",
+  "decryptedAtBlock": "11223389"
+}
 ```
 
 `clearValue` is the raw integer amount — divide by the token's decimals
@@ -159,7 +173,7 @@ curl -s http://127.0.0.1:8787/transfers/0x7c5BF43B851c1dff1a4feE8dB225b87f2C2236
 ```
 
 ```json
-{"transfers":[]}
+{ "transfers": [] }
 ```
 
 An empty list here is also a correct, real answer — it means no
@@ -184,7 +198,7 @@ write-side wrapper's, and that shapes your integration:
   trust model:
   - **Run your own instance.** You hold the operational key yourself (HSM,
     secrets manager — not an env var, for anything beyond local testing).
-    Your users delegate to *your* address. You control both layers of
+    Your users delegate to _your_ address. You control both layers of
     authorization end-to-end.
   - **Consume someone else's already-running instance.** You're trusting
     that operator's key custody and their `--apiKey`-gated access control.
@@ -200,12 +214,12 @@ write-side wrapper's, and that shapes your integration:
 
 ## Endpoints
 
-| Endpoint                                  | Returns                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------ |
-| `GET /health`                               | `{"status":"ok"}`                                                   |
-| `GET /delegations`                          | All delegations this instance has discovered and considers active  |
-| `GET /balances/:token/:holder`               | `403` no delegation · `202` delegated, not decrypted yet · `200` cached decrypted balance |
-| `GET /transfers/:token/:holder`              | Same status semantics, decrypted transfer history                   |
+| Endpoint                        | Returns                                                                                   |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GET /health`                   | `{"status":"ok"}`                                                                         |
+| `GET /delegations`              | All delegations this instance has discovered and considers active                         |
+| `GET /balances/:token/:holder`  | `403` no delegation · `202` delegated, not decrypted yet · `200` cached decrypted balance |
+| `GET /transfers/:token/:holder` | Same status semantics, decrypted transfer history                                         |
 
 ## Auth and production posture
 

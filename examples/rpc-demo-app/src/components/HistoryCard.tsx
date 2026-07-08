@@ -36,6 +36,13 @@ export function HistoryCard({ connectedAddress }: HistoryCardProps) {
 
   const balanceStatus = balanceQuery.data?.status;
 
+  if (balanceQuery.isError || transfersQuery.isError) {
+    console.error(
+      "Failed to reach confidential-indexer:",
+      balanceQuery.error ?? transfersQuery.error,
+    );
+  }
+
   return (
     <div className="card">
       <div className="card-title">Decrypted balance &amp; history (via confidential-indexer)</div>
@@ -43,18 +50,22 @@ export function HistoryCard({ connectedAddress }: HistoryCardProps) {
       <div className="balance-row">
         <span className="balance-label">Balance</span>
         <span className={`balance-value ${balanceQuery.isLoading ? "loading" : ""}`}>
-          {balanceStatus === 200 && balanceQuery.data
-            ? `${formatUnits(BigInt(balanceQuery.data.body.clearValue), CUSDC_DECIMALS)} ${CUSDC_SYMBOL}`
-            : balanceStatus === 202
-              ? "decrypting…"
-              : balanceStatus === 403
-                ? "no delegation"
-                : "—"}
+          {balanceQuery.isError
+            ? "couldn't reach confidential-indexer"
+            : balanceStatus === 200 && balanceQuery.data
+              ? `${formatUnits(BigInt(balanceQuery.data.body.clearValue), CUSDC_DECIMALS)} ${CUSDC_SYMBOL}`
+              : balanceStatus === 202
+                ? "decrypting…"
+                : balanceStatus === 403
+                  ? "no delegation"
+                  : "—"}
         </span>
       </div>
 
       <div className="section-label">Transfers</div>
-      {transfersQuery.data?.status === 200 && transfersQuery.data.body.transfers.length === 0 ? (
+      {transfersQuery.isError ? (
+        <p className="history-empty">Couldn&apos;t reach confidential-indexer.</p>
+      ) : transfersQuery.data?.status === 200 && transfersQuery.data.body.transfers.length === 0 ? (
         <p className="history-empty">No transfers seen yet.</p>
       ) : transfersQuery.data?.status !== 200 ? (
         <p className="history-empty">
@@ -62,7 +73,7 @@ export function HistoryCard({ connectedAddress }: HistoryCardProps) {
         </p>
       ) : (
         [...transfersQuery.data.body.transfers].reverse().map((t) => (
-          <div className="history-row" key={`${t.transactionHash}-${t.amountHandle}`}>
+          <div className="history-row" key={`${t.transactionHash}-${t.encryptedAmount}`}>
             <div className="history-row-main">
               <span className="history-amount">
                 {formatUnits(BigInt(t.clearAmount), CUSDC_DECIMALS)} {CUSDC_SYMBOL}

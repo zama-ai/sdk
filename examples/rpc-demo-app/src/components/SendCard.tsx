@@ -31,7 +31,8 @@ export function SendCard({ connectedAddress }: SendCardProps) {
         })
       : undefined;
 
-  const { sendTransaction, hash, status, sendError, receiptStatus, trace } = useRelayedSend();
+  const { sendTransaction, retryPolling, hash, status, sendError, receiptStatus, trace } =
+    useRelayedSend();
   const isBusy = status === "sending" || status === "confirming";
 
   function handleSend() {
@@ -93,6 +94,19 @@ export function SendCard({ connectedAddress }: SendCardProps) {
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
             {hash.slice(0, 10)}…
           </a>
+        </div>
+      )}
+      {status === "timeout" && hash && (
+        <div className="alert alert-error card-status">
+          Gave up waiting for a receipt — the transaction may still be pending.{" "}
+          <a href={`${SEPOLIA_EXPLORER_URL}/tx/${hash}`} target="_blank" rel="noreferrer">
+            Check Etherscan
+          </a>{" "}
+          or{" "}
+          <button type="button" className="btn-link" onClick={retryPolling}>
+            keep polling
+          </button>
+          .
         </div>
       )}
 

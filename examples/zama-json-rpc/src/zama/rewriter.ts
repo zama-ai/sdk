@@ -151,13 +151,21 @@ export async function maybeRewriteTransaction(params: {
       logger.audit({ decision: "rejected", method, reason: "value out of range for FHE type" });
       throw new InvalidRewriteRequestError(boundsError);
     }
-    const { encryptedValues, inputProof } = await sdk.encrypt({
-      values: [encryptedInput],
-      contractAddress: to,
-      userAddress: tx.from!, // guarded above
-    });
+    let encryptResult: Awaited<ReturnType<ZamaSDK["encrypt"]>>;
+    try {
+      encryptResult = await sdk.encrypt({
+        values: [encryptedInput],
+        contractAddress: to,
+        userAddress: tx.from!, // guarded above
+      });
+    } catch (error) {
+      logger.audit({ decision: "rejected", method, reason: "encrypt failed" });
+      throw error;
+    }
+    const { encryptedValues, inputProof } = encryptResult;
     const encryptedValue = encryptedValues[0];
     if (!encryptedValue) {
+      logger.audit({ decision: "rejected", method, reason: "encrypt returned no value" });
       throw new Error(`sdk.encrypt() returned no encrypted value for "${operation.name}"`);
     }
     realCall = operation.buildRealCall({
@@ -168,7 +176,14 @@ export async function maybeRewriteTransaction(params: {
     });
   } else {
     const handles = operation.extractHandlesToDecrypt(publicArgs);
-    const { clearValues, decryptionProof } = await sdk.decryption.decryptPublicValues(handles);
+    let decryptResult: Awaited<ReturnType<ZamaSDK["decryption"]["decryptPublicValues"]>>;
+    try {
+      decryptResult = await sdk.decryption.decryptPublicValues(handles);
+    } catch (error) {
+      logger.audit({ decision: "rejected", method, reason: "public decrypt failed" });
+      throw error;
+    }
+    const { clearValues, decryptionProof } = decryptResult;
     realCall = operation.buildRealCall({
       contractAddress: to,
       publicArgs,

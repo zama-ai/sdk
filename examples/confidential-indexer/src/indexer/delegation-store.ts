@@ -39,8 +39,9 @@ function deserialize(json: string): DelegationRecord {
  * `revoked`) was seen most recently for a pair — not off the numeric
  * expiration field in the log data, whose exact semantics weren't fully
  * verified against source (see `acl/delegation-log.ts`). This is a local
- * cache hint only: `indexer/decrypt-cache.ts` re-verifies with
- * `sdk.delegations.isActive()` before ever actually decrypting anything.
+ * cache hint only: actual authorization is enforced protocol-side by
+ * `sdk.decryption.delegatedDecryptValues()` itself (relayer/KMS-checked ACL
+ * state), not by a client-side check in this store.
  */
 export class DelegationStore {
   readonly #store: KeyValueStore;
