@@ -326,6 +326,7 @@ describe("WrappedToken", () => {
       handle,
       provider,
     }) => {
+      const unwrapRequestId = `0x${"cd".repeat(32)}` as const;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [
@@ -333,14 +334,14 @@ describe("WrappedToken", () => {
             topics: [
               Topics.UnwrapRequested,
               `0x000000000000000000000000${userAddress.slice(2)}`,
-              `0x${"cd".repeat(32)}`,
+              unwrapRequestId,
             ],
             data: `0x${"00".repeat(32)}`,
           },
         ],
       });
 
-      await wrappedToken.unwrapAll();
+      const result = await wrappedToken.unwrapAll();
 
       expect(relayer.encrypt).not.toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
@@ -349,6 +350,7 @@ describe("WrappedToken", () => {
           args: [userAddress, userAddress, handle],
         }),
       );
+      expect(result.unwrapRequestId).toBe(unwrapRequestId);
     });
 
     test("unwrapAll throws when balance is zero", async ({ wrappedToken, provider }) => {

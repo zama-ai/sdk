@@ -299,7 +299,13 @@ export class WrappedToken extends Token {
       () => onUnwrapSubmitted?.(unwrapResult.txHash),
       this.sdk.logger,
     );
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
+    // Reuse the id `unwrap()` already decoded — no second receipt fetch or decode.
+    return this.#finalizeUnshield(
+      unwrapResult.unwrapRequestId,
+      unwrapResult.txHash,
+      operationId,
+      callbacks,
+    );
   }
 
   /**
@@ -323,7 +329,13 @@ export class WrappedToken extends Token {
       () => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
       this.sdk.logger,
     );
-    return this.#waitAndFinalizeUnshield(unwrapResult.txHash, operationId, callbacks);
+    // Reuse the id `unwrapAll()` already decoded — no second receipt fetch or decode.
+    return this.#finalizeUnshield(
+      unwrapResult.unwrapRequestId,
+      unwrapResult.txHash,
+      operationId,
+      callbacks,
+    );
   }
 
   /**
@@ -344,7 +356,19 @@ export class WrappedToken extends Token {
     unwrapTxHash: Hex,
     callbacks?: UnshieldCallbacks,
   ): Promise<TransactionResult> {
-    return this.#waitAndFinalizeUnshield(unwrapTxHash, crypto.randomUUID(), callbacks);
+    // The only entry point that starts from a bare hash, so it's the only one
+    // that has to fetch the receipt and decode the id from chain.
+    let receipt;
+    try {
+      receipt = await this.sdk.provider.waitForTransactionReceipt(unwrapTxHash);
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new TransactionRevertedError("Failed to get unwrap receipt", { cause: error });
+    }
+    const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
+    return this.#finalizeUnshield(unwrapRequestId, unwrapTxHash, crypto.randomUUID(), callbacks);
   }
 
   /**
@@ -514,27 +538,24 @@ export class WrappedToken extends Token {
     return this.#underlyingPromise;
   }
 
-  async #waitAndFinalizeUnshield(
-    unshieldHash: Hex,
+  /**
+   * Phase 2 of unshield, shared by {@link unshield}/{@link unshieldAll} (which
+   * pass the id `unwrap`/`unwrapAll` already decoded) and {@link resumeUnshield}
+   * (which decoded it from a fetched receipt). Persists the unwrap hash for
+   * recovery, finalizes, then clears the persisted state.
+   */
+  async #finalizeUnshield(
+    unwrapRequestId: EncryptedValue,
+    unwrapTxHash: Hex,
     operationId: string,
     callbacks: UnshieldCallbacks | undefined,
   ): Promise<TransactionResult> {
-    this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unshieldHash, operationId });
+    this.emit({ type: ZamaSDKEvents.UnshieldPhase1Submitted, txHash: unwrapTxHash, operationId });
     await swallow(
       "unshield: savePendingUnshield",
-      () => savePendingUnshield(this.sdk.storage, this.address, unshieldHash),
+      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash),
       this.sdk.logger,
     );
-    let receipt;
-    try {
-      receipt = await this.sdk.provider.waitForTransactionReceipt(unshieldHash);
-    } catch (error) {
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new TransactionRevertedError("Failed to get unshield receipt", { cause: error });
-    }
-    const unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
     this.emit({ type: ZamaSDKEvents.UnshieldPhase2Started, operationId });
     void swallow("unshield: onFinalizing", () => callbacks?.onFinalizing?.(), this.sdk.logger);
     const finalizeResult = await this.finalizeUnwrap(unwrapRequestId);

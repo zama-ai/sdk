@@ -29,7 +29,7 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  *
  * async function unshieldAll() {
  *  const result = await unwrapAll.mutateAsync();
- *  await finalize.mutateASync(result);
+ *  await finalize.mutateAsync(result);
  * }
  * ```
  */

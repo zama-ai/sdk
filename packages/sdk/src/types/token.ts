@@ -49,8 +49,9 @@ export interface UnshieldOptions extends UnshieldCallbacks {
  * {@link TransactionResult} plus the `unwrapRequestId` decoded from the
  * `UnwrapRequested` event.
  *
- * Pass the whole result (or just its `unwrapRequestId`) straight to
- * {@link WrappedToken.finalizeUnwrap} — no manual receipt decoding needed.
+ * Pass its `unwrapRequestId` to {@link WrappedToken.finalizeUnwrap}, or the
+ * whole result to the `useFinalizeUnwrap` hook — no manual receipt decoding
+ * needed either way.
  */
 export interface UnwrapResult extends TransactionResult {
   /** The `unwrapRequestId` to hand to `finalizeUnwrap`. */
