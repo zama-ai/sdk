@@ -154,6 +154,8 @@ export type {
 export {
   ZamaError,
   ZamaErrorCode,
+  isRetryable,
+  retryAfterSeconds,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,

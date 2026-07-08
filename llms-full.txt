@@ -3715,7 +3715,9 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                       |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                            |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                   |
-| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`)                                              |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)             |
+| `NotEntitledError`                      | `NOT_ENTITLED`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                |
+| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (retryable)                               |
 | `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)               |
 | `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                 |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
@@ -3808,9 +3810,12 @@ Here is a quick reference for the most common errors and how to respond:
 | `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                    |
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                    |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`; on a 429, retry after `.retryAfter` seconds. |
-| `WorkerTimeoutError`                   | Retry with client-side backoff (the Node worker is recycled by default). Raise `node({ operationTimeout })` for legitimately long operations.           |
-| `WorkerRecycledError`                  | Just retry — the request was cancelled as collateral of another operation's timeout recycle, not by a failure of its own.                               |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.                     |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                                       |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                                    |
+| `WorkerTimeoutError`                   | See "Retry transient failures" below. Raise `node({ operationTimeout })` for legitimately long operations.                                              |
+| `WorkerRecycledError`                  | See "Retry transient failures" below -- collateral of another operation's timeout, not a failure of its own.                                            |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                                     |
 | `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
@@ -3889,6 +3894,42 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
 | `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |
+
+### 8. Retry transient failures
+
+Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429), `DelegationNotPropagatedError`, `WorkerTimeoutError`, and `WorkerRecycledError`. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+
+| Cause                          | `retryAfterSeconds`                               | Notes                                                                 |
+| ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
+| `RpcRateLimitError`             | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                            |
+| `RelayerRequestFailedError`     | Set on a 429 with a `Retry-After` header           | Only retryable when `.statusCode === 429`; other statuses are terminal. |
+| `DelegationNotPropagatedError`  | `undefined`                                        | The SDK already rides out the propagation window internally; only surfaces if it's exceeded. |
+| `WorkerTimeoutError`            | `undefined`                                        | The Node worker is recycled automatically; raise `node({ operationTimeout })` for legitimately long operations. |
+| `WorkerRecycledError`           | `undefined`                                        | The op was cancelled as collateral of a sibling's timeout, not its own failure. |
+
+
+### Tab: SDK
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Promise<bigint> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isRetryable(error) || attempt >= maxAttempts) {
+        throw error; // terminal, or out of attempts -- surface it
+      }
+      const delaySeconds = retryAfterSeconds(error) ?? attempt * 2; // backoff when the server gives no hint
+      await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+    }
+  }
+}
+```
+
+
+Never retry when `isRetryable(error)` is `false` -- a `NotEntitledError`, for example, means the ACL grant is missing and retrying just busy-loops.
 
 ## Next steps
 

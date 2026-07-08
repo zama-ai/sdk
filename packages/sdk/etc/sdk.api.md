@@ -11217,6 +11217,9 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
+// @public
+export function isRetryable(error: unknown): boolean;
+
 export { KmsDelegatedDecryptEIP712Type }
 
 // @public
@@ -12680,7 +12683,6 @@ export class RelayerRequestFailedError extends ZamaError {
     constructor(message: string, statusCode?: number, options?: ErrorOptions & {
         retryAfter?: number;
     });
-    readonly retryable: boolean;
     readonly retryAfter: number | undefined;
     readonly statusCode: number | undefined;
 }
@@ -12710,6 +12712,9 @@ export function resolveStorage(storage?: GenericStorage | undefined, permitStora
     storage: GenericStorage;
     permitStorage: GenericStorage;
 };
+
+// @public
+export function retryAfterSeconds(error: unknown): number | undefined;
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {
@@ -19568,8 +19573,11 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
 
 // @public
 export class ZamaError extends Error {
-    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
+    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
     readonly code: ZamaErrorCode;
+    readonly retryable: boolean;
 }
 
 // @public

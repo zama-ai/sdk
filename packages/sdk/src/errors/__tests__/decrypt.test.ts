@@ -14,6 +14,7 @@ import {
   ZamaError,
   wrapDecryptError,
 } from "../index";
+import { DECRYPT_PASSTHROUGH_ERROR_TYPES } from "../decrypt";
 import { deserializeError, serializeError } from "../../utils/error";
 
 describe("wrapDecryptError", () => {
@@ -322,6 +323,60 @@ describe("wrapDecryptError", () => {
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
       expect((wrapped as RelayerRequestFailedError).retryAfter).toBe(300);
+    });
+  });
+
+  describe("passthrough set is exhaustive (SDK-248)", () => {
+    // One example per entry in DECRYPT_PASSTHROUGH_ERROR_TYPES, keyed by the
+    // class itself (not just a name/count) so both directions of drift fail
+    // loudly: a class added to the array with no example here, or an example
+    // whose class was dropped from the array, instead of silently collapsing
+    // into DecryptionFailedError.
+    type PassthroughExample = [
+      type: abstract new (...args: never[]) => ZamaError,
+      build: () => ZamaError,
+    ];
+    const passthroughExamples: PassthroughExample[] = [
+      [DecryptionFailedError, () => new DecryptionFailedError("boom")],
+      [NoCiphertextError, () => new NoCiphertextError("missing")],
+      [RelayerRequestFailedError, () => new RelayerRequestFailedError("bad", 502)],
+      [DelegationNotPropagatedError, () => new DelegationNotPropagatedError("propagating")],
+      [SigningRejectedError, () => new SigningRejectedError("user cancelled")],
+      [SigningFailedError, () => new SigningFailedError("bad signature")],
+      [
+        NotEntitledError,
+        () =>
+          new NotEntitledError({
+            encryptedValue: `0x${"12".repeat(32)}`,
+            contractAddress: `0x${"20".repeat(20)}`,
+            account: `0x${"10".repeat(20)}`,
+          }),
+      ],
+      [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
+      [
+        WorkerTimeoutError,
+        () => new WorkerTimeoutError({ operation: "USER_DECRYPT", timeout: 30, elapsed: 30.002 }),
+      ],
+      [WorkerRecycledError, () => new WorkerRecycledError({ operation: "USER_DECRYPT" })],
+    ];
+
+    test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {
+      const testedTypes = new Set(passthroughExamples.map(([Type]) => Type));
+      expect(testedTypes.size).toBe(passthroughExamples.length); // no duplicate/typo masking a missing type
+      for (const ErrorType of DECRYPT_PASSTHROUGH_ERROR_TYPES) {
+        expect(testedTypes.has(ErrorType), `${ErrorType.name} has no passthrough example`).toBe(
+          true,
+        );
+      }
+      expect(testedTypes.size).toBe(DECRYPT_PASSTHROUGH_ERROR_TYPES.length);
+    });
+
+    test("every known typed decrypt cause passes through wrapDecryptError unchanged", () => {
+      for (const [ErrorType, build] of passthroughExamples) {
+        const original = build();
+        expect(original, ErrorType.name).toBeInstanceOf(ErrorType);
+        expect(wrapDecryptError(original, "fallback"), ErrorType.name).toBe(original);
+      }
     });
   });
 });

@@ -32,6 +32,28 @@ export interface DecryptErrorContext {
 }
 
 /**
+ * Every typed SDK error `wrapDecryptError` may see on its way in (from a prior
+ * classification, a worker rethrow, or a caller-level retry) and must pass
+ * through unchanged rather than collapse into terminal `DecryptionFailedError`.
+ * A single source of truth for the early-return check below and for the
+ * `errors.test.ts` "every typed cause passes through unchanged" test — so a
+ * class dropped from this array is caught by that test instead of silently
+ * falling through to the generic fallback.
+ */
+export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
+  DecryptionFailedError,
+  NoCiphertextError,
+  RelayerRequestFailedError,
+  DelegationNotPropagatedError,
+  SigningRejectedError,
+  SigningFailedError,
+  NotEntitledError,
+  RpcRateLimitError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
+] as const;
+
+/**
  * The single decryption-error classifier. Maps a caught error to the right typed
  * SDK error: not-entitled (ACL), consumer RPC rate-limit, NoCiphertext (400),
  * DelegationNotPropagated (delegated 500 *or* a delegated ACL denial, which is
@@ -48,19 +70,8 @@ export function wrapDecryptError(
   fallbackMessage: string,
   ctx: DecryptErrorContext = {},
 ): ZamaError {
-  if (
-    error instanceof DecryptionFailedError ||
-    error instanceof NoCiphertextError ||
-    error instanceof RelayerRequestFailedError ||
-    error instanceof DelegationNotPropagatedError ||
-    error instanceof SigningRejectedError ||
-    error instanceof SigningFailedError ||
-    error instanceof NotEntitledError ||
-    error instanceof RpcRateLimitError ||
-    error instanceof WorkerTimeoutError ||
-    error instanceof WorkerRecycledError
-  ) {
-    return error;
+  if (DECRYPT_PASSTHROUGH_ERROR_TYPES.some((ErrorType) => error instanceof ErrorType)) {
+    return error as ZamaError;
   }
 
   const message = error instanceof Error ? error.message : fallbackMessage;

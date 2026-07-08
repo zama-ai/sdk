@@ -2,9 +2,13 @@ import { describe, test, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
+  isRetryable,
+  retryAfterSeconds,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  NotEntitledError,
   RelayerRequestFailedError,
+  RpcRateLimitError,
   WorkerTimeoutError,
   WorkerRecycledError,
   SigningRejectedError,
@@ -142,6 +146,85 @@ describe("WorkerRecycledError", () => {
     expect(err.message).toBe(
       "Worker operation ENCRYPT was aborted because its worker was recycled after a timeout",
     );
+  });
+});
+
+// --- SDK-248: uniform retryability signal ---
+
+describe("ZamaError.retryable / isRetryable", () => {
+  test("defaults to false for a terminal cause", () => {
+    const err = new NoCiphertextError("no ciphertext");
+    expect(err.retryable).toBe(false);
+    expect(isRetryable(err)).toBe(false);
+  });
+
+  test("is true for RpcRateLimitError", () => {
+    const err = new RpcRateLimitError("throttled");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationNotPropagatedError", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for WorkerTimeoutError and WorkerRecycledError", () => {
+    const timeout = new WorkerTimeoutError({ operation: "USER_DECRYPT", timeout: 30, elapsed: 30 });
+    const recycled = new WorkerRecycledError({ operation: "USER_DECRYPT" });
+    expect(timeout.retryable).toBe(true);
+    expect(recycled.retryable).toBe(true);
+    expect(isRetryable(timeout)).toBe(true);
+    expect(isRetryable(recycled)).toBe(true);
+  });
+
+  test("tracks statusCode for RelayerRequestFailedError (true only on 429)", () => {
+    expect(isRetryable(new RelayerRequestFailedError("rate limited", 429))).toBe(true);
+    expect(isRetryable(new RelayerRequestFailedError("server error", 503))).toBe(false);
+  });
+
+  test("is false for a non-ZamaError, without an instanceof check by the caller", () => {
+    expect(isRetryable(new Error("plain"))).toBe(false);
+    expect(isRetryable("not an error")).toBe(false);
+    expect(isRetryable(null)).toBe(false);
+    expect(isRetryable(undefined)).toBe(false);
+  });
+
+  test("NotEntitledError stays non-retryable — an ACL denial should never be busy-looped", () => {
+    const err = new NotEntitledError({
+      encryptedValue: `0x${"12".repeat(32)}`,
+      contractAddress: `0x${"20".repeat(20)}`,
+      account: `0x${"10".repeat(20)}`,
+    });
+    expect(isRetryable(err)).toBe(false);
+  });
+});
+
+describe("retryAfterSeconds", () => {
+  test("reads the relayer's Retry-After delay", () => {
+    const err = new RelayerRequestFailedError("rate limited", 429, { retryAfter: 300 });
+    expect(retryAfterSeconds(err)).toBe(300);
+  });
+
+  test("reads the RPC rate-limit delay", () => {
+    const err = new RpcRateLimitError("throttled", { retryAfter: 2 });
+    expect(retryAfterSeconds(err)).toBe(2);
+  });
+
+  test("is undefined for a retryable cause with no server-driven delay", () => {
+    expect(
+      retryAfterSeconds(
+        new WorkerTimeoutError({ operation: "USER_DECRYPT", timeout: 30, elapsed: 30 }),
+      ),
+    ).toBeUndefined();
+    expect(retryAfterSeconds(new DelegationNotPropagatedError("not synced"))).toBeUndefined();
+  });
+
+  test("is undefined for a terminal cause and for non-ZamaError values", () => {
+    expect(retryAfterSeconds(new NoCiphertextError("missing"))).toBeUndefined();
+    expect(retryAfterSeconds(new Error("plain"))).toBeUndefined();
+    expect(retryAfterSeconds(null)).toBeUndefined();
   });
 });
 
