@@ -226,6 +226,21 @@ describe("retryAfterSeconds", () => {
     expect(retryAfterSeconds(new Error("plain"))).toBeUndefined();
     expect(retryAfterSeconds(null)).toBeUndefined();
   });
+
+  test("rejects a malformed retryAfter (0, negative, or NaN) instead of handing it to a backoff", () => {
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: 0 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: -5 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: Number.NaN })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RelayerRequestFailedError("rate limited", 429, { retryAfter: -1 })),
+    ).toBeUndefined();
+  });
 });
 
 describe("matchZamaError", () => {

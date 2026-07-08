@@ -3931,6 +3931,8 @@ async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Pro
 
 Never retry when `isRetryable(error)` is `false` -- a `NotEntitledError`, for example, means the ACL grant is missing and retrying just busy-loops.
 
+`isRetryable()` reflects the SDK's own classification, not a guarantee about the underlying cause: a network blip the SDK can't structurally recognize still falls back to a non-retryable `DecryptionFailedError`.
+
 ## Next steps
 
 - See [Error types reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md) for the full error type reference.

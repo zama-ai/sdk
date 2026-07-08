@@ -1,3 +1,5 @@
+import { isValidRetryAfterSeconds } from "../utils/error";
+
 /**
  * Typed error codes thrown by the SDK.
  * Use `error.code` or `instanceof` to programmatically handle specific failure modes.
@@ -201,5 +203,5 @@ export function retryAfterSeconds(error: unknown): number | undefined {
     return undefined;
   }
   const retryAfter = (error as ZamaError & { retryAfter?: unknown }).retryAfter;
-  return typeof retryAfter === "number" ? retryAfter : undefined;
+  return isValidRetryAfterSeconds(retryAfter) ? retryAfter : undefined;
 }

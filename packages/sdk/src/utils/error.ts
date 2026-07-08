@@ -504,15 +504,22 @@ function retryAfterFromHeader(node: Record<string, unknown>): number | undefined
 }
 
 /**
+ * True for a well-formed server-driven retry delay, in seconds: a finite,
+ * positive number. Shared by the chain-walking extractor below and the public
+ * {@link retryAfterSeconds} accessor (`errors/base.ts`), so a malformed value
+ * (`0`, negative, `NaN`) is rejected the same way everywhere instead of being
+ * handed unchanged to a `setTimeout` backoff.
+ */
+export function isValidRetryAfterSeconds(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
  * A single node's server-driven retry delay (seconds): a numeric `retryAfter`
  * (a non-positive synthetic value is ignored), else a `Retry-After` header.
  */
 function retryAfterFromNode(node: Record<string, unknown>): number | undefined {
-  if (
-    typeof node.retryAfter === "number" &&
-    Number.isFinite(node.retryAfter) &&
-    node.retryAfter > 0
-  ) {
+  if (isValidRetryAfterSeconds(node.retryAfter)) {
     return node.retryAfter;
   }
   return retryAfterFromHeader(node);
