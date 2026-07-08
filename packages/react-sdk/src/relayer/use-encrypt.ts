@@ -16,7 +16,7 @@ import { useZamaSDK } from "../provider";
  * @example
  * ```tsx
  * const encrypt = useEncrypt();
- * encrypt.mutate({ values: [{ value: 1000n, type: "uint64" }], contractAddress: "0x...", userAddress: "0x..." });
+ * encrypt.mutate({ values: [{ value: 1000n, type: "euint64" }], contractAddress: "0x...", userAddress: "0x..." });
  * ```
  */
 export function useEncrypt() {

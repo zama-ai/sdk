@@ -39,7 +39,7 @@ function ConfidentialRoundTrip() {
 
     // 1. Encrypt
     const encrypted = await encrypt.mutateAsync({
-      values: [{ value: 42n, type: "uint64" }],
+      values: [{ value: 42n, type: "euint64" }],
       contractAddress,
       userAddress: userAddress!,
     });
@@ -158,7 +158,7 @@ function EncryptExample() {
 
   const handleEncrypt = async () => {
     const result = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "uint64" }],
+      values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourConfidentialContract",
       userAddress: userAddress!,
     });
@@ -185,9 +185,9 @@ Pass multiple values in a single call. Each value needs its FHE type.
 ```tsx
 const result = await encrypt.mutateAsync({
   values: [
-    { value: 500n, type: "uint64" }, // amount
-    { value: true, type: "bool" }, // flag
-    { value: 42n, type: "uint32" }, // parameter
+    { value: 500n, type: "euint64" }, // amount
+    { value: true, type: "ebool" }, // flag
+    { value: 42n, type: "euint32" }, // parameter
   ],
   contractAddress: "0xYourContract",
   userAddress,
@@ -229,7 +229,7 @@ function ConfidentialAction() {
   const handleAction = async () => {
     // 1. Encrypt the value
     const { encryptedValues, inputProof } = await encrypt.mutateAsync({
-      values: [{ value: 1000n, type: "uint64" }],
+      values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xYourContract",
       userAddress: address!,
     });

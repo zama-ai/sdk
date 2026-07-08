@@ -32,7 +32,7 @@ function EncryptValue() {
 
   async function handleEncrypt() {
     const { encryptedValues, inputProof } = await encrypt({
-      values: [{ value: 1000n, type: "uint64" }],
+      values: [{ value: 1000n, type: "euint64" }],
       contractAddress: "0xContract",
       userAddress: "0xUser",
     });
