@@ -3,7 +3,15 @@ import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
-import type { FhevmClient, FhevmClientOptions, FhevmRelayerSDK } from "./types";
+import type { FhevmClient, FhevmClientOptions, FhevmRelayerSDK, FhevmRuntimeConfig } from "./types";
+
+interface RelayerCommonOptions {
+  auth: FhevmRuntimeConfig["auth"];
+  headers?: Record<string, string>;
+  debug: boolean | undefined;
+  fetchRetries: number | undefined;
+  fetchRetryDelayInMilliseconds: number | undefined;
+}
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -28,6 +36,7 @@ export interface FhevmRelayerConfig {
 export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;
   readonly #fhevm: FhevmClient;
+  readonly #defaultOptions: Partial<RelayerCommonOptions>;
 
   constructor(config: FhevmRelayerConfig) {
     this.#chain = config.chain;
@@ -42,6 +51,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
       options: config.options,
     };
     this.#fhevm = config.cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
+    this.#defaultOptions = { auth: this.#chain.auth, fetchRetries: 2 };
   }
 
   get chain() {
@@ -52,7 +62,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValue({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -60,7 +70,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValues({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -70,7 +80,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptPublicValuesWithSignatures({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -78,7 +88,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.encryptValue({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -86,7 +96,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.encryptValues({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -94,7 +104,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptValue({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -102,7 +112,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptValues({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -110,7 +120,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.decryptValuesFromPairs({
       ...parameters,
-      options: { ...parameters.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters.options },
     });
   };
 
@@ -118,7 +128,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#fhevm.init();
     return this.#fhevm.fetchFheEncryptionKeyBytes({
       ...parameters,
-      options: { ...parameters?.options, auth: this.#chain.auth },
+      options: { ...this.#defaultOptions, ...parameters?.options },
     });
   };
 
