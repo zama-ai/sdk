@@ -25,7 +25,7 @@ describe("useConfidentialTransfer", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ address: tokenAddress }),
@@ -53,7 +53,7 @@ describe("useConfidentialTransfer", () => {
     userAddress,
     mutateAndExpectOnSuccess,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     const onSuccess = vi.fn();
@@ -78,7 +78,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const expectedContext = { requestId: "transfer-success-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -104,7 +104,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("tx reverted"));
 
     const expectedContext = { requestId: "transfer-error-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -132,7 +132,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const expectedContext = { requestId: "transfer-settled-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -158,7 +158,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const expectedContext = { requestId: "transfer-success-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -184,7 +184,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("tx reverted"));
 
     const expectedContext = { requestId: "transfer-error-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -212,7 +212,7 @@ describe("useConfidentialTransfer", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const expectedContext = { requestId: "transfer-settled-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -251,10 +251,10 @@ describe("useConfidentialTransfer", () => {
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
     vi.mocked(relayer.userDecrypt).mockImplementation(
       async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
-        [encryptedValues[0]]: encryptedValues[0] === handle ? 1000n : 500n,
+        [encryptedValues[0]!]: encryptedValues[0] === handle ? 1000n : 500n,
       }),
     );
-    vi.mocked(signer.writeContract).mockImplementation(async () => {
+    vi.mocked(signer.writeContract!).mockImplementation(async () => {
       currentHandle = handleB;
       return "0xtxhash";
     });
@@ -301,7 +301,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     userAddress,
   }) => {
     let resolveTransfer: (value: string) => void;
-    vi.mocked(signer.writeContract).mockReturnValue(
+    vi.mocked(signer.writeContract!).mockReturnValue(
       new Promise((resolve) => {
         resolveTransfer = resolve as (value: string) => void;
       }),
@@ -328,8 +328,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
 
     await act(async () => {
@@ -344,7 +344,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
@@ -366,7 +366,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
@@ -393,7 +393,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     userAddress,
   }) => {
     let resolveTransfer: (value: string) => void;
-    vi.mocked(signer.writeContract).mockReturnValue(
+    vi.mocked(signer.writeContract!).mockReturnValue(
       new Promise((resolve) => {
         resolveTransfer = resolve as (value: string) => void;
       }),
@@ -424,7 +424,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("tx reverted"));
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransfer({ address: tokenAddress, optimistic: true }),
@@ -447,8 +447,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
@@ -461,7 +461,7 @@ describe("useConfidentialTransfer optimistic updates", () => {
     tokenAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("tx reverted"));
 
     const onError = vi.fn();
 
@@ -475,15 +475,17 @@ describe("useConfidentialTransfer optimistic updates", () => {
     // Sabotage setQueryData after the optimistic write so rollback throws
     const originalSetQueryData = queryClient.setQueryData.bind(queryClient);
     let callCount = 0;
-    vi.spyOn(queryClient, "setQueryData").mockImplementation((key: string, value: any) => {
-      callCount++;
-      // First call is the optimistic subtract, let it through.
-      // Second call (rollback) should throw.
-      if (callCount <= 1) {
-        return originalSetQueryData(key, value);
-      }
-      throw new Error("rollback boom");
-    });
+    vi.spyOn(queryClient, "setQueryData").mockImplementation(
+      (key: readonly unknown[], value: unknown) => {
+        callCount++;
+        // First call is the optimistic subtract, let it through.
+        // Second call (rollback) should throw.
+        if (callCount <= 1) {
+          return originalSetQueryData(key, value);
+        }
+        throw new Error("rollback boom");
+      },
+    );
 
     // Suppress the expected unhandled rejection from the rollback error
     // propagating through the mutation executor.

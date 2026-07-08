@@ -79,10 +79,7 @@ describe("WagmiProvider.prepareTransaction", () => {
     mockGetChainId.mockResolvedValueOnce(31337);
     mockGetTxCount.mockResolvedValueOnce(7);
     mockEstimateGas.mockResolvedValueOnce(21_000n);
-    mockEstimateFees.mockResolvedValueOnce({
-      maxFeePerGas: 100n,
-      maxPriorityFeePerGas: 10n,
-    });
+    mockEstimateFees.mockResolvedValueOnce({ maxFeePerGas: 100n, maxPriorityFeePerGas: 10n });
 
     const out = await provider.prepareTransaction({
       from: FROM,

@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useZamaSDK, useResumeUnshield } from "@zama-fhe/react-sdk";
-import { loadPendingUnshield, clearPendingUnshield } from "@zama-fhe/sdk";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import { useResumeUnshield, usePendingUnshield } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
@@ -13,21 +11,10 @@ interface PendingUnshieldCardProps {
 }
 
 export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingUnshieldCardProps) {
-  const { storage } = useZamaSDK();
-  const [pendingTxHash, setPendingTxHash] = useState<Hex | null>(null);
-
-  useEffect(() => {
-    loadPendingUnshield(storage, tokenAddress)
-      .then(setPendingTxHash)
-      .catch((err) => console.error("[PendingUnshieldCard] loadPendingUnshield failed:", err));
-  }, [storage, tokenAddress]);
+  const { data: pendingTxHash } = usePendingUnshield(tokenAddress);
 
   const resume = useResumeUnshield(tokenAddress, {
     onSuccess: () => {
-      clearPendingUnshield(storage, tokenAddress).catch((err) =>
-        console.error("[PendingUnshieldCard] Failed to clear pending unshield:", err),
-      );
-      setPendingTxHash(null);
       onSuccess?.();
     },
   });

@@ -19,7 +19,7 @@ describe("useConfidentialSetOperator", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialSetOperator(tokenAddress),
@@ -44,7 +44,7 @@ describe("useConfidentialSetOperator", () => {
     tokenAddress,
     mutateAndExpectOnSuccess,
   }) => {
-    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
 
     const operatorKey = zamaQueryKeys.confidentialIsOperator.token(tokenAddress);
     const onSuccess = vi.fn();

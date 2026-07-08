@@ -88,7 +88,7 @@ describe("zamaQueryKeys", () => {
       zamaQueryKeys.isWrapper.token(TOKEN_LOWER),
       zamaQueryKeys.wrapperDiscovery.token(TOKEN_LOWER, ERC20_LOWER),
       zamaQueryKeys.underlyingAllowance.token(TOKEN_LOWER),
-      zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
+      zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER),
       zamaQueryKeys.confidentialIsOperator.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialIsOperator.scope(TOKEN_LOWER, OWNER_LOWER, SPENDER_LOWER),
       zamaQueryKeys.totalSupply.token(TOKEN_LOWER),
@@ -107,17 +107,17 @@ describe("zamaQueryKeys", () => {
     const lowerVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_LOWER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_LOWER], OWNER_LOWER),
-      zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER, WRAPPER_LOWER),
+      zamaQueryKeys.underlyingAllowance.scope(TOKEN_LOWER, OWNER_LOWER),
     ];
 
     const upperVariants = [
       zamaQueryKeys.confidentialBalance.token(TOKEN_UPPER),
       zamaQueryKeys.confidentialBalances.tokens([TOKEN_UPPER], OWNER_UPPER),
-      zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER, WRAPPER_UPPER),
+      zamaQueryKeys.underlyingAllowance.scope(TOKEN_UPPER, OWNER_UPPER),
     ];
 
     expect(lowerVariants).toEqual(upperVariants);
-    expect(lowerVariants[0][1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
+    expect(lowerVariants[0]![1]).toMatchObject({ tokenAddress: getAddress(TOKEN_LOWER) });
   });
 
   test("normalizes address fields in all other address-bearing factories", () => {

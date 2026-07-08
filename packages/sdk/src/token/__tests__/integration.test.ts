@@ -137,8 +137,8 @@ describe("Integration: multi-step workflows", () => {
       });
 
       // Reset writeContract mock to track finalize call
-      vi.mocked(signer.writeContract).mockClear();
-      vi.mocked(signer.writeContract).mockResolvedValue("0xfinalizetx");
+      vi.mocked(signer.writeContract!).mockClear();
+      vi.mocked(signer.writeContract!).mockResolvedValue("0xfinalizetx");
 
       const finalizeResult = await wrappedToken.finalizeUnwrap(UNWRAP_AMOUNT);
       expect(finalizeResult.txHash).toBe("0xfinalizetx");

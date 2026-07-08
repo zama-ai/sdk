@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import type { Address, PreparedFor } from "@zama-fhe/sdk";
+import type { Address, PreparedFor, TransactionKind } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useRefreshPrepared } from "../use-refresh-prepared";
 import { useZamaSDK } from "../../provider";
@@ -8,25 +8,16 @@ const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
-const STALE: PreparedFor<"ConfidentialTransfer"> = {
+const STALE: PreparedFor<TransactionKind> = {
   kind: "ConfidentialTransfer",
-  request: {
-    kind: "ConfidentialTransfer",
-    from: USER,
-    token: TOKEN,
-    to: RECIPIENT,
-    amount: 1n,
-  },
+  request: { kind: "ConfidentialTransfer", from: USER, token: TOKEN, to: RECIPIENT, amount: 1n },
   unsignedTx: "0xabcd",
   from: USER,
   to: TOKEN,
   chainId: 31337,
 };
 
-const FRESH: PreparedFor<"ConfidentialTransfer"> = {
-  ...STALE,
-  unsignedTx: "0xfresh",
-};
+const FRESH: PreparedFor<TransactionKind> = { ...STALE, unsignedTx: "0xfresh" };
 
 describe("useRefreshPrepared", () => {
   test("default", ({ renderWithProviders }) => {

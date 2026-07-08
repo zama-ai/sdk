@@ -70,9 +70,7 @@ export class ViemProvider implements GenericProvider {
   }
 
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
-    return this.#publicClient.sendRawTransaction({
-      serializedTransaction: signedTx,
-    });
+    return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
   }
 
   async prepareTransaction<
@@ -109,12 +107,7 @@ export class ViemProvider implements GenericProvider {
         ? Promise.resolve(args.gasLimit)
         : (call.gas ??
           this.#publicClient
-            .estimateGas({
-              account: from,
-              to: call.address,
-              data,
-              value: call.value ?? 0n,
-            })
+            .estimateGas({ account: from, to: call.address, data, value: call.value ?? 0n })
             .catch((error: unknown) => {
               throw new TransactionRevertedError(
                 `ViemProvider.prepareTransaction: gas estimation reverted for ${call.functionName} on ${call.address}`,

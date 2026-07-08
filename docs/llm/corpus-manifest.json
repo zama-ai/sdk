@@ -169,6 +169,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/decrypt-from-event-logs",
+      "title": "Decrypt values from event logs",
+      "source_path": "docs/gitbook/src/guides/decrypt-from-event-logs.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/decrypt-from-event-logs",
+      "description": "Decrypt an FHE encrypted value pulled straight off an event log — the common server-side pattern for indexers, wallet history, and bridges.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/handle-errors",
       "title": "Handle errors",
       "source_path": "docs/gitbook/src/guides/handle-errors.md",
@@ -633,6 +645,18 @@
       "category": "reference-react",
       "logical_path": "reference/react/useResumeUnshield",
       "description": "Mutation hook that resumes an unshield interrupted between unwrap and finalize steps.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/usePendingUnshield",
+      "title": "usePendingUnshield",
+      "source_path": "docs/gitbook/src/reference/react/usePendingUnshield.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/usePendingUnshield",
+      "description": "Read the unwrap tx hash of an unshield interrupted between its two phases.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

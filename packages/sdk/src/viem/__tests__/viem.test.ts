@@ -174,7 +174,7 @@ describe("ViemSigner", () => {
           durationDays: "1",
           extraData: "0x",
         },
-      } as EIP712TypedData;
+      } as unknown as EIP712TypedData;
     }
 
     vit(
@@ -186,7 +186,11 @@ describe("ViemSigner", () => {
         expect(walletClient.signTypedData).toHaveBeenCalledWith({
           account: walletClient.account,
           primaryType: "UserDecryptRequestVerification",
-          types: { UserDecryptRequestVerification: typedData.types.UserDecryptRequestVerification },
+          types: {
+            UserDecryptRequestVerification: (
+              typedData.types as { UserDecryptRequestVerification: unknown }
+            ).UserDecryptRequestVerification,
+          },
           domain: typedData.domain,
           message: { ...typedData.message, startTimestamp: 1000n, durationDays: 1n },
         });
@@ -436,8 +440,8 @@ describe("Viem write contract helpers", () => {
             noAccountClient,
             tokenAddress,
             userAddress,
-            new Uint8Array([1]),
-            new Uint8Array([2]),
+            new Uint8Array([1]) as unknown as Hex,
+            new Uint8Array([2]) as unknown as Hex,
           ),
         ).toThrow("WalletClient has no account");
       },
@@ -540,7 +544,7 @@ describe("Viem write contract helpers", () => {
       writeSetOperatorContract(walletClient, tokenAddress, SPENDER);
       const after = Math.floor(Date.now() / 1000) + 3600;
 
-      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const callArgs = (walletClient.writeContract as ReturnType<typeof vi.fn>).mock.calls[0]![0];
       const timestamp = callArgs.args[1] as number;
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);
@@ -572,8 +576,8 @@ describe("Viem write contract helpers", () => {
           tokenAddress,
           userAddress,
           SPENDER,
-          new Uint8Array(),
-          new Uint8Array(),
+          new Uint8Array() as unknown as Hex,
+          new Uint8Array() as unknown as Hex,
         ),
       ).toThrow("WalletClient has no account");
     });

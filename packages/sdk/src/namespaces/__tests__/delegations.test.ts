@@ -69,7 +69,7 @@ describe("Delegations", () => {
     }) => {
       // Mock the on-chain readContract for the pre-flight expiry check (returns 0n = no current delegation)
       vi.mocked(provider.readContract).mockResolvedValue(0n);
-      vi.mocked(signer.writeContract).mockResolvedValue("0xtx");
+      vi.mocked(signer.writeContract!).mockResolvedValue("0xtx");
 
       const result = await sdk.delegations.delegateDecryption({
         contractAddress: TOKEN,

@@ -11,6 +11,7 @@ export {
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";
 export { RpcRateLimitError } from "./rpc";
+export { WorkerTimeoutError, WorkerRecycledError } from "./timeout";
 export { ChainMismatchError } from "./chain";
 export {
   SignerRequiredError,

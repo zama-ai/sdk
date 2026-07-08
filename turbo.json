@@ -1,0 +1,100 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "typecheck": { "dependsOn": ["^build"], "outputs": [] },
+    "api-report": { "dependsOn": ["build"], "outputs": ["etc/**"] },
+    "api-report:check": { "dependsOn": ["build"], "outputs": [] },
+    "//#size": {
+      "dependsOn": ["@zama-fhe/sdk#build", "@zama-fhe/react-sdk#build"],
+      "inputs": [".size-limit.json", "packages/sdk/dist/**", "packages/react-sdk/dist/**"],
+      "outputs": []
+    },
+    "//#contracts:build": {
+      "inputs": [
+        "contracts/src/**",
+        "contracts/test/**",
+        "contracts/script/**",
+        "contracts/foundry.toml",
+        "contracts/remappings.txt",
+        "contracts/soldeer.lock",
+        "contracts/dependencies/**",
+        "contracts/lib/**"
+      ],
+      "outputs": ["contracts/out/**", "contracts/cache/**"]
+    },
+    "//#contracts:test": {
+      "dependsOn": ["//#contracts:build"],
+      "inputs": [
+        "contracts/src/**",
+        "contracts/test/**",
+        "contracts/script/**",
+        "contracts/foundry.toml",
+        "contracts/remappings.txt",
+        "contracts/soldeer.lock",
+        "contracts/dependencies/**",
+        "contracts/lib/**"
+      ],
+      "outputs": []
+    },
+    "//#abi:build": {
+      "dependsOn": ["//#contracts:build"],
+      "inputs": [
+        "contracts/out/ConfidentialWrapperV3.sol/ConfidentialWrapperV3.json",
+        "contracts/out/Impl.sol/IACL.json",
+        "contracts/out/IERC165.sol/IERC165.json",
+        "contracts/out/IERC1363.sol/IERC1363.json",
+        "scripts/abi/build.mjs"
+      ],
+      "outputs": [
+        "packages/sdk/src/abi/confidential-wrapper.abi.ts",
+        "packages/sdk/src/abi/acl.abi.ts",
+        "packages/sdk/src/abi/erc165.abi.ts",
+        "packages/sdk/src/abi/erc1363.abi.ts"
+      ]
+    },
+    "//#abi:check": {
+      "dependsOn": ["//#abi:build"],
+      "inputs": ["packages/sdk/src/abi/*.abi.ts", "scripts/abi/**", "vitest.abi.config.ts"],
+      "outputs": []
+    },
+    "//#llm:build": {
+      "inputs": [
+        "README.md",
+        "packages/*/README.md",
+        "packages/*/etc/*.api.md",
+        "docs/gitbook/src/**",
+        "docs/gitbook/.gitbook/includes/**",
+        "docs/llm/corpus.config.json",
+        "examples/*/README.md",
+        "examples/*/WALKTHROUGH.md",
+        "scripts/llm/**"
+      ],
+      "outputs": ["llms.txt", "llms-full.txt", "docs/llm/corpus-manifest.json"]
+    },
+    "//#llm:check": {
+      "dependsOn": ["//#llm:build"],
+      "inputs": [
+        "llms.txt",
+        "llms-full.txt",
+        "docs/llm/corpus-manifest.json",
+        "scripts/llm/**",
+        "vitest.llm.config.ts"
+      ],
+      "outputs": []
+    },
+    "//#docs:diagrams": {
+      "inputs": ["docs/diagrams/*.d2", "scripts/docs/generate-diagrams.mjs"],
+      "outputs": ["docs/gitbook/src/images/*.svg"]
+    },
+    "//#docs:check-links": {
+      "inputs": [
+        "docs/gitbook/src/**",
+        "docs/gitbook/.gitbook/includes/**",
+        "scripts/docs/check-links.mjs"
+      ],
+      "outputs": []
+    }
+  }
+}

@@ -33,6 +33,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Transfer privately](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md): How to send confidential tokens so the amount stays hidden on-chain.
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md): Convert confidential tokens back to public ERC-20 by unshielding them.
 - [Check balances](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/check-balances.md): Decrypt and read confidential token balances using the SDK and React hooks.
+- [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md): Decrypt an FHE encrypted value pulled straight off an event log — the common server-side pattern for indexers, wallet history, and bridges.
 - [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md): Catch, match, and recover from SDK errors in your application.
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md): How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
 - [Web extensions](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/web-extensions.md): How to use the SDK in MV3 Chrome extensions with persistent permit storage.
@@ -78,6 +79,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md): Mutation hook that unshields confidential tokens back to public ERC-20.
 - [useUnshieldAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshieldAll.md): Mutation hook that unshields the entire confidential balance.
 - [useResumeUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md): Mutation hook that resumes an unshield interrupted between unwrap and finalize steps.
+- [usePendingUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md): Read the unwrap tx hash of an unshield interrupted between its two phases.
 - [useUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrap.md): Low-level mutation hook that requests an unwrap for a specific amount.
 - [useUnwrapAll](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrapAll.md): Low-level mutation hook that requests an unwrap for the full confidential balance.
 - [useFinalizeUnwrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md): Low-level mutation hook that finalizes an unwrap with the decryption proof.

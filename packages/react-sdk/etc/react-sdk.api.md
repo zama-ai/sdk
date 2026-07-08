@@ -232,6 +232,12 @@ export function useMetadata(tokenAddress: Address, options?: Omit<UseQueryOption
 export function useMetadataSuspense(tokenAddress: Address): UseSuspenseQueryResult<TokenMetadata, Error>;
 
 // @public
+export function usePendingUnshield(tokenAddress: Address, options?: Omit<UseQueryOptions<Hex | null>, "queryKey" | "queryFn">): UseQueryResult<`0x${string}` | null, Error>;
+
+// @public
+export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQueryResult<`0x${string}` | null, Error>;
+
+// @public
 export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>;
 
 // @public

@@ -4,23 +4,27 @@
   "private": true,
   "description": "Monorepo for Zama SDK packages",
   "license": "BSD-3-Clause-Clear",
+  "author": "Zama",
   "repository": {
     "type": "git",
     "url": "https://github.com/zama-ai/sdk"
   },
-  "author": "Zama",
+  "workspaces": [
+    "packages/*",
+    "tools/*"
+  ],
   "scripts": {
-    "build": "pnpm build:sdk && pnpm build:react-sdk",
-    "build:sdk": "pnpm --filter @zama-fhe/sdk build",
-    "build:react-sdk": "pnpm --filter @zama-fhe/react-sdk build",
-    "build:test-nextjs": "pnpm --filter @zama-fhe/test-nextjs build",
-    "build:test-vite": "pnpm --filter @zama-fhe/test-vite  build",
+    "build": "turbo run build --filter='./packages/*'",
+    "build:sdk": "turbo run build --filter=@zama-fhe/sdk",
+    "build:react-sdk": "turbo run build --filter=@zama-fhe/react-sdk",
+    "build:test-nextjs": "turbo run build --filter=@zama-fhe/test-nextjs",
+    "build:test-vite": "turbo run build --filter=@zama-fhe/test-vite",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
-    "typecheck": "pnpm run --parallel --recursive '/^typecheck/'",
+    "typecheck": "turbo run typecheck",
     "lint": "oxlint && pnpm ast-grep:scan",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml",
     "codemod:sdk-migration-v3": "codemod workflow run -w codemods/sdk-migration-v3/workflow.yaml",
@@ -46,10 +50,10 @@
     "docs:check-links": "node scripts/docs/check-links.mjs",
     "docs:retarget": "node scripts/docs/retarget.mjs",
     "docs:check-target": "node scripts/docs/check-target.mjs",
-    "api-report": "pnpm build && pnpm api-report:sdk && pnpm api-report:react-sdk",
-    "api-report:sdk": "cd packages/sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.web.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json && api-extractor run --local -c api-extractor.query.json",
-    "api-report:react-sdk": "cd packages/react-sdk && api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.wagmi.json",
-    "api-report:check": "pnpm build && pnpm api-report:check:sdk && pnpm api-report:check:react-sdk",
+    "api-report": "turbo run api-report --filter='./packages/*'",
+    "api-report:sdk": "turbo run api-report --filter=@zama-fhe/sdk",
+    "api-report:react-sdk": "turbo run api-report --filter=@zama-fhe/react-sdk",
+    "api-report:check": "turbo run api-report:check --filter='./packages/*'",
     "api-report:check:sdk": "cd packages/sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json",
     "api-report:check:react-sdk": "cd packages/react-sdk && api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json",
     "api-report:diff": "node scripts/api-report/diff.mjs",
@@ -104,9 +108,13 @@
     "rolldown-plugin-dts": "^0.26.0",
     "semantic-release": "^25.0.5",
     "size-limit": "^12.1.0",
+    "turbo": "2.10.2",
     "typescript": "6.0.3",
     "typescript-language-server": "^5.3.0",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "minimatch": "10.2.4"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
@@ -115,16 +123,9 @@
     ],
     "*.{ts,tsx,js,mjs,cjs,json,yaml,yml}": "oxfmt --no-error-on-unmatched-pattern"
   },
-  "overrides": {
-    "minimatch": "10.2.4"
-  },
-  "workspaces": [
-    "packages/*",
-    "tools/*"
-  ],
-  "packageManager": "pnpm@11.1.2",
   "engines": {
     "node": ">=22",
     "pnpm": ">=11"
-  }
+  },
+  "packageManager": "pnpm@11.1.2"
 }

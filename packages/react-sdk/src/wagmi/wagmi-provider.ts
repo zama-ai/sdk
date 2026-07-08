@@ -140,12 +140,7 @@ export class WagmiProvider implements GenericProvider {
         ? Promise.resolve(args.gasLimit)
         : (call.gas ??
           publicClient
-            .estimateGas({
-              account: from,
-              to: call.address,
-              data,
-              value: call.value ?? 0n,
-            })
+            .estimateGas({ account: from, to: call.address, data, value: call.value ?? 0n })
             .catch((error: unknown) => {
               throw new TransactionRevertedError(
                 `WagmiProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,

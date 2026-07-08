@@ -108,23 +108,16 @@ const dfns = test.extend<DfnsFixtures>({
     await use(client);
   },
   dfnsAccount: async ({ env, dfnsClient, ethProvider }, use) => {
-    const wallet = await dfnsClient.wallets.getWallet({
-      walletId: env.DFNS_WALLET_ID,
-    });
+    const wallet = await dfnsClient.wallets.getWallet({ walletId: env.DFNS_WALLET_ID });
     assertNonNullable(
       wallet.address,
       `dfnsClient.wallets.getWallet(${env.DFNS_WALLET_ID}).address`,
     );
     const network = await ethProvider.getNetwork();
-    await use({
-      address: getAddress(wallet.address),
-      chainId: Number(network.chainId),
-    });
+    await use({ address: getAddress(wallet.address), chainId: Number(network.chainId) });
   },
   sdk: async ({ ethProvider }, use) => {
-    const provider = new EthersProvider({
-      provider: ethProvider as unknown as Provider,
-    });
+    const provider = new EthersProvider({ provider: ethProvider as unknown as Provider });
     const config = createConfig({
       chains: [sepolia] as const,
       relayers: { [sepolia.id]: node() },
@@ -166,16 +159,10 @@ const dfns = test.extend<DfnsFixtures>({
           );
         }
         await sleep(POLL_INTERVAL_MS);
-        snap = await dfnsClient.wallets.getSignature({
-          walletId,
-          signatureId: snap.id,
-        });
+        snap = await dfnsClient.wallets.getSignature({ walletId, signatureId: snap.id });
       }
 
-      return {
-        signedData: snap.signedData,
-        signatureEncoded: snap.signature?.encoded,
-      };
+      return { signedData: snap.signedData, signatureEncoded: snap.signature?.encoded };
     });
   },
 });
@@ -226,12 +213,7 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
       }
 
       const { domain, types, message } = prepared.typedData as unknown as EIP712TypedData & {
-        domain: {
-          name?: string;
-          version?: string;
-          chainId: bigint;
-          verifyingContract?: string;
-        };
+        domain: { name?: string; version?: string; chainId: bigint; verifyingContract?: string };
         types: Record<string, readonly { name: string; type: string }[]>;
         message: Record<string, unknown>;
       };
@@ -249,12 +231,8 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
         domain: {
           ...(domain.name && { name: domain.name }),
           ...(domain.version && { version: domain.version }),
-          ...(domain.chainId !== undefined && {
-            chainId: Number(domain.chainId),
-          }),
-          ...(domain.verifyingContract && {
-            verifyingContract: domain.verifyingContract,
-          }),
+          ...(domain.chainId !== undefined && { chainId: Number(domain.chainId) }),
+          ...(domain.verifyingContract && { verifyingContract: domain.verifyingContract }),
         },
         message,
       });

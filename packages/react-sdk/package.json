@@ -1,7 +1,23 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "3.3.0-alpha.5",
+  "version": "3.3.0-alpha.11",
   "description": "React hooks for Zama SDK",
+  "keywords": [
+    "confidential",
+    "erc20",
+    "ethereum",
+    "fhe",
+    "fhevm",
+    "homomorphic-encryption",
+    "hooks",
+    "privacy",
+    "react",
+    "zama"
+  ],
+  "homepage": "https://github.com/zama-ai/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/zama-ai/sdk/issues"
+  },
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "repository": {
@@ -9,7 +25,13 @@
     "url": "https://github.com/zama-ai/sdk",
     "directory": "packages/react-sdk"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -27,34 +49,15 @@
       "default": "./package.json"
     }
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
   "publishConfig": {
     "access": "public"
-  },
-  "keywords": [
-    "fhe",
-    "zama",
-    "fhevm",
-    "confidential",
-    "erc20",
-    "privacy",
-    "homomorphic-encryption",
-    "react",
-    "hooks",
-    "ethereum"
-  ],
-  "homepage": "https://github.com/zama-ai/sdk#readme",
-  "bugs": {
-    "url": "https://github.com/zama-ai/sdk/issues"
   },
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.wagmi.json",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
     "@zama-fhe/sdk": "workspace:*",
@@ -62,12 +65,11 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
-    "@zama-fhe/sdk": "^3.3.0-alpha.5",
+    "@zama-fhe/sdk": "^3.3.0-alpha.11",
     "react": ">=18",
     "viem": ">=2",
     "wagmi": ">=2"
   },
-  "sideEffects": false,
   "peerDependenciesMeta": {
     "wagmi": {
       "optional": true

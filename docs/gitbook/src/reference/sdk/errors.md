@@ -24,6 +24,8 @@ import {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
+  WorkerTimeoutError,
+  WorkerRecycledError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -89,6 +91,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
+| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)                                                  |
+| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                                                    |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
@@ -207,7 +211,7 @@ FHE decryption failed. Can occur after an interrupted unshield or when the trans
 matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing") });
 ```
 
-**How to handle:** If this happens after a page reload during unshield, use `loadPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
+**How to handle:** If this happens after a page reload during unshield, use `getPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
 
 ### TransactionRevertedError
 
@@ -347,6 +351,52 @@ try {
 ```
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
+
+### WorkerTimeoutError
+
+**Code:** `OPERATION_TIMEOUT`
+
+A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker by default** (terminating the hung thread) so it self-heals, and the operation is **retryable**. Recycling is gated by `recycleWorkerOnTimeout` (default `true`) and never applies to the browser worker (a single worker with no pool). It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
+
+Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
+
+```ts
+import { node } from "@zama-fhe/sdk/node";
+
+relayers: {
+  [sepolia.id]: node({ operationTimeout: 10 }),
+}
+```
+
+```ts
+matchZamaError(error, {
+  OPERATION_TIMEOUT: async (e) => {
+    // The worker was recycled; retry with your own backoff.
+    await backoff();
+    retry(); // or raise operationTimeout if the op is legitimately long
+  },
+});
+```
+
+**How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
+
+### WorkerRecycledError
+
+**Code:** `WORKER_RECYCLED`
+
+An in-flight operation was **aborted as collateral** when its worker was recycled to recover from _another_ operation's timeout (Node pool self-healing) — this operation itself did not time out. Because it never reached a verdict, it is **retryable**: the next call lazily re-inits a fresh worker. It is intentionally distinct from `WorkerTimeoutError` (this op did not exceed its own bound) and from `DecryptionFailedError` (nothing actually failed to decrypt), so you can retry it rather than treating it as a terminal failure. The error carries `operation` and (in the Node pool) `worker`.
+
+```ts
+matchZamaError(error, {
+  WORKER_RECYCLED: async (e) => {
+    // Transient: the worker was replaced under us. Just retry.
+    await backoff();
+    retry();
+  },
+});
+```
+
+**How to handle:** Retry — the request was cancelled by an unrelated recycle, not by a failure of its own.
 
 ## "No balance" vs "zero balance"
 
@@ -574,15 +624,17 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_PROPAGATED`
 
-Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync typically takes 1–2 minutes — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
+Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync usually completes within ~10 blocks (a few seconds) — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
+
+The delegated-decrypt path rides out this window with a bounded internal retry (~30s), so you rarely see this error — it surfaces only when propagation outlasts the retry budget, or when you opt out with `waitForPropagation: false`.
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry in 1–2 minutes"),
+  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry shortly"),
 });
 ```
 
-**How to handle:** Wait 1–2 minutes after the delegation transaction is mined, then retry. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
+**How to handle:** Retry shortly — propagation normally completes within seconds. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
 
 ### AclPausedError
 
@@ -602,21 +654,21 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 
 ## Common problems
 
-| Symptom                                   | Cause                                        | Fix                                                                                        |
-| ----------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates. |
-| Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                         |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                |
-| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `loadPendingUnshield()` on mount, then `resumeUnshield()` to complete.                |
-| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, call `clearPendingUnshield()`.                   |
-| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.    |
-| `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.        |
-| `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.         |
-| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more. |
-| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                |
-| `BalanceCheckUnavailableError`            | No stored permits for balance check          | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.   |
-| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                 | Check network connectivity and RPC endpoint. Retry the shield.                             |
+| Symptom                                   | Cause                                        | Fix                                                                                             |
+| ----------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
+| Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                              |
+| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
+| `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
+| `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |
+| `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.         |
+| `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.             |
+| `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.              |
+| `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more.      |
+| `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                     |
+| `BalanceCheckUnavailableError`            | No stored permits for balance check          | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.        |
+| `ERC20ReadFailedError`                    | ERC-20 balanceOf read failed                 | Check network connectivity and RPC endpoint. Retry the shield.                                  |
 
 ## Related
 

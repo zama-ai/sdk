@@ -2,19 +2,12 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ZamaSDKEvents,
-  IndexedDBStorage,
-  indexedDBStorage,
-  savePendingUnshield,
-  cleartext,
-} from "@zama-fhe/sdk";
+import { IndexedDBStorage, indexedDBStorage, cleartext } from "@zama-fhe/sdk";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import type { EIP1193Provider } from "@zama-fhe/sdk/ethers";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { JsonRpcProvider } from "ethers";
 import { BSC_TESTNET_RPC_URL } from "@/lib/config";
-import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
@@ -33,8 +26,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // Two extra layers handle wallet reactivity:
 //
-// 1. Separate IndexedDB instances for storage and permitStorage — distinct SDK
-//    persistence responsibilities, must not overwrite each other.
+// 1. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 2. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with fresh
 //    ethers adapter state bound to the new account, while ignoring spurious
@@ -134,17 +128,6 @@ export function Providers({ children }: { children: ReactNode }) {
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
       relayers: { [zamaBscTestnetCleartext.id]: cleartext() },
-      onEvent: (event) => {
-        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-          const wrapperAddress = getActiveUnshieldToken();
-          if (wrapperAddress) {
-            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-              console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-            );
-            setActiveUnshieldToken(null);
-          }
-        }
-      },
     });
   }, [walletKey]);
 

@@ -80,11 +80,18 @@ export class DelegationExpirationTooSoonError extends ZamaError {
  *
  * After calling `delegateForUserDecryption()`, the delegation is recorded on-chain
  * immediately. However, the gateway (deployed on Arbitrum) must sync this state
- * via cross-chain event propagation, which typically takes 1–2 minutes.
+ * via cross-chain event propagation, which usually completes within ~10 blocks
+ * (a few seconds).
  *
  * Calling `decryptBalanceAs` during this window will fail because the gateway's
  * `isHandleDelegatedForUserDecryption()` check reads from its own synced copy
  * of the ACL state, which hasn't been updated yet.
+ *
+ * **You rarely need to handle this directly:** the delegated-decrypt path rides
+ * out the propagation window with a bounded internal retry (~30s), so a decrypt
+ * issued right after the grant simply waits for sync. This error only surfaces
+ * if the window outlasts the retry budget, or when retries are disabled via
+ * `waitForPropagation: false`.
  *
  * **Note:** This error is raised as a best-effort heuristic — when a delegated
  * decryption receives an HTTP 500 from the relayer, the most likely cause is a

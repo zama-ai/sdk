@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
-import { savePendingUnshield, ZamaSDKEvents, indexedDBStorage } from "@zama-fhe/sdk";
 import type { Address, Hex } from "viem";
 import { parseAmountSafe, shortAddr, txLink } from "@/lib/react-turnkey-wallet/utils";
 import { MutationStatus } from "./mutation-status";
@@ -19,16 +18,6 @@ export function UnshieldCard({
   const unshield = useUnshield(tokenAddress);
   const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<1 | 2>(1);
-
-  useEffect(() => {
-    function handlePhase1(event: Event) {
-      const txHash = (event as CustomEvent<{ txHash: Hex }>).detail.txHash;
-      savePendingUnshield(indexedDBStorage, tokenAddress, txHash).catch(console.error);
-    }
-
-    window.addEventListener(ZamaSDKEvents.UnshieldPhase1Submitted, handlePhase1);
-    return () => window.removeEventListener(ZamaSDKEvents.UnshieldPhase1Submitted, handlePhase1);
-  }, [tokenAddress]);
 
   function handleUnshield() {
     const parsed = parseAmountSafe(amount, decimals);

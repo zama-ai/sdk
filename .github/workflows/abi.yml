@@ -29,16 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      # TODO: remove once GitHub runner images ship the CVE-2026-31431 kernel fix
-      - name: Workaround CVE-2026-31431 (copy.fail)
-        run: |
-          echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif-aead.conf
-          if lsmod | grep -q algif_aead; then
-            sudo rmmod algif_aead || echo "WARNING: rmmod failed - module may be in use"
-          elif modinfo algif_aead 2>/dev/null | grep -q builtin; then
-            echo "WARNING: algif_aead built-in - modprobe.d blacklist has no effect"
-          fi
-
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -103,5 +93,18 @@ jobs:
       - name: Install dependencies
         run: pnpm ci --ignore-scripts
 
+      - name: Cache turbo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # turbo run abi:check chains //#contracts:build -> //#abi:build -> //#abi:check.
+      # The forge build/cache above already materialises contracts/out + dependencies,
+      # so contracts:build is a cheap no-op (forge is incremental) when turbo misses,
+      # and the whole chain is skipped when abi inputs are unchanged (e.g. a dep bump
+      # triggered this run via package.json but no .sol/abi source moved).
       - name: Verify SDK ABIs are up to date
-        run: pnpm abi:check
+        run: pnpm exec turbo run abi:check

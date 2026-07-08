@@ -10,7 +10,7 @@ import {
 } from "../../test-fixtures";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../../events/sdk-events";
 import type { GenericProvider } from "../../types/provider";
-import type { TransactionPrepareRequest } from "../../types/offline";
+import type { TransactionPrepareRequest } from "../../types";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
@@ -45,10 +45,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         from: userAddress,
-        call: expect.objectContaining({
-          address: TOKEN,
-          functionName: "confidentialTransfer",
-        }),
+        call: expect.objectContaining({ address: TOKEN, functionName: "confidentialTransfer" }),
       }),
     );
     expect(prepared.kind).toBe("ConfidentialTransfer");
@@ -180,9 +177,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({
-          functionName: "confidentialTransferFrom",
-        }),
+        call: expect.objectContaining({ functionName: "confidentialTransferFrom" }),
       }),
     );
   });
@@ -203,9 +198,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encrypt).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "setOperator" }),
-      }),
+      expect.objectContaining({ call: expect.objectContaining({ functionName: "setOperator" }) }),
     );
   });
 
@@ -226,9 +219,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encrypt).toHaveBeenCalledOnce();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "unwrap" }),
-      }),
+      expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
     );
   });
 
@@ -251,9 +242,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     expect(relayer.encrypt).not.toHaveBeenCalled();
     expect(provider.readContract).toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "unwrap" }),
-      }),
+      expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
     );
   });
 
@@ -306,9 +295,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encrypt).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "approve" }),
-      }),
+      expect.objectContaining({ call: expect.objectContaining({ functionName: "approve" }) }),
     );
   });
 
@@ -322,9 +309,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       amount: 10n,
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        call: expect.objectContaining({ functionName: "wrap" }),
-      }),
+      expect.objectContaining({ call: expect.objectContaining({ functionName: "wrap" }) }),
     );
   });
 
@@ -365,9 +350,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({
-          functionName: "delegateForUserDecryption",
-        }),
+        call: expect.objectContaining({ functionName: "delegateForUserDecryption" }),
       }),
     );
   });
@@ -388,9 +371,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({
-          functionName: "revokeDelegationForUserDecryption",
-        }),
+        call: expect.objectContaining({ functionName: "revokeDelegationForUserDecryption" }),
       }),
     );
   });
@@ -406,10 +387,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     await sdk.offlineSigning.broadcast(prepared, SIGNED);
     expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.SetOperatorSubmitted,
-        txHash: TX_HASH,
-      }),
+      expect.objectContaining({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash: TX_HASH }),
     );
   });
 });
@@ -562,10 +540,7 @@ describe("OfflineSigningService — broadcast error paths", () => {
       "Broadcast failed for ConfidentialTransfer",
     );
     expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "transfer",
-      }),
+      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
     );
     // Submitted event must NOT have fired — the send failed.
     const submittedCall = vi
@@ -601,16 +576,10 @@ describe("OfflineSigningService — broadcast error paths", () => {
     // Submitted MUST have been emitted with the real txHash — the caller can
     // recover via resume.
     expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransferSubmitted,
-        txHash: TX_HASH,
-      }),
+      expect.objectContaining({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH }),
     );
     expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "transfer",
-      }),
+      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
     );
   });
 
@@ -654,10 +623,7 @@ describe("OfflineSigningService — broadcast error paths", () => {
     expect(err).toBeInstanceOf(SigningFailedError);
     expect((err as Error).message).toContain("Sign failed for ConfidentialTransfer");
     expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransactionError,
-        operation: "transfer",
-      }),
+      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
     );
   });
 });
@@ -768,12 +734,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
     },
     {
       kind: "SetOperator",
-      requestFor: (from) => ({
-        kind: "SetOperator",
-        from,
-        token: TOKEN,
-        operator: RECIPIENT,
-      }),
+      requestFor: (from) => ({ kind: "SetOperator", from, token: TOKEN, operator: RECIPIENT }),
       event: ZamaSDKEvents.SetOperatorSubmitted,
     },
     {
@@ -789,13 +750,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
     },
     {
       kind: "Wrap",
-      requestFor: (from) => ({
-        kind: "Wrap",
-        from,
-        wrapper: TOKEN,
-        to: RECIPIENT,
-        amount: 1n,
-      }),
+      requestFor: (from) => ({ kind: "Wrap", from, wrapper: TOKEN, to: RECIPIENT, amount: 1n }),
       event: ZamaSDKEvents.ShieldSubmitted,
     },
     {
@@ -851,10 +806,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
 });
 
 describe("OfflineSigningService — encryption invariants", () => {
-  const empty = {
-    encryptedValues: [] as `0x${string}`[],
-    inputProof: "0x040506" as `0x${string}`,
-  };
+  const empty = { encryptedValues: [] as `0x${string}`[], inputProof: "0x040506" as `0x${string}` };
 
   test("ConfidentialTransfer throws EncryptionFailedError on empty handles", async ({
     createSDK,
@@ -1084,12 +1036,7 @@ describe("OfflineSigningService — prepare option overrides", () => {
   }) => {
     const sdk = createSDK({ signer });
     await sdk.offlineSigning.prepare(
-      {
-        kind: "SetOperator",
-        from: userAddress,
-        token: TOKEN,
-        operator: RECIPIENT,
-      },
+      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
       { nonce: 42 },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -1105,31 +1052,18 @@ describe("OfflineSigningService — prepare option overrides", () => {
   }) => {
     const sdk = createSDK({ signer });
     await sdk.offlineSigning.prepare(
-      {
-        kind: "SetOperator",
-        from: userAddress,
-        token: TOKEN,
-        operator: RECIPIENT,
-      },
+      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
       { maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        maxFeePerGas: 1_000_000_000n,
-        maxPriorityFeePerGas: 1n,
-      }),
+      expect.objectContaining({ maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n }),
     );
   });
 
   test("threads options.gasLimit through", async ({ createSDK, signer, provider, userAddress }) => {
     const sdk = createSDK({ signer });
     await sdk.offlineSigning.prepare(
-      {
-        kind: "SetOperator",
-        from: userAddress,
-        token: TOKEN,
-        operator: RECIPIENT,
-      },
+      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
       { gasLimit: 250_000n },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(

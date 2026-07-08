@@ -2,9 +2,9 @@
   "name": "@zama-fhe/test-nextjs",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
+  "type": "module",
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "next build",
@@ -30,9 +30,9 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3"
   },
-  "packageManager": "pnpm@10.30.2",
   "engines": {
     "node": ">=22",
     "pnpm": ">=10"
-  }
+  },
+  "packageManager": "pnpm@10.30.2"
 }

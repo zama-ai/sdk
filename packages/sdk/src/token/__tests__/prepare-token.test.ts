@@ -81,11 +81,7 @@ describe("WrappedToken.prepareShield — routing", () => {
       }),
     );
     expect(plan.steps[1]).toEqual(
-      expect.objectContaining({
-        kind: "Wrap",
-        wrapper: wrapperAddress,
-        amount: 500n,
-      }),
+      expect.objectContaining({ kind: "Wrap", wrapper: wrapperAddress, amount: 500n }),
     );
   });
 

@@ -10,7 +10,9 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
   const hex = i.toString(16).padStart(40, "0");
   return `0x${hex}` as const;
 });
-const [A, B, C] = ADDRS;
+const A = ADDRS[0]!;
+const B = ADDRS[1]!;
+const C = ADDRS[2]!;
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({

@@ -21,7 +21,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`).
+The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -170,6 +170,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 ## Next steps
 
+- [Decrypt values from event logs](./decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
 - [RelayerNode](../reference/sdk/RelayerNode.md) -- `node()` transport factory options
 - [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management

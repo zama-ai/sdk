@@ -10,13 +10,7 @@ const RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
 
 const PREPARED: PreparedFor<"ConfidentialTransfer"> = {
   kind: "ConfidentialTransfer",
-  request: {
-    kind: "ConfidentialTransfer",
-    from: USER,
-    token: TOKEN,
-    to: RECIPIENT,
-    amount: 1n,
-  },
+  request: { kind: "ConfidentialTransfer", from: USER, token: TOKEN, to: RECIPIENT, amount: 1n },
   unsignedTx: "0xabcd",
   from: USER,
   to: TOKEN,

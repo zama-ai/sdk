@@ -69,10 +69,7 @@ export function usePrepare<TContext = unknown>(
     Error,
     PrepareParams,
     TContext
-  >({
-    ...prepareMutationOptions(sdk),
-    ...options,
-  });
+  >({ ...prepareMutationOptions(sdk), ...options });
 }
 
 // Re-export the canonical request types so callers can type their literals

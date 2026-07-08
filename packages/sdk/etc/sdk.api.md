@@ -640,9 +640,6 @@ export class ChromeSessionStorage implements GenericStorage {
 export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
-export function clearPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<void>;
-
-// @public
 export function cleartext(): CleartextRelayerConfig;
 
 // @public
@@ -5463,8 +5460,8 @@ export class Decryption {
         delegatorAddress: Address;
         accountAddress?: Address;
         maxConcurrency?: number;
-    }): Promise<BatchDecryptResult>;
-    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address): Promise<Record<EncryptedValue, ClearValue>>;
+    } & DelegatedDecryptOptions): Promise<BatchDecryptResult>;
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, accountAddress?: Address, options?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -5541,8 +5538,13 @@ export interface DecryptValuesParams {
     startTimestamp: number;
 }
 
-// @public
+// @public @deprecated
 export const DefaultRegistryAddresses: Record<number, Address>;
+
+// @public
+export interface DelegatedDecryptOptions {
+    waitForPropagation?: boolean;
+}
 
 // @public
 export interface DelegatedDecryptValuesParams {
@@ -11337,12 +11339,6 @@ export interface ListPairsOptions {
 }
 
 // @public
-export function loadPendingUnshield(storage: GenericStorage, wrapperAddress: Address): Promise<Hex | null>;
-
-// @public
-export function loadPendingUnshieldRequest(storage: GenericStorage, wrapperAddress: Address): Promise<PendingUnshieldRequest | null>;
-
-// @public
 export const mainnet: {
     readonly id: 1;
     readonly gatewayChainId: 261131;
@@ -11585,12 +11581,6 @@ export interface PaginatedResult<T> {
     readonly pageSize: number;
     // (undocumented)
     readonly total: number;
-}
-
-// @public
-export interface PendingUnshieldRequest {
-    readonly unwrapRequestId?: EncryptedValue;
-    readonly unwrapTxHash: Hex;
 }
 
 // @public
@@ -13159,9 +13149,6 @@ export class RpcRateLimitError extends ZamaError {
     });
     readonly retryAfter: number | undefined;
 }
-
-// @public
-export function savePendingUnshield(storage: GenericStorage, wrapperAddress: Address, unwrapTxHash: Hex, unwrapRequestId?: EncryptedValue): Promise<void>;
 
 // @public
 export const sepolia: {
@@ -18574,6 +18561,30 @@ export interface WorkerLike {
 }
 
 // @public
+export class WorkerRecycledError extends ZamaError {
+    constructor(args: {
+        operation: string;
+        worker?: string;
+    }, options?: ErrorOptions);
+    readonly operation: string;
+    readonly worker: string | undefined;
+}
+
+// @public
+export class WorkerTimeoutError extends ZamaError {
+    constructor(args: {
+        operation: string;
+        timeout: number;
+        elapsed: number;
+        worker?: string;
+    }, options?: ErrorOptions);
+    readonly elapsed: number;
+    readonly operation: string;
+    readonly timeout: number;
+    readonly worker: string | undefined;
+}
+
+// @public
 export function wrapContract(wrapperAddress: Address, to: Address, amount: bigint): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19724,6 +19735,7 @@ export class WrappedToken extends Token {
     // (undocumented)
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
+    getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
     prepareShield(amount: bigint, options?: {
         recipient?: Address;
@@ -19885,7 +19897,9 @@ export const ZamaErrorCode: {
     readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
     readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** The configured signer/account is not entitled (ACL) to decrypt this encrypted value. Don't retry — wait for a grant. */
     readonly NotEntitled: "NOT_ENTITLED"; /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
-    readonly RpcRateLimited: "RPC_RATE_LIMITED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
+    readonly RpcRateLimited: "RPC_RATE_LIMITED"; /** A worker operation exceeded its configured timeout; the worker is recycled by default. Retryable. */
+    readonly OperationTimeout: "OPERATION_TIMEOUT"; /** An in-flight worker operation was aborted as collateral of another operation's timeout recycle. Retryable. */
+    readonly WorkerRecycled: "WORKER_RECYCLED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
     readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
     readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
     readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */

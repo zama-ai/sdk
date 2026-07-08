@@ -281,7 +281,7 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
     }) => {
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("tx reverted"));
+      vi.mocked(signer.writeContract!).mockRejectedValue(new Error("tx reverted"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
@@ -536,7 +536,7 @@ describe("Token event emissions", () => {
         .mockResolvedValueOnce("0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c")
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n);
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
+      vi.mocked(signer.writeContract!).mockRejectedValue(new Error("shield failed"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.shield(100n, { approvalStrategy: "skip" })).rejects.toThrow();
@@ -551,7 +551,7 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
     }) => {
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("setOperator failed"));
+      vi.mocked(signer.writeContract!).mockRejectedValue(new Error("setOperator failed"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
@@ -568,7 +568,7 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
     }) => {
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("unwrap failed"));
+      vi.mocked(signer.writeContract!).mockRejectedValue(new Error("unwrap failed"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.unwrap(50n)).rejects.toThrow();
@@ -583,7 +583,7 @@ describe("Token event emissions", () => {
       signer,
       tokenAddress,
     }) => {
-      vi.mocked(signer.writeContract).mockRejectedValue(new Error("finalize tx failed"));
+      vi.mocked(signer.writeContract!).mockRejectedValue(new Error("finalize tx failed"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(token.finalizeUnwrap("0xburn" as Address)).rejects.toThrow();

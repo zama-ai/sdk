@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import { encodeAbiParameters } from "viem";
 import { Wallet } from "ethers";
+import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
 import { WalletNotConnectedError } from "../../errors";
@@ -42,8 +43,8 @@ const { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner } =
   return { mockContractMethod, MockContract, MockBrowserProvider, mockGetSigner };
 });
 
-vi.mock(import("ethers"), async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock("ethers", async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof ethersModule;
   return {
     ...actual,
     ethers: { ...actual.ethers, Contract: MockContract },
@@ -392,7 +393,7 @@ describe("EthersProvider", () => {
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       const receipt = await ethersProvider.waitForTransactionReceipt("0xhash" as Hex);
-      expect(receipt.logs[0].topics).toEqual(["0xa", "0xb"]);
+      expect(receipt.logs[0]!.topics).toEqual(["0xa", "0xb"]);
     });
 
     test("throws when receipt is null", async () => {

@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ZamaSDKEvents,
-  IndexedDBStorage,
-  createConfig,
-  indexedDBStorage,
-  savePendingUnshield,
-} from "@zama-fhe/sdk";
+import { IndexedDBStorage, createConfig, indexedDBStorage } from "@zama-fhe/sdk";
 import { sepolia as fheSepolia } from "@zama-fhe/sdk/chains";
 import { web } from "@zama-fhe/sdk/web";
 import { ViemProvider, ViemSigner } from "@zama-fhe/sdk/viem";
@@ -23,7 +17,6 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { SEPOLIA_RPC_URL } from "@/lib/config";
-import { getActiveUnshieldToken, setActiveUnshieldToken } from "@/lib/activeUnshield";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
@@ -46,9 +39,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 //
 // Two extra layers handle wallet reactivity:
 //
-// 1. Separate IndexedDB instances for storage and permitStorage — both use the
-//    same internal key; sharing one DB instance can overwrite credential data,
-//    forcing re-signing on every balance decrypt.
+// 1. Separate IndexedDB instances for storage and permitStorage — not required for
+//    correctness (keys are namespaced internally), kept separate here for clarity
+//    between the two storage responsibilities.
 //
 // 2. walletKey + refSeededRef — remounts ZamaProvider on wallet switch with a
 //    fresh ViemSigner bound to the new account, while ignoring spurious
@@ -171,22 +164,6 @@ export function Providers({ children }: { children: ReactNode }) {
       storage: indexedDBStorage,
       permitStorage: permitDBStorage,
       relayers: { [zamaSepolia.id]: web() },
-      onEvent: (event) => {
-        // ZamaSDKEvents.UnshieldPhase1Submitted fires after Phase 1 is mined (the SDK
-        // awaits the receipt before emitting). Saving here ensures the pending state
-        // survives a tab close between Phase 1 completion and Phase 2 completion.
-        // See activeUnshield.ts for why wrapperAddress is passed via a module-level ref.
-        // NOTE: indexedDBStorage must be the same instance as the `storage` field above.
-        if (event.type === ZamaSDKEvents.UnshieldPhase1Submitted) {
-          const wrapperAddress = getActiveUnshieldToken();
-          if (wrapperAddress) {
-            savePendingUnshield(indexedDBStorage, wrapperAddress, event.txHash).catch((err) =>
-              console.error("[Providers] Failed to persist pending unshield:", event.txHash, err),
-            );
-            setActiveUnshieldToken(null);
-          }
-        }
-      },
     });
   }, [walletKey]); // eslint-disable-line react-hooks/exhaustive-deps
 

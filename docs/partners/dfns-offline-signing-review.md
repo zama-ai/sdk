@@ -297,7 +297,7 @@ All links point to the `feature/sdk-75-deferred-signing-v2` branch, where this
 pipeline lives until it merges:
 
 - Public API + caveats: [`packages/sdk/src/namespaces/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/namespaces/offline-signing.ts)
-- Request / prepared types: [`packages/sdk/src/types/offline.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/offline.ts)
+- Request / prepared types: [`packages/sdk/src/types/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/offline-signing.ts)
 - Signer contract (for the adapter alternative): [`packages/sdk/src/types/signer.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/signer.ts)
 - Provider contract (nonce/fees/broadcast): [`packages/sdk/src/types/provider.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/provider.ts)
 - Working DFNS integration: [`packages/sdk/src/services/__tests__/dfns.integration.test.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/services/__tests__/dfns.integration.test.ts)

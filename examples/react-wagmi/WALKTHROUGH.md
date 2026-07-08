@@ -46,7 +46,7 @@ const zamaConfig = createZamaConfig({
   wagmiConfig,
   relayers: { [mySepolia.id]: web() },
   storage: indexedDBStorage,
-  sessionStorage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 ```
 
@@ -56,8 +56,8 @@ const zamaConfig = createZamaConfig({
 <ZamaProvider config={zamaConfig}>
 ```
 
-`storage` and `sessionStorage` use the same IndexedDB-backed storage in this browser app so
-credentials and wallet signatures survive page reloads during local development.
+`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
+the transport key pair and signed permits survive page reloads during local development.
 
 ---
 
@@ -262,15 +262,12 @@ limiting with a private node.
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
 
-1. `onEvent` in `ZamaProvider` intercepts `ZamaSDKEvents.UnshieldPhase1Submitted` and
-   calls `savePendingUnshield(indexedDBStorage, wrapperAddress, txHash)`.
+1. `WrappedToken` persists the unwrap tx hash automatically once Phase 1 is mined —
+   no app-level wiring needed.
 2. On the next page load, `PendingUnshieldCard` reads the pending hash via
-   `loadPendingUnshield(storage, tokenAddress)`.
-3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2.
-
-The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvider`
-**must always reference the same `indexedDBStorage` instance**. If you ever change the
-`storage` prop, update `onEvent` to match.
+   `usePendingUnshield(tokenAddress)`.
+3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2, which clears the
+   pending state automatically on success.
 
 ---
 

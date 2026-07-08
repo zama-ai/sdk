@@ -16,7 +16,7 @@ import { hardhat } from "../../../chains";
 import type { EncryptedValue } from "../../relayer-sdk.types";
 import { MOCK_INPUT_SIGNER_PK, MOCK_KMS_SIGNER_PK } from "../constants";
 import { RelayerCleartext } from "../relayer-cleartext";
-import { DelegationNotPropagatedError, NotEntitledError } from "../../../errors";
+import { NotEntitledError } from "../../../errors";
 
 const hardhatCleartextConfig = hardhat;
 
@@ -678,11 +678,12 @@ describe("RelayerCleartext", () => {
     expect(plaintextCalls).toHaveLength(0);
   });
 
-  test("delegatedUserDecrypt throws transient DelegationNotPropagatedError when the delegator lacks the ACL grant", async () => {
-    // Parity with the relayer/worker path: a handle can be delegated yet the
-    // *delegator* not (yet) hold `persistAllowed`. In production this surfaces as
-    // the transient DelegationNotPropagatedError (delegated ACL denial = lag);
-    // local cleartext dev must classify it identically, not as a generic failure.
+  test("delegatedUserDecrypt throws terminal NotEntitledError when the delegator lacks the ACL grant", async () => {
+    // Cleartext is host-chain-only: the ACL check reads the local chain directly,
+    // so a handle that is delegated yet whose *delegator* lacks `persistAllowed`
+    // is an authoritative, permanent denial — not a gateway propagation lag. It
+    // maps to the terminal NotEntitledError, so the delegated-decrypt retry loop
+    // fails fast instead of spinning its budget on a local misconfig.
     const handle = asHandle("0x" + "12".repeat(32));
     const delegateAddress = "0x3000000000000000000000000000000000000003";
     const { fhevm, calls } = createInstance({
@@ -703,7 +704,7 @@ describe("RelayerCleartext", () => {
         startTimestamp: 1,
         durationDays: 1,
       }),
-    ).rejects.toBeInstanceOf(DelegationNotPropagatedError);
+    ).rejects.toBeInstanceOf(NotEntitledError);
 
     // Never reaches plaintext read — denied at the ACL pre-check.
     const plaintextCalls = filterEthCallsTo(calls, hardhatCleartextConfig.executorAddress);

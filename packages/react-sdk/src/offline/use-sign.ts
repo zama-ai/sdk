@@ -26,8 +26,5 @@ export function useSign<TContext = unknown>(
   options?: UseMutationOptions<Hex, Error, SignParams, TContext>,
 ): UseMutationResult<Hex, Error, SignParams, TContext> {
   const sdk = useZamaSDK();
-  return useMutation<Hex, Error, SignParams, TContext>({
-    ...signMutationOptions(sdk),
-    ...options,
-  });
+  return useMutation<Hex, Error, SignParams, TContext>({ ...signMutationOptions(sdk), ...options });
 }

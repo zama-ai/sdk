@@ -10,6 +10,8 @@ const CURRENT_VERSION = 1;
 /**
  * Persisted state for an in-progress unshield request.
  * Used to resume an interrupted unshield after page reload.
+ *
+ * @internal
  */
 export interface PendingUnshieldRequest {
   /** Transaction hash of the original unwrap call. */
@@ -60,6 +62,8 @@ const PendingUnshieldRequestSchema = z.union([
 /**
  * Persist the unwrap tx hash so an interrupted unshield can be resumed later
  * (e.g. after a page reload).
+ *
+ * @internal
  */
 export async function savePendingUnshield(
   storage: GenericStorage,
@@ -81,6 +85,8 @@ export async function savePendingUnshield(
 
 /**
  * Load a previously saved unwrap tx hash, or `null` if none exists.
+ *
+ * @internal
  */
 export async function loadPendingUnshield(
   storage: GenericStorage,
@@ -97,6 +103,8 @@ export async function loadPendingUnshield(
  * rediscovers the right finalize input from the emitted `UnwrapRequested` event.
  * Use `unwrapRequestId` directly only for custom flows that call `finalizeUnwrap()`
  * without reloading the original unwrap receipt.
+ *
+ * @internal
  */
 export async function loadPendingUnshieldRequest(
   storage: GenericStorage,
@@ -117,6 +125,8 @@ export async function loadPendingUnshieldRequest(
 
 /**
  * Clear the saved unwrap tx hash after a successful finalization.
+ *
+ * @internal
  */
 export async function clearPendingUnshield(
   storage: GenericStorage,

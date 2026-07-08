@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
+  invalidateAfterUnshieldSettled,
   type UnshieldAllParams,
   unshieldAllMutationOptions,
 } from "@zama-fhe/sdk/query";
@@ -40,6 +41,10 @@ export function useUnshieldAll(
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
       invalidateAfterUnshield(context.client, token.address);
+    },
+    onSettled: (data, error, variables, onMutateResult, context) => {
+      options?.onSettled?.(data, error, variables, onMutateResult, context);
+      invalidateAfterUnshieldSettled(context.client, token.address);
     },
   });
 }
