@@ -190,7 +190,7 @@ import { node } from "@zama-fhe/sdk/node";
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
+  ...(RELAYER_API_KEY && { auth: { type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 
 using sdk = new ZamaSDK(
