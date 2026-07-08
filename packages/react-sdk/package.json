@@ -60,7 +60,7 @@
     "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.wagmi.json"
   },
   "devDependencies": {
-    "@fhevm/sdk": "1.1.0-alpha.7",
+    "@fhevm/sdk": "1.2.0-alpha.1",
     "@zama-fhe/sdk": "workspace:*",
     "viem": "^2.53.1"
   },

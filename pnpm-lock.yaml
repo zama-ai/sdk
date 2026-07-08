@@ -171,8 +171,8 @@ importers:
         version: 3.6.17(@tanstack/query-core@5.101.0)(@tanstack/react-query@5.101.0(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
     devDependencies:
       '@fhevm/sdk':
-        specifier: 1.1.0-alpha.7
-        version: 1.1.0-alpha.7(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
+        specifier: 1.2.0-alpha.1
+        version: 1.2.0-alpha.1(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
       '@zama-fhe/sdk':
         specifier: workspace:*
         version: link:../sdk
@@ -183,8 +183,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 1.1.0-alpha.7
-        version: 1.1.0-alpha.7(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
+        specifier: 1.2.0-alpha.1
+        version: 1.2.0-alpha.1(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -522,8 +522,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@1.1.0-alpha.7':
-    resolution: {integrity: sha512-xaAeMpD1byLmg5I3zWT0qrOXxEr/UOdgaQGS/7QU7zrlmMJJ0tWrwsig1KSY+ZRaB/rnrupevzM9fd6rf6Rr9w==}
+  '@fhevm/sdk@1.2.0-alpha.1':
+    resolution: {integrity: sha512-+cSz3NVcQ+z2LOfJh8DZLGpGe0UVEKzDSCF5RIl0KUeLxnmtiURPA1okvDYb/+bjshLwvAl1y39RkiZDLTVkKw==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -3896,7 +3896,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@fhevm/sdk@1.1.0-alpha.7(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))':
+  '@fhevm/sdk@1.2.0-alpha.1(ethers@6.17.0)(typescript@6.0.3)(viem@2.53.1(typescript@6.0.3)(zod@4.4.3))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
