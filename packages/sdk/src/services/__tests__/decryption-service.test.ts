@@ -66,6 +66,54 @@ describe("DecryptionService", () => {
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
   });
 
+  test("userDecrypt splits one contract's handles across the 2048-bit request budget (SDK-252)", async ({
+    cachingService,
+    decryptionService,
+    relayer,
+    userAddress,
+  }) => {
+    // 40 euint64 handles (64 bits each) on one contract = 2560 bits, over the
+    // 2048 cap — must split into a 32-handle chunk (exactly 2048 bits) and an
+    // 8-handle remainder, each within budget.
+    const euint64Handles: EncryptedValue[] = Array.from(
+      { length: 40 },
+      (_, i) => `0x${i.toString(16).padStart(60, "0")}0500` as EncryptedValue,
+    );
+    const expected: Record<EncryptedValue, bigint> = {};
+    euint64Handles.forEach((h, i) => {
+      expected[h] = BigInt(i);
+    });
+
+    vi.mocked(relayer.userDecrypt).mockImplementation(
+      async ({ encryptedValues }: { encryptedValues: EncryptedValue[] }) => {
+        const out: Record<EncryptedValue, bigint> = {};
+        for (const ev of encryptedValues) {
+          out[ev] = expected[ev] as bigint;
+        }
+        return out;
+      },
+    );
+
+    const result = await decryptionService.userDecrypt(
+      handles(euint64Handles.map((h) => [h, CONTRACT_A] as [EncryptedValue, Address])),
+      userAddress,
+    );
+
+    expect(result).toEqual(expected);
+    for (const h of euint64Handles) {
+      await expect(cachingService.get(userAddress, CONTRACT_A, h)).resolves.toBe(expected[h]);
+    }
+
+    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    const callSizes = vi
+      .mocked(relayer.userDecrypt)
+      .mock.calls.map(
+        ([arg]) => (arg as { encryptedValues: EncryptedValue[] }).encryptedValues.length,
+      )
+      .toSorted((a, b) => a - b);
+    expect(callSizes).toEqual([8, 32]);
+  });
+
   test("userDecrypt serves cached values without prompting for credentials", async ({
     cachingService,
     decryptionService,

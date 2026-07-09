@@ -20,7 +20,7 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
 import { pLimit } from "../utils/concurrency";
-import { isEncryptedValueZero } from "../utils/handles";
+import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
 import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
@@ -362,6 +362,16 @@ export class DecryptionService {
       }
     }
 
+    // Split each contract's handles to stay under the relayer's per-request
+    // cleartext-bit budget (SDK-252) — a contract with many/wide handles
+    // becomes several relayer calls instead of one oversized, rejected call.
+    const requests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[] = [];
+    for (const [contractAddress, encryptedValues] of byContract) {
+      for (const chunk of chunkHandlesByBitBudget(encryptedValues)) {
+        requests.push({ contractAddress, encryptedValues: chunk });
+      }
+    }
+
     const t0 = Date.now();
     const uncachedEncryptedValues = uncached.map((h) => h.encryptedValue);
     try {
@@ -371,7 +381,7 @@ export class DecryptionService {
       });
 
       await pLimit(
-        [...byContract.entries()].map(([contractAddress, encryptedValues]) => async () => {
+        requests.map(({ contractAddress, encryptedValues }) => async () => {
           // Classify per contract so a not-entitled / relayer failure carries the
           // exact contract + ACL actor (the request context the worker no longer
           // threads). Already-typed errors pass straight through.

@@ -1,7 +1,7 @@
 import { toBytes } from "viem";
 
 import { HANDLE_VERSION } from "../constants";
-import { fheTypeIdFromName } from "../fhe-type";
+import { fheTypeIdFromName } from "../../../utils/fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "../handle";
 import { hardhat } from "../../../chains";
 import { describe, expect, test } from "../../../test-fixtures";

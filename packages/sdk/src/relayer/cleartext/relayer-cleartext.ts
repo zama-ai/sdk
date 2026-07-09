@@ -49,7 +49,7 @@ import {
   fheTypeIdFromName,
   isFheTypeName,
   type FheTypeId,
-} from "./fhe-type";
+} from "../../utils/fhe-type";
 import { computeInputHandle, computeMockCiphertext } from "./handle";
 import type { FheChain } from "../../chains/types";
 import {

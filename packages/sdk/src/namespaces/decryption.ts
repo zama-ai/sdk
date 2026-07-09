@@ -29,6 +29,10 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
  * **Mixed signer requirement:** `decryptValues` and
  * `delegatedDecryptValues` need a configured signer; `decryptPublicValues`
  * does not. Each method documents its requirement in its JSDoc.
+ *
+ * **Request chunking:** decrypt requests are split internally to stay under
+ * the relayer's per-request cleartext-bit budget (`MAX_DECRYPTION_REQUEST_BITS`) —
+ * callers never need to size batches themselves.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
