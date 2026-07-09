@@ -1,0 +1,24 @@
+id: rename-config-session-storage
+snapshots:
+  'createConfig({ storage, sessionStorage: sessionDBStorage });':
+    fixed: 'createConfig({ storage, permitStorage: sessionDBStorage });'
+    labels:
+    - source: 'sessionStorage: sessionDBStorage'
+      style: primary
+      start: 24
+      end: 56
+    - source: 'createConfig({ storage, sessionStorage: sessionDBStorage })'
+      style: secondary
+      start: 0
+      end: 59
+  'createZamaConfig({ sessionStorage: sessionDBStorage, storage });':
+    fixed: 'createZamaConfig({ permitStorage: sessionDBStorage, storage });'
+    labels:
+    - source: 'sessionStorage: sessionDBStorage'
+      style: primary
+      start: 19
+      end: 51
+    - source: 'createZamaConfig({ sessionStorage: sessionDBStorage, storage })'
+      style: secondary
+      start: 0
+      end: 63

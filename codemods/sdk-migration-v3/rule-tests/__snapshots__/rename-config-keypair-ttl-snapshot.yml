@@ -1,0 +1,24 @@
+id: rename-config-keypair-ttl
+snapshots:
+  'createConfig({ storage, keypairTTL: 2592000 });':
+    fixed: 'createConfig({ storage, transportKeyPairTTL: 2592000 });'
+    labels:
+    - source: 'keypairTTL: 2592000'
+      style: primary
+      start: 24
+      end: 43
+    - source: 'createConfig({ storage, keypairTTL: 2592000 })'
+      style: secondary
+      start: 0
+      end: 46
+  'createZamaConfig({ keypairTTL: 2592000, storage });':
+    fixed: 'createZamaConfig({ transportKeyPairTTL: 2592000, storage });'
+    labels:
+    - source: 'keypairTTL: 2592000'
+      style: primary
+      start: 19
+      end: 38
+    - source: 'createZamaConfig({ keypairTTL: 2592000, storage })'
+      style: secondary
+      start: 0
+      end: 50

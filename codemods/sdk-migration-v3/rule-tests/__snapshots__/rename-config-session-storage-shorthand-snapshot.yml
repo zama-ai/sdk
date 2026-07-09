@@ -1,0 +1,13 @@
+id: rename-config-session-storage-shorthand
+snapshots:
+  createConfig({ storage, sessionStorage });:
+    fixed: 'createConfig({ storage, permitStorage: sessionStorage });'
+    labels:
+    - source: sessionStorage
+      style: primary
+      start: 24
+      end: 38
+    - source: createConfig({ storage, sessionStorage })
+      style: secondary
+      start: 0
+      end: 41
