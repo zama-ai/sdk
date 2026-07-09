@@ -76,12 +76,23 @@ export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient
  */
 export interface RelayerOptions extends FhevmClientOptions {
   /**
-   * Maximum total duration, in milliseconds, to wait for a relayer request
-   * before giving up. This bounds the whole async operation — proof generation
-   * or decryption, including the retry/backoff polling loop — not a single HTTP
-   * call. Defaults to the `@fhevm/sdk` ceiling of one hour; set a shorter bound
-   * only if you would rather fail than keep waiting. A per-call `timeout`
-   * overrides this default.
+   * Maximum duration, in milliseconds, to wait for a relayer **request** — an
+   * input-proof generation or a decryption, including its retry/backoff polling
+   * loop, not a single HTTP call. Defaults to the `@fhevm/sdk` ceiling of one
+   * hour; set a shorter bound only if you would rather fail than keep waiting. A
+   * per-call `timeout` overrides this default.
+   *
+   * @remarks
+   * Bounds only the relayer request, not `@fhevm/sdk`'s one-time (per client)
+   * init phase — on-chain protocol-version resolution, the ~50 MB FHE key fetch,
+   * and the WASM module load — which runs before the first request and can hang
+   * independently of this value. A failed init does not self-recover; discard
+   * the client and build a new one to retry.
+   *
+   * @privateRemarks
+   * `@fhevm/sdk`'s `init()` accepts no options, so no timeout/signal reaches
+   * that phase, and it memoizes a rejected ready-promise (`??=`). Bounding init
+   * is tracked upstream in `@fhevm/sdk`.
    */
   timeout?: number;
 }
