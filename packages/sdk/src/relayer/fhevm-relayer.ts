@@ -7,10 +7,12 @@ import type { FhevmClient, FhevmClientOptions, FhevmRelayerSDK, FhevmRuntimeConf
 
 interface RelayerCommonOptions {
   auth: FhevmRuntimeConfig["auth"];
-  headers?: Record<string, string>;
+  headers: Record<string, string> | undefined;
   debug: boolean | undefined;
   fetchRetries: number | undefined;
   fetchRetryDelayInMilliseconds: number | undefined;
+  signal: AbortSignal | undefined;
+  timeout: number | undefined;
 }
 
 /** Construction config for {@link FhevmRelayer}. */
