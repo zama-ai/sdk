@@ -390,8 +390,8 @@ export const hoodi: {
     readonly relayerUrl: "";
     readonly network: "https://rpc.hoodi.ethpandaops.io";
     readonly aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68";
-    readonly kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030";
-    readonly inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f";
+    readonly kmsContractAddress: "0x822BE20679CfAfdc352F05dEdfe12a07E912212e";
+    readonly inputVerifierContractAddress: "0xf3D9A51f32D9bC23E1eECb0fAbF1f1DA4d9Bba26";
     readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
     readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
     readonly registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f";
