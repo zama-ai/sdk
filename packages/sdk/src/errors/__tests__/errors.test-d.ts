@@ -45,6 +45,14 @@ describe("isRetryable / retryAfterSeconds", () => {
     expectTypeOf(isRetryable(new Error("x"))).toEqualTypeOf<boolean>();
   });
 
+  test("isRetryable narrows to ZamaError with retryable: true", () => {
+    const error: unknown = new Error("x");
+    if (isRetryable(error)) {
+      expectTypeOf(error).toExtend<ZamaError>();
+      expectTypeOf(error.retryable).toEqualTypeOf<true>();
+    }
+  });
+
   test("retryAfterSeconds accepts unknown and returns number | undefined", () => {
     expectTypeOf(retryAfterSeconds).toBeCallableWith(new Error("x"));
     expectTypeOf(retryAfterSeconds(new Error("x"))).toEqualTypeOf<number | undefined>();

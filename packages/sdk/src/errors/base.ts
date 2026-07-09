@@ -187,7 +187,7 @@ export class ZamaError extends Error {
  * }
  * ```
  */
-export function isRetryable(error: unknown): boolean {
+export function isRetryable(error: unknown): error is ZamaError & { retryable: true } {
   return error instanceof ZamaError && error.retryable;
 }
 
@@ -200,7 +200,7 @@ export function isRetryable(error: unknown): boolean {
  * {@link DelegationNotPropagatedError} — retry those with your own backoff).
  */
 export function retryAfterSeconds(error: unknown): number | undefined {
-  if (!(error instanceof ZamaError) || !("retryAfter" in error)) {
+  if (!isRetryable(error) || !("retryAfter" in error)) {
     return undefined;
   }
   const retryAfter = (error as ZamaError & { retryAfter?: unknown }).retryAfter;

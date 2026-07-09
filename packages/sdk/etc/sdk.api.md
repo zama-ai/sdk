@@ -11218,7 +11218,9 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isRetryable(error: unknown): boolean;
+export function isRetryable(error: unknown): error is ZamaError & {
+    retryable: true;
+};
 
 export { KmsDelegatedDecryptEIP712Type }
 
