@@ -105,6 +105,30 @@ describe("CredentialService chain switching", () => {
     await credentialService.grantPermit([B]);
     expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
   });
+
+  test("permits are keyed by the router chain, not the wallet account", async ({
+    createCredentialService,
+  }) => {
+    // The permit storage key follows the router's active chain — the same chain
+    // its EIP-712 domain is signed against — so a permit granted on one chain is
+    // invisible on another and reappears on switch-back. The mock signer's fixed
+    // account.chainId (31337) is deliberately unrelated to the router chains
+    // here, proving the key no longer derives from the wallet account.
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+
+    router.switchChain(2);
+    expect(await credentialService.hasPermit([A])).toBe(false);
+
+    router.switchChain(1);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+  });
 });
 
 describe("CredentialService.isAllowed", () => {

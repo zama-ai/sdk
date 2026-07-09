@@ -93,7 +93,10 @@ export class CredentialService {
       return { keypair, permissions: [] };
     }
 
-    const chainId = account.chainId;
+    // Key permits by the router's active chain — the same source the permit's
+    // EIP-712 domain is signed against (#signPermit uses this.#router.relayer) —
+    // so the storage key and the signature can never disagree on the chain.
+    const chainId = this.#router.chain.id;
     const scope: PermissionScope = {
       signerAddress,
       chainId,
@@ -153,7 +156,7 @@ export class CredentialService {
     if (keypair === null) {
       return false;
     }
-    const chainId = account.chainId;
+    const chainId = this.#router.chain.id;
     const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
@@ -183,7 +186,7 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = account.chainId;
+    const chainId = this.#router.chain.id;
     await this.#store.deletePermitsTouching(
       { signerAddress, chainId, delegatorAddress: signerAddress },
       normalized,
