@@ -31,6 +31,8 @@ export type {
   EncryptedValue,
   ClearValue,
   EIP712TypedData,
+  TypedValue,
+  DecryptValuesParameters,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.

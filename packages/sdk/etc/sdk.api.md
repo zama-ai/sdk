@@ -10,6 +10,7 @@ import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
+import { DecryptValuesParameters } from '@fhevm/sdk/actions/decrypt';
 import { EIP1193Provider } from 'viem';
 import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
@@ -5453,6 +5454,8 @@ export interface DecryptStartEvent extends BaseEvent {
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
+
+export { DecryptValuesParameters }
 
 // @public @deprecated
 export const DefaultRegistryAddresses: Record<number, Address>;
@@ -14653,6 +14656,8 @@ export interface TransferSubmittedEvent extends BaseEvent {
 export class TransportKeyPairExpiredError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
+
+export { TypedValue }
 
 // @public
 export function underlyingContract(wrapperAddress: Address): {

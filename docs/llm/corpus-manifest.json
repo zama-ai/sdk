@@ -1256,7 +1256,7 @@
       "source_type": "api-report",
       "category": "api-reports",
       "logical_path": "packages/sdk/etc/sdk.api",
-      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { createFhevmClient } from '@fhevm/sdk/viem'; import { EIP1193Provider } from 'viem'; import { Eip712Like } from '@fhevm/sdk/types'; import { Hex } from 'viem'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem'; import { Signer } from 'ethers'; import { TypedValue } from '@fhevm/sdk/types'; import { WalletClient } from 'viem'; import { z } from 'zod/mini';",
+      "description": "import { Abi } from 'viem'; import { Address } from 'viem'; import { ContractFunctionArgs } from 'viem'; import { ContractFunctionName } from 'viem'; import { ContractFunctionReturnType } from 'viem'; import { createFhevmClient } from '@fhevm/sdk/viem'; import { DecryptValuesParameters } from '@fhevm/sdk/actions/decrypt'; import { EIP1193Provider } from 'viem'; import { Eip712Like } from '@fhevm/sdk/types'; import { Hex } from 'viem'; import { Provider } from 'ethers'; import { PublicClient } from 'viem'; import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem'; import { Signer } from 'ethers'; import { TypedValue } from '@fhevm/sdk/types'; import { WalletClient } from 'viem'; import { z } from 'zod/mini';",
       "include_in_llms_txt": false,
       "include_in_llms_full": false
     },

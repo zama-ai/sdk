@@ -1,5 +1,5 @@
 import { waitFor } from "@testing-library/react";
-import type { TypedValue } from "@fhevm/sdk/types";
+import type { TypedValue } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegatedDecryptValues } from "../use-delegated-decrypt";
 

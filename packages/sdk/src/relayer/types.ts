@@ -12,6 +12,15 @@ import type { FheChain } from "../chains/types";
 // surface independent of the underlying FHE library.
 // ============================================================================
 
+/**
+ * The FHE backend's typed clear-text value (`{ type, value }`) and the
+ * `decryptValues` parameter shape, re-exported under the SDK's public surface so
+ * downstream packages (the react-sdk, consumers) never import `@fhevm/sdk`
+ * directly — the FHE backend stays an internal implementation detail.
+ */
+export type { TypedValue } from "@fhevm/sdk/types";
+export type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
+
 /** Canonical SDK type for an encrypted value — a `bytes32` ciphertext reference. */
 export type EncryptedValue = Hex;
 

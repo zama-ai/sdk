@@ -1,8 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { type QueryClient, useMutation } from "@tanstack/react-query";
-import type { TypedValue } from "@fhevm/sdk/types";
-import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import type { Address, DecryptValuesParameters, Hex, TypedValue } from "@zama-fhe/sdk";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferAndCallMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";

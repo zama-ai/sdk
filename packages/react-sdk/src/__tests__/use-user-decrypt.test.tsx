@@ -1,5 +1,4 @@
-import type { Address } from "@zama-fhe/sdk";
-import type { TypedValue } from "@fhevm/sdk/types";
+import type { Address, TypedValue } from "@zama-fhe/sdk";
 import { waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";

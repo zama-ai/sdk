@@ -1,7 +1,5 @@
-import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
-import type { TypedValue } from "@fhevm/sdk/types";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { act, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialBalance } from "../use-confidential-balance";
 

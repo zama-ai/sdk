@@ -1,8 +1,6 @@
-import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
-import type { TypedValue } from "@fhevm/sdk/types";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { type QueryClient, useMutation } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useConfidentialBalance } from "../../balance/use-confidential-balance";
