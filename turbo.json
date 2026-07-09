@@ -2,8 +2,8 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"],
   "tasks": {
+    "typecheck": { "outputs": [] },
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "typecheck": { "dependsOn": ["^build"], "outputs": [] },
     "api-report": { "dependsOn": ["build"], "outputs": ["etc/**"] },
     "api-report:check": { "dependsOn": ["build"], "outputs": [] },
     "//#size": {
