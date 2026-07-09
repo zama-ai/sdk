@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.3.1-alpha.1) (2026-07-09)
+
+### Bug Fixes
+
+- **sdk:** correct Hoodi KMSVerifier preset address ([#540](https://github.com/zama-ai/sdk/issues/540)) ([18d2422]())
+
 ## [3.3.0](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0) (2026-07-08)
 
 ### Features
