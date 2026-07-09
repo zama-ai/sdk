@@ -1,6 +1,6 @@
 import { ConfigurationError } from "../errors";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmClientOptions } from "../relayer/types";
+import type { RelayerOptions } from "../relayer/types";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
@@ -12,10 +12,10 @@ import type { CleartextRelayerConfig } from "./types";
  * @example
  * ```ts
  * // executorAddress comes from the chain preset:
- * relayers: { [hardhat.id]: cleartext() }
+ * relayers: { [hardhat.id]: cleartext({ batchRpcCalls: true }) }
  * ```
  */
-export function cleartext(options?: FhevmClientOptions): CleartextRelayerConfig {
+export function cleartext(options?: RelayerOptions): CleartextRelayerConfig {
   return {
     type: "cleartext",
     createRelayer: (chain) => {

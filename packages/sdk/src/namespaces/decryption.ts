@@ -2,7 +2,12 @@ import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
 import type { ChainRouter } from "../chains/router";
-import type { ClearValue, EncryptedValue, DecryptPublicValuesResult } from "../relayer/types";
+import type {
+  ClearValue,
+  DecryptPublicValuesResult,
+  EncryptedValue,
+  FhevmRelayerOptions,
+} from "../relayer/types";
 import type {
   BatchDecryptResult,
   DecryptionService,
@@ -63,6 +68,7 @@ export class Decryption {
    * Relayer errors are wrapped into typed SDK errors.
    *
    * @param encryptedInput - Encrypted values to decrypt, each paired with its contract address.
+   * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
    * @returns A record mapping each encrypted value to its decrypted clear-text value.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
@@ -77,6 +83,7 @@ export class Decryption {
    */
   async decryptValues(
     encryptedInput: EncryptedInput[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("decryptValues");
     const account = await requireAlignedWalletAccount(
@@ -84,7 +91,7 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.decryptValues(encryptedInput, account.address);
+    return service.decryptValues(encryptedInput, account.address, options);
   }
 
   /**
@@ -143,6 +150,7 @@ export class Decryption {
    * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
    *
    * @param encryptedValues - FHE encrypted values to decrypt publicly.
+   * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
    * @returns Clear-text values, ABI-encoded values, and the decryption proof.
    *
    * @example
@@ -151,7 +159,10 @@ export class Decryption {
    *   await sdk.decryption.decryptPublicValues([encryptedValue]);
    * ```
    */
-  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult> {
+  async decryptPublicValues(
+    encryptedValues: EncryptedValue[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<DecryptPublicValuesResult> {
     if (encryptedValues.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
@@ -159,6 +170,7 @@ export class Decryption {
     try {
       const result = await this.#router.relayer.decryptPublicValuesWithSignatures({
         encryptedValues,
+        options,
       });
       const clearValues: Record<EncryptedValue, ClearValue> = {};
       result.checkSignaturesArgs.handlesList.forEach((handle, i) => {

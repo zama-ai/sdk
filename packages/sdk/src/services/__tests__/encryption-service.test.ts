@@ -43,6 +43,20 @@ describe("EncryptionService", () => {
     );
   });
 
+  test("forwards per-call signal and timeout to the relayer", async ({
+    createEncryptionService,
+    relayer,
+  }) => {
+    const service = createEncryptionService({ emitEvent: vi.fn() });
+    const { signal } = new AbortController();
+
+    await service.encryptValues(ENCRYPT_PARAMS, { timeout: 1234, signal });
+
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { timeout: 1234, signal } }),
+    );
+  });
+
   test("wraps non-ZamaError failures and emits EncryptError", async ({
     createEncryptionService,
     relayer,

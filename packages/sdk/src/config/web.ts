@@ -1,5 +1,5 @@
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmClientOptions } from "../relayer/types";
+import type { RelayerOptions } from "../relayer/types";
 import type { WebRelayerConfig } from "./types";
 
 /**
@@ -8,11 +8,11 @@ import type { WebRelayerConfig } from "./types";
  * @example
  * ```ts
  * relayers: {
- *   [sepolia.id]: web(),
- *   [mainnet.id]: web(),
+ *   [sepolia.id]: web({ timeout: 5 * 60_000 }),
+ *   [mainnet.id]: web({ batchRpcCalls: true }),
  * }
  * ```
  */
-export function web(options?: FhevmClientOptions): WebRelayerConfig {
+export function web(options?: RelayerOptions): WebRelayerConfig {
   return { type: "web", createRelayer: (chain) => new FhevmRelayer({ chain, options }) };
 }

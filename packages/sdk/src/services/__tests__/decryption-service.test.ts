@@ -67,6 +67,27 @@ describe("DecryptionService", () => {
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
   });
 
+  test("decryptValues forwards per-call signal and timeout to the relayer", async ({
+    createDecryptionService,
+    relayer,
+    userAddress,
+  }) => {
+    const service = createDecryptionService({ emitEvent: vi.fn() });
+    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+      { type: "uint64", value: 10n } as TypedValue,
+    ]);
+    const { signal } = new AbortController();
+
+    await service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress, {
+      timeout: 1234,
+      signal,
+    });
+
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { timeout: 1234, signal } }),
+    );
+  });
+
   test("decryptValues serves cached values without prompting for credentials", async ({
     cachingService,
     decryptionService,

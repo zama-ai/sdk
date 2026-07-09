@@ -1178,7 +1178,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
     // @internal
     get logger(): GenericLogger;
     // @internal

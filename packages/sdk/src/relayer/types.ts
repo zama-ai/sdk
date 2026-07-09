@@ -61,12 +61,38 @@ export type FhevmClient = ReturnType<typeof createFhevmClient>;
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
 
 /**
+ * Options for a relayer transport (`web` / `node` / `cleartext`): the per-client
+ * {@link FhevmClientOptions} plus a default request `timeout` applied to every
+ * relayer round-trip on the chain. A per-call `timeout` overrides this default.
+ */
+export interface RelayerOptions extends FhevmClientOptions {
+  /**
+   * Maximum total duration, in milliseconds, to wait for a relayer request
+   * before giving up. This bounds the whole async operation — proof generation
+   * or decryption, including the retry/backoff polling loop — not a single HTTP
+   * call. Defaults to the `@fhevm/sdk` ceiling of one hour; set a shorter bound
+   * only if you would rather fail than keep waiting. A per-call `timeout`
+   * overrides this default.
+   */
+  timeout?: number;
+}
+
+/**
  * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
  * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
  * is one-shot and idempotent; conflicting configs across chains will throw).
  */
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
+export interface FhevmRelayerOptions {
+  auth: FhevmRuntimeConfig["auth"];
+  headers: Record<string, string> | undefined;
+  debug: boolean | undefined;
+  fetchRetries: number | undefined;
+  fetchRetryDelayInMilliseconds: number | undefined;
+  signal: AbortSignal | undefined;
+  timeout: number | undefined;
+}
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.

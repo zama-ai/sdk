@@ -16,7 +16,7 @@ import {
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { ClearValue, EncryptedValue } from "../relayer/types";
+import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
 import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
@@ -58,6 +58,7 @@ interface DecryptionStrategy {
     credentials: SerializedTransportKeyPairWithPermissions;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">;
   }) => Promise<DecryptValuesReturnType>;
   errorMessage: string;
   delegated?: boolean;
@@ -104,17 +105,22 @@ export class DecryptionService {
   async decryptValues(
     handles: EncryptedInput[],
     signerAddress: Address,
+    opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedSigner = getAddress(signerAddress);
-    return this.#decrypt(handles, {
-      requesterAddress: normalizedSigner,
-      aclActorAddress: normalizedSigner,
-      resolveCredentials: (contractAddresses) =>
-        this.#credentialService.grantPermit(contractAddresses),
-      decryptContract: ({ credentials, contractAddress, encryptedValues }) =>
-        this.#decryptValues(credentials, contractAddress, encryptedValues),
-      errorMessage: "Failed to decrypt encrypted values",
-    });
+    return this.#decrypt(
+      handles,
+      {
+        requesterAddress: normalizedSigner,
+        aclActorAddress: normalizedSigner,
+        resolveCredentials: (contractAddresses) =>
+          this.#credentialService.grantPermit(contractAddresses),
+        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
+          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
+        errorMessage: "Failed to decrypt encrypted values",
+      },
+      opts,
+    );
   }
 
   async delegatedDecryptValues(
@@ -122,11 +128,11 @@ export class DecryptionService {
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
-    options?: DelegatedDecryptOptions,
+    opts?: DelegatedDecryptOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#withPropagationRetry(options?.waitForPropagation ?? true, () =>
+    return this.#withPropagationRetry(opts?.waitForPropagation ?? true, () =>
       this.#decrypt(encryptedInputs, {
         requesterAddress: getAddress(accountAddress),
         aclActorAddress: normalizedDelegator,
@@ -137,8 +143,8 @@ export class DecryptionService {
             delegatorAddress: normalizedDelegator,
             delegateAddress: normalizedDelegate,
           }),
-        decryptContract: ({ credentials, contractAddress, encryptedValues }) =>
-          this.#decryptValues(credentials, contractAddress, encryptedValues),
+        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
+          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
         errorMessage: "Failed to decrypt delegated encrypted values",
         delegated: true,
       }),
@@ -283,6 +289,7 @@ export class DecryptionService {
     credentials: SerializedTransportKeyPairWithPermissions,
     contractAddress: Address,
     encryptedValues: EncryptedValue[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<DecryptValuesReturnType> {
     const permit = resolvePermit(credentials, contractAddress);
     const transportKeyPair = await this.#router.relayer.parseTransportKeyPair({
@@ -298,12 +305,14 @@ export class DecryptionService {
       signedPermit,
       encryptedValues,
       contractAddress,
+      options,
     });
   }
 
   async #decrypt(
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
       return {};
@@ -392,6 +401,7 @@ export class DecryptionService {
               credentials,
               contractAddress,
               encryptedValues,
+              options,
             });
           } catch (error) {
             throw wrapDecryptError(error, strategy.errorMessage, {

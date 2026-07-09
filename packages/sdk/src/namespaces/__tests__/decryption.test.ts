@@ -22,6 +22,23 @@ describe("Decryption", () => {
       await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]);
       expect(relayer.decryptValues).toHaveBeenCalledOnce();
     });
+
+    test("forwards per-call signal and timeout to the relayer", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const { signal } = new AbortController();
+
+      await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }], {
+        timeout: 1234,
+        signal,
+      });
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { timeout: 1234, signal } }),
+      );
+    });
   });
 
   describe("delegatedDecryptValues (signer-required)", () => {
@@ -45,6 +62,22 @@ describe("Decryption", () => {
         encryptedValues: [handle],
       });
       expect(result.clearValues[handle]).toBe(500n);
+    });
+
+    test("forwards per-call signal and timeout to the relayer", async ({
+      createSDK,
+      handle,
+      relayer,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      const signal = new AbortController().signal;
+
+      await sdk.decryption.decryptPublicValues([handle], { timeout: 1234, signal });
+
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [handle],
+        options: { timeout: 1234, signal },
+      });
     });
 
     test("returns empty result for empty encrypted values without calling the relayer", async ({

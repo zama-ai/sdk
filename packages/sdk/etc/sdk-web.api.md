@@ -10,7 +10,7 @@ import { EIP1193Provider } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public
-export function web(options?: FhevmClientOptions): WebRelayerConfig;
+export function web(options?: RelayerOptions): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {

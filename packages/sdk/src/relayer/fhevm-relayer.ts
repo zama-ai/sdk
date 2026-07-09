@@ -3,17 +3,7 @@ import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
-import type { FhevmClient, FhevmClientOptions, FhevmRelayerSDK, FhevmRuntimeConfig } from "./types";
-
-interface RelayerCommonOptions {
-  auth: FhevmRuntimeConfig["auth"];
-  headers: Record<string, string> | undefined;
-  debug: boolean | undefined;
-  fetchRetries: number | undefined;
-  fetchRetryDelayInMilliseconds: number | undefined;
-  signal: AbortSignal | undefined;
-  timeout: number | undefined;
-}
+import type { FhevmClient, FhevmRelayerOptions, FhevmRelayerSDK, RelayerOptions } from "./types";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -25,8 +15,11 @@ export interface FhevmRelayerConfig {
    * instead of calling the relayer.
    */
   cleartext?: boolean;
-  /** Per-client `@fhevm/sdk` options forwarded to `createFhevmClient`. */
-  options?: FhevmClientOptions;
+  /**
+   * Per-transport {@link RelayerOptions}: `@fhevm/sdk` client options plus a
+   * default request `timeout` applied to every relayer round-trip on the chain.
+   */
+  options?: RelayerOptions;
 }
 
 /**
@@ -38,10 +31,11 @@ export interface FhevmRelayerConfig {
 export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;
   readonly #fhevm: FhevmClient;
-  readonly #defaultOptions: Partial<RelayerCommonOptions>;
+  readonly #defaultOptions: Partial<FhevmRelayerOptions>;
 
   constructor(config: FhevmRelayerConfig) {
     this.#chain = config.chain;
+    const { timeout, batchRpcCalls, moduleVersions, fheEncryptionKey } = config.options ?? {};
     const params = {
       publicClient: createPublicClient({
         transport:
@@ -50,10 +44,10 @@ export class FhevmRelayer implements FhevmRelayerSDK {
             : custom(this.#chain.network),
       }),
       chain: toFhevmChain(this.#chain),
-      options: config.options,
+      options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
     this.#fhevm = config.cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
-    this.#defaultOptions = { auth: this.#chain.auth, fetchRetries: 2 };
+    this.#defaultOptions = { auth: this.#chain.auth, fetchRetries: 2, timeout };
   }
 
   get chain() {

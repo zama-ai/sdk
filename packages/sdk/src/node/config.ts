@@ -1,7 +1,7 @@
 import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
-import type { FhevmClientOptions } from "../relayer/types";
+import type { RelayerOptions } from "../relayer/types";
 
 /** Node transport — drives the FHE backend directly on the calling thread. */
 export interface NodeRelayerConfig extends RelayerConfig {
@@ -15,11 +15,11 @@ export interface NodeRelayerConfig extends RelayerConfig {
  * @example
  * ```ts
  * relayers: {
- *   [sepolia.id]: node(),
- *   [mainnet.id]: node(),
+ *   [sepolia.id]: node({ timeout: 5 * 60_000 }),
+ *   [mainnet.id]: node({ batchRpcCalls: true }),
  * }
  * ```
  */
-export function node(options?: FhevmClientOptions): NodeRelayerConfig {
+export function node(options?: RelayerOptions): NodeRelayerConfig {
   return { type: "node", createRelayer: (chain) => new FhevmRelayer({ chain, options }) };
 }

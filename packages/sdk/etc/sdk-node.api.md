@@ -60,7 +60,7 @@ export const bscTestnet: {
 export const chains: Record<number, FheChain>;
 
 // @public
-export function cleartext(options?: FhevmClientOptions): CleartextRelayerConfig;
+export function cleartext(options?: RelayerOptions): CleartextRelayerConfig;
 
 // @public
 export type ClearValue = TypedValue["value"] | bigint | string | undefined;
@@ -159,7 +159,7 @@ export const mainnet: {
 };
 
 // @public
-export function node(options?: FhevmClientOptions): NodeRelayerConfig;
+export function node(options?: RelayerOptions): NodeRelayerConfig;
 
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {

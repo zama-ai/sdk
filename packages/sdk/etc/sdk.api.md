@@ -631,7 +631,7 @@ export class ChromeSessionStorage implements GenericStorage {
 export const chromeSessionStorage: ChromeSessionStorage;
 
 // @public
-export function cleartext(options?: FhevmClientOptions): CleartextRelayerConfig;
+export function cleartext(options?: RelayerOptions): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
@@ -5418,8 +5418,8 @@ export class Decryption {
         router: ChainRouter;
         decryptionService: DecryptionService | undefined;
     });
-    decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<DecryptPublicValuesResult>;
-    decryptValues(encryptedInput: DecryptInput[]): Promise<Record<EncryptedValue, ClearValue>>;
+    decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
+    decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
         encryptedInputs: DecryptInput[];
         delegatorAddress: Address;
@@ -19492,7 +19492,7 @@ export class ZamaSDK {
     dispose(): void;
     // @internal
     emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
-    encrypt(params: EncryptParams): Promise<EncryptResult>;
+    encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
     // @internal
     get logger(): GenericLogger;
     // @internal
