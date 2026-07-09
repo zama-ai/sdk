@@ -117,6 +117,18 @@ jobs:
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
+      # Replay the SDK build from the turbo cache that ci.yml's build job populated
+      # under the same turbo-<os>-<sha> key. restore-keys falls back to the latest
+      # branch cache so an unfinished/absent ci build only costs a partial rebuild,
+      # never a cold one. Read-only restore — ci owns the save.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Build SDK packages
         run: pnpm build
 
@@ -231,6 +243,18 @@ jobs:
         with:
           path: /home/runner/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # Replay the SDK build from the turbo cache that ci.yml's build job populated
+      # under the same turbo-<os>-<sha> key. restore-keys falls back to the latest
+      # branch cache so an unfinished/absent ci build only costs a partial rebuild,
+      # never a cold one. Read-only restore — ci owns the save.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       - name: Build SDK packages
         run: pnpm build

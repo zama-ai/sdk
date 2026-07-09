@@ -29,6 +29,7 @@ env:
 jobs:
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       # Enables the live relayer-auth negative checks (cookie / bearer / no-auth
       # / bogus-key are rejected by the hosted relayer). No API key needed.
