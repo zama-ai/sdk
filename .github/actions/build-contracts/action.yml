@@ -1,4 +1,4 @@
-name: Setup Foundry
+name: Build contracts
 description: >-
   Initialise the forge-fhevm submodule, install the pinned Foundry toolchain,
   and materialise the contracts build (contracts/out + dependencies) through a

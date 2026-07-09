@@ -1,4 +1,4 @@
-name: Setup
+name: Install dependencies
 description: >-
   Set up pnpm, Node.js 22, and Aikido Safe Chain, then install dependencies.
   Assumes the repo is already checked out — local composite actions can only
