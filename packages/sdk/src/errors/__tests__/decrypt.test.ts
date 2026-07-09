@@ -300,5 +300,18 @@ describe("wrapDecryptError", () => {
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
     });
+
+    test("maps an @fhevm/sdk RelayerTimeoutError (no status) to a retryable RelayerRequestFailedError", () => {
+      // A relayer timeout carries no HTTP status but the operation is safe to
+      // retry (mirroring the former retryable WorkerTimeoutError). It must not
+      // be misclassified as terminal (retryable: false) like a 4xx/5xx.
+      const timeout = Object.assign(new Error("Relayer request timed out"), {
+        name: "RelayerTimeoutError",
+      });
+      const wrapped = wrapDecryptError(timeout, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
+      expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
+    });
   });
 });

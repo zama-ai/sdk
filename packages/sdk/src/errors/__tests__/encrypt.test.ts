@@ -48,6 +48,21 @@ describe("wrapEncryptError", () => {
     });
   });
 
+  describe("relayer timeout is retryable", () => {
+    test("maps an @fhevm/sdk RelayerTimeoutError (no status) to a retryable RelayerRequestFailedError", () => {
+      // A timeout during encryption carries no HTTP status but is safe to retry;
+      // it must surface as a retryable RelayerRequestFailedError rather than a
+      // terminal EncryptionFailedError (which has no retryable signal at all).
+      const timeout = Object.assign(new Error("Relayer request timed out"), {
+        name: "RelayerTimeoutError",
+      });
+      const wrapped = wrapEncryptError(timeout, "Encryption failed");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
+      expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
+    });
+  });
+
   describe("fallback to EncryptionFailedError", () => {
     test("wraps an Error without statusCode as EncryptionFailedError using the fallback message", () => {
       const error = new Error("network down");

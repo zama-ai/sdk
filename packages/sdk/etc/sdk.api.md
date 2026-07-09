@@ -12581,6 +12581,7 @@ export interface RelayerConfig {
 export class RelayerRequestFailedError extends ZamaError {
     constructor(message: string, statusCode?: number, options?: ErrorOptions & {
         retryAfter?: number;
+        retryable?: boolean;
     });
     readonly retryable: boolean;
     readonly retryAfter: number | undefined;

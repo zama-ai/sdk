@@ -1,4 +1,4 @@
-import { extractHttpStatus, extractRetryAfter } from "../utils/error";
+import { extractHttpStatus, extractRetryAfter, isRelayerTimeoutError } from "../utils/error";
 import { ZamaError } from "./base";
 import { EncryptionFailedError } from "./encryption";
 import { RelayerRequestFailedError } from "./relayer";
@@ -24,12 +24,15 @@ export function wrapEncryptError(error: unknown, fallbackMessage: string): ZamaE
   }
 
   const statusCode = extractHttpStatus(error);
+  // A relayer timeout carries no HTTP status but is safe to retry — surface it as
+  // a retryable RelayerRequestFailedError rather than a terminal EncryptionFailed.
+  const isTimeout = isRelayerTimeoutError(error);
 
-  if (statusCode !== undefined) {
+  if (statusCode !== undefined || isTimeout) {
     return new RelayerRequestFailedError(
       error instanceof Error ? error.message : fallbackMessage,
       statusCode,
-      { cause: error, retryAfter: extractRetryAfter(error) },
+      { cause: error, retryAfter: extractRetryAfter(error), retryable: isTimeout || undefined },
     );
   }
 

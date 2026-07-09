@@ -12,6 +12,7 @@ import {
   hasStructuredRpcRateLimitSignal,
   isNotEntitledMessage,
   isRelayerError,
+  isRelayerTimeoutError,
   isRpcRateLimitError,
   parseHandleFromMessage,
 } from "../utils/error";
@@ -131,6 +132,10 @@ export function wrapDecryptError(
     return new RelayerRequestFailedError(message, statusCode, {
       cause: error,
       retryAfter: extractRetryAfter(error),
+      // A relayer timeout carries no HTTP status but is safe to retry; force
+      // `retryable` so it isn't misclassified as terminal. Other relayer errors
+      // fall back to the status-based default (429 → retryable).
+      retryable: isRelayerTimeoutError(error) || undefined,
     });
   }
 

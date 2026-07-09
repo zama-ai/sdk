@@ -136,6 +136,17 @@ export function isRelayerError(error: unknown): boolean {
 }
 
 /**
+ * True when the failure is an `@fhevm/sdk` relayer *timeout* (`RelayerTimeoutError`,
+ * thrown when a request exceeds the relayer's global deadline without a verdict).
+ * Unlike a terminal 4xx/5xx, the operation itself is safe to retry, so callers map
+ * it to a {@link RelayerRequestFailedError} with `retryable: true` — mirroring the
+ * former `WorkerTimeoutError`, which was likewise documented retryable.
+ */
+export function isRelayerTimeoutError(error: unknown): boolean {
+  return findInErrorChain(error, (node) => node.name === "RelayerTimeoutError") !== undefined;
+}
+
+/**
  * True if the error is the consumer's RPC provider throttling an on-chain read
  * (HTTP 429 / JSON-RPC -32005). Relayer-originated 429s are excluded.
  */
