@@ -18,9 +18,6 @@ export const mainnet = {
 
 /**
  * Sepolia testnet network configuration (chainId 11155111).
- *
- * Contract addresses and `gatewayChainId` mirror the `sepolia` definition
- * exported from `@fhevm/sdk/chains`, flattened and extended like {@link mainnet}.
  */
 export const sepolia = {
   id: 11155111,
