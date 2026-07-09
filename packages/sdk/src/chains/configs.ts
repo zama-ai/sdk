@@ -50,7 +50,7 @@ export const hoodi = {
   relayerUrl: "",
   network: "https://rpc.hoodi.ethpandaops.io",
   aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68",
-  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
+  kmsContractAddress: "0x822BE20679CfAfdc352F05dEdfe12a07E912212e",
   inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
