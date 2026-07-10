@@ -31,7 +31,7 @@ describe("EncryptionService", () => {
     expect(result.inputProof).toBe(inputProof);
     expect(relayer.encryptValues).toHaveBeenCalledWith({
       ...ENCRYPT_PARAMS,
-      values: [{ value: 100n, type: "uint64" }],
+      values: [{ value: 100n, type: "euint64" }],
     });
     expect(emitEvent).toHaveBeenCalledWith(
       { type: events.EncryptStart },
