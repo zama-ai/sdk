@@ -71,10 +71,95 @@ export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient
 
 /**
  * Options for a relayer transport (`web` / `node` / `cleartext`): the per-client
- * {@link FhevmClientOptions} plus a default request `timeout` applied to every
- * relayer round-trip on the chain. A per-call `timeout` overrides this default.
+ * `@fhevm/sdk` options that shape the underlying client, plus the request
+ * defaults `timeout` and `debug` applied to every relayer round-trip on the
+ * chain. A per-call `timeout`/`debug` overrides these defaults.
+ *
+ * @remarks
+ * The three client options mirror {@link FhevmClientOptions} but are listed
+ * explicitly so each carries its own documentation; `timeout` and `debug` are
+ * picked from {@link FhevmRelayerOptions}, the per-request option set.
  */
-export interface RelayerOptions extends FhevmClientOptions {
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+  /**
+   * Batch the client's JSON-RPC reads (the on-chain calls it makes to resolve
+   * the protocol and key versions) into a single request instead of issuing
+   * them one by one.
+   *
+   * @defaultValue `false`
+   */
+  readonly batchRpcCalls?: boolean;
+  /**
+   * A pre-fetched FHE public encryption key. Supply it to skip the ~50 MB key
+   * fetch `@fhevm/sdk` otherwise performs during init — e.g. to reuse a key
+   * cached across clients or sessions.
+   *
+   * @defaultValue none — the key is fetched from the relayer's `keyurl`.
+   */
+  readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+  /**
+   * Pins the TFHE/KMS WASM module versions instead of auto-resolving them from
+   * the chain's on-chain protocol version.
+   *
+   * @defaultValue `'auto'`
+   */
+  readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
+}
+
+/**
+ * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
+ * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
+ * is one-shot and idempotent; conflicting configs across chains will throw).
+ */
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
+
+/**
+ * The full set of per-request options `@fhevm/sdk`'s relayer accepts on every
+ * round-trip (mirrors its `RelayerCommonOptions`). Distinct from
+ * {@link RelayerOptions}, which configures a transport once at construction —
+ * these are applied per call.
+ *
+ */
+export interface FhevmRelayerOptions {
+  /** Relayer authentication for the chain. Defaulted from the chain's config. */
+  readonly auth?: FhevmRuntimeConfig["auth"];
+  /** Extra HTTP headers attached to each relayer request. */
+  readonly headers?: Record<string, string>;
+  /**
+   * When `true`, `@fhevm/sdk`'s relayer emits verbose per-request trace logs to
+   * `console.log` (`[RelayerAsyncRequest]:…`), following each round-trip through
+   * its polling/retry loop. Off by default. A per-call `debug` overrides this.
+   *
+   * @remarks
+   * This is a raw diagnostic switch on the FHE backend, separate from the SDK's
+   * own configurable logger ({@link GenericLogger} via `createConfig`): it always
+   * writes to `console`, regardless of any logger you pass. Use it for one-off
+   * troubleshooting of relayer round-trips, not as a production logging channel.
+   *
+   * @defaultValue `false` `@fhevm/sdk` treats a missing flag as off.
+   */
+  readonly debug?: boolean;
+  /**
+   * Times a failed HTTP fetch is retried on transient errors before the request
+   * gives up. This is the low-level fetch retry, separate from the async-job
+   * polling loop that waits on a queued relayer request.
+   *
+   * @defaultValue `3` `@fhevm/sdk`'s `FETCH_RETRY`.
+   */
+  readonly fetchRetries?: number;
+  /**
+   * Delay between those fetch retries, in milliseconds.
+   *
+   * @defaultValue `1_000` `@fhevm/sdk`'s `FETCH_RETRY_AFTER_MS`;
+   */
+  readonly fetchRetryDelayInMilliseconds?: number;
+  /**
+   * Cancels the request (and its retry/backoff loop) when aborted.
+   *
+   * @defaultValue none — the SDK injects no signal, so a request is uncancellable
+   * unless a per-call `signal` is passed.
+   */
+  readonly signal?: AbortSignal;
   /**
    * Maximum duration, in milliseconds, to wait for a relayer **request** — an
    * input-proof generation or a decryption, including its retry/backoff polling
@@ -89,29 +174,16 @@ export interface RelayerOptions extends FhevmClientOptions {
    * independently of this value. A failed init does not self-recover; discard
    * the client and build a new one to retry.
    *
+   * @defaultValue `3_600_000` (1 hour) — `@fhevm/sdk`'s
+   * `DEFAULT_GLOBAL_REQUEST_TIMEOUT_MS`, applied when no `timeout` is set at
+   * construction or per call.
+   *
    * @privateRemarks
    * `@fhevm/sdk`'s `init()` accepts no options, so no timeout/signal reaches
    * that phase, and it memoizes a rejected ready-promise (`??=`). Bounding init
    * is tracked upstream in `@fhevm/sdk`.
    */
-  timeout?: number;
-}
-
-/**
- * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
- * module versions. Applied once per process (the underlying `setFhevmRuntimeConfig`
- * is one-shot and idempotent; conflicting configs across chains will throw).
- */
-export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
-
-export interface FhevmRelayerOptions {
-  auth: FhevmRuntimeConfig["auth"];
-  headers: Record<string, string> | undefined;
-  debug: boolean | undefined;
-  fetchRetries: number | undefined;
-  fetchRetryDelayInMilliseconds: number | undefined;
-  signal: AbortSignal | undefined;
-  timeout: number | undefined;
+  readonly timeout?: number;
 }
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
