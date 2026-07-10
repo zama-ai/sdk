@@ -611,7 +611,6 @@ export class ChainRouter {
     // (undocumented)
     get chains(): readonly FheChain[];
     get relayer(): RelayerSDK;
-    // (undocumented)
     switchChain(chainId: number): void;
 }
 
@@ -12592,7 +12591,7 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+export interface RelayerSDK extends Pick<FhevmClient, "init" | "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     // (undocumented)
     chain: FheChain;
 }
@@ -12605,7 +12604,7 @@ export interface ResolvedChainRelayer {
     // (undocumented)
     chain: FheChain;
     // (undocumented)
-    relayer: RelayerConfig;
+    relayerConfig: RelayerConfig;
 }
 
 // @public (undocumented)
