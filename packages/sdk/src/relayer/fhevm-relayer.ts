@@ -347,8 +347,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     this.#fhevm.serializeSignedDecryptionPermit(parameters);
 
   /**
-   * Rebuilds a transport key pair from its serialized hex `{ publicKey,
-   * privateKey }` form. Reverse of {@link serializeTransportKeyPair}.
+   * Rebuilds a transport key pair from its serialized hex
+   * `{ publicKey, privateKey }` form. Reverse of {@link serializeTransportKeyPair}.
    *
    * @example
    * ```ts
