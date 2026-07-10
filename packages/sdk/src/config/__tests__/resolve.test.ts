@@ -72,8 +72,8 @@ describe("resolveChainRelayers", () => {
       [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
-    expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
+    expect(result.get(11155111)).toEqual({ chain: sepolia, relayerConfig: sepoliaCfg });
+    expect(result.get(1)).toEqual({ chain: mainnet, relayerConfig: mainnetCfg });
   });
 });
 

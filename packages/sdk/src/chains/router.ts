@@ -2,7 +2,6 @@ import type { FheChain } from "./types";
 import { resolveChainRelayers } from "../config/resolve";
 import type { RelayerConfig } from "../config/types";
 import { ConfigurationError } from "../errors";
-import { assertNonNullable } from "../utils";
 import type { FhevmRelayerSDK } from "../relayer/types";
 
 /**
@@ -29,8 +28,8 @@ export class ChainRouter {
     // One backend per chain. A shared config object can yield the same backend
     // instance for several chains (createRelayer decides); terminate() dedupes.
     const relayers = new Map<number, FhevmRelayerSDK>();
-    for (const [chainId, { relayer, chain }] of resolveChainRelayers(chains, configs)) {
-      relayers.set(chainId, relayer.createRelayer(chain));
+    for (const [chainId, { relayerConfig, chain }] of resolveChainRelayers(chains, configs)) {
+      relayers.set(chainId, relayerConfig.createRelayer(chain));
     }
     this.#relayers = relayers;
   }
@@ -41,23 +40,35 @@ export class ChainRouter {
 
   get chain(): FheChain {
     const chain = this.#chains.get(this.#chainId);
-    assertNonNullable(chain, "ChainRouter: chain");
+    if (chain === undefined) {
+      throw new ConfigurationError(
+        `Chain ${this.#chainId} is not configured. Add it to the chains array.`,
+      );
+    }
     return chain;
   }
 
+  /**
+   * Point the router at `chainId`. The active chain follows the wallet even when
+   * that chain has no configured backend: the {@link chain} / {@link relayer}
+   * getters throw a {@link ConfigurationError} for an unconfigured chain, so an
+   * unsupported chain fails loudly at the next operation rather than silently
+   * routing to the previously active chain (which would encrypt against, and
+   * sign an EIP-712 decryption permit for, the wrong chain's domain and ACL).
+   * Switching back to a configured chain restores service.
+   */
   switchChain(chainId: number): void {
-    if (!this.#chains.has(chainId)) {
-      throw new ConfigurationError(
-        `No relayer configured for chain ${chainId}. Add it to the chains array.`,
-      );
-    }
     this.#chainId = chainId;
   }
 
   /** The single-chain backend for the currently active chain. */
   get relayer(): FhevmRelayerSDK {
-    const relayer = this.#relayers.get(this.#chainId);
-    assertNonNullable(relayer, "ChainRouter: relayer");
+    const relayer = this.#relayers.get(this.chain.id);
+    if (relayer === undefined) {
+      throw new ConfigurationError(
+        `No relayer configured for chain ${this.#chainId}. Add it to the relayers object.`,
+      );
+    }
     return relayer;
   }
 }

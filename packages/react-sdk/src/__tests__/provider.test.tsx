@@ -108,9 +108,12 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
+    // Warm the next account on the configured chain (the wrapper configures
+    // 31337). A change onto an unconfigured chain would correctly fail to warm,
+    // since the router has no backend for it.
     listener({
       previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
-      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 1 },
+      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 31337 },
     });
 
     await waitFor(() => {
