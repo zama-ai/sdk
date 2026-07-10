@@ -7,7 +7,7 @@
  * non-mainnet chain the SDK ships in `chains/configs.ts`:
  *
  *   1. the target confidential token is registered and valid in the on-chain
- *      wrappers registry,
+ *      wrappers registry, and reverse-resolves to its documented ERC-20,
  *   2. its ERC-7984 metadata reads back over RPC,
  *   3. an encrypted balance handle can be read for a fresh account, and
  *   4. typed inputs encrypt through the chain's relayer transport.
@@ -40,9 +40,9 @@ import {
 import { bscTestnet, hoodi, ingenTestnet, sepolia } from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
-import { createPublicClient, createWalletClient, custom, http, isAddress, isHex } from "viem";
+import { createPublicClient, createWalletClient, custom, http, isHex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 
 interface ChainEntry {
   readonly chain: FheChain;
@@ -50,35 +50,37 @@ interface ChainEntry {
    *  `cleartext()` for chains that drive the FHE backend without one. */
   readonly relayer: RelayerConfig;
   /** A confidential (ERC-7984) token registered on this chain, discovered from
-   *  the on-chain wrappers registry (`getTokenConfidentialTokenPair`). The
-   *  paired underlying ERC-20 is noted alongside for reference. */
+   *  the on-chain wrappers registry (`getTokenAddress`). */
   readonly confidentialTokenAddress: Address;
+  /** The plain ERC-20 the confidential token wraps. Asserted against the
+   *  registry's reverse lookup so this pairing can't silently drift. */
+  readonly underlyingTokenAddress: Address;
 }
 
 const entries: readonly ChainEntry[] = [
   {
-    // underlying ERC-20: 0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF
     chain: sepolia,
     relayer: node(),
     confidentialTokenAddress: "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639",
+    underlyingTokenAddress: "0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF",
   },
   {
-    // underlying ERC-20: 0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b
     chain: hoodi,
     relayer: cleartext(),
     confidentialTokenAddress: "0x2dEBbe0487Ef921dF4457F9E36eD05Be2df1AC75",
+    underlyingTokenAddress: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
   },
   {
-    // underlying ERC-20: 0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c
     chain: bscTestnet,
     relayer: cleartext(),
     confidentialTokenAddress: "0xbb9Ac1000B79a035B7Aa933cf6E44B51a2f6222a",
+    underlyingTokenAddress: "0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c",
   },
   {
-    // underlying ERC-20: 0x7CC6EB5E82f5ae84BC08cC58734E6aD2c2510068
     chain: ingenTestnet,
     relayer: cleartext(),
     confidentialTokenAddress: "0x604fFb6b71bfEe1B155B4093bdCF19a7c7029Efd",
+    underlyingTokenAddress: "0x7CC6EB5E82f5ae84BC08cC58734E6aD2c2510068",
   },
 ];
 
@@ -97,7 +99,7 @@ for (const entry of entries) {
 
     // One single-chain SDK per entry: its provider is bound to this chain's
     // RPC and its relayer to this chain's transport.
-    using sdk = new ZamaSDK(
+    const sdk = new ZamaSDK(
       createConfig({
         chains: [entry.chain],
         publicClient,
@@ -106,21 +108,27 @@ for (const entry of entries) {
         relayers: { [entry.chain.id]: entry.relayer },
       }),
     );
+    // One token instance shared across the read tests below.
+    const token = sdk.createToken(entry.confidentialTokenAddress);
 
-    test("confirms the confidential token is registered and valid via the on-chain registry", async () => {
-      // Reverse lookup: a valid confidential token maps back to its underlying ERC-20.
+    // Tear the relayer/signer down once the suite finishes. A block-scoped
+    // `using` would dispose at the end of this describe callback — before any
+    // test runs — so disposal is deferred to afterAll instead.
+    afterAll(() => {
+      sdk.terminate();
+    });
+
+    test("confirms the confidential token is registered and reverse-resolves to its underlying ERC-20", async () => {
       const [isValid, underlyingAddress] = await sdk.registry.getTokenAddress(
         entry.confidentialTokenAddress,
       );
 
       expect(isValid).toBe(true);
-      expect(isAddress(underlyingAddress)).toBe(true);
-      expect(underlyingAddress).not.toBe("0x0000000000000000000000000000000000000000");
+      // Compare case-insensitively — the registry returns a checksummed address.
+      expect(underlyingAddress.toLowerCase()).toBe(entry.underlyingTokenAddress.toLowerCase());
     });
 
     test("reads confidential token metadata over RPC", async () => {
-      const token = sdk.createToken(entry.confidentialTokenAddress);
-
       const [symbol, decimals, isConfidential] = await Promise.all([
         token.symbol(),
         token.decimals(),
@@ -135,13 +143,12 @@ for (const entry of entries) {
     });
 
     test("reads an encrypted balance handle without decrypting or signing", async () => {
-      const token = sdk.createToken(entry.confidentialTokenAddress);
-
       // A fresh account has an uninitialized (zero) balance handle; the contract
       // still returns a well-formed bytes32 reference rather than reverting.
       const handle = await token.confidentialBalanceOf(account.address);
 
       expect(isHex(handle)).toBe(true);
+      expect(handle).toHaveLength(66); // "0x" + 32 bytes
     });
 
     test("encrypts typed inputs through the chain's relayer transport", async () => {
