@@ -11,3 +11,11 @@ snapshots:
       style: secondary
       start: 0
       end: 41
+    - source: ({ storage, sessionStorage })
+      style: secondary
+      start: 12
+      end: 41
+    - source: '{ storage, sessionStorage }'
+      style: secondary
+      start: 13
+      end: 40

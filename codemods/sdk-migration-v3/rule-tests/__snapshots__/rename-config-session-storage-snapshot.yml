@@ -11,6 +11,14 @@ snapshots:
       style: secondary
       start: 0
       end: 59
+    - source: '({ storage, sessionStorage: sessionDBStorage })'
+      style: secondary
+      start: 12
+      end: 59
+    - source: '{ storage, sessionStorage: sessionDBStorage }'
+      style: secondary
+      start: 13
+      end: 58
   'createZamaConfig({ sessionStorage: sessionDBStorage, storage });':
     fixed: 'createZamaConfig({ permitStorage: sessionDBStorage, storage });'
     labels:
@@ -22,3 +30,11 @@ snapshots:
       style: secondary
       start: 0
       end: 63
+    - source: '({ sessionStorage: sessionDBStorage, storage })'
+      style: secondary
+      start: 16
+      end: 63
+    - source: '{ sessionStorage: sessionDBStorage, storage }'
+      style: secondary
+      start: 17
+      end: 62

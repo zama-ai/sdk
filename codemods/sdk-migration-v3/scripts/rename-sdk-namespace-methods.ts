@@ -45,9 +45,14 @@ const RENAME_MAP: Record<string, RenameTarget> = {
       "return true). Verify this call site still holds under the new semantics.",
   },
   getDelegationExpiry: { namespace: "delegations", method: "getExpiry" },
-  userDecrypt: { namespace: "decryption", method: "userDecrypt" },
-  delegatedUserDecrypt: { namespace: "decryption", method: "delegatedDecrypt" },
-  publicDecrypt: { namespace: "decryption", method: "publicDecrypt" },
+  // The SDK-169 PR (#354) originally landed these three as decryption.userDecrypt /
+  // .delegatedDecrypt / .publicDecrypt, but SDK-205 (PR #386, "align decrypt wording
+  // with the Zama glossary") renamed them again three commits later. Target the
+  // CURRENT names (verified against packages/sdk/src/namespaces/decryption.ts) --
+  // decryption.userDecrypt/.delegatedDecrypt/.publicDecrypt do not exist.
+  userDecrypt: { namespace: "decryption", method: "decryptValues" },
+  delegatedUserDecrypt: { namespace: "decryption", method: "delegatedDecryptValues" },
+  publicDecrypt: { namespace: "decryption", method: "decryptPublicValues" },
 };
 
 // Pre-filter: skip files that never import ZamaSDK.
@@ -107,10 +112,16 @@ const codemod: Codemod<Tsx> = async (root) => {
 
   // (3) Rewrite `X.method(args)` where X is a traced SDK binding and `method` is
   // in the rename map. The semantic-shift case (isDelegated) replaces the whole
-  // call with a leading comment; every other case only replaces the property
-  // name -- keeping edits at disjoint, non-overlapping ranges within one call
-  // (a `property.replace` nested inside a `call.replace` on the same call would
-  // be an invalid overlapping edit in the same commitEdits batch).
+  // call. Every case -- including the semantic-shift one -- only ever replaces
+  // the `property` node, never the whole `call` (arguments untouched). This
+  // matters beyond tidiness: `call.replace(...)` covers the call's entire range,
+  // including its `arguments` subtree, so a DIFFERENT matched call nested in
+  // those arguments (e.g. `sdk.isDelegated(sdk.allow([...]))`) would have its
+  // own, independently-collected edit silently discarded by commitEdits for
+  // overlapping the outer edit's range -- no error, just a dropped rewrite. The
+  // `property` node's range ends right before the arguments' opening paren, so
+  // appending a trailing comment to its replacement text stays disjoint from
+  // whatever edits a nested call inside `arguments` may also contribute.
   for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
     const fn = call.field("function");
     if (!fn || fn.kind() !== "member_expression") {
@@ -125,16 +136,12 @@ const codemod: Codemod<Tsx> = async (root) => {
     if (!target) {
       continue;
     }
-    if (target.semanticShiftNote) {
-      const args = call.field("arguments")?.text() ?? "()";
-      const newCall = `${object.text()}.${target.namespace}.${target.method}${args}`;
-      // A trailing block comment (not a leading line comment) stays valid no matter
-      // what precedes the call in its statement (`await x`, `return x`, `const y = x`),
-      // avoiding any need to locate the enclosing statement's boundary.
-      edits.push(call.replace(`${newCall} /* ${target.semanticShiftNote} */`));
-    } else {
-      edits.push(property.replace(`${target.namespace}.${target.method}`));
-    }
+    const replacement = `${target.namespace}.${target.method}`;
+    edits.push(
+      property.replace(
+        target.semanticShiftNote ? `${replacement} /* ${target.semanticShiftNote} */` : replacement,
+      ),
+    );
   }
 
   return edits.length > 0 ? rootNode.commitEdits(edits) : null;

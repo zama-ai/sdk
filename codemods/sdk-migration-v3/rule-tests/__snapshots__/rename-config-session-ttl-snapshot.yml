@@ -11,6 +11,14 @@ snapshots:
       style: secondary
       start: 0
       end: 44
+    - source: '({ storage, sessionTTL: 86400 })'
+      style: secondary
+      start: 12
+      end: 44
+    - source: '{ storage, sessionTTL: 86400 }'
+      style: secondary
+      start: 13
+      end: 43
   'createZamaConfig({ sessionTTL: 86400, storage });':
     fixed: 'createZamaConfig({ permitTTL: 86400, storage });'
     labels:
@@ -22,3 +30,11 @@ snapshots:
       style: secondary
       start: 0
       end: 48
+    - source: '({ sessionTTL: 86400, storage })'
+      style: secondary
+      start: 16
+      end: 48
+    - source: '{ sessionTTL: 86400, storage }'
+      style: secondary
+      start: 17
+      end: 47
