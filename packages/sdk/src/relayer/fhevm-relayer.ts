@@ -150,6 +150,21 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * Encrypts one typed input under the chain's FHE key, bound to the contract it
+   * targets and the user submitting it, and returns the ciphertext handle plus
+   * the input proof the contract verifies on-chain. `type` is the raw FHE type
+   * without the `e` prefix (`"uint64"`, `"bool"`, `"address"`).
+   *
+   * @example
+   * ```ts
+   * const { encryptedValue, inputProof } = await relayer.encryptValue({
+   *   value: { type: "uint64", value: 1000n },
+   *   contractAddress: "0xToken…",
+   *   userAddress: "0xUser…",
+   * });
+   * ```
+   */
   encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
     await this.init();
     return this.#fhevm.encryptValue({
@@ -158,6 +173,23 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * Batch form of {@link encryptValue}: encrypts several inputs for the same
+   * contract and user in one call, returning all ciphertext handles under a
+   * single shared input proof.
+   *
+   * @example
+   * ```ts
+   * const { encryptedValues, inputProof } = await relayer.encryptValues({
+   *   values: [
+   *     { type: "uint64", value: 1000n },
+   *     { type: "bool", value: true },
+   *   ],
+   *   contractAddress: "0xToken…",
+   *   userAddress: "0xUser…",
+   * });
+   * ```
+   */
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
     await this.init();
     return this.#fhevm.encryptValues({
@@ -166,6 +198,23 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * User-decrypts a single access-controlled value: the relayer re-encrypts it
+   * to the ephemeral transport key pair, gated by the signed permit, and this
+   * returns the typed clear value. Build the key pair with
+   * {@link generateTransportKeyPair} and the permit with
+   * {@link signDecryptionPermit}.
+   *
+   * @example
+   * ```ts
+   * const { type, value } = await relayer.decryptValue({
+   *   encryptedValue: handle,
+   *   contractAddress: "0xToken…",
+   *   transportKeyPair,
+   *   signedPermit,
+   * });
+   * ```
+   */
   decryptValue: FhevmClient["decryptValue"] = async (parameters) => {
     await this.init();
     return this.#fhevm.decryptValue({
@@ -174,6 +223,21 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * Batch form of {@link decryptValue} for values that all belong to the same
+   * contract; returns the typed clear values positionally. For values spanning
+   * multiple contracts, use {@link decryptValuesFromPairs}.
+   *
+   * @example
+   * ```ts
+   * const values = await relayer.decryptValues({
+   *   encryptedValues: [handleA, handleB],
+   *   contractAddress: "0xToken…",
+   *   transportKeyPair,
+   *   signedPermit,
+   * });
+   * ```
+   */
   decryptValues: FhevmClient["decryptValues"] = async (parameters) => {
     await this.init();
     return this.#fhevm.decryptValues({
@@ -182,6 +246,23 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * User-decrypts values that span multiple contracts: each pair carries its own
+   * `contractAddress`, so one permit covering those contracts decrypts them all
+   * in a single round-trip. Returns the typed clear values positionally.
+   *
+   * @example
+   * ```ts
+   * const values = await relayer.decryptValuesFromPairs({
+   *   pairs: [
+   *     { encryptedValue: handleA, contractAddress: "0xTokenA…" },
+   *     { encryptedValue: handleB, contractAddress: "0xTokenB…" },
+   *   ],
+   *   transportKeyPair,
+   *   signedPermit,
+   * });
+   * ```
+   */
   decryptValuesFromPairs: FhevmClient["decryptValuesFromPairs"] = async (parameters) => {
     await this.init();
     return this.#fhevm.decryptValuesFromPairs({
@@ -190,6 +271,17 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * Fetches the chain's raw FHE public-key bytes — the key encryption uses —
+   * served from cache unless `ignoreCache` forces a refetch. Rarely called
+   * directly: {@link encryptValue}/{@link encryptValues} fetch the key for you.
+   *
+   * @example
+   * ```ts
+   * const keyBytes = await relayer.fetchFheEncryptionKeyBytes();
+   * const fresh = await relayer.fetchFheEncryptionKeyBytes({ ignoreCache: true });
+   * ```
+   */
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
     await this.init();
     return this.#fhevm.fetchFheEncryptionKeyBytes({
@@ -198,6 +290,27 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     });
   };
 
+  /**
+   * Builds the EIP-712 user-decrypt permit and signs it with the given signer,
+   * authorizing the transport key pair to decrypt the listed contracts' values
+   * for `durationSeconds` starting at `startTimestamp`. Pass `delegatorAddress`
+   * to sign a delegated permit — decrypting values owned by that account instead
+   * of the signer's own. Persist the result via
+   * {@link serializeSignedDecryptionPermit}.
+   *
+   * @example
+   * ```ts
+   * const signedPermit = await relayer.signDecryptionPermit({
+   *   transportKeyPair,
+   *   contractAddresses: ["0xToken…"],
+   *   startTimestamp: Math.floor(Date.now() / 1000),
+   *   durationSeconds: 60 * 60 * 24,
+   *   signerAddress: "0xUser…",
+   *   signer,
+   *   // delegatorAddress: "0xOwner…", // omit for a self permit
+   * });
+   * ```
+   */
   signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
     await this.init();
     return this.#fhevm.signDecryptionPermit(parameters);
@@ -205,18 +318,79 @@ export class FhevmRelayer implements FhevmRelayerSDK {
 
   // Non-network passthroughs — no relayer round-trip, so no `auth` to inject.
 
+  /**
+   * Serializes a transport key pair to a hex `{ publicKey, privateKey }` pair for
+   * storage or transport, so a decryption session can resume without regenerating
+   * keys. Reverse of {@link parseTransportKeyPair}. Purely local — no round-trip.
+   *
+   * @example
+   * ```ts
+   * const stored = relayer.serializeTransportKeyPair({ transportKeyPair });
+   * // { publicKey: "0x…", privateKey: "0x…" }
+   * ```
+   */
   serializeTransportKeyPair: FhevmClient["serializeTransportKeyPair"] = (parameters) =>
     this.#fhevm.serializeTransportKeyPair(parameters);
 
+  /**
+   * Serializes a signed permit to a plain, JSON-stringifiable object (version,
+   * EIP-712 payload, signature, signer) for caching or transport. Reverse of
+   * {@link parseSignedDecryptionPermit}. Purely local — no round-trip.
+   *
+   * @example
+   * ```ts
+   * const serialized = relayer.serializeSignedDecryptionPermit({ signedPermit });
+   * localStorage.setItem("permit", JSON.stringify(serialized));
+   * ```
+   */
   serializeSignedDecryptionPermit: FhevmClient["serializeSignedDecryptionPermit"] = (parameters) =>
     this.#fhevm.serializeSignedDecryptionPermit(parameters);
 
+  /**
+   * Rebuilds a transport key pair from its serialized hex `{ publicKey,
+   * privateKey }` form. Reverse of {@link serializeTransportKeyPair}.
+   *
+   * @example
+   * ```ts
+   * const transportKeyPair = await relayer.parseTransportKeyPair({
+   *   publicKey: stored.publicKey,
+   *   privateKey: stored.privateKey,
+   * });
+   * ```
+   */
   parseTransportKeyPair: FhevmClient["parseTransportKeyPair"] = (parameters) =>
     this.#fhevm.parseTransportKeyPair(parameters);
 
+  /**
+   * Rebuilds a signed permit from its serialized form and validates it: checks
+   * the EIP-712 structure, verifies the signature against the on-chain verifier,
+   * and confirms the permit's public key matches `transportKeyPair`. Reverse of
+   * {@link serializeSignedDecryptionPermit}.
+   *
+   * @throws if the permit is malformed, expired, or its signature is invalid.
+   *
+   * @example
+   * ```ts
+   * const signedPermit = await relayer.parseSignedDecryptionPermit({
+   *   serializedPermit,
+   *   transportKeyPair,
+   * });
+   * ```
+   */
   parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = (parameters) =>
     this.#fhevm.parseSignedDecryptionPermit(parameters);
 
+  /**
+   * Generates a fresh ephemeral transport key pair for a user-decrypt session.
+   * The relayer re-encrypts decrypted values to this pair's public key, so only
+   * the holder of the private key can read them; bind it to a permit via
+   * {@link signDecryptionPermit}.
+   *
+   * @example
+   * ```ts
+   * const transportKeyPair = await relayer.generateTransportKeyPair();
+   * ```
+   */
   generateTransportKeyPair: FhevmClient["generateTransportKeyPair"] = async () => {
     await this.init();
     return this.#fhevm.generateTransportKeyPair();

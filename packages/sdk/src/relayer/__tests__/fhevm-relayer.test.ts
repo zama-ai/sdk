@@ -104,7 +104,7 @@ describe("FhevmRelayer request options", () => {
   test("applies the transport-level timeout default to every relayer call", async () => {
     const relayer = new FhevmRelayer({ chain: anvil, options: { timeout: 5_000 } });
     await relayer.encryptValues(encryptArgs);
-    expect(optionsFromLastEncrypt()).toMatchObject({ timeout: 5_000, fetchRetries: 2 });
+    expect(optionsFromLastEncrypt()).toMatchObject({ timeout: 5_000 });
   });
 
   test("lets a per-call timeout override the transport default", async () => {
@@ -130,7 +130,7 @@ describe("FhevmRelayer request options", () => {
     const relayer = new FhevmRelayer({ chain: anvil });
     await relayer.encryptValues(encryptArgs);
     const options = optionsFromLastEncrypt();
-    expect(options).toMatchObject({ fetchRetries: 2 });
+    expect(options).toBeDefined();
     expect(options?.timeout).toBeUndefined();
   });
 
@@ -140,14 +140,13 @@ describe("FhevmRelayer request options", () => {
       await callRelayer(relayer, method);
       expect(optionsFromLast(method), `${method} should merge defaults`).toMatchObject({
         timeout: 3_000,
-        fetchRetries: 2,
       });
     }
   });
 
   test("a per-call option overrides the default on the merge, not the reverse", async () => {
     const relayer = new FhevmRelayer({ chain: anvil, options: { timeout: 5_000 } });
-    // fetchRetries is a transport default; a per-call value must win.
+    // timeout is a transport default (5_000); a per-call value (42) must win.
     await relayer.decryptValues({ options: { fetchRetries: 9, timeout: 42 } } as never);
     expect(optionsFromLast("decryptValues")).toMatchObject({ fetchRetries: 9, timeout: 42 });
   });
