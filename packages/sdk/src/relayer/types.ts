@@ -119,6 +119,7 @@ export interface FhevmRelayerOptions {
  */
 export interface FhevmRelayerSDK extends Pick<
   FhevmClient,
+  | "init"
   | "encryptValue"
   | "encryptValues"
   | "decryptPublicValue"

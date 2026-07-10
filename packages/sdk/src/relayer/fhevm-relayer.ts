@@ -54,8 +54,10 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     return this.#chain;
   }
 
+  init: FhevmClient["init"] = async () => this.#fhevm.init();
+
   decryptPublicValue: FhevmClient["decryptPublicValue"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptPublicValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -63,7 +65,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   decryptPublicValues: FhevmClient["decryptPublicValues"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptPublicValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -73,7 +75,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   decryptPublicValuesWithSignatures: FhevmClient["decryptPublicValuesWithSignatures"] = async (
     parameters,
   ) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptPublicValuesWithSignatures({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -81,7 +83,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.encryptValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -89,7 +91,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.encryptValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -97,7 +99,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   decryptValue: FhevmClient["decryptValue"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -105,7 +107,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   decryptValues: FhevmClient["decryptValues"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -113,7 +115,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   decryptValuesFromPairs: FhevmClient["decryptValuesFromPairs"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.decryptValuesFromPairs({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
@@ -121,7 +123,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.fetchFheEncryptionKeyBytes({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters?.options },
@@ -129,7 +131,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   };
 
   signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.signDecryptionPermit(parameters);
   };
 
@@ -148,7 +150,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     this.#fhevm.parseSignedDecryptionPermit(parameters);
 
   generateTransportKeyPair: FhevmClient["generateTransportKeyPair"] = async () => {
-    await this.#fhevm.init();
+    await this.init();
     return this.#fhevm.generateTransportKeyPair();
   };
 }
