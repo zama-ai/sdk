@@ -62,10 +62,7 @@ afterwards); pins are never bumped.
 A config assembled via a variable or spread and passed to `createConfig(cfg)` is
 **not** rewritten by the ast-grep step above — the property isn't syntactically
 inside the call, and widening the scope to reach it would reopen the
-`sessionStorage` collision this scoping exists to avoid. That case is instead
-caught at runtime: `buildZamaConfig` (`packages/sdk/src/config/build.ts`) warns
-via the configured logger when it sees a stale top-level key, regardless of how
-the config object was assembled.
+`sessionStorage` collision this scoping exists to avoid. See "Known limitations".
 
 ## Optional AI tail
 
@@ -199,4 +196,6 @@ CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
   `createZamaConfig` object-literal argument** (`rename-credentials-config-keys.yml`).
   A config assembled via a variable or spread is not reachable by this rule without
   reopening the `sessionStorage`/`window.sessionStorage` collision the scoping
-  exists to prevent — see the runtime guard note under "What it does" above.
+  exists to prevent — the type has no index signature, so `tsc` only flags a
+  removed key on a direct literal (`TS2353`); the variable/spread case has no
+  automated signal today and relies on manual review.

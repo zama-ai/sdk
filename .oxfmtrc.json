@@ -19,6 +19,7 @@
     "packages/sdk/etc",
     "packages/react-sdk/etc",
     "contracts/lib",
-    "codemods/sdk-migration-v3/rule-tests"
+    "codemods/sdk-migration-v3/rule-tests",
+    "codemods/sdk-migration-v3/tests/rename-sdk-namespace-methods"
   ]
 }
