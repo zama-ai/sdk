@@ -1,0 +1,30 @@
+name: Install dependencies
+description: >-
+  Set up pnpm, Node.js 24.18.0, and Aikido Safe Chain, then install dependencies.
+  Assumes the repo is already checked out — local composite actions can only
+  run after checkout, so the caller owns that step.
+
+inputs:
+  ignore-scripts:
+    description: Pass --ignore-scripts to `pnpm ci` (skips contract postinstall).
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: 24.18.0
+        cache: pnpm
+
+    - name: Install Aikido Safe Chain
+      shell: bash
+      run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm ci ${{ inputs.ignore-scripts == 'true' && '--ignore-scripts' || '' }}
