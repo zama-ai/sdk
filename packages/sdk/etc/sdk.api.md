@@ -11246,6 +11246,9 @@ export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCod
 }): R | undefined;
 
 // @public
+export const MAX_DECRYPTION_REQUEST_BITS = 2048;
+
+// @public
 export class MemoryStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;

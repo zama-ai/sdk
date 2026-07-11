@@ -30,14 +30,21 @@ const MAX_KNOWN_ENCRYPTION_BITS = 256;
  * decodes from — see `relayer/cleartext/relayer-cleartext.ts`).
  *
  * Falls back to {@link MAX_KNOWN_ENCRYPTION_BITS} for an unrecognized type
- * byte instead of throwing. A real on-chain handle always carries a valid
- * type byte, so this fallback only ever fires for synthetic test handles —
+ * byte, or for a value that isn't parseable hex at all, instead of throwing.
+ * A real on-chain handle is always well-formed with a valid type byte, so
+ * this fallback only ever fires for synthetic test/placeholder handles —
  * deliberately more permissive than the relayer's own strict validation so
  * chunking stays safe without requiring every test fixture to encode a real
- * FHE type. Do not tighten this to match relayer semantics.
+ * FHE handle. Do not tighten this to match relayer semantics.
  */
 export function encryptionBitsForHandle(encryptedValue: EncryptedValue): number {
-  const typeByte = Number((BigInt(encryptedValue) >> 8n) & 0xffn);
+  let handleValue: bigint;
+  try {
+    handleValue = BigInt(encryptedValue);
+  } catch {
+    return MAX_KNOWN_ENCRYPTION_BITS;
+  }
+  const typeByte = Number((handleValue >> 8n) & 0xffn);
   return isFheTypeId(typeByte) ? encryptionBitsFromFheTypeId(typeByte) : MAX_KNOWN_ENCRYPTION_BITS;
 }
 
