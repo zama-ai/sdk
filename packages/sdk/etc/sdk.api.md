@@ -5390,7 +5390,7 @@ export interface DecryptEndEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface DecryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
@@ -5818,7 +5818,7 @@ export interface EncryptEndEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.EncryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface EncryptErrorEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
@@ -14415,7 +14415,7 @@ export const Topics: {
     readonly UnwrapFinalized: `0x${string}`;
 };
 
-// @public (undocumented)
+// @public
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
     operation: TransactionOperation;

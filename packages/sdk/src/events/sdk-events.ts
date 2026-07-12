@@ -54,6 +54,7 @@ export interface EncryptEndEvent extends BaseEvent {
   durationMs: number;
 }
 
+/** Passive-logging channel only — handle the thrown `ZamaError` at the call site instead. */
 export interface EncryptErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.EncryptError;
   /** The error that caused the encryption to fail. */
@@ -76,6 +77,7 @@ export interface DecryptEndEvent extends BaseEvent {
   result: Record<EncryptedValue, ClearValue>;
 }
 
+/** Passive-logging channel only — handle the thrown `ZamaError` at the call site instead. */
 export interface DecryptErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.DecryptError;
   /** The error that caused the decryption to fail. */
@@ -85,6 +87,7 @@ export interface DecryptErrorEvent extends BaseEvent {
   encryptedValues: EncryptedValue[];
 }
 
+/** Passive-logging channel only — handle the thrown `ZamaError` at the call site instead. */
 export interface TransactionErrorEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.TransactionError;
   /** Which SDK operation failed. */
