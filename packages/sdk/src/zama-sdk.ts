@@ -4,13 +4,13 @@ import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
-import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
 import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
+import { EventService } from "./services/event-service";
 import { LifecycleService } from "./services/lifecycle-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
@@ -48,9 +48,14 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
+  /**
+   * The unified SDK event stream. Subscribe with `sdk.events.on(type, listener)`,
+   * `.once(type, listener)`, or `.subscribe(listener)` for every event — each
+   * returns an unsubscribe function.
+   */
+  readonly events: EventService;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
-  readonly #onEvent: ZamaSDKEventListener;
   readonly #logger: GenericLogger;
   readonly #cachingService: CachingService;
   readonly #lifecycleService: LifecycleService;
@@ -64,13 +69,13 @@ export class ZamaSDK {
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
-    this.#onEvent = config.onEvent ?? function () {};
     this.#logger = config.logger;
+    this.events = new EventService({ onEvent: config.onEvent, logger: this.#logger });
     this.#cachingService = new CachingService(config.storage, this.#logger);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       relayer: this.relayer,
-      emitEvent: this.emitEvent.bind(this),
+      emitEvent: this.events.emit.bind(this.events),
       logger: this.#logger,
     });
 
@@ -103,12 +108,12 @@ export class ZamaSDK {
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         relayer: this.relayer,
-        emitEvent: this.emitEvent.bind(this),
+        emitEvent: this.events.emit.bind(this.events),
       });
     }
     this.#encryptionService = new EncryptionService({
       relayer: this.relayer,
-      emitEvent: this.emitEvent.bind(this),
+      emitEvent: this.events.emit.bind(this.events),
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
@@ -161,25 +166,6 @@ export class ZamaSDK {
    */
   get logger(): GenericLogger {
     return this.#logger;
-  }
-
-  /**
-   * Emit a structured SDK event into the unified SDK event stream.
-   *
-   * Listener exceptions are caught and logged so that a misbehaving subscriber
-   * can never corrupt SDK operations.
-   *
-   * Application code should subscribe via the `onEvent` config option, never
-   * call this directly.
-   *
-   * @internal
-   */
-  emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void {
-    try {
-      this.#onEvent({ ...input, tokenAddress, timestamp: Date.now() } as ZamaSDKEvent);
-    } catch (error) {
-      this.#logger.warn(`${input.type} event listener silently failed`, { error });
-    }
   }
 
   /**
@@ -266,12 +252,14 @@ export class ZamaSDK {
   }
 
   /**
-   * Unsubscribe from signer lifecycle events without terminating the relayer.
-   * Call this when the SDK instance is being replaced but the relayer is shared
-   * (e.g. React provider remount in Strict Mode).
+   * Unsubscribe from signer lifecycle events and remove every `sdk.events`
+   * listener, without terminating the relayer. Call this when the SDK instance
+   * is being replaced but the relayer is shared (e.g. React provider remount
+   * in Strict Mode).
    */
   dispose(): void {
     this.#lifecycleService.dispose();
+    this.events.dispose();
   }
 
   /**

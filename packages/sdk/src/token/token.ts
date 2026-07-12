@@ -858,7 +858,7 @@ export class Token {
    * @internal
    */
   protected emit(input: ZamaSDKEventInput): void {
-    this.sdk.emitEvent(input, this.address);
+    this.sdk.events.emit(input, this.address);
   }
 
   /**
