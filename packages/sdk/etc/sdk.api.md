@@ -5880,6 +5880,24 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
+export class EventService {
+    constructor(config: EventServiceConfig);
+    dispose(): void;
+    // @internal
+    emit(input: ZamaSDKEventInput, tokenAddress?: Address): void;
+    on<K extends ZamaSDKEventType>(type: K, listener: TypedZamaSDKEventListener<K>): () => void;
+    once<K extends ZamaSDKEventType>(type: K, listener: TypedZamaSDKEventListener<K>): () => void;
+    subscribe(listener: ZamaSDKEventListener): () => void;
+}
+
+// @public (undocumented)
+export interface EventServiceConfig {
+    // (undocumented)
+    logger: GenericLogger;
+    onEvent?: ZamaSDKEventListener;
+}
+
+// @public
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
@@ -14755,6 +14773,11 @@ export class TransportKeyPairExpiredError extends ZamaError {
 }
 
 // @public
+export type TypedZamaSDKEventListener<K extends ZamaSDKEventType> = (event: Extract<ZamaSDKEvent, {
+    type: K;
+}>) => void;
+
+// @public
 export function underlyingContract(wrapperAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -19621,9 +19644,8 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams): Promise<EncryptResult>;
+    readonly events: EventService;
     // @internal
     get logger(): GenericLogger;
     // @internal

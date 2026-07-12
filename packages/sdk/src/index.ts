@@ -151,6 +151,8 @@ export type {
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
 } from "./events";
+export { EventService } from "./services/event-service";
+export type { EventServiceConfig, TypedZamaSDKEventListener } from "./services/event-service";
 export {
   ZamaError,
   ZamaErrorCode,
