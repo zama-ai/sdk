@@ -24,6 +24,7 @@
 - [Check balances](guides/check-balances.md)
 - [Decrypt values from event logs](guides/decrypt-from-event-logs.md)
 - [Handle errors](guides/handle-errors.md)
+- [Observe SDK events](guides/observe-sdk-events.md)
 - [Node.js backend](guides/node-js-backend.md)
 - [Web extensions](guides/web-extensions.md)
 - [Local development](guides/local-development.md)

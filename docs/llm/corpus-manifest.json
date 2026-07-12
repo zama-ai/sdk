@@ -193,6 +193,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/observe-sdk-events",
+      "title": "Observe SDK events",
+      "source_path": "docs/gitbook/src/guides/observe-sdk-events.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/observe-sdk-events.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/observe-sdk-events",
+      "description": "Subscribe to the unified SDK event stream for logging, analytics, and monitoring.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/node-js-backend",
       "title": "Node.js backend",
       "source_path": "docs/gitbook/src/guides/node-js-backend.md",
