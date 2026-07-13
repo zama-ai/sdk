@@ -5,3 +5,4 @@ export type {
   Permission,
 } from "./types";
 export type { ChecksummedAddress } from "../schemas/primitives";
+export { StoredTransportKeyPairSchema, PermissionSchema } from "./schemas";

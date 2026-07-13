@@ -41,7 +41,7 @@ import type { TransactionRevertedError } from "./transaction";
  * Guards presence + value type only: a wrong-but-valid mapping (a code pointing at a
  * structurally identical sibling class) still compiles — `errors.test-d.ts` backstops that.
  */
-type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
+export type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
 
 /**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
@@ -49,7 +49,7 @@ type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
  * `ZamaError`. Hand-maintained; the `Complete` wrapper fails the build if a code is
  * added without an entry here (or mapped to a non-`ZamaError`).
  */
-type ErrorForCode = Complete<{
+export type ErrorForCode = Complete<{
   [ZamaErrorCode.SigningRejected]: SigningRejectedError;
   [ZamaErrorCode.SigningFailed]: SigningFailedError;
   [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;

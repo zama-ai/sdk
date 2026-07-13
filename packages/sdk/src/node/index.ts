@@ -29,6 +29,13 @@ export type { DecryptPublicValuesResult } from "../relayer/types";
 // referenced structurally by this entry point's own public signatures.
 export type { FheChain, FheChainAuth } from "../chains/types";
 export type { GenericStorage } from "../types/storage";
+export type {
+  RelayerOptions,
+  FhevmClient,
+  FhevmRelayerOptions,
+  FhevmClientOptions,
+  FhevmRuntimeConfig,
+} from "../relayer/types";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";

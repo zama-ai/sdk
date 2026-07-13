@@ -8,6 +8,7 @@
 export type { ZamaConfigViem } from "./types";
 export type { Hex } from "viem";
 export type { EncryptedValue, EIP712TypedData, ClearValue } from "../relayer/types";
+export { transactionOperationMetadata } from "../events/sdk-events";
 
 export { createConfig } from "./config";
 
@@ -15,7 +16,7 @@ export { createConfig } from "./config";
 // referenced structurally by this entry point's own public signatures.
 export { BaseSigner } from "../signer/base-signer";
 export { MutableWalletAccountStore } from "../signer/wallet-account-store";
-export { ChainRouter } from "../chains/router";
+export type { ChainRouter } from "../chains/router";
 export type { AtLeastOneChain, FheChain, FheChainAuth } from "../chains/types";
 export type { ZamaConfig, ZamaConfigBase, RelayerConfig } from "../config/types";
 export type { GenericProvider } from "../types/provider";
@@ -66,7 +67,7 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
 } from "../events/sdk-events";
-export type { FhevmRelayerSDK } from "../relayer/types";
+export type { FhevmRelayerSDK, FhevmRuntimeConfig, FhevmClient } from "../relayer/types";
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export { ViemProvider, type ViemProviderConfig } from "./viem-provider";

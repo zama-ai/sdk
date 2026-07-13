@@ -21,12 +21,13 @@ export type {
 } from "viem";
 export { ProviderRpcError } from "viem";
 export type { EncryptedValue, EIP712TypedData, ClearValue } from "../relayer/types";
+export { transactionOperationMetadata } from "../events/sdk-events";
 
 // SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
 // referenced structurally by this entry point's own public signatures.
 export { BaseSigner } from "../signer/base-signer";
 export { MutableWalletAccountStore } from "../signer/wallet-account-store";
-export { ChainRouter } from "../chains/router";
+export type { ChainRouter } from "../chains/router";
 export type { AtLeastOneChain, FheChain, FheChainAuth } from "../chains/types";
 export type { ZamaConfig, ZamaConfigBase, RelayerConfig } from "../config/types";
 export type { GenericProvider } from "../types/provider";
@@ -77,7 +78,13 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
 } from "../events/sdk-events";
-export type { FhevmRelayerSDK } from "../relayer/types";
+export type { FhevmRelayerSDK, FhevmRuntimeConfig, FhevmClient } from "../relayer/types";
+export type {
+  EthersCallProvider,
+  EthersTransactionSigner,
+  EthersTransactionRequest,
+  EthersTransactionResponse,
+} from "./contracts";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

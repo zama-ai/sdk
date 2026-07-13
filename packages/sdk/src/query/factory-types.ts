@@ -5,18 +5,16 @@ import type {
   skipToken,
 } from "@tanstack/query-core";
 
-type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
-
 export type QueryFactoryOptions<
   TQueryFnData = unknown,
   TError = Error,
   TData = TQueryFnData,
   TQueryKey extends QueryKey = QueryKey,
 > = Omit<
-  RequiredBy<
-    QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>,
-    "queryKey"
-  >,
+  Omit<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey"> &
+    Required<
+      Pick<QueryObserverOptions<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>, "queryKey">
+    >,
   "queryFn" | "queryHash" | "queryKeyHashFn" | "throwOnError"
 > & {
   queryFn: Exclude<

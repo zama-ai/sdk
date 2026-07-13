@@ -138,7 +138,12 @@ export type { ClearValue, EncryptParams, EncryptResult, EncryptedValue } from ".
 export type { EncryptInput, EIP712TypedData } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
-export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
+export type {
+  FhevmRelayerSDK as RelayerSDK,
+  FhevmRelayerOptions,
+  FhevmRuntimeConfig,
+  FhevmClient,
+} from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
@@ -162,7 +167,7 @@ export type {
   UnshieldCallbacks,
   UnshieldOptions,
 } from "../types";
-export { ZamaSDKEvents } from "../events/sdk-events";
+export { ZamaSDKEvents, transactionOperationMetadata } from "../events/sdk-events";
 export type {
   SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
@@ -193,7 +198,7 @@ export type {
 // SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
 // referenced structurally by this entry point's own public signatures.
 export type { FheChain, FheChainAuth } from "../chains/types";
-export { ChainRouter } from "../chains/router";
+export type { ChainRouter } from "../chains/router";
 export type { WalletAccountStore } from "../types/signer";
 export type {
   ContractAbi,

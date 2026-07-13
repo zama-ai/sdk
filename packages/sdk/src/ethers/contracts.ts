@@ -37,22 +37,22 @@ interface TransactionRequestConfig {
   value?: bigint;
 }
 
-interface EthersTransactionRequest {
+export interface EthersTransactionRequest {
   to: Address;
   data: Hex;
   gasLimit?: bigint;
   value?: bigint;
 }
 
-interface EthersTransactionResponse {
+export interface EthersTransactionResponse {
   hash: string;
 }
 
-interface EthersCallProvider {
+export interface EthersCallProvider {
   call(tx: EthersTransactionRequest): Promise<string>;
 }
 
-interface EthersTransactionSigner extends EthersCallProvider {
+export interface EthersTransactionSigner extends EthersCallProvider {
   sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }
 

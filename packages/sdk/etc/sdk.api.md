@@ -618,6 +618,11 @@ export class ChainRouter {
 export const chains: Record<number, FheChain>;
 
 // @public
+export type ChecksummedAddress = Address & {
+    readonly [checksummedTag]: true;
+};
+
+// @public
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -641,6 +646,9 @@ export interface CleartextRelayerConfig extends RelayerConfig {
 
 // @public
 export type ClearValue = TypedValue["value"] | bigint | string | undefined;
+
+// @public
+export type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
 
 // @public
 export function confidentialBalanceOfContract(tokenAddress: Address, userAddress: Address): {
@@ -5846,6 +5854,40 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
+export type ErrorForCode = Complete<{
+    [ZamaErrorCode.SigningRejected]: SigningRejectedError;
+    [ZamaErrorCode.SigningFailed]: SigningFailedError;
+    [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
+    [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
+    [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+    [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
+    [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
+    [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+    [ZamaErrorCode.NotEntitled]: NotEntitledError;
+    [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
+    [ZamaErrorCode.Configuration]: ConfigurationError;
+    [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
+    [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
+    [ZamaErrorCode.DelegationNotFound]: DelegationNotFoundError;
+    [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
+    [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
+    [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+    [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
+    [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
+    [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
+    [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
+    [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
+    [ZamaErrorCode.AclPaused]: AclPausedError;
+    [ZamaErrorCode.DelegationExpirationTooSoon]: DelegationExpirationTooSoonError;
+    [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
+    [ZamaErrorCode.ChainMismatch]: ChainMismatchError;
+    [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
+    [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
+    [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+}>;
+
+// @public
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
@@ -5883,6 +5925,26 @@ export type FheChainAuth = {
     cookie?: string;
     value: string;
 };
+
+// @public
+export type FhevmClient = ReturnType<typeof createFhevmClient>;
+
+// @public
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+// @public
+export interface FhevmRelayerOptions {
+    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly debug?: boolean;
+    readonly fetchRetries?: number;
+    readonly fetchRetryDelayInMilliseconds?: number;
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly timeout?: number;
+}
+
+// @public
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
@@ -11408,6 +11470,28 @@ export interface PaginatedResult<T> {
 // @public
 export type Permission = z.infer<typeof PermissionSchema>;
 
+// @public (undocumented)
+export const PermissionSchema: z.ZodMiniObject<{
+    keypairPublicKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    contractAddresses: z.ZodMiniArray<z.ZodMiniPipe<z.ZodMiniCustom<`0x${string}`, `0x${string}`>, z.ZodMiniTransform<ChecksummedAddress, `0x${string}`>>>;
+    serializedPermit: z.ZodMiniObject<{
+        version: z.ZodMiniNumberFormat;
+        eip712: z.ZodMiniObject<{
+            domain: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>;
+            primaryType: z.ZodMiniOptional<z.ZodMiniString<string>>;
+            types: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniArray<z.ZodMiniObject<{
+                name: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+            }, z.core.$strip>>>;
+            message: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>;
+        }, z.core.$strip>;
+        signature: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+        signerAddress: z.ZodMiniPipe<z.ZodMiniCustom<`0x${string}`, `0x${string}`>, z.ZodMiniTransform<ChecksummedAddress, `0x${string}`>>;
+    }, z.core.$strip>;
+    startTimestamp: z.ZodMiniNumberFormat;
+    durationDays: z.ZodMiniNumberFormat;
+}, z.core.$strip>;
+
 // @public
 export class Permits {
     // @internal
@@ -12591,6 +12675,13 @@ export interface RelayerConfig {
     readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: string;
+}
+
+// @public
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+    readonly batchRpcCalls?: boolean;
+    readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+    readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
 }
 
 // @public
@@ -14079,6 +14170,14 @@ export class SigningRejectedError extends ZamaError {
 // @public
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
+// @public (undocumented)
+export const StoredTransportKeyPairSchema: z.ZodMiniObject<{
+    publicKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    privateKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    createdAt: z.ZodMiniNumberFormat;
+    expiresAt: z.ZodMiniNumberFormat;
+}, z.core.$strip>;
+
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
     readonly address: `0x${string}`;
@@ -14331,6 +14430,98 @@ export interface TransactionErrorEvent extends BaseEvent {
 
 // @public
 export type TransactionOperation = keyof typeof transactionOperationMetadata;
+
+// @public
+export const transactionOperationMetadata: {
+    approveUnderlying: {
+        submittedEvent: (txHash: Hex) => {
+            type: "approveUnderlying:submitted";
+            txHash: `0x${string}`;
+            step: "approve";
+        };
+    };
+    "approveUnderlying:reset": {
+        submittedEvent: (txHash: Hex) => {
+            type: "approveUnderlying:submitted";
+            txHash: `0x${string}`;
+            step: "reset";
+        };
+    };
+    delegateDecryption: {
+        submittedEvent: (txHash: Hex) => {
+            type: "delegation:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    finalizeUnwrap: {
+        submittedEvent: (txHash: Hex) => {
+            type: "finalizeUnwrap:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    revokeDelegation: {
+        submittedEvent: (txHash: Hex) => {
+            type: "revokeDelegation:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    setOperator: {
+        submittedEvent: (txHash: Hex) => {
+            type: "setOperator:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    "shield:transferAndCall": {
+        submittedEvent: (txHash: Hex) => {
+            type: "shield:submitted";
+            txHash: `0x${string}`;
+            shieldPath: "transferAndCall";
+        };
+    };
+    "shield:approveAndWrap": {
+        submittedEvent: (txHash: Hex) => {
+            type: "shield:submitted";
+            txHash: `0x${string}`;
+            shieldPath: "approveAndWrap";
+        };
+    };
+    transfer: {
+        submittedEvent: (txHash: Hex) => {
+            type: "transfer:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    transferAndCall: {
+        submittedEvent: (txHash: Hex) => {
+            type: "transfer:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    transferFrom: {
+        submittedEvent: (txHash: Hex) => {
+            type: "transferFrom:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    transferFromAndCall: {
+        submittedEvent: (txHash: Hex) => {
+            type: "transferFrom:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    unwrap: {
+        submittedEvent: (txHash: Hex) => {
+            type: "unwrap:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+    unwrapAll: {
+        submittedEvent: (txHash: Hex) => {
+            type: "unwrap:submitted";
+            txHash: `0x${string}`;
+        };
+    };
+};
 
 // @public
 export interface TransactionReceipt {

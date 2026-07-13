@@ -1,12 +1,15 @@
-import type { FheChain } from "../chains/types";
 import type { RelayerConfig } from "../config/types";
 import { FhevmRelayer } from "../relayer/fhevm-relayer";
 import type { RelayerOptions } from "../relayer/types";
 
-/** Node transport — drives the FHE backend directly on the calling thread. */
+/**
+ * Node transport config. `createRelayer` is an internal self-registration
+ * hook (see `RelayerConfig`) — `FhevmRelayer` is an implementation detail,
+ * not part of the public API, so this deliberately doesn't narrow its type
+ * beyond the base (mirrors `WebRelayerConfig`/`CleartextRelayerConfig`).
+ */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
-  readonly createRelayer: (chain: FheChain) => FhevmRelayer;
 }
 
 /**
