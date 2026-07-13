@@ -207,6 +207,27 @@ export class CredentialService {
   }
 
   /**
+   * Remove the stored permit(s) covering `contractAddress` in the given
+   * (possibly delegated) scope, without touching the key pair or any other
+   * permission. Used only by the KMS-context-rotation recovery path
+   * (SDK-137): `DecryptionService` calls this on a stale-context decrypt
+   * failure, then re-plans via {@link grantPermit} to force a fresh
+   * signature. Not exposed on the public `Permits` namespace —
+   * {@link revokePermits} is the public, non-delegated equivalent.
+   *
+   * @throws if reading the signer address fails. {@link SigningFailedError}
+   */
+  async invalidatePermit(contractAddress: Address, delegator?: Address): Promise<void> {
+    const account = this.#signer.requireWalletAccount("invalidatePermit");
+    const signerAddress = checksum(account.address);
+    const chainId = this.#router.chain.id;
+    const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
+    await this.#store.deletePermitsTouching({ signerAddress, chainId, delegatorAddress }, [
+      checksum(contractAddress),
+    ]);
+  }
+
+  /**
    * Warm the signer transport key pair cache for a known address.
    *
    * Best-effort prefetch primitive: correctness still comes from `grantPermit`,

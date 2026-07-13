@@ -1,6 +1,16 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import { MAX_UINT64 } from "../../contracts";
-import { DelegationNotPropagatedError, NotEntitledError, RpcRateLimitError } from "../../errors";
+import { anvil } from "../../chains";
+import {
+  DelegationNotPropagatedError,
+  NotEntitledError,
+  RpcRateLimitError,
+  StaleKmsContextError,
+} from "../../errors";
+import { PermissionStore } from "../../credentials/permission-store";
+import type { Permission } from "../../credentials/types";
+import { checksum } from "../../schemas/primitives";
+import { TEST_PUBLIC_KEY } from "../../test-fixtures/constants";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -15,6 +25,11 @@ const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as A
 const HANDLE_A = `0x${"aa".repeat(32)}` as EncryptedValue;
 const HANDLE_B = `0x${"bb".repeat(32)}` as EncryptedValue;
 const ZERO_ENCRYPTED_VALUE = `0x${"00".repeat(32)}` as EncryptedValue;
+
+/** Mirrors the literal message `@fhevm/sdk`'s KMS-context assertion throws (SDK-137). */
+function staleKmsContextError(): Error {
+  return new Error('extraData "0xaaa" does not match KmsSignersContext extraData "0xbbb".');
+}
 
 function handles(items: Array<[EncryptedValue, Address]>): EncryptedInput[] {
   return items.map(([encryptedValue, contractAddress]) => ({ encryptedValue, contractAddress }));
@@ -546,6 +561,171 @@ describe("DecryptionService", () => {
       // HANDLE_B in-flight). HANDLE_C is short-circuited by the abort flag, so it
       // never reaches the relayer — without the flag this would be 6.
       expect(relayer.decryptValues).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe("KMS context rotation recovery (SDK-137)", () => {
+    test("a stale-context failure invalidates the permit, re-signs once, and retries to success", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(staleKmsContextError())
+        .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue]);
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).resolves.toEqual({ [HANDLE_A]: 10n });
+
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+      // One signature for the initial permit, one more for the recovery re-sign.
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+    });
+
+    test("two consecutive stale-context failures throw StaleKmsContextError without a third attempt", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.decryptValues).mockRejectedValue(staleKmsContextError());
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).rejects.toBeInstanceOf(StaleKmsContextError);
+
+      // Exactly one retry: two decrypt attempts, two signatures (initial + recovery).
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+    });
+
+    test("a non-stale-context failure is not retried and is classified as before", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.decryptValues).mockRejectedValue(new Error("boom"));
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).rejects.toMatchObject({ code: "DECRYPTION_FAILED" });
+
+      // No recovery attempt: exactly the initial decrypt call and signature.
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(1);
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(1);
+    });
+
+    test("a stale permission for one contract does not affect an already-granted permit for another", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      storage,
+      userAddress,
+    }) => {
+      // Establish A's permit through the real signing flow, then append B's as
+      // a separate permit directly — bypassing `findPermitToWiden` (SDK-136),
+      // which would otherwise coalesce two low-usage permits into one shared
+      // signature before the interesting part of this test even starts.
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 1n } as TypedValue,
+      ]);
+      await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+      const scope = {
+        signerAddress: checksum(userAddress),
+        chainId: anvil.id,
+        delegatorAddress: checksum(userAddress),
+      };
+      const permissionB: Permission = {
+        keypairPublicKey: TEST_PUBLIC_KEY,
+        contractAddresses: [checksum(CONTRACT_B)],
+        serializedPermit: {
+          version: 1,
+          eip712: { domain: {}, types: {}, message: {} },
+          signature: `0x${"bb".repeat(65)}` as Hex,
+          signerAddress: checksum(userAddress),
+        },
+        startTimestamp: Math.floor(Date.now() / 1000),
+        durationDays: 1,
+      };
+      await new PermissionStore({ storage, logger: new LoggerService() }).append(scope, [
+        permissionB,
+      ]);
+
+      const invalidateSpy = vi.spyOn(credentialService, "invalidatePermit");
+      const signsBefore = vi.mocked(relayer.signDecryptionPermit).mock.calls.length;
+      const decryptsBefore = vi.mocked(relayer.decryptValues).mock.calls.length;
+
+      // New (uncached) handles on the same contracts: A's stored permit has gone
+      // stale and recovers; B's stays covered throughout and is never retried.
+      const HANDLE_A2 = `0x${"cc".repeat(32)}` as EncryptedValue;
+      const HANDLE_B2 = `0x${"dd".repeat(32)}` as EncryptedValue;
+      let contractACalls = 0;
+      let contractBCalls = 0;
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ contractAddress }: DecryptValuesParameters) => {
+          if (contractAddress === CONTRACT_A) {
+            contractACalls++;
+            // First attempt uses the now-stale stored permit and fails; the
+            // recovery retry (with a freshly signed permit) succeeds.
+            if (contractACalls === 1) {
+              throw staleKmsContextError();
+            }
+            return [{ type: "uint64", value: 30n } as TypedValue];
+          }
+          contractBCalls++;
+          return [{ type: "uint64", value: 40n } as TypedValue];
+        },
+      );
+
+      await expect(
+        decryptionService.decryptValues(
+          handles([
+            [HANDLE_A2, CONTRACT_A],
+            [HANDLE_B2, CONTRACT_B],
+          ]),
+          userAddress,
+        ),
+      ).resolves.toEqual({ [HANDLE_A2]: 30n, [HANDLE_B2]: 40n });
+
+      // Only A's stale permit was invalidated — never B's, and the recovery
+      // path was never entered for B (exactly one relayer attempt each for a
+      // healthy contract, two for the recovering one).
+      expect(invalidateSpy).toHaveBeenCalledExactlyOnceWith(checksum(CONTRACT_A));
+      expect(contractACalls).toBe(2);
+      expect(contractBCalls).toBe(1);
+      expect(vi.mocked(relayer.decryptValues).mock.calls.length - decryptsBefore).toBe(3);
+      // Exactly one extra signature for A's recovery — B's existing coverage
+      // needs no new wallet prompt (whether or not it ends up sharing that
+      // fresh permit via SDK-136 widening is an internal storage optimization,
+      // not a second prompt).
+      expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length - signsBefore).toBe(1);
+    });
+
+    test("delegatedDecryptValues applies the same stale-context recovery", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(staleKmsContextError())
+        .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue]);
+
+      await expect(
+        decryptionService.delegatedDecryptValues(
+          handles([[HANDLE_A, CONTRACT_A]]),
+          delegatorAddress,
+          delegateAddress,
+          userAddress,
+        ),
+      ).resolves.toEqual({ [HANDLE_A]: 10n });
+
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
     });
   });
 });

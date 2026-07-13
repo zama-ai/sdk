@@ -26,6 +26,7 @@ import type {
   InsufficientERC20BalanceError,
 } from "./balance";
 import type { ConfigurationError, RelayerRequestFailedError } from "./relayer";
+import type { StaleKmsContextError } from "./decrypt";
 import type { NotEntitledError } from "./entitlement";
 import type { RpcRateLimitError } from "./rpc";
 import type {
@@ -80,6 +81,7 @@ type ErrorForCode = Complete<{
   [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+  [ZamaErrorCode.StaleKmsContext]: StaleKmsContextError;
 }>;
 
 /**

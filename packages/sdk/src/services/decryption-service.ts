@@ -10,6 +10,7 @@ import {
   DelegationNotPropagatedError,
   isFatalBatchError,
   RpcRateLimitError,
+  StaleKmsContextError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
@@ -19,7 +20,12 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
 import { pLimit } from "../utils/concurrency";
 import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
-import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
+import {
+  extractRetryAfter,
+  isRpcRateLimitError,
+  isStaleKmsContextError,
+  toError,
+} from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -53,6 +59,8 @@ interface DecryptionStrategy {
   resolveCredentials: (
     contractAddresses: Address[],
   ) => Promise<SerializedTransportKeyPairWithPermissions>;
+  /** Drop the stored permit covering one contract — the KMS-context-rotation recovery primitive (SDK-137). */
+  invalidatePermit: (contractAddress: Address) => Promise<void>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
     credentials: SerializedTransportKeyPairWithPermissions;
@@ -115,6 +123,8 @@ export class DecryptionService {
         aclActorAddress: normalizedSigner,
         resolveCredentials: (contractAddresses) =>
           this.#credentialService.grantPermit(contractAddresses),
+        invalidatePermit: (contractAddress) =>
+          this.#credentialService.invalidatePermit(contractAddress),
         decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
           this.#decryptValues(credentials, contractAddress, encryptedValues, options),
         errorMessage: "Failed to decrypt encrypted values",
@@ -138,6 +148,8 @@ export class DecryptionService {
         aclActorAddress: normalizedDelegator,
         resolveCredentials: (contractAddresses) =>
           this.#credentialService.grantPermit(contractAddresses, normalizedDelegator),
+        invalidatePermit: (contractAddress) =>
+          this.#credentialService.invalidatePermit(contractAddress, normalizedDelegator),
         validate: (contractAddresses) =>
           this.#assertAllDelegationsActive(contractAddresses, {
             delegatorAddress: normalizedDelegator,
@@ -309,6 +321,55 @@ export class DecryptionService {
     });
   }
 
+  /**
+   * Run `strategy.decryptContract` for one contract; if it fails with the
+   * KMS-context-staleness signature (SDK-137: the permit was signed before a
+   * KMS context rotation), invalidate that one permit, re-plan via
+   * `strategy.resolveCredentials` (exactly one fresh wallet prompt, scoped to
+   * this contract only — other contracts in the same batch are untouched),
+   * and retry once. A second failure — stale-context or otherwise —
+   * propagates: this is a single bounded retry, never a loop.
+   */
+  async #decryptContractWithStaleContextRecovery(
+    strategy: DecryptionStrategy,
+    contractAddress: Address,
+    encryptedValues: EncryptedValue[],
+    credentials: SerializedTransportKeyPairWithPermissions,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<DecryptValuesReturnType> {
+    try {
+      return await strategy.decryptContract({
+        credentials,
+        contractAddress,
+        encryptedValues,
+        options,
+      });
+    } catch (error) {
+      if (!isStaleKmsContextError(error)) {
+        throw error;
+      }
+      await strategy.invalidatePermit(contractAddress);
+      const freshCredentials = await strategy.resolveCredentials([contractAddress]);
+      try {
+        return await strategy.decryptContract({
+          credentials: freshCredentials,
+          contractAddress,
+          encryptedValues,
+          options,
+        });
+      } catch (retryError) {
+        if (isStaleKmsContextError(retryError)) {
+          throw new StaleKmsContextError(
+            `${strategy.errorMessage}: the KMS context for ${contractAddress} rotated again immediately ` +
+              `after a fresh permit was signed. Retry the request.`,
+            { cause: retryError },
+          );
+        }
+        throw retryError;
+      }
+    }
+  }
+
   async #decrypt(
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
@@ -407,12 +468,13 @@ export class DecryptionService {
           // threads). Already-typed errors pass straight through.
           let decrypted: DecryptValuesReturnType;
           try {
-            decrypted = await strategy.decryptContract({
-              credentials,
+            decrypted = await this.#decryptContractWithStaleContextRecovery(
+              strategy,
               contractAddress,
               encryptedValues,
+              credentials,
               options,
-            });
+            );
           } catch (error) {
             throw wrapDecryptError(error, strategy.errorMessage, {
               isDelegated: strategy.delegated,

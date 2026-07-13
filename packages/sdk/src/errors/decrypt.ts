@@ -1,4 +1,4 @@
-import type { ZamaError } from "./base";
+import { ZamaError, ZamaErrorCode } from "./base";
 import { DecryptionFailedError } from "./encryption";
 import { NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
@@ -16,6 +16,20 @@ import {
   isRpcRateLimitError,
   parseHandleFromMessage,
 } from "../utils/error";
+
+/**
+ * The permit's KMS context (contextId + epochId) rotated on the server; the
+ * SDK invalidated the stale permit, signed a fresh one (one wallet prompt),
+ * and retried once — and the retry failed too (either the rotation happened
+ * again immediately, or something else went wrong on the retry). See
+ * {@link DecryptionService} for the recovery this terminates (SDK-137).
+ */
+export class StaleKmsContextError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.StaleKmsContext, message, options);
+    this.name = "StaleKmsContextError";
+  }
+}
 
 /**
  * Context the caller supplies so a not-entitled / delegation failure can be
@@ -52,6 +66,7 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   SigningFailedError,
   NotEntitledError,
   RpcRateLimitError,
+  StaleKmsContextError,
 ] as const;
 
 /**

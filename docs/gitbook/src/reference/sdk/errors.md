@@ -38,6 +38,7 @@ import {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  StaleKmsContextError,
   SignerRequiredError,
   SignerNotConfiguredError,
   WalletNotConnectedError,
@@ -89,6 +90,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
+| `StaleKmsContextError`                  | `STALE_KMS_CONTEXT`                   | KMS context rotated twice in immediate succession, even after an automatic re-sign — rare                                         |
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
@@ -347,6 +349,22 @@ try {
 ```
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
+
+### StaleKmsContextError
+
+**Code:** `STALE_KMS_CONTEXT`
+
+The KMS periodically rotates its signing context. A permit signed under the previous context is rejected on the next decrypt — the SDK detects this automatically, discards just that one stale permit, re-signs it (one wallet prompt), and retries. `StaleKmsContextError` only surfaces if the context rotates **again** immediately after that retry, which is rare.
+
+Only the permit covering the affected contract is replaced; permits for other contracts in the same session are unaffected.
+
+```ts
+matchZamaError(error, {
+  STALE_KMS_CONTEXT: () => showError("Network is busy rotating keys — please retry"),
+});
+```
+
+**How to handle:** Retry the request. If it persists, the KMS is rotating unusually fast — wait a few seconds before retrying again.
 
 ## "No balance" vs "zero balance"
 
@@ -615,6 +633,7 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | `RelayerRequestFailedError`               | Wrong relayer URL or missing auth            | Verify `relayerUrl` in transport config. Check the `auth` option if using API key auth.         |
 | `NotEntitledError` on decrypt             | Account lacks ACL grant for the value        | Don't retry. Wait for an on-chain `FHE.allow` grant / backfill, then decrypt again.             |
 | `RpcRateLimitError` on decrypt            | Consumer RPC provider throttled (429/-32005) | Back off and retry. Raise your RPC rate limit or use a higher-throughput endpoint.              |
+| `StaleKmsContextError` on decrypt         | KMS context rotated twice in a row           | Retry. If it keeps happening, wait a few seconds between attempts.                              |
 | `InsufficientConfidentialBalanceError`    | Confidential balance < requested amount      | Show the user their balance and the shortfall. Wait for incoming transfers or shield more.      |
 | `InsufficientERC20BalanceError`           | ERC-20 balance < requested shield amount     | Show the user their public token balance. They need to acquire more tokens.                     |
 | `BalanceCheckUnavailableError`            | No stored permits for balance check          | Call `sdk.permits.grantPermit([token.address])` first, or pass `skipBalanceCheck: true`.        |

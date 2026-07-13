@@ -228,6 +228,32 @@ export function isNotEntitledMessage(message: string): boolean {
   return message.toLowerCase().includes("is not authorized to decrypt handle");
 }
 
+/**
+ * True when the failure is `@fhevm/sdk`'s internal KMS-context-mismatch
+ * assertion (`assertExtraDataMatchesKmsSingersContext`): the permit's signed
+ * `extraData` (contextId + epochId) no longer matches the current on-chain
+ * KMS signers context — the permit was signed before a KMS context rotation.
+ *
+ * No dedicated error class or code exists for this: the assertion throws a
+ * plain, unnamed `Error`, and it lives in an internal module that is not part
+ * of `@fhevm/sdk`'s public `exports` map, so there is nothing to import and
+ * check with `instanceof`. This keys on the literal message text instead,
+ * pinned to `@fhevm/sdk@1.1.0-alpha.8` — a deliberately narrow phrase chosen
+ * to minimize false positives on an unrelated error.
+ *
+ * See {@link DecryptionService} for the recovery this gates (SDK-137):
+ * invalidate the stale permit, re-plan via `grantPermit` (one fresh wallet
+ * prompt), retry once.
+ *
+ * The `error.test.ts` drift guard reads the installed `@fhevm/sdk` source and
+ * fails loudly if the message is reworded.
+ */
+export function isStaleKmsContextError(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes("does not match KmsSignersContext extraData")
+  );
+}
+
 /** Parse the on-chain handle out of the not-entitled message. */
 export function parseHandleFromMessage(message: string): string | undefined {
   return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];

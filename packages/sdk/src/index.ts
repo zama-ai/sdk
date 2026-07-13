@@ -175,6 +175,7 @@ export {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  StaleKmsContextError,
   matchZamaError,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";

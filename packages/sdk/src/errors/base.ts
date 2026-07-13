@@ -76,6 +76,8 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
+  /** The permit's KMS context rotated on the server; a fresh permit was signed and retried once, and still failed. */
+  StaleKmsContext: "STALE_KMS_CONTEXT",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -126,6 +128,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
+  [ZamaErrorCode.StaleKmsContext]: true, // rotated twice in a row; rare, a later retry is expected to succeed
 };
 
 /**

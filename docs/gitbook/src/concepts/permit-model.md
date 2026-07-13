@@ -61,6 +61,12 @@ The relayer verifies this signature before re-encrypting any ciphertext. Without
 Each permit records its start timestamp and duration at creation time. Changing `permitTTL` between sessions does not retroactively alter existing permits — they use their original duration.
 {% endhint %}
 
+### KMS context rotation
+
+The KMS periodically rotates its signing context. If a decrypt fails because the permit was signed under the previous context, the SDK detects this automatically: it discards just that one permit, re-signs it (one wallet prompt), and retries — no manual `revokePermits()` + re-`grantPermit()` needed. Only the affected contract's permit is replaced; other permits in the same scope are untouched.
+
+This recovery is bounded to a single retry. If the context rotates again immediately after, the decrypt throws `StaleKmsContextError` — see the [error reference](../reference/sdk/errors.md#stalekmscontexterror).
+
 ## How additive permits work
 
 Unlike a session model where re-authorizing replaces the previous authorization, permits are purely additive:

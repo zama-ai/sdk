@@ -2,6 +2,7 @@ export {
   toError,
   isContractCallError,
   isRpcRateLimitError,
+  isStaleKmsContextError,
   isNotEntitledMessage,
   parseHandleFromMessage,
   extractRetryAfter,

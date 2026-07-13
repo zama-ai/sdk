@@ -11,6 +11,7 @@ import {
   isConsumerRpcError,
   isRelayerError,
   isNotEntitledMessage,
+  isStaleKmsContextError,
   parseHandleFromMessage,
   extractRetryAfter,
   parseRetryAfterHeader,
@@ -430,5 +431,29 @@ describe("isNotEntitledMessage / parseHandleFromMessage", () => {
   test("the installed @fhevm/sdk still names its relayer response errors Relayer*", () => {
     const source = fhevmSdkFile("core/errors/RelayerResponseApiError.ts");
     expect(source).toContain("name: 'RelayerResponseApiError'");
+  });
+
+  // isStaleKmsContextError (SDK-137) keys on the literal message
+  // `assertExtraDataMatchesKmsSingersContext` throws — an internal, unexported
+  // @fhevm/sdk assertion with no dedicated error class or code. If a future
+  // @fhevm/sdk bump rewords it, the recovery in DecryptionService silently stops
+  // firing (every stale-context decrypt then falls through as a plain
+  // DecryptionFailedError) — guard against that drift.
+  test("the installed @fhevm/sdk still throws the KmsSignersContext extraData-mismatch message our matcher keys on", () => {
+    const source = fhevmSdkFile("core/host-contracts/KmsSignersContext-p.ts");
+    expect(source).toContain("does not match KmsSignersContext extraData");
+  });
+});
+
+describe("isStaleKmsContextError", () => {
+  test("matches @fhevm/sdk's KMS-context-mismatch assertion message", () => {
+    const message = 'extraData "0xaaaa" does not match KmsSignersContext extraData "0xbbbb".';
+    expect(isStaleKmsContextError(new Error(message))).toBe(true);
+  });
+
+  test("does NOT match an unrelated error", () => {
+    expect(isStaleKmsContextError(new Error("network unreachable"))).toBe(false);
+    expect(isStaleKmsContextError("not an error")).toBe(false);
+    expect(isStaleKmsContextError(undefined)).toBe(false);
   });
 });

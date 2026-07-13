@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { WalletNotConnectedError } from "../../errors/signer";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -364,5 +365,66 @@ describe("CredentialService.grantPermit widening", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("CredentialService.invalidatePermit (SDK-137)", () => {
+  test("removes the permit covering the given contract, leaving the keypair intact", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+
+    await credentialService.invalidatePermit(A);
+
+    expect(await credentialService.hasPermit([A])).toBe(false);
+    // Same widening semantics as revokePermits: A and B shared one signed
+    // payload, so invalidating A cascades to B too — expected, not a leak.
+    expect(await credentialService.hasPermit([B])).toBe(false);
+    // The keypair itself is untouched — no extra prompt on the next grantPermit
+    // beyond the one signature for the re-covered contracts.
+    await credentialService.grantPermit([A, B]);
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+  });
+
+  test("leaves an unrelated, separately-chunked permit untouched", async ({
+    credentialService,
+  }) => {
+    const ten = ADDRS.slice(0, 10);
+    const K = ADDRS[10]!;
+    await credentialService.grantPermit(ten);
+    await credentialService.grantPermit([K]);
+
+    await credentialService.invalidatePermit(A);
+
+    expect(await credentialService.hasPermit([K])).toBe(true);
+  });
+
+  test("only touches the (possibly delegated) scope it targets", async ({ credentialService }) => {
+    await credentialService.grantPermit([A]);
+    await credentialService.grantPermit([A], DELEGATOR_B);
+
+    await credentialService.invalidatePermit(A);
+
+    expect(await credentialService.hasPermit([A])).toBe(false);
+    expect(await credentialService.hasPermit([A], DELEGATOR_B)).toBe(true);
+  });
+
+  test("invalidating the delegated scope leaves the direct scope untouched", async ({
+    credentialService,
+  }) => {
+    await credentialService.grantPermit([A]);
+    await credentialService.grantPermit([A], DELEGATOR_B);
+
+    await credentialService.invalidatePermit(A, DELEGATOR_B);
+
+    expect(await credentialService.hasPermit([A])).toBe(true);
+    expect(await credentialService.hasPermit([A], DELEGATOR_B)).toBe(false);
+  });
+
+  test("throws when no wallet account is connected", async ({ credentialService, signer }) => {
+    vi.mocked(signer.requireWalletAccount).mockImplementation(() => {
+      throw new WalletNotConnectedError("no wallet connected");
+    });
+    await expect(credentialService.invalidatePermit(A)).rejects.toThrow(WalletNotConnectedError);
   });
 });
