@@ -3947,10 +3947,7 @@ const unsubscribe = sdk.events.subscribe((event) => {
 Passing `onEvent` to `createConfig`/the SDK constructor is convenience sugar for this same catch-all subscription, registered once at construction time:
 
 ```ts
-const sdk = new ZamaSDK({
-  ...config,
-  onEvent: (event) => analytics.track(event.type, event),
-});
+const sdk = new ZamaSDK({ ...config, onEvent: (event) => analytics.track(event.type, event) });
 ```
 
 ### 3. Subscribe to one occurrence only
