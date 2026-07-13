@@ -57,7 +57,10 @@ export class EventService {
    * @returns An unsubscribe function; calling it before the event fires cancels delivery.
    */
   once<K extends ZamaSDKEventType>(type: K, listener: TypedZamaSDKEventListener<K>): () => void {
+    let fired = false;
     const wrapped: TypedZamaSDKEventListener<K> = (event) => {
+      if (fired) {return;}
+      fired = true;
       unsubscribe();
       listener(event);
     };

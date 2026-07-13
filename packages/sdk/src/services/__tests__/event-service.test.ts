@@ -53,6 +53,35 @@ describe("EventService", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
+  test("the unsubscribe function returned by once() cancels delivery when called before the event fires", () => {
+    const service = new EventService({ logger: new LoggerService() });
+    const listener = vi.fn();
+    const unsubscribe = service.once(ZamaSDKEvents.EncryptStart, listener);
+
+    unsubscribe();
+    service.emit({ type: ZamaSDKEvents.EncryptStart });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test("once() fires exactly once even when a second once() listener re-enters emit() for the same type", () => {
+    const service = new EventService({ logger: new LoggerService() });
+    const second = vi.fn();
+    // The first listener synchronously re-triggers emit() for the same event type before
+    // the outer emit()'s listener snapshot finishes iterating — this exercises the reentrancy
+    // path where a stale snapshot could otherwise invoke an already-fired once() listener again.
+    const first = vi.fn(() => {
+      service.emit({ type: ZamaSDKEvents.EncryptStart });
+    });
+    service.once(ZamaSDKEvents.EncryptStart, first);
+    service.once(ZamaSDKEvents.EncryptStart, second);
+
+    service.emit({ type: ZamaSDKEvents.EncryptStart });
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
   test("subscribe() receives every event regardless of type", () => {
     const service = new EventService({ logger: new LoggerService() });
     const listener = vi.fn();
