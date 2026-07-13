@@ -383,8 +383,8 @@ export class DecryptionService {
     }
 
     // Split each contract's handles to stay under the relayer's per-request
-    // cleartext-bit budget (SDK-252) — a contract with many/wide handles
-    // becomes several relayer calls instead of one oversized, rejected call.
+    // cleartext-bit budget — a contract with many/wide handles becomes
+    // several relayer calls instead of one oversized, rejected call.
     const requests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[] = [];
     for (const [contractAddress, encryptedValues] of byContract) {
       for (const chunk of chunkHandlesByBitBudget(encryptedValues)) {

@@ -88,7 +88,7 @@ describe("DecryptionService", () => {
     );
   });
 
-  test("decryptValues splits one contract's handles across the 2048-bit request budget (SDK-252)", async ({
+  test("decryptValues splits one contract's handles across the 2048-bit request budget", async ({
     cachingService,
     decryptionService,
     relayer,
