@@ -12,12 +12,10 @@ export function isEncryptedValueZero(encryptedValue: string): boolean {
 }
 
 /**
- * Per-request cleartext-bit budget enforced by the KMS gateway on every
- * decryption request (`decryptValues` / `delegatedDecryptValues`). Protocol-level
- * constant, mirrors {@link MAX_CONTRACTS_PER_PERMIT}'s local duplication —
- * duplicated here (matches `@fhevm/sdk`'s own `MAX_KMS_DECRYPT_DECRYPTION_BIT_LIMIT`)
- * rather than imported since `@fhevm/sdk` only exposes the underlying FHE-type
- * table via entrypoints unsafe to import at runtime from isomorphic code.
+ * Per-request cleartext-bit budget enforced by the KMS gateway, mirrored from
+ * `@fhevm/sdk`'s `MAX_KMS_DECRYPT_DECRYPTION_BIT_LIMIT` (protocol-level constant,
+ * not imported — see {@link MAX_CONTRACTS_PER_PERMIT} for why). Internal: decrypt
+ * requests are chunked to respect it automatically, so callers never need this value.
  */
 export const MAX_DECRYPTION_REQUEST_BITS = 2048;
 

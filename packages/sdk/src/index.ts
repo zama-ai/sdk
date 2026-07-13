@@ -72,11 +72,7 @@ export type {
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export { Token, WrappedToken, type BatchBalancesResult, type BatchDecryptAsOptions } from "./token";
-export {
-  ZERO_ENCRYPTED_VALUE,
-  isEncryptedValueZero,
-  MAX_DECRYPTION_REQUEST_BITS,
-} from "./utils/handles";
+export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,
   memoryStorage,

@@ -37,8 +37,8 @@ import { assertNonNullable } from "../utils";
  * does not. Each method documents its requirement in its JSDoc.
  *
  * **Request chunking:** decrypt requests are split internally to stay under
- * the relayer's per-request cleartext-bit budget (`MAX_DECRYPTION_REQUEST_BITS`) —
- * callers never need to size batches themselves.
+ * the relayer's 2048-cleartext-bit per-request budget — callers never need to
+ * size batches themselves.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
