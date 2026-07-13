@@ -1699,15 +1699,16 @@ relayers: { [chain.id]: web() }
 
 The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
-`auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
+`auth`) and the SDK resolves the right backend per chain via `ChainRouter`.
 
 
 > [!INFO]
 > **Imported the relayer config types directly?** They followed the constructor →
 > factory move: `node()` / `web()` / `cleartext()` return `NodeRelayerConfig` /
 > `WebRelayerConfig` / `CleartextRelayerConfig` (all extend `RelayerConfig`). The
-> relayer-sdk-level `RelayerWebConfig` / `RelayerWebSecurityConfig` are unchanged
-> but now live under `@zama-fhe/sdk/web`.
+> old constructor-level `RelayerWebConfig` / `RelayerWebSecurityConfig` types were
+> removed with the worker-backed relayer. Put RPC URL and auth on `FheChain`, and
+> pass supported client/request defaults directly to `web()` or `node()`.
 
 
 
@@ -2656,13 +2657,15 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for details.
+When a browser relayer is routed through your own proxy, enforce CSRF protection
+at the proxy/application boundary (for example, with same-site cookies and your
+framework's CSRF middleware). The `web()` transport does not manage CSRF tokens.
 
 ## Next steps
 
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
-- [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [web() transport reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser-side FHE transport options
 - [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — `node()` transport factory
 
 ## Relayer API keys

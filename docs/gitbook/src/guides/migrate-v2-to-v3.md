@@ -344,14 +344,15 @@ relayers: { [chain.id]: web() }
 
 The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
-`auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
+`auth`) and the SDK resolves the right backend per chain via `ChainRouter`.
 
 {% hint style="info" %}
 **Imported the relayer config types directly?** They followed the constructor →
 factory move: `node()` / `web()` / `cleartext()` return `NodeRelayerConfig` /
 `WebRelayerConfig` / `CleartextRelayerConfig` (all extend `RelayerConfig`). The
-relayer-sdk-level `RelayerWebConfig` / `RelayerWebSecurityConfig` are unchanged
-but now live under `@zama-fhe/sdk/web`.
+old constructor-level `RelayerWebConfig` / `RelayerWebSecurityConfig` types were
+removed with the worker-backed relayer. Put RPC URL and auth on `FheChain`, and
+pass supported client/request defaults directly to `web()` or `node()`.
 {% endhint %}
 
 {% hint style="info" %}
