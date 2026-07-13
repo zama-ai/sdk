@@ -377,8 +377,12 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     relayer,
   }) => {
     const signerB = createMockSigner(DELEGATOR);
-    const serviceA = createCredentialService({ scope: "tenant-1", storage });
-    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+    const serviceA = createCredentialService({ keyPairScope: "tenant-1", storage });
+    const serviceB = createCredentialService({
+      keyPairScope: "tenant-1",
+      storage,
+      signer: signerB,
+    });
 
     const resultA = await serviceA.grantPermit([A]);
     const resultB = await serviceB.grantPermit([A]);
@@ -401,8 +405,12 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     relayer,
   }) => {
     const signerB = createMockSigner(DELEGATOR);
-    const serviceA = createCredentialService({ scope: "tenant-1", storage });
-    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+    const serviceA = createCredentialService({ keyPairScope: "tenant-1", storage });
+    const serviceB = createCredentialService({
+      keyPairScope: "tenant-1",
+      storage,
+      signer: signerB,
+    });
 
     const before = await serviceA.grantPermit([A]);
     await serviceB.grantPermit([A]);
@@ -424,8 +432,12 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     relayer,
   }) => {
     const signerB = createMockSigner(DELEGATOR);
-    const serviceA = createCredentialService({ scope: "tenant-1", storage });
-    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+    const serviceA = createCredentialService({ keyPairScope: "tenant-1", storage });
+    const serviceB = createCredentialService({
+      keyPairScope: "tenant-1",
+      storage,
+      signer: signerB,
+    });
 
     await serviceA.grantPermit([A]);
     await serviceB.grantPermit([A]);
@@ -463,7 +475,18 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
   test("rotateScope() throws when scopeId doesn't match the configured scope", async ({
     createCredentialService,
   }) => {
-    const service = createCredentialService({ scope: "tenant-1" });
+    const service = createCredentialService({ keyPairScope: "tenant-1" });
     await expect(service.rotateScope("tenant-2")).rejects.toThrow(ConfigurationError);
+  });
+
+  test("rotateScope() propagates a storage-delete failure end-to-end, doesn't swallow it", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    const service = createCredentialService({ keyPairScope: "tenant-1", storage });
+    await service.grantPermit([]); // warm the shared key pair so there's something to delete
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+
+    await expect(service.rotateScope("tenant-1")).rejects.toThrow("delete boom");
   });
 });

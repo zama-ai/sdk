@@ -198,10 +198,16 @@ export class Permits {
    * they're all treated as stale on next access. Signer-level {@link clear} never does
    * this — it only ever wipes the calling signer's own permits.
    *
+   * Not best-effort, unlike most credential-store writes: a storage failure rejects
+   * instead of being logged and swallowed. This is the primitive an operator reaches
+   * for on suspected key compromise — a resolved promise must mean the key pair is
+   * actually gone.
+   *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against rotating the wrong scope by mistake.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if the underlying storage delete fails.
    */
   async rotateScope(scopeId: string): Promise<void> {
     const service = this.#requireCredentialService("rotateScope");

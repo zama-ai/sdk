@@ -128,19 +128,25 @@ describe("TransportKeyPairVault", () => {
 describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   test("two signers configured with the same scope share one key pair", async () => {
     const storage = new MemoryStorage();
-    const scoped = (scope: string) =>
+    // One shared generator across both vaults: each vault getting its own generator
+    // would make `fromA`/`fromB` trivially equal (both are each generator's
+    // deterministic first call) regardless of whether the implementation under test
+    // actually shares anything.
+    const generator = makeGenerator();
+    const scoped = () =>
       new TransportKeyPairVault({
-        generator: makeGenerator(),
+        generator,
         storage,
         ttl: TTL_SECONDS,
         logger: makeLogger(),
-        scope,
+        keyPairScope: "tenant-1",
       });
 
-    const vaultA = scoped("tenant-1");
-    const vaultB = scoped("tenant-1");
+    const vaultA = scoped();
+    const vaultB = scoped();
 
-    const [fromA, fromB] = await Promise.all([vaultA.getOrCreate(USER), vaultB.getOrCreate(OTHER)]);
+    const fromA = await vaultA.getOrCreate(USER);
+    const fromB = await vaultB.getOrCreate(OTHER);
     expect(fromB).toEqual(fromA); // different signers, same scope → same key pair
     expect(await vaultA.readStored(OTHER)).toEqual(fromA); // signerAddress arg is ignored for storage keying
   });
@@ -155,14 +161,14 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      scope: "tenant-1",
+      keyPairScope: "tenant-1",
     });
     const vaultTenant2 = new TransportKeyPairVault({
       generator,
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      scope: "tenant-2",
+      keyPairScope: "tenant-2",
     });
     const vaultUnscoped = new TransportKeyPairVault({
       generator,
@@ -187,14 +193,14 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      scope: "tenant-1",
+      keyPairScope: "tenant-1",
     });
     const vaultB = new TransportKeyPairVault({
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      scope: "tenant-1",
+      keyPairScope: "tenant-1",
     });
 
     const shared = await vaultA.getOrCreate(USER);
@@ -220,5 +226,26 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     const before = await vault.getOrCreate(USER);
     await vault.clearScope();
     expect(await vault.readStored(USER)).toEqual(before);
+  });
+
+  test("clearScope() propagates a storage-delete failure instead of swallowing it", async () => {
+    // Unlike clear() (best-effort, low-stakes), clearScope() is the primitive an
+    // operator relies on for suspected-compromise rotation: a caller that gets a
+    // resolved promise must be able to trust the key pair is actually gone. A
+    // transient storage failure must surface, not be logged-and-dropped.
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      keyPairScope: "tenant-1",
+    });
+    await vault.getOrCreate(USER);
+
+    await expect(vault.clearScope()).rejects.toThrow("delete boom");
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 });

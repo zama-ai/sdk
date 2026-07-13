@@ -40,9 +40,11 @@ export interface CredentialServiceConfig {
    * Opt-in shared-tenant scope (B2B2C/WaaS operators). When set, every signer
    * configured with the same scope shares one transport key pair instead of one
    * per signer address. Permits stay per-signer regardless — see {@link rotateScope}
-   * for the operator-level counterpart to signer-level revocation.
+   * for the operator-level counterpart to signer-level revocation. Named
+   * `keyPairScope`, not `scope`, to stay unambiguous next to the unrelated
+   * `PermissionScope` (signer/chain/delegator) used throughout this class.
    */
-  scope?: string;
+  keyPairScope?: string;
 }
 
 /**
@@ -65,7 +67,7 @@ export class CredentialService {
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
-  readonly #scope: string | undefined;
+  readonly #keyPairScope: string | undefined;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -77,7 +79,7 @@ export class CredentialService {
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
       logger: config.logger,
-      scope: config.scope,
+      keyPairScope: config.keyPairScope,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
@@ -87,7 +89,7 @@ export class CredentialService {
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
-    this.#scope = config.scope;
+    this.#keyPairScope = config.keyPairScope;
   }
 
   /**
@@ -238,19 +240,23 @@ export class CredentialService {
    * the only operation that can invalidate a shared key pair; signer-level
    * {@link clearCredentials} never does.
    *
+   * Not best-effort: unlike {@link clearCredentials}, a storage failure here rejects
+   * instead of being logged and swallowed — see {@link TransportKeyPairVault.clearScope}.
+   *
    * @param scopeId - Must match the scope this service was configured with. Requiring
    *   the caller to name it guards against rotating the wrong scope by mistake.
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if the underlying storage delete fails.
    */
   async rotateScope(scopeId: string): Promise<void> {
-    if (this.#scope === undefined) {
+    if (this.#keyPairScope === undefined) {
       throw new ConfigurationError(
         "rotateScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to rotate.",
       );
     }
-    if (scopeId !== this.#scope) {
+    if (scopeId !== this.#keyPairScope) {
       throw new ConfigurationError(
-        `rotateScope("${scopeId}") does not match the configured scope ("${this.#scope}").`,
+        `rotateScope("${scopeId}") does not match the configured scope ("${this.#keyPairScope}").`,
       );
     }
     await this.#vault.clearScope();

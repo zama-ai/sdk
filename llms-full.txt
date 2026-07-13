@@ -15420,7 +15420,7 @@ For a complete "log out" that also removes the transport key pair, use `sdk.perm
 
 Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
 
-Invalidating the *shared* key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
+Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
 
 ## Wallet account changes
 
@@ -15507,17 +15507,17 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-| Parameter  | Value                                                            |
-| ---------- | ---------------------------------------------------------------- |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM key pair                                        |
+| Parameter  | Value                                                                    |
+| ---------- | ------------------------------------------------------------------------ |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
+| Key format | Plaintext ML-KEM key pair                                                |
 | Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) for the full lifecycle.
 
 ### Shared-tenant scope (B2B2C / WaaS operators)
 
-`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the *same* transport key pair instead of generating one per signer address.
+`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the _same_ transport key pair instead of generating one per signer address.
 
 **When it's the right tradeoff.** A separately-tenanted deployment (browser or mobile dApp, treasury wallet) gets real defense-in-depth from per-signer keys: compromising one signer's storage never exposes another user's key. A shared-tenant Wallet-as-a-Service operator holding thousands of client wallets behind one operator-controlled key store gets none of that benefit — if the store is breached, every wallet behind it is compromised together regardless of how many key pairs exist. In that case, per-signer keys are pure overhead (generation, storage rows, management) with no corresponding security gain, and `transportKeyPairScope` lets the operator collapse them into one.
 
@@ -15529,6 +15529,8 @@ The security model relies on same-origin isolation: only JavaScript running on t
 > [!WARNING]
 > Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
 
+
+**Onboarding race.** `GenericStorage` has no compare-and-swap, so the very first time a scope's key pair is created, concurrent signers can race the underlying storage. This isn't just a more-likely version of the ordinary per-signer race (two tabs for the same end-user, where the loser just re-signs) — under a shared scope the racers are typically _different_ end-users behind the same operator, so the losing side can have an already-granted permit silently pruned as stale through no action of its own, and because one slot serves the whole cohort, every TTL expiry or `rotateScope()` call is a correlated event that can push many signers into the window at once. Pre-warm a scope's key pair once (a single call, e.g. `sdk.permits.warmTransportKeyPair()`) before opening concurrent traffic to it, rather than letting the first wave of real users race each other.
 
 ### Limitations
 

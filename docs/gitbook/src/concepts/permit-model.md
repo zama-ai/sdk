@@ -92,7 +92,7 @@ For a complete "log out" that also removes the transport key pair, use `sdk.perm
 
 Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
 
-Invalidating the *shared* key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. See [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
+Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. See [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
 
 ## Wallet account changes
 
