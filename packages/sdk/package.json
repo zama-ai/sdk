@@ -39,6 +39,9 @@
   "types": "./dist/esm/index.d.ts",
   "typesVersions": {
     "*": {
+      "cleartext": [
+        "./dist/esm/cleartext/index.d.ts"
+      ],
       "query": [
         "./dist/esm/query/index.d.ts"
       ],
@@ -70,6 +73,17 @@
         "default": "./dist/cjs/index.cjs"
       },
       "default": "./dist/esm/index.js"
+    },
+    "./cleartext": {
+      "import": {
+        "types": "./dist/esm/cleartext/index.d.ts",
+        "default": "./dist/esm/cleartext/index.js"
+      },
+      "require": {
+        "types": "./dist/esm/cleartext/index.d.ts",
+        "default": "./dist/cjs/cleartext/index.cjs"
+      },
+      "default": "./dist/esm/cleartext/index.js"
     },
     "./query": {
       "import": {
