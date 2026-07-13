@@ -178,13 +178,13 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   /**
    * Encrypts one typed input under the chain's FHE key, bound to the contract it
    * targets and the user submitting it, and returns the ciphertext handle plus
-   * the input proof the contract verifies on-chain. `type` is the raw FHE type
-   * without the `e` prefix (`"uint64"`, `"bool"`, `"address"`).
+   * the input proof the contract verifies on-chain. `type` is the FHE type
+   * with the `e` prefix (`"euint64"`, `"ebool"`, `"eaddress"`).
    *
    * @example
    * ```ts
    * const { encryptedValue, inputProof } = await relayer.encryptValue({
-   *   value: { type: "uint64", value: 1000n },
+   *   value: { type: "euint64", value: 1000n },
    *   contractAddress: "0xToken…",
    *   userAddress: "0xUser…",
    * });
@@ -207,8 +207,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```ts
    * const { encryptedValues, inputProof } = await relayer.encryptValues({
    *   values: [
-   *     { type: "uint64", value: 1000n },
-   *     { type: "bool", value: true },
+   *     { type: "euint64", value: 1000n },
+   *     { type: "ebool", value: true },
    *   ],
    *   contractAddress: "0xToken…",
    *   userAddress: "0xUser…",
