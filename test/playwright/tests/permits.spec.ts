@@ -24,6 +24,24 @@ test("should show allowed after allow then not-allowed after revoke", async ({
   await expect(page.getByTestId("permits-status")).toContainText("Allowed: false");
 });
 
+test("should show not-allowed after clearing stored credentials", async ({ page, contracts }) => {
+  await page.goto(`/permits?tokens=${contracts.cUSDT},${contracts.cUSDC}`);
+
+  // Allow first
+  await page.getByTestId("permits-allow-button").click();
+  await expect(page.getByTestId("permits-status")).toContainText("Allowed: true");
+
+  // Clearing credentials wipes the local keypair and permits
+  await page.getByTestId("permits-clear-credentials-button").click();
+  await expect(page.getByTestId("clear-credentials-success")).toContainText(
+    "Credentials cleared successfully",
+  );
+
+  // Status should reflect the cleared credentials after reload
+  await page.goto(`/permits?tokens=${contracts.cUSDT},${contracts.cUSDC}`);
+  await expect(page.getByTestId("permits-status")).toContainText("Allowed: false");
+});
+
 test("should show not-allowed after revoking all permits", async ({ page, contracts }) => {
   await page.goto(`/permits?tokens=${contracts.cUSDT},${contracts.cUSDC}`);
 

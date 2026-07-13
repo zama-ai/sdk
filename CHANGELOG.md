@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.1...v3.3.1-alpha.2) (2026-07-13)
+
+### Code Refactoring
+
+- **sdk:** replace @zama-fhe/relayer-sdk with @fhevm/sdk ([#458](https://github.com/zama-ai/sdk/issues/458)) ([f9b79c9]())
+
 ## [3.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.3.1-alpha.1) (2026-07-09)
 
 ### Bug Fixes

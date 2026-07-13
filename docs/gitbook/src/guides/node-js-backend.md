@@ -1,11 +1,11 @@
 ---
 title: Node.js backend
-description: How to use the SDK in a Node.js server environment with worker threads and per-request isolation.
+description: How to use the SDK in a Node.js server environment with per-request storage isolation.
 ---
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
+The SDK works in Node.js with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
 
 {% hint style="info" %}
 The `auth` / `RELAYER_API_KEY` shown below is for the Zama-hosted **mainnet** relayer. The **Sepolia testnet** relayer needs no key — omit `auth` on testnet.
@@ -21,7 +21,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
+The `node()` transport runs FHE operations through `@fhevm/sdk`. Chain data comes from the preset, so a bare call is all you need; it also accepts an optional `@fhevm/sdk` options object (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -47,7 +47,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -132,7 +132,7 @@ The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKe
 
 ### 7. Clean up on shutdown
 
-Terminate the worker pool when your process exits:
+Release the SDK's resources when your process exits:
 
 ```ts
 process.on("SIGTERM", () => {
@@ -160,7 +160,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -171,7 +171,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 ## Next steps
 
 - [Decrypt values from event logs](./decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
-- [RelayerNode](../reference/sdk/RelayerNode.md) -- `node()` transport factory options
+- [node() transport](../reference/sdk/RelayerNode.md) -- the `node()` transport factory reference
 - [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management
 - [GenericSigner](../reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations

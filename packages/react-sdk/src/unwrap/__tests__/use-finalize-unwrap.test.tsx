@@ -74,15 +74,15 @@ describe("useFinalizeUnwrap", () => {
 });
 
 describe("useFinalizeUnwrap error propagation", () => {
-  test("propagates DecryptionFailedError from userDecrypt failure", async ({
+  test("propagates DecryptionFailedError from decryptValues failure", async ({
     createWrapper,
     mockWrappedToken: token,
     relayer,
   }) => {
     const error = new DecryptionFailedError("decryption timeout");
-    vi.mocked(relayer.userDecrypt).mockRejectedValueOnce(error);
+    vi.mocked(relayer.decryptValues).mockRejectedValueOnce(error);
     vi.mocked(token.finalizeUnwrap).mockImplementationOnce(async () => {
-      await relayer.userDecrypt({} as never);
+      await relayer.decryptValues({} as never);
       return { txHash: "0xtx", receipt: { logs: [] } };
     });
 
@@ -101,7 +101,7 @@ describe("useFinalizeUnwrap error propagation", () => {
       expect(result.current.isError).toBe(true);
     });
 
-    expect(vi.mocked(relayer.userDecrypt)).toHaveBeenCalledOnce();
+    expect(vi.mocked(relayer.decryptValues)).toHaveBeenCalledOnce();
     expect(result.current.error).toBeInstanceOf(DecryptionFailedError);
   });
 });

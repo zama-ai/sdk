@@ -2,11 +2,11 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { resolveChainRelayers, resolveStorage } from "../resolve";
 import { sepolia, mainnet, hardhat, anvil, type FheChain } from "../../chains";
 import type { RelayerConfig } from "../types";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
+import type { FhevmRelayerSDK } from "../../relayer/types";
 
 /** Stub the public RelayerConfig seam — no internal-module mocking. */
 function mockRelayerConfig(type: RelayerConfig["type"] = "web"): RelayerConfig {
-  return { type, createRelayer: () => ({}) as unknown as RelayerSDK };
+  return { type, createRelayer: () => ({}) as unknown as FhevmRelayerSDK };
 }
 
 describe("resolveChainRelayers", () => {
@@ -72,8 +72,8 @@ describe("resolveChainRelayers", () => {
       [1]: mainnetCfg,
     });
     expect(result.size).toBe(2);
-    expect(result.get(11155111)).toEqual({ chain: sepolia, relayer: sepoliaCfg });
-    expect(result.get(1)).toEqual({ chain: mainnet, relayer: mainnetCfg });
+    expect(result.get(11155111)).toEqual({ chain: sepolia, relayerConfig: sepoliaCfg });
+    expect(result.get(1)).toEqual({ chain: mainnet, relayerConfig: mainnetCfg });
   });
 });
 

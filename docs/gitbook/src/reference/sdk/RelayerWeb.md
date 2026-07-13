@@ -1,26 +1,19 @@
 ---
-title: RelayerWeb
-description: Browser relayer that runs FHE operations in a Web Worker via WASM.
+title: web() transport
+description: Browser relayer transport that runs FHE operations via bundled WASM.
 ---
 
-# RelayerWeb
+# `web()` transport
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available.
 
 ## Import
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
+import { web } from "@zama-fhe/sdk/web";
 ```
 
-{% hint style="info" %}
-For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](./network-presets.md) for examples.
-{% endhint %}
-
 ## Usage
-
-{% tabs %}
-{% tab title="Recommended (web transport)" %}
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -35,75 +28,17 @@ const config = createConfig({
 });
 ```
 
-{% endtab %}
-{% tab title="Direct construction" %}
+## Parameters
 
-```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
+`web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
 
-const relayer = new RelayerWeb({ chain: sepolia, worker: relayerWorkerClient });
-```
+## Return Type
 
-{% endtab %}
-{% endtabs %}
-
-## Constructor (`RelayerWebConfig`)
-
-### chain
-
-`FheChain`
-
-FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object.
-
-### worker
-
-`RelayerWorkerClient`
-
-Worker client that handles WASM operations off the main thread.
-
-### security
-
-`RelayerWebSecurityConfig | undefined`
-
-Security options for the WASM bundle and relayer requests.
-
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
-
-### threads
-
-`number | undefined`
-
-Number of WASM threads for parallel FHE operations inside the Web Worker. Default: `1` (single-threaded). The practical sweet spot is 4-8 threads; beyond that, diminishing returns and higher memory usage.
-
-{% hint style="warning" %}
-Multi-threading requires [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` access:
-
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
-
-Without these headers, the browser blocks `SharedArrayBuffer` and the relayer falls back to single-threaded mode.
-{% endhint %}
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage for caching the FHE encryption key and params across sessions.
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-How long cached FHE artifacts remain valid, in seconds.
+`WebRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
-- [ZamaSDK](./ZamaSDK.md) — pass the relayer to the SDK constructor
-- [RelayerNode](./RelayerNode.md) — Node.js variant using worker threads
+- [`node()` transport](./RelayerNode.md) — the Node.js variant, running FHE on the calling thread
+- [`cleartext()` transport](./RelayerCleartext.md) — the development variant, no FHE
+- [ZamaSDK](./ZamaSDK.md) — pass the config to the SDK constructor
 - [Configuration guide](../../guides/configuration.md) — authentication and network presets

@@ -1,6 +1,6 @@
-import { ApproveForm } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
 import { CONTRACTS } from "@/constants";
+import { ApproveForm } from "@zama-fhe/test-components";
+import { getAddress } from "viem";
 
 export default async function ApprovePage({
   searchParams,
@@ -8,8 +8,8 @@ export default async function ApprovePage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONTRACTS.cUSDT;
-  const spender = params.spender as Address | undefined;
+  const token = getAddress(params.token ?? CONTRACTS.cUSDT);
+  const spender = params.spender ? getAddress(params.spender) : undefined;
 
   return (
     <div className="space-y-6">

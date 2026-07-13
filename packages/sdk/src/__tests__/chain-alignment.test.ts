@@ -68,7 +68,7 @@ describe("chain alignment guards", () => {
       // No write or relayer-mutation side-effects — chain check must run first.
       expect(signer.signTypedData).not.toHaveBeenCalled();
       expect(signer.writeContract).not.toHaveBeenCalled();
-      expect(relayer.encrypt).not.toHaveBeenCalled();
+      expect(relayer.encryptValues).not.toHaveBeenCalled();
     },
   );
 });

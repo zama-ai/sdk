@@ -22,36 +22,23 @@ export type {
   AtLeastOneChain,
   ResolvedChainRelayer,
 } from "./config";
-export type { RelayerDispatcher, WorkerLike } from "./relayer/relayer-dispatcher";
-export type { RelayerSDK } from "./relayer/relayer-sdk";
+export type { ChainRouter } from "./chains/router";
+export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
-  RelayerSDKStatus,
   EncryptResult,
   EncryptParams,
   EncryptInput,
   EncryptedValue,
   ClearValue,
   EIP712TypedData,
-  NetworkType,
-  FheEncryptionKey,
-  PublicParamsData,
-} from "./relayer/relayer-sdk.types";
-export type {
-  FheTypeName,
-  ZKProofLike,
-  InputProofBytesType,
-  FhevmInstanceConfig,
-} from "@zama-fhe/relayer-sdk/bundle";
+  TypedValue,
+  DecryptValuesParameters,
+} from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
 // Re-exported from the underlying relayer types under their glossary names.
-export type {
-  UserDecryptParams as DecryptValuesParams,
-  PublicDecryptResult as DecryptPublicValuesResult,
-  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "./relayer/relayer-sdk.types";
-export type { KmsDelegatedUserDecryptEIP712Type as KmsDelegatedDecryptEIP712Type } from "@zama-fhe/relayer-sdk/bundle";
-export type { GenericLogger } from "./worker/worker.types";
+export type { DecryptPublicValuesResult } from "./relayer/types";
+export type { GenericLogger } from "./types/logger";
 
 // Chain presets and types
 export {
@@ -64,7 +51,7 @@ export {
   anvil,
   chains,
 } from "./chains";
-export type { FheChain } from "./chains/types";
+export type { FheChain, FheChainAuth } from "./chains/types";
 
 // ERC-165 interface IDs
 export {
@@ -94,7 +81,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { TransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
+export type { SerializedTransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
 export type {
   GenericSigner,
   GenericProvider,
@@ -166,8 +153,6 @@ export {
   NotEntitledError,
   RpcRateLimitError,
   ConfigurationError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ChainMismatchError,
   SignerRequiredError,
   SignerNotConfiguredError,

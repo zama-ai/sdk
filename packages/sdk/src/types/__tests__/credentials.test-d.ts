@@ -1,5 +1,5 @@
-import { describe, expectTypeOf, test } from "vitest";
 import type { Hex } from "viem";
+import { describe, expectTypeOf, test } from "vitest";
 import type { Permission, StoredTransportKeyPair } from "../../credentials/types";
 import type { ChecksummedAddress } from "../../schemas/primitives";
 
@@ -15,11 +15,7 @@ describe("StoredTransportKeyPair", () => {
 describe("Permission", () => {
   test("has all required fields with correct types", () => {
     expectTypeOf<Permission["keypairPublicKey"]>().toEqualTypeOf<Hex>();
-    expectTypeOf<Permission["signerAddress"]>().toEqualTypeOf<ChecksummedAddress>();
-    expectTypeOf<Permission["delegatorAddress"]>().toEqualTypeOf<ChecksummedAddress>();
-    expectTypeOf<Permission["chainId"]>().toEqualTypeOf<number>();
-    expectTypeOf<Permission["signedContractAddresses"]>().toEqualTypeOf<ChecksummedAddress[]>();
-    expectTypeOf<Permission["signature"]>().toEqualTypeOf<Hex>();
+    expectTypeOf<Permission["contractAddresses"]>().toEqualTypeOf<ChecksummedAddress[]>();
     expectTypeOf<Permission["startTimestamp"]>().toEqualTypeOf<number>();
     expectTypeOf<Permission["durationDays"]>().toEqualTypeOf<number>();
   });

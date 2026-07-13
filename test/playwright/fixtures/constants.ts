@@ -4,9 +4,6 @@ export const TEST_PRIVATE_KEY =
 /** Amount minted to the test account per token (ERC-20 units with 6 decimals). */
 export const MINTED = 1_000n * 10n ** 6n;
 
-/** Port for the mock relayer server. */
-export const MOCK_RELAYER_PORT = 4200;
-
 /** Dev-server port for the Next.js test app. */
 export const NEXTJS_PORT = 3100;
 

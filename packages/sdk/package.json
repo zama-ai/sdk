@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.3.1-alpha.1",
+  "version": "3.3.1-alpha.2",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
@@ -134,6 +134,10 @@
         "types": "./dist/esm/node/index.d.ts",
         "default": "./dist/esm/node/index.js"
       },
+      "require": {
+        "types": "./dist/esm/node/index.d.ts",
+        "default": "./dist/cjs/node/index.cjs"
+      },
       "default": "./dist/esm/node/index.js"
     },
     "./chains": {
@@ -162,7 +166,7 @@
     "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json"
   },
   "dependencies": {
-    "@zama-fhe/relayer-sdk": "~0.4.4",
+    "@fhevm/sdk": "1.1.0-alpha.8",
     "viem": ">=2",
     "zod": ">=4"
   },

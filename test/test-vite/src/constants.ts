@@ -1,24 +1,25 @@
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import deployments from "../../../contracts/deployments.json";
 
 export const CONFIDENTIAL_TOKEN_ADDRESSES: [Address, ...Address[]] = [
-  deployments.cUSDT as Address, // cUSDT
-  deployments.cToken as Address, // cUSDC
+  getAddress(deployments.cUSDT), // cUSDT
+  getAddress(deployments.cToken), // cUSDC
 ];
 
 export const ERC20_TOKENS: { address: Address; wrapper: Address }[] = [
   {
-    address: deployments.USDT as Address, // USDT
-    wrapper: deployments.cUSDT as Address, // cUSDT
+    address: getAddress(deployments.USDT), // USDT
+    wrapper: getAddress(deployments.cUSDT), // cUSDT
   },
   {
-    address: deployments.erc20 as Address, // USDC
-    wrapper: deployments.cToken as Address, // cUSDC
+    address: getAddress(deployments.erc20), // USDC
+    wrapper: getAddress(deployments.cToken), // cUSDC
   },
 ];
 
 export const DEFAULTS = {
-  token: deployments.USDT as Address, // USDT (ERC-20)
-  wrapper: deployments.cUSDT as Address, // cUSDT
-  confidentialToken: deployments.cUSDT as Address, // cUSDT
+  token: getAddress(deployments.USDT), // USDT (ERC-20)
+  wrapper: getAddress(deployments.cUSDT), // cUSDT
+  confidentialToken: getAddress(deployments.cUSDT), // cUSDT
 };
