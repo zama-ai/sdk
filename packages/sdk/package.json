@@ -120,6 +120,10 @@
         "types": "./dist/esm/node/index.d.ts",
         "default": "./dist/esm/node/index.js"
       },
+      "require": {
+        "types": "./dist/esm/node/index.d.ts",
+        "default": "./dist/cjs/node/index.cjs"
+      },
       "default": "./dist/esm/node/index.js"
     },
     "./chains": {

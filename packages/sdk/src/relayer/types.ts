@@ -1,5 +1,11 @@
 import type { Eip712Like, TypedValue } from "@fhevm/sdk/types";
-import type { createFhevmClient, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
+import type {
+  createFhevmBaseClient,
+  createFhevmClient,
+  createFhevmDecryptClient,
+  createFhevmEncryptClient,
+  setFhevmRuntimeConfig,
+} from "@fhevm/sdk/viem";
 import type { Address, Hex } from "viem";
 import type { FheChain } from "../chains/types";
 
@@ -65,6 +71,13 @@ export type EIP712TypedData = Eip712Like;
 
 /** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
 export type FhevmClient = ReturnType<typeof createFhevmClient>;
+
+/** @internal Capability-scoped `@fhevm/sdk` clients used by {@link FhevmRelayer}. */
+export type FhevmBaseClient = ReturnType<typeof createFhevmBaseClient>;
+/** @internal */
+export type FhevmDecryptClient = ReturnType<typeof createFhevmDecryptClient>;
+/** @internal */
+export type FhevmEncryptClient = ReturnType<typeof createFhevmEncryptClient>;
 
 /** Per-client `@fhevm/sdk` options (`batchRpcCalls`, `fheEncryptionKey`). */
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
@@ -191,7 +204,6 @@ export interface FhevmRelayerOptions {
  */
 export interface FhevmRelayerSDK extends Pick<
   FhevmClient,
-  | "init"
   | "encryptValue"
   | "encryptValues"
   | "decryptPublicValue"

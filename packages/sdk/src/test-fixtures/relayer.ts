@@ -15,7 +15,6 @@ import { anvil } from "../chains";
 export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): FhevmRelayerSDK {
   return {
     chain: anvil,
-    init: vi.fn().mockResolvedValue(undefined),
     generateTransportKeyPair: vi
       .fn()
       .mockResolvedValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),

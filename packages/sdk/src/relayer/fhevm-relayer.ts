@@ -1,9 +1,25 @@
-import { createFhevmClient } from "@fhevm/sdk/viem";
-import { createFhevmCleartextClient } from "@fhevm/sdk/viem/cleartext";
+import {
+  createFhevmBaseClient,
+  createFhevmDecryptClient,
+  createFhevmEncryptClient,
+} from "@fhevm/sdk/viem";
+import {
+  createFhevmCleartextBaseClient,
+  createFhevmCleartextDecryptClient,
+  createFhevmCleartextEncryptClient,
+} from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
-import type { FhevmClient, FhevmRelayerOptions, FhevmRelayerSDK, RelayerOptions } from "./types";
+import type {
+  FhevmBaseClient,
+  FhevmClient,
+  FhevmDecryptClient,
+  FhevmEncryptClient,
+  FhevmRelayerOptions,
+  FhevmRelayerSDK,
+  RelayerOptions,
+} from "./types";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -23,36 +39,37 @@ export interface FhevmRelayerConfig {
 }
 
 /**
- * Single-chain FHE backend that drives `@fhevm/sdk` on the calling thread.
+ * Single-chain FHE backend that drives `@fhevm/sdk` on the calling thread with
+ * capability-scoped lazy initialization.
  * EIP-712 signing is done by the signer layer; this backend builds the typed
  * data and, on decrypt, reassembles the new SDK's signed permit from the
  * interface's params + the previously returned signature.
  *
  * @remarks
- * Each method delegates to the underlying {@link FhevmClient}, adding two
- * cross-cutting behaviors that the delegated signatures don't express:
+ * Each method delegates to the narrowest base, decrypt, or encrypt client,
+ * adding two cross-cutting behaviors that the delegated signatures don't
+ * express:
  *
- * - **Lazy init.** Every network method awaits {@link FhevmRelayer.init} before
- *   delegating, so callers never init the client themselves. `init()` is
- *   idempotent — it memoizes its ready-promise — so the repeated awaits
- *   collapse to a single init per client.
+ * - **Lazy init.** Each operation initializes only the capability it requires.
+ *   Public decrypt avoids WASM, private decrypt loads TKMS only, and encryption
+ *   alone loads TFHE and the FHE encryption key.
  * - **Option merging.** The chain's default options (`auth`, `timeout`, `debug`)
  *   are spread in first, then the per-call `options`, so a per-call value always
- *   wins over the chain default. The passthrough methods (serialize/parse and
- *   key-pair helpers) make no relayer round-trip, so they inject no options.
+ *   wins over the chain default. Serialization helpers make no relayer
+ *   round-trip, so they inject no options.
  */
 export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;
-  readonly #fhevm: FhevmClient;
+  readonly #base: FhevmBaseClient;
+  readonly #decrypt: FhevmDecryptClient;
+  readonly #encrypt: FhevmEncryptClient;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
-  #initPromise: Promise<void> | undefined;
+  #encryptInitPromise: Promise<void> | undefined;
 
   /**
-   * Builds the `@fhevm/sdk` client for the chain — a cleartext client in
-   * {@link FhevmRelayerConfig.cleartext} mode, otherwise the real relayer
-   * client — and captures the chain's `auth`/`timeout`/`debug` as the default
-   * options merged into every network call. Construction is cheap; the client's
-   * one-time init is deferred to the first network call (see {@link init}).
+   * Builds capability-scoped `@fhevm/sdk` clients for the chain and captures
+   * the chain's `auth`/`timeout`/`debug` as request defaults. Construction is
+   * cheap; each client's one-time init is deferred to its first operation.
    */
   constructor(config: FhevmRelayerConfig) {
     this.#chain = config.chain;
@@ -68,7 +85,15 @@ export class FhevmRelayer implements FhevmRelayerSDK {
       chain: toFhevmChain(this.#chain),
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
-    this.#fhevm = config.cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
+    if (config.cleartext) {
+      this.#base = createFhevmCleartextBaseClient(params);
+      this.#decrypt = createFhevmCleartextDecryptClient(params);
+      this.#encrypt = createFhevmCleartextEncryptClient(params);
+    } else {
+      this.#base = createFhevmBaseClient(params);
+      this.#decrypt = createFhevmDecryptClient(params);
+      this.#encrypt = createFhevmEncryptClient(params);
+    }
     this.#defaultOptions = {
       ...(this.#chain.auth !== undefined && { auth: this.#chain.auth }),
       ...(timeout !== undefined && { timeout }),
@@ -81,25 +106,11 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     return this.#chain;
   }
 
-  /**
-   * Runs the client's one-time init and memoizes the combined attempt. Two
-   * steps in order: first prefetch the chain's FHE encryption key with the
-   * default options — the only path that carries the chain's `auth`, so the
-   * key fetch reaches an authenticated relayer — then delegate to the client's
-   * own init (on-chain protocol-version resolution and the WASM module load).
-   * Every network method awaits this first, so calling it directly is optional.
-   * Safe to call repeatedly; concurrent and post-settlement calls share the one
-   * memoized promise.
-   *
-   * @remarks
-   * A failed init does not self-recover: the rejected promise stays memoized in
-   * `#initPromise`. Discard this backend and build a new one to retry.
-   */
-  init: FhevmClient["init"] = () => {
-    this.#initPromise ??= this.#fhevm
+  #initEncrypt = (): Promise<void> => {
+    this.#encryptInitPromise ??= this.#encrypt
       .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
-      .then(() => this.#fhevm.init());
-    return this.#initPromise;
+      .then(() => this.#encrypt.init());
+    return this.#encryptInitPromise;
   };
 
   /**
@@ -115,8 +126,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   decryptPublicValue: FhevmClient["decryptPublicValue"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.decryptPublicValue({
+    await this.#base.init();
+    return this.#base.decryptPublicValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -135,8 +146,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   decryptPublicValues: FhevmClient["decryptPublicValues"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.decryptPublicValues({
+    await this.#base.init();
+    return this.#base.decryptPublicValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -157,8 +168,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   decryptPublicValuesWithSignatures: FhevmClient["decryptPublicValuesWithSignatures"] = async (
     parameters,
   ) => {
-    await this.init();
-    return this.#fhevm.decryptPublicValuesWithSignatures({
+    await this.#base.init();
+    return this.#base.decryptPublicValuesWithSignatures({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -180,8 +191,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.encryptValue({
+    await this.#initEncrypt();
+    return this.#encrypt.encryptValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -205,8 +216,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.encryptValues({
+    await this.#initEncrypt();
+    return this.#encrypt.encryptValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -230,8 +241,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   decryptValue: FhevmClient["decryptValue"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.decryptValue({
+    await this.#decrypt.init();
+    return this.#decrypt.decryptValue({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -253,8 +264,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   decryptValues: FhevmClient["decryptValues"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.decryptValues({
+    await this.#decrypt.init();
+    return this.#decrypt.decryptValues({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -278,8 +289,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   decryptValuesFromPairs: FhevmClient["decryptValuesFromPairs"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.decryptValuesFromPairs({
+    await this.#decrypt.init();
+    return this.#decrypt.decryptValuesFromPairs({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters.options },
     });
@@ -297,8 +308,8 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.fetchFheEncryptionKeyBytes({
+    await this.#initEncrypt();
+    return this.#encrypt.fetchFheEncryptionKeyBytes({
       ...parameters,
       options: { ...this.#defaultOptions, ...parameters?.options },
     });
@@ -326,11 +337,12 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
-    await this.init();
-    return this.#fhevm.signDecryptionPermit(parameters);
+    await this.#base.init();
+    return this.#base.signDecryptionPermit(parameters);
   };
 
-  // Non-network passthroughs — no relayer round-trip, so no `auth` to inject.
+  // Permit/key-pair helpers carry no request options. Parsing initializes the
+  // capability needed to validate the restored value; serialization stays local.
 
   /**
    * Serializes a transport key pair to a hex `{ publicKey, privateKey }` pair for
@@ -344,7 +356,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   serializeTransportKeyPair: FhevmClient["serializeTransportKeyPair"] = (parameters) =>
-    this.#fhevm.serializeTransportKeyPair(parameters);
+    this.#decrypt.serializeTransportKeyPair(parameters);
 
   /**
    * Serializes a signed permit to a plain, JSON-stringifiable object (version,
@@ -358,7 +370,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   serializeSignedDecryptionPermit: FhevmClient["serializeSignedDecryptionPermit"] = (parameters) =>
-    this.#fhevm.serializeSignedDecryptionPermit(parameters);
+    this.#base.serializeSignedDecryptionPermit(parameters);
 
   /**
    * Rebuilds a transport key pair from its serialized hex
@@ -372,8 +384,10 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * });
    * ```
    */
-  parseTransportKeyPair: FhevmClient["parseTransportKeyPair"] = (parameters) =>
-    this.#fhevm.parseTransportKeyPair(parameters);
+  parseTransportKeyPair: FhevmClient["parseTransportKeyPair"] = async (parameters) => {
+    await this.#decrypt.init();
+    return this.#decrypt.parseTransportKeyPair(parameters);
+  };
 
   /**
    * Rebuilds a signed permit from its serialized form and validates it: checks
@@ -391,8 +405,10 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * });
    * ```
    */
-  parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = (parameters) =>
-    this.#fhevm.parseSignedDecryptionPermit(parameters);
+  parseSignedDecryptionPermit: FhevmClient["parseSignedDecryptionPermit"] = async (parameters) => {
+    await this.#base.init();
+    return this.#base.parseSignedDecryptionPermit(parameters);
+  };
 
   /**
    * Generates a fresh ephemeral transport key pair for a user-decrypt session.
@@ -406,7 +422,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
    * ```
    */
   generateTransportKeyPair: FhevmClient["generateTransportKeyPair"] = async () => {
-    await this.init();
-    return this.#fhevm.generateTransportKeyPair();
+    await this.#decrypt.init();
+    return this.#decrypt.generateTransportKeyPair();
   };
 }
