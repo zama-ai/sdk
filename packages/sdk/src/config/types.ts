@@ -48,7 +48,8 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   onEvent?: ZamaSDKEventListener;
   /**
    * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
-   * module versions. `auth` defaults to the first chain's `auth` when omitted here.
+   * module versions. `runtime.auth` is the process-wide fallback; each chain's
+   * `auth` is forwarded on that chain's relayer requests and takes precedence.
    */
   runtime?: FhevmRuntimeConfig;
   /**
