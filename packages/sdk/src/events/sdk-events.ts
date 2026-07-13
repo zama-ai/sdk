@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/types";
 import type { ShieldPath } from "../types/token";
 
 /**

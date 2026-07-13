@@ -2,8 +2,9 @@ import { describe, expect, test, vi } from "../../test-fixtures";
 import { Token } from "../token";
 import { MAX_UINT64 } from "../../contracts/constants";
 import type { Address } from "viem";
-import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/types";
 import type { ZamaSDK } from "../../zama-sdk";
+import type { TypedValue } from "@fhevm/sdk/types";
 
 const TOKEN_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const TOKEN_B = "0x7A7a7A7a7a7a7a7A7a7a7a7A7a7A7A7A7A7A7a7A" as Address;
@@ -59,16 +60,12 @@ describe("Token.batchDecryptBalancesAs", () => {
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
       .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
-    vi.mocked(relayer.delegatedUserDecrypt)
-      .mockResolvedValueOnce({ [HANDLE_A]: 100n })
-      .mockResolvedValueOnce({ [HANDLE_B]: 200n });
+    vi.mocked(relayer.decryptValues)
+      .mockResolvedValueOnce([{ type: "uint64", value: 100n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 200n } as TypedValue]);
 
     const tokenA = new Token(delegateSdk, TOKEN_A);
     const tokenB = new Token(delegateSdk, TOKEN_B);
-
-    vi.mocked(relayer.delegatedUserDecrypt)
-      .mockResolvedValueOnce({ [HANDLE_A]: 100n })
-      .mockResolvedValueOnce({ [HANDLE_B]: 200n });
 
     const balances = await Token.batchDecryptBalancesAs([tokenA, tokenB], {
       delegatorAddress: DELEGATOR,
@@ -101,7 +98,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     const balances = await Token.batchDecryptBalancesAs([token], { delegatorAddress: DELEGATOR });
 
     expect(balances.get(TOKEN_A)).toBe(0n);
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
     // Pre-flight is skipped only when every handle is zero — zero balances
     // need no authorization — so getDelegationExpiry never calls readContract.
     expect(delegateProvider.readContract).toHaveBeenCalledTimes(1);
@@ -131,7 +128,7 @@ describe("Token.batchDecryptBalancesAs", () => {
     // Delegation check now fires even when the cache resolves everything, so
     // revoked delegations can't leak stale cached values.
     expect(delegateProvider.readContract).toHaveBeenCalledTimes(2);
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
     expect(balances.get(TOKEN_A)).toBe(42n);
   });
 
@@ -160,7 +157,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("calls onError callback when decryption fails for a token", async ({
@@ -212,7 +209,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_NOT_FOUND" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("throws aggregated DecryptionFailedError when delegation has expired", async ({
@@ -239,7 +236,7 @@ describe("Token.batchDecryptBalancesAs", () => {
       message: expect.stringContaining(TOKEN_A),
       cause: expect.objectContaining({ code: "DELEGATION_EXPIRED" }),
     });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("batch succeeds when delegation is permanently active", async ({

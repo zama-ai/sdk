@@ -78,10 +78,10 @@ function ConfidentialRoundTrip() {
 
 {% endcode %}
 
-{% hint style="warning" %}
-**Required: Cross-Origin headers**
+{% hint style="info" %}
+**Recommended: Cross-Origin headers for faster encryption**
 
-`useEncrypt` loads FHE WASM in a Web Worker, which requires `SharedArrayBuffer`. You must set these HTTP headers:
+`useEncrypt` runs FHE WASM in the browser. With `SharedArrayBuffer` available, the runtime spawns a worker pool and encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
@@ -124,13 +124,13 @@ export default defineConfig({
 {% endtab %}
 {% endtabs %}
 
-See [Configuration](./configuration.md) for full setup instructions.
+See the [security model](../concepts/security-model.md#coop-coep-headers) for details.
 {% endhint %}
 
 {% hint style="warning" %}
 **SSR: "window is not defined"**
 
-FHE operations use Web Workers and browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
+FHE operations use browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
 
 ```tsx
 "use client"; // Required at the top of the file
@@ -252,7 +252,7 @@ function ConfidentialAction() {
 ### 3. Decryption of the encrypted data
 
 {% hint style="info" %}
-**Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.userDecrypt`, which makes you build the credential bundle by hand, is an escape hatch — reach for it only when you genuinely need that control.
+**Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.decryptValuesFromPairs`, which makes you supply the transport key pair and signed permit yourself, is an escape hatch — reach for it only when you genuinely need that control.
 {% endhint %}
 
 Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.

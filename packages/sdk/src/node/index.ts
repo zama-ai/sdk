@@ -2,76 +2,22 @@
  * Node.js backend for `@zama-fhe/sdk` — provides the `node()` transport
  * factory for server-side FHE operations.
  *
- * The `node()` transport factory self-registers its handler on first call,
- * keeping `node:worker_threads` out of browser bundles.
+ * The `node()` transport drives `@fhevm/sdk` directly on the calling thread.
  *
  * @packageDocumentation
  */
 
 export { node } from "./config";
-export type { NodeRelayerConfig, NodePoolOptions } from "./config";
-// Surfaced because `ErrorResponse.serialized` (below) is typed as it — custom
-// worker implementors otherwise get an opaque type across the `/node` boundary.
-export type { SerializedError } from "../utils/error";
+export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
-export type { RelayerNodeConfig } from "../relayer/relayer-node";
-export type { RelayerSDK } from "../relayer/relayer-sdk";
-export type { NodeWorkerClientConfig } from "../worker/worker.node-client";
-export type { NodeWorkerPoolConfig } from "../worker/worker.node-pool";
-export type {
-  GenericLogger,
-  WorkerRequestType,
-  WorkerRequest,
-  WorkerResponse,
-  InitRequest,
-  InitPayload,
-  WorkerEnv,
-  UpdateCsrfRequest,
-  EncryptRequest,
-  UserDecryptRequest,
-  PublicDecryptRequest,
-  GenerateKeypairRequest,
-  CreateEIP712Request,
-  CreateDelegatedEIP712Request,
-  DelegatedUserDecryptRequest,
-  RequestZKProofVerificationRequest,
-  GetPublicKeyRequest,
-  GetPublicParamsRequest,
-  EncryptPayload,
-  UserDecryptPayload,
-  DelegatedUserDecryptPayload,
-  CreateEIP712Payload,
-  CreateDelegatedEIP712Payload,
-  EncryptResponseData,
-  UserDecryptResponseData,
-  PublicDecryptResponseData,
-  GenerateKeypairResponseData,
-  CreateEIP712ResponseData,
-  CreateDelegatedEIP712ResponseData,
-  DelegatedUserDecryptResponseData,
-  RequestZKProofVerificationResponseData,
-  GetPublicKeyResponseData,
-  GetPublicParamsResponseData,
-  BaseRequest,
-  SuccessResponse,
-  ErrorResponse,
-} from "../worker/worker.types";
-export { BaseWorkerClient } from "../worker/worker.base-client";
+export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
+export type { GenericLogger } from "../types/logger";
 
-// Relayer types used in RelayerNode's public API
-export type {
-  ClearValue,
-  EIP712TypedData,
-  EncryptParams,
-  EncryptResult,
-} from "../relayer/relayer-sdk.types";
+// Relayer types used in the node transport's public API
+export type { ClearValue, EIP712TypedData, EncryptParams } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
-export type {
-  UserDecryptParams as DecryptValuesParams,
-  PublicDecryptResult as DecryptPublicValuesResult,
-  DelegatedUserDecryptParams as DelegatedDecryptValuesParams,
-} from "../relayer/relayer-sdk.types";
+export type { DecryptPublicValuesResult } from "../relayer/types";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";

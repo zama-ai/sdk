@@ -1,6 +1,6 @@
 /* eslint-disable no-empty-pattern */
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
-import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../../relayer/types";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 
 import {
@@ -163,7 +163,13 @@ describe("ViemSigner", () => {
             { name: "chainId", type: "uint256" },
             { name: "verifyingContract", type: "address" },
           ],
-          UserDecryptRequestVerification: [{ name: "publicKey", type: "bytes" }],
+          UserDecryptRequestVerification: [
+            { name: "publicKey", type: "bytes" },
+            { name: "contractAddresses", type: "address[]" },
+            { name: "startTimestamp", type: "uint256" },
+            { name: "durationDays", type: "uint256" },
+            { name: "extraData", type: "bytes" },
+          ],
         },
         primaryType: "UserDecryptRequestVerification",
         message: {

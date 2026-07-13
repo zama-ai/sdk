@@ -1,12 +1,14 @@
 "use client";
 
 import type { Address } from "@zama-fhe/sdk";
-import { useIsConfidential, useIsWrapper, useMetadata } from "@zama-fhe/react-sdk";
+import { useIsConfidential, useIsWrapper, useMetadata, useTotalSupply } from "@zama-fhe/react-sdk";
 
 export function TokenMetadataPanel({ tokenAddress }: { tokenAddress: Address }) {
   const { data: metadata, isLoading: metaLoading } = useMetadata(tokenAddress);
   const { data: isConfidential, isLoading: confLoading } = useIsConfidential(tokenAddress);
   const { data: isWrapper, isLoading: wrapperLoading } = useIsWrapper(tokenAddress);
+  // inferredTotalSupply only exists on confidential tokens — gate the query
+  const { data: totalSupply } = useTotalSupply(tokenAddress, { enabled: isConfidential === true });
 
   const loading = metaLoading || confLoading || wrapperLoading;
 
@@ -48,6 +50,12 @@ export function TokenMetadataPanel({ tokenAddress }: { tokenAddress: Address }) 
             <dt className="text-zama-gray">Is Wrapper:</dt>
             <dd className="text-white" data-testid="metadata-is-wrapper">
               {isWrapper === undefined ? "N/A" : String(isWrapper)}
+            </dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-zama-gray">Total Supply:</dt>
+            <dd className="text-white" data-testid="metadata-total-supply">
+              {totalSupply === undefined ? "N/A" : totalSupply.toString()}
             </dd>
           </div>
         </dl>

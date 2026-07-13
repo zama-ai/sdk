@@ -9,8 +9,6 @@ import {
   NotEntitledError,
   RelayerRequestFailedError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
@@ -105,51 +103,6 @@ describe("RelayerRequestFailedError", () => {
   });
 });
 
-describe("WorkerTimeoutError", () => {
-  test("has correct code, name, and diagnostic fields", () => {
-    const err = new WorkerTimeoutError({
-      operation: "USER_DECRYPT",
-      timeout: 30,
-      elapsed: 30.004,
-      worker: "node-worker-2",
-    });
-    expect(err).toBeInstanceOf(ZamaError);
-    expect(err.code).toBe(ZamaErrorCode.OperationTimeout);
-    expect(err.name).toBe("WorkerTimeoutError");
-    expect(err.operation).toBe("USER_DECRYPT");
-    expect(err.timeout).toBe(30);
-    expect(err.elapsed).toBe(30.004);
-    expect(err.worker).toBe("node-worker-2");
-    expect(err.message).toMatch(/USER_DECRYPT timed out after 30s.*node-worker-2/);
-  });
-
-  test("worker label is optional", () => {
-    const err = new WorkerTimeoutError({ operation: "ENCRYPT", timeout: 5, elapsed: 5.001 });
-    expect(err.worker).toBeUndefined();
-    expect(err.message).toBe("Worker operation ENCRYPT timed out after 5s");
-  });
-});
-
-describe("WorkerRecycledError", () => {
-  test("has correct code, name, and diagnostic fields", () => {
-    const err = new WorkerRecycledError({ operation: "USER_DECRYPT", worker: "node-worker-2" });
-    expect(err).toBeInstanceOf(ZamaError);
-    expect(err.code).toBe(ZamaErrorCode.WorkerRecycled);
-    expect(err.name).toBe("WorkerRecycledError");
-    expect(err.operation).toBe("USER_DECRYPT");
-    expect(err.worker).toBe("node-worker-2");
-    expect(err.message).toMatch(/USER_DECRYPT.*recycled.*node-worker-2/);
-  });
-
-  test("worker label is optional", () => {
-    const err = new WorkerRecycledError({ operation: "ENCRYPT" });
-    expect(err.worker).toBeUndefined();
-    expect(err.message).toBe(
-      "Worker operation ENCRYPT was aborted because its worker was recycled after a timeout",
-    );
-  });
-});
-
 // --- SDK-248: uniform retryability signal ---
 
 describe("ZamaError.retryable / isRetryable", () => {
@@ -181,15 +134,6 @@ describe("ZamaError.retryable / isRetryable", () => {
     const err = new WalletAccountNotReadyError("decrypt");
     expect(err.retryable).toBe(true);
     expect(isRetryable(err)).toBe(true);
-  });
-
-  test("is true for WorkerTimeoutError and WorkerRecycledError", () => {
-    const timeout = new WorkerTimeoutError({ operation: "USER_DECRYPT", timeout: 30, elapsed: 30 });
-    const recycled = new WorkerRecycledError({ operation: "USER_DECRYPT" });
-    expect(timeout.retryable).toBe(true);
-    expect(recycled.retryable).toBe(true);
-    expect(isRetryable(timeout)).toBe(true);
-    expect(isRetryable(recycled)).toBe(true);
   });
 
   test("tracks statusCode for RelayerRequestFailedError (true only on 429)", () => {
@@ -226,12 +170,8 @@ describe("retryAfterSeconds", () => {
   });
 
   test("is undefined for a retryable cause with no server-driven delay", () => {
-    expect(
-      retryAfterSeconds(
-        new WorkerTimeoutError({ operation: "USER_DECRYPT", timeout: 30, elapsed: 30 }),
-      ),
-    ).toBeUndefined();
     expect(retryAfterSeconds(new DelegationNotPropagatedError("not synced"))).toBeUndefined();
+    expect(retryAfterSeconds(new DelegationCooldownError("cooldown"))).toBeUndefined();
   });
 
   test("is undefined for a terminal cause and for non-ZamaError values", () => {

@@ -47,7 +47,7 @@ const config = createConfig({
   signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -421,7 +421,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and terminates the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
+Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
 
 ```ts
 sdk.terminate();

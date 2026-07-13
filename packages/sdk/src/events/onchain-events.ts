@@ -3,7 +3,7 @@
  * Works with raw log data from any provider.
  */
 
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";

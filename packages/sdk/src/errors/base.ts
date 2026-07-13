@@ -38,10 +38,6 @@ export const ZamaErrorCode = {
   NotEntitled: "NOT_ENTITLED",
   /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
   RpcRateLimited: "RPC_RATE_LIMITED",
-  /** A worker operation exceeded its configured timeout; the worker is recycled by default. Retryable. */
-  OperationTimeout: "OPERATION_TIMEOUT",
-  /** An in-flight worker operation was aborted as collateral of another operation's timeout recycle. Retryable. */
-  WorkerRecycled: "WORKER_RECYCLED",
   /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
   Configuration: "CONFIGURATION",
   /** Delegation cannot target self (delegate === msg.sender). */
@@ -111,8 +107,6 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.RelayerRequestFailed]: false, // conditional — see doc above
   [ZamaErrorCode.NotEntitled]: false,
   [ZamaErrorCode.RpcRateLimited]: true,
-  [ZamaErrorCode.OperationTimeout]: true,
-  [ZamaErrorCode.WorkerRecycled]: true,
   [ZamaErrorCode.Configuration]: false,
   [ZamaErrorCode.DelegationSelfNotAllowed]: false,
   [ZamaErrorCode.DelegationCooldown]: true, // per-block timing gate, resolves on next-block retry
@@ -167,9 +161,9 @@ export class ZamaError extends Error {
 
 /**
  * True if `error` is a {@link ZamaError} whose failure is transient and safe to
- * retry (rate-limited, back-pressured, a recycled/timed-out worker op, a
- * delegation still propagating or in its per-block cooldown, or a wallet
- * account still resolving). Compiler-guaranteed to stay in sync with the
+ * retry (rate-limited, back-pressured, a delegation still propagating or in
+ * its per-block cooldown, or a wallet account still resolving).
+ * Compiler-guaranteed to stay in sync with the
  * taxonomy: every {@link ZamaError} subclass declares its own retryability via
  * {@link ZamaError.retryable}, so a consumer never has to hardcode a set of
  * retryable codes.
@@ -196,8 +190,8 @@ export function isRetryable(error: unknown): error is ZamaError & { retryable: t
  * {@link ZamaError} — unifying the `retryAfter` field that today lives on
  * {@link RelayerRequestFailedError} and {@link RpcRateLimitError} only.
  * `undefined` when the error isn't retryable, or is retryable but carries no
- * server-driven delay (e.g. {@link WorkerTimeoutError}, {@link WorkerRecycledError},
- * {@link DelegationNotPropagatedError} — retry those with your own backoff).
+ * server-driven delay (e.g. {@link DelegationNotPropagatedError} — retry that
+ * with your own backoff).
  */
 export function retryAfterSeconds(error: unknown): number | undefined {
   if (!isRetryable(error) || !("retryAfter" in error)) {

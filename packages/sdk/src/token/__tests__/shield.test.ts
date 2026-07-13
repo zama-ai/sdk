@@ -2,6 +2,7 @@ import { type Address, getAddress } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { ZamaSDKEvents } from "../../events/sdk-events";
 import { ZamaErrorCode } from "../../errors";
+import type { TypedValue } from "@fhevm/sdk/types";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const OTHER_RECIPIENT = "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address;
@@ -124,7 +125,9 @@ describe("WrappedToken.shield", () => {
       .mockResolvedValueOnce(1000n) // ERC-20 balanceOf
       .mockResolvedValueOnce(0n) // allowance
       .mockResolvedValue(fixtureHandle); // subsequent confidentialBalanceOf calls
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [fixtureHandle]: 1000n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 1000n } as TypedValue,
+    ]);
 
     const shieldResult = await token.shield(500n);
     expect(shieldResult.txHash).toBe("0xtxhash");
@@ -144,7 +147,7 @@ describe("WrappedToken.shield", () => {
 
     const balance = await token.balanceOf(userAddress);
     expect(balance).toBe(1000n);
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [fixtureHandle] }),
     );
   });

@@ -36,11 +36,14 @@ export default function App() {
           <Route path="unwrap-manual" Component={lazy(() => import("./pages/unwrap-manual"))} />
           <Route path="approve" Component={lazy(() => import("./pages/approve"))} />
           <Route path="allow-all" Component={lazy(() => import("./pages/allow-all"))} />
-          <Route path="fhe-relayer" Component={lazy(() => import("./pages/fhe-relayer"))} />
+          <Route path="decrypt" Component={lazy(() => import("./pages/decrypt"))} />
+          <Route path="encrypt" Component={lazy(() => import("./pages/encrypt"))} />
           <Route
             path="wrapper-discovery"
             Component={lazy(() => import("./pages/wrapper-discovery"))}
           />
+          <Route path="registry" Component={lazy(() => import("./pages/registry"))} />
+          <Route path="suspense" Component={lazy(() => import("./pages/suspense"))} />
           <Route path="resume-unshield" Component={lazy(() => import("./pages/resume-unshield"))} />
           <Route path="delegation" Component={lazy(() => import("./pages/delegation"))} />
           <Route path="token-metadata" Component={lazy(() => import("./pages/token-metadata"))} />

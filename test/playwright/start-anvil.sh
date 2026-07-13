@@ -11,7 +11,7 @@ set -euo pipefail
 PORT="${1:?Usage: start-anvil.sh <port>}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONTRACTS_DIR="$(cd "$SCRIPT_DIR/../../contracts" && pwd)"
-FORGE_FHEVM_DIR="$CONTRACTS_DIR/lib/forge-fhevm"
+FHEVM_CONTRACTS_DIR="$CONTRACTS_DIR/lib/fhevm/sdk/js-sdk/contracts"
 
 # Anvil default account #0
 DEPLOYER_PK="${DEPLOYER_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}"
@@ -53,7 +53,10 @@ stop_anvil() {
 start_anvil() {
   free_port
 
-  anvil --port "$PORT" --chain-id 31337 --silent &
+  # --disable-code-size-limit: the @fhevm/sdk cleartext implementations (v0.13)
+  # exceed EIP-170's 24KB limit, so they only deploy on an anvil with the check
+  # off. Matches fhevm's own cleartext anvil runner.
+  anvil --port "$PORT" --chain-id 31337 --disable-code-size-limit --silent &
   ANVIL_PID=$!
 
   # Poll a real RPC call, not a bare TCP accept: the port can open before anvil
@@ -102,20 +105,22 @@ acquire_lock() {
 deploy_contracts() {
   local attempt_num="$1"
 
-  # fhevm host stack — independent per port, no lock needed. Skip the internal
-  # forge build in CI, where artifacts are prebuilt and soldeer deps may be absent.
-  local deploy_args=(--anvil-port "$PORT")
-  [ -n "${CI:-}" ] && deploy_args+=(--skip-build)
-  if ! "$FORGE_FHEVM_DIR/deploy-local.sh" "${deploy_args[@]}"; then
-    echo "fhevm host stack deploy failed on port $PORT" >&2
-    return 1
-  fi
-
   acquire_lock || return 1
 
-  # Clear broadcast cache — both anvils share chain-id 31337, so the second run
+  # Clear broadcast caches — both anvils share chain-id 31337, so a second run
   # would see stale artifacts from the first and fail with "nonce too low".
   rm -rf "$CONTRACTS_DIR/broadcast"
+  rm -rf "$FHEVM_CONTRACTS_DIR/broadcast"
+
+  # @fhevm/sdk cleartext host stack (CleartextInputVerifier.inputProof + matching
+  # coprocessor/KMS signer keys). Replaces forge-fhevm's incompatible cleartext
+  # model. Serialized under the lock with the project deploy because both anvils
+  # broadcast into the shared chain-id-31337 cache dir.
+  if ! "$SCRIPT_DIR/deploy-cleartext-host.sh" "http://127.0.0.1:$PORT"; then
+    echo "cleartext fhevm host stack deploy failed on port $PORT" >&2
+    release_lock
+    return 1
+  fi
 
   # Deploy project contracts. forge's batched simulation estimates gas with warm
   # storage (EIP-2929), but each broadcast tx runs cold, so the FHE-heavy wrap()

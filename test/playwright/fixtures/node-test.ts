@@ -1,14 +1,16 @@
 /**
  * Playwright fixtures for Node.js SDK transport-layer tests (no browser).
  *
- * Tests RelayerNode pool lifecycle, chain switching, and concurrency.
- * Domain-level FHE scenarios are covered by the browser e2e suite.
+ * Tests the FhevmRelayer lifecycle, chain config, and concurrency in
+ * `cleartext()` mode against local anvil (no relayer infra needed — mock
+ * plaintexts are read from the on-chain executor). Domain-level FHE scenarios
+ * are covered by the browser e2e suite.
  */
 import { test as base } from "@playwright/test";
 import type { FheChain } from "@zama-fhe/sdk";
 import { ZamaSDK } from "@zama-fhe/sdk";
 import { anvil } from "@zama-fhe/sdk/chains";
-import { node } from "@zama-fhe/sdk/node";
+import { cleartext } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import type { Address, PublicClient } from "viem";
 import { createPublicClient, createTestClient, http, publicActions, walletActions } from "viem";
@@ -86,7 +88,7 @@ export const nodeTest = base.extend<NodeTestFixtures, NodeWorkerFixtures>({
       chains: [chain],
       publicClient,
       walletClient: viemClient,
-      relayers: { [chain.id]: node() },
+      relayers: { [chain.id]: cleartext() },
     });
     using sdk = new ZamaSDK(config);
     await use(sdk);

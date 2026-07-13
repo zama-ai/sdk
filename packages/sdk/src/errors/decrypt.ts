@@ -6,23 +6,21 @@ import { DelegationNotPropagatedError } from "./delegation";
 import { NotEntitledError } from "./entitlement";
 import { RpcRateLimitError } from "./rpc";
 import { SigningRejectedError, SigningFailedError } from "./signing";
-import { WorkerRecycledError, WorkerTimeoutError } from "./timeout";
 import {
   extractHttpStatus,
   extractRetryAfter,
   hasStructuredRpcRateLimitSignal,
   isNotEntitledMessage,
+  isRelayerError,
+  isRelayerTimeoutError,
   isRpcRateLimitError,
   parseHandleFromMessage,
 } from "../utils/error";
 
 /**
  * Context the caller supplies so a not-entitled / delegation failure can be
- * mapped precisely. The classifier runs on both worker-origin errors (rebuilt
- * from the serialized envelope) and main-thread-origin ones (cleartext relayer,
- * delegation pre-check) — the request context (`contractAddress` / `account`)
- * only exists on the main thread, so it is injected here rather than threaded
- * across the worker boundary.
+ * mapped precisely. The request context (`contractAddress` / `account`) is not
+ * present on the raw error, so it is injected here.
  */
 export interface DecryptErrorContext {
   isDelegated?: boolean;
@@ -54,8 +52,6 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   SigningFailedError,
   NotEntitledError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
 ] as const;
 
 /**
@@ -67,8 +63,7 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
  *
  * Errors that are already typed SDK errors are returned as-is so callers can
  * still match the original cause. All structured signals (codes, status, cause
- * chain) are read from the error itself — worker-origin errors are first rebuilt
- * by {@link deserializeError}, so this runs identically regardless of origin.
+ * chain) are read from the error itself.
  */
 export function wrapDecryptError(
   error: unknown,
@@ -81,9 +76,9 @@ export function wrapDecryptError(
 
   const message = error instanceof Error ? error.message : fallbackMessage;
 
-  // Actor not entitled (ACL). The relayer throws a message-only Error whose text
-  // survives the worker boundary; the handle is parseable from it and the
-  // contract/account come from the request context the caller holds.
+  // Actor not entitled (ACL). The relayer throws a message-only Error; the handle
+  // is parseable from it and the contract/account come from the request context
+  // the caller holds.
   if (error instanceof Error && isNotEntitledMessage(error.message)) {
     // On the delegated path the "not entitled" verdict comes from the
     // *delegator's* `persistAllowed` L1 read, which has no staleness tolerance:
@@ -116,8 +111,8 @@ export function wrapDecryptError(
 
   // Consumer's RPC provider throttling an on-chain read. An unambiguous
   // structured signal (-32005 / viem `status: 429`) wins over any HTTP status;
-  // relayer-origin 429s carry `code: "RELAYER_FETCH_ERROR"` and are excluded,
-  // staying RelayerRequestFailedError below.
+  // relayer-origin errors are `@fhevm/sdk` `Relayer*` classes and are excluded by
+  // `isRelayerError`, staying RelayerRequestFailedError below.
   if (hasStructuredRpcRateLimitSignal(error)) {
     return new RpcRateLimitError(message, { cause: error, retryAfter: extractRetryAfter(error) });
   }
@@ -149,10 +144,14 @@ export function wrapDecryptError(
     );
   }
 
-  if (statusCode !== undefined) {
+  if (isRelayerError(error) || statusCode !== undefined) {
     return new RelayerRequestFailedError(message, statusCode, {
       cause: error,
       retryAfter: extractRetryAfter(error),
+      // A relayer timeout carries no HTTP status but is safe to retry; force
+      // `retryable` so it isn't misclassified as terminal. Other relayer errors
+      // fall back to the status-based default (429 → retryable).
+      retryable: isRelayerTimeoutError(error) || undefined,
     });
   }
 

@@ -1,4 +1,10 @@
-import { BrowserProvider, Contract, type InterfaceAbi, type Signer } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  type InterfaceAbi,
+  type Signer,
+  type TypedDataDomain,
+} from "ethers";
 import {
   getAddress,
   isHex,
@@ -13,7 +19,7 @@ import {
   WalletAccountNotReadyError,
   WalletNotConnectedError,
 } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
@@ -124,9 +130,9 @@ export class EthersSigner extends BaseSigner {
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const mutableSigTypes = Object.fromEntries(
-      Object.entries(sigTypes).map(([key, fields]) => [key, [...fields]]),
+      Object.entries(sigTypes).map(([name, fields]) => [name, [...fields]]),
     );
-    const sig = await signer.signTypedData(domain, mutableSigTypes, message);
+    const sig = await signer.signTypedData(domain as TypedDataDomain, mutableSigTypes, message);
     if (!isHex(sig)) {
       throw new TypeError(`Expected hex string, got: ${sig}`);
     }
