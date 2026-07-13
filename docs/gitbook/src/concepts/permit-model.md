@@ -88,6 +88,12 @@ Permits can be removed in two ways:
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](../reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
 
+### Two revocation tiers with a shared scope
+
+Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
+
+Invalidating the *shared* key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. See [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
+
 ## Wallet account changes
 
 The SDK automatically manages permits when the wallet state changes:

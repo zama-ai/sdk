@@ -124,3 +124,101 @@ describe("TransportKeyPairVault", () => {
     }
   });
 });
+
+describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
+  test("two signers configured with the same scope share one key pair", async () => {
+    const storage = new MemoryStorage();
+    const scoped = (scope: string) =>
+      new TransportKeyPairVault({
+        generator: makeGenerator(),
+        storage,
+        ttl: TTL_SECONDS,
+        logger: makeLogger(),
+        scope,
+      });
+
+    const vaultA = scoped("tenant-1");
+    const vaultB = scoped("tenant-1");
+
+    const [fromA, fromB] = await Promise.all([vaultA.getOrCreate(USER), vaultB.getOrCreate(OTHER)]);
+    expect(fromB).toEqual(fromA); // different signers, same scope → same key pair
+    expect(await vaultA.readStored(OTHER)).toEqual(fromA); // signerAddress arg is ignored for storage keying
+  });
+
+  test("different scopes (and unscoped) never share a key pair", async () => {
+    const storage = new MemoryStorage();
+    // One shared generator (not one per vault) so each first-time call is guaranteed
+    // a distinct key — three independent counters would each start at 1 and collide.
+    const generator = makeGenerator();
+    const vaultTenant1 = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+    });
+    const vaultTenant2 = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-2",
+    });
+    const vaultUnscoped = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+    });
+
+    const tenant1Key = await vaultTenant1.getOrCreate(USER);
+    const tenant2Key = await vaultTenant2.getOrCreate(USER);
+    const unscopedKey = await vaultUnscoped.getOrCreate(USER);
+
+    expect(tenant2Key).not.toEqual(tenant1Key);
+    expect(unscopedKey).not.toEqual(tenant1Key);
+    expect(unscopedKey).not.toEqual(tenant2Key);
+  });
+
+  test("clear() never deletes a scope's shared key pair — only clearScope() does", async () => {
+    const storage = new MemoryStorage();
+    const vaultA = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+    });
+    const vaultB = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+    });
+
+    const shared = await vaultA.getOrCreate(USER);
+
+    // Signer-level teardown for USER must not touch the shared key pair: OTHER
+    // (another signer in the same scope) still reads the same key afterwards.
+    await vaultA.clear(USER);
+    expect(await vaultB.readStored(OTHER)).toEqual(shared);
+
+    // Only the scope-level operation can invalidate it.
+    await vaultA.clearScope();
+    expect(await vaultB.readStored(OTHER)).toBeNull();
+  });
+
+  test("clearScope() is a no-op when no scope is configured", async () => {
+    const storage = new MemoryStorage();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+    });
+    const before = await vault.getOrCreate(USER);
+    await vault.clearScope();
+    expect(await vault.readStored(USER)).toEqual(before);
+  });
+});

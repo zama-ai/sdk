@@ -376,6 +376,22 @@ Cross-Origin-Embedder-Policy: require-corp
 If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 {% endhint %}
 
+### 8. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
+
+By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+```
+
+Permits stay per-signer regardless of scope. See [Security Model](../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](../concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.rotateScope()`).
+
 ## Shared relayer options
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:

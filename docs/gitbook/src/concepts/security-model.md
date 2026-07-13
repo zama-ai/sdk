@@ -65,9 +65,23 @@ The transport private key is stored in plaintext in the configured storage backe
 | ---------- | ---------------------------------------------------------------- |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
 | Key format | Plaintext ML-KEM key pair                                        |
-| Scope      | One transport key pair per signer address (chain-independent)    |
+| Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
+
+### Shared-tenant scope (B2B2C / WaaS operators)
+
+`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the *same* transport key pair instead of generating one per signer address.
+
+**When it's the right tradeoff.** A separately-tenanted deployment (browser or mobile dApp, treasury wallet) gets real defense-in-depth from per-signer keys: compromising one signer's storage never exposes another user's key. A shared-tenant Wallet-as-a-Service operator holding thousands of client wallets behind one operator-controlled key store gets none of that benefit — if the store is breached, every wallet behind it is compromised together regardless of how many key pairs exist. In that case, per-signer keys are pure overhead (generation, storage rows, management) with no corresponding security gain, and `transportKeyPairScope` lets the operator collapse them into one.
+
+**When it isn't.** If signers are genuinely isolated — separate end-user devices, separate trust boundaries, separate storage backends — per-signer keys (the default) give you isolation that a shared scope would throw away. Don't configure a scope just to save storage rows if your signers don't already share one key store.
+
+**What stays isolated regardless of scope.** Permits are always per-signer: the EIP-712 signature is inherently tied to the signing wallet, so two signers in the same scope never see each other's permits, only the underlying key pair. See [Permit Model](./permit-model.md#revocation) for how revocation is split into two tiers to preserve this isolation.
+
+{% hint style="warning" %}
+Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](../guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
+{% endhint %}
 
 ### Limitations
 
@@ -146,6 +160,10 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
+
+**With a shared `transportKeyPairScope` configured, these signer-level operations never touch the shared key pair** — `sdk.permits.clear()` for one signer only ever removes that signer's own permits, exactly like `revokePermits()`. This is deliberate: one end-user disconnecting must never invalidate every other signer sharing the scope's operator-controlled key store.
+
+Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
 
 ## CSRF protection
 

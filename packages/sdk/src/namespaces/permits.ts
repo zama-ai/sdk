@@ -18,6 +18,11 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
  * surfaced; the key pair exists to sign permits and is created automatically when needed.
  * {@link clear} wipes both the permit store and the transport key pair (permits
  * cascade-delete with the key pair).
+ *
+ * When `transportKeyPairScope` is configured (opt-in shared-tenant scope for B2B2C/WaaS
+ * operators), {@link clear} and {@link revokePermits} stay signer-level only — they never
+ * touch the shared key pair. {@link rotateScope} is the distinct, operator-level operation
+ * for that.
  */
 export class Permits {
   readonly #signer: GenericSigner | undefined;
@@ -183,5 +188,23 @@ export class Permits {
         this.#logger,
       );
     }
+  }
+
+  /**
+   * Rotate the shared transport key pair for `transportKeyPairScope` (operator-level
+   * action, not an end-user one — no wallet account is required or touched).
+   *
+   * Deletes the shared key pair; every permit in the scope embeds its public key, so
+   * they're all treated as stale on next access. Signer-level {@link clear} never does
+   * this — it only ever wipes the calling signer's own permits.
+   *
+   * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
+   *   against rotating the wrong scope by mistake.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   */
+  async rotateScope(scopeId: string): Promise<void> {
+    const service = this.#requireCredentialService("rotateScope");
+    await service.rotateScope(scopeId);
   }
 }

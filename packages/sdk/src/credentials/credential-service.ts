@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
+import { ConfigurationError } from "../errors/relayer";
 import { wrapSigningError } from "../errors/signing";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
@@ -35,6 +36,13 @@ export interface CredentialServiceConfig {
   permitStorage?: GenericStorage;
   /** SDK-wide logger for credential-path diagnostics. */
   logger: GenericLogger;
+  /**
+   * Opt-in shared-tenant scope (B2B2C/WaaS operators). When set, every signer
+   * configured with the same scope shares one transport key pair instead of one
+   * per signer address. Permits stay per-signer regardless — see {@link rotateScope}
+   * for the operator-level counterpart to signer-level revocation.
+   */
+  scope?: string;
 }
 
 /**
@@ -42,6 +50,13 @@ export interface CredentialServiceConfig {
  *
  * `CredentialService` is the only credentials object held by `ZamaSDK`. It accepts identity
  * transitions via `handleWalletAccountChange`.
+ *
+ * Two distinct revocation tiers exist and must not be conflated: {@link clearCredentials}
+ * (signer-level, e.g. an end-user "disconnect") only ever removes that signer's own
+ * key-pair slot and permits — when a scope is configured, the shared key pair was never
+ * stored there, so it's untouched. {@link rotateScope} (operator-level) is the only way
+ * to invalidate a scope's shared key pair, and it does so for every signer in the scope
+ * at once.
  */
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;
@@ -50,6 +65,7 @@ export class CredentialService {
   readonly #signer: GenericSigner;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
+  readonly #scope: string | undefined;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -61,6 +77,7 @@ export class CredentialService {
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
       logger: config.logger,
+      scope: config.scope,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
@@ -70,6 +87,7 @@ export class CredentialService {
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
+    this.#scope = config.scope;
   }
 
   /**
@@ -197,6 +215,11 @@ export class CredentialService {
    * Wipe the keypair for the current signer and cascade-delete every
    * permission referencing it across all chains and delegators.
    *
+   * Signer-level only: when a scope is configured, the shared key pair was never
+   * stored under this signer's own slot, so it survives untouched — only this
+   * signer's permits are removed. Use {@link rotateScope} to invalidate the shared
+   * key pair itself.
+   *
    * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async clearCredentials(): Promise<void> {
@@ -204,6 +227,33 @@ export class CredentialService {
     const signerAddress = checksum(account.address);
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
+  }
+
+  /**
+   * Rotate this scope's shared transport key pair (operator-level action).
+   *
+   * Deletes the shared key pair. Every permit signed under it embeds the old
+   * public key, so `listUsableAndPrune` treats them all as stale on next access —
+   * no permit is touched directly, and no connected wallet is required. This is
+   * the only operation that can invalidate a shared key pair; signer-level
+   * {@link clearCredentials} never does.
+   *
+   * @param scopeId - Must match the scope this service was configured with. Requiring
+   *   the caller to name it guards against rotating the wrong scope by mistake.
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   */
+  async rotateScope(scopeId: string): Promise<void> {
+    if (this.#scope === undefined) {
+      throw new ConfigurationError(
+        "rotateScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to rotate.",
+      );
+    }
+    if (scopeId !== this.#scope) {
+      throw new ConfigurationError(
+        `rotateScope("${scopeId}") does not match the configured scope ("${this.#scope}").`,
+      );
+    }
+    await this.#vault.clearScope();
   }
 
   /**
