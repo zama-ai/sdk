@@ -5849,7 +5849,7 @@ export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
-    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly auth?: FheChainAuth;
     readonly executorAddress?: Address | undefined;
     // (undocumented)
     readonly gatewayChainId: number;
@@ -5869,6 +5869,20 @@ export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
 }
+
+// @public
+export type FheChainAuth = {
+    __type: "BearerToken";
+    token: string;
+} | {
+    __type: "ApiKeyHeader";
+    header?: string;
+    value: string;
+} | {
+    __type: "ApiKeyCookie";
+    cookie?: string;
+    value: string;
+};
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {

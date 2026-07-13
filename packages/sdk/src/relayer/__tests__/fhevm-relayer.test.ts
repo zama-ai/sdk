@@ -97,18 +97,33 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.encryptClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
   });
 
-  test("encryption prefetches with chain auth and initializes only encrypt", async () => {
-    const auth = { type: "ApiKeyHeader", value: "secret" } as const;
-    const relayer = new FhevmRelayer({ chain: { ...anvil, auth } });
-    await relayer.encryptValues(encryptArgs);
+  test.each([
+    {
+      auth: { __type: "ApiKeyHeader", value: "secret", header: "x-custom-key" } as const,
+      expected: { type: "ApiKeyHeader", value: "secret", header: "x-custom-key" } as const,
+    },
+    {
+      auth: { __type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
+      expected: { type: "ApiKeyCookie", value: "secret", cookie: "custom-cookie" } as const,
+    },
+    {
+      auth: { __type: "BearerToken", token: "secret" } as const,
+      expected: { type: "BearerToken", token: "secret" } as const,
+    },
+  ])(
+    "translates $auth.__type chain auth before encryption prefetch",
+    async ({ auth, expected }) => {
+      const relayer = new FhevmRelayer({ chain: { ...anvil, auth } });
+      await relayer.encryptValues(encryptArgs);
 
-    expect(clients.encryptClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
-      options: { auth },
-    });
-    expect(clients.encryptClient.init).toHaveBeenCalledOnce();
-    expect(clients.baseClient.init).not.toHaveBeenCalled();
-    expect(clients.decryptClient.init).not.toHaveBeenCalled();
-  });
+      expect(clients.encryptClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+        options: { auth: expected },
+      });
+      expect(clients.encryptClient.init).toHaveBeenCalledOnce();
+      expect(clients.baseClient.init).not.toHaveBeenCalled();
+      expect(clients.decryptClient.init).not.toHaveBeenCalled();
+    },
+  );
 
   test("prefetches the FHE key before initializing encryption", async () => {
     const relayer = new FhevmRelayer({ chain: anvil });

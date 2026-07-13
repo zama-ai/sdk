@@ -51,7 +51,7 @@ export {
   anvil,
   chains,
 } from "./chains";
-export type { FheChain } from "./chains/types";
+export type { FheChain, FheChainAuth } from "./chains/types";
 
 // ERC-165 interface IDs
 export {

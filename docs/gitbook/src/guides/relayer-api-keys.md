@@ -32,7 +32,7 @@ Before publishing your solution on mainnet, ensure that end-to-end integration h
 Once you receive your API key, wire it into the SDK using one of the two strategies covered in the [Authentication guide](authentication.md):
 
 - **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
-- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ type: "ApiKeyHeader", value: ... }`.
+- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
 
 For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` and `ApiKeyCookie` apply to self-hosted relayers or proxied setups.)
 

@@ -15,6 +15,16 @@ describe("FheChain", () => {
     const chain: FheChain = sepolia;
     expectTypeOf(chain.id).toEqualTypeOf<number>();
   });
+
+  test("keeps the legacy __type relayer auth discriminator", () => {
+    assertType<FheChain>({ ...sepolia, auth: { __type: "ApiKeyHeader", value: "secret" } });
+
+    assertType<FheChain>({
+      ...sepolia,
+      // @ts-expect-error — the low-level `type` discriminator stays behind the adapter
+      auth: { type: "ApiKeyHeader", value: "secret" },
+    });
+  });
 });
 
 describe("ZamaConfigViem", () => {

@@ -72,7 +72,7 @@ const ZAMA_RELAYER_API_KEY = process.env.ZAMA_RELAYER_API_KEY;
 
 const entries: readonly ChainEntry[] = [
   {
-    chain: { ...mainnet, auth: { type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
+    chain: { ...mainnet, auth: { __type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
     relayer: node(),
     confidentialTokenAddress: "0xe978F22157048E5DB8E5d07971376e86671672B2",
     underlyingTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",

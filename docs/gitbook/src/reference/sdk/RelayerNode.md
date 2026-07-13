@@ -23,7 +23,7 @@ import { sepolia } from "@zama-fhe/sdk/chains";
 
 const config = createConfig({
   // Sepolia testnet needs no relayer key; for the mainnet relayer add
-  // `auth: { type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY }` to the chain.
+  // `auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY }` to the chain.
   chains: [sepolia],
   publicClient,
   walletClient,

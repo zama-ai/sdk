@@ -1,5 +1,10 @@
 import type { Address, EIP1193Provider } from "viem";
-import type { FhevmRuntimeConfig } from "../relayer/types";
+
+/** Authentication forwarded to a chain's relayer endpoint. */
+export type FheChainAuth =
+  | { __type: "BearerToken"; token: string }
+  | { __type: "ApiKeyHeader"; header?: string; value: string }
+  | { __type: "ApiKeyCookie"; cookie?: string; value: string };
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -32,10 +37,10 @@ export interface FheChain<TId extends number = number> {
   readonly executorAddress?: Address | undefined;
   /**
    * Authentication for the relayer endpoint.
-   * Use `{ type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
-   * or `{ type: "BearerToken", token: "your-token" }` for bearer auth.
+   * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
+   * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.
    */
-  readonly auth?: FhevmRuntimeConfig["auth"];
+  readonly auth?: FheChainAuth;
 }
 
 /** At least one chain is required. */

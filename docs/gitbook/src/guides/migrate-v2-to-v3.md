@@ -190,7 +190,7 @@ import { node } from "@zama-fhe/sdk/node";
 const zamaSepolia = {
   ...sepolia,
   network: SEPOLIA_RPC_URL,
-  ...(RELAYER_API_KEY && { auth: { type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
+  ...(RELAYER_API_KEY && { auth: { __type: "ApiKeyHeader" as const, value: RELAYER_API_KEY } }),
 } as const satisfies FheChain;
 
 using sdk = new ZamaSDK(
@@ -357,8 +357,9 @@ but now live under `@zama-fhe/sdk/web`.
 {% hint style="info" %}
 **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
 The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
-and cookie are rejected at the edge). Field names differ — `ApiKeyHeader` uses
-`value`, `BearerToken` uses `token`. See [Relayer API keys](./relayer-api-keys.md).
+and cookie are rejected at the edge). The `__type` discriminator is unchanged;
+`ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. See
+[Relayer API keys](./relayer-api-keys.md).
 {% endhint %}
 
 ## Step 3 — Permits & delegated decryption

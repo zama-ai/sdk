@@ -20,6 +20,7 @@ import type {
   FhevmRelayerSDK,
   RelayerOptions,
 } from "./types";
+import { ConfigurationError } from "../errors";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -95,7 +96,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
       this.#encrypt = createFhevmEncryptClient(params);
     }
     this.#defaultOptions = {
-      ...(this.#chain.auth !== undefined && { auth: this.#chain.auth }),
+      ...(this.#chain.auth !== undefined && { auth: toFhevmAuth(this.#chain.auth) }),
       ...(timeout !== undefined && { timeout }),
       ...(debug !== undefined && { debug }),
     };
@@ -425,4 +426,20 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.generateTransportKeyPair();
   };
+}
+
+function toFhevmAuth(
+  auth: NonNullable<FheChain["auth"]>,
+): NonNullable<FhevmRelayerOptions["auth"]> {
+  const type = auth["__type"];
+  switch (type) {
+    case "ApiKeyHeader":
+      return { type, value: auth.value, header: auth.header };
+    case "ApiKeyCookie":
+      return { type, value: auth.value, cookie: auth.cookie };
+    case "BearerToken":
+      return { type, token: auth.token };
+    default:
+      throw new ConfigurationError(`Unknown auth type: ${String(type)}`);
+  }
 }

@@ -39,7 +39,7 @@ const walletClient = createWalletClient({ account, chain: sepoliaViem, transport
 const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
-  auth: { type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 
 const config = createConfig({
@@ -118,17 +118,17 @@ import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
-  auth: { type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 ```
 
 The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKeyHeader`** — it's the only mode the hosted endpoint accepts. `BearerToken` and `ApiKeyCookie` are for self-hosted relayers or proxied setups where you control the auth layer (see the [Authentication guide](./authentication.md)).
 
-| Mode           | Shape                                          | Use it when                                  |
-| -------------- | ---------------------------------------------- | -------------------------------------------- |
-| API key header | `{ type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
-| API key cookie | `{ type: "ApiKeyCookie", value: "your-key" }`  | Behind your own proxy (SDK→proxy hop)        |
-| Bearer token   | `{ type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
+| Mode           | Shape                                            | Use it when                                  |
+| -------------- | ------------------------------------------------ | -------------------------------------------- |
+| API key header | `{ __type: "ApiKeyHeader", value: "your-key" }`  | Zama-hosted relayer (required), or default   |
+| API key cookie | `{ __type: "ApiKeyCookie", value: "your-key" }`  | Behind your own proxy (SDK→proxy hop)        |
+| Bearer token   | `{ __type: "BearerToken", token: "your-token" }` | Self-hosted relayer with a bearer auth layer |
 
 ### 7. Clean up on shutdown
 
@@ -152,7 +152,7 @@ import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
-  auth: { type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 
 const config = createConfig({

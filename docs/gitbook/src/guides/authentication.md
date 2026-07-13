@@ -121,7 +121,7 @@ import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
-  auth: { type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
+  auth: { __type: "ApiKeyHeader" as const, value: process.env.RELAYER_API_KEY! },
 } as const satisfies FheChain;
 ```
 
@@ -145,13 +145,13 @@ Against the **Zama-hosted relayer**, only `ApiKeyHeader` works — requests with
 
 ```ts
 // Zama-hosted relayer — API key in the x-api-key header (required)
-auth: { type: "ApiKeyHeader", value: "your-api-key" }
+auth: { __type: "ApiKeyHeader", value: "your-api-key" }
 
 // Behind your own proxy — credential carried as a cookie to your proxy
-auth: { type: "ApiKeyCookie", value: "your-api-key" }
+auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 
 // Self-hosted relayer — only if your auth layer expects a bearer token
-auth: { type: "BearerToken", token: "your-token" }
+auth: { __type: "BearerToken", token: "your-token" }
 ```
 
 When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
