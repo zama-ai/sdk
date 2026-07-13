@@ -59,7 +59,9 @@ export class EventService {
   once<K extends ZamaSDKEventType>(type: K, listener: TypedZamaSDKEventListener<K>): () => void {
     let fired = false;
     const wrapped: TypedZamaSDKEventListener<K> = (event) => {
-      if (fired) {return;}
+      if (fired) {
+        return;
+      }
       fired = true;
       unsubscribe();
       listener(event);
