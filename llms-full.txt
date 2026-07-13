@@ -3744,7 +3744,7 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
 | Error                                   | Code                                  | What happened                                                                                       |
-| --------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                  |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                            |
 | `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                           |
@@ -3837,7 +3837,7 @@ Each handler receives the error class for its code, so subclass fields are avail
 Here is a quick reference for the most common errors and how to respond:
 
 | Error                                  | Recommended action                                                                                                                      |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                    |
 | `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                 |
 | `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                      |
@@ -3933,13 +3933,13 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
-| Cause                          | `retryAfterSeconds`                               | Notes                                                                                                    |
-| ------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `RpcRateLimitError`            | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                               |
-| `RelayerRequestFailedError`    | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.      |
-| `DelegationNotPropagatedError` | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.             |
-| `DelegationCooldownError`      | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                       |
-| `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved.  |
+| Cause                          | `retryAfterSeconds`                               | Notes                                                                                                   |
+| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `RpcRateLimitError`            | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
+| `RelayerRequestFailedError`    | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
+| `DelegationNotPropagatedError` | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
+| `DelegationCooldownError`      | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
+| `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
 
 
 ### Tab: SDK
