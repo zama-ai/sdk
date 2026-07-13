@@ -2,9 +2,10 @@
  * Real multi-chain integration test.
  *
  * Unlike the mocked `integration.test.ts`, this suite hits live infrastructure —
- * a public RPC per chain plus, on Sepolia, the hosted Zama testnet relayer
- * (`relayer.testnet.zama.org`). It runs the same read-only flow against every
- * non-mainnet chain the SDK ships in `chains/configs.ts`:
+ * a public RPC per chain plus, where one exists, the chain's hosted Zama relayer
+ * (`relayer.testnet.zama.org` on Sepolia, `relayer.mainnet.zama.org` on
+ * mainnet). It runs the same read-only flow against every relayer-backed and
+ * cleartext chain the SDK ships in `chains/configs.ts`:
  *
  *   1. the target confidential token is registered and valid in the on-chain
  *      wrappers registry, and reverse-resolves to its documented ERC-20,
@@ -19,11 +20,17 @@
  *
  * Each entry runs its own single-chain `ZamaSDK` rather than one shared
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
- * one `PublicClient`) and the relayer transport differs per chain. Sepolia has
- * full FHE infrastructure and uses the `node()` relayer; the cleartext testnets
- * (hoodi / bsc / ingen) have no hosted relayer and drive the FHE backend through
- * `cleartext()`. `mainnet` is out of scope (this is the non-mainnet suite) and
- * `hardhat` needs a local node.
+ * one `PublicClient`) and the relayer transport differs per chain. Sepolia and
+ * mainnet have full FHE infrastructure and use the `node()` relayer; the
+ * cleartext testnets (hoodi / bsc / ingen) have no hosted relayer and drive the
+ * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
+ * scope.
+ *
+ * Mainnet's hosted relayer requires a Zama API key (`x-api-key` header), so the
+ * mainnet entry only wires relayer `auth` when `ZAMA_RELAYER_API_KEY` is set;
+ * its encryption test is skipped when the key is absent. The other three
+ * mainnet checks are RPC-only and always run. Every other chain's relayer is
+ * open, so the whole suite runs there without any key.
  *
  * Runs only via `pnpm test:integration` (the default unit run excludes
  * `*integration.test.ts`). Being network-dependent, a failure most often means
@@ -37,7 +44,7 @@ import {
   type FheChain,
   type RelayerConfig,
 } from "@zama-fhe/sdk";
-import { bscTestnet, hoodi, ingenTestnet, sepolia } from "@zama-fhe/sdk/chains";
+import { bscTestnet, hoodi, ingenTestnet, mainnet, sepolia } from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { createPublicClient, createWalletClient, custom, http, isHex } from "viem";
@@ -55,9 +62,21 @@ interface ChainEntry {
   /** The plain ERC-20 the confidential token wraps. Asserted against the
    *  registry's reverse lookup so this pairing can't silently drift. */
   readonly underlyingTokenAddress: Address;
+  /** When set, the encryption test needs relayer `auth` and is skipped unless
+   *  `ZAMA_RELAYER_API_KEY` is set (Zama's hosted mainnet relayer requires it). */
+  readonly requiresApiKey?: boolean;
 }
 
+/** Zama API key for the hosted mainnet relayer's `x-api-key` header. */
+const ZAMA_RELAYER_API_KEY = process.env.ZAMA_RELAYER_API_KEY;
+
 const entries: readonly ChainEntry[] = [
+  {
+    chain: { ...mainnet, auth: { type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
+    relayer: node(),
+    confidentialTokenAddress: "0xe978F22157048E5DB8E5d07971376e86671672B2",
+    underlyingTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  },
   {
     chain: sepolia,
     relayer: node(),
@@ -151,25 +170,30 @@ for (const entry of entries) {
       expect(handle).toHaveLength(66); // "0x" + 32 bytes
     });
 
-    test("encrypts typed inputs through the chain's relayer transport", async () => {
-      // Exercises all three EncryptInput branches (numeric / bool / address) and,
-      // under the hood, the input-proof path — no gas, no tx.
-      const { encryptedValues, inputProof } = await sdk.encrypt({
-        values: [
-          { value: 1000n, type: "euint64" },
-          { value: true, type: "ebool" },
-          { value: account.address, type: "eaddress" },
-        ],
-        contractAddress: entry.confidentialTokenAddress,
-        userAddress: account.address,
-      });
+    // Skip the relayer round-trip when the chain needs an API key we don't have;
+    // the RPC-only tests above still cover it.
+    test.skipIf(entry.chain.auth && !ZAMA_RELAYER_API_KEY)(
+      "encrypts typed inputs through the chain's relayer transport",
+      async () => {
+        // Exercises all three EncryptInput branches (numeric / bool / address) and,
+        // under the hood, the input-proof path — no gas, no tx.
+        const { encryptedValues, inputProof } = await sdk.encrypt({
+          values: [
+            { value: 1000n, type: "euint64" },
+            { value: true, type: "ebool" },
+            { value: account.address, type: "eaddress" },
+          ],
+          contractAddress: entry.confidentialTokenAddress,
+          userAddress: account.address,
+        });
 
-      expect(encryptedValues).toHaveLength(3);
-      for (const value of encryptedValues) {
-        expect(isHex(value)).toBe(true);
-      }
-      expect(isHex(inputProof)).toBe(true);
-      expect(inputProof.length).toBeGreaterThan(2);
-    });
+        expect(encryptedValues).toHaveLength(3);
+        for (const value of encryptedValues) {
+          expect(isHex(value)).toBe(true);
+        }
+        expect(isHex(inputProof)).toBe(true);
+        expect(inputProof.length).toBeGreaterThan(2);
+      },
+    );
   });
 }

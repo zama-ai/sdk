@@ -95,6 +95,7 @@
     "@vitest/ui": "^4.1.9",
     "codemod": "1.12.3",
     "conventional-changelog-conventionalcommits": "^9.3.1",
+    "dotenv": "^17.4.2",
     "ethers": "^6.17.0",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.10.6",
