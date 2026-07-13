@@ -125,6 +125,11 @@ export class Permits {
    * `switchChain` before fanning the wallet-account change out to listeners,
    * so any downstream caller (including React adapters) observes the
    * dispatcher on the wallet chain by the time it invokes warmup.
+   *
+   * Not for pre-warming a shared `transportKeyPairScope`: this call's wallet-account
+   * precondition doesn't conceptually apply to a scope-wide key, and would silently
+   * no-op precisely when an operator is most likely to be calling it (no end-user
+   * connected yet). Use {@link warmScope} instead.
    */
   async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
@@ -212,5 +217,20 @@ export class Permits {
   async rotateScope(scopeId: string): Promise<void> {
     const service = this.#requireCredentialService("rotateScope");
     await service.rotateScope(scopeId);
+  }
+
+  /**
+   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level,
+   * no wallet account required or touched) — the pre-warm counterpart to
+   * {@link rotateScope}. Prefer this over {@link warmTransportKeyPair} for a scoped
+   * key pair: unlike that method, this never silently no-ops for lack of a connected
+   * wallet, because a scope-wide key was never tied to one in the first place.
+   *
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if no scope is configured. {@link ConfigurationError}
+   */
+  async warmScope(): Promise<void> {
+    const service = this.#requireCredentialService("warmScope");
+    await service.warmScope();
   }
 }

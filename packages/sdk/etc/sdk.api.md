@@ -11425,6 +11425,7 @@ export class Permits {
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
     rotateScope(scopeId: string): Promise<void>;
+    warmScope(): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
 }
 

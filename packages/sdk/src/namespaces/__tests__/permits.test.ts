@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { ChainMismatchError, SignerNotConfiguredError } from "../../errors";
+import { ChainMismatchError, ConfigurationError, SignerNotConfiguredError } from "../../errors";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
@@ -177,6 +177,60 @@ describe("Permits", () => {
 
       await sdk.decryption.decryptValues(handles);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("scope (opt-in shared-tenant)", () => {
+    test("rotateScope throws SignerNotConfiguredError when no signer is configured", async ({
+      createSDK,
+    }) => {
+      const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
+      await expect(sdk.permits.rotateScope("tenant-1")).rejects.toBeInstanceOf(
+        SignerNotConfiguredError,
+      );
+    });
+
+    test("warmScope throws SignerNotConfiguredError when no signer is configured", async ({
+      createSDK,
+    }) => {
+      const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
+      await expect(sdk.permits.warmScope()).rejects.toBeInstanceOf(SignerNotConfiguredError);
+    });
+
+    test("rotateScope throws ConfigurationError when no scope is configured", async ({ sdk }) => {
+      await expect(sdk.permits.rotateScope("tenant-1")).rejects.toBeInstanceOf(ConfigurationError);
+    });
+
+    test("warmScope throws ConfigurationError when no scope is configured", async ({ sdk }) => {
+      await expect(sdk.permits.warmScope()).rejects.toBeInstanceOf(ConfigurationError);
+    });
+
+    test("warmScope succeeds with a signer configured but no connected wallet account — unlike warmTransportKeyPair", async ({
+      createSDK,
+      signer,
+      relayer,
+    }) => {
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
+      const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
+
+      // The sibling per-signer primitive silently no-ops under this exact condition —
+      // this is precisely the gap warmScope exists to not have.
+      await expect(sdk.permits.warmTransportKeyPair()).resolves.toBeUndefined();
+      expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
+
+      await sdk.permits.warmScope();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+    });
+
+    test("rotateScope succeeds with a signer configured but no connected wallet account", async ({
+      createSDK,
+      signer,
+    }) => {
+      vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
+      const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
+
+      await sdk.permits.warmScope();
+      await expect(sdk.permits.rotateScope("tenant-1")).resolves.toBeUndefined();
     });
   });
 });

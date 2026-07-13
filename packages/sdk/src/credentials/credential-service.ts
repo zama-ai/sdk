@@ -269,9 +269,28 @@ export class CredentialService {
    * which lazily creates the transport key pair when needed. Errors (storage failure,
    * relayer 4xx, missing Worker in SSR) are **not** swallowed here — the caller
    * decides whether to log, ignore, or surface them.
+   *
+   * Not for pre-warming a shared scope: `address` is ignored for storage keying once
+   * a scope is configured (see {@link TransportKeyPairVault}), so this call's actual
+   * effect wouldn't match its apparent per-signer intent. Use {@link warmScope} instead.
    */
   async warmTransportKeyPair(address: Address): Promise<void> {
     await this.#vault.getOrCreate(checksum(address));
+  }
+
+  /**
+   * Warm this scope's shared transport key pair (operator-level, no wallet needed) —
+   * the pre-warm counterpart to {@link rotateScope}.
+   *
+   * @throws if no scope is configured on this service. {@link ConfigurationError}
+   */
+  async warmScope(): Promise<void> {
+    if (this.#keyPairScope === undefined) {
+      throw new ConfigurationError(
+        "warmScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to warm.",
+      );
+    }
+    await this.#vault.warmScope();
   }
 
   /**

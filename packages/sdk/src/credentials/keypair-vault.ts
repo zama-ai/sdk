@@ -57,7 +57,10 @@ export class TransportKeyPairVault {
   }
 
   async readStored(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair | null> {
-    const key = this.#identityKey(signerAddress);
+    return this.#readByKey(this.#identityKey(signerAddress));
+  }
+
+  async #readByKey(key: string): Promise<StoredTransportKeyPair | null> {
     const raw = await this.#storage.get(key);
     if (raw === null || raw === undefined) {
       return null;
@@ -101,19 +104,21 @@ export class TransportKeyPairVault {
    * shares one slot, its TTL expiry or a {@link clearScope} rotation is a single
    * correlated event that can push many signers into this window at once, unlike the
    * per-signer race which only ever recurs per individual user. Operators onboarding a
-   * scope should pre-warm it once (a single `getOrCreate` call, e.g. via
-   * `warmTransportKeyPair`) before opening concurrent traffic, to avoid hitting this
-   * window with a whole cohort at once.
+   * scope should pre-warm it once via {@link warmScope} before opening concurrent
+   * traffic, to avoid hitting this window with a whole cohort at once.
    */
   async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair> {
-    const identityKey = this.#identityKey(signerAddress);
+    return this.#getOrCreateByKey(this.#identityKey(signerAddress));
+  }
+
+  async #getOrCreateByKey(identityKey: string): Promise<StoredTransportKeyPair> {
     const existing = this.#pending.get(identityKey);
     if (existing) {
       return existing;
     }
 
     const promise = (async () => {
-      const cached = await this.readStored(signerAddress);
+      const cached = await this.#readByKey(identityKey);
       if (cached !== null) {
         return cached;
       }
@@ -173,5 +178,21 @@ export class TransportKeyPairVault {
       return;
     }
     await this.#storage.delete(transportKeyPairScopeStorageKey(this.#keyPairScope));
+  }
+
+  /**
+   * Generate and persist the shared scope's transport key pair if absent — the
+   * pre-warm counterpart to {@link clearScope}. No-op if no scope is configured.
+   *
+   * Unlike {@link getOrCreate}, this needs no signer address at all: a scoped identity
+   * never depends on one. Operators use this to warm a scope once, deliberately,
+   * before opening concurrent traffic to it — see the class docs on {@link getOrCreate}
+   * for why that avoids a thundering-herd race across the whole cohort.
+   */
+  async warmScope(): Promise<void> {
+    if (this.#keyPairScope === undefined) {
+      return;
+    }
+    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#keyPairScope));
   }
 }

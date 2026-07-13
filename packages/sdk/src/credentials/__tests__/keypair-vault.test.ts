@@ -248,4 +248,45 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     await expect(vault.clearScope()).rejects.toThrow("delete boom");
     expect(logger.warn).not.toHaveBeenCalled();
   });
+
+  test("warmScope() generates and persists the shared key pair, needing no signer address", async () => {
+    const storage = new MemoryStorage();
+    const generator = makeGenerator();
+    const vaultA = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      keyPairScope: "tenant-1",
+    });
+    const vaultB = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      keyPairScope: "tenant-1",
+    });
+
+    await vaultA.warmScope();
+    // A signer that never calls warmScope itself still finds the pre-warmed key.
+    const found = await vaultB.readStored(USER);
+    expect(found).not.toBeNull();
+
+    // Calling it again doesn't regenerate — it's idempotent, same as getOrCreate.
+    await vaultA.warmScope();
+    expect(await vaultB.readStored(USER)).toEqual(found);
+    expect(generator).toHaveBeenCalledOnce();
+  });
+
+  test("warmScope() is a no-op when no scope is configured", async () => {
+    const storage = new MemoryStorage();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+    });
+    await vault.warmScope();
+    expect(await vault.readStored(USER)).toBeNull();
+  });
 });
