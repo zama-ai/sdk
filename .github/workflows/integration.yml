@@ -31,13 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Enables the live relayer-auth negative checks (cookie / bearer / no-auth
-      # / bogus-key are rejected by the hosted relayer). No API key needed.
-      # Toggle without a commit via the repo variable (Settings → Variables) —
-      # set it to "true" to run them; unset/anything-else skips them. Acts as a
-      # kill switch if the hosted relayer's auth behavior changes and the canary
-      # needs muting while it's reconciled.
-      ENABLE_RELAYER_AUTH_TESTS: ${{ vars.ENABLE_RELAYER_AUTH_TESTS }}
+      # Authenticates the hosted-mainnet relayer integration test. When unset,
+      # that test is skipped (gated on the key's presence), so forks and
+      # secret-less runs stay green.
+      ZAMA_RELAYER_API_KEY: ${{ secrets.ZAMA_RELAYER_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
