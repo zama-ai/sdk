@@ -139,6 +139,64 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.decryptClient.init).not.toHaveBeenCalled();
     expect(clients.encryptClient.init).not.toHaveBeenCalled();
   });
+
+  test.each([
+    {
+      label: "single public decrypt",
+      capability: "base" as const,
+      invoke: (relayer: FhevmRelayer) =>
+        relayer.decryptPublicValue({ encryptedValue: "0x" } as never),
+      delegatedAction: clients.baseClient.decryptPublicValue,
+    },
+    {
+      label: "single private decrypt",
+      capability: "decrypt" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.decryptValue({} as never),
+      delegatedAction: clients.decryptClient.decryptValue,
+    },
+    {
+      label: "cross-contract private decrypt",
+      capability: "decrypt" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.decryptValuesFromPairs({} as never),
+      delegatedAction: clients.decryptClient.decryptValuesFromPairs,
+    },
+    {
+      label: "single encryption",
+      capability: "encrypt" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.encryptValue({} as never),
+      delegatedAction: clients.encryptClient.encryptValue,
+    },
+    {
+      label: "FHE key fetch",
+      capability: "encrypt" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.fetchFheEncryptionKeyBytes(),
+      delegatedAction: clients.encryptClient.fetchFheEncryptionKeyBytes,
+    },
+    {
+      label: "signed permit parsing",
+      capability: "base" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.parseSignedDecryptionPermit({} as never),
+      delegatedAction: clients.baseClient.parseSignedDecryptionPermit,
+    },
+    {
+      label: "transport key generation",
+      capability: "decrypt" as const,
+      invoke: (relayer: FhevmRelayer) => relayer.generateTransportKeyPair(),
+      delegatedAction: clients.decryptClient.generateTransportKeyPair,
+    },
+  ])(
+    "routes $label through only the $capability capability",
+    async ({ capability, delegatedAction, invoke }) => {
+      const relayer = new FhevmRelayer({ chain: anvil });
+
+      await invoke(relayer);
+
+      expect(delegatedAction).toHaveBeenCalled();
+      expect(clients.baseClient.init).toHaveBeenCalledTimes(capability === "base" ? 1 : 0);
+      expect(clients.decryptClient.init).toHaveBeenCalledTimes(capability === "decrypt" ? 1 : 0);
+      expect(clients.encryptClient.init).toHaveBeenCalledTimes(capability === "encrypt" ? 1 : 0);
+    },
+  );
 });
 
 describe("FhevmRelayer request options", () => {
