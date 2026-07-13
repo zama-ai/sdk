@@ -189,3 +189,39 @@ export type {
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
 } from "../events/sdk-events";
+
+// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
+// referenced structurally by this entry point's own public signatures.
+export type { FheChain, FheChainAuth } from "../chains/types";
+export { ChainRouter } from "../chains/router";
+export type { WalletAccountStore } from "../types/signer";
+export type {
+  ContractAbi,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadContractReturnType,
+  ReadFunctionName,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../types/contract";
+export type { GenericProvider } from "../types/provider";
+export type { RelayerConfig } from "../config/types";
+export type { WrappersRegistryConfig, ListPairsOptions } from "../wrappers-registry";
+export { ZamaErrorCode } from "../errors/base";
+export type {
+  DelegatedDecryptOptions,
+  BatchDecryptResult,
+  BatchDecryptItem,
+} from "../services/decryption-service";
+export type { GenericLogger } from "../types/logger";
+export { ZamaError } from "../errors/base";
+export { WrappersRegistry } from "../wrappers-registry";
+export type {
+  PaginatedResult,
+  TokenWrapperPair,
+  TokenWrapperPairWithMetadata,
+} from "../contracts/wrappers-registry";
+export { Permits } from "../namespaces/permits";
+export { Delegations } from "../namespaces/delegations";
+export { Decryption } from "../namespaces/decryption";

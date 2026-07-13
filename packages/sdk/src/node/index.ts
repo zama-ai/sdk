@@ -10,14 +10,25 @@
 export { node } from "./config";
 export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
-export type { RelayerConfig } from "../config/types";
+export type { RelayerConfig, CleartextRelayerConfig } from "../config/types";
 export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { GenericLogger } from "../types/logger";
 
 // Relayer types used in the node transport's public API
-export type { ClearValue, EIP712TypedData, EncryptParams } from "../relayer/types";
+export type {
+  ClearValue,
+  EIP712TypedData,
+  EncryptParams,
+  EncryptInput,
+  EncryptedValue,
+} from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
+
+// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
+// referenced structurally by this entry point's own public signatures.
+export type { FheChain, FheChainAuth } from "../chains/types";
+export type { GenericStorage } from "../types/storage";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";
