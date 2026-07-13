@@ -7,7 +7,7 @@ description: Subscribe to the unified SDK event stream for logging, analytics, a
 
 `sdk.events` is a typed, multi-listener event stream for passive, SDK-wide observation -- debug logging, performance monitoring, analytics, and correlating multi-step operations. It is separate from the per-operation callbacks (`ShieldCallbacks`, `TransferCallbacks`, `UnshieldCallbacks`) that individual `Token`/`WrappedToken` methods accept as options.
 
-Use `sdk.events` when you want to observe the SDK as a whole, wired independently from any single call. Use per-operation callbacks when you want to drive UI state for one specific call (see [Shield tokens](shield-tokens.md), [Unshield tokens](unshield-tokens.md), [Transfer privately](transfer-privately.md)). A consumer never needs both to get a complete picture of a single operation -- callbacks and events for the same step carry the same information, fired from the same place.
+Use `sdk.events` when you want to observe the SDK as a whole, wired independently from any single call. Use per-operation callbacks when you want to drive UI state for one specific call (see [Shield tokens](shield-tokens.md), [Unshield tokens](unshield-tokens.md), [Transfer privately](transfer-privately.md)). For most operations a consumer never needs both to get a complete picture -- callbacks and events for the same step are fired from the same place with equivalent data. The one current exception is shield: `ShieldSubmittedEvent` carries `shieldPath` (which execution path was used) and `ApproveUnderlyingSubmittedEvent` carries `step`, neither of which is exposed on `ShieldCallbacks` yet -- if your shield UI needs that detail, subscribe to the event alongside the callback for now.
 
 ## Steps
 
@@ -127,7 +127,7 @@ sdk.events.on(ZamaSDKEvents.UnshieldPhase2Submitted, (event) => {
 
 ## A listener that throws never breaks the SDK
 
-If a listener throws, the SDK catches it, logs a warning through the configured logger, and continues delivering the event to any other listeners. The operation that triggered the event is never affected by a misbehaving listener.
+If a listener throws, the SDK catches it and continues delivering the event to any other listeners -- the operation that triggered the event is never affected by a misbehaving listener. The exception is also logged through the configured `logger`, but the SDK's logger is silent by default: if you didn't pass a `logger` to `createConfig`/the SDK constructor, a throwing listener fails with no observable trace. Pass a `logger` if you want that warning to actually surface, especially for listeners wired to third-party code (analytics, monitoring) that you don't fully control.
 
 ## Next steps
 
