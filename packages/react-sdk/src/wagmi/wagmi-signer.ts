@@ -25,6 +25,20 @@ function walletAccountFromConnection(connection: WagmiConnection): WalletAccount
   return { address: getAddress(connection.address), chainId: connection.chainId };
 }
 
+// viem requires uint values as bigints, but the KMS permit message carries them
+// as decimal strings. Convert by declared field type rather than by name so every
+// permit version is covered (V1 `durationDays`, V2 `durationSeconds`, ...).
+function messageWithBigIntUints(typedData: EIP712TypedData): Record<string, unknown> {
+  const fields = (typedData.primaryType ? typedData.types[typedData.primaryType] : undefined) ?? [];
+  const message: Record<string, unknown> = { ...typedData.message };
+  for (const { name, type } of fields) {
+    if (/^uint\d*$/.test(type)) {
+      message[name] = BigInt(message[name] as string | number | bigint);
+    }
+  }
+  return message;
+}
+
 /** Configuration for {@link WagmiSigner}. */
 export interface WagmiSignerConfig {
   /** Wagmi `Config` — same instance passed to {@link WagmiProvider}. */
@@ -56,12 +70,8 @@ export class WagmiSigner extends BaseSigner {
       primaryType: typedData.primaryType,
       types: sigTypes,
       domain: typedData.domain,
-      message: {
-        ...typedData.message,
-        startTimestamp: BigInt(typedData.message.startTimestamp),
-        durationDays: BigInt(typedData.message.durationDays),
-      },
-      // Cast: EIP712TypedData is a union; viem cannot correlate primaryType/types/message across union members, so the inferred `message` collapses to `never`.
+      message: messageWithBigIntUints(typedData),
+      // Cast: EIP712TypedData is structural (`Eip712Like`), so viem cannot correlate primaryType/types/message and the inferred `message` collapses to `never`.
     } as Parameters<typeof signTypedData>[1]);
   }
 

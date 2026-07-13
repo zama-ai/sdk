@@ -6,28 +6,23 @@
 
 import { Abi } from 'viem';
 import { Address } from 'viem';
-import { Auth } from '@zama-fhe/relayer-sdk/bundle';
-import { Bytes32Hex } from '@zama-fhe/relayer-sdk/bundle';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/bundle';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { EIP1193Provider } from 'viem';
+import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
-import { InputProofBytesType } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsDelegatedUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
-import { KmsUserDecryptEIP712Type } from '@zama-fhe/relayer-sdk/bundle';
 import { PublicClient } from 'viem';
-import { PublicDecryptResults } from '@zama-fhe/relayer-sdk/bundle';
-import * as SDK from '@zama-fhe/relayer-sdk/bundle';
+import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
+import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
-import { ZKProofLike } from '@zama-fhe/relayer-sdk/bundle';
 
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
 
 // @public
-export type EncryptedValue = Bytes32Hex;
+export type EncryptedValue = Hex;
 
 export { Hex }
 

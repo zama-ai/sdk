@@ -24,8 +24,6 @@ import {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -82,7 +80,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                                                           |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -91,9 +89,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
-| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)                                                  |
-| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                                                    |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                                                                 |
@@ -191,7 +187,7 @@ matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing err
 
 **Code:** `ENCRYPTION_FAILED`
 
-FHE encryption failed inside the Web Worker. Usually caused by missing WASM support or restrictive CSP headers.
+FHE encryption failed inside the WASM runtime. Usually caused by missing WASM support or restrictive CSP headers.
 
 ```ts
 matchZamaError(error, {
@@ -352,52 +348,6 @@ try {
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
 
-### WorkerTimeoutError
-
-**Code:** `OPERATION_TIMEOUT`
-
-A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker by default** (terminating the hung thread) so it self-heals, and the operation is **retryable**. Recycling is gated by `recycleWorkerOnTimeout` (default `true`) and never applies to the browser worker (a single worker with no pool). It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
-
-Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
-
-```ts
-import { node } from "@zama-fhe/sdk/node";
-
-relayers: {
-  [sepolia.id]: node({ operationTimeout: 10 }),
-}
-```
-
-```ts
-matchZamaError(error, {
-  OPERATION_TIMEOUT: async (e) => {
-    // The worker was recycled; retry with your own backoff.
-    await backoff();
-    retry(); // or raise operationTimeout if the op is legitimately long
-  },
-});
-```
-
-**How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
-
-### WorkerRecycledError
-
-**Code:** `WORKER_RECYCLED`
-
-An in-flight operation was **aborted as collateral** when its worker was recycled to recover from _another_ operation's timeout (Node pool self-healing) — this operation itself did not time out. Because it never reached a verdict, it is **retryable**: the next call lazily re-inits a fresh worker. It is intentionally distinct from `WorkerTimeoutError` (this op did not exceed its own bound) and from `DecryptionFailedError` (nothing actually failed to decrypt), so you can retry it rather than treating it as a terminal failure. The error carries `operation` and (in the Node pool) `worker`.
-
-```ts
-matchZamaError(error, {
-  WORKER_RECYCLED: async (e) => {
-    // Transient: the worker was replaced under us. Just retry.
-    await backoff();
-    retry();
-  },
-});
-```
-
-**How to handle:** Retry — the request was cancelled by an unrelated recycle, not by a failure of its own.
-
 ## "No balance" vs "zero balance"
 
 These are distinct states:
@@ -420,13 +370,13 @@ try {
 
 **Code:** `CONFIGURATION`
 
-Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE worker fails to initialize (e.g. missing WASM support, terminated relayer).
+Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE runtime fails to initialize (e.g. missing WASM support, terminated relayer).
 
 ```ts
 matchZamaError(error, { CONFIGURATION: (e) => console.error("Configuration error:", e.message) });
 ```
 
-**How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
+**How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions runtime initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
 
 ### InsufficientConfidentialBalanceError
 
@@ -658,7 +608,7 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 | ----------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
 | Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                              |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `ConfigurationError` on first operation   | FHE runtime failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |

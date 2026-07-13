@@ -69,3 +69,43 @@ test("should shield USDC and show confidential balance", async ({
   const onChainUsdc = await readErc20Balance(contracts.USDC);
   expect(onChainUsdc).toBe(usdcBefore - shieldAmount);
 });
+
+test("should surface an error when shielding more than the ERC-20 balance", async ({
+  page,
+  contracts,
+  readErc20Balance,
+}) => {
+  const usdtBefore = await readErc20Balance(contracts.USDT);
+
+  await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
+
+  // The current allowance is displayed before shielding
+  await expect(page.getByTestId("allowance")).toContainText("Current allowance:");
+
+  await page.getByTestId("amount-input").fill((usdtBefore + 1n).toString());
+  await page.getByTestId("shield-button").click();
+
+  await expect(page.getByTestId("shield-error")).toContainText("Error:");
+  await expect(page.getByTestId("shield-success")).not.toBeVisible();
+
+  // On-chain: ERC-20 balance is untouched
+  const onChainUsdt = await readErc20Balance(contracts.USDT);
+  expect(onChainUsdt).toBe(usdtBefore);
+});
+
+test("should approve the wrapper for an explicit underlying amount", async ({
+  page,
+  contracts,
+}) => {
+  const approveAmount = 12345n;
+
+  await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
+  await expect(page.getByTestId("allowance")).toContainText("Current allowance:");
+
+  await page.getByTestId("approve-amount-input").fill(approveAmount.toString());
+  await page.getByTestId("approve-underlying-button").click();
+
+  await expect(page.getByTestId("approve-underlying-success")).toContainText("Tx: 0x");
+  // The allowance query is invalidated after approval and reflects the new value
+  await expect(page.getByTestId("allowance")).toHaveText(`Current allowance: ${approveAmount}`);
+});

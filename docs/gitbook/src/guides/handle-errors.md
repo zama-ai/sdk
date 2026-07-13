@@ -17,16 +17,14 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | --------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                             |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                       |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                        |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                      |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                          |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                 |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                       |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                            |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                   |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`)                                              |
-| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)               |
-| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                 |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                         |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                          |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                              |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                   |
@@ -114,16 +112,14 @@ Here is a quick reference for the most common errors and how to respond:
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                                    |
 | `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                                                      |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                                      |
 | `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                              |
 | `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                                       |
 | `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                    |
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                    |
 | `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`; on a 429, retry after `.retryAfter` seconds. |
-| `WorkerTimeoutError`                   | Retry with client-side backoff (the Node worker is recycled by default). Raise `node({ operationTimeout })` for legitimately long operations.           |
-| `WorkerRecycledError`                  | Just retry — the request was cancelled as collateral of another operation's timeout recycle, not by a failure of its own.                               |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                             |
 | `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
 | `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
 | `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).                 |
@@ -200,8 +196,8 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.     |
 | Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                 |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.                  |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                          |
+| `ConfigurationError` on first operation   | FHE runtime failed to initialize            | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.             |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                     |
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
 | `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |

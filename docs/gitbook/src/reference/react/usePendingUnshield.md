@@ -22,7 +22,7 @@ import { usePendingUnshield } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 function ResumeUnshieldGuard({
   wrapperAddress,

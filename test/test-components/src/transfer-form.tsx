@@ -14,6 +14,8 @@ export function TransferForm({ tokenAddress }: { tokenAddress: Address }) {
     <form
       action={(formData) => {
         transfer.mutate({
+          // Forwarded unvalidated on purpose: the malformed-recipient e2e test
+          // asserts the SDK mutation (not the form) rejects a bad address.
           to: formData.get("recipient") as Address,
           amount: BigInt(formData.get("amount") as string),
           skipBalanceCheck: true,

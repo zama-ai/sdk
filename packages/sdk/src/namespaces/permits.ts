@@ -2,10 +2,9 @@ import { getAddress, type Address } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
-import type { GenericProvider, GenericSigner } from "../types";
+import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import type { GenericLogger } from "../worker/worker.types";
 
 /**
  * Public namespace for permit and transport-key-pair management.

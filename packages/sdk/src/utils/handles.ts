@@ -1,4 +1,4 @@
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { encryptionBitsFromFheTypeId, isFheTypeId } from "./fhe-type";
 
 export const ZERO_ENCRYPTED_VALUE =
@@ -12,12 +12,12 @@ export function isEncryptedValueZero(encryptedValue: string): boolean {
 }
 
 /**
- * Per-request cleartext-bit budget enforced by the relayer gateway on every
- * decryption request (`userDecrypt` / `delegatedUserDecrypt`). Protocol-level
+ * Per-request cleartext-bit budget enforced by the KMS gateway on every
+ * decryption request (`decryptValues` / `delegatedDecryptValues`). Protocol-level
  * constant, mirrors {@link MAX_CONTRACTS_PER_PERMIT}'s local duplication —
- * duplicated here rather than imported since `@zama-fhe/relayer-sdk` only
- * exposes it via platform-specific (`/node`, `/web`) entrypoints unsafe to
- * import at runtime from isomorphic code.
+ * duplicated here (matches `@fhevm/sdk`'s own `MAX_KMS_DECRYPT_DECRYPTION_BIT_LIMIT`)
+ * rather than imported since `@fhevm/sdk` only exposes the underlying FHE-type
+ * table via entrypoints unsafe to import at runtime from isomorphic code.
  */
 export const MAX_DECRYPTION_REQUEST_BITS = 2048;
 
@@ -26,8 +26,8 @@ const MAX_KNOWN_ENCRYPTION_BITS = 256;
 
 /**
  * Cleartext bit cost of decrypting a single handle, derived from its FHE
- * type (encoded at bits 8-15 of the handle, the same position `RelayerCleartext`
- * decodes from — see `relayer/cleartext/relayer-cleartext.ts`).
+ * type (encoded at bits 8-15 of the handle — the same layout `@fhevm/sdk`'s
+ * `FhevmHandle` decodes, byte 30 of the 32-byte handle).
  *
  * Falls back to {@link MAX_KNOWN_ENCRYPTION_BITS} for an unrecognized type
  * byte, or for a value that isn't parseable hex at all, instead of throwing.

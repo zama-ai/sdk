@@ -20,6 +20,14 @@ test("should shield USDT, unwrap, then resume unshield", async ({
   // Navigate to resume-unshield page
   await page.goto(`/resume-unshield?token=${contracts.cUSDT}`);
 
+  // The confidential balance is displayed before unwrapping
+  await expect(page.getByTestId("current-balance")).toHaveText(
+    `Balance: ${cUSDTBefore + shieldAmount}`,
+  );
+
+  // Guard: resume is disabled until phase 1 produces a tx hash
+  await expect(page.getByTestId("resume-button")).toBeDisabled();
+
   // Step 1: Unwrap (phase 1 only)
   await page.getByTestId("amount-input").fill(unshieldAmount.toString());
   await page.getByTestId("unwrap-button").click();
@@ -27,6 +35,7 @@ test("should shield USDT, unwrap, then resume unshield", async ({
   await expect(page.getByTestId("unwrap-tx-hash")).toContainText("0x");
 
   // Step 2: Resume unshield from the tx hash
+  await expect(page.getByTestId("resume-button")).toBeEnabled();
   await page.getByTestId("resume-button").click();
   await expect(page.getByTestId("resume-success")).toContainText("Tx: 0x");
 

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "../../test-fixtures";
-import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/types";
 import { chunkHandlesByBitBudget, encryptionBitsForHandle } from "../handles";
 
 /** Build a 32-byte handle with `typeId` at byte 30 (bits 8-15) and version 0 at byte 31. */

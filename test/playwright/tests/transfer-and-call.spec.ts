@@ -23,10 +23,11 @@ test("transferAndCall to the receiver mock succeeds and moves the balance", asyn
   await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x");
 
   await page.goto(`/transfer-and-call?token=${contracts.cUSDT}`);
-  await page.getByTestId("recipient-input").fill(contracts.confidentialReceiver);
-  await page.getByTestId("amount-input").fill(transferAmount.toString());
-  await page.getByTestId("data-input").fill(SUCCESS_DATA);
-  await page.getByTestId("transfer-and-call-button").click();
+  const form = page.getByTestId("transfer-and-call-form");
+  await form.getByTestId("recipient-input").fill(contracts.confidentialReceiver);
+  await form.getByTestId("amount-input").fill(transferAmount.toString());
+  await form.getByTestId("data-input").fill(SUCCESS_DATA);
+  await form.getByTestId("transfer-and-call-button").click();
 
   await expect(page.getByTestId("transfer-and-call-success")).toContainText("Tx: 0x");
 
@@ -41,11 +42,49 @@ test("transferAndCall to the receiver mock succeeds and moves the balance", asyn
 
 test("transferAndCall surfaces a revert from the receiver hook", async ({ page, contracts }) => {
   await page.goto(`/transfer-and-call?token=${contracts.cUSDT}`);
-  await page.getByTestId("recipient-input").fill(contracts.confidentialReceiver);
-  await page.getByTestId("amount-input").fill("1");
+  const form = page.getByTestId("transfer-and-call-form");
+  await form.getByTestId("recipient-input").fill(contracts.confidentialReceiver);
+  await form.getByTestId("amount-input").fill("1");
   // abi.encode(uint8(2)) — receiver mock reverts with InvalidInput(2).
-  await page.getByTestId("data-input").fill(REVERT_DATA);
-  await page.getByTestId("transfer-and-call-button").click();
+  await form.getByTestId("data-input").fill(REVERT_DATA);
+  await form.getByTestId("transfer-and-call-button").click();
 
   await expect(page.getByTestId("transfer-and-call-error")).toBeVisible();
+});
+
+test("transferFromAndCall from the connected holder moves the balance", async ({
+  page,
+  contracts,
+  account,
+  formatUnits,
+  confidentialBalances,
+}) => {
+  const shieldAmount = 800n;
+  const transferAmount = 300n;
+
+  const cUSDTBefore = confidentialBalances.cUSDT;
+
+  await page.goto(`/shield?token=${contracts.USDT}&wrapper=${contracts.cUSDT}`);
+  await page.getByTestId("amount-input").fill(shieldAmount.toString());
+  await page.getByTestId("shield-button").click();
+  await expect(page.getByTestId("shield-success")).toContainText("Tx: 0x");
+
+  // Self transfer-from needs no operator approval — `from` is the connected wallet.
+  await page.goto(`/transfer-and-call?token=${contracts.cUSDT}`);
+  const form = page.getByTestId("transfer-from-and-call-form");
+  await form.getByTestId("from-input").fill(account.address);
+  await form.getByTestId("to-input").fill(contracts.confidentialReceiver);
+  await form.getByTestId("amount-input").fill(transferAmount.toString());
+  await form.getByTestId("data-input").fill(SUCCESS_DATA);
+  await form.getByTestId("transfer-from-and-call-button").click();
+
+  await expect(page.getByTestId("transfer-from-and-call-success")).toContainText("Tx: 0x");
+
+  // Confidential balance dropped by the transfer amount.
+  await page.goto("/wallet");
+  await page.getByTestId("reveal-button").click();
+  const expectedBalance = cUSDTBefore + shieldAmount - transferAmount;
+  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
+    formatUnits(expectedBalance, 6),
+  );
 });

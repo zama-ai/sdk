@@ -59,12 +59,12 @@ function DecryptValue({ encryptedValue }: { encryptedValue: string }) {
 
 ### inputs (first argument)
 
-`EncryptedInput[]`
+`DecryptInput[]`
 
 Array of encrypted values to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
-import { type EncryptedInput } from "@zama-fhe/sdk";
+import { type DecryptInput } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type             | Description                                            |

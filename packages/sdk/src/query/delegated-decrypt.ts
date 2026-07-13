@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/types";
 import type { EncryptedInput } from "./user-decrypt";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";

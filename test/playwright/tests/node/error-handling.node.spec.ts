@@ -1,52 +1,9 @@
 /**
- * Scenario: Verify SDK/RelayerNode error behaviour and typed error matching.
+ * Scenario: Verify SDK / FhevmRelayer error behaviour and typed error matching.
  * Domain-level error scenarios are covered by the browser e2e suite.
  */
-import {
-  type FheChain,
-  DecryptionFailedError,
-  matchZamaError,
-  NoCiphertextError,
-  ZamaSDK,
-} from "@zama-fhe/sdk";
-import { node } from "@zama-fhe/sdk/node";
-import { createConfig } from "@zama-fhe/sdk/viem";
-import type { PublicClient, WalletClient } from "viem";
+import { DecryptionFailedError, matchZamaError, NoCiphertextError } from "@zama-fhe/sdk";
 import { expect, nodeTest as test } from "../../fixtures/node-test";
-
-interface CreateZamaSDKParams {
-  chain: FheChain;
-  publicClient: PublicClient;
-  viemClient: WalletClient;
-  transportOverrides?: Partial<FheChain>;
-  poolOptions?: Parameters<typeof node>[0];
-}
-
-function createZamaSDK({
-  chain,
-  publicClient,
-  viemClient,
-  transportOverrides,
-  poolOptions,
-}: CreateZamaSDKParams) {
-  const chainOverrides = transportOverrides ? { ...chain, ...transportOverrides } : chain;
-  return new ZamaSDK(
-    createConfig({
-      chains: [chainOverrides],
-      publicClient,
-      walletClient: viemClient,
-      relayers: { [chainOverrides.id]: node(poolOptions) },
-    }),
-  );
-}
-
-test("operations after terminate throw", async ({ sdk }) => {
-  sdk.terminate();
-
-  await expect(async () => {
-    await sdk.permits.grantPermit(["0x0000000000000000000000000000000000000001" as `0x${string}`]);
-  }).rejects.toThrow();
-});
 
 test("matchZamaError routes to the correct handler", async () => {
   const decErr = new DecryptionFailedError("test decryption failure");
@@ -62,24 +19,6 @@ test("matchZamaError routes to the correct handler", async () => {
   expect(
     matchZamaError(decErr, { NO_CIPHERTEXT: () => "no_ciphertext", _: () => "fallback" }),
   ).toBe("fallback");
-});
-
-test("zero poolSize rejects at config creation", async ({ chain, publicClient, viemClient }) => {
-  expect(() =>
-    createZamaSDK({ chain, publicClient, viemClient, poolOptions: { poolSize: 0 } }),
-  ).toThrow();
-});
-
-test("init failure resets so next call retries", async ({ chain, publicClient, viemClient }) => {
-  using sdk = createZamaSDK({
-    chain,
-    publicClient,
-    viemClient,
-    transportOverrides: { relayerUrl: "http://127.0.0.1:1", network: "http://127.0.0.1:1" },
-  });
-
-  await expect(sdk.relayer.generateTransportKeyPair()).rejects.toThrow();
-  await expect(sdk.relayer.generateTransportKeyPair()).rejects.toThrow();
 });
 
 test("isConfidential on non-ERC-165 contract reverts with a ContractFunction error", async ({
@@ -98,11 +37,4 @@ test("isConfidential on non-ERC-165 contract reverts with a ContractFunction err
         error.name === "ContractFunctionRevertedError",
     ).toBe(true);
   }
-});
-
-test("terminate during pool init rejects cleanly", async ({ chain, publicClient, viemClient }) => {
-  const sdk = createZamaSDK({ chain, publicClient, viemClient });
-  const initPromise = sdk.relayer.generateTransportKeyPair();
-  sdk.terminate();
-  await expect(initPromise).rejects.toThrow();
 });

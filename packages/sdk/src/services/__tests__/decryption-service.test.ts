@@ -2,12 +2,13 @@ import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
 import { DelegationNotPropagatedError, NotEntitledError, RpcRateLimitError } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
-import type { EncryptedValue } from "../../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { LoggerService } from "../logger-service";
 
-const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 import { CachingService } from "../caching-service";
+import type { TypedValue } from "@fhevm/sdk/types";
+import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
 
 const CONTRACT_A = getAddress("0x3333333333333333333333333333333333333333") as Address;
 const CONTRACT_B = getAddress("0x4444444444444444444444444444444444444444") as Address;
@@ -20,19 +21,19 @@ function handles(items: Array<[EncryptedValue, Address]>): EncryptedInput[] {
 }
 
 describe("DecryptionService", () => {
-  test("userDecrypt returns zero handles without credentials or relayer calls", async ({
+  test("decryptValues returns zero handles without credentials or relayer calls", async ({
     decryptionService,
     relayer,
     userAddress,
   }) => {
     await expect(
-      decryptionService.userDecrypt(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
+      decryptionService.decryptValues(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n });
-    expect(relayer.createEIP712).not.toHaveBeenCalled();
-    expect(relayer.userDecrypt).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
-  test("userDecrypt decrypts uncached handles grouped by contract and writes cache", async ({
+  test("decryptValues decrypts uncached handles grouped by contract and writes cache", async ({
     cachingService,
     createDecryptionService,
     relayer,
@@ -41,11 +42,11 @@ describe("DecryptionService", () => {
   }) => {
     const emitEvent = vi.fn();
     const service = createDecryptionService({ emitEvent });
-    vi.mocked(relayer.userDecrypt)
-      .mockResolvedValueOnce({ [HANDLE_A]: 10n })
-      .mockResolvedValueOnce({ [HANDLE_B]: 20n });
+    vi.mocked(relayer.decryptValues)
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 20n } as TypedValue]);
 
-    const result = await service.userDecrypt(
+    const result = await service.decryptValues(
       handles([
         [HANDLE_A, CONTRACT_A],
         [HANDLE_B, CONTRACT_B],
@@ -56,17 +57,38 @@ describe("DecryptionService", () => {
     expect(result).toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
     await expect(cachingService.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
     await expect(cachingService.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [HANDLE_A], contractAddress: CONTRACT_A }),
     );
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [HANDLE_B], contractAddress: CONTRACT_B }),
     );
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptStart }));
     expect(emitEvent).toHaveBeenCalledWith(expect.objectContaining({ type: events.DecryptEnd }));
   });
 
-  test("userDecrypt splits one contract's handles across the 2048-bit request budget (SDK-252)", async ({
+  test("decryptValues forwards per-call signal and timeout to the relayer", async ({
+    createDecryptionService,
+    relayer,
+    userAddress,
+  }) => {
+    const service = createDecryptionService({ emitEvent: vi.fn() });
+    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+      { type: "uint64", value: 10n } as TypedValue,
+    ]);
+    const { signal } = new AbortController();
+
+    await service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress, {
+      timeout: 1234,
+      signal,
+    });
+
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { timeout: 1234, signal } }),
+    );
+  });
+
+  test("decryptValues splits one contract's handles across the 2048-bit request budget (SDK-252)", async ({
     cachingService,
     decryptionService,
     relayer,
@@ -84,17 +106,15 @@ describe("DecryptionService", () => {
       expected[h] = BigInt(i);
     });
 
-    vi.mocked(relayer.userDecrypt).mockImplementation(
-      async ({ encryptedValues }: { encryptedValues: EncryptedValue[] }) => {
-        const out: Record<EncryptedValue, bigint> = {};
-        for (const ev of encryptedValues) {
-          out[ev] = expected[ev] as bigint;
-        }
-        return out;
+    vi.mocked(relayer.decryptValues).mockImplementation(
+      async ({ encryptedValues }: DecryptValuesParameters) => {
+        return encryptedValues.map(
+          (ev) => ({ type: "uint64", value: expected[ev as EncryptedValue] }) as TypedValue,
+        );
       },
     );
 
-    const result = await decryptionService.userDecrypt(
+    const result = await decryptionService.decryptValues(
       handles(euint64Handles.map((h) => [h, CONTRACT_A] as [EncryptedValue, Address])),
       userAddress,
     );
@@ -104,17 +124,15 @@ describe("DecryptionService", () => {
       await expect(cachingService.get(userAddress, CONTRACT_A, h)).resolves.toBe(expected[h]);
     }
 
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     const callSizes = vi
-      .mocked(relayer.userDecrypt)
-      .mock.calls.map(
-        ([arg]) => (arg as { encryptedValues: EncryptedValue[] }).encryptedValues.length,
-      )
+      .mocked(relayer.decryptValues)
+      .mock.calls.map(([arg]) => arg.encryptedValues.length)
       .toSorted((a, b) => a - b);
     expect(callSizes).toEqual([8, 32]);
   });
 
-  test("userDecrypt serves cached values without prompting for credentials", async ({
+  test("decryptValues serves cached values without prompting for credentials", async ({
     cachingService,
     decryptionService,
     relayer,
@@ -123,21 +141,23 @@ describe("DecryptionService", () => {
     await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
 
     await expect(
-      decryptionService.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.createEIP712).not.toHaveBeenCalled();
-    expect(relayer.userDecrypt).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
-  test("userDecrypt resolves credentials against all contracts including zero handles", async ({
+  test("decryptValues resolves credentials against all contracts including zero handles", async ({
     decryptionService,
     relayer,
     userAddress,
   }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_B]: 20n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 20n } as TypedValue,
+    ]);
 
     await expect(
-      decryptionService.userDecrypt(
+      decryptionService.decryptValues(
         handles([
           [ZERO_ENCRYPTED_VALUE, CONTRACT_A],
           [HANDLE_B, CONTRACT_B],
@@ -146,18 +166,15 @@ describe("DecryptionService", () => {
       ),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n, [HANDLE_B]: 20n });
 
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      TEST_PUBLIC_KEY,
-      [CONTRACT_A, CONTRACT_B],
-      expect.anything(),
-      expect.any(Number),
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledWith(
+      expect.objectContaining({ contractAddresses: [CONTRACT_A, CONTRACT_B] }),
     );
-    expect(relayer.userDecrypt).toHaveBeenCalledWith(
+    expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [HANDLE_B], contractAddress: CONTRACT_B }),
     );
   });
 
-  test("delegatedUserDecrypt validates delegation before returning cached values", async ({
+  test("delegatedDecryptValues validates delegation before returning cached values", async ({
     cachingService,
     decryptionService,
     provider,
@@ -170,17 +187,17 @@ describe("DecryptionService", () => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     await expect(
-      decryptionService.delegatedUserDecrypt(
+      decryptionService.delegatedDecryptValues(
         handles([[HANDLE_A, CONTRACT_A]]),
         delegatorAddress,
         delegateAddress,
         userAddress,
       ),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
-  test("delegatedUserDecrypt fails fast when delegation is inactive", async ({
+  test("delegatedDecryptValues fails fast when delegation is inactive", async ({
     decryptionService,
     provider,
     relayer,
@@ -191,15 +208,15 @@ describe("DecryptionService", () => {
     vi.mocked(provider.readContract).mockResolvedValue(0n);
 
     await expect(
-      decryptionService.delegatedUserDecrypt(
+      decryptionService.delegatedDecryptValues(
         handles([[HANDLE_A, CONTRACT_A]]),
         delegatorAddress,
         delegateAddress,
         userAddress,
       ),
     ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
-    expect(relayer.createDelegatedUserDecryptEIP712).not.toHaveBeenCalled();
-    expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
   test("delegatedBatchDecryptHandlesAs isolates per-handle failures after batch failure", async ({
@@ -211,22 +228,10 @@ describe("DecryptionService", () => {
     userAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-    vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-      domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-      types: { DelegatedUserDecryptRequestVerification: [] },
-      message: {
-        publicKey: TEST_PUBLIC_KEY,
-        contractAddresses: [CONTRACT_A],
-        delegatorAddress,
-        startTimestamp: 1000n,
-        durationDays: 1n,
-        extraData: "0x",
-      },
-    } as never);
-    vi.mocked(relayer.delegatedUserDecrypt)
+    vi.mocked(relayer.decryptValues)
       .mockRejectedValueOnce(new Error("batch failed"))
       .mockRejectedValueOnce(new Error("batch failed"))
-      .mockResolvedValueOnce({ [HANDLE_A]: 10n })
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
       .mockRejectedValueOnce(new Error("handle failed"));
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
@@ -259,7 +264,7 @@ describe("DecryptionService", () => {
     userAddress,
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-    vi.mocked(relayer.delegatedUserDecrypt).mockResolvedValue({});
+    vi.mocked(relayer.decryptValues).mockResolvedValue([]);
 
     const result = await decryptionService.delegatedBatchDecryptHandlesAs({
       encryptedInputs: handles([[HANDLE_A, CONTRACT_A]]),
@@ -290,10 +295,12 @@ describe("DecryptionService", () => {
     const service = createDecryptionService({
       cache: new CachingService(storage, new LoggerService()),
     });
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [HANDLE_A]: 10n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 10n } as TypedValue,
+    ]);
 
     await expect(
-      service.userDecrypt(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 10n });
   });
 
@@ -310,14 +317,14 @@ describe("DecryptionService", () => {
       vi.mocked(provider.readContract).mockRejectedValue(rpcError);
 
       await expect(
-        decryptionService.delegatedUserDecrypt(
+        decryptionService.delegatedDecryptValues(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
           userAddress,
         ),
       ).rejects.toBeInstanceOf(RpcRateLimitError);
-      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
 
     test("maps the relayer's not-entitled failure on the delegated path to transient DelegationNotPropagatedError", async ({
@@ -329,32 +336,18 @@ describe("DecryptionService", () => {
       userAddress,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [CONTRACT_A],
-          delegatorAddress,
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
-        },
-      } as never);
       // The relayer's ACL gate throws a message-only Error; after the worker
       // boundary only the message survives. On the delegated path that verdict
       // comes from the *delegator's* `persistAllowed` L1 read, which is false
       // transiently under propagation lag — so it is surfaced as the retryable
       // DelegationNotPropagatedError, not the terminal NotEntitledError used for a
       // direct signer denial.
-      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
-        new Error(
-          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
-        ),
+      vi.mocked(relayer.decryptValues).mockRejectedValue(
+        new Error(`User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`),
       );
 
       const error = await decryptionService
-        .delegatedUserDecrypt(
+        .delegatedDecryptValues(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -368,21 +361,7 @@ describe("DecryptionService", () => {
       expect(error).not.toBeInstanceOf(NotEntitledError);
     });
 
-    const notPropagatedEip712 = (delegatorAddress: Address) =>
-      ({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [CONTRACT_A],
-          delegatorAddress,
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
-        },
-      }) as never;
-
-    test("delegatedUserDecrypt rides out the propagation window and resolves once the delegation syncs", async ({
+    test("delegatedDecryptValues rides out the propagation window and resolves once the delegation syncs", async ({
       decryptionService,
       provider,
       relayer,
@@ -393,18 +372,15 @@ describe("DecryptionService", () => {
       vi.useFakeTimers();
       try {
         vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-        vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
-          notPropagatedEip712(delegatorAddress),
-        );
         const notPropagated = new Error(
-          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
+          `User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`,
         );
-        vi.mocked(relayer.delegatedUserDecrypt)
+        vi.mocked(relayer.decryptValues)
           .mockRejectedValueOnce(notPropagated)
           .mockRejectedValueOnce(notPropagated)
-          .mockResolvedValueOnce({ [HANDLE_A]: 7n });
+          .mockResolvedValueOnce([{ type: "uint64", value: 7n } as TypedValue]);
 
-        const promise = decryptionService.delegatedUserDecrypt(
+        const promise = decryptionService.delegatedDecryptValues(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -414,13 +390,13 @@ describe("DecryptionService", () => {
         await vi.advanceTimersByTimeAsync(4000);
 
         await expect(promise).resolves.toEqual({ [HANDLE_A]: 7n });
-        expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(3);
+        expect(relayer.decryptValues).toHaveBeenCalledTimes(3);
       } finally {
         vi.useRealTimers();
       }
     });
 
-    test("delegatedUserDecrypt gives up with DelegationNotPropagatedError after the retry budget", async ({
+    test("delegatedDecryptValues gives up with DelegationNotPropagatedError after the retry budget", async ({
       decryptionService,
       provider,
       relayer,
@@ -431,17 +407,12 @@ describe("DecryptionService", () => {
       vi.useFakeTimers();
       try {
         vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-        vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
-          notPropagatedEip712(delegatorAddress),
-        );
-        vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
-          new Error(
-            `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
-          ),
+        vi.mocked(relayer.decryptValues).mockRejectedValue(
+          new Error(`User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`),
         );
 
         const settled = decryptionService
-          .delegatedUserDecrypt(
+          .delegatedDecryptValues(
             handles([[HANDLE_A, CONTRACT_A]]),
             delegatorAddress,
             delegateAddress,
@@ -453,13 +424,13 @@ describe("DecryptionService", () => {
 
         expect(await settled).toBeInstanceOf(DelegationNotPropagatedError);
         // It retried rather than giving up on the first response.
-        expect(vi.mocked(relayer.delegatedUserDecrypt).mock.calls.length).toBeGreaterThan(1);
+        expect(vi.mocked(relayer.decryptValues).mock.calls.length).toBeGreaterThan(1);
       } finally {
         vi.useRealTimers();
       }
     });
 
-    test("delegatedUserDecrypt with waitForPropagation:false fails fast on the first response", async ({
+    test("delegatedDecryptValues with waitForPropagation:false fails fast on the first response", async ({
       decryptionService,
       provider,
       relayer,
@@ -468,17 +439,12 @@ describe("DecryptionService", () => {
       userAddress,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue(
-        notPropagatedEip712(delegatorAddress),
-      );
-      vi.mocked(relayer.delegatedUserDecrypt).mockRejectedValue(
-        new Error(
-          `User address ${delegatorAddress} is not authorized to user decrypt handle ${HANDLE_A}!`,
-        ),
+      vi.mocked(relayer.decryptValues).mockRejectedValue(
+        new Error(`User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`),
       );
 
       await expect(
-        decryptionService.delegatedUserDecrypt(
+        decryptionService.delegatedDecryptValues(
           handles([[HANDLE_A, CONTRACT_A]]),
           delegatorAddress,
           delegateAddress,
@@ -486,7 +452,7 @@ describe("DecryptionService", () => {
           { waitForPropagation: false },
         ),
       ).rejects.toBeInstanceOf(DelegationNotPropagatedError);
-      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(1);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(1);
     });
 
     test("delegatedBatchDecryptHandlesAs aborts on RpcRateLimitError instead of per-item retry", async ({
@@ -513,7 +479,7 @@ describe("DecryptionService", () => {
           maxConcurrency: 1,
         }),
       ).rejects.toBeInstanceOf(RpcRateLimitError);
-      expect(relayer.delegatedUserDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptValues).not.toHaveBeenCalled();
     });
 
     test("a fatal error in the per-item fallback short-circuits the still-queued items", async ({
@@ -532,26 +498,14 @@ describe("DecryptionService", () => {
       const CONTRACT_C = getAddress("0x5555555555555555555555555555555555555555") as Address;
       const HANDLE_C = `0x${"cc".repeat(32)}` as EncryptedValue;
       vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
-      vi.mocked(relayer.createDelegatedUserDecryptEIP712).mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [CONTRACT_A],
-          delegatorAddress,
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
-        },
-      } as never);
 
       let bulkCalls = 0;
       let resolveAFailed = (): void => {};
       const aFailed = new Promise<void>((r) => {
         resolveAFailed = r;
       });
-      vi.mocked(relayer.delegatedUserDecrypt).mockImplementation(
-        async ({ encryptedValues }: { encryptedValues: EncryptedValue[] }) => {
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: DecryptValuesParameters) => {
           // Bulk phase: one call per contract, all reject non-fatally.
           if (bulkCalls < 3) {
             bulkCalls++;
@@ -568,9 +522,9 @@ describe("DecryptionService", () => {
             // a macrotask hop so the freed worker re-enters the loop afterwards.
             await aFailed;
             await new Promise((r) => setTimeout(r, 5));
-            return { [HANDLE_B]: 20n };
+            return [{ type: "uint64", value: 20n } as TypedValue];
           }
-          return { [HANDLE_C]: 30n };
+          return [{ type: "uint64", value: 30n } as TypedValue];
         },
       );
 
@@ -591,7 +545,7 @@ describe("DecryptionService", () => {
       // 3 bulk calls (one per contract) + 2 per-item calls (HANDLE_A fatal,
       // HANDLE_B in-flight). HANDLE_C is short-circuited by the abort flag, so it
       // never reaches the relayer — without the flag this would be 6.
-      expect(relayer.delegatedUserDecrypt).toHaveBeenCalledTimes(5);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(5);
     });
   });
 });

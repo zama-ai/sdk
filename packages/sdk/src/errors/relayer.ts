@@ -15,20 +15,25 @@ export class RelayerRequestFailedError extends ZamaError {
 
   /**
    * Whether the request may be safely retried. `true` for relayer back-pressure
-   * (HTTP 429); pair with {@link retryAfter} for the server's suggested delay.
+   * (HTTP 429) — pair with {@link retryAfter} for the server's suggested delay —
+   * and for a relayer timeout (which carries no status but is safe to retry, via
+   * the `retryable` option). `false` for terminal failures (e.g. a 4xx/5xx).
    */
   readonly retryable: boolean;
 
   constructor(
     message: string,
     statusCode?: number,
-    options?: ErrorOptions & { retryAfter?: number },
+    options?: ErrorOptions & { retryAfter?: number; retryable?: boolean },
   ) {
     super(ZamaErrorCode.RelayerRequestFailed, message, options);
     this.name = "RelayerRequestFailedError";
     this.statusCode = statusCode;
-    this.retryable = statusCode === 429;
-    // Keep the two fields consistent: a delay only makes sense when retryable.
+    // Retryable on relayer back-pressure (HTTP 429) by default, or when the
+    // caller forces it (a relayer timeout has no status but is safe to retry).
+    this.retryable = options?.retryable ?? statusCode === 429;
+    // Keep the two fields consistent: a delay only makes sense when retryable,
+    // and only a 429 actually carries a server-supplied `Retry-After`.
     this.retryAfter = this.retryable ? options?.retryAfter : undefined;
   }
 }

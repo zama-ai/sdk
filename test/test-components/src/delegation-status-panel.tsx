@@ -2,6 +2,7 @@
 
 import { useDelegationStatus, useRevokeDelegation, useMetadata } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 
 export function DelegationStatusPanel({
   tokenAddress,
@@ -47,7 +48,7 @@ export function DelegationStatusPanel({
       {/* Revoke delegation section */}
       <form
         action={(formData) => {
-          revoke.mutate({ delegateAddress: formData.get("delegate") as Address });
+          revoke.mutate({ delegateAddress: getAddress(formData.get("delegate") as string) });
         }}
         className="space-y-4"
       >

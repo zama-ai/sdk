@@ -77,3 +77,38 @@ test("should shield USDC then transfer to another address", async ({
   const onChainUsdc = await readErc20Balance(contracts.USDC);
   expect(onChainUsdc).toBe(usdcBefore - shieldAmount);
 });
+
+test("should transfer zero when the amount exceeds the confidential balance", async ({
+  page,
+  contracts,
+  formatUnits,
+  confidentialBalances,
+}) => {
+  // ERC-7984 semantics: an over-balance transfer must NOT revert (a revert would
+  // leak balance information) — the token transfers an encrypted zero instead.
+  const cUSDTBefore = confidentialBalances.cUSDT;
+
+  await page.goto(`/transfer?token=${contracts.cUSDT}`);
+  await page.getByTestId("recipient-input").fill(recipient);
+  await page.getByTestId("amount-input").fill((cUSDTBefore + 1000n).toString());
+  await page.getByTestId("transfer-button").click();
+
+  await expect(page.getByTestId("transfer-success")).toContainText("Tx: 0x");
+
+  // Balance is unchanged: the transferred amount was clamped to zero
+  await page.goto("/wallet");
+  await page.getByTestId("reveal-button").click();
+  await expect(page.getByTestId("token-row-cUSDT").getByTestId("balance")).toHaveText(
+    formatUnits(cUSDTBefore, 6),
+  );
+});
+
+test("should surface an error for a malformed recipient address", async ({ page, contracts }) => {
+  await page.goto(`/transfer?token=${contracts.cUSDT}`);
+  await page.getByTestId("recipient-input").fill("0xnot-a-valid-address");
+  await page.getByTestId("amount-input").fill("100");
+  await page.getByTestId("transfer-button").click();
+
+  await expect(page.getByTestId("transfer-error")).toContainText("Error:");
+  await expect(page.getByTestId("transfer-success")).not.toBeVisible();
+});
