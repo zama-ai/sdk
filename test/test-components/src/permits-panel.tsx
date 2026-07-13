@@ -1,6 +1,11 @@
 "use client";
 
-import { useHasPermit, useRevokePermits, useGrantPermit } from "@zama-fhe/react-sdk";
+import {
+  useClearCredentials,
+  useHasPermit,
+  useRevokePermits,
+  useGrantPermit,
+} from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
 
 export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...Address[]] }) {
@@ -8,6 +13,7 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
   const { mutate: allow } = useGrantPermit();
   const revoke = useRevokePermits();
   const revokeAll = useRevokePermits();
+  const clearCredentials = useClearCredentials();
 
   return (
     <div className="space-y-6" data-testid="permits-panel">
@@ -44,6 +50,15 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
           >
             {revokeAll.isPending ? "Revoking..." : "Revoke All"}
           </button>
+
+          <button
+            onClick={() => clearCredentials.mutate()}
+            disabled={clearCredentials.isPending}
+            className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border transition-colors disabled:opacity-50"
+            data-testid="permits-clear-credentials-button"
+          >
+            {clearCredentials.isPending ? "Clearing..." : "Clear Credentials"}
+          </button>
         </div>
 
         {revoke.isSuccess && (
@@ -64,6 +79,16 @@ export function PermitsPanel({ tokenAddresses }: { tokenAddresses: [Address, ...
         {revokeAll.isError && (
           <p className="text-zama-error" data-testid="revoke-all-error">
             Error: {revokeAll.error.message}
+          </p>
+        )}
+        {clearCredentials.isSuccess && (
+          <p className="text-zama-success" data-testid="clear-credentials-success">
+            Credentials cleared successfully
+          </p>
+        )}
+        {clearCredentials.isError && (
+          <p className="text-zama-error" data-testid="clear-credentials-error">
+            Error: {clearCredentials.error.message}
           </p>
         )}
       </div>

@@ -154,11 +154,13 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](../reference/sdk/RelayerWeb.md) for details.
+When a browser relayer is routed through your own proxy, enforce CSRF protection
+at the proxy/application boundary (for example, with same-site cookies and your
+framework's CSRF middleware). The `web()` transport does not manage CSRF tokens.
 
 ## Next steps
 
 - [Configuration](./configuration.md) — full relayer, signer, and storage setup
 - [Shield Tokens](./shield-tokens.md) — start converting public tokens to confidential form
-- [RelayerWeb reference](../reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [web() transport reference](../reference/sdk/RelayerWeb.md) — browser-side FHE transport options
 - [RelayerNode reference](../reference/sdk/RelayerNode.md) — `node()` transport factory

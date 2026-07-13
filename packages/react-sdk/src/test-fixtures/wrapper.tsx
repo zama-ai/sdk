@@ -1,15 +1,14 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import type React from "react";
-import type { GenericLogger, ZamaConfig } from "@zama-fhe/sdk";
+import { createConfig, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
-import type { RelayerDispatcher } from "@zama-fhe/sdk/relayer/relayer-dispatcher";
-import type { RelayerSDK } from "@zama-fhe/sdk/relayer/relayer-sdk";
+import type { FhevmRelayerSDK } from "@zama-fhe/sdk/relayer/types";
 import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
-import type { QueryClientFixtures } from "./query-client";
+import type React from "react";
 import { Providers } from "./providers";
+import type { QueryClientFixtures } from "./query-client";
 
 /** Silent logger standing in for the SDK's resolved no-op `LoggerService`. */
 const noopLogger: GenericLogger = {
@@ -19,36 +18,55 @@ const noopLogger: GenericLogger = {
   debug: () => {},
 };
 
+/** Overrides for createWrapper / renderWithProviders. Extends ZamaConfig with a test-only
+ * `relayer` shorthand that injects a custom relayer for the default chain. */
+export interface WrapperOverrides extends Partial<ZamaConfig> {
+  relayer?: FhevmRelayerSDK;
+}
+
 export interface WrapperFixtures {
-  createWrapper: (overrides?: Partial<ZamaConfig>) => {
+  createWrapper: (overrides?: WrapperOverrides) => {
     Wrapper: React.FC<{ children?: React.ReactNode }>;
     queryClient: QueryClient;
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    relayer: FhevmRelayerSDK;
     storage: GenericStorage;
   };
   renderWithProviders: <TResult>(
     hook: () => TResult,
-    overrides?: Partial<ZamaConfig>,
+    overrides?: WrapperOverrides,
     options?: Omit<RenderHookOptions<unknown>, "wrapper">,
   ) => ReturnType<typeof renderHook<TResult, unknown>> & { queryClient: QueryClient };
 }
 
 type WrapperDeps = QueryClientFixtures & {
   chain: FheChain;
-  relayer: RelayerSDK;
+  relayer: FhevmRelayerSDK;
   provider: GenericProvider;
   signer: GenericSigner;
   storage: GenericStorage;
 };
 
 export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
-  createWrapper: async ({ chain, relayer, provider, signer, storage, queryClient }, use) => {
-    function createWrapper(overrides?: Partial<ZamaConfig>) {
-      const config = {
+  createWrapper: async (
+    { chain, relayer: fixtureRelayer, provider, signer, storage, queryClient },
+    use,
+  ) => {
+    function createWrapper(overrides?: WrapperOverrides) {
+      const { relayer: relayerOverride, ...restOverrides } = overrides ?? {};
+      const activeRelayer = relayerOverride ?? fixtureRelayer;
+      const config = createConfig({
+        //@ts-expect-error
         chains: [chain],
-        relayer,
+        relayers: {
+          [chain.id]: {
+            type: "cleartext",
+            createRelayer() {
+              return activeRelayer;
+            },
+          },
+        },
         provider,
         signer,
         storage,
@@ -58,8 +76,8 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         registryTTL: 86400,
         onEvent: undefined,
         logger: noopLogger,
-        ...overrides,
-      } as unknown as ZamaConfig;
+        ...restOverrides,
+      });
 
       function Wrapper({ children }: { children?: React.ReactNode }) {
         return (
@@ -74,7 +92,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
         queryClient,
         signer: config.signer,
         provider: config.provider,
-        relayer: config.relayer,
+        relayer: config.router.relayer,
         storage: config.storage,
       };
     }
@@ -83,7 +101,7 @@ export const wrapperFixtures: FixturesOf<WrapperFixtures, WrapperDeps> = {
   renderWithProviders: async ({ createWrapper }, use) => {
     function renderWithProviders<TResult>(
       hook: () => TResult,
-      overrides?: Partial<ZamaConfig>,
+      overrides?: WrapperOverrides,
       options?: Omit<RenderHookOptions<unknown>, "wrapper">,
     ) {
       const { Wrapper, queryClient } = createWrapper(overrides);

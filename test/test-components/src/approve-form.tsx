@@ -6,6 +6,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import { useAccount } from "wagmi";
 
 export function ApproveForm({
@@ -27,7 +28,7 @@ export function ApproveForm({
   return (
     <form
       action={(formData) => {
-        setOperator.mutate({ operator: formData.get("operator") as Address });
+        setOperator.mutate({ operator: getAddress(formData.get("operator") as string) });
       }}
       className="space-y-4"
       data-testid="operator-form"

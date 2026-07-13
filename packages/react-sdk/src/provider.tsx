@@ -20,17 +20,6 @@ export interface ZamaProviderProps extends PropsWithChildren {
 
 const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 
-function warmTransportKeyPair(sdk: ZamaSDK, logger: GenericLogger): void {
-  void sdk.permits.warmTransportKeyPair().catch((error: unknown) => {
-    // Warmup is a latency optimization — the first real permit/decrypt call
-    // will lazily retry transport-key-pair generation and surface actionable
-    // errors. We route this through the configured logger (silent by default)
-    // so persistent failures (storage corruption, relayer 4xx during
-    // generation) leave a breadcrumb during debugging.
-    logger.warn("warm transport key pair failed", { error });
-  });
-}
-
 /**
  * Provides a {@link ZamaSDK} instance to all descendant hooks.
  *
@@ -53,20 +42,30 @@ export function ZamaProvider({ children, config }: ZamaProviderProps) {
 
   const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
 
-  // Transport-key-pair warming may touch `new Worker(...)` (web() relayer), which
-  // is undefined during SSR. Driving warmup from a client-only useEffect rather
-  // than the SDK constructor keeps server-rendered trees free of browser-only
-  // infrastructure. Non-React framework adapters need to mirror this contract:
+  // Transport-key-pair warming touches @fhevm/sdk's browser-only runtime (WASM,
+  // and worker threads it may spawn internally), which is undefined during SSR.
+  // Driving warmup from a client-only useEffect rather than the SDK constructor
+  // keeps server-rendered trees free of browser-only infrastructure. Non-React
+  // framework adapters need to mirror this contract:
   // call `sdk.permits.warmTransportKeyPair()` on mount and on every
   // `onWalletAccountChange` — the SDK no longer warms itself.
   useEffect(() => {
-    const logger = config.logger;
-    warmTransportKeyPair(sdk, logger);
+    function warmTransportKeyPair(zama: ZamaSDK, logger: GenericLogger): void {
+      void zama.permits.warmTransportKeyPair().catch((error: unknown) => {
+        // Warmup is a latency optimization — the first real permit/decrypt call
+        // will lazily retry transport-key-pair generation and surface actionable
+        // errors. We route this through the configured logger (silent by default)
+        // so persistent failures (storage corruption, relayer 4xx during
+        // generation) leave a breadcrumb during debugging.
+        logger.warn("warm transport key pair failed", { error });
+      });
+    }
+    warmTransportKeyPair(sdk, config.logger);
     return sdk.onWalletAccountChange(({ previous }) => {
       if (previous) {
         invalidateWalletLifecycleQueries(queryClient);
       }
-      warmTransportKeyPair(sdk, logger);
+      warmTransportKeyPair(sdk, config.logger);
     });
   }, [sdk, queryClient, config.logger]);
 

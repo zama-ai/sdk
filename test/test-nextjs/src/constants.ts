@@ -1,11 +1,12 @@
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import deployments from "../../../contracts/deployments.json";
 
 export const CONTRACTS = {
-  USDT: deployments.USDT as Address,
-  cUSDT: deployments.cUSDT as Address,
-  USDC: deployments.erc20 as Address,
-  cUSDC: deployments.cToken as Address,
+  USDT: getAddress(deployments.USDT),
+  cUSDT: getAddress(deployments.cUSDT),
+  USDC: getAddress(deployments.erc20),
+  cUSDC: getAddress(deployments.cToken),
 } as const;
 
 export const CONFIDENTIAL_TOKEN_ADDRESSES: [Address, ...Address[]] = [

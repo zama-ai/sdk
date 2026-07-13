@@ -1,14 +1,12 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
-import type { RelayerSDK } from "../../relayer/relayer-sdk";
-import { node } from "../../node/config";
-import { web } from "../web";
+import type { FhevmRelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
 
-function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
+function mockRelayerConfig(relayer: FhevmRelayerSDK): RelayerConfig {
   return { type: "test", createRelayer: vi.fn(() => relayer) };
 }
 
@@ -97,46 +95,5 @@ describe("createConfig validation", () => {
     });
     expect(config.logger).toBeInstanceOf(LoggerService);
     expect(() => config.logger.debug("noop")).not.toThrow();
-  });
-
-  test("passes the SDK-wide LoggerService to a relayer's createWorker", ({ relayer, provider }) => {
-    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    const createWorker = vi.fn(() => ({ terminate: vi.fn() }));
-    const relayerConfig: RelayerConfig = {
-      type: "test",
-      createWorker,
-      createRelayer: vi.fn(() => relayer),
-    };
-
-    createConfig({
-      chains: [hardhat],
-      relayers: { [hardhat.id]: relayerConfig },
-      provider,
-      logger: sink,
-    });
-
-    expect(createWorker).toHaveBeenCalledWith([hardhat], expect.any(LoggerService));
-  });
-
-  test("rejects invalid web transport numeric options at the factory boundary", () => {
-    expect(() => web({ threads: 0 })).toThrow(ConfigurationError);
-    expect(() => web({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
-  });
-
-  test("rejects invalid node transport numeric options at the factory boundary", () => {
-    expect(() => node({ poolSize: 0 })).toThrow(ConfigurationError);
-    expect(() => node({ fheArtifactCacheTTL: -1 })).toThrow(ConfigurationError);
-    expect(() => node({ operationTimeout: 0 })).toThrow(ConfigurationError);
-    expect(() => node({ initTimeout: -1 })).toThrow(ConfigurationError);
-    // Above the setTimeout-overflow-safe cap (1 hour) — must fail loudly rather
-    // than silently clamp to an instant timeout.
-    expect(() => node({ operationTimeout: 3_601 })).toThrow(ConfigurationError);
-    expect(() => node({ initTimeout: 100_000 })).toThrow(ConfigurationError);
-  });
-
-  test("accepts valid node worker-timeout options", () => {
-    expect(() =>
-      node({ operationTimeout: 5, initTimeout: 90, recycleWorkerOnTimeout: false }),
-    ).not.toThrow();
   });
 });

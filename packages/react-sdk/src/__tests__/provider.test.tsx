@@ -1,9 +1,10 @@
-import { describe, expect, test } from "../test-fixtures";
 import { renderHook, waitFor } from "@testing-library/react";
 import type * as ZamaSdkModule from "@zama-fhe/sdk";
-import type { ZamaSDKEventListener, ZamaConfig } from "@zama-fhe/sdk";
+import type { ZamaConfig, ZamaSDKEventListener } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { vi } from "vitest";
 import { useZamaSDK } from "../provider";
+import { describe, expect, test } from "../test-fixtures";
 
 // Spy on ZamaSDK constructor by wrapping the real class
 const tokenSDKConstructorArgs: ZamaConfig[] = [];
@@ -39,10 +40,14 @@ describe("ZamaProvider & useZamaSDK", () => {
     relayer,
     renderWithProviders,
   }) => {
-    const { unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
+    const { result, unmount } = renderWithProviders(() => useZamaSDK(), { relayer });
 
-    unmount();
-    expect(relayer.terminate).not.toHaveBeenCalled();
+    // Unmount runs the provider's cleanup effect, which disposes SDK-owned
+    // signer subscriptions but must leave the caller-owned relayer untouched.
+    // The relayer no longer exposes terminate(); the invariant to guard is that
+    // unmounting neither throws nor swaps out / tears down the caller's relayer.
+    expect(() => unmount()).not.toThrow();
+    expect(result.current.relayer).toBe(relayer);
   });
 
   test("invalidates wallet-scoped queries when the signer lifecycle changes", ({
@@ -103,9 +108,12 @@ describe("ZamaProvider & useZamaSDK", () => {
 
     expect(signer.walletAccount.subscribe).toHaveBeenCalledTimes(1);
     const listener = vi.mocked(signer.walletAccount.subscribe).mock.calls[0]![0];
+    // Warm the next account on the configured chain (the wrapper configures
+    // 31337). A change onto an unconfigured chain would correctly fail to warm,
+    // since the router has no backend for it.
     listener({
       previous: { address: "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa", chainId: 31337 },
-      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 1 },
+      next: { address: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB", chainId: 31337 },
     });
 
     await waitFor(() => {
@@ -126,12 +134,14 @@ describe("ZamaProvider & useZamaSDK", () => {
       expect(sink.warn).toHaveBeenCalled();
     });
 
-    // The provider passes a bare message; the `[zama-sdk]` prefix is owned
-    // solely by LoggerService. A literal prefix here would double up in
-    // production (the regression this test guards against). Assert it for every
-    // warmup-failure log (mount + each wallet-account change re-warm).
+    // The provider passes a bare message to its LoggerService, which owns the
+    // `[zama-sdk]` prefix and adds it exactly once before the consumer's sink
+    // sees it. A literal prefix in the provider's call site would double up to
+    // `[zama-sdk] [zama-sdk] …` (the regression this test guards against).
+    // Assert the single-prefixed result for every warmup-failure log
+    // (mount + each wallet-account change re-warm).
     for (const [message] of vi.mocked(sink.warn).mock.calls) {
-      expect(message).toBe("warm transport key pair failed");
+      expect(message).toBe("[zama-sdk] warm transport key pair failed");
     }
   });
 

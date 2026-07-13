@@ -1,6 +1,6 @@
-import { DelegationPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
 import { CONFIDENTIAL_TOKEN_ADDRESSES } from "@/constants";
+import { DelegationPanel } from "@zama-fhe/test-components";
+import { getAddress } from "viem";
 
 export default async function DelegationPage({
   searchParams,
@@ -8,9 +8,9 @@ export default async function DelegationPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONFIDENTIAL_TOKEN_ADDRESSES[0];
-  const delegate = params.delegate as Address | undefined;
-  const delegator = params.delegator as Address | undefined;
+  const token = getAddress(params.token ?? CONFIDENTIAL_TOKEN_ADDRESSES[0]);
+  const delegate = params.delegate ? getAddress(params.delegate) : undefined;
+  const delegator = params.delegator ? getAddress(params.delegator) : undefined;
 
   return (
     <div className="space-y-6">

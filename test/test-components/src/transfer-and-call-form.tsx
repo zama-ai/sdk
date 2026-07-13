@@ -6,6 +6,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address, Hex } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import { useAccount } from "wagmi";
 
 export function TransferAndCallForm({ tokenAddress }: { tokenAddress: Address }) {
@@ -18,7 +19,7 @@ export function TransferAndCallForm({ tokenAddress }: { tokenAddress: Address })
     <form
       action={(formData) => {
         transferAndCall.mutate({
-          to: formData.get("recipient") as Address,
+          to: getAddress(formData.get("recipient") as string),
           amount: BigInt(formData.get("amount") as string),
           data: formData.get("data") as Hex,
           // Test-harness convention (matches transfer-form / unshield-form): skip the SDK's

@@ -7,7 +7,7 @@
 
 export type { ZamaConfigViem } from "./types";
 export type { Hex } from "viem";
-export type { EncryptedValue } from "../relayer/relayer-sdk.types";
+export type { EncryptedValue } from "../relayer/types";
 
 export { createConfig } from "./config";
 
