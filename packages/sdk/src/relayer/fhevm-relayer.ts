@@ -34,7 +34,7 @@ export interface FhevmRelayerConfig {
  *
  * - **Lazy init.** Every network method awaits {@link FhevmRelayer.init} before
  *   delegating, so callers never init the client themselves. `init()` is
- *   idempotent — the client memoizes its ready-promise — so the repeated awaits
+ *   idempotent — it memoizes its ready-promise — so the repeated awaits
  *   collapse to a single init per client.
  * - **Option merging.** The chain's default options (`auth`, `timeout`, `debug`)
  *   are spread in first, then the per-call `options`, so a per-call value always
@@ -45,6 +45,7 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;
   readonly #fhevm: FhevmClient;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
+  #initPromise: Promise<void> | undefined;
 
   /**
    * Builds the `@fhevm/sdk` client for the chain — a cleartext client in
@@ -68,7 +69,11 @@ export class FhevmRelayer implements FhevmRelayerSDK {
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
     this.#fhevm = config.cleartext ? createFhevmCleartextClient(params) : createFhevmClient(params);
-    this.#defaultOptions = { auth: this.#chain.auth, timeout, debug };
+    this.#defaultOptions = {
+      ...(this.#chain.auth !== undefined && { auth: this.#chain.auth }),
+      ...(timeout !== undefined && { timeout }),
+      ...(debug !== undefined && { debug }),
+    };
   }
 
   /** The FHE chain this backend is bound to. */
@@ -77,16 +82,25 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   }
 
   /**
-   * Runs the client's one-time init — on-chain protocol-version resolution, the
-   * FHE key fetch, and the WASM module load — and memoizes the result. Every
-   * network method awaits this first, so calling it directly is optional. Safe
-   * to call repeatedly; a settled init returns immediately.
+   * Runs the client's one-time init and memoizes the combined attempt. Two
+   * steps in order: first prefetch the chain's FHE encryption key with the
+   * default options — the only path that carries the chain's `auth`, so the
+   * key fetch reaches an authenticated relayer — then delegate to the client's
+   * own init (on-chain protocol-version resolution and the WASM module load).
+   * Every network method awaits this first, so calling it directly is optional.
+   * Safe to call repeatedly; concurrent and post-settlement calls share the one
+   * memoized promise.
    *
    * @remarks
-   * A failed init does not self-recover: the underlying client memoizes the
-   * rejected ready-promise. Discard this backend and build a new one to retry.
+   * A failed init does not self-recover: the rejected promise stays memoized in
+   * `#initPromise`. Discard this backend and build a new one to retry.
    */
-  init: FhevmClient["init"] = async () => this.#fhevm.init();
+  init: FhevmClient["init"] = () => {
+    this.#initPromise ??= this.#fhevm
+      .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
+      .then(() => this.#fhevm.init());
+    return this.#initPromise;
+  };
 
   /**
    * Decrypts a single publicly-decryptable value — one whose contract granted

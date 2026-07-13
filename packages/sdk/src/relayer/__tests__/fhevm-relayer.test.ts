@@ -150,12 +150,46 @@ describe("FhevmRelayer request options", () => {
     await relayer.decryptValues({ options: { fetchRetries: 9, timeout: 42 } } as never);
     expect(optionsFromLast("decryptValues")).toMatchObject({ fetchRetries: 9, timeout: 42 });
   });
+
+  test("does not overwrite runtime auth when the chain has no auth", async () => {
+    const relayer = new FhevmRelayer({ chain: anvil });
+    await relayer.encryptValues(encryptArgs);
+    expect(optionsFromLastEncrypt()).not.toHaveProperty("auth");
+  });
+
+  test("lets per-call auth override the chain auth", async () => {
+    const chainAuth = { type: "ApiKeyHeader", value: "chain-secret" } as const;
+    const callAuth = { type: "BearerToken", token: "call-secret" } as const;
+    const relayer = new FhevmRelayer({ chain: { ...anvil, auth: chainAuth } });
+    await relayer.encryptValues({ ...encryptArgs, options: { auth: callAuth } });
+    expect(optionsFromLastEncrypt()).toMatchObject({ auth: callAuth });
+  });
 });
 
 describe("FhevmRelayer init lifecycle", () => {
   test("init() delegates to the underlying @fhevm/sdk client", async () => {
     const relayer = new FhevmRelayer({ chain: anvil });
     await relayer.init();
+    expect(fhevmClient.init).toHaveBeenCalledTimes(1);
+  });
+
+  test("prefetches the FHE key with chain auth before client init", async () => {
+    const auth = { type: "ApiKeyHeader", value: "secret" } as const;
+    const relayer = new FhevmRelayer({ chain: { ...anvil, auth } });
+    await relayer.init();
+
+    expect(fhevmClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({ options: { auth } });
+    const [prefetchOrder] = fhevmClient.fetchFheEncryptionKeyBytes.mock.invocationCallOrder;
+    const [initOrder] = fhevmClient.init.mock.invocationCallOrder;
+    expect(prefetchOrder).toBeDefined();
+    expect(initOrder).toBeDefined();
+    expect(prefetchOrder).toBeLessThan(initOrder as number);
+  });
+
+  test("shares one combined initialization attempt across concurrent callers", async () => {
+    const relayer = new FhevmRelayer({ chain: anvil });
+    await Promise.all([relayer.init(), relayer.init()]);
+    expect(fhevmClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledTimes(1);
     expect(fhevmClient.init).toHaveBeenCalledTimes(1);
   });
 
@@ -167,7 +201,7 @@ describe("FhevmRelayer init lifecycle", () => {
 
       expect(fhevmClient.init, `${method} must init the client`).toHaveBeenCalledTimes(1);
       const [initOrder] = fhevmClient.init.mock.invocationCallOrder;
-      const [callOrder] = fhevmClient[method].mock.invocationCallOrder;
+      const callOrder = fhevmClient[method].mock.invocationCallOrder.at(-1);
       expect(initOrder).toBeDefined();
       expect(callOrder).toBeDefined();
       expect(initOrder, `${method} must init() before the relayer round-trip`).toBeLessThan(
