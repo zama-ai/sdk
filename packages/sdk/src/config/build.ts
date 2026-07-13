@@ -5,6 +5,7 @@ import {
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
 } from "../credentials/credential-service";
 import { PermitTTLSchema, TransportKeyPairTTLSchema } from "../credentials/schemas";
+import { ConfigurationError } from "../errors";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseConfiguration } from "../validation";
@@ -23,8 +24,17 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
-  if (!hasFhevmRuntimeConfig()) {
-    const { runtime = {} } = params;
+  // The FHEVM runtime is a process-global, set-once singleton. The first
+  // config applies it; later configs are allowed as long as they don't try to
+  // change the runtime — passing explicit `runtime` options after it's set is
+  // rejected, but omitting them is an idempotent no-op.
+  if (hasFhevmRuntimeConfig()) {
+    if (params.runtime !== undefined) {
+      throw new ConfigurationError(
+        "FHEVM runtime configuration is already set and cannot be changed.",
+      );
+    }
+  } else {
     setFhevmRuntimeConfig({
       wasmAssetLoadMode: "auto",
       moduleVersions: "auto",
@@ -33,7 +43,7 @@ export function buildZamaConfig(
         warn: (message) => params.logger?.warn(message),
         debug: (message) => params.logger?.debug(message),
       },
-      ...runtime,
+      ...params.runtime,
     });
   }
 
