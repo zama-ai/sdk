@@ -5424,7 +5424,18 @@ export class Decryption {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
         router: ChainRouter;
-        decryptionService: DecryptionService | undefined;
+        decryptionService: {
+            decryptValues(handles: DecryptInput[], signerAddress: Address, opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
+            delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, delegateAddress: Address, accountAddress: Address, opts?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
+            delegatedBatchDecryptHandlesAs(params: {
+                encryptedInputs: DecryptInput[];
+                delegatorAddress: Address;
+                delegateAddress: Address;
+                accountAddress: Address;
+                maxConcurrency?: number;
+                waitForPropagation?: boolean;
+            }): Promise<BatchDecryptResult>;
+        } | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
@@ -5740,7 +5751,29 @@ export class Delegations {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        delegationService: DelegationService;
+        delegationService: {
+            delegateDecryption(signer: GenericSigner, params: {
+                contractAddress: Address;
+                delegateAddress: Address;
+                delegatorAddress: Address;
+                expirationDate?: Date;
+            }): Promise<TransactionResult>;
+            revokeDelegation(signer: GenericSigner, params: {
+                contractAddress: Address;
+                delegateAddress: Address;
+                delegatorAddress: Address;
+            }): Promise<TransactionResult>;
+            isDelegated(params: {
+                contractAddress: Address;
+                delegatorAddress: Address;
+                delegateAddress: Address;
+            }): Promise<boolean>;
+            getDelegationExpiry(params: {
+                contractAddress: Address;
+                delegatorAddress: Address;
+                delegateAddress: Address;
+            }): Promise<bigint>;
+        };
     });
     delegateDecryption(input: {
         contractAddress: Address;
@@ -11498,8 +11531,16 @@ export class Permits {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        cachingService: CachingService;
-        credentialService: CredentialService | undefined;
+        cachingService: {
+            clearForRequester(requester: Address): Promise<void>;
+        };
+        credentialService: {
+            grantPermit(contracts: readonly Address[], delegator?: Address): Promise<SerializedTransportKeyPairWithPermissions>;
+            hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
+            warmTransportKeyPair(address: Address): Promise<void>;
+            revokePermits(contracts?: readonly Address[]): Promise<void>;
+            clearCredentials(): Promise<void>;
+        } | undefined;
         logger: GenericLogger;
     });
     clear(): Promise<void>;
@@ -12975,6 +13016,14 @@ export interface SerializedTransportKeyPair {
     privateKey: Hex;
     // (undocumented)
     publicKey: Hex;
+}
+
+// @public
+export interface SerializedTransportKeyPairWithPermissions {
+    // (undocumented)
+    readonly keypair: SerializedTransportKeyPair;
+    // (undocumented)
+    readonly permissions: readonly Permission[];
 }
 
 // @public

@@ -149,7 +149,13 @@ export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type { SerializedTransportKeyPair } from "../credentials";
+export type {
+  SerializedTransportKeyPair,
+  SerializedTransportKeyPairWithPermissions,
+  Permission,
+} from "../credentials";
+export { PermissionSchema, StoredTransportKeyPairSchema } from "../credentials";
+export type { ChecksummedAddress } from "../schemas/primitives";
 export type {
   GenericSigner,
   GenericStorage,

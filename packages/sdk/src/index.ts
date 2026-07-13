@@ -86,7 +86,12 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { SerializedTransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
+export type {
+  SerializedTransportKeyPair,
+  SerializedTransportKeyPairWithPermissions,
+  StoredTransportKeyPair,
+  Permission,
+} from "./credentials";
 export { StoredTransportKeyPairSchema, PermissionSchema } from "./credentials";
 export type {
   GenericSigner,

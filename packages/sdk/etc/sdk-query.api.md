@@ -102,6 +102,11 @@ export class ChainRouter {
 }
 
 // @public
+export type ChecksummedAddress = Address & {
+    readonly [checksummedTag]: true;
+};
+
+// @public
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 // @public
@@ -274,7 +279,18 @@ export class Decryption {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
         router: ChainRouter;
-        decryptionService: DecryptionService | undefined;
+        decryptionService: {
+            decryptValues(handles: DecryptInput[], signerAddress: Address, opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
+            delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, delegateAddress: Address, accountAddress: Address, opts?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
+            delegatedBatchDecryptHandlesAs(params: {
+                encryptedInputs: DecryptInput[];
+                delegatorAddress: Address;
+                delegateAddress: Address;
+                accountAddress: Address;
+                maxConcurrency?: number;
+                waitForPropagation?: boolean;
+            }): Promise<BatchDecryptResult>;
+        } | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
@@ -346,7 +362,29 @@ export class Delegations {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        delegationService: DelegationService;
+        delegationService: {
+            delegateDecryption(signer: GenericSigner, params: {
+                contractAddress: Address;
+                delegateAddress: Address;
+                delegatorAddress: Address;
+                expirationDate?: Date;
+            }): Promise<TransactionResult>;
+            revokeDelegation(signer: GenericSigner, params: {
+                contractAddress: Address;
+                delegateAddress: Address;
+                delegatorAddress: Address;
+            }): Promise<TransactionResult>;
+            isDelegated(params: {
+                contractAddress: Address;
+                delegatorAddress: Address;
+                delegateAddress: Address;
+            }): Promise<boolean>;
+            getDelegationExpiry(params: {
+                contractAddress: Address;
+                delegatorAddress: Address;
+                delegateAddress: Address;
+            }): Promise<bigint>;
+        };
     });
     delegateDecryption(input: {
         contractAddress: Address;
@@ -697,13 +735,46 @@ export interface PendingUnshieldQueryConfig {
 export function pendingUnshieldQueryOptions(sdk: ZamaSDK, tokenAddress: Address, config?: PendingUnshieldQueryConfig): QueryFactoryOptions<Hex | null, Error, Hex | null, ReturnType<typeof zamaQueryKeys.pendingUnshield.token>>;
 
 // @public
+export type Permission = z.infer<typeof PermissionSchema>;
+
+// @public (undocumented)
+export const PermissionSchema: z.ZodMiniObject<{
+    keypairPublicKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    contractAddresses: z.ZodMiniArray<z.ZodMiniPipe<z.ZodMiniCustom<`0x${string}`, `0x${string}`>, z.ZodMiniTransform<ChecksummedAddress, `0x${string}`>>>;
+    serializedPermit: z.ZodMiniObject<{
+        version: z.ZodMiniNumberFormat;
+        eip712: z.ZodMiniObject<{
+            domain: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>;
+            primaryType: z.ZodMiniOptional<z.ZodMiniString<string>>;
+            types: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniArray<z.ZodMiniObject<{
+                name: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+            }, z.core.$strip>>>;
+            message: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>;
+        }, z.core.$strip>;
+        signature: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+        signerAddress: z.ZodMiniPipe<z.ZodMiniCustom<`0x${string}`, `0x${string}`>, z.ZodMiniTransform<ChecksummedAddress, `0x${string}`>>;
+    }, z.core.$strip>;
+    startTimestamp: z.ZodMiniNumberFormat;
+    durationDays: z.ZodMiniNumberFormat;
+}, z.core.$strip>;
+
+// @public
 export class Permits {
     // @internal
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        cachingService: CachingService;
-        credentialService: CredentialService | undefined;
+        cachingService: {
+            clearForRequester(requester: Address): Promise<void>;
+        };
+        credentialService: {
+            grantPermit(contracts: readonly Address[], delegator?: Address): Promise<SerializedTransportKeyPairWithPermissions>;
+            hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
+            warmTransportKeyPair(address: Address): Promise<void>;
+            revokePermits(contracts?: readonly Address[]): Promise<void>;
+            clearCredentials(): Promise<void>;
+        } | undefined;
         logger: GenericLogger;
     });
     clear(): Promise<void>;
@@ -815,6 +886,14 @@ export interface SerializedTransportKeyPair {
     publicKey: Hex;
 }
 
+// @public
+export interface SerializedTransportKeyPairWithPermissions {
+    // (undocumented)
+    readonly keypair: SerializedTransportKeyPair;
+    // (undocumented)
+    readonly permissions: readonly Permission[];
+}
+
 // @public (undocumented)
 export interface SetOperatorSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -861,6 +940,14 @@ export interface SignerQueryContext {
     // (undocumented)
     walletAccount?: WalletAccount;
 }
+
+// @public (undocumented)
+export const StoredTransportKeyPairSchema: z.ZodMiniObject<{
+    publicKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    privateKey: z.ZodMiniCustom<`0x${string}`, `0x${string}`>;
+    createdAt: z.ZodMiniNumberFormat;
+    expiresAt: z.ZodMiniNumberFormat;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type StrippedQueryOptionKeys = "gcTime" | "staleTime" | "enabled" | "select" | "refetchInterval" | "refetchOnMount" | "refetchOnWindowFocus" | "refetchOnReconnect" | "retry" | "retryDelay" | "retryOnMount" | "queryFn" | "queryKey" | "queryKeyHashFn" | "initialData" | "initialDataUpdatedAt" | "placeholderData" | "structuralSharing" | "throwOnError" | "meta" | "query" | "pollingInterval";
