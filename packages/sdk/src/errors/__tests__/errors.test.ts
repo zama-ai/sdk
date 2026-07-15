@@ -23,6 +23,8 @@ import {
   AclPausedError,
   DelegationExpirationTooSoonError,
   WalletAccountNotReadyError,
+  KeyDigestVerificationFailedError,
+  KeyDigestMismatchError,
 } from "..";
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
@@ -154,6 +156,18 @@ describe("ZamaError.retryable / isRetryable", () => {
       contractAddress: `0x${"20".repeat(20)}`,
       account: `0x${"10".repeat(20)}`,
     });
+    expect(isRetryable(err)).toBe(false);
+  });
+
+  test("is true for KeyDigestVerificationFailedError — an RPC problem, not a confirmed mismatch", () => {
+    const err = new KeyDigestVerificationFailedError("RPC timeout");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is false for KeyDigestMismatchError — a confirmed mismatch is never auto-retried", () => {
+    const err = new KeyDigestMismatchError("digest mismatch");
+    expect(err.retryable).toBe(false);
     expect(isRetryable(err)).toBe(false);
   });
 });

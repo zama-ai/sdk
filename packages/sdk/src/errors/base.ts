@@ -130,6 +130,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
+  [ZamaErrorCode.KeyDigestVerificationFailed]: true, // RPC/read problem, not a confirmed mismatch
+  [ZamaErrorCode.KeyDigestMismatch]: false, // confirmed mismatch — never auto-retried
 };
 
 /**
