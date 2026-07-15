@@ -5861,6 +5861,7 @@ export interface FheChain<TId extends number = number> {
     readonly kmsContractAddress: Address;
     // (undocumented)
     readonly network: EIP1193Provider | string;
+    readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
     // (undocumented)
     readonly relayerUrl: string;

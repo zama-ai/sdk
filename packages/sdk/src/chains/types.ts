@@ -36,6 +36,14 @@ export interface FheChain<TId extends number = number> {
    */
   readonly executorAddress?: Address | undefined;
   /**
+   * Address of the `ProtocolConfig` contract on the host chain.
+   *
+   * Required once the chain's `KMSVerifier` reaches v0.4.0 (protocol v0.14.0+):
+   * without it, permit signing throws instead of resolving the current KMS
+   * context/epoch. `undefined` for chains still below that protocol version.
+   */
+  readonly protocolConfigContractAddress?: Address | undefined;
+  /**
    * Authentication for the relayer endpoint.
    * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
    * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.
