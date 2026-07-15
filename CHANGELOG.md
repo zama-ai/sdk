@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.2...v3.4.0-alpha.1) (2026-07-15)
+
+### Features
+
+- **sdk:** chunk decryption requests to respect the relayer's per-request bit budget ([#541](https://github.com/zama-ai/sdk/issues/541)) ([d1717a9]())
+
 ## [3.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.1...v3.3.1-alpha.2) (2026-07-13)
 
 ### Code Refactoring
