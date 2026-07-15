@@ -27,6 +27,11 @@ export const targets = [
     path: "packages/sdk/src/abi/erc1363.abi.ts",
     exportName: "erc1363Abi",
   },
+  {
+    artifactPath: "contracts/out/IKMSGeneration.sol/IKMSGeneration.json",
+    path: "packages/sdk/src/abi/kms-generation.abi.ts",
+    exportName: "kmsGenerationAbi",
+  },
 ];
 
 export function headerFor(artifactPath) {

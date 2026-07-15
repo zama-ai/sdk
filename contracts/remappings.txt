@@ -3,6 +3,7 @@
 @openzeppelin/contracts-upgradeable/=lib/forge-fhevm/dependencies/@openzeppelin-contracts-upgradeable-5.1.0/
 @openzeppelin/contracts/=lib/forge-fhevm/dependencies/@openzeppelin-contracts-5.1.0/
 encrypted-types/=lib/forge-fhevm/dependencies/@encrypted-types-0.0.4/
+fhevm-host-contracts/=lib/fhevm/host-contracts/contracts/
 forge-fhevm/=lib/forge-fhevm/src/
 forge-std/=lib/forge-fhevm/dependencies/forge-std-1.14.0/src/
 protocol-apps-registry/=dependencies/protocol-apps-registry-0647c5fd9e41/
