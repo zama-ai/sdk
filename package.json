@@ -111,7 +111,7 @@
     "rolldown-plugin-dts": "^0.27.4",
     "semantic-release": "^25.0.5",
     "size-limit": "^12.1.0",
-    "turbo": "2.10.2",
+    "turbo": "2.10.4",
     "typescript": "7.0.2",
     "typescript-language-server": "^5.3.0",
     "vitest": "^4.1.9"
