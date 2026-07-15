@@ -668,7 +668,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
-    relayers: { [K in TChains[number]["id"]]: RelayerConfig };
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairTTL?: number;
