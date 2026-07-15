@@ -63,9 +63,11 @@ Each permit records its start timestamp and duration at creation time. Changing 
 
 ### KMS context rotation
 
-The KMS periodically rotates its signing context. If a decrypt fails because the permit was signed under the previous context, the SDK detects this automatically: it discards just that one permit, re-signs it (one wallet prompt), and retries — no manual `revokePermits()` + re-`grantPermit()` needed. Only the affected contract's permit is replaced; other permits in the same scope are untouched.
+The KMS periodically rotates its signing context. If a decrypt fails because the permit was signed under the previous context, the SDK detects this automatically and recovers without a manual `revokePermits()` + re-`grantPermit()`: it discards the stale permit(s) and re-signs once for every contract hit by the same rotation in that decrypt call — chunked at up to 10 contracts per wallet signature, same as any permit grant — then retries.
 
-This recovery is bounded to a single retry. If the context rotates again immediately after, the decrypt throws `StaleKmsContextError` — see the [error reference](../reference/sdk/errors.md#stalekmscontexterror).
+Discarding a stale permit removes the whole signed payload it belongs to. If [widening](#how-additive-permits-work) had bundled it with other, still-valid contracts, their coverage is dropped too — this is the same behavior `revokePermits()` already has, not new — and is transparently re-granted the next time those contracts are decrypted. Permits in a separate signed payload are never touched.
+
+This recovery is bounded to a single retry per contract. If the context rotates again immediately after, the decrypt throws `StaleKmsContextError` for that contract — see the [error reference](../reference/sdk/errors.md#stalekmscontexterror).
 
 ## How additive permits work
 

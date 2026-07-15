@@ -212,6 +212,7 @@ export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
+    recoveredContracts: Address[];
     result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;

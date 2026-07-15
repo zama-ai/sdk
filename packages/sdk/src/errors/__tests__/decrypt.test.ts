@@ -9,6 +9,7 @@ import {
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
+  StaleKmsContextError,
   ZamaError,
   wrapDecryptError,
 } from "../index";
@@ -343,6 +344,7 @@ describe("wrapDecryptError", () => {
           }),
       ],
       [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
+      [StaleKmsContextError, () => new StaleKmsContextError("rotated twice")],
     ];
 
     test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {

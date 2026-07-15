@@ -20,12 +20,7 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
 import { pLimit } from "../utils/concurrency";
 import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
-import {
-  extractRetryAfter,
-  isRpcRateLimitError,
-  isStaleKmsContextError,
-  toError,
-} from "../utils";
+import { extractRetryAfter, isRpcRateLimitError, isStaleKmsContextError, toError } from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -322,52 +317,164 @@ export class DecryptionService {
   }
 
   /**
-   * Run `strategy.decryptContract` for one contract; if it fails with the
-   * KMS-context-staleness signature (SDK-137: the permit was signed before a
-   * KMS context rotation), invalidate that one permit, re-plan via
-   * `strategy.resolveCredentials` (exactly one fresh wallet prompt, scoped to
-   * this contract only — other contracts in the same batch are untouched),
-   * and retry once. A second failure — stale-context or otherwise —
-   * propagates: this is a single bounded retry, never a loop.
+   * Apply one contract's decrypted values into the running `result` map and the
+   * decrypt cache, then throw if the relayer silently omitted a value for any
+   * requested handle. Shared between the first decrypt pass and the stale-context
+   * recovery retry (SDK-137) so both go through identical result handling.
    */
-  async #decryptContractWithStaleContextRecovery(
+  async #applyDecryptResult(
     strategy: DecryptionStrategy,
     contractAddress: Address,
     encryptedValues: EncryptedValue[],
-    credentials: SerializedTransportKeyPairWithPermissions,
-    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
-  ): Promise<DecryptValuesReturnType> {
-    try {
-      return await strategy.decryptContract({
-        credentials,
-        contractAddress,
-        encryptedValues,
-        options,
-      });
-    } catch (error) {
-      if (!isStaleKmsContextError(error)) {
-        throw error;
+    decrypted: DecryptValuesReturnType,
+    result: Record<EncryptedValue, ClearValue>,
+  ): Promise<void> {
+    for (let i = 0; i < encryptedValues.length; i++) {
+      const encryptedValue = encryptedValues[i];
+      const value = decrypted[i]?.value;
+      if (encryptedValue === undefined || value === undefined) {
+        continue;
       }
-      await strategy.invalidatePermit(contractAddress);
-      const freshCredentials = await strategy.resolveCredentials([contractAddress]);
-      try {
-        return await strategy.decryptContract({
-          credentials: freshCredentials,
-          contractAddress,
-          encryptedValues,
-          options,
-        });
-      } catch (retryError) {
-        if (isStaleKmsContextError(retryError)) {
-          throw new StaleKmsContextError(
-            `${strategy.errorMessage}: the KMS context for ${contractAddress} rotated again immediately ` +
-              `after a fresh permit was signed. Retry the request.`,
-            { cause: retryError },
+      result[encryptedValue] = value;
+      await this.#cache.set(strategy.requesterAddress, contractAddress, encryptedValue, value);
+    }
+
+    const missing = encryptedValues.filter(
+      (encryptedValue) => result[encryptedValue] === undefined,
+    );
+    if (missing.length > 0) {
+      throw new DecryptionFailedError(
+        `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
+        {
+          cause: new AggregateError(
+            missing.map(
+              (encryptedValue) =>
+                new DecryptionFailedError(
+                  `No clear value for handle ${encryptedValue} on ${contractAddress}`,
+                ),
+            ),
+            `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
+          ),
+        },
+      );
+    }
+  }
+
+  /**
+   * Enrich `error`'s cause chain with error(s) that preceded it without losing
+   * `error`'s own classified type (a `SigningRejectedError` stays a
+   * `SigningRejectedError`, etc.) — `cause` is a plain, reassignable property by
+   * design, meant for exactly this: attaching diagnostic context after the fact.
+   * Used so a KMS-context-rotation recovery failure (SDK-137) always keeps the
+   * original stale-context detection traceable, no matter which later step failed.
+   */
+  #withPriorCauses(error: ZamaError, priorErrors: readonly unknown[]): ZamaError {
+    if (priorErrors.length === 0) {
+      return error;
+    }
+    error.cause = new AggregateError(
+      error.cause !== undefined ? [...priorErrors, error.cause] : priorErrors,
+      "KMS context recovery: original stale-context detection(s) preceding this failure",
+    );
+    return error;
+  }
+
+  /**
+   * Recover from a KMS context rotation detected during the first decrypt pass
+   * (SDK-137). A rotation is a network-wide event, so every contract whose
+   * current permit just went stale is recovered *together* in one pass — not one
+   * at a time — invalidating each stale permit, then making exactly one
+   * `strategy.resolveCredentials` call for the whole affected set. This preserves
+   * SDK-136's permit-widening optimization (one wallet prompt covering the batch,
+   * chunked at up to 10 contracts, instead of up to N independent single-contract
+   * prompts) and avoids piling concurrent writers onto the same `PermissionStore`
+   * scope, which could otherwise silently drop a freshly-signed recovery permit.
+   *
+   * Bounded to a single retry per contract: a second stale-context failure throws
+   * `StaleKmsContextError` for that contract; any other retry failure, or a
+   * failure invalidating/re-signing itself, keeps the original stale-context
+   * error(s) traceable via `cause` (see {@link #withPriorCauses}).
+   */
+  async #recoverStaleContext(
+    strategy: DecryptionStrategy,
+    stale: Map<Address, unknown>,
+    staleRequests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[],
+    result: Record<EncryptedValue, ClearValue>,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<void> {
+    const staleContracts = [...stale.keys()];
+
+    let freshCredentials: SerializedTransportKeyPairWithPermissions;
+    try {
+      options?.signal?.throwIfAborted();
+      // Sequential, not fanned out through pLimit like the decrypt calls below:
+      // each invalidation is an independent delete, but concurrent callers all
+      // mutating the same PermissionStore scope right before the single
+      // resolveCredentials() call below reads it is exactly the race this
+      // batched recovery exists to avoid.
+      for (const contractAddress of staleContracts) {
+        await strategy.invalidatePermit(contractAddress);
+      }
+      freshCredentials = await strategy.resolveCredentials(staleContracts);
+    } catch (recoveryError) {
+      throw this.#withPriorCauses(
+        wrapDecryptError(recoveryError, strategy.errorMessage, {
+          isDelegated: strategy.delegated,
+          contractAddress: staleContracts[0],
+          account: strategy.aclActorAddress,
+        }),
+        [...stale.values()],
+      );
+    }
+
+    // Each entry is one bit-budget chunk that failed in the first pass — a
+    // contract with several oversized chunks can appear more than once here,
+    // and each is retried independently against the one shared freshCredentials.
+    await pLimit(
+      staleRequests.map(({ contractAddress, encryptedValues }) => async () => {
+        try {
+          const decrypted = await strategy.decryptContract({
+            credentials: freshCredentials,
+            contractAddress,
+            encryptedValues,
+            options,
+          });
+          await this.#applyDecryptResult(
+            strategy,
+            contractAddress,
+            encryptedValues,
+            decrypted,
+            result,
+          );
+        } catch (retryError) {
+          if (isStaleKmsContextError(retryError)) {
+            throw wrapDecryptError(
+              new StaleKmsContextError(
+                `${strategy.errorMessage}: the KMS context for ${contractAddress} rotated again immediately ` +
+                  `after a fresh permit was signed. Retry the request.`,
+                { cause: retryError },
+              ),
+              strategy.errorMessage,
+              {
+                isDelegated: strategy.delegated,
+                contractAddress,
+                account: strategy.aclActorAddress,
+              },
+            );
+          }
+          const originalError = stale.get(contractAddress);
+          throw this.#withPriorCauses(
+            wrapDecryptError(retryError, strategy.errorMessage, {
+              isDelegated: strategy.delegated,
+              contractAddress,
+              account: strategy.aclActorAddress,
+            }),
+            originalError !== undefined ? [originalError] : [],
           );
         }
-        throw retryError;
-      }
-    }
+      }),
+      5,
+    );
   }
 
   async #decrypt(
@@ -461,67 +568,57 @@ export class DecryptionService {
         encryptedValues: uncachedEncryptedValues,
       });
 
+      // First pass: attempt every contract with the batch's shared credentials.
+      // A stale-context failure (SDK-137) is collected rather than recovered
+      // inline — see #recoverStaleContext for why every contract hit by the same
+      // rotation is recovered together, in one pass, below.
+      const stale = new Map<Address, unknown>();
+
+      // Each entry is one bit-budget chunk (see `requests` above) that fails
+      // with a stale-context error — a contract with several oversized chunks
+      // can contribute more than one entry here, all recovered together below.
+      const staleRequests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[] = [];
+
       await pLimit(
         requests.map(({ contractAddress, encryptedValues }) => async () => {
-          // Classify per contract so a not-entitled / relayer failure carries the
-          // exact contract + ACL actor (the request context the worker no longer
-          // threads). Already-typed errors pass straight through.
-          let decrypted: DecryptValuesReturnType;
           try {
-            decrypted = await this.#decryptContractWithStaleContextRecovery(
+            const decrypted = await strategy.decryptContract({
+              credentials,
+              contractAddress,
+              encryptedValues,
+              options,
+            });
+            await this.#applyDecryptResult(
               strategy,
               contractAddress,
               encryptedValues,
-              credentials,
-              options,
+              decrypted,
+              result,
             );
           } catch (error) {
+            if (isStaleKmsContextError(error)) {
+              if (!stale.has(contractAddress)) {
+                stale.set(contractAddress, error);
+              }
+              staleRequests.push({ contractAddress, encryptedValues });
+              return;
+            }
+            // Classify per contract so a not-entitled / relayer failure carries the
+            // exact contract + ACL actor (the request context the worker no longer
+            // threads). Already-typed errors pass straight through.
             throw wrapDecryptError(error, strategy.errorMessage, {
               isDelegated: strategy.delegated,
               contractAddress,
               account: strategy.aclActorAddress,
             });
           }
-
-          // `decryptValues` returns clear values positionally aligned with the
-          // requested `encryptedValues`; zip them back into the handle→value map.
-          for (let i = 0; i < encryptedValues.length; i++) {
-            const encryptedValue = encryptedValues[i];
-            const value = decrypted[i]?.value;
-            if (encryptedValue === undefined || value === undefined) {
-              continue;
-            }
-            result[encryptedValue] = value;
-            await this.#cache.set(
-              strategy.requesterAddress,
-              contractAddress,
-              encryptedValue,
-              value,
-            );
-          }
-
-          const missing = encryptedValues.filter(
-            (encryptedValue) => result[encryptedValue] === undefined,
-          );
-          if (missing.length > 0) {
-            throw new DecryptionFailedError(
-              `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
-              {
-                cause: new AggregateError(
-                  missing.map(
-                    (encryptedValue) =>
-                      new DecryptionFailedError(
-                        `No clear value for handle ${encryptedValue} on ${contractAddress}`,
-                      ),
-                  ),
-                  `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
-                ),
-              },
-            );
-          }
         }),
         5,
       );
+
+      if (stale.size > 0) {
+        await this.#recoverStaleContext(strategy, stale, staleRequests, result, options);
+      }
 
       const uncachedResult: Record<EncryptedValue, ClearValue> = {};
       for (const encryptedValue of uncachedEncryptedValues) {
@@ -535,6 +632,7 @@ export class DecryptionService {
         durationMs: Date.now() - t0,
         encryptedValues: uncachedEncryptedValues,
         result: uncachedResult,
+        recoveredContracts: [...stale.keys()],
       });
       return result;
     } catch (error) {

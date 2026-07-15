@@ -5386,6 +5386,7 @@ export interface DecryptEndEvent extends BaseEvent {
     // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
+    recoveredContracts: Address[];
     result: Record<EncryptedValue, ClearValue>;
     // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
@@ -14084,6 +14085,11 @@ export class SigningRejectedError extends ZamaError {
 }
 
 // @public
+export class StaleKmsContextError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
 export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 // @public
@@ -19503,6 +19509,7 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly StaleKmsContext: "STALE_KMS_CONTEXT";
 };
 
 // @public

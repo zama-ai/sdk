@@ -74,6 +74,15 @@ export interface DecryptEndEvent extends BaseEvent {
   encryptedValues: EncryptedValue[];
   /** Decrypted values keyed by encrypted value — use this to correlate events to specific entries. */
   result: Record<EncryptedValue, ClearValue>;
+  /**
+   * Contracts whose stored permit had gone stale from a KMS context rotation
+   * (SDK-137) and were transparently recovered (invalidated, re-signed, retried)
+   * during this decrypt. Empty on the common path. A KMS context rotation is a
+   * network-wide, recurring event — this is the signal to notice "users are
+   * getting extra wallet prompts right now" without waiting for a
+   * `StaleKmsContextError` report from a double-rotation.
+   */
+  recoveredContracts: Address[];
 }
 
 export interface DecryptErrorEvent extends BaseEvent {

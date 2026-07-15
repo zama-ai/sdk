@@ -727,5 +727,151 @@ describe("DecryptionService", () => {
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
       expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
     });
+
+    test("a shared KMS rotation across multiple contracts recovers with exactly one batched re-sign, not one per contract", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      userAddress,
+    }) => {
+      const invalidateSpy = vi.spyOn(credentialService, "invalidatePermit");
+      const signsBefore = vi.mocked(relayer.signDecryptionPermit).mock.calls.length;
+
+      const attempts = new Map<Address, number>();
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ contractAddress: rawContractAddress }: DecryptValuesParameters) => {
+          const contractAddress = rawContractAddress as Address;
+          const n = (attempts.get(contractAddress) ?? 0) + 1;
+          attempts.set(contractAddress, n);
+          if (n === 1) {
+            throw staleKmsContextError();
+          }
+          return [
+            { type: "uint64", value: contractAddress === CONTRACT_A ? 10n : 20n } as TypedValue,
+          ];
+        },
+      );
+
+      await expect(
+        decryptionService.decryptValues(
+          handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          userAddress,
+        ),
+      ).resolves.toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
+
+      expect(invalidateSpy).toHaveBeenCalledTimes(2);
+      expect(invalidateSpy).toHaveBeenCalledWith(checksum(CONTRACT_A));
+      expect(invalidateSpy).toHaveBeenCalledWith(checksum(CONTRACT_B));
+      expect(attempts.get(CONTRACT_A)).toBe(2);
+      expect(attempts.get(CONTRACT_B)).toBe(2);
+
+      // One signature for the initial shared permit, plus exactly ONE more for the
+      // batched recovery re-sign covering both contracts together (preserving
+      // SDK-136 widening) — not two independent single-contract re-signs.
+      expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length - signsBefore).toBe(2);
+    });
+
+    test("a failure while invalidating/re-signing during recovery keeps the original stale-context error traceable via cause", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.decryptValues).mockRejectedValue(staleKmsContextError());
+      const recoveryFailure = new Error("wallet locked");
+      vi.spyOn(credentialService, "invalidatePermit").mockRejectedValueOnce(recoveryFailure);
+
+      const error: unknown = await decryptionService
+        .decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress)
+        .catch((e: unknown) => e);
+
+      // The failure that actually surfaces (wallet locked, while invalidating the
+      // stale permit) has nothing to do with staleness by itself -- the original
+      // detection must still be reachable so a debugging engineer isn't looking at
+      // a bare, context-free failure.
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).cause).toBeInstanceOf(AggregateError);
+      const aggregated = ((error as Error).cause as AggregateError).errors as unknown[];
+      expect(
+        aggregated.some(
+          (e) => e instanceof Error && e.message.includes("does not match KmsSignersContext"),
+        ),
+      ).toBe(true);
+      expect(aggregated).toContain(recoveryFailure);
+    });
+
+    test("a retry failure for an unrelated reason after recovery keeps the original stale-context detection traceable via cause", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      const retryFailure = new Error("boom on retry");
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(staleKmsContextError())
+        .mockRejectedValueOnce(retryFailure);
+
+      const error: unknown = await decryptionService
+        .decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress)
+        .catch((e: unknown) => e);
+
+      expect(error).toMatchObject({ code: "DECRYPTION_FAILED" });
+      expect((error as Error).cause).toBeInstanceOf(AggregateError);
+      const aggregated = ((error as Error).cause as AggregateError).errors as unknown[];
+      expect(
+        aggregated.some(
+          (e) => e instanceof Error && e.message.includes("does not match KmsSignersContext"),
+        ),
+      ).toBe(true);
+    });
+
+    test("DecryptEnd carries recoveredContracts: empty on the clean path, populated after a rotation recovery", async ({
+      createDecryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      const emitEvent = vi.fn();
+      const service = createDecryptionService({ emitEvent });
+
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 1n } as TypedValue,
+      ]);
+      await service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+      const cleanEnd = emitEvent.mock.calls.map(([e]) => e).find((e) => e.type === "decrypt:end");
+      expect(cleanEnd?.recoveredContracts).toEqual([]);
+
+      emitEvent.mockClear();
+      const HANDLE_A2 = `0x${"ee".repeat(32)}` as EncryptedValue;
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(staleKmsContextError())
+        .mockResolvedValueOnce([{ type: "uint64", value: 2n } as TypedValue]);
+      await service.decryptValues(handles([[HANDLE_A2, CONTRACT_A]]), userAddress);
+      const recoveredEnd = emitEvent.mock.calls
+        .map(([e]) => e)
+        .find((e) => e.type === "decrypt:end");
+      expect(recoveredEnd?.recoveredContracts).toEqual([checksum(CONTRACT_A)]);
+    });
+
+    test("an already-aborted signal short-circuits before the recovery re-sign fires", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      userAddress,
+    }) => {
+      vi.mocked(relayer.decryptValues).mockRejectedValue(staleKmsContextError());
+      const invalidateSpy = vi.spyOn(credentialService, "invalidatePermit");
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress, {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow();
+
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    });
   });
 });

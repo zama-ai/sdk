@@ -354,9 +354,9 @@ try {
 
 **Code:** `STALE_KMS_CONTEXT`
 
-The KMS periodically rotates its signing context. A permit signed under the previous context is rejected on the next decrypt — the SDK detects this automatically, discards just that one stale permit, re-signs it (one wallet prompt), and retries. `StaleKmsContextError` only surfaces if the context rotates **again** immediately after that retry, which is rare.
+The KMS periodically rotates its signing context. A permit signed under the previous context is rejected on the next decrypt — the SDK detects this automatically, discards the affected permit(s), re-signs once for every contract hit by the same rotation in that decrypt call, and retries. `StaleKmsContextError` only surfaces if the context rotates **again** immediately after that retry, which is rare.
 
-Only the permit covering the affected contract is replaced; permits for other contracts in the same session are unaffected.
+Only the permit(s) covering the affected contract(s) are replaced — a permit in a separate signed payload is never touched. If a discarded permit had been widened to also cover other, still-valid contracts, their coverage is dropped too and transparently re-granted on their next decrypt (the same behavior `revokePermits()` already has, not new to this recovery path).
 
 ```ts
 matchZamaError(error, {
