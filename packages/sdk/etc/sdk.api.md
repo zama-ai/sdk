@@ -35,7 +35,7 @@ export class AclPausedError extends ZamaError {
 
 // @public
 export const AclTopics: {
-    readonly DelegatedForUserDecryption: `0x${string}`;
+    readonly DelegatedForUserDecryption: `0x${string}`; /** `RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)` */
     readonly RevokedDelegationForUserDecryption: `0x${string}`;
 };
 
@@ -5859,6 +5859,7 @@ export interface FheChain<TId extends number = number> {
     readonly inputVerifierContractAddress: Address;
     // (undocumented)
     readonly kmsContractAddress: Address;
+    readonly kmsGenerationContractAddress?: Address | undefined;
     // (undocumented)
     readonly network: EIP1193Provider | string;
     readonly protocolConfigContractAddress?: Address | undefined;
@@ -7262,6 +7263,59 @@ export function getConfidentialTokenAddressContract(registry: Address, tokenAddr
 };
 
 // @public
+export function getCrsMaterialsContract(kmsGenerationAddress: Address, crsId: bigint): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "getKeyMaterials";
+        readonly inputs: readonly [{
+            readonly name: "keyId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string[]";
+            readonly internalType: "string[]";
+        }, {
+            readonly name: "";
+            readonly type: "tuple[]";
+            readonly internalType: "struct IKMSGeneration.KeyDigest[]";
+            readonly components: readonly [{
+                readonly name: "keyType";
+                readonly type: "uint8";
+                readonly internalType: "enum IKMSGeneration.KeyType";
+            }, {
+                readonly name: "digest";
+                readonly type: "bytes";
+                readonly internalType: "bytes";
+            }];
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "getCrsMaterials";
+        readonly inputs: readonly [{
+            readonly name: "crsId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string[]";
+            readonly internalType: "string[]";
+        }, {
+            readonly name: "";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly stateMutability: "view";
+    }];
+    readonly functionName: "getCrsMaterials";
+    readonly args: readonly [bigint];
+};
+
+// @public
 export function getDelegationExpiryContract(aclAddress: Address, delegatorAddress: Address, delegateAddress: Address, contractAddress: Address): {
     readonly address: `0x${string}`;
     readonly abi: readonly [{
@@ -7469,6 +7523,59 @@ export function getDelegationExpiryContract(aclAddress: Address, delegatorAddres
     }];
     readonly functionName: "getUserDecryptionDelegationExpirationDate";
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
+};
+
+// @public
+export function getKeyMaterialsContract(kmsGenerationAddress: Address, keyId: bigint): {
+    readonly address: `0x${string}`;
+    readonly abi: readonly [{
+        readonly type: "function";
+        readonly name: "getKeyMaterials";
+        readonly inputs: readonly [{
+            readonly name: "keyId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string[]";
+            readonly internalType: "string[]";
+        }, {
+            readonly name: "";
+            readonly type: "tuple[]";
+            readonly internalType: "struct IKMSGeneration.KeyDigest[]";
+            readonly components: readonly [{
+                readonly name: "keyType";
+                readonly type: "uint8";
+                readonly internalType: "enum IKMSGeneration.KeyType";
+            }, {
+                readonly name: "digest";
+                readonly type: "bytes";
+                readonly internalType: "bytes";
+            }];
+        }];
+        readonly stateMutability: "view";
+    }, {
+        readonly type: "function";
+        readonly name: "getCrsMaterials";
+        readonly inputs: readonly [{
+            readonly name: "crsId";
+            readonly type: "uint256";
+            readonly internalType: "uint256";
+        }];
+        readonly outputs: readonly [{
+            readonly name: "";
+            readonly type: "string[]";
+            readonly internalType: "string[]";
+        }, {
+            readonly name: "";
+            readonly type: "bytes";
+            readonly internalType: "bytes";
+        }];
+        readonly stateMutability: "view";
+    }];
+    readonly functionName: "getKeyMaterials";
+    readonly args: readonly [bigint];
 };
 
 // @public
@@ -11183,9 +11290,14 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
-export function isRetryable(error: unknown): error is ZamaError & {
-    retryable: true;
-};
+export class KeyDigestMismatchError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export class KeyDigestVerificationFailedError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 // @public
 export interface ListPairsOptions {
@@ -11209,7 +11321,7 @@ export const mainnet: {
 };
 
 // @public
-export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R; } & {
+export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCode]?: (error: ErrorForCode[K]) => R } & {
     _?: (error: unknown) => R;
 }): R | undefined;
 
@@ -12605,6 +12717,7 @@ export class RelayerRequestFailedError extends ZamaError {
         retryAfter?: number;
         retryable?: boolean;
     });
+    readonly retryable: boolean;
     readonly retryAfter: number | undefined;
     readonly statusCode: number | undefined;
 }
@@ -12631,9 +12744,6 @@ export function resolveStorage(storage?: GenericStorage | undefined, permitStora
     storage: GenericStorage;
     permitStorage: GenericStorage;
 };
-
-// @public
-export function retryAfterSeconds(error: unknown): number | undefined;
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {
@@ -14323,9 +14433,9 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 
 // @public
 export const Topics: {
-    readonly ConfidentialTransfer: `0x${string}`;
-    readonly Wrap: `0x${string}`;
-    readonly UnwrapRequested: `0x${string}`;
+    readonly ConfidentialTransfer: `0x${string}`; /** `Wrap(address indexed to, uint256 roundedAmount, euint64 encryptedWrappedAmount)` */
+    readonly Wrap: `0x${string}`; /** `UnwrapRequested(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 amount)` */
+    readonly UnwrapRequested: `0x${string}`; /** `UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)` */
     readonly UnwrapFinalized: `0x${string}`;
 };
 
@@ -19425,7 +19535,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     permitStorage?: GenericStorage;
     permitTTL?: number;
     registryTTL?: number;
-    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
     transportKeyPairTTL?: number;
@@ -19465,45 +19575,44 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
 
 // @public
 export class ZamaError extends Error {
-    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions & {
-        retryable?: boolean;
-    });
+    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
     readonly code: ZamaErrorCode;
-    readonly retryable: boolean;
 }
 
 // @public
 export const ZamaErrorCode: {
-    readonly SigningRejected: "SIGNING_REJECTED";
-    readonly SigningFailed: "SIGNING_FAILED";
-    readonly EncryptionFailed: "ENCRYPTION_FAILED";
-    readonly DecryptionFailed: "DECRYPTION_FAILED";
-    readonly TransactionReverted: "TRANSACTION_REVERTED";
-    readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED";
-    readonly InvalidTransportKeyPair: "INVALID_KEYPAIR";
-    readonly NoCiphertext: "NO_CIPHERTEXT";
-    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED";
-    readonly NotEntitled: "NOT_ENTITLED";
-    readonly RpcRateLimited: "RPC_RATE_LIMITED";
-    readonly Configuration: "CONFIGURATION";
-    readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED";
-    readonly DelegationCooldown: "DELEGATION_COOLDOWN";
-    readonly DelegationNotFound: "DELEGATION_NOT_FOUND";
-    readonly DelegationExpired: "DELEGATION_EXPIRED";
-    readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE";
-    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE";
-    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE";
-    readonly ERC20ReadFailed: "ERC20_READ_FAILED";
-    readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED";
-    readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT";
-    readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF";
-    readonly AclPaused: "ACL_PAUSED";
-    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
-    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
-    readonly ChainMismatch: "CHAIN_MISMATCH";
-    readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
-    readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
-    readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly SigningRejected: "SIGNING_REJECTED"; /** Wallet signature failed for a reason other than rejection. */
+    readonly SigningFailed: "SIGNING_FAILED"; /** FHE encryption failed. */
+    readonly EncryptionFailed: "ENCRYPTION_FAILED"; /** FHE decryption failed. */
+    readonly DecryptionFailed: "DECRYPTION_FAILED"; /** On-chain transaction reverted. */
+    readonly TransactionReverted: "TRANSACTION_REVERTED"; /** Transport key pair has expired and needs regeneration. */
+    readonly TransportKeyPairExpired: "KEYPAIR_EXPIRED"; /** Relayer rejected transport key pair (stale, expired, or malformed). */
+    readonly InvalidTransportKeyPair: "INVALID_KEYPAIR"; /** No FHE ciphertext exists for this account (never shielded). */
+    readonly NoCiphertext: "NO_CIPHERTEXT"; /** Relayer HTTP request failed. */
+    readonly RelayerRequestFailed: "RELAYER_REQUEST_FAILED"; /** The configured signer/account is not entitled (ACL) to decrypt this encrypted value. Don't retry — wait for a grant. */
+    readonly NotEntitled: "NOT_ENTITLED"; /** The consumer's RPC provider rate-limited an on-chain read (e.g. HTTP 429 / JSON-RPC -32005). Retryable. */
+    readonly RpcRateLimited: "RPC_RATE_LIMITED"; /** SDK configuration is invalid (e.g. forbidden chain ID, unsupported type). */
+    readonly Configuration: "CONFIGURATION"; /** Delegation cannot target self (delegate === msg.sender). */
+    readonly DelegationSelfNotAllowed: "DELEGATION_SELF_NOT_ALLOWED"; /** Only one delegate/revoke per (delegator, delegate, contract) per block. */
+    readonly DelegationCooldown: "DELEGATION_COOLDOWN"; /** No active delegation found for this (delegator, delegate, contract) tuple. */
+    readonly DelegationNotFound: "DELEGATION_NOT_FOUND"; /** The delegation has expired. */
+    readonly DelegationExpired: "DELEGATION_EXPIRED"; /** Confidential (cToken) balance is insufficient for the requested operation. */
+    readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE"; /** ERC-20 balance is insufficient for the requested shield amount. */
+    readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE"; /** Balance validation could not be performed (no cached credentials and decryption not possible). */
+    readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE"; /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
+    readonly ERC20ReadFailed: "ERC20_READ_FAILED"; /** The new expiration date equals the current one — no on-chain change needed. */
+    readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED"; /** Delegate address cannot be the contract address. */
+    readonly DelegationDelegateEqualsContract: "DELEGATION_DELEGATE_EQUALS_CONTRACT"; /** Contract address cannot be the sender address. */
+    readonly DelegationContractIsSelf: "DELEGATION_CONTRACT_IS_SELF"; /** The ACL contract is paused. */
+    readonly AclPaused: "ACL_PAUSED"; /** Expiration date is too soon (must be at least 1 hour in the future). */
+    readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON"; /** Delegation exists on-chain but hasn't propagated to the gateway yet. */
+    readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED"; /** Signer and provider are connected to different chains. */
+    readonly ChainMismatch: "CHAIN_MISMATCH"; /** Operation requires a signer but none is configured. */
+    readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED"; /** Operation requires a connected wallet account. */
+    readonly WalletNotConnected: "WALLET_NOT_CONNECTED"; /** Wallet account discovery is still resolving. */
+    readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY"; /** The on-chain read needed to verify a key/CRS digest failed (RPC error, timeout). Retryable. */
+    readonly KeyDigestVerificationFailed: "KEY_DIGEST_VERIFICATION_FAILED"; /** Downloaded FHE public key or CRS bytes don't match the on-chain KMSGeneration digest. */
+    readonly KeyDigestMismatch: "KEY_DIGEST_MISMATCH";
 };
 
 // @public
@@ -19543,7 +19652,7 @@ export class ZamaSDK {
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
-export type ZamaSDKEventInput = ZamaSDKEvent extends (infer E) ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
+export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
 
 // @public (undocumented)
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;

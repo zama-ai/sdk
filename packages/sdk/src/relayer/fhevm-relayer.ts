@@ -8,7 +8,7 @@ import {
   createFhevmCleartextDecryptClient,
   createFhevmCleartextEncryptClient,
 } from "@fhevm/sdk/viem/cleartext";
-import { createPublicClient, custom, http } from "viem";
+import { createPublicClient, custom, http, type PublicClient } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
 import type {
@@ -21,6 +21,7 @@ import type {
   RelayerOptions,
 } from "./types";
 import { ConfigurationError } from "../errors";
+import { verifyFheEncryptionKeyDigest } from "./verify-key-digest";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -61,6 +62,7 @@ export interface FhevmRelayerConfig {
  */
 export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;
+  readonly #publicClient: PublicClient;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
   readonly #encrypt: FhevmEncryptClient;
@@ -76,13 +78,14 @@ export class FhevmRelayer implements FhevmRelayerSDK {
     this.#chain = config.chain;
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
+    this.#publicClient = createPublicClient({
+      transport:
+        typeof this.#chain.network === "string"
+          ? http(this.#chain.network)
+          : custom(this.#chain.network),
+    });
     const params = {
-      publicClient: createPublicClient({
-        transport:
-          typeof this.#chain.network === "string"
-            ? http(this.#chain.network)
-            : custom(this.#chain.network),
-      }),
+      publicClient: this.#publicClient,
       chain: toFhevmChain(this.#chain),
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
@@ -110,7 +113,17 @@ export class FhevmRelayer implements FhevmRelayerSDK {
   #initEncrypt = (): Promise<void> => {
     this.#encryptInitPromise ??= this.#encrypt
       .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
-      .then(() => this.#encrypt.init());
+      .then(async (keyBytes) => {
+        const kmsGenerationContractAddress = this.#chain.kmsGenerationContractAddress;
+        if (kmsGenerationContractAddress !== undefined) {
+          await verifyFheEncryptionKeyDigest(
+            this.#publicClient,
+            kmsGenerationContractAddress,
+            keyBytes,
+          );
+        }
+        return this.#encrypt.init();
+      });
     return this.#encryptInitPromise;
   };
 

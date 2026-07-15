@@ -20,6 +20,8 @@ import type {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
   ChainMismatchError,
+  KeyDigestVerificationFailedError,
+  KeyDigestMismatchError,
 } from "..";
 import { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds, matchZamaError } from "..";
 
@@ -81,6 +83,11 @@ describe("error subclasses extend ZamaError", () => {
   test("relayer errors", () => {
     expectTypeOf<RelayerRequestFailedError>().toExtend<ZamaError>();
     expectTypeOf<ConfigurationError>().toExtend<ZamaError>();
+  });
+
+  test("key digest errors", () => {
+    expectTypeOf<KeyDigestVerificationFailedError>().toExtend<ZamaError>();
+    expectTypeOf<KeyDigestMismatchError>().toExtend<ZamaError>();
   });
 
   test("delegation errors", () => {

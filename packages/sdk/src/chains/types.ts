@@ -44,6 +44,16 @@ export interface FheChain<TId extends number = number> {
    */
   readonly protocolConfigContractAddress?: Address | undefined;
   /**
+   * Address of the `KMSGeneration` contract on the host chain.
+   *
+   * When set, the SDK verifies the downloaded FHE public key and CRS bytes
+   * against the on-chain SHAKE256 digest before using them. `undefined`
+   * (the default on every built-in preset) skips verification, matching
+   * today's behavior; no chain this SDK ships presets for has
+   * `KMSGeneration` deployed yet.
+   */
+  readonly kmsGenerationContractAddress?: Address | undefined;
+  /**
    * Authentication for the relayer endpoint.
    * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
    * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.

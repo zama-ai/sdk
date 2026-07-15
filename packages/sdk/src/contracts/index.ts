@@ -59,4 +59,6 @@ export {
   type PaginatedResult,
 } from "./wrappers-registry";
 
+export { getKeyMaterialsContract, getCrsMaterialsContract } from "./kms-generation";
+
 export { MAX_UINT64 } from "./constants";

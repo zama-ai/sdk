@@ -76,6 +76,10 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
+  /** The on-chain read needed to verify a key/CRS digest failed (RPC error, timeout). Retryable. */
+  KeyDigestVerificationFailed: "KEY_DIGEST_VERIFICATION_FAILED",
+  /** Downloaded FHE public key or CRS bytes don't match the on-chain KMSGeneration digest. */
+  KeyDigestMismatch: "KEY_DIGEST_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */

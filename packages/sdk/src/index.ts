@@ -175,6 +175,8 @@ export {
   DelegationContractIsSelfError,
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
+  KeyDigestVerificationFailedError,
+  KeyDigestMismatchError,
   matchZamaError,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
@@ -249,5 +251,7 @@ export {
   getConfidentialTokenAddressContract,
   getTokenAddressContract,
   isConfidentialTokenValidContract,
+  getKeyMaterialsContract,
+  getCrsMaterialsContract,
 } from "./contracts";
 export type { TokenWrapperPair, TokenWrapperPairWithMetadata, PaginatedResult } from "./contracts";
