@@ -20,7 +20,24 @@ describe("Decryption", () => {
       handle,
     }) => {
       await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }]);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
+    });
+
+    test("forwards per-call signal and timeout to the relayer", async ({
+      sdk,
+      relayer,
+      handle,
+    }) => {
+      const { signal } = new AbortController();
+
+      await sdk.decryption.decryptValues([{ encryptedValue: handle, contractAddress: TOKEN }], {
+        timeout: 1234,
+        signal,
+      });
+
+      expect(relayer.decryptValues).toHaveBeenCalledWith(
+        expect.objectContaining({ options: { timeout: 1234, signal } }),
+      );
     });
   });
 
@@ -41,8 +58,26 @@ describe("Decryption", () => {
       const sdk = createSDK({ signer: undefined });
       const result = await sdk.decryption.decryptPublicValues([handle]);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [handle],
+      });
       expect(result.clearValues[handle]).toBe(500n);
+    });
+
+    test("forwards per-call signal and timeout to the relayer", async ({
+      createSDK,
+      handle,
+      relayer,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      const signal = new AbortController().signal;
+
+      await sdk.decryption.decryptPublicValues([handle], { timeout: 1234, signal });
+
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [handle],
+        options: { timeout: 1234, signal },
+      });
     });
 
     test("returns empty result for empty encrypted values without calling the relayer", async ({
@@ -55,11 +90,13 @@ describe("Decryption", () => {
         decryptionProof: "0x",
         abiEncodedClearValues: "0x",
       });
-      expect(relayer.publicDecrypt).not.toHaveBeenCalled();
+      expect(relayer.decryptPublicValuesWithSignatures).not.toHaveBeenCalled();
     });
 
     test("wraps relayer errors through wrapDecryptError", async ({ sdk, relayer, handle }) => {
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(new Error("relayer down"));
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValueOnce(
+        new Error("relayer down"),
+      );
       await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBeInstanceOf(
         DecryptionFailedError,
       );
@@ -67,7 +104,7 @@ describe("Decryption", () => {
 
     test("re-throws typed SDK errors as-is (no double-wrap)", async ({ sdk, relayer, handle }) => {
       const original = new DecryptionFailedError("already typed");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValueOnce(original);
       await expect(sdk.decryption.decryptPublicValues([handle])).rejects.toBe(original);
     });
   });

@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import type { Address, PreparedFor, TransactionPrepareRequest } from "@zama-fhe/sdk";
+import type { Address, PreparedFor, PrepareTransactionRequest } from "@zama-fhe/sdk";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { usePrepare } from "../use-prepare";
 import { useZamaSDK } from "../../provider";
@@ -37,7 +37,7 @@ describe("usePrepare", () => {
       .spyOn(result.current.sdk.offlineSigning, "prepare")
       .mockResolvedValue(PREPARED as never);
 
-    const request: TransactionPrepareRequest = {
+    const request: PrepareTransactionRequest = {
       kind: "ConfidentialTransfer",
       from: USER,
       token: TOKEN,

@@ -1,6 +1,6 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { waitFor } from "@testing-library/react";
-import type { Address } from "@zama-fhe/sdk";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialBalances } from "../use-confidential-balances";
 
 describe("useConfidentialBalances", () => {
@@ -25,7 +25,12 @@ describe("useConfidentialBalances", () => {
         throw new Error(`Unexpected readContract address ${address}`);
       },
     );
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
+    vi.mocked(relayer.decryptValues).mockImplementation(
+      async ({ encryptedValues }: DecryptValuesParameters) => {
+        const value = encryptedValues[0] === handleA ? 10n : 20n;
+        return [{ type: "uint64", value } as TypedValue];
+      },
+    );
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({
@@ -59,7 +64,9 @@ describe("useConfidentialBalances", () => {
     const handle = `0x${"dd".repeat(32)}`;
 
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 33n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 33n } as TypedValue,
+    ]);
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalances({ addresses: [mixedCaseToken], account: userAddress }),
@@ -97,7 +104,9 @@ describe("useConfidentialBalances", () => {
   }) => {
     const handle = `0x${"ef".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 77n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 77n } as TypedValue,
+    ]);
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
@@ -133,7 +142,12 @@ describe("useConfidentialBalances", () => {
           throw new Error(`Unexpected readContract address ${address}`);
         },
       );
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handleA]: 10n, [handleB]: 20n });
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: DecryptValuesParameters) => {
+          const value = encryptedValues[0] === handleA ? 10n : 20n;
+          return [{ type: "uint64", value } as TypedValue];
+        },
+      );
 
       const tokens = [tokenAddress, otherTokenAddress];
       const { result } = renderWithProviders(() =>

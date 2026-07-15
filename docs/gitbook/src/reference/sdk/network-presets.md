@@ -77,7 +77,7 @@ const mySepolia = {
 
 ### Server apps
 
-On the server, use `node()` with pool options. Chain data (network, relayerUrl) comes from the preset:
+On the server, use `node()`. Chain data (network, relayerUrl) comes from the preset, so a bare call is all you need — it also accepts optional `@fhevm/sdk` client options (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning:
 
 ```ts
 import { node } from "@zama-fhe/sdk/node";
@@ -87,7 +87,7 @@ const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
 } as const satisfies FheChain;
-// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
+// Then in createConfig: relayers: { [mySepolia.id]: node() }
 ```
 
 ### Local development

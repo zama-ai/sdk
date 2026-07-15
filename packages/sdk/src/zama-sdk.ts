@@ -1,13 +1,13 @@
 import type { Address } from "viem";
+import type { ChainRouter } from "./chains/router";
+import type { ZamaConfig } from "./config/types";
+import { CredentialService } from "./credentials/credential-service";
+import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { OfflineSigning } from "./namespaces/offline-signing";
 import { Permits } from "./namespaces/permits";
-import type { ZamaConfig } from "./config/types";
-import { CredentialService } from "./credentials/credential-service";
-import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
-import type { RelayerDispatcher } from "./relayer/relayer-dispatcher";
-import type { EncryptParams, EncryptResult } from "./relayer/relayer-sdk.types";
+import type { EncryptParams, FhevmRelayerOptions, FhevmRelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -17,12 +17,12 @@ import { OfflineSigningService } from "./services/offline-signing-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   GenericStorage,
   WalletAccountListener,
 } from "./types";
-import type { GenericLogger } from "./worker/worker.types";
 import { WrappersRegistry } from "./wrappers-registry";
 
 /**
@@ -35,8 +35,7 @@ import { WrappersRegistry } from "./wrappers-registry";
  * emission).
  */
 export class ZamaSDK {
-  /** @internal */
-  readonly relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;
@@ -66,7 +65,7 @@ export class ZamaSDK {
   readonly #offlineSigningService: OfflineSigningService;
 
   constructor(config: ZamaConfig) {
-    this.relayer = config.relayer;
+    this.#router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
     this.storage = config.storage;
@@ -75,7 +74,7 @@ export class ZamaSDK {
     this.#cachingService = new CachingService(config.storage, this.#logger);
     this.#delegationService = new DelegationService({
       provider: this.provider,
-      relayer: this.relayer,
+      router: config.router,
       emitEvent: this.emitEvent.bind(this),
       logger: this.#logger,
     });
@@ -94,11 +93,11 @@ export class ZamaSDK {
     this.#registryAddresses = registryAddresses;
     this.#registryTTL = config.registryTTL;
 
-    // CredentialService is always constructed (with optional signer) so the
-    // offline-signing pipeline can use its prepareEIP712 / registerSignedPermit
-    // entry points without a connected wallet.
+    // CredentialService is always constructed (with optional signer) so
+    // public-decrypt / encryption flows and pre-wallet-connect construction
+    // work; permit-signing methods require a signer and throw without one.
     this.#credentialService = new CredentialService({
-      relayer: this.relayer,
+      router: config.router,
       signer: config.signer,
       transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
@@ -111,17 +110,17 @@ export class ZamaSDK {
         cache: this.#cachingService,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
-        relayer: this.relayer,
+        router: config.router,
         emitEvent: this.emitEvent.bind(this),
       });
     }
     this.#encryptionService = new EncryptionService({
-      relayer: this.relayer,
+      router: config.router,
       emitEvent: this.emitEvent.bind(this),
     });
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
-      relayer: this.relayer,
+      router: config.router,
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
       logger: this.#logger,
@@ -129,9 +128,8 @@ export class ZamaSDK {
     this.#offlineSigningService = new OfflineSigningService({
       signer: config.signer,
       provider: this.provider,
-      relayer: this.relayer,
+      router: config.router,
       encryption: this.#encryptionService,
-      credentials: this.#credentialService,
       emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
     });
 
@@ -150,7 +148,7 @@ export class ZamaSDK {
     this.decryption = new Decryption({
       signer: this.signer,
       provider: this.provider,
-      relayer: this.relayer,
+      router: config.router,
       decryptionService: this.#decryptionService,
     });
     this.offlineSigning = new OfflineSigning(this.#offlineSigningService);
@@ -179,6 +177,15 @@ export class ZamaSDK {
    */
   get logger(): GenericLogger {
     return this.#logger;
+  }
+
+  /**
+   * The single-chain relayer backend for the **currently active** chain.
+   *
+   * @internal
+   */
+  get relayer(): FhevmRelayerSDK {
+    return this.#router.relayer;
   }
 
   /**
@@ -243,8 +250,8 @@ export class ZamaSDK {
    * });
    * ```
    */
-  async encrypt(params: EncryptParams): Promise<EncryptResult> {
-    return this.#encryptionService.encrypt(params);
+  async encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">) {
+    return this.#encryptionService.encryptValues(params, options);
   }
 
   /**
@@ -298,7 +305,6 @@ export class ZamaSDK {
    */
   terminate(): void {
     this.dispose();
-    this.relayer.terminate();
     this.signer?.dispose?.();
   }
 

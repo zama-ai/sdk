@@ -1,5 +1,46 @@
 # Changelog
 
+## [3.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.1...v3.3.1-alpha.2) (2026-07-13)
+
+### Code Refactoring
+
+- **sdk:** replace @zama-fhe/relayer-sdk with @fhevm/sdk ([#458](https://github.com/zama-ai/sdk/issues/458)) ([f9b79c9]())
+
+## [3.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.3.1-alpha.1) (2026-07-09)
+
+### Bug Fixes
+
+- **sdk:** correct Hoodi KMSVerifier preset address ([#540](https://github.com/zama-ai/sdk/issues/540)) ([18d2422]())
+
+## [3.3.0](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0) (2026-07-08)
+
+### Features
+
+- **examples:** demonstrate confidentialTransferAndCall vault deposit [SDK-244] ([#495](https://github.com/zama-ai/sdk/issues/495)) ([f2af503]())
+- **sdk:** add confidentialTransferAndCall to Token methods [SDK-168] ([#423](https://github.com/zama-ai/sdk/issues/423)) ([7b2b916]())
+- **sdk:** persist pending unshield state internally ([#497](https://github.com/zama-ai/sdk/issues/497)) ([3523b53]())
+- **sdk:** typed decryption error causes — not-entitled, RPC rate-limit, relayer back-pressure [SDK-239][SDK-236] ([#489](https://github.com/zama-ai/sdk/issues/489)) ([09d244d]()), closes [#482]() [#492]() [#488]() [#482]() [#492]()
+
+### Bug Fixes
+
+- **sdk:** configurable + diagnosable Node worker timeouts with self-healing [SDK-237] ([#494](https://github.com/zama-ai/sdk/issues/494)) ([e572582]())
+- **sdk:** resolve node worker without import.meta.resolve for SSR bundlers [SDK-235] ([#490](https://github.com/zama-ai/sdk/issues/490)) ([7ce975b]()), closes [#285]()
+
+### Reverts
+
+- pin conventional-changelog-conventionalcommits back to ^9.3.1 ([#514](https://github.com/zama-ai/sdk/issues/514)) ([c5db065]()), closes [#505]() [#495]()
+
+### Code Refactoring
+
+- **examples:** migrate off pending-unshield helpers [SDK-251] ([#531](https://github.com/zama-ai/sdk/issues/531)) ([848d61f]()), closes [#497]() [#497]() [#497]() [#497]()
+- **sdk:** absorb the delegation-propagation window internally [SDK-241] ([#486](https://github.com/zama-ai/sdk/issues/486)) ([1bd102f]()), closes [#489]()
+- **sdk:** single source of truth for WrappersRegistry config [SDK-127] ([#517](https://github.com/zama-ai/sdk/issues/517)) ([e7feeb0]())
+- **sdk:** type matchZamaError handlers by matched error subclass [SDK-231] ([#488](https://github.com/zama-ai/sdk/issues/488)) ([9c98fbc]())
+
+### Build System
+
+- integrate Turborepo for cached build/typecheck/api-report/size ([#523](https://github.com/zama-ai/sdk/issues/523)) ([fb5c6b7]())
+
 ## [3.3.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2026-07-07)
 
 ### Build System

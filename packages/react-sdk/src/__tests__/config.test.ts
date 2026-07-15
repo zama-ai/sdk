@@ -22,6 +22,15 @@ vi.mock(import("../../../sdk/src/ethers/ethers-signer"), async (importOriginal) 
   return { ...actual, EthersSigner: vi.fn() };
 });
 
+// These tests only assert config wiring (router/storage/options), never relayer
+// behaviour. Stub the backend so `web().createRelayer` doesn't construct a real
+// `@fhevm/sdk` client — that would touch the SDK's global runtime config, which
+// flakes when these tests share a worker with others that set it.
+vi.mock(import("../../../sdk/src/relayer/fhevm-relayer"), async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, FhevmRelayer: vi.fn() };
+});
+
 const MockWagmiSigner = vi.mocked(WagmiSigner);
 const MockViemSigner = vi.mocked(ViemSigner);
 const MockEthersSigner = vi.mocked(EthersSigner);
@@ -68,7 +77,7 @@ describe("createConfig", () => {
         wagmiConfig: mockWagmiConfig([11155111]),
         relayers: { [11155111]: web() },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
 
     test("resolves relayers with default web()", () => {
@@ -77,7 +86,7 @@ describe("createConfig", () => {
         wagmiConfig: mockWagmiConfig([11155111]),
         relayers: { [11155111]: web() },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
 
     test("throws when a chain has no relayer configured", () => {
@@ -109,7 +118,7 @@ describe("createConfig", () => {
         walletClient: {} as any,
         relayers: { [11155111]: web() },
       });
-      expect(config.relayer).toBeDefined();
+      expect(config.router).toBeDefined();
     });
   });
 
@@ -150,14 +159,12 @@ describe("createConfig", () => {
     test("returns tagged config when called with no args", () => {
       const result = web();
       expect(result.type).toBe("web");
-      expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });
 
-    test("captures options in createWorker/createRelayer closures", () => {
-      const result = web({ threads: 4 });
+    test("returns tagged config when called with no args (options test)", () => {
+      const result = web();
       expect(result.type).toBe("web");
-      expect(result.createWorker).toBeTypeOf("function");
       expect(result.createRelayer).toBeTypeOf("function");
     });
   });

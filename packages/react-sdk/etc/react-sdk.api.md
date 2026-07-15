@@ -10,15 +10,14 @@ import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
 import { BroadcastParams } from '@zama-fhe/sdk/query';
-import { ClearValues } from '@zama-fhe/relayer-sdk/web';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
+import { ClearValue } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
-import { DecryptionPermitResult } from '@zama-fhe/sdk';
+import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
@@ -30,13 +29,10 @@ import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
-import { PermitKind } from '@zama-fhe/sdk';
 import { PreparedFor } from '@zama-fhe/sdk';
-import { PreparedPermitFor } from '@zama-fhe/sdk';
 import { PrepareParams } from '@zama-fhe/sdk/query';
 import { PropsWithChildren } from 'react';
 import { RefreshPreparedParams } from '@zama-fhe/sdk/query';
-import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
@@ -156,20 +152,16 @@ export function useConfidentialTransferFromAndCall(address: Address, options?: U
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDecryptPublicValues(): UseMutationResult<Readonly<{
-clearValues: ClearValues;
-abiEncodedClearValues: `0x${string}`;
-decryptionProof: `0x${string}`;
-}>, Error, `0x${string}`[], unknown>;
+export function useDecryptPublicValues(): UseMutationResult<DecryptPublicValuesResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
 
 // @public
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
 
 // @public
-export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptValuesMutationParams, unknown>;
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValue>, Error, DelegatedDecryptValuesMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
@@ -238,13 +230,10 @@ export function usePendingUnshield(tokenAddress: Address, options?: Omit<UseQuer
 export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQueryResult<`0x${string}` | null, Error>;
 
 // @public
-export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>, Error, PrepareParams, TContext>;
+export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, PrepareParams, TContext>;
 
 // @public
 export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
-
-// @public
-export function useRegisterPermit<TContext = unknown>(options?: UseMutationOptions<DecryptionPermitResult, Error, RegisterPermitParams, TContext>): UseMutationResult<DecryptionPermitResult, Error, RegisterPermitParams, TContext>;
 
 // @public
 export function useResume<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, ResumeParams, TContext>): UseMutationResult<TransactionResult, Error, ResumeParams, TContext>;

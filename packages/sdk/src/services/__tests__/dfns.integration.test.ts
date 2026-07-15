@@ -9,7 +9,6 @@ import { sepolia } from "../../chains";
 import { createConfig } from "../../config/create";
 import { EthersProvider } from "../../ethers/ethers-provider";
 import { node } from "../../node";
-import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { describe, expect, test } from "../../test-fixtures";
 import type { WalletAccount } from "../../types";
@@ -197,55 +196,9 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
     POLL_TIMEOUT_MS + 60_000,
   );
 
-  dfns(
-    "prepare → DFNS async signTypedData (policy approval) → registerPermit",
-    async ({ sdk, pollDfnsSignature, dfnsAccount, env }) => {
-      const prepared = await sdk.offlineSigning.prepare({
-        kind: "DecryptionPermit",
-        from: dfnsAccount.address,
-        contracts: [env.TOKEN_ADDRESS],
-      });
-
-      if (prepared.typedData === null) {
-        const cached = await sdk.offlineSigning.registerPermit(prepared, "0x" as Hex);
-        expect(cached.contracts).toEqual(prepared.context.chunk);
-        return;
-      }
-
-      const { domain, types, message } = prepared.typedData as unknown as EIP712TypedData & {
-        domain: { name?: string; version?: string; chainId: bigint; verifyingContract?: string };
-        types: Record<string, readonly { name: string; type: string }[]>;
-        message: Record<string, unknown>;
-      };
-      const eip712Types: Record<string, { name: string; type: string }[]> = {};
-      for (const [k, v] of Object.entries(types)) {
-        if (k === "EIP712Domain") {
-          continue;
-        }
-        eip712Types[k] = [...v];
-      }
-
-      const { signatureEncoded } = await pollDfnsSignature({
-        kind: "Eip712",
-        types: eip712Types,
-        domain: {
-          ...(domain.name && { name: domain.name }),
-          ...(domain.version && { version: domain.version }),
-          ...(domain.chainId !== undefined && { chainId: Number(domain.chainId) }),
-          ...(domain.verifyingContract && { verifyingContract: domain.verifyingContract }),
-        },
-        message,
-      });
-      if (!signatureEncoded) {
-        throw new Error("DFNS returned no signature.encoded for Eip712 signing");
-      }
-      const sig = signatureEncoded as Hex;
-      expect(sig).toMatch(/^0x[0-9a-f]{130}$/i);
-
-      const registered = await sdk.offlineSigning.registerPermit(prepared, sig);
-      expect(registered.contracts.length).toBeGreaterThan(0);
-      expect(registered.durationDays).toBeGreaterThan(0);
-    },
-    POLL_TIMEOUT_MS + 60_000,
-  );
+  // NOTE: The DFNS decryption-permit flow moved to `sdk.permits.grantPermit`
+  // with a DFNS-backed signer whose async `signTypedData` polls for policy
+  // approval (the signer-boundary model). That coverage is tracked as a
+  // follow-up; the permit-specific offline `prepare`/`registerPermit` API it
+  // used to exercise no longer exists.
 });

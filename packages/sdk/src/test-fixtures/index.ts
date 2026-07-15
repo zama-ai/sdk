@@ -4,6 +4,7 @@ import { chainFixtures, type ChainFixtures } from "./chain";
 import { providerFixtures, type ProviderFixtures } from "./provider";
 import { queryContextFixtures, type QueryContextFixtures } from "./query-context";
 import { relayerFixtures, type RelayerFixtures } from "./relayer";
+import { routerFixtures, type RouterFixtures } from "./router";
 import { sdkFixtures, type SdkFixtures } from "./sdk";
 import { serviceFixtures, type ServiceFixtures } from "./services";
 import { signerFixtures, type SignerFixtures } from "./signer";
@@ -13,6 +14,7 @@ import { tokenFixtures, type TokenFixtures } from "./token";
 export type SDKTestFixtures = AddressFixtures &
   ChainFixtures &
   RelayerFixtures &
+  RouterFixtures &
   SignerFixtures &
   ProviderFixtures &
   StorageFixtures &
@@ -25,6 +27,7 @@ export const test = base.extend<SDKTestFixtures>({
   ...addressFixtures,
   ...chainFixtures,
   ...relayerFixtures,
+  ...routerFixtures,
   ...signerFixtures,
   ...providerFixtures,
   ...storageFixtures,
@@ -38,6 +41,8 @@ export type { AddressFixtures } from "./addresses";
 export type { ChainFixtures } from "./chain";
 export type { ProviderFixtures } from "./provider";
 export type { RelayerFixtures } from "./relayer";
+export type { CreateMockRouterOverrides, RouterFixtures } from "./router";
+export { createMockRouter } from "./router";
 export type { CreateSDKFn, SdkFixtures } from "./sdk";
 export type {
   CreateCredentialServiceFn,

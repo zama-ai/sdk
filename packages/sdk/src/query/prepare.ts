@@ -1,9 +1,6 @@
 import type { Hex } from "viem";
 import type {
-  DecryptionPermitRequest,
-  PermitKind,
   PreparedFor,
-  PreparedPermitFor,
   PreparedTransaction,
   TransactionKind,
   PrepareTransactionRequest,
@@ -14,27 +11,25 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link prepareMutationOptions}. */
 export interface PrepareParams {
-  readonly request: PrepareTransactionRequest | DecryptionPermitRequest;
+  readonly request: PrepareTransactionRequest;
   readonly options?: OfflineSigningOptions;
 }
 
-/** Discriminated union over the two prepared shapes returned by `sdk.offlineSigning.prepare`. */
-export type PrepareResult = PreparedFor<TransactionKind> | PreparedPermitFor<PermitKind>;
+/** The prepared unsigned-transaction shape returned by `sdk.offlineSigning.prepare`. */
+export type PrepareResult = PreparedFor<TransactionKind>;
 
 /**
- * Mutation options for `sdk.offlineSigning.prepare`. Generic over `kind` — the same factory
- * builds an unsigned transaction ({@link TransactionKind}) or a typed-data envelope
- * ({@link PermitKind}) depending on the request.
+ * Mutation options for `sdk.offlineSigning.prepare` — builds an unsigned
+ * transaction ({@link TransactionKind}) for the given request.
  */
 export function prepareMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<readonly ["zama.prepare"], PrepareParams, PrepareResult> {
   return {
     mutationKey: ["zama.prepare"] as const,
-    mutationFn: ({ request, options }) =>
-      // Delegate to the SDK's overloaded `prepare` — cast to `never` because
-      // the wide union doesn't match either narrow overload signature exactly.
-      sdk.offlineSigning.prepare(request as never, options),
+    // Cast to `never`: the wide request union doesn't match the narrow
+    // per-kind overload signature exactly.
+    mutationFn: ({ request, options }) => sdk.offlineSigning.prepare(request as never, options),
   };
 }
 

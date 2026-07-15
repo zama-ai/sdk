@@ -3,7 +3,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegateDecryption } from "../use-delegate-decryption";
-const ACL = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
+const ACL = "0x50157CFfD6bBFA2DECe204a89ec419c23ef5755D" as Address;
 
 describe("useDelegateDecryption", () => {
   test("default", ({ renderWithProviders, tokenAddress }) => {

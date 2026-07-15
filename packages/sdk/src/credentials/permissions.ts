@@ -8,7 +8,7 @@ export function uncoveredContracts(
   permissions: readonly Permission[],
   requested: readonly ChecksummedAddress[],
 ): ChecksummedAddress[] {
-  const covered = new Set(permissions.flatMap((p) => p.signedContractAddresses));
+  const covered = new Set(permissions.flatMap((p) => p.contractAddresses));
   return requested.filter((addr) => !covered.has(addr));
 }
 
@@ -40,7 +40,7 @@ export function withoutPermitsTouching(
   contracts: readonly ChecksummedAddress[],
 ): Permission[] {
   const removeSet = new Set(contracts);
-  return permissions.filter((p) => !p.signedContractAddresses.some((a) => removeSet.has(a)));
+  return permissions.filter((p) => !p.contractAddresses.some((a) => removeSet.has(a)));
 }
 
 /** Deduplicate and sort the union of two pre-checksummed address lists. */
@@ -51,25 +51,25 @@ export function sortedUnion<T extends string>(a: readonly T[], b: readonly T[]):
 /**
  * Find the in-scope permit best suited to be widened with `uncovered`.
  *
- * Returns the permit whose `signedContractAddresses ∪ uncovered` still fits
+ * Returns the permit whose `contractAddresses ∪ uncovered` still fits
  * the 10-contract cap and that has the largest overlap with `requested`. Ties
  * broken by most-recent `startTimestamp`. Returns `null` when none fits.
  */
 export function findPermitToWiden(
-  permits: readonly Permission[],
+  permissions: readonly Permission[],
   uncovered: readonly ChecksummedAddress[],
   requested: readonly ChecksummedAddress[],
 ): Permission | null {
   const requestedSet = new Set(requested);
-  const feasible = permits.filter(
-    (p) => new Set([...p.signedContractAddresses, ...uncovered]).size <= MAX_CONTRACTS_PER_PERMIT,
+  const feasible = permissions.filter(
+    (p) => new Set([...p.contractAddresses, ...uncovered]).size <= MAX_CONTRACTS_PER_PERMIT,
   );
   if (feasible.length === 0) {
     return null;
   }
 
   function overlap(p: Permission) {
-    return p.signedContractAddresses.reduce((n, a) => n + (requestedSet.has(a) ? 1 : 0), 0);
+    return p.contractAddresses.reduce((n, a) => n + (requestedSet.has(a) ? 1 : 0), 0);
   }
 
   const maxOverlap = Math.max(...feasible.map(overlap));

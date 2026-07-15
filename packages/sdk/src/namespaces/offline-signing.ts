@@ -4,14 +4,10 @@ import type {
   OfflineSigningService,
 } from "../services/offline-signing-service";
 import type {
-  DecryptionPermitRequest,
-  DecryptionPermitResult,
-  PermitKind,
   PreparedFor,
-  PreparedPermitFor,
   PreparedTransaction,
+  PrepareTransactionRequest,
   TransactionKind,
-  TransactionPrepareRequest,
   TransactionResult,
 } from "../types";
 
@@ -25,16 +21,14 @@ import type {
  * - **In-process atomic** ({@link Token} methods like `Token.confidentialTransfer`) — *not* on this client; lives on `Token` for online-signer call sites where prepare/sign/broadcast can run synchronously.
  * - **Decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls. This namespace.
  *
- * Two artifact branches share that decomposition, distinguished by what
- * {@link prepare} returns:
- * - **Transactions** — an RLP-encoded unsigned EIP-1559 tx; finalize with
- *   {@link broadcast} (you hold the signed bytes) or {@link resume} (a custodian
- *   broadcast it). Yields a {@link TransactionResult}.
- * - **Decryption permits** — `prepare({ kind: "DecryptionPermit" })` yields an
- *   EIP-712 typed-data envelope (no on-chain tx); sign it externally and finalize
- *   with {@link registerPermit}. Yields a {@link DecryptionPermitResult}.
- *   {@link sign} / {@link broadcast} / {@link resume} / {@link refresh} are
- *   transaction-only.
+ * This pipeline is **transaction-only**: {@link prepare} returns an
+ * RLP-encoded unsigned EIP-1559 tx, finalized with {@link broadcast} (you hold
+ * the signed bytes) or {@link resume} (a custodian broadcast it), yielding a
+ * {@link TransactionResult}. Decryption permits are *not* transactions — they
+ * are signed credentials with no broadcast step — so they are acquired through
+ * `sdk.permits.grantPermit` instead, which signs with whatever signer you
+ * configured (including an out-of-process custody signer whose `signTypedData`
+ * resolves when the HSM/policy engine returns).
  *
  * Obtained via `sdk.offlineSigning`. "Offline" refers to where the signer's
  * keys live (out-of-process: HSM, custody control plane, policy engine), not
@@ -77,18 +71,10 @@ export class OfflineSigning {
    *   provider's chain. {@link ChainMismatchError}
    */
   prepare<K extends TransactionKind>(
-    request: Extract<TransactionPrepareRequest, { kind: K }>,
+    request: Extract<PrepareTransactionRequest, { kind: K }>,
     options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>>;
-  prepare<K extends PermitKind>(
-    request: DecryptionPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedPermitFor<K>>;
-  prepare(
-    request: TransactionPrepareRequest | DecryptionPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
-    return this.#offlineSigningService.prepare(request as never, options);
+  ): Promise<PreparedFor<K>> {
+    return this.#offlineSigningService.prepare(request, options);
   }
 
   /**
@@ -105,9 +91,10 @@ export class OfflineSigning {
    *   in your back-end signer service, pass bytes to {@link broadcast}.
    *   `sign()` throws {@link SignerNotConfiguredError} here — by design.
    * - **Permit-only signers** (KMS configurations that can `signTypedData`
-   *   but not full transactions): use the signer for {@link registerPermit}
-   *   flows; for tx-signing, arrange an out-of-process pipeline bypassing
-   *   this method. `sign()` throws {@link SignerCapabilityError} here.
+   *   but not full transactions): for tx-signing, arrange an out-of-process
+   *   pipeline bypassing this method. `sign()` throws
+   *   {@link SignerCapabilityError} here. (Permits are signed via
+   *   `sdk.permits.grantPermit`, which needs only `signTypedData`.)
    *
    * Both cases naturally route to `prepare → external sign → broadcast`
    * — this method is the convenience for the third case where the configured
@@ -128,20 +115,6 @@ export class OfflineSigning {
    */
   broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.broadcast(preparedTx, signedTx);
-  }
-
-  /**
-   * Persist an externally-signed decryption permit. Pair with
-   * `sdk.offlineSigning.prepare({ kind: "DecryptionPermit", from, contracts })` and an
-   * external `signTypedData` call over `preparedPermit.typedData`.
-   *
-   * Signer-optional: works without a configured signer.
-   */
-  registerPermit<K extends PermitKind>(
-    preparedPermit: PreparedPermitFor<K>,
-    signature: Hex,
-  ): Promise<DecryptionPermitResult> {
-    return this.#offlineSigningService.registerPermit(preparedPermit, signature);
   }
 
   /**

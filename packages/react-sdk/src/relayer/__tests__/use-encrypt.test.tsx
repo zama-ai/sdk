@@ -30,7 +30,7 @@ describe("useEncrypt", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(relayer.encrypt).toHaveBeenCalledTimes(1);
+    expect(relayer.encryptValues).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual({ encryptedValues: [handle], inputProof });
   });
 });

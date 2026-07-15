@@ -1,24 +1,22 @@
-import type { Address, Hex } from "viem";
-import type { GenericSigner, GenericStorage } from "../types";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { Address } from "viem";
+import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
-import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
-import { swallow } from "../utils/swallow";
-import { TransportKeyPairVault } from "./keypair-vault";
-import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
-import { PermissionStore } from "./permission-store";
-import type { PermissionScope } from "./storage-keys";
-import type {
-  StoredTransportKeyPairWithPermits,
-  Permission,
-  StoredTransportKeyPair,
-} from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
-import type { GenericLogger } from "../worker/worker.types";
+import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
+import { swallow } from "../utils/swallow";
+import { TransportKeyPairVault } from "./keypair-vault";
+import { PermissionStore } from "./permission-store";
+import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
+import { SerializedPermitSchema } from "./schemas";
+import type { PermissionScope } from "./storage-keys";
+import type {
+  Permission,
+  SerializedTransportKeyPairWithPermissions,
+  StoredTransportKeyPair,
+} from "./types";
 import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
@@ -26,14 +24,15 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
-  relayer: RelayerDispatcher;
+  router: ChainRouter;
   /**
    * Optional signer. Required for {@link CredentialService.grantPermit},
    * {@link CredentialService.revokePermits}, and
-   * {@link CredentialService.clearCredentials}. The offline-signing entry
-   * points ({@link CredentialService.prepareEIP712},
-   * {@link CredentialService.registerSignedPermit}) work without a signer
-   * (canonical cross-process custody shape).
+   * {@link CredentialService.clearCredentials} — each throws
+   * {@link SignerNotConfiguredError} without one. Omitted for signer-less
+   * usage (public decryption / encryption, or construction before a wallet
+   * connects). Deferred/custody signing is served by passing an
+   * out-of-process signer here, not by a separate signer-less code path.
    */
   signer?: GenericSigner;
   /** Transport key pair lifetime in seconds. Pre-validated. */
@@ -57,14 +56,18 @@ export interface CredentialServiceConfig {
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
-      generator: () => config.relayer.generateTransportKeyPair(),
+      generator: async () => {
+        const relayer = config.router.relayer;
+        const transportKeyPair = await relayer.generateTransportKeyPair();
+        return relayer.serializeTransportKeyPair({ transportKeyPair });
+      },
       storage: config.storage,
       ttl: config.transportKeyPairTTL,
       logger: config.logger,
@@ -73,7 +76,7 @@ export class CredentialService {
       storage: config.permitStorage ?? config.storage,
       logger: config.logger,
     });
-    this.#relayer = config.relayer;
+    this.#router = config.router;
     this.#signer = config.signer;
     this.#permitTTL = config.permitTTL;
     this.#logger = config.logger;
@@ -98,40 +101,43 @@ export class CredentialService {
   async grantPermit(
     contracts: readonly Address[],
     delegator?: Address,
-  ): Promise<StoredTransportKeyPairWithPermits> {
+  ): Promise<SerializedTransportKeyPairWithPermissions> {
     const signer = this.#requireSigner("grantPermit");
     const account = signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
     if (requested.length === 0) {
-      return { keypair, permits: [] };
+      return { keypair, permissions: [] };
     }
 
-    const chainId = account.chainId;
+    // Key permits by the router's active chain — the same source the permit's
+    // EIP-712 domain is signed against (#signPermit uses this.#router.relayer) —
+    // so the storage key and the signature can never disagree on the chain.
+    const chainId = this.#router.chain.id;
     const scope: PermissionScope = {
       signerAddress,
       chainId,
       delegatorAddress: delegator ? checksum(delegator) : signerAddress,
     };
-    const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
+    const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
-    const uncovered = uncoveredContracts(permits, requested);
+    const uncovered = uncoveredContracts(permissions, requested);
     if (uncovered.length > 0) {
-      const candidate = findPermitToWiden(permits, uncovered, requested);
+      const candidate = findPermitToWiden(permissions, uncovered, requested);
       if (candidate !== null) {
-        const widenedSet = sortedUnion(candidate.signedContractAddresses, uncovered);
+        const widenedSet = sortedUnion(candidate.contractAddresses, uncovered);
         const widened = await this.#signPermit({ chunk: widenedSet, keypair, scope });
         await swallow(
           "replace permit",
-          () => this.#store.replace(scope, candidate.signature, widened),
+          () => this.#store.replace(scope, candidate.serializedPermit.signature, widened),
           this.#logger,
         );
-        permits[permits.indexOf(candidate)] = widened;
+        permissions[permissions.indexOf(candidate)] = widened;
       } else {
         for (const chunk of chunkContracts(uncovered)) {
           const permission = await this.#signPermit({ chunk, keypair, scope });
-          permits.push(permission);
+          permissions.push(permission);
           await swallow(
             "persist permit",
             () => this.#store.append(scope, [permission]),
@@ -144,7 +150,7 @@ export class CredentialService {
     const requestedSet = new Set(requested);
     return {
       keypair,
-      permits: permits.filter((p) => p.signedContractAddresses.some((a) => requestedSet.has(a))),
+      permissions: permissions.filter((p) => p.contractAddresses.some((a) => requestedSet.has(a))),
     };
   }
 
@@ -168,7 +174,7 @@ export class CredentialService {
     if (keypair === null) {
       return false;
     }
-    const chainId = account.chainId;
+    const chainId = this.#router.chain.id;
     const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
     const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
@@ -199,7 +205,7 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = account.chainId;
+    const chainId = this.#router.chain.id;
     await this.#store.deletePermitsTouching(
       { signerAddress, chainId, delegatorAddress: signerAddress },
       normalized,
@@ -254,96 +260,6 @@ export class CredentialService {
     }
   }
 
-  /**
-   * Build the EIP-712 envelope and permit context for an offline-signing
-   * decryption permit. The caller signs `typedData` externally (custodian,
-   * HSM, …) and feeds the signature back to {@link registerSignedPermit}.
-   *
-   * Signer-optional: when no signer is configured, the caller supplies the
-   * `from` (signer wallet address) and `chainId` explicitly — this is the
-   * canonical cross-process custody shape.
-   *
-   * Limited to a single permit chunk (≤ {@link MAX_CONTRACTS_PER_PERMIT}
-   * contracts). For larger sets, split at the call site and repeat the
-   * prepare → sign → register cycle per chunk. Already-covered contracts
-   * are filtered out — if every requested address is already covered, the
-   * returned `typedData` is `null` (no signature needed).
-   */
-  async prepareEIP712(
-    contracts: readonly Address[],
-    options: { from: Address; chainId: number; delegator?: Address },
-  ): Promise<{
-    typedData: EIP712TypedData | null;
-    keypair: StoredTransportKeyPair;
-    scope: PermissionScope;
-    chunk: ChecksummedAddress[];
-    startTimestamp: number;
-  }> {
-    const { from, chainId, delegator } = options;
-    const signerAddress = checksum(from);
-    const requested = normalizeAddresses(contracts);
-    const keypair = await this.#vault.getOrCreate(signerAddress);
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId,
-      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
-    };
-    if (requested.length === 0) {
-      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
-    }
-    const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
-    const uncovered = uncoveredContracts(permits, requested);
-    if (uncovered.length === 0) {
-      return { typedData: null, keypair, scope, chunk: [], startTimestamp: nowSeconds() };
-    }
-    const chunks = chunkContracts(uncovered);
-    const [chunk, ...extra] = chunks;
-    if (chunk === undefined || extra.length > 0) {
-      throw new ConfigurationError(
-        `Offline decryption permit accepts at most one permit chunk (≤10 uncovered contracts) per prepare → registerPermit cycle; got ${uncovered.length}. Split contracts at the call site and run one cycle per chunk.`,
-      );
-    }
-    const startTimestamp = nowSeconds();
-    const isDelegated = scope.delegatorAddress !== scope.signerAddress;
-    const typedData = isDelegated
-      ? await this.#relayer.createDelegatedUserDecryptEIP712(
-          keypair.publicKey,
-          chunk,
-          scope.delegatorAddress,
-          startTimestamp,
-          this.#permitTTL,
-        )
-      : await this.#relayer.createEIP712(keypair.publicKey, chunk, startTimestamp, this.#permitTTL);
-    return { typedData, keypair, scope, chunk, startTimestamp };
-  }
-
-  /**
-   * Persist a permit produced by an external signature over the typed-data
-   * envelope returned from {@link prepareEIP712}. The caller passes back
-   * the same `keypair`, `scope`, `chunk`, and `startTimestamp` so the
-   * Permission shape matches what `allow` would have produced internally.
-   */
-  async registerSignedPermit(input: {
-    signature: Hex;
-    keypair: Pick<StoredTransportKeyPair, "publicKey">;
-    scope: PermissionScope;
-    chunk: ChecksummedAddress[];
-    startTimestamp: number;
-  }): Promise<Permission> {
-    const permission: Permission = {
-      keypairPublicKey: input.keypair.publicKey,
-      signerAddress: input.scope.signerAddress,
-      delegatorAddress: input.scope.delegatorAddress,
-      chainId: input.scope.chainId,
-      signedContractAddresses: input.chunk,
-      signature: input.signature,
-      startTimestamp: input.startTimestamp,
-      durationDays: this.#permitTTL,
-    };
-    await swallow("persist permit", () => this.#store.append(input.scope, [permission]));
-    return permission;
-  }
-
   async #signPermit(input: {
     chunk: ChecksummedAddress[];
     keypair: StoredTransportKeyPair;
@@ -352,32 +268,35 @@ export class CredentialService {
     const { chunk, keypair, scope } = input;
     const startTimestamp = nowSeconds();
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
-
+    const relayer = this.#router.relayer;
     try {
-      const eip712 = isDelegated
-        ? await this.#relayer.createDelegatedUserDecryptEIP712(
-            keypair.publicKey,
-            chunk,
-            scope.delegatorAddress,
-            startTimestamp,
-            this.#permitTTL,
-          )
-        : await this.#relayer.createEIP712(
-            keypair.publicKey,
-            chunk,
-            startTimestamp,
-            this.#permitTTL,
-          );
+      const transportKeyPair = await relayer.parseTransportKeyPair({
+        publicKey: keypair.publicKey,
+        privateKey: keypair.privateKey,
+      });
+      const permitInput = {
+        transportKeyPair,
+        contractAddresses: chunk,
+        startTimestamp,
+        durationSeconds: this.#permitTTL * SECONDS_PER_DAY,
+        signerAddress: scope.signerAddress,
+        signer: this.#requireSigner("signPermit"),
+      };
+      const signedPermit = isDelegated
+        ? await relayer.signDecryptionPermit({
+            ...permitInput,
+            delegatorAddress: scope.delegatorAddress,
+          })
+        : await relayer.signDecryptionPermit(permitInput);
 
-      const signature = await this.#requireSigner("signPermit").signTypedData(eip712);
+      const serializedPermit = SerializedPermitSchema.parse(
+        relayer.serializeSignedDecryptionPermit({ signedPermit }),
+      );
 
       return {
         keypairPublicKey: keypair.publicKey,
-        signerAddress: scope.signerAddress,
-        delegatorAddress: scope.delegatorAddress,
-        chainId: scope.chainId,
-        signedContractAddresses: chunk,
-        signature,
+        contractAddresses: chunk,
+        serializedPermit,
         startTimestamp,
         durationDays: this.#permitTTL,
       };

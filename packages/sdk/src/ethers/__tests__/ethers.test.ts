@@ -5,7 +5,7 @@ import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
 import { WalletNotConnectedError } from "../../errors";
-import type { EIP712TypedData } from "../../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../../relayer/types";
 
 // ── Mock ethers ──────────────────────────────────────────────
 

@@ -1,42 +1,47 @@
+import { getAddress } from "viem";
+import type { ChainRouter } from "../chains/router";
 import { wrapEncryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { EncryptParams, EncryptResult } from "../relayer/relayer-sdk.types";
+import type { EncryptParams, EncryptResult, FhevmRelayerOptions } from "../relayer/types";
 import { toError } from "../utils";
 
 export class EncryptionService {
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #emitEvent: (
     input: ZamaSDKEventInput,
     tokenAddress?: EncryptParams["contractAddress"],
   ) => void;
 
   constructor({
-    relayer,
+    router,
     emitEvent,
   }: {
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     emitEvent: (input: ZamaSDKEventInput, tokenAddress?: EncryptParams["contractAddress"]) => void;
   }) {
-    this.#relayer = relayer;
+    this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
-  async encrypt(params: EncryptParams): Promise<EncryptResult> {
+  async encryptValues(
+    params: EncryptParams,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<EncryptResult> {
     const t0 = Date.now();
+    const normalizedContractAddress = getAddress(params.contractAddress);
     try {
-      this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, params.contractAddress);
-      const result = await this.#relayer.encrypt(params);
+      this.#emitEvent({ type: ZamaSDKEvents.EncryptStart }, normalizedContractAddress);
+      const result = await this.#router.relayer.encryptValues({ ...params, options });
       this.#emitEvent(
         { type: ZamaSDKEvents.EncryptEnd, durationMs: Date.now() - t0 },
-        params.contractAddress,
+        normalizedContractAddress,
       );
       return result;
     } catch (error) {
       this.#emitEvent(
         { type: ZamaSDKEvents.EncryptError, error: toError(error), durationMs: Date.now() - t0 },
-        params.contractAddress,
+        normalizedContractAddress,
       );
       throw wrapEncryptError(error, "Encryption failed");
     }

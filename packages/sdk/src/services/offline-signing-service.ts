@@ -1,4 +1,5 @@
 import { getAddress, type Address, type Hex } from "viem";
+import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
   confidentialBalanceOfContract,
@@ -14,8 +15,6 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import type { CredentialService } from "../credentials/credential-service";
-import { checksum } from "../credentials/utils";
 import {
   ChainMismatchError,
   ConfigurationError,
@@ -29,27 +28,21 @@ import {
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
 import { assertSignTransaction } from "../signer/capabilities";
 import type {
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
   ConfidentialTransferRequest,
-  DecryptionPermitRequest,
-  DecryptionPermitResult,
   DelegateDecryptionRequest,
-  ExecuteRequest,
   FinalizeUnwrapRequest,
   GenericProvider,
   GenericSigner,
-  PermitKind,
   PreparedFor,
-  PreparedPermitFor,
   PreparedTransaction,
   RevokeDelegationRequest,
   SetOperatorRequest,
   TransactionKind,
-  TransactionPrepareRequest,
+  PrepareTransactionRequest,
   TransactionResult,
   TransferAndCallRequest,
   UnwrapAllRequest,
@@ -57,7 +50,7 @@ import type {
   WrapRequest,
 } from "../types";
 import { toError } from "../utils";
-import { assertBigint, assertHex } from "../utils/assertions";
+import { assertBigint } from "../utils/assertions";
 import type { EncryptionService } from "./encryption-service";
 
 /** Configuration for {@link OfflineSigningService}. */
@@ -69,9 +62,8 @@ export interface OfflineSigningServiceConfig {
    */
   readonly signer?: GenericSigner;
   readonly provider: GenericProvider;
-  readonly relayer: RelayerDispatcher;
+  readonly router: ChainRouter;
   readonly encryption: EncryptionService;
-  readonly credentials: CredentialService;
   readonly emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }
 
@@ -147,56 +139,36 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionOperation> = {
 export class OfflineSigningService {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #encryption: EncryptionService;
-  readonly #credentials: CredentialService;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 
   constructor(config: OfflineSigningServiceConfig) {
     this.#signer = config.signer;
     this.#provider = config.provider;
-    this.#relayer = config.relayer;
+    this.#router = config.router;
     this.#encryption = config.encryption;
-    this.#credentials = config.credentials;
     this.#emitEvent = config.emitEvent;
   }
 
   // ── prepare ─────────────────────────────────────────────────────────────
 
   /**
-   * Build the offline-signing payload for the given request.
+   * Build the offline-signing payload for the given transaction request:
+   * an RLP-encoded unsigned transaction the caller signs externally (via
+   * {@link sign}, an HSM, or any out-of-process signer) and feeds back through
+   * {@link broadcast}.
    *
-   * For transaction kinds, returns an RLP-encoded unsigned transaction the
-   * caller signs externally (via {@link sign}, an HSM, or any out-of-process
-   * signer) and feeds back through {@link broadcast}.
-   *
-   * For `DecryptionPermit`, returns an EIP-712 typed-data envelope to be
-   * signed externally and fed back through {@link registerPermit}.
+   * Decryption permits are not transactions — acquire them via
+   * `sdk.permits.grantPermit`, which signs with the configured signer
+   * (including an out-of-process custody signer).
    *
    * Signer-optional: when a signer IS configured, its connected wallet
    * address must equal `request.from` or {@link SignerAddressMismatchError}
    * is thrown.
    */
-  prepare<K extends TransactionKind>(
-    request: Extract<TransactionPrepareRequest, { kind: K }>,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>>;
-  prepare<K extends PermitKind>(
-    request: DecryptionPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedPermitFor<K>>;
-  async prepare(
-    request: TransactionPrepareRequest | DecryptionPermitRequest,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedTransaction | PreparedPermitFor<PermitKind>> {
-    if (isDecryptionPermitRequest(request)) {
-      return this.#prepareDecryptionPermit(request);
-    }
-    return this.#prepareTransaction(request, options);
-  }
-
-  async #prepareTransaction<K extends TransactionKind>(
-    request: Extract<TransactionPrepareRequest, { kind: K }>,
+  async prepare<K extends TransactionKind>(
+    request: Extract<PrepareTransactionRequest, { kind: K }>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
     const from = getAddress(request.from);
@@ -219,35 +191,6 @@ export class OfflineSigningService {
       to: call.address,
       chainId,
     } as PreparedFor<K>;
-  }
-
-  async #prepareDecryptionPermit(
-    request: DecryptionPermitRequest,
-  ): Promise<PreparedPermitFor<"DecryptionPermit">> {
-    const from = getAddress(request.from);
-    await this.#assertMatchesConfiguredSigner(from, `prepare(${request.kind})`);
-    const chainId = await this.#provider.getChainId();
-    const { typedData, keypair, scope, chunk, startTimestamp } =
-      await this.#credentials.prepareEIP712(request.contracts, {
-        from,
-        chainId,
-        delegator: request.delegator,
-      });
-    return {
-      kind: "DecryptionPermit",
-      request,
-      from,
-      chainId,
-      typedData,
-      context: {
-        keypairPublicKey: keypair.publicKey,
-        signerAddress: scope.signerAddress,
-        delegatorAddress: scope.delegatorAddress,
-        chainId: scope.chainId,
-        chunk,
-        startTimestamp,
-      },
-    };
   }
 
   // ── sign ────────────────────────────────────────────────────────────────
@@ -372,57 +315,13 @@ export class OfflineSigningService {
     preparedTx: PreparedFor<K>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
-    return this.#prepareTransaction(preparedTx.request, options);
-  }
-
-  // ── registerPermit ─────────────────────────────────────────────────────
-
-  /**
-   * Register an externally-signed {@link PreparedPermitFor} into the
-   * credential cache. Pair with `prepare({ kind: "DecryptionPermit", ... })`
-   * and an external `signTypedData` call over `preparedPermit.typedData`.
-   *
-   * Signer-optional: works without a configured signer (canonical
-   * cross-process custody shape).
-   *
-   * @throws {@link TypeError} if `signature` is not a valid 0x-prefixed
-   *   hex string.
-   */
-  async registerPermit<K extends PermitKind>(
-    preparedPermit: PreparedPermitFor<K>,
-    signature: Hex,
-  ): Promise<DecryptionPermitResult> {
-    assertHex(signature, "registerPermit: signature");
-    if (preparedPermit.typedData === null) {
-      // Already covered — nothing to register.
-      return {
-        contracts: preparedPermit.context.chunk,
-        durationDays: 0,
-        startTimestamp: preparedPermit.context.startTimestamp,
-      };
-    }
-    const permit = await this.#credentials.registerSignedPermit({
-      signature,
-      keypair: { publicKey: preparedPermit.context.keypairPublicKey },
-      scope: {
-        signerAddress: checksum(preparedPermit.context.signerAddress),
-        chainId: preparedPermit.context.chainId,
-        delegatorAddress: checksum(preparedPermit.context.delegatorAddress),
-      },
-      chunk: preparedPermit.context.chunk.map(checksum),
-      startTimestamp: preparedPermit.context.startTimestamp,
-    });
-    return {
-      contracts: permit.signedContractAddresses,
-      durationDays: permit.durationDays,
-      startTimestamp: permit.startTimestamp,
-    };
+    return this.prepare(preparedTx.request, options);
   }
 
   // ── internals ──────────────────────────────────────────────────────────
 
   async #buildCall(
-    request: TransactionPrepareRequest,
+    request: PrepareTransactionRequest,
     from: Address,
   ): Promise<{
     readonly address: Address;
@@ -468,7 +367,7 @@ export class OfflineSigningService {
     request: ConfidentialTransferRequest,
     from: Address,
   ): Promise<ReturnType<typeof confidentialTransferContract>> {
-    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: from,
@@ -484,7 +383,7 @@ export class OfflineSigningService {
     request: ConfidentialTransferFromRequest,
     _from: Address,
   ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
-    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: getAddress(request.owner),
@@ -512,7 +411,7 @@ export class OfflineSigningService {
     request: UnwrapRequest,
     from: Address,
   ): Promise<ReturnType<typeof unwrapContract>> {
-    const { encryptedValues, inputProof } = await this.#encryption.encrypt({
+    const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
       userAddress: from,
@@ -537,18 +436,18 @@ export class OfflineSigningService {
   async #buildFinalizeUnwrap(
     request: FinalizeUnwrapRequest,
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
-    const decrypted = await this.#relayer
-      .publicDecrypt([request.unwrapRequestIdOrAmount])
+    const decrypted = await this.#router.relayer
+      .decryptPublicValuesWithSignatures({ encryptedValues: [request.unwrapRequestIdOrAmount] })
       .catch((error: unknown) => {
         throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");
       });
-    const raw = decrypted.clearValues[request.unwrapRequestIdOrAmount];
-    assertBigint(raw, "FinalizeUnwrap: publicDecrypt(handle).clearValue");
+    const raw = decrypted.clearValues[0]?.value;
+    assertBigint(raw, "FinalizeUnwrap: decryptPublicValuesWithSignatures(handle).clearValue");
     return finalizeUnwrapContract(
       request.wrapper,
       request.unwrapRequestIdOrAmount,
       raw,
-      decrypted.decryptionProof,
+      decrypted.checkSignaturesArgs.decryptionProof,
     );
   }
 
@@ -675,8 +574,4 @@ export class OfflineSigningService {
       prepared.to,
     );
   }
-}
-
-function isDecryptionPermitRequest(value: ExecuteRequest): value is DecryptionPermitRequest {
-  return value.kind === "DecryptionPermit";
 }

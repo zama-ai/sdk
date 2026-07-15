@@ -37,7 +37,7 @@ const config = createConfig({
   chains: [sepolia],
   provider: myCustomProvider,
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 const sdk = new ZamaSDK(config);
 ```

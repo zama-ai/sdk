@@ -16,15 +16,15 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../chains/router";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   TransactionResult,
   WriteContractConfig,
 } from "../types";
 import { submitTransaction } from "../utils/submit-transaction";
-import type { GenericLogger } from "../worker/worker.types";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
@@ -32,24 +32,24 @@ type AclTransactionOperation = Extract<
 >;
 
 export class DelegationService {
+  readonly #router: ChainRouter;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   readonly #logger: GenericLogger;
 
   constructor({
     provider,
-    relayer,
+    router,
     emitEvent = () => {},
     logger,
   }: {
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#logger = logger;
     this.#emitEvent = emitEvent;
   }
@@ -90,7 +90,7 @@ export class DelegationService {
       );
     }
 
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
@@ -136,7 +136,7 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
 
     let currentExpiry: bigint;
     try {
@@ -188,7 +188,7 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
     return this.#provider.readContract(
       getDelegationExpiryContract(
         acl,

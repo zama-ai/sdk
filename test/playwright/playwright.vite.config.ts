@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { MOCK_RELAYER_PORT, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
+import { VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -28,11 +28,6 @@ export default defineConfig<{}, WorkerFixtures>({
   ],
   webServer: [
     {
-      command: `node fixtures/relayer-sdk-server.mjs ${MOCK_RELAYER_PORT}`,
-      port: MOCK_RELAYER_PORT,
-      reuseExistingServer: !CI,
-    },
-    {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
       wait: { stdout: /Anvil ready on port (\d+)/ },
@@ -40,8 +35,8 @@ export default defineConfig<{}, WorkerFixtures>({
     },
     {
       command: CI
-        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite preview`
-        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite dev`,
+        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite preview`
+        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite dev`,
       port: VITE_PORT,
       reuseExistingServer: !CI,
     },

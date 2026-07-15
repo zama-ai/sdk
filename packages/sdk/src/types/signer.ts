@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import type {
   ContractAbi,
   WriteContractArgs,

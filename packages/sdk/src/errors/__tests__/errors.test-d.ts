@@ -11,8 +11,6 @@ import type {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -123,17 +121,6 @@ describe("matchZamaError", () => {
       RPC_RATE_LIMITED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
         expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
-      },
-      OPERATION_TIMEOUT: (e) => {
-        expectTypeOf(e).toEqualTypeOf<WorkerTimeoutError>();
-        expectTypeOf(e.operation).toEqualTypeOf<string>();
-        expectTypeOf(e.timeout).toEqualTypeOf<number>();
-        expectTypeOf(e.elapsed).toEqualTypeOf<number>();
-      },
-      WORKER_RECYCLED: (e) => {
-        expectTypeOf(e).toEqualTypeOf<WorkerRecycledError>();
-        expectTypeOf(e.operation).toEqualTypeOf<string>();
-        expectTypeOf(e.worker).toEqualTypeOf<string | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();

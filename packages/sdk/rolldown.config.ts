@@ -1,16 +1,8 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { iife } from "./iife-plugin";
 
 const shared = {
-  external: [
-    /^viem/,
-    /^ethers/,
-    /^@zama-fhe\/relayer-sdk/,
-    /^@tanstack\/query-core/,
-    /^node:/,
-    /^zod($|\/)/,
-  ],
+  external: [/^viem/, /^ethers/, /^@fhevm\/sdk/, /^@tanstack\/query-core/, /^node:/, /^zod($|\/)/],
   resolve: { tsconfigFilename: "tsconfig.build.json" },
   treeshake: true,
 };
@@ -18,9 +10,10 @@ const shared = {
 const entryPoints = {
   index: "src/index.ts",
   "chains/index": "src/chains/index.ts",
-  "cleartext/index": "src/relayer/cleartext/index.ts",
+  "cleartext/index": "src/cleartext/index.ts",
   "query/index": "src/query/index.ts",
   "web/index": "src/web/index.ts",
+  "node/index": "src/node/index.ts",
   "viem/index": "src/viem/index.ts",
   "ethers/index": "src/ethers/index.ts",
 };
@@ -28,14 +21,10 @@ const entryPoints = {
 export default defineConfig([
   // ESM build (primary)
   {
-    input: {
-      ...entryPoints,
-      "node/index": "src/node/index.ts",
-      "node/relayer-sdk.node-worker": "src/worker/relayer-sdk.node-worker.ts",
-    },
+    input: entryPoints,
     output: { dir: "dist/esm", format: "esm", sourcemap: true, minify: true },
     ...shared,
-    plugins: [iife({ tsconfig: "tsconfig.build.json" }), dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
   },
   // CJS build (for moduleResolution: "node" / CommonJS consumers)
   {
@@ -49,6 +38,5 @@ export default defineConfig([
       minify: true,
     },
     ...shared,
-    plugins: [iife({ tsconfig: "tsconfig.build.json" })],
   },
 ]);

@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EIP712TypedData, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 
 // ─── Per-kind request payloads ──────────────────────────────────────────
 
@@ -146,46 +146,18 @@ export interface RevokeDelegationRequest {
   readonly delegateAddress: Address;
 }
 
-/**
- * FHE decryption permit request. Unlike the transaction-kind requests, this
- * produces an EIP-712 typed-data envelope (no on-chain transaction). Pair
- * `prepare` with an external `signTypedData`, then call
- * {@link Offline.registerPermit} to register the signature.
- *
- * @see {@link ExecuteRequest} — the request union {@link Offline.prepare} accepts.
- */
-export interface DecryptionPermitRequest {
-  readonly kind: "DecryptionPermit";
-  /** Tx-sender / permit-signer wallet address. */
-  readonly from: Address;
-  /** Contract addresses to authorize. */
-  readonly contracts: readonly Address[];
-  /** Delegator address for delegated decryption permits. */
-  readonly delegator?: Address;
-}
-
 // ─── Discriminator unions ───────────────────────────────────────────────
 
 /**
  * Kinds of write operations that follow the prepare → sign → broadcast
- * pipeline (yields a {@link TransactionResult}). Excludes typed-data flows
- * like {@link DecryptionPermitRequest}.
+ * pipeline (yields a {@link TransactionResult}). Decryption permits are not
+ * transactions and are acquired via `sdk.permits.grantPermit` instead.
  *
  * Single-tx kinds. Multi-step flows (shield over a non-1363 underlying,
  * the request → finalize unshield round-trip) are composed at the Token
  * level out of these primitives.
  */
 export type TransactionKind = PrepareTransactionRequest["kind"];
-
-/** Alias for {@link TransactionKind} — used in method generic constraints. */
-export type TxKind = TransactionKind;
-
-/**
- * Kinds of typed-data ("permit") flows that follow the prepare → sign →
- * registerPermit pipeline. Produces a {@link DecryptionPermitResult} rather
- * than a {@link TransactionResult}.
- */
-export type PermitKind = "DecryptionPermit";
 
 /** Discriminated union of all transaction prepare requests. */
 export type PrepareTransactionRequest =
@@ -200,9 +172,6 @@ export type PrepareTransactionRequest =
   | TransferAndCallRequest
   | DelegateDecryptionRequest
   | RevokeDelegationRequest;
-
-/** Union of every request {@link Offline.prepare} accepts. */
-export type ExecuteRequest = PrepareTransactionRequest | DecryptionPermitRequest;
 
 // ─── Prepared payloads ──────────────────────────────────────────────────
 
@@ -243,61 +212,4 @@ export interface PreparedTransaction {
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
   readonly kind: K;
   readonly request: Extract<PrepareTransactionRequest, { kind: K }>;
-}
-
-// ─── Prepared permit (typed-data) payloads ─────────────────────────────
-
-/**
- * The opaque per-prepare context the credential service stashes on a
- * {@link PreparedDecryptionPermit}. Callers should never construct or
- * mutate this; pass it back into {@link Offline.registerPermit} alongside
- * the external signature.
- *
- * @internal
- */
-export interface DecryptionPermitContext {
-  readonly keypairPublicKey: Hex;
-  readonly signerAddress: Address;
-  readonly delegatorAddress: Address;
-  readonly chainId: number;
-  readonly chunk: readonly Address[];
-  readonly startTimestamp: number;
-}
-
-/**
- * Result of {@link Offline.prepare} for the `DecryptionPermit` kind. Unlike
- * {@link PreparedTransaction} this is a typed-data envelope (no
- * `unsignedTx`/`to`) — feed `typedData` to an external `signTypedData`,
- * then call {@link Offline.registerPermit} with the signature.
- *
- * `typedData` is `null` when the requested contracts are already covered
- * by an existing permit (no signature needed). Callers can short-circuit
- * by checking `prepared.typedData === null`.
- */
-export interface PreparedDecryptionPermit {
-  readonly kind: "DecryptionPermit";
-  readonly request: DecryptionPermitRequest;
-  readonly from: Address;
-  readonly chainId: number;
-  readonly typedData: EIP712TypedData | null;
-  /** @internal — pass to {@link Offline.registerPermit}; do not mutate. */
-  readonly context: DecryptionPermitContext;
-}
-
-/**
- * {@link PreparedDecryptionPermit} narrowed by `kind` (currently a single
- * kind). Mirrors {@link PreparedFor} for transaction kinds.
- */
-export interface PreparedPermitFor<K extends PermitKind> extends PreparedDecryptionPermit {
-  readonly kind: K;
-}
-
-/** Outcome of {@link Offline.registerPermit}. */
-export interface DecryptionPermitResult {
-  /** The newly persisted permit chunk's contract addresses. */
-  readonly contracts: readonly Address[];
-  /** Permit duration in days (mirrors `permitTTL`). */
-  readonly durationDays: number;
-  /** Permit start timestamp (seconds since epoch). */
-  readonly startTimestamp: number;
 }

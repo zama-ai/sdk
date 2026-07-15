@@ -1,10 +1,10 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { type QueryClient, useMutation } from "@tanstack/react-query";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialBalance } from "../../balance/use-confidential-balance";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialTransfer } from "../use-confidential-transfer";
 
 describe("useConfidentialTransfer", () => {
@@ -249,10 +249,10 @@ describe("useConfidentialTransfer", () => {
     // transaction write so the post-transfer refetch sees handleB.
     let currentHandle: string = handle;
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-    vi.mocked(relayer.userDecrypt).mockImplementation(
-      async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
-        [encryptedValues[0]!]: encryptedValues[0] === handle ? 1000n : 500n,
-      }),
+    vi.mocked(relayer.decryptValues).mockImplementation(
+      async ({ encryptedValues }: DecryptValuesParameters) => [
+        { type: "uint64", value: encryptedValues[0] === handle ? 1000n : 500n } as TypedValue,
+      ],
     );
     vi.mocked(signer.writeContract!).mockImplementation(async () => {
       currentHandle = handleB;

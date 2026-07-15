@@ -4,12 +4,12 @@ import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-even
 import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
 import { assertWriteContract } from "../signer/capabilities";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   TransactionResult,
   WriteContractConfig,
 } from "../types";
-import type { GenericLogger } from "../worker/worker.types";
 import { swallow } from "./swallow";
 
 /**

@@ -2,6 +2,7 @@
 
 import { useDelegateDecryption, useDecryptBalanceAs, useMetadata } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 
 export function DelegationPanel({
   tokenAddress,
@@ -23,7 +24,7 @@ export function DelegationPanel({
       {/* Section 1: Delegate */}
       <form
         action={(formData) => {
-          delegate.mutate({ delegateAddress: formData.get("delegate") as Address });
+          delegate.mutate({ delegateAddress: getAddress(formData.get("delegate") as string) });
         }}
         className="space-y-4"
       >
@@ -62,7 +63,7 @@ export function DelegationPanel({
       {/* Section 2: Decrypt as Delegate */}
       <form
         action={(formData) => {
-          decryptAs.mutate({ delegatorAddress: formData.get("delegator") as Address });
+          decryptAs.mutate({ delegatorAddress: getAddress(formData.get("delegator") as string) });
         }}
         className="space-y-4"
       >

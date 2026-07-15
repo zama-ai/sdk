@@ -1,7 +1,7 @@
 import type { Hex } from "viem";
 import { WalletNotConnectedError } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
-import type { WalletAccount } from "../types/signer";
+import type { EIP712TypedData } from "../relayer/types";
+import type { WalletAccount } from "../types";
 import { MutableWalletAccountStore } from "./wallet-account-store";
 
 /**

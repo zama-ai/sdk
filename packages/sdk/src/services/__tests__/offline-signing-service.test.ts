@@ -10,7 +10,7 @@ import {
 } from "../../test-fixtures";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../../events/sdk-events";
 import type { GenericProvider } from "../../types/provider";
-import type { TransactionPrepareRequest } from "../../types";
+import type { PrepareTransactionRequest } from "../../types";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
@@ -35,7 +35,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
       amount: 1_000n,
     });
 
-    expect(relayer.encrypt).toHaveBeenCalledWith(
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({
         values: [{ value: 1_000n, type: "euint64" }],
         contractAddress: TOKEN,
@@ -172,7 +172,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       to: RECIPIENT,
       amount: 5n,
     });
-    expect(relayer.encrypt).toHaveBeenCalledWith(
+    expect(relayer.encryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ userAddress: owner, contractAddress: TOKEN }),
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -196,7 +196,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       token: TOKEN,
       operator: RECIPIENT,
     });
-    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ call: expect.objectContaining({ functionName: "setOperator" }) }),
     );
@@ -217,7 +217,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       to: RECIPIENT,
       amount: 7n,
     });
-    expect(relayer.encrypt).toHaveBeenCalledOnce();
+    expect(relayer.encryptValues).toHaveBeenCalledOnce();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
     );
@@ -239,7 +239,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       token: TOKEN,
       to: RECIPIENT,
     });
-    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.readContract).toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
@@ -254,11 +254,14 @@ describe("OfflineSigningService — other transaction kinds", () => {
     userAddress,
   }) => {
     const handle = ("0x" + "cd".repeat(32)) as Hex;
-    vi.mocked(relayer.publicDecrypt).mockResolvedValue({
-      clearValues: { [handle]: 42n },
-      decryptionProof: "0xproof" as Hex,
-      abiEncodedClearValues: "0x2a" as Hex,
-    });
+    vi.mocked(relayer.decryptPublicValuesWithSignatures).mockResolvedValue({
+      clearValues: [{ type: "uint64", value: 42n }],
+      checkSignaturesArgs: {
+        handlesList: [handle],
+        abiEncodedCleartexts: "0x2a",
+        decryptionProof: "0xproof",
+      },
+    } as unknown as Awaited<ReturnType<typeof relayer.decryptPublicValuesWithSignatures>>);
     const sdk = createSDK({ signer });
     await sdk.offlineSigning.prepare({
       kind: "FinalizeUnwrap",
@@ -266,7 +269,9 @@ describe("OfflineSigningService — other transaction kinds", () => {
       wrapper: TOKEN,
       unwrapRequestIdOrAmount: handle,
     });
-    expect(relayer.publicDecrypt).toHaveBeenCalledWith([handle]);
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+      encryptedValues: [handle],
+    });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         call: expect.objectContaining({
@@ -293,7 +298,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       spender: RECIPIENT,
       amount: 999n,
     });
-    expect(relayer.encrypt).not.toHaveBeenCalled();
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ call: expect.objectContaining({ functionName: "approve" }) }),
     );
@@ -388,130 +393,6 @@ describe("OfflineSigningService — other transaction kinds", () => {
     await sdk.offlineSigning.broadcast(prepared, SIGNED);
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash: TX_HASH }),
-    );
-  });
-});
-
-describe("OfflineSigningService — DecryptionPermit offline path", () => {
-  test("prepare returns a typed-data envelope for fresh contracts", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN],
-    });
-    expect(prepared.kind).toBe("DecryptionPermit");
-    expect(prepared.typedData).not.toBeNull();
-    expect(prepared.context.chunk).toEqual([TOKEN]);
-  });
-
-  test("prepare returns typedData: null when contracts are empty (keypair warm)", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [],
-    });
-    expect(prepared.typedData).toBeNull();
-  });
-
-  test("registerPermit round-trip: prepare → external signTypedData stub → registerPermit", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN],
-    });
-    const externalSignature = `0x${"ab".repeat(65)}` as Hex;
-    const result = await sdk.offlineSigning.registerPermit(prepared, externalSignature);
-    expect(result.contracts).toEqual([TOKEN]);
-    // After registering, a hasPermit lookup should report true.
-    const allowed = await sdk.permits.hasPermit([TOKEN]);
-    expect(allowed).toBe(true);
-  });
-
-  test("registerPermit rejects a malformed signature with TypeError", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN],
-    });
-    await expect(
-      sdk.offlineSigning.registerPermit(prepared, "not-hex" as unknown as Hex),
-    ).rejects.toBeInstanceOf(TypeError);
-  });
-});
-
-describe("OfflineSigningService — DecryptionPermit", () => {
-  test("prepare → signTypedData → registerPermit signs typed data via the signer", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN],
-    });
-    expect(prepared.typedData).not.toBeNull();
-    const signature = await signer.signTypedData(prepared.typedData!);
-    await sdk.offlineSigning.registerPermit(prepared, signature);
-    expect(signer.signTypedData).toHaveBeenCalledOnce();
-    expect(signer.signTransaction).not.toHaveBeenCalled();
-  });
-
-  test("prepare({ contracts: [] }) returns prepared.typedData === null (keypair warm)", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [],
-    });
-    expect(prepared.typedData).toBeNull();
-    expect(signer.signTypedData).not.toHaveBeenCalled();
-  });
-
-  test("forwards contracts into CredentialService.allow → relayer.createEIP712", async ({
-    createSDK,
-    signer,
-    relayer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const OTHER = "0x4444444444444444444444444444444444444444" as Address;
-    await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN, OTHER],
-    });
-    // createEIP712(publicKey, contractAddresses, startTimestamp, durationDays)
-    expect(relayer.createEIP712).toHaveBeenCalledWith(
-      expect.anything(),
-      [TOKEN, OTHER],
-      expect.any(Number),
-      expect.any(Number),
     );
   });
 });
@@ -704,7 +585,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
   const OWNER = "0x1111111111111111111111111111111111111111" as Address;
   const ANY_DELEGATE = "0x1111111111111111111111111111111111111111" as Address;
   type Expectation = {
-    requestFor: (from: Address) => TransactionPrepareRequest;
+    requestFor: (from: Address) => PrepareTransactionRequest;
     event: ZamaSDKEventInput["type"];
     kind: string;
   };
@@ -806,7 +687,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
 });
 
 describe("OfflineSigningService — encryption invariants", () => {
-  const empty = { encryptedValues: [] as `0x${string}`[], inputProof: "0x040506" as `0x${string}` };
+  const empty = { encryptedValues: [], inputProof: "0x040506" } as never;
 
   test("ConfidentialTransfer throws EncryptionFailedError on empty handles", async ({
     createSDK,
@@ -815,7 +696,7 @@ describe("OfflineSigningService — encryption invariants", () => {
     userAddress,
   }) => {
     const { EncryptionFailedError } = await import("../../errors");
-    vi.mocked(relayer.encrypt).mockResolvedValueOnce(empty);
+    vi.mocked(relayer.encryptValues).mockResolvedValueOnce(empty);
     const sdk = createSDK({ signer });
     await expect(
       sdk.offlineSigning.prepare({
@@ -835,7 +716,7 @@ describe("OfflineSigningService — encryption invariants", () => {
     userAddress,
   }) => {
     const { EncryptionFailedError } = await import("../../errors");
-    vi.mocked(relayer.encrypt).mockResolvedValueOnce(empty);
+    vi.mocked(relayer.encryptValues).mockResolvedValueOnce(empty);
     const sdk = createSDK({ signer });
     await expect(
       sdk.offlineSigning.prepare({
@@ -856,7 +737,7 @@ describe("OfflineSigningService — encryption invariants", () => {
     userAddress,
   }) => {
     const { EncryptionFailedError } = await import("../../errors");
-    vi.mocked(relayer.encrypt).mockResolvedValueOnce(empty);
+    vi.mocked(relayer.encryptValues).mockResolvedValueOnce(empty);
     const sdk = createSDK({ signer });
     await expect(
       sdk.offlineSigning.prepare({
@@ -1117,24 +998,6 @@ describe("OfflineSigningService — refreshPrepared", () => {
     const refreshed = await sdk.offlineSigning.refresh(prepared);
     expect(refreshed.from).toBe(prepared.from);
     expect(refreshed.kind).toBe("SetOperator");
-  });
-});
-
-describe("OfflineSigningService — DecryptionPermit cross-process", () => {
-  test("signer-absent SDK: prepare → external sign → registerPermit round-trip", async ({
-    createSDK,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer: undefined });
-    const prepared = await sdk.offlineSigning.prepare({
-      kind: "DecryptionPermit",
-      from: userAddress,
-      contracts: [TOKEN],
-    });
-    expect(prepared.typedData).not.toBeNull();
-    const externalSignature = `0x${"ab".repeat(65)}` as Hex;
-    const result = await sdk.offlineSigning.registerPermit(prepared, externalSignature);
-    expect(result.contracts).toEqual([TOKEN]);
   });
 });
 
