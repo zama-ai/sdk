@@ -1069,6 +1069,66 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/README",
+      "title": "Changelog",
+      "source_path": "docs/gitbook/src/changelog/README.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/README.md",
+      "source_type": "official-doc",
+      "category": "docs",
+      "logical_path": "changelog/README",
+      "description": "Notable changes, new features, and breaking changes for each release of the Zama SDK.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-3",
+      "title": "3.3.x",
+      "source_path": "docs/gitbook/src/changelog/v3-3.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md",
+      "source_type": "official-doc",
+      "category": "docs",
+      "logical_path": "changelog/v3-3",
+      "description": "confidentialTransferAndCall, automatic pending-unshield recovery, typed decryption errors, and the internal @fhevm/sdk backend migration.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-2",
+      "title": "3.2.0",
+      "source_path": "docs/gitbook/src/changelog/v3-2.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md",
+      "source_type": "official-doc",
+      "category": "docs",
+      "logical_path": "changelog/v3-2",
+      "description": "Configurable, silent-by-default logging; upgrade codemods; and a Wrap event decoding fix.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-1",
+      "title": "3.1.0",
+      "source_path": "docs/gitbook/src/changelog/v3-1.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md",
+      "source_type": "official-doc",
+      "category": "docs",
+      "logical_path": "changelog/v3-1",
+      "description": "createConfig, transport factories, the provider/signer split, the Token/WrappedToken hierarchy, and top-level FHE primitives.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-0",
+      "title": "3.0.x",
+      "source_path": "docs/gitbook/src/changelog/v3-0.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md",
+      "source_type": "official-doc",
+      "category": "docs",
+      "logical_path": "changelog/v3-0",
+      "description": "The first stable v3 line — the high-level clear-text-in, clear-text-out SDK — plus upgraded wrapper and registry contract support.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "example:examples/example-hoodi/readme",
       "title": "example-hoodi README",
       "source_path": "examples/example-hoodi/README.md",
