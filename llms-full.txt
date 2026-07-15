@@ -15620,6 +15620,11 @@ This page covers the `3.3.x` line: `3.3.1` and `3.3.0`.
 
 The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk` `1.x`. The high-level surface is unchanged — `createConfig`, `Token` / `WrappedToken`, `sdk.encrypt`, `sdk.decryption.*`, and the React hooks all behave exactly as before, so **`Token` and hooks apps need no changes**. What the new backend does add is a richer set of FHE runtime and per-chain tuning knobs on `createConfig`, documented below.
 
+
+> [!INFO]
+> **Expect a wallet signature after upgrading.** The new backend persists the full signed [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) (the EIP-712 payload and its signature) where earlier versions stored only the raw signature, and the two formats are not interchangeable. Permits cached by a pre-`3.3.1` version fail validation on read and are discarded rather than migrated, so the first decryption on each chain after upgrading prompts the user to sign a permit once more. Subsequent decrypts reuse the stored permit silently.
+
+
 ### FHE runtime and client tuning
 
 `createConfig` accepts a process-wide `runtime` object — the `@fhevm/sdk` runtime config. It configures the FHE engine itself (applied once per process): how the WASM assets load, threading, module versions, and a fallback relayer `auth`.
