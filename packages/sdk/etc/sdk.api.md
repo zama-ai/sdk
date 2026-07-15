@@ -11277,6 +11277,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 };
 
 // @public
+export function isRetryable(error: unknown): error is ZamaError & {
+    retryable: true;
+};
+
+// @public
 export interface ListPairsOptions {
     metadata?: boolean;
     page?: number;
@@ -12731,7 +12736,6 @@ export class RelayerRequestFailedError extends ZamaError {
         retryAfter?: number;
         retryable?: boolean;
     });
-    readonly retryable: boolean;
     readonly retryAfter: number | undefined;
     readonly statusCode: number | undefined;
 }
@@ -12758,6 +12762,9 @@ export function resolveStorage(storage?: GenericStorage | undefined, permitStora
     storage: GenericStorage;
     permitStorage: GenericStorage;
 };
+
+// @public
+export function retryAfterSeconds(error: unknown): number | undefined;
 
 // @public
 export interface RevokedDelegationForUserDecryptionEvent {
@@ -19697,8 +19704,11 @@ export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChai
 
 // @public
 export class ZamaError extends Error {
-    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
+    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
     readonly code: ZamaErrorCode;
+    readonly retryable: boolean;
 }
 
 // @public

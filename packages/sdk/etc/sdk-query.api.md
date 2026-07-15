@@ -1466,8 +1466,11 @@ export type ZamaConfig = {
 
 // @public
 export class ZamaError extends Error {
-    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions);
+    constructor(code: ZamaErrorCode, message: string, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
     readonly code: ZamaErrorCode;
+    readonly retryable: boolean;
 }
 
 // @public
