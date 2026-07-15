@@ -15660,7 +15660,12 @@ const config = createConfig({
 
 Threading is controlled by `singleThread` and `numberOfThreads`. By default the runtime uses a multi-threaded worker pool when `SharedArrayBuffer` is available (requires the [cross-origin isolation headers](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md)); set `singleThread: true` to opt out. Use `locateFile` to remap where the WASM assets are served from if you self-host them.
 
-`runtime.auth` is a process-wide fallback; a per-chain `auth` set on the chain preset takes precedence for that chain. Because the underlying runtime is one-shot, conflicting `runtime` configs across chains throw at setup.
+`runtime.auth` is a process-wide fallback; a per-chain `auth` set on the chain preset takes precedence for that chain.
+
+
+> [!WARNING]
+> **`runtime` is applied once per process and can't be changed afterward.** The `@fhevm/sdk` runtime is a process-global singleton, applied by the first `createConfig` call. A later `createConfig` never reconfigures it — the original stays in effect, and a warning is logged (`"runtime configuration is already set and cannot be changed."`). Set `runtime` on your first `createConfig`; per-chain tuning that must vary belongs in each transport factory's `options`, not in `runtime`.
+
 
 Each transport factory (`web()` / `node()` / `cleartext()`) also takes an optional `options` object that tunes the `@fhevm/sdk` client for that one chain, at construction:
 
