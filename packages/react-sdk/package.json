@@ -22,7 +22,7 @@
   "author": "Zama",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/sdk",
+    "url": "git+https://github.com/zama-ai/sdk.git",
     "directory": "packages/react-sdk"
   },
   "files": [
