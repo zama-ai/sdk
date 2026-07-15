@@ -15605,56 +15605,6 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 If you discover a security vulnerability in the SDK, report it to **security@zama.ai**. Do not open a public GitHub issue for security reports. See the [Security Policy](https://github.com/zama-ai/sdk/blob/main/SECURITY.md) for full details.
 
-## Changelog
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/changelog/README.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/README.md
-- logical_path: changelog/README
-
-# Changelog
-
-This section documents the notable changes, new features, and breaking changes in each version of `@zama-fhe/sdk` and `@zama-fhe/react-sdk` across the current `v3` line, with explanations and copy-pasteable examples. Patch releases are grouped under their minor-version page.
-
-The two packages share a version number and are released together, so a single entry covers both the core SDK and the React hooks.
-
-## Release history
-
-| Version              | Date       | Highlights                                                                                                        |
-| -------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) | 2026-07-08 | `confidentialTransferAndCall`, pending-unshield recovery, typed decryption errors; `@fhevm/sdk` backend migration |
-| [**3.2.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) | 2026-06-24 | Configurable, silent-by-default logging; upgrade codemods; `Wrap` event decoding fix                              |
-| [**3.1.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) | 2026-06-22 | `createConfig`, transport factories, provider/signer split, `Token`/`WrappedToken`, top-level primitives          |
-| [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) | 2026-05-28 | First stable `v3` line; upgraded wrapper + registry contract support                                              |
-
-## How versions work
-
-The SDK follows [semantic versioning](https://semver.org/):
-
-- **Major** (`3.x.x`) — breaking changes to the public API.
-- **Minor** (`x.1.x`) — new features, backward compatible.
-- **Patch** (`x.x.1`) — bug fixes, backward compatible.
-
-Breaking changes are always called out in a highlighted box at the top of the relevant page, with a migration snippet.
-
-## Where to go next
-
-If you're upgrading across a major version, start with the [Migrate from v2 to v3](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) guide.
-
-🟨 Go to [**3.3.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) for the latest release.
-
-🟨 Go to the [**SDK reference**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/README.md) for the full core API surface.
-
-🟨 Go to the [**React reference**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/README.md) for all hooks.
-
-## Help center
-
-Ask technical questions, discuss with the community, or report a bug.
-
-- [Community forum](https://community.zama.org/c/zama-protocol/15)
-- [Discord channel](https://discord.com/invite/zama)
-- [Open an issue](https://github.com/zama-ai/sdk/issues) on the SDK repository
-
 ## 3.3.x
 
 - source_type: official-doc
@@ -15956,11 +15906,11 @@ const config = createConfig({
 
 Relayers tell the SDK how to run FHE operations on each chain. Pick a transport per environment and map it to the chains it serves. Chain-specific data (relayer URL, network, contract addresses) comes from the chain preset, so a bare call is all most apps need.
 
-| Transport     | Environment | Import                    |
-| ------------- | ----------- | ------------------------- |
-| `web()`       | Browser     | `@zama-fhe/sdk/web`       |
-| `node()`      | Node.js     | `@zama-fhe/sdk/node`      |
-| `cleartext()` | Local dev   | `@zama-fhe/sdk`           |
+| Transport     | Environment | Import               |
+| ------------- | ----------- | -------------------- |
+| `web()`       | Browser     | `@zama-fhe/sdk/web`  |
+| `node()`      | Node.js     | `@zama-fhe/sdk/node` |
+| `cleartext()` | Local dev   | `@zama-fhe/sdk`      |
 
 ```ts
 import { web } from "@zama-fhe/sdk/web";
@@ -15986,11 +15936,7 @@ The signer is **optional**. Omit it to build a read-only SDK — perfect for das
 
 ```ts
 // Read-only SDK — no walletClient/signer supplied.
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  relayers: { [sepolia.id]: web() },
-});
+const config = createConfig({ chains: [sepolia], publicClient, relayers: { [sepolia.id]: web() } });
 const sdk = new ZamaSDK(config);
 
 // Reads work; writes throw SignerRequiredError.
