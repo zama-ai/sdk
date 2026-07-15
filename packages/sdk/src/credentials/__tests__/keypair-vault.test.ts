@@ -139,7 +139,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
         storage,
         ttl: TTL_SECONDS,
         logger: makeLogger(),
-        keyPairScope: "tenant-1",
+        scope: "tenant-1",
       });
 
     const vaultA = scoped();
@@ -161,14 +161,14 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
     const vaultTenant2 = new TransportKeyPairVault({
       generator,
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-2",
+      scope: "tenant-2",
     });
     const vaultUnscoped = new TransportKeyPairVault({
       generator,
@@ -193,14 +193,14 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
     const vaultB = new TransportKeyPairVault({
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
 
     const shared = await vaultA.getOrCreate(USER);
@@ -241,7 +241,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger,
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
     await vault.getOrCreate(USER);
 
@@ -257,14 +257,14 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
     const vaultB = new TransportKeyPairVault({
       generator,
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
 
     await vaultA.warmScope();
@@ -303,7 +303,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger,
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
 
     await expect(vault.warmScope()).rejects.toThrow("set boom");
@@ -313,7 +313,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   test("clearScope() racing an in-flight getOrCreate() does not resurrect the rotated key", async () => {
     // Reproduces the TOCTOU window: a generation already in flight when clearScope()
     // is called must not persist behind the delete once its round trip completes —
-    // otherwise the operator's resolved rotateScope() promise would be a lie.
+    // otherwise the operator's resolved revokeTransportKeyPair() promise would be a lie.
     const storage = new MemoryStorage();
     let releaseGenerator!: () => void;
     const gate = new Promise<void>((resolve) => {
@@ -331,7 +331,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      keyPairScope: "tenant-1",
+      scope: "tenant-1",
     });
 
     // Kick off a generation and let it block inside the generator (simulating a slow

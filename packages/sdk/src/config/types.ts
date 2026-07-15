@@ -47,7 +47,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * as a tenant ID. Every signer configured with the same scope shares one
    * transport key pair instead of one per signer address. Permits stay per-signer
    * regardless. Omit for the default: one key pair per signer. See
-   * `sdk.permits.rotateScope()` for the operator-level counterpart to
+   * `sdk.permits.revokeTransportKeyPair()` for the operator-level counterpart to
    * signer-level revocation.
    */
   transportKeyPairScope?: string;

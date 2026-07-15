@@ -21,8 +21,8 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
  *
  * When `transportKeyPairScope` is configured (opt-in shared-tenant scope for B2B2C/WaaS
  * operators), {@link clear} and {@link revokePermits} stay signer-level only — they never
- * touch the shared key pair. {@link rotateScope} is the distinct, operator-level operation
- * for that.
+ * touch the shared key pair. {@link revokeTransportKeyPair} is the distinct,
+ * operator-level operation for that.
  */
 export class Permits {
   readonly #signer: GenericSigner | undefined;
@@ -196,7 +196,7 @@ export class Permits {
   }
 
   /**
-   * Rotate the shared transport key pair for `transportKeyPairScope` (operator-level
+   * Revoke the shared transport key pair for `transportKeyPairScope` (operator-level
    * action, not an end-user one — no wallet account is required or touched).
    *
    * Deletes the shared key pair; every permit in the scope embeds its public key, so
@@ -214,22 +214,22 @@ export class Permits {
    * the key remains usable until its own `permitTTL` expiry regardless of this call.
    *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
-   *   against rotating the wrong scope by mistake.
+   *   against revoking the wrong scope by mistake.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    * @throws if the underlying storage delete fails.
    */
-  async rotateScope(scopeId: string): Promise<void> {
-    const service = this.#requireCredentialService("rotateScope");
-    await service.rotateScope(scopeId);
+  async revokeTransportKeyPair(scopeId: string): Promise<void> {
+    const service = this.#requireCredentialService("revokeTransportKeyPair");
+    await service.revokeTransportKeyPair(scopeId);
   }
 
   /**
    * Warm the shared transport key pair for `transportKeyPairScope` (operator-level,
    * no wallet account required or touched) — the pre-warm counterpart to
-   * {@link rotateScope}. Prefer this over {@link warmTransportKeyPair} for a scoped
-   * key pair: unlike that method, this never silently no-ops for lack of a connected
-   * wallet, because a scope-wide key was never tied to one in the first place.
+   * {@link revokeTransportKeyPair}. Prefer this over {@link warmTransportKeyPair} for a
+   * scoped key pair: unlike that method, this never silently no-ops for lack of a
+   * connected wallet, because a scope-wide key was never tied to one in the first place.
    *
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured. {@link ConfigurationError}

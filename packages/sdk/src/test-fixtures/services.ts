@@ -77,7 +77,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         permitTTL: config.permitTTL ?? 1,
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
-        keyPairScope: config.keyPairScope,
+        scope: config.scope,
         logger: new LoggerService(),
       });
     await use(factory);

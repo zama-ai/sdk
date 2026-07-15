@@ -182,11 +182,11 @@ describe("Permits", () => {
   });
 
   describe("scope (opt-in shared-tenant)", () => {
-    test("rotateScope throws SignerNotConfiguredError when no signer is configured", async ({
+    test("revokeTransportKeyPair throws SignerNotConfiguredError when no signer is configured", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.rotateScope("tenant-1")).rejects.toBeInstanceOf(
+      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).rejects.toBeInstanceOf(
         SignerNotConfiguredError,
       );
     });
@@ -198,8 +198,12 @@ describe("Permits", () => {
       await expect(sdk.permits.warmScope()).rejects.toBeInstanceOf(SignerNotConfiguredError);
     });
 
-    test("rotateScope throws ConfigurationError when no scope is configured", async ({ sdk }) => {
-      await expect(sdk.permits.rotateScope("tenant-1")).rejects.toBeInstanceOf(ConfigurationError);
+    test("revokeTransportKeyPair throws ConfigurationError when no scope is configured", async ({
+      sdk,
+    }) => {
+      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).rejects.toBeInstanceOf(
+        ConfigurationError,
+      );
     });
 
     test("warmScope throws ConfigurationError when no scope is configured", async ({ sdk }) => {
@@ -223,7 +227,7 @@ describe("Permits", () => {
       expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
     });
 
-    test("rotateScope succeeds with a signer configured but no connected wallet account", async ({
+    test("revokeTransportKeyPair succeeds with a signer configured but no connected wallet account", async ({
       createSDK,
       signer,
     }) => {
@@ -231,7 +235,7 @@ describe("Permits", () => {
       const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
 
       await sdk.permits.warmScope();
-      await expect(sdk.permits.rotateScope("tenant-1")).resolves.toBeUndefined();
+      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).resolves.toBeUndefined();
     });
 
     test("warmTransportKeyPair, despite its per-signer-sounding name, mis-keys into a scope's shared slot when a scope is configured", async ({

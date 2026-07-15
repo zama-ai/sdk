@@ -17,18 +17,16 @@ interface TransportKeyPairVaultConfig {
   /**
    * Opt-in shared-tenant scope (B2B2C/WaaS). When set, every signer configured with
    * this scope reads/creates the *same* key pair instead of one per signer address.
-   * Undefined preserves the default per-signer behavior. Named `keyPairScope`, not
-   * `scope`, to stay unambiguous next to the unrelated `PermissionScope` concept
-   * (signer/chain/delegator) used elsewhere in the credentials layer.
+   * Undefined preserves the default per-signer behavior.
    */
-  keyPairScope?: string;
+  scope?: string;
 }
 
 /**
  * Identity-scoped, chain-independent vault for ML-KEM transport key pairs.
  *
  * One transport key pair per signer address by default; the key pair survives chain
- * switches and permit revocations. When `keyPairScope` is configured, reads/creates key
+ * switches and permit revocations. When `scope` is configured, reads/creates key
  * off the shared scope identity instead of the signer address. {@link clear} always
  * targets the per-signer key regardless of scope — an individual signer's teardown must
  * never delete a scope's shared key pair. Only {@link clearScope} can do that.
@@ -38,7 +36,7 @@ export class TransportKeyPairVault {
   readonly #storage: GenericStorage;
   readonly #ttl: number;
   readonly #logger: GenericLogger;
-  readonly #keyPairScope: string | undefined;
+  readonly #scope: string | undefined;
   readonly #pending = new Map<string, Promise<StoredTransportKeyPair>>();
   /**
    * Per-key generation counter, bumped by {@link clearScope}. Lets a generation that
@@ -53,13 +51,13 @@ export class TransportKeyPairVault {
     this.#storage = config.storage;
     this.#ttl = config.ttl;
     this.#logger = config.logger;
-    this.#keyPairScope = config.keyPairScope;
+    this.#scope = config.scope;
   }
 
   /** Storage identity for reads/creates: the shared scope key when configured, else the per-signer key. */
   #identityKey(signerAddress: ChecksummedAddress): string {
-    return this.#keyPairScope !== undefined
-      ? transportKeyPairScopeStorageKey(this.#keyPairScope)
+    return this.#scope !== undefined
+      ? transportKeyPairScopeStorageKey(this.#scope)
       : transportKeyPairStorageKey(signerAddress);
   }
 
@@ -96,23 +94,12 @@ export class TransportKeyPairVault {
   /**
    * Return the cached transport key pair, generating and persisting a fresh one if absent or expired.
    *
-   * @remarks Deduplicates concurrent calls within this process — simultaneous requests
-   * share one generation promise. Across separate processes/instances sharing a scope,
-   * two first-time callers can still race the underlying storage; the loser's write
-   * wins or loses on `storage.set` ordering, and the next read converges on whichever
-   * entry survives.
-   *
-   * This is not merely a more-likely version of the pre-existing per-signer race
-   * (multiple tabs/processes for one signer, where both racers are the same end-user
-   * and the loser just re-signs). Under a shared scope the racers are typically
-   * *different* end-users behind the same operator: if signer A already holds a permit
-   * bound to the key pair that loses the race, that permit is silently pruned as stale
-   * on A's next lookup — through no action of A's own. And because the whole cohort
-   * shares one slot, its TTL expiry or a {@link clearScope} rotation is a single
-   * correlated event that can push many signers into this window at once, unlike the
-   * per-signer race which only ever recurs per individual user. Operators onboarding a
-   * scope should pre-warm it once via {@link warmScope} before opening concurrent
-   * traffic, to avoid hitting this window with a whole cohort at once.
+   * @remarks Deduplicates concurrent calls within this process. Across separate
+   * processes/instances sharing a scope, two first-time callers can still race the
+   * underlying storage — unlike the per-signer version of this race, the loser here can
+   * be a *different* end-user, whose existing permit then gets silently pruned as stale.
+   * Pre-warm a scope once via {@link warmScope} before opening concurrent traffic to
+   * avoid hitting this with a whole cohort at once.
    */
   async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair> {
     return this.#getOrCreateByKey(this.#identityKey(signerAddress));
@@ -208,10 +195,10 @@ export class TransportKeyPairVault {
    * land after this delete and silently resurrect the key this call just removed.
    */
   async clearScope(): Promise<void> {
-    if (this.#keyPairScope === undefined) {
+    if (this.#scope === undefined) {
       return;
     }
-    const key = transportKeyPairScopeStorageKey(this.#keyPairScope);
+    const key = transportKeyPairScopeStorageKey(this.#scope);
     this.#epoch.set(key, (this.#epoch.get(key) ?? 0) + 1);
     await this.#storage.delete(key);
   }
@@ -232,11 +219,9 @@ export class TransportKeyPairVault {
    * still be exposed to it because a transient write failure was logged and dropped.
    */
   async warmScope(): Promise<void> {
-    if (this.#keyPairScope === undefined) {
+    if (this.#scope === undefined) {
       return;
     }
-    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#keyPairScope), {
-      strict: true,
-    });
+    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#scope), { strict: true });
   }
 }

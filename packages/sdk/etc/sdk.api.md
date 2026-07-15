@@ -11424,7 +11424,7 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
-    rotateScope(scopeId: string): Promise<void>;
+    revokeTransportKeyPair(scopeId: string): Promise<void>;
     warmScope(): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
 }
