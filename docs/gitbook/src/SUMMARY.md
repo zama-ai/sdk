@@ -107,6 +107,6 @@
 ## Changelog
 
 - [3.3.x](changelog/v3-3.md)
-- [3.2.x](changelog/v3-2.md)
-- [3.1.x](changelog/v3-1.md)
+- [3.2.0](changelog/v3-2.md)
+- [3.1.0](changelog/v3-1.md)
 - [3.0.x](changelog/v3-0.md)
