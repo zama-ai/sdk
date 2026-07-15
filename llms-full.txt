@@ -2468,7 +2468,7 @@ The knob most apps reach for is thread count:
 > If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 
 
-### 8. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
+### 9. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
 
 By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
 
@@ -15420,7 +15420,7 @@ For a complete "log out" that also removes the transport key pair, use `sdk.perm
 
 Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
 
-Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when a shared scope makes sense.
+Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so `hasPermit`/`grantPermit` treat them all as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
 
 ## Wallet account changes
 
@@ -15619,6 +15619,8 @@ After revoking permits, the transport key pair remains in storage. Use `sdk.perm
 **With a shared `transportKeyPairScope` configured, these signer-level operations never touch the shared key pair** — `sdk.permits.clear()` for one signer only ever removes that signer's own permits, exactly like `revokePermits()`. This is deliberate: one end-user disconnecting must never invalidate every other signer sharing the scope's operator-controlled key store.
 
 Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.rotateScope(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
+
+`rotateScope()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `rotateScope()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
 
 ## CSRF protection
 

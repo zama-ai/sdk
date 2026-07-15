@@ -40,6 +40,13 @@ export class TransportKeyPairVault {
   readonly #logger: GenericLogger;
   readonly #keyPairScope: string | undefined;
   readonly #pending = new Map<string, Promise<StoredTransportKeyPair>>();
+  /**
+   * Per-key generation counter, bumped by {@link clearScope}. Lets a generation that
+   * was already in flight when a rotation happened detect it's stale once its
+   * `#generator()` round trip completes, so it skips persisting a key that would
+   * silently resurrect the one the rotation just deleted.
+   */
+  readonly #epoch = new Map<string, number>();
 
   constructor(config: TransportKeyPairVaultConfig) {
     this.#generator = config.generator;
@@ -111,11 +118,21 @@ export class TransportKeyPairVault {
     return this.#getOrCreateByKey(this.#identityKey(signerAddress));
   }
 
-  async #getOrCreateByKey(identityKey: string): Promise<StoredTransportKeyPair> {
+  /**
+   * @param strict - When `true`, a `storage.set` failure during persistence rejects
+   *   instead of being logged and swallowed. Used by {@link warmScope}, which — like
+   *   {@link clearScope} — must not resolve successfully while its write silently failed.
+   */
+  async #getOrCreateByKey(
+    identityKey: string,
+    options?: { strict?: boolean },
+  ): Promise<StoredTransportKeyPair> {
     const existing = this.#pending.get(identityKey);
     if (existing) {
       return existing;
     }
+
+    const epochAtStart = this.#epoch.get(identityKey) ?? 0;
 
     const promise = (async () => {
       const cached = await this.#readByKey(identityKey);
@@ -130,11 +147,23 @@ export class TransportKeyPairVault {
         createdAt,
         expiresAt: createdAt + this.#ttl,
       };
-      await swallow(
-        "persist transport key pair",
-        () => this.#storage.set(identityKey, stored),
-        this.#logger,
-      );
+      // If a rotation bumped this key's epoch while `#generator()` was in flight, this
+      // generation started before the rotation and must not persist — doing so would
+      // silently resurrect the key the rotation just deleted (see `clearScope`). The
+      // freshly generated key pair is still returned to whichever caller triggered this
+      // round trip so their in-flight request succeeds; the next access regenerates and
+      // persists properly against the new epoch.
+      if ((this.#epoch.get(identityKey) ?? 0) === epochAtStart) {
+        if (options?.strict) {
+          await this.#storage.set(identityKey, stored);
+        } else {
+          await swallow(
+            "persist transport key pair",
+            () => this.#storage.set(identityKey, stored),
+            this.#logger,
+          );
+        }
+      }
       return stored;
     })().finally(() => {
       this.#pending.delete(identityKey);
@@ -172,12 +201,19 @@ export class TransportKeyPairVault {
    * the key pair is actually gone, not silently still live because a transient storage
    * error (exactly the kind of failure likely during an incident) was logged and
    * dropped.
+   *
+   * Also bumps the key's generation epoch *before* deleting, so a `getOrCreate`/
+   * `warmScope` generation already in flight for this same scope discards its result
+   * instead of persisting it once the round trip completes — otherwise that write would
+   * land after this delete and silently resurrect the key this call just removed.
    */
   async clearScope(): Promise<void> {
     if (this.#keyPairScope === undefined) {
       return;
     }
-    await this.#storage.delete(transportKeyPairScopeStorageKey(this.#keyPairScope));
+    const key = transportKeyPairScopeStorageKey(this.#keyPairScope);
+    this.#epoch.set(key, (this.#epoch.get(key) ?? 0) + 1);
+    await this.#storage.delete(key);
   }
 
   /**
@@ -188,11 +224,19 @@ export class TransportKeyPairVault {
    * never depends on one. Operators use this to warm a scope once, deliberately,
    * before opening concurrent traffic to it — see the class docs on {@link getOrCreate}
    * for why that avoids a thundering-herd race across the whole cohort.
+   *
+   * Not best-effort: like {@link clearScope}, a `storage.set` failure during persistence
+   * propagates instead of being swallowed. A resolved promise here is meant to mean the
+   * key pair is actually warmed in shared storage — an operator pre-warming ahead of
+   * traffic to avoid the thundering-herd race must be able to trust that, not silently
+   * still be exposed to it because a transient write failure was logged and dropped.
    */
   async warmScope(): Promise<void> {
     if (this.#keyPairScope === undefined) {
       return;
     }
-    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#keyPairScope));
+    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#keyPairScope), {
+      strict: true,
+    });
   }
 }

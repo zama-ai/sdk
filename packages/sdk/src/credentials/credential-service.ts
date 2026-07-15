@@ -243,6 +243,12 @@ export class CredentialService {
    * Not best-effort: unlike {@link clearCredentials}, a storage failure here rejects
    * instead of being logged and swallowed — see {@link TransportKeyPairVault.clearScope}.
    *
+   * Only stops the SDK from reissuing or reusing the deleted key going forward — does
+   * not revoke any permit already issued under it. A permit is a self-contained,
+   * bearer-style EIP-712 signature the relayer accepts independently of this SDK's
+   * storage; one already exfiltrated alongside the key remains usable until its own
+   * `permitTTL` expiry regardless of this call.
+   *
    * @param scopeId - Must match the scope this service was configured with. Requiring
    *   the caller to name it guards against rotating the wrong scope by mistake.
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}

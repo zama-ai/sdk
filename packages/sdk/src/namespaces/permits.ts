@@ -208,6 +208,11 @@ export class Permits {
    * for on suspected key compromise — a resolved promise must mean the key pair is
    * actually gone.
    *
+   * Stops the SDK from reissuing or reusing the deleted key — does not revoke any
+   * permit already issued under it. A permit is a self-contained, bearer-style EIP-712
+   * signature the relayer accepts independently of this SDK; one exfiltrated alongside
+   * the key remains usable until its own `permitTTL` expiry regardless of this call.
+   *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against rotating the wrong scope by mistake.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}

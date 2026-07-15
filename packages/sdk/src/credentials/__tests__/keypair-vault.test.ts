@@ -289,4 +289,63 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     await vault.warmScope();
     expect(await vault.readStored(USER)).toBeNull();
   });
+
+  test("warmScope() propagates a storage-set failure instead of swallowing it", async () => {
+    // Unlike getOrCreate()'s ordinary best-effort persist, warmScope() is the primitive
+    // an operator relies on to pre-warm before opening concurrent traffic — a resolved
+    // promise must mean the key is actually in shared storage, not silently still absent
+    // because a transient write failure was logged and dropped.
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("set boom"));
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      keyPairScope: "tenant-1",
+    });
+
+    await expect(vault.warmScope()).rejects.toThrow("set boom");
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  test("clearScope() racing an in-flight getOrCreate() does not resurrect the rotated key", async () => {
+    // Reproduces the TOCTOU window: a generation already in flight when clearScope()
+    // is called must not persist behind the delete once its round trip completes —
+    // otherwise the operator's resolved rotateScope() promise would be a lie.
+    const storage = new MemoryStorage();
+    let releaseGenerator!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseGenerator = resolve;
+    });
+    const generator = vi.fn().mockImplementation(async () => {
+      await gate; // held open until the test lets it through, after clearScope() resolves
+      return {
+        publicKey: PUBLIC_KEY,
+        privateKey: PRIVATE_KEY,
+      } as unknown as SerializeTransportKeyPairReturnType;
+    });
+    const vault = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      keyPairScope: "tenant-1",
+    });
+
+    // Kick off a generation and let it block inside the generator (simulating a slow
+    // relayer round trip) before clearScope() runs.
+    const inFlight = vault.getOrCreate(USER);
+
+    await vault.clearScope();
+
+    // Only now does the stale generation's round trip complete and attempt to persist.
+    releaseGenerator();
+    await inFlight;
+
+    // The rotation must win: no key pair resurrected in storage after clearScope()
+    // resolved, even though a generation that predates it finished afterward.
+    expect(await vault.readStored(USER)).toBeNull();
+  });
 });

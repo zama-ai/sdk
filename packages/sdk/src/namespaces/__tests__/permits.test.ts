@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
+import { createMockSigner } from "../../test-fixtures/signer";
 import { ChainMismatchError, ConfigurationError, SignerNotConfiguredError } from "../../errors";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
@@ -231,6 +232,28 @@ describe("Permits", () => {
 
       await sdk.permits.warmScope();
       await expect(sdk.permits.rotateScope("tenant-1")).resolves.toBeUndefined();
+    });
+
+    test("warmTransportKeyPair, despite its per-signer-sounding name, mis-keys into a scope's shared slot when a scope is configured", async ({
+      createSDK,
+      storage,
+      relayer,
+    }) => {
+      const signerB = createMockSigner(DELEGATOR);
+      const sdkA = createSDK({ transportKeyPairScope: "tenant-1", storage });
+      const sdkB = createSDK({ transportKeyPairScope: "tenant-1", storage, signer: signerB });
+
+      vi.mocked(relayer.generateTransportKeyPair).mockClear();
+      await sdkA.permits.warmTransportKeyPair();
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+      // sdkB is a *different* signer sharing the same scope + storage. If
+      // warmTransportKeyPair() had actually kept its per-signer contract, sdkB would
+      // find no key under its own address and generate one of its own here. It doesn't
+      // — because with a scope configured, `address` is ignored for storage keying and
+      // sdkA's warm already landed in the shared slot sdkB also reads from.
+      await sdkB.permits.grantPermit([CONTRACT_A]);
+      expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
     });
   });
 });

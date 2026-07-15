@@ -376,7 +376,7 @@ Cross-Origin-Embedder-Policy: require-corp
 If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 {% endhint %}
 
-### 8. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
+### 9. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
 
 By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
 
