@@ -44,4 +44,5 @@ export type {
   UnshieldOptions,
   UnwrapResult,
   ShieldPath,
+  WrapOptions,
 } from "./token";

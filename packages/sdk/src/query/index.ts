@@ -12,6 +12,7 @@ export {
   invalidateAfterUnwrap,
   invalidateAfterUnshield,
   invalidateAfterUnshieldSettled,
+  invalidateAfterWrap,
   invalidateBalanceQueries,
   invalidateWagmiBalanceQueries,
   invalidateWalletLifecycleQueries,
@@ -94,6 +95,7 @@ export { unshieldMutationOptions, type UnshieldParams } from "./unshield";
 export { unshieldAllMutationOptions, type UnshieldAllParams } from "./unshield-all";
 export { resumeUnshieldMutationOptions, type ResumeUnshieldParams } from "./resume-unshield";
 export { unwrapMutationOptions, type UnwrapParams } from "./unwrap";
+export { wrapMutationOptions, type WrapParams } from "./wrap";
 export { unwrapAllMutationOptions } from "./unwrap-all";
 export { finalizeUnwrapMutationOptions, type FinalizeUnwrapParams } from "./finalize-unwrap";
 export { encryptMutationOptions } from "./encrypt";

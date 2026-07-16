@@ -29,6 +29,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                              |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                               |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                   |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                        |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                               |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                       |
@@ -110,34 +111,35 @@ Each handler receives the error class for its code, so subclass fields are avail
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                    |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                      |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                              |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                       |
-| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                    |
-| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                    |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.     |
-| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                      |
-| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                   |
-| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                     |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                             |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                            |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                       |
-| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                               |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                          |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                              |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                    |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                    |
-| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                    |
-| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                         |
-| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                       |
-| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                      |
+| Error                                  | Recommended action                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                       |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                    |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                         |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                 |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                      |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                        |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                               |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                          |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically. |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).    |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                   |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                  |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                             |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                 |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                       |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                       |
+| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                       |
+| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                            |
+| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                          |
+| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                         |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
