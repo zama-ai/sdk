@@ -121,38 +121,28 @@ jobs:
           name: sdk-tarballs
           path: /tmp/tarballs
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: DEBUG types/node
-        if: matrix.example == 'node-viem'
+      - name: Install with workspace SDK overlay
+        # Point this example's own SDK dependency at the freshly-built workspace
+        # tarball (real pnpm-pack output, not a symlink), then resolve
+        # everything in a single fresh `npm install` pass — never committed,
+        # this checkout is thrown away after the job.
+        #
+        # Deliberately NOT `npm ci` followed by a second `npm install <tarball>`
+        # overlay: that two-phase approach non-deterministically pruned
+        # unrelated root devDependencies on GitHub-hosted runners (observed
+        # silently dropping @types/node, breaking typecheck) even though every
+        # input file reproduced correctly locally — a single resolve avoids the
+        # whole class of issue.
         run: |
-          echo "--- npm config list -l ---"
-          npm config list -l
-          echo "--- ~/.npmrc ---"
-          cat ~/.npmrc 2>&1 || true
-          echo "--- /etc/npmrc / global npmrc ---"
-          npm config get globalconfig
-          cat "$(npm config get globalconfig)" 2>&1 || true
-          echo "--- node_modules/@types listing ---"
-          ls -la node_modules/@types/ 2>&1 || echo "NO @types dir"
-          echo "--- npm ls @types/node ---"
-          npm ls @types/node --all 2>&1 || true
-          echo "--- registry metadata for @types/node@22.7.5 ---"
-          npm view @types/node@22.7.5 version dist.tarball 2>&1 || true
-          echo "--- total top-level node_modules count ---"
-          ls node_modules | wc -l
-
-      - name: Overlay workspace SDK build
-        # Replace whatever published version this example pins with the
-        # freshly-built workspace tarballs, without touching its committed
-        # package.json/lockfile — the point is to compile the example's own
-        # code against the SDK as it exists in this PR, not against npm.
-        run: |
-          tarballs=()
-          grep -q '"@zama-fhe/sdk"' package.json && tarballs+=("/tmp/tarballs/zama-fhe-sdk.tgz")
-          grep -q '"@zama-fhe/react-sdk"' package.json && tarballs+=("/tmp/tarballs/zama-fhe-react-sdk.tgz")
-          npm install --no-save "${tarballs[@]}"
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            if (pkg.dependencies?.["@zama-fhe/sdk"]) pkg.dependencies["@zama-fhe/sdk"] = "file:/tmp/tarballs/zama-fhe-sdk.tgz";
+            if (pkg.dependencies?.["@zama-fhe/react-sdk"]) pkg.dependencies["@zama-fhe/react-sdk"] = "file:/tmp/tarballs/zama-fhe-react-sdk.tgz";
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          '
+          rm -f package-lock.json
+          npm install
 
       - name: Typecheck
         run: npm run typecheck
