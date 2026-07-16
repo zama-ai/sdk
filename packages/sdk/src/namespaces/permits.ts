@@ -156,11 +156,7 @@ export class Permits {
     try {
       await service.revokePermits(contracts);
     } finally {
-      await swallow(
-        "clear decrypt cache",
-        () => this.#cachingService.clearForRequester(signerAddress),
-        this.#logger,
-      );
+      await this.#clearDecryptCacheForRequester(signerAddress);
     }
   }
 
@@ -177,11 +173,15 @@ export class Permits {
     try {
       await service.clearCredentials();
     } finally {
-      await swallow(
-        "clear decrypt cache",
-        () => this.#cachingService.clearForRequester(signerAddress),
-        this.#logger,
-      );
+      await this.#clearDecryptCacheForRequester(signerAddress);
     }
+  }
+
+  async #clearDecryptCacheForRequester(signerAddress: Address): Promise<void> {
+    await swallow(
+      "clear decrypt cache",
+      () => this.#cachingService.clearForRequester(signerAddress),
+      this.#logger,
+    );
   }
 }
