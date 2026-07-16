@@ -11430,8 +11430,8 @@ export class Permits {
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
     revokeTransportKeyPair(scopeId: string): Promise<void>;
-    warmScope(): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
+    warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
 
 // @public

@@ -277,7 +277,8 @@ export class CredentialService {
    *
    * Not for pre-warming a shared scope: `address` is ignored for storage keying once
    * a scope is configured (see {@link TransportKeyPairVault}), so this call's actual
-   * effect wouldn't match its apparent per-signer intent. Use {@link warmScope} instead.
+   * effect wouldn't match its apparent per-signer intent. Use
+   * {@link warmTransportKeyPairScope} instead.
    */
   async warmTransportKeyPair(address: Address): Promise<void> {
     await this.#vault.getOrCreate(checksum(address));
@@ -287,12 +288,19 @@ export class CredentialService {
    * Warm this scope's shared transport key pair (operator-level, no wallet needed) —
    * the pre-warm counterpart to {@link revokeTransportKeyPair}.
    *
-   * @throws if no scope is configured on this service. {@link ConfigurationError}
+   * @param scopeId - Must match the scope this service was configured with. Requiring
+   *   the caller to name it guards against warming the wrong scope by mistake.
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    */
-  async warmScope(): Promise<void> {
+  async warmTransportKeyPairScope(scopeId: string): Promise<void> {
     if (this.#scope === undefined) {
       throw new ConfigurationError(
-        "warmScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to warm.",
+        "warmTransportKeyPairScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to warm.",
+      );
+    }
+    if (scopeId !== this.#scope) {
+      throw new ConfigurationError(
+        `warmTransportKeyPairScope("${scopeId}") does not match the configured scope ("${this.#scope}").`,
       );
     }
     await this.#vault.warmScope();

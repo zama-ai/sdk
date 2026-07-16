@@ -482,7 +482,7 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     await expect(service.revokeTransportKeyPair("tenant-1")).rejects.toThrow("delete boom");
   });
 
-  test("warmScope() generates the shared key pair without needing a connected wallet", async ({
+  test("warmTransportKeyPairScope() generates the shared key pair without needing a connected wallet", async ({
     createCredentialService,
     createMockSigner,
     storage,
@@ -492,7 +492,7 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     const serviceA = createCredentialService({ scope: "tenant-1", storage });
     const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
 
-    await serviceA.warmScope();
+    await serviceA.warmTransportKeyPairScope("tenant-1");
     expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
 
     // serviceB never warmed itself — it finds the same pre-warmed key pair.
@@ -501,7 +501,18 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
   });
 
-  test("warmScope() throws when no scope is configured", async ({ credentialService }) => {
-    await expect(credentialService.warmScope()).rejects.toThrow(ConfigurationError);
+  test("warmTransportKeyPairScope() throws when no scope is configured", async ({
+    credentialService,
+  }) => {
+    await expect(credentialService.warmTransportKeyPairScope("tenant-1")).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("warmTransportKeyPairScope() throws when scopeId doesn't match the configured scope", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1" });
+    await expect(service.warmTransportKeyPairScope("tenant-2")).rejects.toThrow(ConfigurationError);
   });
 });

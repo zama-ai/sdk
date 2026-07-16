@@ -191,11 +191,13 @@ describe("Permits", () => {
       );
     });
 
-    test("warmScope throws SignerNotConfiguredError when no signer is configured", async ({
+    test("warmTransportKeyPairScope throws SignerNotConfiguredError when no signer is configured", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.warmScope()).rejects.toBeInstanceOf(SignerNotConfiguredError);
+      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).rejects.toBeInstanceOf(
+        SignerNotConfiguredError,
+      );
     });
 
     test("revokeTransportKeyPair throws ConfigurationError when no scope is configured", async ({
@@ -206,11 +208,24 @@ describe("Permits", () => {
       );
     });
 
-    test("warmScope throws ConfigurationError when no scope is configured", async ({ sdk }) => {
-      await expect(sdk.permits.warmScope()).rejects.toBeInstanceOf(ConfigurationError);
+    test("warmTransportKeyPairScope throws ConfigurationError when no scope is configured", async ({
+      sdk,
+    }) => {
+      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).rejects.toBeInstanceOf(
+        ConfigurationError,
+      );
     });
 
-    test("warmScope succeeds with a signer configured but no connected wallet account — unlike warmTransportKeyPair", async ({
+    test("warmTransportKeyPairScope throws ConfigurationError when scopeId doesn't match the configured scope", async ({
+      createSDK,
+    }) => {
+      const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
+      await expect(sdk.permits.warmTransportKeyPairScope("tenant-2")).rejects.toBeInstanceOf(
+        ConfigurationError,
+      );
+    });
+
+    test("warmTransportKeyPairScope succeeds with a signer configured but no connected wallet account — unlike warmTransportKeyPair", async ({
       createSDK,
       signer,
       relayer,
@@ -219,11 +234,11 @@ describe("Permits", () => {
       const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
 
       // The sibling per-signer primitive silently no-ops under this exact condition —
-      // this is precisely the gap warmScope exists to not have.
+      // this is precisely the gap warmTransportKeyPairScope exists to not have.
       await expect(sdk.permits.warmTransportKeyPair()).resolves.toBeUndefined();
       expect(relayer.generateTransportKeyPair).not.toHaveBeenCalled();
 
-      await sdk.permits.warmScope();
+      await sdk.permits.warmTransportKeyPairScope("tenant-1");
       expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
     });
 
@@ -234,7 +249,7 @@ describe("Permits", () => {
       vi.mocked(signer.walletAccount.getSnapshot).mockReturnValue(undefined);
       const sdk = createSDK({ transportKeyPairScope: "tenant-1" });
 
-      await sdk.permits.warmScope();
+      await sdk.permits.warmTransportKeyPairScope("tenant-1");
       await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).resolves.toBeUndefined();
     });
 

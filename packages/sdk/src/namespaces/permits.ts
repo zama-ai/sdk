@@ -129,7 +129,7 @@ export class Permits {
    * Not for pre-warming a shared `transportKeyPairScope`: this call's wallet-account
    * precondition doesn't conceptually apply to a scope-wide key, and would silently
    * no-op precisely when an operator is most likely to be calling it (no end-user
-   * connected yet). Use {@link warmScope} instead.
+   * connected yet). Use {@link warmTransportKeyPairScope} instead.
    */
   async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
@@ -197,7 +197,8 @@ export class Permits {
 
   /**
    * Revoke the shared transport key pair for `transportKeyPairScope` (operator-level
-   * action, not an end-user one — no wallet account is required or touched).
+   * action — no wallet account needs to be connected, but a signer must still be
+   * configured on this SDK instance at construction time).
    *
    * Deletes the shared key pair; every permit in the scope embeds its public key, so
    * they're all treated as stale on next access. Signer-level {@link clear} never does
@@ -225,17 +226,20 @@ export class Permits {
   }
 
   /**
-   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level,
-   * no wallet account required or touched) — the pre-warm counterpart to
+   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level —
+   * no wallet account needs to be connected, but a signer must still be configured on
+   * this SDK instance at construction time) — the pre-warm counterpart to
    * {@link revokeTransportKeyPair}. Prefer this over {@link warmTransportKeyPair} for a
    * scoped key pair: unlike that method, this never silently no-ops for lack of a
    * connected wallet, because a scope-wide key was never tied to one in the first place.
    *
+   * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
+   *   against warming the wrong scope by mistake.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
-   * @throws if no scope is configured. {@link ConfigurationError}
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    */
-  async warmScope(): Promise<void> {
-    const service = this.#requireCredentialService("warmScope");
-    await service.warmScope();
+  async warmTransportKeyPairScope(scopeId: string): Promise<void> {
+    const service = this.#requireCredentialService("warmTransportKeyPairScope");
+    await service.warmTransportKeyPairScope(scopeId);
   }
 }

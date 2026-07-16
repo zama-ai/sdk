@@ -114,7 +114,14 @@ export class TransportKeyPairVault {
     identityKey: string,
     options?: { strict?: boolean },
   ): Promise<StoredTransportKeyPair> {
-    const existing = this.#pending.get(identityKey);
+    const strict = options?.strict ?? false;
+    // Keyed on (identityKey, strict), not identityKey alone: a strict caller
+    // (warmScope) and a non-strict caller (getOrCreate) can target the same shared
+    // scope identity, and must never adopt each other's persistence guarantee —
+    // whichever registers first would otherwise silently impose its strictness on
+    // the other. See the strict param doc above.
+    const pendingKey = `${identityKey}::${strict}`;
+    const existing = this.#pending.get(pendingKey);
     if (existing) {
       return existing;
     }
@@ -153,10 +160,10 @@ export class TransportKeyPairVault {
       }
       return stored;
     })().finally(() => {
-      this.#pending.delete(identityKey);
+      this.#pending.delete(pendingKey);
     });
 
-    this.#pending.set(identityKey, promise);
+    this.#pending.set(pendingKey, promise);
     return promise;
   }
 
@@ -192,7 +199,11 @@ export class TransportKeyPairVault {
    * Also bumps the key's generation epoch *before* deleting, so a `getOrCreate`/
    * `warmScope` generation already in flight for this same scope discards its result
    * instead of persisting it once the round trip completes — otherwise that write would
-   * land after this delete and silently resurrect the key this call just removed.
+   * land after this delete and silently resurrect the key this call just removed. This
+   * relies on the backing {@link GenericStorage} applying same-key writes in dispatch
+   * order — true for `MemoryStorage` and conventional stores, but a custom async
+   * adapter without that guarantee could still let an in-flight `set` land after this
+   * `delete`.
    */
   async clearScope(): Promise<void> {
     if (this.#scope === undefined) {

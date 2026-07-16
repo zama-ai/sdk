@@ -310,6 +310,36 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
+  test("warmScope() keeps its not-best-effort guarantee even when a concurrent getOrCreate() on the same scope registers first", async () => {
+    // Reproduces the #pending dedup bug: a strict caller (warmScope) and a non-strict
+    // caller (getOrCreate) targeting the same shared scope identity must never adopt
+    // each other's persistence guarantee — whichever registers its pending promise
+    // first must not silently impose its strictness on the other.
+    const storage = new MemoryStorage();
+    vi.spyOn(storage, "set").mockRejectedValue(new Error("set boom"));
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      scope: "tenant-1",
+    });
+
+    // Fire both back-to-back, before either resolves, so a naive identity-only
+    // dedup key would have the non-strict call's promise win for both.
+    const nonStrict = vault.getOrCreate(USER);
+    const strict = vault.warmScope();
+
+    // getOrCreate() is best-effort: the storage.set failure is logged and swallowed,
+    // and it still resolves with the freshly generated (unpersisted) key pair.
+    await expect(nonStrict).resolves.toBeDefined();
+    expect(logger.warn).toHaveBeenCalled();
+
+    // warmScope() must still honor its own not-best-effort contract regardless.
+    await expect(strict).rejects.toThrow("set boom");
+  });
+
   test("clearScope() racing an in-flight getOrCreate() does not resurrect the rotated key", async () => {
     // Reproduces the TOCTOU window: a generation already in flight when clearScope()
     // is called must not persist behind the delete once its round trip completes —
