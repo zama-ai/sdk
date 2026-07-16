@@ -40,11 +40,13 @@ import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
 import { UnwrapParams } from '@zama-fhe/sdk/query';
+import { UnwrapResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
+import { WrapParams } from '@zama-fhe/sdk/query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
@@ -293,10 +295,13 @@ export function useUnshield(address: Address, options?: UseMutationOptions<Trans
 export function useUnshieldAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
 
 // @public
-export function useUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
+export function useUnwrap(address: Address, options?: UseMutationOptions<UnwrapResult, Error, UnwrapParams, Address>): UseMutationResult<UnwrapResult, Error, UnwrapParams, `0x${string}`>;
 
 // @public
-export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
+export function useUnwrapAll(address: Address, options?: UseMutationOptions<UnwrapResult, Error, void, Address>): UseMutationResult<UnwrapResult, Error, void, `0x${string}`>;
+
+// @public
+export function useWrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, WrapParams, Address>): UseMutationResult<TransactionResult, Error, WrapParams, `0x${string}`>;
 
 // @public
 export function useWrappedToken(address: Address): WrappedToken;

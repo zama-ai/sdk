@@ -41,6 +41,12 @@ export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress
   invalidateWagmiBalanceQueries(queryClient);
 }
 
+export function invalidateAfterWrap(queryClient: QueryClientLike, tokenAddress: Address): void {
+  invalidateBalanceQueries(queryClient, tokenAddress);
+  invalidateUnderlyingAllowanceQueries(queryClient, tokenAddress);
+  invalidateWagmiBalanceQueries(queryClient);
+}
+
 export function invalidateBalanceQueries(
   queryClient: QueryClientLike,
   tokenAddress: Address,

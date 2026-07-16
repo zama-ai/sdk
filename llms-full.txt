@@ -2468,6 +2468,22 @@ The knob most apps reach for is thread count:
 > If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
 
 
+### 9. (Optional) Share one transport key pair across signers (B2B2C / WaaS)
+
+By default, every signer gets its own transport key pair. Wallet-as-a-Service operators managing many end-user wallets from one operator-controlled key store can opt into sharing a single key pair across signers with `transportKeyPairScope`:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+```
+
+Permits stay per-signer regardless of scope. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
+
 ## Shared relayer options
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
@@ -2918,6 +2934,36 @@ const { txHash } = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
+## Manual approve + wrap (escape hatch)
+
+`shield()` bundles approval and wrapping into one call and is what almost every app should use. If you need to split the `approve` + `wrap` path across two separately-triggered signatures — for example to render distinct "approve" and "shield" steps in your own UI, or to approve well ahead of the wrap — call `approveUnderlying()` and `wrap()` directly.
+
+This applies only to the `approve` + `wrap` path. Don't use it to recreate `shield()` by hand: `wrap()` never sends `transferAndCall`, so you lose automatic ERC-1363 routing along with the `approvalStrategy` handling.
+
+
+### Tab: Core SDK
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+### Tab: React
+
+```tsx
+const approve = useApproveUnderlying("0xWrapperAddress");
+const wrap = useWrap("0xWrapperAddress");
+
+await approve.mutateAsync({ amount: 1000n });
+await wrap.mutateAsync({ amount: 1000n });
+```
+
+
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+
 ## Next steps
 
 - [Transfer Privately](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md) — send confidential tokens to another address
@@ -3315,10 +3361,53 @@ if (unwrapTxHash) {
 
 All mutation hooks automatically invalidate balance queries on success, so your UI stays in sync without manual cache management.
 
+### 6. Decompose the unshield into explicit phases
+
+`unshield()` orchestrates both on-chain steps for you and should be your default. Drop down to the low-level primitives only when you genuinely need per-phase control -- for example, to submit the unwrap now and let the user finalize later from a different screen.
+
+- **`unwrap(amount)`** (or **`unwrapAll()`**) submits phase 1 and returns an `UnwrapResult`: the `txHash`, mined `receipt`, and the `unwrapRequestId` needed for phase 2.
+- **`finalizeUnwrap(unwrapRequestId)`** fetches the public decryption proof and submits phase 2.
+
+
+### Tab: SDK
+
+```ts
+// Phase 1: request the unwrap on-chain
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
+
+// ...later, once the request has been processed on-chain
+
+// Phase 2: fetch the decryption proof and finalize
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
+```
+
+### Tab: React
+
+```tsx
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+
+const unwrap = useUnwrap("0xWrapper");
+const finalize = useFinalizeUnwrap("0xWrapper");
+
+// Phase 1 -- the mutation `data` is an UnwrapResult
+const result = await unwrap.mutateAsync({ amount: 500n });
+
+// Phase 2 -- the result's unwrapRequestId feeds straight in
+await finalize.mutateAsync(result);
+```
+
+
+Use `unwrapAll()` / `useUnwrapAll` in place of `unwrap` / `useUnwrap` to request the full confidential balance instead of a fixed amount.
+
+
+> [!WARNING]
+> When you drive the two phases yourself, you own the state between them. `getPendingUnshield()` and `resumeUnshield()` only track unshields started through `unshield()` -- they will not pick up an `unwrap` you submitted directly. Persist the `unwrapRequestId` yourself if the session might end before you finalize.
+
+
 ## Next steps
 
 - See [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
-- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, `useResumeUnshield`, and the low-level `useUnwrap` / `useUnwrapAll` / `useFinalizeUnwrap` details.
 - If your unshield fails, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.
 
 ## Check balances
@@ -3759,6 +3848,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                              |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                               |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                   |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                        |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                               |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                       |
@@ -3836,34 +3926,35 @@ Each handler receives the error class for its code, so subclass fields are avail
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                    |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                      |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                              |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                       |
-| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                    |
-| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                    |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.     |
-| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                      |
-| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                   |
-| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                     |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                             |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                            |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                       |
-| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                               |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                          |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                              |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                    |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                    |
-| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                    |
-| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                         |
-| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                       |
-| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                      |
+| Error                                  | Recommended action                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                       |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                    |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                         |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                 |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                      |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                        |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                               |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                          |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically. |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).    |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                   |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                  |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                             |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                 |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                       |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                       |
+| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                       |
+| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                            |
+| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                          |
+| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                         |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -6055,6 +6146,26 @@ await wrappedToken.approveUnderlying();
 await wrappedToken.approveUnderlying(1000n);
 ```
 
+### wrap
+
+`(amount: bigint, options?: WrapOptions) => Promise<TransactionResult>`
+
+Wraps already-approved underlying ERC-20 into confidential tokens — the second half of the manual `approve` + `wrap` flow. Validates the ERC-20 balance and the wrapper's allowance before submitting: throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the allowance is below `amount` (call `approveUnderlying()` first).
+
+Most apps should use `shield()`, which routes ERC-1363 tokens through `transferAndCall` and manages approval automatically. Reach for `wrap()` only when you need the `approve` and `wrap` signatures as separate, independently-triggered steps — see [Shield tokens → Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch).
+
+```ts
+await wrappedToken.approveUnderlying(1000n);
+const { txHash, receipt } = await wrappedToken.wrap(1000n);
+```
+
+Options:
+
+| Option            | Type                    | Default | Description                           |
+| ----------------- | ----------------------- | ------- | ------------------------------------- |
+| `to`              | `Address`               | signer  | Recipient of the confidential balance |
+| `onWrapSubmitted` | `(txHash: Hex) => void` | —       | Called after the wrap tx is submitted |
+
 ## Unshield
 
 ### unshield
@@ -6129,35 +6240,34 @@ Most apps should use `unshield()` or `unshieldAll()`. The low-level methods are 
 
 ### unwrap
 
-`(amount: bigint) => Promise<TransactionResult>`
+`(amount: bigint) => Promise<UnwrapResult>`
 
-Encrypts `amount` and submits the unwrap request. Finalization is not automatic.
+Encrypts `amount` and submits the unwrap request. Finalization is not automatic. The returned `UnwrapResult` extends `TransactionResult` with the `unwrapRequestId` decoded from the `UnwrapRequested` event, so you can finalize without parsing the receipt yourself.
 
 ```ts
-const { txHash, receipt } = await wrappedToken.unwrap(500n);
+const { txHash, unwrapRequestId } = await wrappedToken.unwrap(500n);
 ```
 
 ### unwrapAll
 
-`() => Promise<TransactionResult>`
+`() => Promise<UnwrapResult>`
 
-Submits an unwrap request for the full confidential balance using the current encrypted balance handle.
+Submits an unwrap request for the full confidential balance using the current encrypted balance handle. Like `unwrap`, it returns the decoded `unwrapRequestId` on the result.
 
 ```ts
-const { txHash } = await wrappedToken.unwrapAll();
+const { unwrapRequestId } = await wrappedToken.unwrapAll();
 ```
 
 ### finalizeUnwrap
 
 `(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapResult` that `unwrap` / `unwrapAll` returned.
 
 ```ts
-const event = findUnwrapRequested(receipt.logs);
-if (!event) throw new Error("No unwrap request found");
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
 
-await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
 ```
 
 ## Related
@@ -7386,6 +7496,7 @@ import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
@@ -7453,6 +7564,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                      |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                                                                 |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                                                             |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                                                                  |
@@ -7806,6 +7918,34 @@ try {
 ```
 
 **How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### InsufficientAllowanceError
+
+**Code:** `INSUFFICIENT_ALLOWANCE`
+
+The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this — it manages approval internally.
+
+| Property    | Type      | Description                                     |
+| ----------- | --------- | ----------------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to wrap             |
+| `available` | `bigint`  | Allowance approved to the wrapper at check time |
+| `token`     | `Address` | Underlying ERC-20 token contract address        |
+
+```ts
+import { InsufficientAllowanceError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.wrap(1000n);
+} catch (error) {
+  if (error instanceof InsufficientAllowanceError) {
+    // Approve the wrapper first, then retry the wrap.
+    await wrappedToken.approveUnderlying(1000n);
+    await wrappedToken.wrap(1000n);
+  }
+}
+```
+
+**How to handle:** Call `approveUnderlying()` (or `useApproveUnderlying`) for at least the wrap amount before calling `wrap()`. Most apps avoid this entirely by using `shield()`, which approves and wraps in one call.
 
 ### BalanceCheckUnavailableError
 
@@ -10937,16 +11077,17 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 ### Tab: UnwrapButton.tsx
 
 ```tsx
-import { useUnwrap } from "@zama-fhe/react-sdk";
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
   const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
-    const { txHash } = await unwrap({ amount: 500n });
-    console.log("Unwrap requested:", txHash);
-    // Parse the UnwrapRequested event with findUnwrapRequested,
-    // then pass unwrapRequestId to useFinalizeUnwrap.
+    // `unwrap` returns the `unwrapRequestId` directly -- no manual event decoding.
+    const result = await unwrap({ amount: 500n });
+    console.log("Unwrap requested:", result.txHash);
+    await finalize(result);
   };
 
   return (
@@ -10984,7 +11125,7 @@ await unwrap({ amount: 1000n });
 
 ## Return Type
 
-The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
+The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
 ### `mutate`
 
@@ -11069,16 +11210,17 @@ import { useUnwrapAll } from "@zama-fhe/react-sdk";
 ### Tab: UnwrapAllButton.tsx
 
 ```tsx
-import { useUnwrapAll } from "@zama-fhe/react-sdk";
+import { useUnwrapAll, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapAllButton() {
   const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
+  const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnwrapAll = async () => {
-    const { txHash } = await unwrapAll();
-    console.log("Unwrap requested:", txHash);
-    // Parse the UnwrapRequested event with findUnwrapRequested,
-    // then pass unwrapRequestId to useFinalizeUnwrap.
+    // `unwrapAll` returns the `unwrapRequestId` directly -- no manual event decoding.
+    const result = await unwrapAll();
+    console.log("Unwrap requested:", result.txHash);
+    await finalize(result);
   };
 
   return (
@@ -11104,7 +11246,7 @@ const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 
 ## Return Type
 
-The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
+The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
 ### `mutate`
 
@@ -11190,20 +11332,17 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
-import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
   const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
   const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap and find the event in the receipt
-    const { receipt } = await unwrap({ amount: 500n });
-    const event = findUnwrapRequested(receipt.logs);
-    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
+    // Step 1: submit the unwrap -- the result carries the `unwrapRequestId`.
+    const result = await unwrap({ amount: 500n });
 
-    // Step 2: finalize with the unwrap request ID from the event
-    await finalize({ unwrapRequestId: event.unwrapRequestId });
+    // Step 2: finalize. Pass the whole result; the hook reads `unwrapRequestId`.
+    await finalize(result);
   };
 
   return (
@@ -11233,7 +11372,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
 `EncryptedValue`
 
-The unwrap request ID emitted in the `UnwrapRequested` event.
+The unwrap request ID. Read it from the `UnwrapResult` returned by [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrap.md) / [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrapAll.md) -- you can pass the whole result, since it's a superset of `{ unwrapRequestId }`.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
@@ -15470,6 +15609,12 @@ Permits can be removed in two ways:
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
 
+### Two revocation tiers with a shared scope
+
+Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
+
+Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair — no permit needs to be touched directly, and no wallet needs to be connected. `hasPermit`/`grantPermit` then treat every permit in the scope as stale on next access, though not via one single mechanism: immediately after the revoke, `hasPermit()` returns `false` because there's no stored key pair left to compare against; once some later caller regenerates a key for the scope, it's the newly-mismatched embedded public key that `pruneUnusable` then filters existing permits on. Same end-user-visible outcome either way. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
+
 ## Wallet account changes
 
 The SDK automatically manages permits when the wallet state changes:
@@ -15555,13 +15700,35 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-| Parameter  | Value                                                            |
-| ---------- | ---------------------------------------------------------------- |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM key pair                                        |
-| Scope      | One transport key pair per signer address (chain-independent)    |
+| Parameter  | Value                                                                    |
+| ---------- | ------------------------------------------------------------------------ |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
+| Key format | Plaintext ML-KEM key pair                                                |
+| Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) for the full lifecycle.
+
+### Shared-tenant scope (B2B2C / WaaS operators)
+
+`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the _same_ transport key pair instead of generating one per signer address.
+
+**When it's the right tradeoff.** A separately-tenanted deployment (browser or mobile dApp, treasury wallet) gets real defense-in-depth from per-signer keys: compromising one signer's storage never exposes another user's key. A shared-tenant Wallet-as-a-Service operator holding thousands of client wallets behind one operator-controlled key store gets none of that benefit — if the store is breached, every wallet behind it is compromised together regardless of how many key pairs exist. In that case, per-signer keys are pure overhead (generation, storage rows, management) with no corresponding security gain, and `transportKeyPairScope` lets the operator collapse them into one.
+
+**When it isn't.** If signers are genuinely isolated — separate end-user devices, separate trust boundaries, separate storage backends — per-signer keys (the default) give you isolation that a shared scope would throw away. Don't configure a scope just to save storage rows if your signers don't already share one key store.
+
+**What stays isolated regardless of scope.** Permits are always per-signer: the EIP-712 signature is inherently tied to the signing wallet, so two signers in the same scope never see each other's permits, only the underlying key pair. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#revocation) for how revocation is split into two tiers to preserve this isolation.
+
+
+> [!WARNING]
+> Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
+
+
+**Onboarding race.** `GenericStorage` has no compare-and-swap, so the very first time a scope's key pair is created, concurrent signers can race the underlying storage. This isn't just a more-likely version of the ordinary per-signer race (two tabs for the same end-user, where the loser just re-signs) — under a shared scope the racers are typically _different_ end-users behind the same operator, so the losing side can have an already-granted permit silently pruned as stale through no action of its own, and because one slot serves the whole cohort, every TTL expiry or `revokeTransportKeyPair()` call is a correlated event that can push many signers into the window at once. Pre-warm a scope's key pair once with `sdk.permits.warmTransportKeyPairScope(scopeId)` before opening concurrent traffic to it, rather than letting the first wave of real users race each other.
+
+
+> [!INFO]
+> Use `sdk.permits.warmTransportKeyPairScope(scopeId)`, not `sdk.permits.warmTransportKeyPair()`, to pre-warm a scope. The latter is gated on a connected wallet-account snapshot — a precondition inherited from its per-signer use case that doesn't apply to a scope-wide key, and it would silently no-op precisely when an operator is most likely to call it: before any end-user is connected. `warmTransportKeyPairScope()` needs no wallet account _connected_ — though, like the rest of the `credentials/` facade, it still requires a `signer` to be configured on the `ZamaSDK` instance at construction time — matching `revokeTransportKeyPair()`'s operator-level design.
+
 
 ### Limitations
 
@@ -15641,6 +15808,12 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
+
+**With a shared `transportKeyPairScope` configured, these signer-level operations never touch the shared key pair** — `sdk.permits.clear()` for one signer only ever removes that signer's own permits, exactly like `revokePermits()`. This is deliberate: one end-user disconnecting must never invalidate every other signer sharing the scope's operator-controlled key store.
+
+Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
+
+`revokeTransportKeyPair()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `revokeTransportKeyPair()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
 
 ## CSRF protection
 

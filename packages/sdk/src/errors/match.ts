@@ -22,6 +22,7 @@ import type { DecryptionFailedError, EncryptionFailedError } from "./encryption"
 import type {
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
+  InsufficientAllowanceError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
 } from "./balance";
@@ -69,6 +70,7 @@ type ErrorForCode = Complete<{
   [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
   [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
   [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+  [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
   [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
   [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
   [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;

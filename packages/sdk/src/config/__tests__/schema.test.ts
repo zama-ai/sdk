@@ -67,6 +67,38 @@ describe("createConfig validation", () => {
     ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
   });
 
+  test("rejects an empty transportKeyPairScope at createConfig", ({ relayer, provider }) => {
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairScope: "",
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairScope: "",
+      }),
+    ).toThrow("transportKeyPairScope must be a non-empty string");
+  });
+
+  test("resolves transportKeyPairScope to undefined when omitted, preserving the default per-signer behavior", ({
+    relayer,
+    provider,
+  }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    });
+
+    expect(config.transportKeyPairScope).toBeUndefined();
+  });
+
   test("wraps a supplied logger into a LoggerService on the resolved config", ({
     relayer,
     provider,

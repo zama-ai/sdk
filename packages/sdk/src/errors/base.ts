@@ -52,6 +52,8 @@ export const ZamaErrorCode = {
   InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE",
   /** ERC-20 balance is insufficient for the requested shield amount. */
   InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE",
+  /** ERC-20 allowance granted to the wrapper is insufficient for the requested wrap amount. */
+  InsufficientAllowance: "INSUFFICIENT_ALLOWANCE",
   /** Balance validation could not be performed (no cached credentials and decryption not possible). */
   BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE",
   /** Public ERC-20 read (e.g. balanceOf) failed due to a network or contract error. */
@@ -116,6 +118,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.DelegationExpired]: false,
   [ZamaErrorCode.InsufficientConfidentialBalance]: false,
   [ZamaErrorCode.InsufficientERC20Balance]: false,
+  [ZamaErrorCode.InsufficientAllowance]: false, // terminal: caller must approve a larger allowance
   [ZamaErrorCode.BalanceCheckUnavailable]: false,
   [ZamaErrorCode.ERC20ReadFailed]: false, // conservative: conflates network (transient) and contract (terminal) faults, see class doc
   [ZamaErrorCode.DelegationExpiryUnchanged]: false,

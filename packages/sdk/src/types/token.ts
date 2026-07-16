@@ -1,5 +1,7 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
+import type { EncryptedValue } from "../relayer/types";
 import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
+import type { TransactionResult } from "./transaction";
 
 /** Options for {@link ConfidentialToken.confidentialTransfer}. */
 export interface TransferOptions extends TransferCallbacks {
@@ -36,8 +38,30 @@ export interface ShieldOptions extends ShieldCallbacks {
   to?: Address;
 }
 
+/** Options for {@link WrappedToken.wrap}. */
+export interface WrapOptions {
+  /** Recipient of the confidential tokens. Defaults to the signer address. */
+  to?: Address;
+  /** Fires with the wrap transaction hash once submitted. */
+  onWrapSubmitted?: (txHash: Hex) => void;
+}
+
 /** Options for {@link WrappedToken.unshield}. */
 export interface UnshieldOptions extends UnshieldCallbacks {
   /** Skip confidential balance validation (e.g. for smart wallets). Default: `false`. */
   skipBalanceCheck?: boolean;
+}
+
+/**
+ * Result of {@link WrappedToken.unwrap} / {@link WrappedToken.unwrapAll}: a
+ * {@link TransactionResult} plus the `unwrapRequestId` decoded from the
+ * `UnwrapRequested` event.
+ *
+ * Pass its `unwrapRequestId` to {@link WrappedToken.finalizeUnwrap}, or the
+ * whole result to the `useFinalizeUnwrap` hook — no manual receipt decoding
+ * needed either way.
+ */
+export interface UnwrapResult extends TransactionResult {
+  /** The `unwrapRequestId` to hand to `finalizeUnwrap`. */
+  unwrapRequestId: EncryptedValue;
 }

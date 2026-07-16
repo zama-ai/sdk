@@ -1,0 +1,40 @@
+id: rename-config-session-ttl
+snapshots:
+  'createConfig({ storage, sessionTTL: 86400 });':
+    fixed: 'createConfig({ storage, permitTTL: 86400 });'
+    labels:
+    - source: 'sessionTTL: 86400'
+      style: primary
+      start: 24
+      end: 41
+    - source: 'createConfig({ storage, sessionTTL: 86400 })'
+      style: secondary
+      start: 0
+      end: 44
+    - source: '({ storage, sessionTTL: 86400 })'
+      style: secondary
+      start: 12
+      end: 44
+    - source: '{ storage, sessionTTL: 86400 }'
+      style: secondary
+      start: 13
+      end: 43
+  'createZamaConfig({ sessionTTL: 86400, storage });':
+    fixed: 'createZamaConfig({ permitTTL: 86400, storage });'
+    labels:
+    - source: 'sessionTTL: 86400'
+      style: primary
+      start: 19
+      end: 36
+    - source: 'createZamaConfig({ sessionTTL: 86400, storage })'
+      style: secondary
+      start: 0
+      end: 48
+    - source: '({ sessionTTL: 86400, storage })'
+      style: secondary
+      start: 16
+      end: 48
+    - source: '{ sessionTTL: 86400, storage }'
+      style: secondary
+      start: 17
+      end: 47
