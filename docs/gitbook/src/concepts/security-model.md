@@ -61,13 +61,33 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-| Parameter  | Value                                                            |
-| ---------- | ---------------------------------------------------------------- |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM key pair                                        |
-| Scope      | One transport key pair per signer address (chain-independent)    |
+| Parameter  | Value                                                                    |
+| ---------- | ------------------------------------------------------------------------ |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
+| Key format | Plaintext ML-KEM key pair                                                |
+| Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
+
+### Shared-tenant scope (B2B2C / WaaS operators)
+
+`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the _same_ transport key pair instead of generating one per signer address.
+
+**When it's the right tradeoff.** A separately-tenanted deployment (browser or mobile dApp, treasury wallet) gets real defense-in-depth from per-signer keys: compromising one signer's storage never exposes another user's key. A shared-tenant Wallet-as-a-Service operator holding thousands of client wallets behind one operator-controlled key store gets none of that benefit — if the store is breached, every wallet behind it is compromised together regardless of how many key pairs exist. In that case, per-signer keys are pure overhead (generation, storage rows, management) with no corresponding security gain, and `transportKeyPairScope` lets the operator collapse them into one.
+
+**When it isn't.** If signers are genuinely isolated — separate end-user devices, separate trust boundaries, separate storage backends — per-signer keys (the default) give you isolation that a shared scope would throw away. Don't configure a scope just to save storage rows if your signers don't already share one key store.
+
+**What stays isolated regardless of scope.** Permits are always per-signer: the EIP-712 signature is inherently tied to the signing wallet, so two signers in the same scope never see each other's permits, only the underlying key pair. See [Permit Model](./permit-model.md#revocation) for how revocation is split into two tiers to preserve this isolation.
+
+{% hint style="warning" %}
+Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](../guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
+{% endhint %}
+
+**Onboarding race.** `GenericStorage` has no compare-and-swap, so the very first time a scope's key pair is created, concurrent signers can race the underlying storage. This isn't just a more-likely version of the ordinary per-signer race (two tabs for the same end-user, where the loser just re-signs) — under a shared scope the racers are typically _different_ end-users behind the same operator, so the losing side can have an already-granted permit silently pruned as stale through no action of its own, and because one slot serves the whole cohort, every TTL expiry or `revokeTransportKeyPair()` call is a correlated event that can push many signers into the window at once. Pre-warm a scope's key pair once with `sdk.permits.warmTransportKeyPairScope(scopeId)` before opening concurrent traffic to it, rather than letting the first wave of real users race each other.
+
+{% hint style="info" %}
+Use `sdk.permits.warmTransportKeyPairScope(scopeId)`, not `sdk.permits.warmTransportKeyPair()`, to pre-warm a scope. The latter is gated on a connected wallet-account snapshot — a precondition inherited from its per-signer use case that doesn't apply to a scope-wide key, and it would silently no-op precisely when an operator is most likely to call it: before any end-user is connected. `warmTransportKeyPairScope()` needs no wallet account _connected_ — though, like the rest of the `credentials/` facade, it still requires a `signer` to be configured on the `ZamaSDK` instance at construction time — matching `revokeTransportKeyPair()`'s operator-level design.
+{% endhint %}
 
 ### Limitations
 
@@ -146,6 +166,12 @@ The EIP-712 typed data includes the wallet address. A permit signed by address A
 Permits can be revoked programmatically via `sdk.permits.revokePermits()` or automatically via wallet lifecycle events (disconnect, account switch). Revocation removes permits from storage immediately.
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
+
+**With a shared `transportKeyPairScope` configured, these signer-level operations never touch the shared key pair** — `sdk.permits.clear()` for one signer only ever removes that signer's own permits, exactly like `revokePermits()`. This is deliberate: one end-user disconnecting must never invalidate every other signer sharing the scope's operator-controlled key store.
+
+Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
+
+`revokeTransportKeyPair()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `revokeTransportKeyPair()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
 
 ## CSRF protection
 

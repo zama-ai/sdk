@@ -12895,7 +12895,9 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
+    revokeTransportKeyPair(scopeId: string): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
+    warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
 
 // @public
@@ -18458,7 +18460,7 @@ export interface UnwrapFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public
@@ -19603,7 +19605,12 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
+}
+
+// @public
+export interface UnwrapResult extends TransactionResult {
+    unwrapRequestId: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -20807,8 +20814,8 @@ export class WrappedToken extends Token {
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<UnwrapResult>;
+    unwrapAll(): Promise<UnwrapResult>;
 }
 
 // @public
@@ -20875,6 +20882,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;
@@ -20893,6 +20901,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
+    transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
 
