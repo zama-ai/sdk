@@ -506,16 +506,14 @@ export class WrappedToken extends Token {
 
   /**
    * Decode the `unwrapRequestId` from an unwrap/unshield receipt's logs.
-   * Falls back to the event's `encryptedAmount` on protocol versions that
-   * don't emit a dedicated `unwrapRequestId`. Throws when the receipt lacks
-   * the `UnwrapRequested` event entirely.
+   * Throws when the receipt lacks the `UnwrapRequested` event entirely.
    */
   #extractUnwrapRequestId(logs: readonly RawLog[]): EncryptedValue {
     const event = findUnwrapRequested(logs);
     if (!event) {
       throw new TransactionRevertedError("No UnwrapRequested event found in unwrap receipt");
     }
-    return event.unwrapRequestId ?? event.encryptedAmount;
+    return event.unwrapRequestId;
   }
 
   async #getUnderlying(): Promise<Address> {

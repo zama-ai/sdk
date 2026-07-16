@@ -16992,7 +16992,7 @@ export interface UnwrapFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public
@@ -18137,7 +18137,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public
