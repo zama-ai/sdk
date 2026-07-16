@@ -42,6 +42,15 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   transportKeyPairTTL?: number;
   /** Permit lifetime in days. Default: 30. Clamped to `transportKeyPairTTL / 86400`. */
   permitTTL?: number;
+  /**
+   * Opt-in shared-tenant scope (B2B2C/WaaS operators) — an opaque identifier such
+   * as a tenant ID. Every signer configured with the same scope shares one
+   * transport key pair instead of one per signer address. Permits stay per-signer
+   * regardless. Omit for the default: one key pair per signer. See
+   * `sdk.permits.revokeTransportKeyPair()` for the operator-level counterpart to
+   * signer-level revocation.
+   */
+  transportKeyPairScope?: string;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -90,6 +99,7 @@ export type ZamaConfig = {
   readonly permitStorage: GenericStorage;
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
+  readonly transportKeyPairScope: string | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
   /**
