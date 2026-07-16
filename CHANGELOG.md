@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
+
+### Code Refactoring
+
+- **codemod:** rewrite renamed credentials config keys, flag silent drops [SDK-249] ([#544](https://github.com/zama-ai/sdk/issues/544)) ([c0c54ca]())
+
 ## [3.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.4...v3.4.0-alpha.5) (2026-07-16)
 
 ### Features
