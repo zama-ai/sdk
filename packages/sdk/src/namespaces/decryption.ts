@@ -35,6 +35,10 @@ import { assertNonNullable } from "../utils";
  * **Mixed signer requirement:** `decryptValues` and
  * `delegatedDecryptValues` need a configured signer; `decryptPublicValues`
  * does not. Each method documents its requirement in its JSDoc.
+ *
+ * **Request chunking:** decrypt requests are split internally to stay under
+ * the relayer's 2048-cleartext-bit per-request budget — callers never need to
+ * size batches themselves.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;

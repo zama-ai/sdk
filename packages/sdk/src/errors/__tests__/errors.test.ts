@@ -2,9 +2,13 @@ import { describe, test, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
+  isRetryable,
+  retryAfterSeconds,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  NotEntitledError,
   RelayerRequestFailedError,
+  RpcRateLimitError,
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
@@ -18,6 +22,7 @@ import {
   DelegationContractIsSelfError,
   AclPausedError,
   DelegationExpirationTooSoonError,
+  WalletAccountNotReadyError,
 } from "..";
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
@@ -94,6 +99,99 @@ describe("RelayerRequestFailedError", () => {
     // retryAfter only makes sense when retryable: a 503 with a delay drops it.
     expect(
       new RelayerRequestFailedError("server error", 503, { retryAfter: 60 }).retryAfter,
+    ).toBeUndefined();
+  });
+});
+
+// --- SDK-248: uniform retryability signal ---
+
+describe("ZamaError.retryable / isRetryable", () => {
+  test("defaults to false for a terminal cause", () => {
+    const err = new NoCiphertextError("no ciphertext");
+    expect(err.retryable).toBe(false);
+    expect(isRetryable(err)).toBe(false);
+  });
+
+  test("is true for RpcRateLimitError", () => {
+    const err = new RpcRateLimitError("throttled");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationNotPropagatedError", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationCooldownError — a next-block retry resolves it", () => {
+    const err = new DelegationCooldownError("cooldown");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for WalletAccountNotReadyError — wallet account discovery is still resolving", () => {
+    const err = new WalletAccountNotReadyError("decrypt");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("tracks statusCode for RelayerRequestFailedError (true only on 429)", () => {
+    expect(isRetryable(new RelayerRequestFailedError("rate limited", 429))).toBe(true);
+    expect(isRetryable(new RelayerRequestFailedError("server error", 503))).toBe(false);
+  });
+
+  test("is false for a non-ZamaError, without an instanceof check by the caller", () => {
+    expect(isRetryable(new Error("plain"))).toBe(false);
+    expect(isRetryable("not an error")).toBe(false);
+    expect(isRetryable(null)).toBe(false);
+    expect(isRetryable(undefined)).toBe(false);
+  });
+
+  test("NotEntitledError stays non-retryable — an ACL denial should never be busy-looped", () => {
+    const err = new NotEntitledError({
+      encryptedValue: `0x${"12".repeat(32)}`,
+      contractAddress: `0x${"20".repeat(20)}`,
+      account: `0x${"10".repeat(20)}`,
+    });
+    expect(isRetryable(err)).toBe(false);
+  });
+});
+
+describe("retryAfterSeconds", () => {
+  test("reads the relayer's Retry-After delay", () => {
+    const err = new RelayerRequestFailedError("rate limited", 429, { retryAfter: 300 });
+    expect(retryAfterSeconds(err)).toBe(300);
+  });
+
+  test("reads the RPC rate-limit delay", () => {
+    const err = new RpcRateLimitError("throttled", { retryAfter: 2 });
+    expect(retryAfterSeconds(err)).toBe(2);
+  });
+
+  test("is undefined for a retryable cause with no server-driven delay", () => {
+    expect(retryAfterSeconds(new DelegationNotPropagatedError("not synced"))).toBeUndefined();
+    expect(retryAfterSeconds(new DelegationCooldownError("cooldown"))).toBeUndefined();
+  });
+
+  test("is undefined for a terminal cause and for non-ZamaError values", () => {
+    expect(retryAfterSeconds(new NoCiphertextError("missing"))).toBeUndefined();
+    expect(retryAfterSeconds(new Error("plain"))).toBeUndefined();
+    expect(retryAfterSeconds(null)).toBeUndefined();
+  });
+
+  test("rejects a malformed retryAfter (0, negative, or NaN) instead of handing it to a backoff", () => {
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: 0 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: -5 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: Number.NaN })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RelayerRequestFailedError("rate limited", 429, { retryAfter: -1 })),
     ).toBeUndefined();
   });
 });

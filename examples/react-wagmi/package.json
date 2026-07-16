@@ -15,14 +15,14 @@
     "next": "^16.2.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "viem": "^2.54.3",
-    "wagmi": "^3.5.0"
+    "viem": "^2.55.0",
+    "wagmi": "^3.7.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   },
   "overrides": {
     "hono": ">=4.12.2",
