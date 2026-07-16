@@ -23,16 +23,17 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 {% tab title="UnwrapButton.tsx" %}
 
 ```tsx
-import { useUnwrap } from "@zama-fhe/react-sdk";
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
   const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
-    const { txHash } = await unwrap({ amount: 500n });
-    console.log("Unwrap requested:", txHash);
-    // Parse the UnwrapRequested event with findUnwrapRequested,
-    // then pass unwrapRequestId to useFinalizeUnwrap.
+    // `unwrap` returns the `unwrapRequestId` directly -- no manual event decoding.
+    const result = await unwrap({ amount: 500n });
+    console.log("Unwrap requested:", result.txHash);
+    await finalize(result);
   };
 
   return (
@@ -72,7 +73,7 @@ await unwrap({ amount: 1000n });
 
 ## Return Type
 
-The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
+The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](./useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

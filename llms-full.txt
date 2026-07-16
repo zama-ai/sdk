@@ -6181,35 +6181,34 @@ Most apps should use `unshield()` or `unshieldAll()`. The low-level methods are 
 
 ### unwrap
 
-`(amount: bigint) => Promise<TransactionResult>`
+`(amount: bigint) => Promise<UnwrapResult>`
 
-Encrypts `amount` and submits the unwrap request. Finalization is not automatic.
+Encrypts `amount` and submits the unwrap request. Finalization is not automatic. The returned `UnwrapResult` extends `TransactionResult` with the `unwrapRequestId` decoded from the `UnwrapRequested` event, so you can finalize without parsing the receipt yourself.
 
 ```ts
-const { txHash, receipt } = await wrappedToken.unwrap(500n);
+const { txHash, unwrapRequestId } = await wrappedToken.unwrap(500n);
 ```
 
 ### unwrapAll
 
-`() => Promise<TransactionResult>`
+`() => Promise<UnwrapResult>`
 
-Submits an unwrap request for the full confidential balance using the current encrypted balance handle.
+Submits an unwrap request for the full confidential balance using the current encrypted balance handle. Like `unwrap`, it returns the decoded `unwrapRequestId` on the result.
 
 ```ts
-const { txHash } = await wrappedToken.unwrapAll();
+const { unwrapRequestId } = await wrappedToken.unwrapAll();
 ```
 
 ### finalizeUnwrap
 
 `(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapResult` that `unwrap` / `unwrapAll` returned.
 
 ```ts
-const event = findUnwrapRequested(receipt.logs);
-if (!event) throw new Error("No unwrap request found");
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
 
-await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
 ```
 
 ## Related
@@ -11000,16 +10999,17 @@ import { useUnwrap } from "@zama-fhe/react-sdk";
 ### Tab: UnwrapButton.tsx
 
 ```tsx
-import { useUnwrap } from "@zama-fhe/react-sdk";
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapButton() {
   const { mutateAsync: unwrap, isPending } = useUnwrap("0xWrapper");
+  const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnwrap = async () => {
-    const { txHash } = await unwrap({ amount: 500n });
-    console.log("Unwrap requested:", txHash);
-    // Parse the UnwrapRequested event with findUnwrapRequested,
-    // then pass unwrapRequestId to useFinalizeUnwrap.
+    // `unwrap` returns the `unwrapRequestId` directly -- no manual event decoding.
+    const result = await unwrap({ amount: 500n });
+    console.log("Unwrap requested:", result.txHash);
+    await finalize(result);
   };
 
   return (
@@ -11047,7 +11047,7 @@ await unwrap({ amount: 1000n });
 
 ## Return Type
 
-The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
+The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
 ### `mutate`
 
@@ -11132,16 +11132,17 @@ import { useUnwrapAll } from "@zama-fhe/react-sdk";
 ### Tab: UnwrapAllButton.tsx
 
 ```tsx
-import { useUnwrapAll } from "@zama-fhe/react-sdk";
+import { useUnwrapAll, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 function UnwrapAllButton() {
   const { mutateAsync: unwrapAll, isPending } = useUnwrapAll("0xWrapper");
+  const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnwrapAll = async () => {
-    const { txHash } = await unwrapAll();
-    console.log("Unwrap requested:", txHash);
-    // Parse the UnwrapRequested event with findUnwrapRequested,
-    // then pass unwrapRequestId to useFinalizeUnwrap.
+    // `unwrapAll` returns the `unwrapRequestId` directly -- no manual event decoding.
+    const result = await unwrapAll();
+    console.log("Unwrap requested:", result.txHash);
+    await finalize(result);
   };
 
   return (
@@ -11167,7 +11168,7 @@ const { mutateAsync: unwrapAll } = useUnwrapAll("0xWrapper");
 
 ## Return Type
 
-The mutation resolves with `{ txHash: Hex, receipt: TransactionReceipt }`.
+The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
 ### `mutate`
 
@@ -11253,20 +11254,17 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
-import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
   const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
   const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap and find the event in the receipt
-    const { receipt } = await unwrap({ amount: 500n });
-    const event = findUnwrapRequested(receipt.logs);
-    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
+    // Step 1: submit the unwrap -- the result carries the `unwrapRequestId`.
+    const result = await unwrap({ amount: 500n });
 
-    // Step 2: finalize with the unwrap request ID from the event
-    await finalize({ unwrapRequestId: event.unwrapRequestId });
+    // Step 2: finalize. Pass the whole result; the hook reads `unwrapRequestId`.
+    await finalize(result);
   };
 
   return (
@@ -11296,7 +11294,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
 `EncryptedValue`
 
-The unwrap request ID emitted in the `UnwrapRequested` event.
+The unwrap request ID. Read it from the `UnwrapResult` returned by [`useUnwrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrap.md) / [`useUnwrapAll`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnwrapAll.md) -- you can pass the whole result, since it's a superset of `{ unwrapRequestId }`.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
