@@ -10,6 +10,7 @@ import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
 const transportKeyPairTTLError = "transportKeyPairTTL must be a positive integer number of seconds";
 const permitTTLError = "permitTTL must be a positive integer number of days";
+const transportKeyPairScopeError = "transportKeyPairScope must be a non-empty string";
 
 /** Maximum transportKeyPairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 export const MAX_TRANSPORT_KEY_PAIR_TTL_SECONDS = 365 * SECONDS_PER_DAY;
@@ -29,6 +30,10 @@ export const TransportKeyPairTTLSchema = z
 export const PermitTTLSchema = z
   .int({ error: permitTTLError })
   .check(z.positive({ error: permitTTLError }));
+
+export const TransportKeyPairScopeSchema = z
+  .string({ error: transportKeyPairScopeError })
+  .check(z.minLength(1, transportKeyPairScopeError));
 
 export const StoredTransportKeyPairSchema = z.object({
   publicKey: hex,
