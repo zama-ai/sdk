@@ -1,8 +1,10 @@
 import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { ConfigurationError } from "../../errors/relayer";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -364,5 +366,153 @@ describe("CredentialService.grantPermit widening", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("CredentialService scope (opt-in shared-tenant)", () => {
+  test("two signers in the same scope share one key pair; permits stay per-signer", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    const resultA = await serviceA.grantPermit([A]);
+    const resultB = await serviceB.grantPermit([A]);
+
+    // Same shared key pair, one generation call...
+    expect(resultB.keypair.publicKey).toBe(resultA.keypair.publicKey);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+    // ...but independently addressable permits, each signed by its own signer.
+    expect(await serviceA.hasPermit([A])).toBe(true);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+    await serviceA.revokePermits([A]);
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+  });
+
+  test("clearCredentials() (signer-level) never deletes the shared key pair", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    const before = await serviceA.grantPermit([A]);
+    await serviceB.grantPermit([A]);
+    await serviceA.clearCredentials();
+
+    // serviceA's own permit is gone, but serviceB (same scope) is untouched and the
+    // shared key pair itself survives — no second generation call.
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+    const after = await serviceA.grantPermit([]);
+    expect(after.keypair.publicKey).toBe(before.keypair.publicKey);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("revokeTransportKeyPair() invalidates every permit in the scope via the embedded public key, without touching them directly", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    await serviceA.grantPermit([A]);
+    await serviceB.grantPermit([A]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    await serviceA.revokeTransportKeyPair("tenant-1");
+
+    // No keypair exists yet post-rotation → both report false immediately.
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(false);
+
+    // Force regeneration with a *distinct* public key (the fixture's default mock
+    // always returns the same static key pair, which would mask the mechanism under
+    // test) and confirm the old permit is filtered out as stale by its embedded
+    // (now-mismatched) public key — not because the permit itself was deleted.
+    // `generateTransportKeyPair` returns an opaque, unconstructable key-pair handle
+    // post-#458, so the distinct value is injected at `serializeTransportKeyPair` —
+    // the step that actually produces the hex the vault stores — instead.
+    vi.mocked(relayer.serializeTransportKeyPair).mockReturnValueOnce({
+      publicKey:
+        `0x${"33".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["publicKey"],
+      privateKey:
+        `0x${"44".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["privateKey"],
+    });
+    const regenerated = await serviceB.grantPermit([]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
+    expect(regenerated.keypair.publicKey).toBe(`0x${"33".repeat(32)}`);
+    expect(await serviceB.hasPermit([A])).toBe(false);
+  });
+
+  test("revokeTransportKeyPair() throws when no scope is configured", async ({
+    credentialService,
+  }) => {
+    await expect(credentialService.revokeTransportKeyPair("tenant-1")).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("revokeTransportKeyPair() throws when scopeId doesn't match the configured scope", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1" });
+    await expect(service.revokeTransportKeyPair("tenant-2")).rejects.toThrow(ConfigurationError);
+  });
+
+  test("revokeTransportKeyPair() propagates a storage-delete failure end-to-end, doesn't swallow it", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1", storage });
+    await service.grantPermit([]); // warm the shared key pair so there's something to delete
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+
+    await expect(service.revokeTransportKeyPair("tenant-1")).rejects.toThrow("delete boom");
+  });
+
+  test("warmTransportKeyPairScope() generates the shared key pair without needing a connected wallet", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    await serviceA.warmTransportKeyPairScope("tenant-1");
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    // serviceB never warmed itself — it finds the same pre-warmed key pair.
+    const result = await serviceB.grantPermit([]);
+    expect(result.keypair.publicKey).toBeDefined();
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("warmTransportKeyPairScope() throws when no scope is configured", async ({
+    credentialService,
+  }) => {
+    await expect(credentialService.warmTransportKeyPairScope("tenant-1")).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("warmTransportKeyPairScope() throws when scopeId doesn't match the configured scope", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1" });
+    await expect(service.warmTransportKeyPairScope("tenant-2")).rejects.toThrow(ConfigurationError);
   });
 });
