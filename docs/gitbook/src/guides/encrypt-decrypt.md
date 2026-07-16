@@ -408,7 +408,7 @@ const { data } = useDecryptValues([
 
 #### Persistent caching
 
-Decrypted values are stored through the SDK's internal CachingService, scoped by signer and contract address. Cached values survive page reloads — `useDecryptValues` returns them instantly without hitting the relayer.
+Decrypted values are stored through the SDK's internal DecryptCache, scoped by signer and contract address. Cached values survive page reloads — `useDecryptValues` returns them instantly without hitting the relayer.
 
 The cache is cleared on `permits.revokePermits()`, `permits.clear()`, or wallet lifecycle events (disconnect, account/chain change).
 

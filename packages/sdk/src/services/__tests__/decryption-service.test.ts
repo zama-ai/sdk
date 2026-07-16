@@ -6,7 +6,7 @@ import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { LoggerService } from "../logger-service";
 
-import { CachingService } from "../caching-service";
+import { DecryptCache } from "../decrypt-cache";
 import type { TypedValue } from "@fhevm/sdk/types";
 import type { DecryptValuesParameters } from "@fhevm/sdk/actions/decrypt";
 
@@ -34,7 +34,7 @@ describe("DecryptionService", () => {
   });
 
   test("decryptValues decrypts uncached handles grouped by contract and writes cache", async ({
-    cachingService,
+    decryptCache,
     createDecryptionService,
     relayer,
     userAddress,
@@ -55,8 +55,8 @@ describe("DecryptionService", () => {
     );
 
     expect(result).toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
-    await expect(cachingService.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
-    await expect(cachingService.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
+    await expect(decryptCache.get(userAddress, CONTRACT_A, HANDLE_A)).resolves.toBe(10n);
+    await expect(decryptCache.get(userAddress, CONTRACT_B, HANDLE_B)).resolves.toBe(20n);
     expect(relayer.decryptValues).toHaveBeenCalledWith(
       expect.objectContaining({ encryptedValues: [HANDLE_A], contractAddress: CONTRACT_A }),
     );
@@ -89,7 +89,7 @@ describe("DecryptionService", () => {
   });
 
   test("decryptValues splits one contract's handles across the 2048-bit request budget", async ({
-    cachingService,
+    decryptCache,
     decryptionService,
     relayer,
     userAddress,
@@ -121,7 +121,7 @@ describe("DecryptionService", () => {
 
     expect(result).toEqual(expected);
     for (const h of euint64Handles) {
-      await expect(cachingService.get(userAddress, CONTRACT_A, h)).resolves.toBe(expected[h]);
+      await expect(decryptCache.get(userAddress, CONTRACT_A, h)).resolves.toBe(expected[h]);
     }
 
     expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
@@ -133,12 +133,12 @@ describe("DecryptionService", () => {
   });
 
   test("decryptValues serves cached values without prompting for credentials", async ({
-    cachingService,
+    decryptCache,
     decryptionService,
     relayer,
     userAddress,
   }) => {
-    await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
+    await decryptCache.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
 
     await expect(
       decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
@@ -175,7 +175,7 @@ describe("DecryptionService", () => {
   });
 
   test("delegatedDecryptValues validates delegation before returning cached values", async ({
-    cachingService,
+    decryptCache,
     decryptionService,
     provider,
     relayer,
@@ -183,7 +183,7 @@ describe("DecryptionService", () => {
     delegateAddress,
     userAddress,
   }) => {
-    await cachingService.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
+    await decryptCache.set(userAddress, CONTRACT_A, HANDLE_A, 42n);
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
 
     await expect(
@@ -293,7 +293,7 @@ describe("DecryptionService", () => {
       throw new Error("cache unavailable");
     };
     const service = createDecryptionService({
-      cache: new CachingService(storage, new LoggerService()),
+      cache: new DecryptCache(storage, new LoggerService()),
     });
     vi.mocked(relayer.decryptValues).mockResolvedValue([
       { type: "uint64", value: 10n } as TypedValue,

@@ -1,7 +1,7 @@
 import { getAddress, type Address } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
-import type { CachingService } from "../services/caching-service";
+import type { DecryptCache } from "../services/decrypt-cache";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
@@ -22,7 +22,7 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 export class Permits {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #cachingService: CachingService;
+  readonly #decryptCache: DecryptCache;
   readonly #credentialService: CredentialService | undefined;
   readonly #logger: GenericLogger;
 
@@ -30,13 +30,13 @@ export class Permits {
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    cachingService: CachingService;
+    decryptCache: DecryptCache;
     credentialService: CredentialService | undefined;
     logger: GenericLogger;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
-    this.#cachingService = opts.cachingService;
+    this.#decryptCache = opts.decryptCache;
     this.#credentialService = opts.credentialService;
     this.#logger = opts.logger;
   }
@@ -158,7 +158,7 @@ export class Permits {
     } finally {
       await swallow(
         "clear decrypt cache",
-        () => this.#cachingService.clearForRequester(signerAddress),
+        () => this.#decryptCache.clearForRequester(signerAddress),
         this.#logger,
       );
     }
@@ -179,7 +179,7 @@ export class Permits {
     } finally {
       await swallow(
         "clear decrypt cache",
-        () => this.#cachingService.clearForRequester(signerAddress),
+        () => this.#decryptCache.clearForRequester(signerAddress),
         this.#logger,
       );
     }

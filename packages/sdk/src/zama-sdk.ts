@@ -7,7 +7,7 @@ import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
 import type { EncryptParams, FhevmRelayerOptions, FhevmRelayerSDK } from "./relayer/types";
-import { CachingService } from "./services/caching-service";
+import { DecryptCache } from "./services/decrypt-cache";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
@@ -51,7 +51,7 @@ export class ZamaSDK {
   readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
   readonly #logger: GenericLogger;
-  readonly #cachingService: CachingService;
+  readonly #decryptCache: DecryptCache;
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
   readonly #decryptionService: DecryptionService | undefined;
@@ -65,7 +65,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.#onEvent = config.onEvent ?? function () {};
     this.#logger = config.logger;
-    this.#cachingService = new CachingService(config.storage, this.#logger);
+    this.#decryptCache = new DecryptCache(config.storage, this.#logger);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       router: config.router,
@@ -98,7 +98,7 @@ export class ZamaSDK {
         logger: this.#logger,
       });
       this.#decryptionService = new DecryptionService({
-        cache: this.#cachingService,
+        cache: this.#decryptCache,
         credentialService: this.#credentialService,
         delegationService: this.#delegationService,
         router: config.router,
@@ -112,7 +112,7 @@ export class ZamaSDK {
     this.#lifecycleService = new LifecycleService({
       signer: config.signer,
       router: config.router,
-      cachingService: this.#cachingService,
+      decryptCache: this.#decryptCache,
       credentialService: this.#credentialService,
       logger: this.#logger,
     });
@@ -120,7 +120,7 @@ export class ZamaSDK {
     this.permits = new Permits({
       signer: this.signer,
       provider: this.provider,
-      cachingService: this.#cachingService,
+      decryptCache: this.#decryptCache,
       credentialService: this.#credentialService,
       logger: this.#logger,
     });

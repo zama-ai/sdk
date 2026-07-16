@@ -11419,7 +11419,7 @@ export class Permits {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        cachingService: CachingService;
+        decryptCache: DecryptCache;
         credentialService: CredentialService | undefined;
         logger: GenericLogger;
     });

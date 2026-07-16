@@ -5,7 +5,7 @@ import type { CredentialServiceConfig } from "../credentials/credential-service"
 import { CredentialService } from "../credentials/credential-service";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type { ChainRouter } from "../chains/router";
-import { CachingService } from "../services/caching-service";
+import { DecryptCache } from "../services/decrypt-cache";
 import { DecryptionService } from "../services/decryption-service";
 import { DelegationService } from "../services/delegation-service";
 import { EncryptionService } from "../services/encryption-service";
@@ -30,7 +30,7 @@ export type CreateDelegationServiceFn = (overrides?: {
 }) => DelegationService;
 
 export type CreateDecryptionServiceFn = (overrides?: {
-  cache?: CachingService;
+  cache?: DecryptCache;
   credentialService?: CredentialService;
   delegationService?: DelegationService;
   router?: ChainRouter;
@@ -44,13 +44,13 @@ export type CreateEncryptionServiceFn = (overrides?: {
 
 export type CreateLifecycleServiceFn = (overrides?: {
   signer?: GenericSigner;
-  cachingService?: CachingService;
+  decryptCache?: DecryptCache;
   router?: ChainRouter;
   credentialService?: CredentialService;
 }) => LifecycleService;
 
 export interface ServiceFixtures {
-  cachingService: CachingService;
+  decryptCache: DecryptCache;
   credentialService: CredentialService;
   delegationService: DelegationService;
   decryptionService: DecryptionService;
@@ -65,8 +65,8 @@ export interface ServiceFixtures {
 type ServiceDeps = RelayerFixtures & SignerFixtures & ProviderFixtures & StorageFixtures;
 
 export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
-  cachingService: async ({ storage }, use) => {
-    await use(new CachingService(storage, new LoggerService()));
+  decryptCache: async ({ storage }, use) => {
+    await use(new DecryptCache(storage, new LoggerService()));
   },
   createCredentialService: async ({ relayer, signer, storage }, use) => {
     const factory: CreateCredentialServiceFn = (config = {}) =>
@@ -98,12 +98,12 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
     await use(createDelegationService());
   },
   createDecryptionService: async (
-    { cachingService, credentialService, delegationService, relayer },
+    { decryptCache, credentialService, delegationService, relayer },
     use,
   ) => {
     const factory: CreateDecryptionServiceFn = (overrides = {}) =>
       new DecryptionService({
-        cache: overrides.cache ?? cachingService,
+        cache: overrides.cache ?? decryptCache,
         credentialService: overrides.credentialService ?? credentialService,
         delegationService: overrides.delegationService ?? delegationService,
         router: overrides.router ?? createMockRouter({ relayer }),
@@ -125,11 +125,11 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
   encryptionService: async ({ createEncryptionService }, use) => {
     await use(createEncryptionService());
   },
-  createLifecycleService: async ({ signer, cachingService, relayer }, use) => {
+  createLifecycleService: async ({ signer, decryptCache, relayer }, use) => {
     const factory: CreateLifecycleServiceFn = (overrides = {}) =>
       new LifecycleService({
         signer: "signer" in overrides ? overrides.signer : signer,
-        cachingService: overrides.cachingService ?? cachingService,
+        decryptCache: overrides.decryptCache ?? decryptCache,
         router: overrides.router ?? createMockRouter({ relayer }),
         credentialService: overrides.credentialService,
         logger: new LoggerService(),

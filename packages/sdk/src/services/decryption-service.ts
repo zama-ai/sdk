@@ -20,7 +20,7 @@ import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer
 import { pLimit } from "../utils/concurrency";
 import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
 import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
-import type { CachingService } from "./caching-service";
+import type { DecryptCache } from "./decrypt-cache";
 import type { DelegationService } from "./delegation-service";
 
 /**
@@ -76,7 +76,7 @@ export interface BatchDecryptResult {
 }
 
 export class DecryptionService {
-  readonly #cache: CachingService;
+  readonly #cache: DecryptCache;
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
   readonly #router: ChainRouter;
@@ -89,7 +89,7 @@ export class DecryptionService {
     router,
     emitEvent,
   }: {
-    cache: CachingService;
+    cache: DecryptCache;
     credentialService: CredentialService;
     delegationService: DelegationService;
     router: ChainRouter;

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { CredentialService } from "../../credentials/credential-service";
-import type { CachingService } from "../caching-service";
+import type { DecryptCache } from "../decrypt-cache";
 import type { WalletAccountChange } from "../../types";
 
 describe("LifecycleService", () => {
@@ -73,7 +73,7 @@ describe("LifecycleService", () => {
       const clearForRequester = vi.fn(async () => {
         calls.push("cache");
       });
-      const cache = { clearForRequester } as unknown as CachingService;
+      const cache = { clearForRequester } as unknown as DecryptCache;
       const switchChain = vi.fn(() => {
         calls.push("relayer");
       });
@@ -91,7 +91,7 @@ describe("LifecycleService", () => {
       });
       const service = createLifecycleService({
         signer,
-        cachingService: cache,
+        decryptCache: cache,
         router,
         credentialService,
       });
@@ -161,7 +161,7 @@ describe("LifecycleService", () => {
       createMockSigner,
     }) => {
       const clearForRequester = vi.fn();
-      const cachingService = { clearForRequester } as unknown as CachingService;
+      const decryptCache = { clearForRequester } as unknown as DecryptCache;
       let dispatch: ((change: WalletAccountChange) => void) | undefined;
       const signer = createMockSigner(undefined, {
         walletAccount: {
@@ -173,7 +173,7 @@ describe("LifecycleService", () => {
           isReady: vi.fn().mockReturnValue(true),
         },
       });
-      const service = createLifecycleService({ signer, cachingService });
+      const service = createLifecycleService({ signer, decryptCache });
       const listener = vi.fn();
       service.onWalletAccountChange(listener);
 
@@ -227,7 +227,7 @@ describe("LifecycleService", () => {
       } as unknown as CredentialService;
       const cache = {
         clearForRequester: vi.fn().mockRejectedValue(new Error("cache boom")),
-      } as unknown as CachingService;
+      } as unknown as DecryptCache;
       const router = createMockRouter({
         switchChain: vi.fn(() => {
           throw new Error("relayer boom");
@@ -246,7 +246,7 @@ describe("LifecycleService", () => {
       });
       const service = createLifecycleService({
         signer,
-        cachingService: cache,
+        decryptCache: cache,
         router,
         credentialService,
       });

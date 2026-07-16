@@ -7,12 +7,12 @@ import type {
   WalletAccountListener,
 } from "../types";
 import { swallow } from "../utils";
-import type { CachingService } from "./caching-service";
+import type { DecryptCache } from "./decrypt-cache";
 
 export type LifecycleServiceOptions = {
   signer?: GenericSigner;
   router: ChainRouter;
-  cachingService: CachingService;
+  decryptCache: DecryptCache;
   credentialService?: CredentialService;
   logger: GenericLogger;
 };
@@ -28,7 +28,7 @@ export type LifecycleServiceOptions = {
 export class LifecycleService {
   readonly #signer: GenericSigner | undefined;
   readonly #router: ChainRouter;
-  readonly #cachingService: CachingService;
+  readonly #decryptCache: DecryptCache;
   readonly #credentialService: CredentialService | undefined;
   readonly #logger: GenericLogger;
   readonly #walletAccountListeners = new Set<WalletAccountListener>();
@@ -37,7 +37,7 @@ export class LifecycleService {
   constructor(opts: LifecycleServiceOptions) {
     this.#signer = opts.signer;
     this.#router = opts.router;
-    this.#cachingService = opts.cachingService;
+    this.#decryptCache = opts.decryptCache;
     this.#credentialService = opts.credentialService;
     this.#logger = opts.logger;
     if (this.#signer) {
@@ -92,7 +92,7 @@ export class LifecycleService {
     if (prev) {
       await swallow(
         "clear decrypt cache",
-        () => this.#cachingService.clearForRequester(prev.address),
+        () => this.#decryptCache.clearForRequester(prev.address),
         this.#logger,
       );
     }

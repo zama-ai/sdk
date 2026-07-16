@@ -13,7 +13,7 @@ const CacheIndexSchema = z.array(z.string());
  * Each entry is keyed by `(requester, contractAddress, handle)` so different
  * signers cannot read each other's cached decryptions.
  */
-export class CachingService {
+export class DecryptCache {
   readonly #storage: GenericStorage;
   readonly #logger: GenericLogger;
   readonly #decryptNamespace = "zama:decrypt";
@@ -43,7 +43,7 @@ export class CachingService {
       }
       return parsed.data;
     } catch (error) {
-      this.#logger.warn("CachingService.get failed", { error });
+      this.#logger.warn("DecryptCache.get failed", { error });
       return null;
     }
   }
@@ -59,12 +59,12 @@ export class CachingService {
       await this.#storage.set<ClearValue>(key, value);
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
-          this.#logger.warn("CachingService index write failed", { error });
+          this.#logger.warn("DecryptCache index write failed", { error });
         }),
       );
       await this.#indexWriteQueue;
     } catch (error) {
-      this.#logger.warn("CachingService.set failed", { error });
+      this.#logger.warn("DecryptCache.set failed", { error });
     }
   }
 
@@ -76,7 +76,7 @@ export class CachingService {
     const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doDelete(key).catch((error) => {
-        this.#logger.warn("CachingService.delete failed", { error });
+        this.#logger.warn("DecryptCache.delete failed", { error });
       }),
     );
     await this.#indexWriteQueue;
@@ -85,7 +85,7 @@ export class CachingService {
   async clearForRequester(requester: Address): Promise<void> {
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doClearForRequester(requester).catch((error) => {
-        this.#logger.warn("CachingService.clearForRequester failed", { error });
+        this.#logger.warn("DecryptCache.clearForRequester failed", { error });
       }),
     );
     await this.#indexWriteQueue;
@@ -94,7 +94,7 @@ export class CachingService {
   async clearAll(): Promise<void> {
     this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
       this.#doClearAll().catch((error) => {
-        this.#logger.warn("CachingService.clearAll failed", { error });
+        this.#logger.warn("DecryptCache.clearAll failed", { error });
       }),
     );
     await this.#indexWriteQueue;
