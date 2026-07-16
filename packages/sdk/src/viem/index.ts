@@ -12,8 +12,6 @@ export { transactionOperationMetadata } from "../events/sdk-events";
 
 export { createConfig } from "./config";
 
-// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
-// referenced structurally by this entry point's own public signatures.
 export { BaseSigner } from "../signer/base-signer";
 export { MutableWalletAccountStore } from "../signer/wallet-account-store";
 export type { ChainRouter } from "../chains/router";

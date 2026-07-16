@@ -11,8 +11,6 @@
 export { web } from "../config/web";
 export type { WebRelayerConfig, RelayerConfig } from "../config/types";
 
-// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
-// referenced structurally by this entry point's own public signatures.
 export type { FheChain, FheChainAuth } from "../chains/types";
 export type {
   FhevmRelayerSDK,

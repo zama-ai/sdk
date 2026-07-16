@@ -23,8 +23,6 @@ export { ProviderRpcError } from "viem";
 export type { EncryptedValue, EIP712TypedData, ClearValue } from "../relayer/types";
 export { transactionOperationMetadata } from "../events/sdk-events";
 
-// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
-// referenced structurally by this entry point's own public signatures.
 export { BaseSigner } from "../signer/base-signer";
 export { MutableWalletAccountStore } from "../signer/wallet-account-store";
 export type { ChainRouter } from "../chains/router";

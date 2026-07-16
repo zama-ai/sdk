@@ -206,8 +206,6 @@ export type {
   RevokeDelegationSubmittedEvent,
 } from "../events/sdk-events";
 
-// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
-// referenced structurally by this entry point's own public signatures.
 export type { FheChain, FheChainAuth } from "../chains/types";
 export type { ChainRouter } from "../chains/router";
 export type { WalletAccountStore } from "../types/signer";

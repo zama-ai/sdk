@@ -25,8 +25,6 @@ export type {
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
 
-// SDK-209: re-export types already public at the main `@zama-fhe/sdk` entry point —
-// referenced structurally by this entry point's own public signatures.
 export type { FheChain, FheChainAuth } from "../chains/types";
 export type { GenericStorage } from "../types/storage";
 export type {
