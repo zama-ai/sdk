@@ -24,6 +24,10 @@ export function UnwrapManualForm({
   const unwrapAll = useUnwrapAll(wrapperAddress);
   const finalizeUnwrap = useFinalizeUnwrap(wrapperAddress);
 
+  // Either entry point (single unwrap or unwrap-all) yields an UnwrapResult;
+  // the finalize phase consumes whichever one produced a request.
+  const unwrapResult = unwrap.data ?? unwrapAll.data;
+
   return (
     <div className="space-y-6">
       {/* Step 1: Unwrap */}
@@ -83,9 +87,9 @@ export function UnwrapManualForm({
           </p>
         )}
 
-        {unwrap.data?.unwrapRequestId && (
+        {unwrapResult?.unwrapRequestId && (
           <p className="text-sm text-zama-gray" data-testid="burn-handle">
-            Unwrap request ID: {unwrap.data?.unwrapRequestId}
+            Unwrap request ID: {unwrapResult.unwrapRequestId}
           </p>
         )}
 
@@ -111,10 +115,10 @@ export function UnwrapManualForm({
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!unwrap.isSuccess) {
+          if (!unwrapResult) {
             return;
           }
-          finalizeUnwrap.mutate(unwrap.data);
+          finalizeUnwrap.mutate(unwrapResult);
         }}
         className="space-y-4"
         data-testid="finalize-form"
@@ -123,7 +127,7 @@ export function UnwrapManualForm({
 
         <button
           type="submit"
-          disabled={finalizeUnwrap.isPending || !unwrap.data?.unwrapRequestId}
+          disabled={finalizeUnwrap.isPending || !unwrapResult?.unwrapRequestId}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="finalize-button"
         >
