@@ -24,6 +24,10 @@ nodes:
           js_file: "scripts/core-rename-createzamaconfig-to-createconfig.ts"
           language: "tsx"
           include: ["**/*.{ts,tsx}"]
+      - name: "credentials config keys: sessionStorage/keypairTTL/sessionTTL -> permitStorage/transportKeyPairTTL/permitTTL"
+        ast-grep:
+          config_file: "rules/rename-credentials-config-keys.yml"
+          include: ["**/*.{ts,tsx}"]
       - name: "Handle type -> EncryptedValue"
         ast-grep:
           config_file: "rules/core-handle-type-replaced-by-encrypted-value.yml"
@@ -48,6 +52,11 @@ nodes:
           js_file: "scripts/use-zama-config-interface-removed.ts"
           language: "tsx"
           include: ["**/*.{ts,tsx}"]
+      - name: "ZamaSDK flat methods -> permits/delegations/decryption namespaces"
+        js-ast-grep:
+          js_file: "scripts/rename-sdk-namespace-methods.ts"
+          language: "tsx"
+          include: ["**/*.{ts,tsx}"]
 
   # --- optional AI assisted upgrade: the non-mechanical changes the codemods can't express ---
   # `type: manual` keeps this opt-in: `codemod workflow run` does NOT trigger it, so the
@@ -64,8 +73,13 @@ nodes:
           prompt: |
             You are finishing an @zama-fhe/sdk + @zama-fhe/react-sdk upgrade to 3.1.0.
             The mechanical changes (renames, config-key changes, the UseZamaConfig
-            removal, mutation-hook config->address) were ALREADY applied by the
-            preceding deterministic codemod steps — do NOT redo them.
+            removal, mutation-hook config->address, and ZamaSDK's flat methods moving
+            under sdk.permits/sdk.delegations/sdk.decryption) were ALREADY applied by
+            the preceding deterministic codemod steps — do NOT redo them. An SDK
+            instance obtained other than through a local `new ZamaSDK(...)` (a factory,
+            a hook, a re-exported singleton) may still have old-style flat calls left —
+            fix those the same way, and if a call was `sdk.isDelegated(...)`, note that
+            `isActive` also checks expiry (existence alone is no longer sufficient).
 
             Apply only the remaining breaking changes introduced in 3.1.0, editing the
             target files in place. Be conservative: minimal diffs, no unrelated
@@ -81,11 +95,19 @@ nodes:
             - Removed with no drop-in (flag with a TODO; route to the high-level hooks):
               useCreateEIP712, useCreateDelegatedUserDecryptEIP712, useGenerateKeypair,
               usePublicKey, usePublicParams, useRequestZKProofVerification, useActivityFeed,
-              and the CredentialsManager / RelayerWeb / RelayerNode classes.
+              and the RelayerWeb / RelayerNode classes.
+            - Credentials types (SDK-134): `CredentialsManager`, `DelegatedCredentialsManager`,
+              `CredentialsManagerConfig`, `DelegatedCredentialsManagerConfig` no longer exist —
+              their config fields moved onto `ZamaConfigBase` directly (`permitStorage`,
+              `transportKeyPairTTL`, `permitTTL`). `StoredCredentials` /
+              `DelegatedStoredCredentials` don't have a 1:1 replacement type either — they
+              split into `StoredTransportKeyPair` (keypair) + `Permission` (permit scope,
+              includes `delegatorAddress`/`delegateAddress`), both exported from
+              `@zama-fhe/sdk`. A caller typing against the old flat shape needs to restructure
+              to the two separate types, not just rename the reference — flag with a TODO
+              rather than guessing the split.
             - ZamaSDK: sdk.requireSigner(op) -> the sdk.signer property with a null guard;
-              the flat methods (allow / isAllowed / userDecrypt / delegateDecryption / ...)
-              move under sdk.decryption / sdk.delegations / sdk.permits; createReadonlyToken
-              -> createToken / createWrappedToken.
+              createReadonlyToken -> createToken / createWrappedToken.
             - Contract builders take hex (EncryptedValue / Hex) instead of Uint8Array for
               the encrypted amount and input proof.
 
