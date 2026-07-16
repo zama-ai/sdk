@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.4...v3.4.0-alpha.5) (2026-07-16)
+
+### Features
+
+- **sdk:** expose wrap() + useWrap for two-signature shield ([#522](https://github.com/zama-ai/sdk/issues/522)) ([5bb88a9]())
+
 ## [3.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.3...v3.4.0-alpha.4) (2026-07-16)
 
 ### Features
