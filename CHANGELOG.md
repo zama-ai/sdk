@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.3...v3.4.0-alpha.4) (2026-07-16)
+
+### Features
+
+- **credentials:** opt-in shared ML-KEM keypair scope for shared-tenant operators [SDK-142] ([#546](https://github.com/zama-ai/sdk/issues/546)) ([aee2db4]()), closes [#458]()
+
 ## [3.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.2...v3.4.0-alpha.3) (2026-07-16)
 
 ### Bug Fixes
