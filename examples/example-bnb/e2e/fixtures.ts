@@ -39,7 +39,15 @@ export interface RpcOptions {
    * flag is therefore on RpcOptions (not WalletConfig) so the RPC interceptor can handle it.
    */
   emptyRegistry?: boolean;
+  /**
+   * Value returned by the ACL's `getUserDecryptionDelegationExpirationDate`.
+   * Defaults to `0n` (no delegation). Use `MAX_UINT64` for a permanent delegation.
+   */
+  delegationExpiry?: bigint;
 }
+
+/** Sentinel the ACL contract uses for a permanent (no-expiry) delegation. */
+export const MAX_UINT64 = 2n ** 64n - 1n;
 
 /**
  * Injects a stateful mock EIP-1193 provider into the page before load.
@@ -183,6 +191,9 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
     /** BNB WrappersRegistry — lowercased for comparison with request `to` fields. */
     const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
 
+    /** BNB testnet ACL contract (see sdk chains/configs.ts) — used to mock delegation-status reads. */
+    const ACL = "0x52470e945521e247cb4754088a836dc4b838afbe";
+
     /** Mock token pair addresses (all-digit = checksum-neutral, no case conversion needed). */
     const T1 = MOCK_TOKEN1_ADDRESS;
     const CT1 = MOCK_CTOKEN1_ADDRESS;
@@ -233,6 +244,11 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
             abiBool(true) // pair[1]
           );
         }
+      }
+
+      // getUserDecryptionDelegationExpirationDate(address,address,address) → uint64
+      if (to === ACL && sel === "0x3f462dbe") {
+        return "0x" + abiU256(options.delegationExpiry ?? 0n);
       }
 
       // Token metadata: name(), symbol(), decimals(), totalSupply()
