@@ -16994,7 +16994,7 @@ export interface UnwrapFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public
@@ -18139,7 +18139,12 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
+}
+
+// @public
+export interface UnwrapResult extends TransactionResult {
+    unwrapRequestId: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -19343,8 +19348,8 @@ export class WrappedToken extends Token {
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<UnwrapResult>;
+    unwrapAll(): Promise<UnwrapResult>;
 }
 
 // @public
