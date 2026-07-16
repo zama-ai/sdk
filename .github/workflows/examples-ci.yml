@@ -144,6 +144,22 @@ jobs:
           rm -f package-lock.json
           npm install
 
+      - name: DEBUG2 types/node
+        if: matrix.example == 'node-viem'
+        run: |
+          echo "--- tsc version ---"
+          npx tsc --version
+          echo "--- all @types dirs anywhere under node_modules ---"
+          find node_modules -type d -name "@types" 2>&1
+          echo "--- contents of each ---"
+          find node_modules -type d -name "@types" -exec ls -la {} \; 2>&1
+          echo "--- package.json as seen on disk ---"
+          cat package.json
+          echo "--- tsconfig.json as seen on disk ---"
+          cat tsconfig.json
+          echo "--- npm ls --all (full tree) ---"
+          npm ls --all 2>&1 | head -80
+
       - name: Typecheck
         run: npm run typecheck
 
