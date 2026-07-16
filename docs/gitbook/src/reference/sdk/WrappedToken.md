@@ -190,35 +190,34 @@ Most apps should use `unshield()` or `unshieldAll()`. The low-level methods are 
 
 ### unwrap
 
-`(amount: bigint) => Promise<TransactionResult>`
+`(amount: bigint) => Promise<UnwrapResult>`
 
-Encrypts `amount` and submits the unwrap request. Finalization is not automatic.
+Encrypts `amount` and submits the unwrap request. Finalization is not automatic. The returned `UnwrapResult` extends `TransactionResult` with the `unwrapRequestId` decoded from the `UnwrapRequested` event, so you can finalize without parsing the receipt yourself.
 
 ```ts
-const { txHash, receipt } = await wrappedToken.unwrap(500n);
+const { txHash, unwrapRequestId } = await wrappedToken.unwrap(500n);
 ```
 
 ### unwrapAll
 
-`() => Promise<TransactionResult>`
+`() => Promise<UnwrapResult>`
 
-Submits an unwrap request for the full confidential balance using the current encrypted balance handle.
+Submits an unwrap request for the full confidential balance using the current encrypted balance handle. Like `unwrap`, it returns the decoded `unwrapRequestId` on the result.
 
 ```ts
-const { txHash } = await wrappedToken.unwrapAll();
+const { unwrapRequestId } = await wrappedToken.unwrapAll();
 ```
 
 ### finalizeUnwrap
 
 `(unwrapRequestId: EncryptedValue) => Promise<TransactionResult>`
 
-Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapRequested` event.
+Completes an unwrap after the gateway has publicly decrypted the unwrap request. Pass the `unwrapRequestId` from the `UnwrapResult` that `unwrap` / `unwrapAll` returned.
 
 ```ts
-const event = findUnwrapRequested(receipt.logs);
-if (!event) throw new Error("No unwrap request found");
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
 
-await wrappedToken.finalizeUnwrap(event.unwrapRequestId);
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
 ```
 
 ## Related

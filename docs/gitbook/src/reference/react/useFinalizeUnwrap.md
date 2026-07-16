@@ -24,20 +24,17 @@ import { useFinalizeUnwrap } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
-import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 function TwoStepUnshield() {
   const { mutateAsync: unwrap } = useUnwrap("0xWrapper");
   const { mutateAsync: finalize, isPending } = useFinalizeUnwrap("0xWrapper");
 
   const handleUnshield = async () => {
-    // Step 1: submit the unwrap and find the event in the receipt
-    const { receipt } = await unwrap({ amount: 500n });
-    const event = findUnwrapRequested(receipt.logs);
-    if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
+    // Step 1: submit the unwrap -- the result carries the `unwrapRequestId`.
+    const result = await unwrap({ amount: 500n });
 
-    // Step 2: finalize with the unwrap request ID from the event
-    await finalize({ unwrapRequestId: event.unwrapRequestId });
+    // Step 2: finalize. Pass the whole result; the hook reads `unwrapRequestId`.
+    await finalize(result);
   };
 
   return (
@@ -69,7 +66,7 @@ const { mutateAsync: finalize } = useFinalizeUnwrap("0xWrapper");
 
 `EncryptedValue`
 
-The unwrap request ID emitted in the `UnwrapRequested` event.
+The unwrap request ID. Read it from the `UnwrapResult` returned by [`useUnwrap`](./useUnwrap.md) / [`useUnwrapAll`](./useUnwrapAll.md) -- you can pass the whole result, since it's a superset of `{ unwrapRequestId }`.
 
 ```tsx
 await finalize({ unwrapRequestId: requestId });
