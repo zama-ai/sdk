@@ -1,12 +1,11 @@
 import type { WrappedToken } from "../token/wrapped-token";
-import type { TransactionResult } from "../types";
+import type { TransactionResult, WrapOptions } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
 import type { Address } from "viem";
 
 /** Variables for {@link wrapMutationOptions}. */
-export interface WrapParams {
+export interface WrapParams extends WrapOptions {
   amount: bigint;
-  to?: Address;
 }
 
 export function wrapMutationOptions(
@@ -14,6 +13,6 @@ export function wrapMutationOptions(
 ): MutationFactoryOptions<readonly ["zama.wrap", Address], WrapParams, TransactionResult> {
   return {
     mutationKey: ["zama.wrap", token.address] as const,
-    mutationFn: async ({ amount, to }) => token.wrap(amount, to ? { to } : undefined),
+    mutationFn: async ({ amount, ...rest }) => token.wrap(amount, rest),
   };
 }

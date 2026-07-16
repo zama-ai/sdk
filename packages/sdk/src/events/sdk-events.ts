@@ -20,6 +20,7 @@ export const ZamaSDKEvents = {
   TransferFromSubmitted: "transferFrom:submitted",
   SetOperatorSubmitted: "setOperator:submitted",
   ApproveUnderlyingSubmitted: "approveUnderlying:submitted",
+  WrapSubmitted: "wrap:submitted",
   UnwrapSubmitted: "unwrap:submitted",
   FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted",
   // Delegation operations
@@ -122,6 +123,17 @@ export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
   step: "reset" | "approve";
 }
 
+/**
+ * Emitted by the standalone `wrap()` escape hatch (not by `shield()`, which
+ * emits {@link ShieldSubmittedEvent}). Distinct so a caller-initiated `wrap`
+ * isn't conflated with `shield()`'s internal `approveAndWrap` leg — mirroring
+ * how `unwrap` emits its own event rather than reusing the unshield phases.
+ */
+export interface WrapSubmittedEvent extends BaseEvent {
+  type: typeof ZamaSDKEvents.WrapSubmitted;
+  txHash: Hex;
+}
+
 export interface UnwrapSubmittedEvent extends BaseEvent {
   type: typeof ZamaSDKEvents.UnwrapSubmitted;
   txHash: Hex;
@@ -176,6 +188,7 @@ export type ZamaSDKEvent =
   | TransferFromSubmittedEvent
   | SetOperatorSubmittedEvent
   | ApproveUnderlyingSubmittedEvent
+  | WrapSubmittedEvent
   | UnwrapSubmittedEvent
   | FinalizeUnwrapSubmittedEvent
   | DelegationSubmittedEvent
@@ -244,13 +257,7 @@ export const transactionOperationMetadata = {
       shieldPath: "approveAndWrap" as const,
     }),
   },
-  wrap: {
-    submittedEvent: (txHash: Hex) => ({
-      type: ZamaSDKEvents.ShieldSubmitted,
-      txHash,
-      shieldPath: "approveAndWrap" as const,
-    }),
-  },
+  wrap: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.WrapSubmitted, txHash }) },
   transfer: {
     submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.TransferSubmitted, txHash }),
   },

@@ -11,11 +11,17 @@ describe("WrappedToken.wrap", () => {
     const options = wrapMutationOptions(mockWrappedToken);
 
     await options.mutationFn({ amount: 1n });
-    expect(mockWrappedToken.wrap).toHaveBeenCalledWith(1n, undefined);
+    expect(mockWrappedToken.wrap).toHaveBeenCalledWith(1n, {});
 
-    await options.mutationFn({ amount: 2n, to: "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" });
+    const onWrapSubmitted = () => {};
+    await options.mutationFn({
+      amount: 2n,
+      to: "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b",
+      onWrapSubmitted,
+    });
     expect(mockWrappedToken.wrap).toHaveBeenLastCalledWith(2n, {
       to: "0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b",
+      onWrapSubmitted,
     });
   });
 
@@ -35,6 +41,8 @@ describe("WrappedToken.wrap", () => {
     expect(signer.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "wrap" }),
     );
+    // wrap-only, no approve leg — pins the escape-hatch invariant.
+    expect(signer.writeContract).toHaveBeenCalledTimes(1);
   });
 
   test("routes to the recipient from options.to", async ({
@@ -75,6 +83,9 @@ describe("WrappedToken.wrap", () => {
 
     await expect(token.wrap(100n)).rejects.toMatchObject({
       code: ZamaErrorCode.InsufficientERC20Balance,
+      requested: 100n,
+      available: 50n,
+      token: UNDERLYING,
     });
     expect(signer.writeContract).not.toHaveBeenCalled();
   });
@@ -91,6 +102,9 @@ describe("WrappedToken.wrap", () => {
 
     await expect(token.wrap(100n)).rejects.toMatchObject({
       code: ZamaErrorCode.InsufficientAllowance,
+      requested: 100n,
+      available: 50n,
+      token: UNDERLYING,
     });
     expect(signer.writeContract).not.toHaveBeenCalled();
   });

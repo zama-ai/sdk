@@ -213,6 +213,7 @@ export class WrappedToken extends Token {
    * @param amount - The plaintext amount to wrap.
    * @param options - Optional `to` recipient and `onWrapSubmitted` callback.
    * @returns The transaction hash and mined receipt.
+   * @throws if reading the ERC-20 balance or allowance fails. {@link ERC20ReadFailedError}
    * @throws if the ERC-20 balance is less than `amount`. {@link InsufficientERC20BalanceError}
    * @throws if the allowance granted to the wrapper is less than `amount`. {@link InsufficientAllowanceError}
    *
@@ -249,9 +250,20 @@ export class WrappedToken extends Token {
       );
     }
 
-    const allowance = await this.sdk.provider.readContract(
-      allowanceContract(underlying, userAddress, this.address),
-    );
+    let allowance: bigint;
+    try {
+      allowance = await this.sdk.provider.readContract(
+        allowanceContract(underlying, userAddress, this.address),
+      );
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new ERC20ReadFailedError(
+        `Could not read ERC-20 allowance for wrap validation (token: ${underlying})`,
+        { cause: toError(error) },
+      );
+    }
     if (allowance < amount) {
       throw new InsufficientAllowanceError(
         `Insufficient allowance for wrap: requested ${amount}, approved ${allowance}. Call approveUnderlying() first (token: ${underlying}).`,

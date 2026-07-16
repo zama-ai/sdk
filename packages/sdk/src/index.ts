@@ -124,6 +124,7 @@ export type {
   TransferFromSubmittedEvent,
   SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
+  WrapSubmittedEvent,
   UnwrapSubmittedEvent,
   FinalizeUnwrapSubmittedEvent,
   UnshieldPhase1SubmittedEvent,

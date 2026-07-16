@@ -59,5 +59,7 @@ test("should surface an error when wrapping more than the approved allowance", a
   // (public read, no signing) and fails early with InsufficientAllowanceError.
   await page.getByTestId("wrap-amount-input").fill("1000");
   await page.getByTestId("wrap-button").click();
-  await expect(page.getByTestId("wrap-error")).toBeVisible();
+  // Assert it's specifically the allowance error, not any error — the balance
+  // check runs first, so a low-balance wallet would otherwise pass this test.
+  await expect(page.getByTestId("wrap-error")).toContainText("allowance");
 });
