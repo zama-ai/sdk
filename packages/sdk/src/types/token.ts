@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
 import type { TransactionResult } from "./transaction";
@@ -36,6 +36,14 @@ export interface ShieldOptions extends ShieldCallbacks {
   approvalStrategy?: ApprovalStrategy;
   /** Recipient address for the shielded tokens. Defaults to the connected wallet. */
   to?: Address;
+}
+
+/** Options for {@link WrappedToken.wrap}. */
+export interface WrapOptions {
+  /** Recipient of the confidential tokens. Defaults to the signer address. */
+  to?: Address;
+  /** Fires with the wrap transaction hash once submitted. */
+  onWrapSubmitted?: (txHash: Hex) => void;
 }
 
 /** Options for {@link WrappedToken.unshield}. */
