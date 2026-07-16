@@ -19,6 +19,7 @@ import {
   DecryptionFailedError,
   ERC20ReadFailedError,
   EncryptionFailedError,
+  InsufficientAllowanceError,
   InsufficientERC20BalanceError,
   SignerNotConfiguredError,
   TransactionRevertedError,
@@ -39,6 +40,7 @@ import type {
   UnshieldCallbacks,
   UnshieldOptions,
   UnwrapResult,
+  WrapOptions,
 } from "../types";
 
 /**
@@ -195,6 +197,85 @@ export class WrappedToken extends Token {
       operation: "shield:transferAndCall",
       config: transferAndCallContract(underlying, this.address, amount, data),
       onSubmitted: options?.onShieldSubmitted,
+    });
+  }
+
+  /**
+   * Wrap already-approved underlying ERC-20 into confidential tokens.
+   *
+   * Escape hatch for splitting shield across two signatures: call
+   * {@link approveUnderlying} first, then `wrap`. Most callers should use
+   * {@link shield}, which routes and orchestrates approval automatically.
+   *
+   * Validates the ERC-20 balance and the allowance granted to this wrapper
+   * (public reads, no signing) and fails early with a clear error.
+   *
+   * @param amount - The plaintext amount to wrap.
+   * @param options - Optional `to` recipient and `onWrapSubmitted` callback.
+   * @returns The transaction hash and mined receipt.
+   * @throws if reading the ERC-20 balance or allowance fails. {@link ERC20ReadFailedError}
+   * @throws if the ERC-20 balance is less than `amount`. {@link InsufficientERC20BalanceError}
+   * @throws if the allowance granted to the wrapper is less than `amount`. {@link InsufficientAllowanceError}
+   *
+   * @example
+   * ```ts
+   * await wrappedToken.approveUnderlying(1000n);
+   * await wrappedToken.wrap(1000n);
+   * ```
+   */
+  async wrap(amount: bigint, options?: WrapOptions): Promise<TransactionResult> {
+    this.#requireSigner("wrap");
+    const account = await requireAlignedWalletAccount("wrap", this.sdk.signer, this.sdk.provider);
+    const underlying = await this.#getUnderlying();
+    const userAddress = getAddress(account.address);
+
+    let erc20Balance: bigint;
+    try {
+      erc20Balance = await this.sdk.provider.readContract(
+        balanceOfContract(underlying, userAddress),
+      );
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new ERC20ReadFailedError(
+        `Could not read ERC-20 balance for wrap validation (token: ${underlying})`,
+        { cause: toError(error) },
+      );
+    }
+    if (erc20Balance < amount) {
+      throw new InsufficientERC20BalanceError(
+        `Insufficient ERC-20 balance: requested ${amount}, available ${erc20Balance} (token: ${underlying})`,
+        { requested: amount, available: erc20Balance, token: underlying },
+      );
+    }
+
+    let allowance: bigint;
+    try {
+      allowance = await this.sdk.provider.readContract(
+        allowanceContract(underlying, userAddress, this.address),
+      );
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw new ERC20ReadFailedError(
+        `Could not read ERC-20 allowance for wrap validation (token: ${underlying})`,
+        { cause: toError(error) },
+      );
+    }
+    if (allowance < amount) {
+      throw new InsufficientAllowanceError(
+        `Insufficient allowance for wrap: requested ${amount}, approved ${allowance}. Call approveUnderlying() first (token: ${underlying}).`,
+        { requested: amount, available: allowance, token: underlying },
+      );
+    }
+
+    const recipient = options?.to ? getAddress(options.to) : userAddress;
+    return this.submitTransaction({
+      operation: "wrap",
+      config: wrapContract(this.address, recipient, amount),
+      onSubmitted: options?.onWrapSubmitted,
     });
   }
 
