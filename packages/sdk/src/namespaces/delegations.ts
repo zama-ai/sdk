@@ -18,31 +18,7 @@ import { requireConfigured } from "../errors";
 export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #delegationService: {
-    delegateDecryption(
-      signer: GenericSigner,
-      params: {
-        contractAddress: Address;
-        delegateAddress: Address;
-        delegatorAddress: Address;
-        expirationDate?: Date;
-      },
-    ): Promise<TransactionResult>;
-    revokeDelegation(
-      signer: GenericSigner,
-      params: { contractAddress: Address; delegateAddress: Address; delegatorAddress: Address },
-    ): Promise<TransactionResult>;
-    isDelegated(params: {
-      contractAddress: Address;
-      delegatorAddress: Address;
-      delegateAddress: Address;
-    }): Promise<boolean>;
-    getDelegationExpiry(params: {
-      contractAddress: Address;
-      delegatorAddress: Address;
-      delegateAddress: Address;
-    }): Promise<bigint>;
-  };
+  readonly #delegationService;
 
   /** @internal */
   constructor(opts: {

@@ -26,21 +26,8 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 export class Permits {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #cachingService: { clearForRequester(requester: Address): Promise<void> };
-  readonly #credentialService:
-    | {
-        grantPermit(
-          contracts: readonly Address[],
-          delegator?: Address,
-        ): Promise<SerializedTransportKeyPairWithPermissions>;
-        hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
-        warmTransportKeyPair(address: Address): Promise<void>;
-        revokePermits(contracts?: readonly Address[]): Promise<void>;
-        clearCredentials(): Promise<void>;
-        revokeTransportKeyPair(scopeId: string): Promise<void>;
-        warmTransportKeyPairScope(scopeId: string): Promise<void>;
-      }
-    | undefined;
+  readonly #cachingService;
+  readonly #credentialService;
   readonly #logger: GenericLogger;
 
   /** @internal */

@@ -40,30 +40,7 @@ export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #router: ChainRouter;
-  readonly #decryptionService:
-    | {
-        decryptValues(
-          handles: EncryptedInput[],
-          signerAddress: Address,
-          opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
-        ): Promise<Record<EncryptedValue, ClearValue>>;
-        delegatedDecryptValues(
-          encryptedInputs: EncryptedInput[],
-          delegatorAddress: Address,
-          delegateAddress: Address,
-          accountAddress: Address,
-          opts?: DelegatedDecryptOptions,
-        ): Promise<Record<EncryptedValue, ClearValue>>;
-        delegatedBatchDecryptHandlesAs(params: {
-          encryptedInputs: EncryptedInput[];
-          delegatorAddress: Address;
-          delegateAddress: Address;
-          accountAddress: Address;
-          maxConcurrency?: number;
-          waitForPropagation?: boolean;
-        }): Promise<BatchDecryptResult>;
-      }
-    | undefined;
+  readonly #decryptionService;
 
   /** @internal */
   constructor(opts: {
