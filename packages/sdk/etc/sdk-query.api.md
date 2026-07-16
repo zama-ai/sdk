@@ -283,7 +283,7 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
-// @public (undocumented)
+// @public
 export interface DelegationStatusData {
     // (undocumented)
     expiryTimestamp: bigint;

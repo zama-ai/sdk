@@ -5744,6 +5744,11 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    getStatus(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<DelegationStatus>;
     isActive(params: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -5758,6 +5763,14 @@ export class Delegations {
 // @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @public
+export interface DelegationStatus {
+    // (undocumented)
+    expiryTimestamp: bigint;
+    // (undocumented)
+    isActive: boolean;
 }
 
 // @public (undocumented)

@@ -8439,6 +8439,7 @@ sdk.delegations.delegateDecryption(/* ... */);
 sdk.delegations.revokeDelegation(/* ... */);
 sdk.delegations.isActive(/* ... */);
 sdk.delegations.getExpiry(/* ... */);
+sdk.delegations.getStatus(/* ... */);
 ```
 
 ## Methods
@@ -8553,6 +8554,22 @@ const expiryDate = new Date(Number(expiry) * 1000);
 | `0n`         | No delegation (never set or revoked) |
 | `2^64 - 1`   | Permanent                            |
 | Other        | UTC Unix timestamp in seconds        |
+
+### getStatus
+
+`(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<DelegationStatus>`
+
+Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`) from a single on-chain read, instead of calling `isActive()` and `getExpiry()` separately.
+
+Signer-independent — works without a configured signer.
+
+```ts
+const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
+  contractAddress: "0xConfidentialToken",
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+```
 
 ## Events
 

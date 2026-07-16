@@ -31,6 +31,12 @@ type AclTransactionOperation = Extract<
   "delegateDecryption" | "revokeDelegation"
 >;
 
+/** Delegation activity and expiry, resolved from a single expiry read. */
+export interface DelegationStatus {
+  isActive: boolean;
+  expiryTimestamp: bigint;
+}
+
 export class DelegationService {
   readonly #router: ChainRouter;
   readonly #provider: GenericProvider;
@@ -168,15 +174,28 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
+    return (await this.getStatus(params)).isActive;
+  }
+
+  /**
+   * Resolve activity and expiry together from a single {@link getDelegationExpiry} read,
+   * instead of two separate round trips through {@link isDelegated} and
+   * {@link getDelegationExpiry}.
+   */
+  async getStatus(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<DelegationStatus> {
+    const expiryTimestamp = await this.getDelegationExpiry(params);
+    if (expiryTimestamp === 0n) {
+      return { isActive: false, expiryTimestamp };
     }
-    if (expiry === MAX_UINT64) {
-      return true;
+    if (expiryTimestamp === MAX_UINT64) {
+      return { isActive: true, expiryTimestamp };
     }
     const now = await this.#provider.getBlockTimestamp();
-    return expiry > now;
+    return { isActive: expiryTimestamp > now, expiryTimestamp };
   }
 
   async getDelegationExpiry({
