@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.2...v3.4.0-alpha.3) (2026-07-16)
+
+### Bug Fixes
+
+- **sdk:** unbundle unshield into request + finalize phases ([#530](https://github.com/zama-ai/sdk/issues/530)) ([b3b5835]())
+
 ## [3.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.1...v3.4.0-alpha.2) (2026-07-15)
 
 ### Features
