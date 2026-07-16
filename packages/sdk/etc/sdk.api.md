@@ -9585,6 +9585,14 @@ export const ingenTestnet: {
 };
 
 // @public
+export class InsufficientAllowanceError extends ZamaError {
+    constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
+    readonly available: bigint;
+    readonly requested: bigint;
+    readonly token: Address;
+}
+
+// @public
 export class InsufficientConfidentialBalanceError extends ZamaError {
     constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions);
     readonly available: bigint;
@@ -19337,6 +19345,12 @@ export interface WrapEvent {
 }
 
 // @public
+export interface WrapOptions {
+    onWrapSubmitted?: (txHash: Hex) => void;
+    to?: Address;
+}
+
+// @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
@@ -19350,6 +19364,7 @@ export class WrappedToken extends Token {
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     unwrap(amount: bigint): Promise<UnwrapResult>;
     unwrapAll(): Promise<UnwrapResult>;
+    wrap(amount: bigint, options?: WrapOptions): Promise<TransactionResult>;
 }
 
 // @public
@@ -19388,6 +19403,14 @@ export interface WrappersRegistryConfig {
     provider: GenericProvider;
     registryAddresses?: Record<number, Address>;
     registryTTL?: number;
+}
+
+// @public
+export interface WrapSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.WrapSubmitted;
 }
 
 // @public
@@ -19500,6 +19523,7 @@ export const ZamaErrorCode: {
     readonly DelegationExpired: "DELEGATION_EXPIRED";
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE";
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE";
+    readonly InsufficientAllowance: "INSUFFICIENT_ALLOWANCE";
     readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE";
     readonly ERC20ReadFailed: "ERC20_READ_FAILED";
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED";
@@ -19548,7 +19572,7 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
 export type ZamaSDKEventInput = ZamaSDKEvent extends (infer E) ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
@@ -19570,6 +19594,7 @@ export const ZamaSDKEvents: {
     readonly TransferFromSubmitted: "transferFrom:submitted";
     readonly SetOperatorSubmitted: "setOperator:submitted";
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
+    readonly WrapSubmitted: "wrap:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
     readonly DelegationSubmitted: "delegation:submitted";

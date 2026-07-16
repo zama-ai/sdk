@@ -19,6 +19,7 @@ import type {
   DelegationNotPropagatedError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   ChainMismatchError,
 } from "..";
 import { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds, matchZamaError } from "..";
@@ -131,6 +132,9 @@ describe("matchZamaError", () => {
       },
       INSUFFICIENT_ERC20_BALANCE: (e) => {
         expectTypeOf(e).toEqualTypeOf<InsufficientERC20BalanceError>();
+      },
+      INSUFFICIENT_ALLOWANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientAllowanceError>();
       },
       RELAYER_REQUEST_FAILED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();
