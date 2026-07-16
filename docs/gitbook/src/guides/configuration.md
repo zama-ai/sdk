@@ -38,8 +38,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 
 | Relayer       | Environment | Description                                  |
 | ------------- | ----------- | -------------------------------------------- |
-| `web()`       | Browser     | Runs WASM in a Web Worker via CDN            |
-| `node()`      | Node.js     | Uses native worker threads                   |
+| `web()`       | Browser     | Runs FHE via bundled WASM in the browser     |
+| `node()`      | Node.js     | Same FHE runtime, server-side                |
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
@@ -48,14 +48,14 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The relayer factory only accepts pool/worker options.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`).
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
 
-// Node.js — pool options only; chain data comes from the preset
-node({ poolSize: 4 });
+// Node.js — chain data comes from the preset
+node();
 
 // Local dev — no KMS, no gateway; executorAddress comes from the chain preset
 cleartext();
@@ -213,7 +213,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -239,7 +239,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -299,7 +299,7 @@ const config = createConfig({
 });
 ```
 
-When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
 
@@ -339,9 +339,42 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
 | `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
 | `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
-| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+| `debug` | Verbose diagnostics — relayer request timing, orchestration progress                         |
 
-The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+
+### 8. (Optional) Tune the FHE runtime
+
+The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — threading, WASM asset loading, and module versions. It is process-global: it applies once per process, not per chain or per relayer.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  runtime: {
+    numberOfThreads: 4, // parallelise FHE work across Web Workers
+  },
+});
+```
+
+The knob most apps reach for is thread count:
+
+| Field             | Effect                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| `numberOfThreads` | Number of Web Workers used to parallelise FHE encryption/decryption |
+| `singleThread`    | `true` forces a single thread — no `SharedArrayBuffer` required     |
+
+{% hint style="warning" %}
+Multi-threaded FHE relies on `SharedArrayBuffer`, which browsers only expose to [cross-origin isolated](https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) pages. To run more than one thread, serve your app with both headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
+{% endhint %}
 
 ## Shared relayer options
 
@@ -350,7 +383,7 @@ When multiple chains use the same relayer, create it once and reference that sin
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedWeb = web({ threads: 8 });
+const sharedWeb = web({ batchRpcCalls: true });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
@@ -363,7 +396,7 @@ const config = createConfig({
 });
 ```
 
-Chains that reference the _same_ relayer object — the result of a single `web()` call — share one worker, reducing memory usage.
+Chains that reference the _same_ relayer object — the result of a single `web()` call — share one FHE backend instance, reducing memory usage.
 
 ## Next steps
 

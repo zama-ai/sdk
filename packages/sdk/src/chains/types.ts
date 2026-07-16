@@ -1,5 +1,10 @@
-import type { Auth } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, EIP1193Provider, Hex } from "viem";
+import type { Address, EIP1193Provider } from "viem";
+
+/** Authentication forwarded to a chain's relayer endpoint. */
+export type FheChainAuth =
+  | { __type: "BearerToken"; token: string }
+  | { __type: "ApiKeyHeader"; header?: string; value: string }
+  | { __type: "ApiKeyCookie"; cookie?: string; value: string };
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -35,11 +40,7 @@ export interface FheChain<TId extends number = number> {
    * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
    * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.
    */
-  readonly auth?: Auth;
-  /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
-  readonly kmsSignerPrivateKey?: Hex;
-  /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */
-  readonly inputSignerPrivateKey?: Hex;
+  readonly auth?: FheChainAuth;
 }
 
 /** At least one chain is required. */

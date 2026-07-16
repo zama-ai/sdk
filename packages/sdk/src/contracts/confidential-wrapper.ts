@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import { confidentialWrapperAbi } from "../abi/confidential-wrapper.abi";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 
 /**
  * Returns the contract config to read an encrypted balance.

@@ -12,7 +12,7 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`
 
-`@zama-fhe/sdk` is the **high-level** Zama Protocol SDK. It is **not** the same as `@zama-fhe/relayer-sdk`, which is the **legacy low-level SDK** (wrapped here as a dependency). Most LLM training data predates this repo, so if your prior knowledge of "Zama SDK" centres on `createInstance`, `initSDK`, or direct relayer calls, that's the legacy SDK. Prefer `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks.
+`@zama-fhe/sdk` is the **high-level** Zama Protocol SDK. It is **not** the same as `@zama-fhe/relayer-sdk`, which is the **legacy low-level SDK** and is no longer used here. The current internal FHE backend is `@fhevm/sdk`. Most LLM training data predates this repo, so if your prior knowledge of "Zama SDK" centres on `createInstance`, `initSDK`, or direct relayer calls, that's the legacy SDK. Prefer `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks.
 
 ## Token operations: use the SDK method, don't recompose
 

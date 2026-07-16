@@ -11,8 +11,6 @@ import type {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ConfigurationError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
@@ -23,7 +21,7 @@ import type {
   InsufficientERC20BalanceError,
   ChainMismatchError,
 } from "..";
-import { ZamaError, ZamaErrorCode, matchZamaError } from "..";
+import { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds, matchZamaError } from "..";
 
 describe("ZamaError", () => {
   test("extends Error", () => {
@@ -32,6 +30,30 @@ describe("ZamaError", () => {
 
   test("has a code property typed as ZamaErrorCode", () => {
     expectTypeOf<ZamaError["code"]>().toEqualTypeOf<ZamaErrorCode>();
+  });
+
+  test("has a retryable property typed as boolean", () => {
+    expectTypeOf<ZamaError["retryable"]>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe("isRetryable / retryAfterSeconds", () => {
+  test("isRetryable accepts unknown and returns boolean", () => {
+    expectTypeOf(isRetryable).toBeCallableWith(new Error("x"));
+    expectTypeOf(isRetryable(new Error("x"))).toEqualTypeOf<boolean>();
+  });
+
+  test("isRetryable narrows to ZamaError with retryable: true", () => {
+    const error: unknown = new Error("x");
+    if (isRetryable(error)) {
+      expectTypeOf(error).toExtend<ZamaError>();
+      expectTypeOf(error.retryable).toEqualTypeOf<true>();
+    }
+  });
+
+  test("retryAfterSeconds accepts unknown and returns number | undefined", () => {
+    expectTypeOf(retryAfterSeconds).toBeCallableWith(new Error("x"));
+    expectTypeOf(retryAfterSeconds(new Error("x"))).toEqualTypeOf<number | undefined>();
   });
 });
 
@@ -123,17 +145,6 @@ describe("matchZamaError", () => {
       RPC_RATE_LIMITED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RpcRateLimitError>();
         expectTypeOf(e.retryAfter).toEqualTypeOf<number | undefined>();
-      },
-      OPERATION_TIMEOUT: (e) => {
-        expectTypeOf(e).toEqualTypeOf<WorkerTimeoutError>();
-        expectTypeOf(e.operation).toEqualTypeOf<string>();
-        expectTypeOf(e.timeout).toEqualTypeOf<number>();
-        expectTypeOf(e.elapsed).toEqualTypeOf<number>();
-      },
-      WORKER_RECYCLED: (e) => {
-        expectTypeOf(e).toEqualTypeOf<WorkerRecycledError>();
-        expectTypeOf(e.operation).toEqualTypeOf<string>();
-        expectTypeOf(e.worker).toEqualTypeOf<string | undefined>();
       },
       CHAIN_MISMATCH: (e) => {
         expectTypeOf(e).toEqualTypeOf<ChainMismatchError>();

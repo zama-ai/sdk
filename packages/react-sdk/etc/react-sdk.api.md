@@ -9,14 +9,14 @@ import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
-import { ClearValues } from '@zama-fhe/relayer-sdk/web';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
+import { ClearValue } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
+import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
@@ -143,20 +143,16 @@ export function useConfidentialTransferFromAndCall(address: Address, options?: U
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDecryptPublicValues(): UseMutationResult<Readonly<{
-clearValues: ClearValues;
-abiEncodedClearValues: `0x${string}`;
-decryptionProof: `0x${string}`;
-}>, Error, `0x${string}`[], unknown>;
+export function useDecryptPublicValues(): UseMutationResult<DecryptPublicValuesResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
 
 // @public
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
 
 // @public
-export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptValuesMutationParams, unknown>;
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValue>, Error, DelegatedDecryptValuesMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;

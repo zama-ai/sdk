@@ -1,4 +1,4 @@
-import type { GenericLogger } from "../worker/worker.types";
+import type { GenericLogger } from "../types";
 
 /**
  * Runs a function and swallows any errors.

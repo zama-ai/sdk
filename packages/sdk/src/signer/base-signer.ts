@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import { WalletNotConnectedError } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import type {
   ContractAbi,
   GenericSigner,

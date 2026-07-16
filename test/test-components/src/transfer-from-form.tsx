@@ -6,6 +6,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 import { useAccount } from "wagmi";
 
 export function TransferFromForm({
@@ -24,8 +25,8 @@ export function TransferFromForm({
     <form
       action={(formData) => {
         transferFrom.mutate({
-          from: formData.get("from") as Address,
-          to: formData.get("to") as Address,
+          from: getAddress(formData.get("from") as string),
+          to: getAddress(formData.get("to") as string),
           amount: BigInt(formData.get("amount") as string),
         });
       }}

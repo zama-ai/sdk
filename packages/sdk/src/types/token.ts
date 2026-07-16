@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import type { ShieldCallbacks, TransferCallbacks, UnshieldCallbacks } from "./callbacks";
 import type { TransactionResult } from "./transaction";
 

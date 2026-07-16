@@ -41,3 +41,20 @@ test("should shield, approve, then transfer-from on cUSDT", async ({
     formatUnits(expectedBalance, 6),
   );
 });
+
+test("should surface an error when transfer-from is called without operator approval", async ({
+  page,
+  contracts,
+  account,
+}) => {
+  // `from` is another account that never approved us as operator — the token
+  // rejects the transfer with UnauthorizedSpender. (Self transfer-from needs no
+  // approval, so the holder here must NOT be the connected wallet.)
+  await page.goto(`/transfer-from?token=${contracts.cUSDT}&from=${recipient}`);
+  await page.getByTestId("to-input").fill(account.address);
+  await page.getByTestId("amount-input").fill("100");
+  await page.getByTestId("transfer-from-button").click();
+
+  await expect(page.getByTestId("transfer-from-error")).toContainText("Error:");
+  await expect(page.getByTestId("transfer-from-success")).not.toBeVisible();
+});

@@ -4,7 +4,7 @@ Zama SDK is a suite of TypeScript libraries for building privacy-preserving dApp
 
 **Design principle: clear-text in, clear-text out.** Callers work with familiar primitives (for tokens, ERC-20-style `balanceOf`, `transfer`, etc.) while the SDK handles the protocol complexity under the hood — encrypted inputs, EIP-712 signing, Relayer routing, and response-format interpretation. Agents should design new APIs the same way: accept plaintext, return plaintext, push everything FHE-related down into the SDK.
 
-**Framework-agnostic core.** The core SDK works with viem, ethers, or any EVM library via adapters. Heavy FHE operations run in Web Workers (browser) or worker threads (Node.js) so the main thread stays responsive.
+**Framework-agnostic core.** The core SDK works with viem, ethers, or any EVM library via adapters. Heavy FHE operations run through `@fhevm/sdk`'s bundled WASM runtime, which spawns an internal worker pool for multi-threaded encryption where the environment allows (cross-origin isolation in browsers).
 
 **React-first view layer.** First-class React hooks, powered by `@tanstack/react-query`, including a drop-in wagmi integration. Other frameworks (React Native, Vue, etc.) aren't supported today, but the three-layer architecture (core action → query-options factory → framework hook) leaves room to add them without touching the core.
 

@@ -8,4 +8,4 @@ export {
   anvil,
   chains,
 } from "./configs";
-export type { FheChain, AtLeastOneChain } from "./types";
+export type { FheChain, FheChainAuth, AtLeastOneChain } from "./types";

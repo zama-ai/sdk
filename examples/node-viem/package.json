@@ -7,11 +7,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "^3.2.0",
-    "viem": "^2.54.3"
+    "@zama-fhe/sdk": "^3.3.0",
+    "viem": "^2.55.0"
   },
   "devDependencies": {
     "tsx": "^4.23.0",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   }
 }

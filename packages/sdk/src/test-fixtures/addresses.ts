@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import type { FixturesOf } from "./types";
 import {
   ACL,

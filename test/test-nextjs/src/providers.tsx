@@ -27,7 +27,8 @@ const zamaConfig = createZamaConfig({
   chains: [
     { ...fheAnvil, network: rpcUrl, registryAddress: getAddress(deployments.wrappersRegistry) },
   ],
-  relayers: { [fheAnvil.id]: cleartext() },
+  relayers: { [fheAnvil.id]: cleartext({ batchRpcCalls: true }) },
+  runtime: { numberOfThreads: 4 },
   wagmiConfig,
 });
 

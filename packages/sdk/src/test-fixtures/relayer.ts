@@ -1,10 +1,9 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { FhevmRelayerSDK } from "../relayer/types";
 import type { FixturesOf } from "./types";
 import {
-  ACL,
   TEST_PRIVATE_KEY,
   TEST_PUBLIC_KEY,
   TOKEN,
@@ -13,68 +12,105 @@ import {
 } from "./constants";
 import { anvil } from "../chains";
 
-export function createMockRelayer(overrides: Partial<RelayerDispatcher> = {}): RelayerDispatcher {
+export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): FhevmRelayerSDK {
   return {
-    chains: [anvil],
     chain: anvil,
-    switchChain: vi.fn(),
     generateTransportKeyPair: vi
       .fn()
       .mockResolvedValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
-    createEIP712: vi
+    parseTransportKeyPair: vi.fn().mockImplementation((kp: unknown) => kp),
+    serializeTransportKeyPair: vi
       .fn()
-      .mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { UserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [TOKEN],
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
+      .mockReturnValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
+    // Route through the passed signer so `signer.signTypedData` call-count and
+    // rejection assertions stay observable through the new permit-signing flow.
+    signDecryptionPermit: vi
+      .fn()
+      .mockImplementation(
+        async (params: {
+          signer: { signTypedData: (typedData: unknown) => Promise<string> };
+          signerAddress: string;
+          delegatorAddress?: string;
+          contractAddresses: readonly string[];
+        }) => {
+          const eip712 = {
+            domain: { name: "Decryption", version: "1", chainId: 31337n, verifyingContract: TOKEN },
+            types: { UserDecryptRequestVerification: [] },
+            primaryType: "UserDecryptRequestVerification",
+            message: {
+              publicKey: TEST_PUBLIC_KEY,
+              contractAddresses: params.contractAddresses,
+              startTimestamp: "1000",
+              durationDays: "1",
+              extraData: "0x",
+            },
+          };
+          const signature = await params.signer.signTypedData(eip712);
+          return {
+            version: 1,
+            eip712,
+            signature,
+            signerAddress: params.signerAddress,
+            encryptedDataOwnerAddress: params.delegatorAddress ?? params.signerAddress,
+            transportPublicKey: TEST_PUBLIC_KEY,
+            isDelegated: params.delegatorAddress !== undefined,
+            assertNotExpired: () => {},
+          };
         },
-      }),
-    encrypt: vi
+      ),
+    serializeSignedDecryptionPermit: vi
+      .fn()
+      .mockImplementation(
+        (params: {
+          signedPermit: {
+            version: number;
+            eip712: unknown;
+            signature: string;
+            signerAddress: string;
+          };
+        }) => ({
+          version: params.signedPermit.version,
+          eip712: params.signedPermit.eip712,
+          signature: params.signedPermit.signature,
+          signerAddress: params.signedPermit.signerAddress,
+        }),
+      ),
+    parseSignedDecryptionPermit: vi.fn().mockImplementation(async (params: unknown) => params),
+    encryptValue: vi
+      .fn()
+      .mockResolvedValue({ encryptedValue: VALID_ENCRYPTED_VALUE, inputProof: VALID_INPUT_PROOF }),
+    encryptValues: vi
       .fn()
       .mockResolvedValue({
         encryptedValues: [VALID_ENCRYPTED_VALUE],
         inputProof: VALID_INPUT_PROOF,
       }),
-    userDecrypt: vi.fn().mockResolvedValue({ [VALID_ENCRYPTED_VALUE as string]: 1000n }),
-    publicDecrypt: vi.fn().mockImplementation((handles: string[]) => {
-      const clearValues: Record<string, bigint> = {};
-      for (const h of handles) {
-        clearValues[h] = 500n;
-      }
-      return Promise.resolve({
-        clearValues,
-        abiEncodedClearValues: "0x1f4",
-        decryptionProof: "0xproof",
-      });
-    }),
-    createDelegatedUserDecryptEIP712: vi
+    decryptValue: vi.fn().mockResolvedValue({ type: "uint64", value: 1000n }),
+    decryptValues: vi.fn().mockResolvedValue([{ type: "uint64", value: 1000n }]),
+    decryptValuesFromPairs: vi.fn().mockResolvedValue([{ type: "uint64", value: 1000n }]),
+    decryptPublicValue: vi.fn().mockResolvedValue({ type: "uint64", value: 500n }),
+    decryptPublicValues: vi.fn().mockResolvedValue([{ type: "uint64", value: 500n }]),
+    decryptPublicValuesWithSignatures: vi
       .fn()
-      .mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {},
-      }),
-    delegatedUserDecrypt: vi.fn().mockResolvedValue({ [VALID_ENCRYPTED_VALUE as string]: 1000n }),
-    requestZKProofVerification: vi.fn(),
-    getAclAddress: vi.fn().mockResolvedValue(ACL),
+      .mockImplementation((params: { encryptedValues: readonly string[] }) =>
+        Promise.resolve({
+          clearValues: params.encryptedValues.map(() => ({ type: "uint64", value: 500n })),
+          checkSignaturesArgs: {
+            handlesList: params.encryptedValues,
+            abiEncodedCleartexts: "0x1f4",
+            decryptionProof: "0xproof",
+          },
+        }),
+      ),
     fetchFheEncryptionKeyBytes: vi
       .fn()
       .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
-    getPublicParams: vi
-      .fn()
-      .mockResolvedValue({ publicParams: new Uint8Array([2]), publicParamsId: "pp-1" }),
-    terminate: vi.fn(),
     ...overrides,
-  } as unknown as RelayerDispatcher;
+  } satisfies FhevmRelayerSDK;
 }
 
 export interface RelayerFixtures {
-  relayer: RelayerDispatcher;
+  relayer: FhevmRelayerSDK;
   createMockRelayer: typeof createMockRelayer;
 }
 
