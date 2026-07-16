@@ -3345,10 +3345,53 @@ if (unwrapTxHash) {
 
 All mutation hooks automatically invalidate balance queries on success, so your UI stays in sync without manual cache management.
 
+### 6. Decompose the unshield into explicit phases
+
+`unshield()` orchestrates both on-chain steps for you and should be your default. Drop down to the low-level primitives only when you genuinely need per-phase control -- for example, to submit the unwrap now and let the user finalize later from a different screen.
+
+- **`unwrap(amount)`** (or **`unwrapAll()`**) submits phase 1 and returns an `UnwrapResult`: the `txHash`, mined `receipt`, and the `unwrapRequestId` needed for phase 2.
+- **`finalizeUnwrap(unwrapRequestId)`** fetches the public decryption proof and submits phase 2.
+
+
+### Tab: SDK
+
+```ts
+// Phase 1: request the unwrap on-chain
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
+
+// ...later, once the request has been processed on-chain
+
+// Phase 2: fetch the decryption proof and finalize
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
+```
+
+### Tab: React
+
+```tsx
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+
+const unwrap = useUnwrap("0xWrapper");
+const finalize = useFinalizeUnwrap("0xWrapper");
+
+// Phase 1 -- the mutation `data` is an UnwrapResult
+const result = await unwrap.mutateAsync({ amount: 500n });
+
+// Phase 2 -- the result's unwrapRequestId feeds straight in
+await finalize.mutateAsync(result);
+```
+
+
+Use `unwrapAll()` / `useUnwrapAll` in place of `unwrap` / `useUnwrap` to request the full confidential balance instead of a fixed amount.
+
+
+> [!WARNING]
+> When you drive the two phases yourself, you own the state between them. `getPendingUnshield()` and `resumeUnshield()` only track unshields started through `unshield()` -- they will not pick up an `unwrap` you submitted directly. Persist the `unwrapRequestId` yourself if the session might end before you finalize.
+
+
 ## Next steps
 
 - See [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
-- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, `useResumeUnshield`, and the low-level `useUnwrap` / `useUnwrapAll` / `useFinalizeUnwrap` details.
 - If your unshield fails, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.
 
 ## Check balances
