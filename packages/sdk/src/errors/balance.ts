@@ -44,6 +44,24 @@ export class InsufficientERC20BalanceError extends ZamaError {
   }
 }
 
+/** ERC-20 allowance granted to the wrapper is insufficient for the requested wrap amount. */
+export class InsufficientAllowanceError extends ZamaError {
+  /** The amount the caller requested. */
+  readonly requested: bigint;
+  /** The allowance available at the time of the check. */
+  readonly available: bigint;
+  /** The underlying ERC-20 token contract address. */
+  readonly token: Address;
+
+  constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.InsufficientAllowance, message, options);
+    this.name = "InsufficientAllowanceError";
+    this.requested = details.requested;
+    this.available = details.available;
+    this.token = details.token;
+  }
+}
+
 /** Balance validation could not be performed (no cached credentials and decryption not possible). */
 export class BalanceCheckUnavailableError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
