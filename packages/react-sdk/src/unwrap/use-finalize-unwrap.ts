@@ -24,10 +24,13 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  *
  * @example
  * ```tsx
+ * const unwrap = useUnwrap("0xWrapper");
  * const finalize = useFinalizeUnwrap("0xWrapper");
- * const event = findUnwrapRequested(receipt.logs);
- * if (!event?.unwrapRequestId) throw new Error("UnwrapRequested event missing");
- * finalize.mutate({ unwrapRequestId: event.unwrapRequestId });
+ *
+ * async function unshield() {
+ *  const result = await unwrap.mutateAsync({ amount: 500n });
+ *  await finalize.mutateAsync(result);
+ * }
  * ```
  */
 export function useFinalizeUnwrap(

@@ -2,7 +2,7 @@
 
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
-import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import type { Address, UnwrapResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnwrap,
   type UnwrapParams,
@@ -12,8 +12,11 @@ import { useWrappedToken } from "../token/use-wrapped-token";
 
 /**
  * Request an unwrap for a specific amount. Encrypts the amount first.
- * Call {@link useFinalizeUnwrap} after the request is processed on-chain,
- * or use {@link useUnshield} for a single-call orchestration.
+ * Pass the result to {@link useFinalizeUnwrap} once the request is processed
+ * on-chain, or use {@link useUnshield} for a single-call orchestration.
+ *
+ * The mutation `data` is an {@link UnwrapResult} — its `unwrapRequestId` feeds
+ * straight into `useFinalizeUnwrap`, so no manual receipt decoding is needed.
  *
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
@@ -26,16 +29,21 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * @example
  * ```tsx
  * const unwrap = useUnwrap("0xWrapper");
- * unwrap.mutate({ amount: 500n });
+ * const finalize = useFinalizeUnwrap("0xWrapper");
+ *
+ * async function unshield() {
+ *  const result = await unwrap.mutateAsync({ amount: 500n });
+ *  await finalize.mutateAsync(result);
+ * }
  * ```
  */
 export function useUnwrap(
   address: Address,
-  options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>,
+  options?: UseMutationOptions<UnwrapResult, Error, UnwrapParams, Address>,
 ) {
   const token = useWrappedToken(address);
 
-  return useMutation<TransactionResult, Error, UnwrapParams, Address>({
+  return useMutation<UnwrapResult, Error, UnwrapParams, Address>({
     ...unwrapMutationOptions(token),
     ...options,
     onSuccess: (data, variables, onMutateResult, context) => {
