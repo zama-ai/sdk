@@ -10,18 +10,18 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
-    "@zama-fhe/react-sdk": "3.3.0-alpha.3",
-    "@zama-fhe/sdk": "3.3.0-alpha.3",
+    "@zama-fhe/react-sdk": "3.3.0-alpha.9",
+    "@zama-fhe/sdk": "3.3.0-alpha.9",
     "next": "^16.2.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "viem": "^2.47.0",
-    "wagmi": "^3.5.0"
+    "viem": "^2.55.0",
+    "wagmi": "^3.7.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
     "@types/react": "^19.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   },
   "overrides": {
     "hono": ">=4.12.2",

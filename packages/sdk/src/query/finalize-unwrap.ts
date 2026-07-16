@@ -1,4 +1,4 @@
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";

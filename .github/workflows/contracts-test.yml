@@ -29,35 +29,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Init submodules
-        run: git submodule update --init --recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1.8.0
-        with:
-          version: v1.5.1
-
-      - name: Restore Forge build cache
-        id: forge-build-cache
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          path: |
-            contracts/out
-            contracts/cache
-            contracts/dependencies
-            contracts/lib/forge-fhevm/out
-            contracts/lib/forge-fhevm/dependencies
-          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock') }}
-
-      - name: Install Soldeer dependencies
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: |
-          cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-          cd "$GITHUB_WORKSPACE/contracts" && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install
-
-      - name: Build forge-fhevm contracts
-        if: steps.forge-build-cache.outputs.cache-hit != 'true'
-        run: cd contracts/lib/forge-fhevm && forge build
+      - name: Build contracts
+        uses: ./.github/actions/build-contracts
 
       - name: Run contract tests
         run: cd contracts && forge test -vvv

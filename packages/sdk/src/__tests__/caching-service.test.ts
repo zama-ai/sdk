@@ -1,6 +1,6 @@
 import { getAddress, type Address } from "viem";
 import { describe, expect, test } from "../test-fixtures";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { CachingService } from "../services/caching-service";
 import { LoggerService } from "../services/logger-service";
 
@@ -74,7 +74,7 @@ describe("CachingService", () => {
   test("invalid stored values behave as cachingService misses", async ({ createMockStorage }) => {
     const storage = createMockStorage();
     const cachingService = new CachingService(storage, new LoggerService());
-    storage.get = async () => ({ value: 42n });
+    storage.get = (async () => ({ value: 42n })) as typeof storage.get;
 
     await expect(cachingService.get(REQUESTER_A, CONTRACT_A, HANDLE_A)).resolves.toBeNull();
   });

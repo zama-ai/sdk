@@ -20,7 +20,7 @@ export type {
   Hex,
 } from "viem";
 export { ProviderRpcError } from "viem";
-export type { EncryptedValue } from "../relayer/relayer-sdk.types";
+export type { EncryptedValue } from "../relayer/types";
 export {
   readConfidentialBalanceOfContract,
   readUnderlyingTokenContract,

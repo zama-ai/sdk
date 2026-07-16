@@ -1,7 +1,7 @@
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
-import type { TransportKeyPair } from "../types";
+import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { checksum } from "../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
@@ -10,15 +10,20 @@ const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const TTL_SECONDS = 86400;
 
-function makeGenerator(): () => Promise<TransportKeyPair> {
+const makeLogger = () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() });
+
+function makeGenerator(): () => Promise<SerializeTransportKeyPairReturnType> {
   // Each call generates a unique keypair so cache hits/misses are observable
   // via equality without poking the generator's call count.
   let counter = 0;
   return vi.fn().mockImplementation(async () => {
     counter += 1;
     return {
-      publicKey: (PUBLIC_KEY.slice(0, -2) + counter.toString(16).padStart(2, "0")) as `0x${string}`,
-      privateKey: PRIVATE_KEY,
+      publicKey: (PUBLIC_KEY.slice(0, -2) +
+        counter
+          .toString(16)
+          .padStart(2, "0")) as unknown as SerializeTransportKeyPairReturnType["publicKey"],
+      privateKey: PRIVATE_KEY as unknown as SerializeTransportKeyPairReturnType["privateKey"],
     };
   });
 }
@@ -31,6 +36,7 @@ const test = baseTest.extend<{ vault: TransportKeyPairVault }>({
         generator: makeGenerator(),
         storage: new MemoryStorage(),
         ttl: TTL_SECONDS,
+        logger: makeLogger(),
       }),
     );
   },
@@ -84,6 +90,7 @@ describe("TransportKeyPairVault", () => {
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
+      logger: makeLogger(),
     });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.

@@ -1,10 +1,10 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { type QueryClient, useMutation } from "@tanstack/react-query";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { EncryptionFailedError, SigningRejectedError } from "@zama-fhe/sdk";
 import { confidentialTransferMutationOptions, zamaQueryKeys } from "@zama-fhe/sdk/query";
-import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialBalance } from "../../balance/use-confidential-balance";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialTransfer } from "../use-confidential-transfer";
 
 describe("useConfidentialTransfer", () => {
@@ -249,10 +249,10 @@ describe("useConfidentialTransfer", () => {
     // transaction write so the post-transfer refetch sees handleB.
     let currentHandle: string = handle;
     vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-    vi.mocked(relayer.userDecrypt).mockImplementation(
-      async ({ encryptedValues }: { encryptedValues: Hex[] }) => ({
-        [encryptedValues[0]]: encryptedValues[0] === handle ? 1000n : 500n,
-      }),
+    vi.mocked(relayer.decryptValues).mockImplementation(
+      async ({ encryptedValues }: DecryptValuesParameters) => [
+        { type: "uint64", value: encryptedValues[0] === handle ? 1000n : 500n } as TypedValue,
+      ],
     );
     vi.mocked(signer.writeContract).mockImplementation(async () => {
       currentHandle = handleB;
@@ -328,8 +328,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
 
     await act(async () => {
@@ -447,8 +447,8 @@ describe("useConfidentialTransfer optimistic updates", () => {
     );
     expect(cancelSpy.mock.invocationCallOrder[0]).toBeDefined();
     expect(setQueryDataSpy.mock.invocationCallOrder[0]).toBeDefined();
-    expect(cancelSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      setQueryDataSpy.mock.invocationCallOrder[0],
+    expect(cancelSpy.mock.invocationCallOrder[0]!).toBeLessThan(
+      setQueryDataSpy.mock.invocationCallOrder[0]!,
     );
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 3800n);
     expect(setQueryDataSpy).toHaveBeenCalledWith(balanceKey, 5000n);
@@ -475,15 +475,17 @@ describe("useConfidentialTransfer optimistic updates", () => {
     // Sabotage setQueryData after the optimistic write so rollback throws
     const originalSetQueryData = queryClient.setQueryData.bind(queryClient);
     let callCount = 0;
-    vi.spyOn(queryClient, "setQueryData").mockImplementation((key: string, value: any) => {
-      callCount++;
-      // First call is the optimistic subtract, let it through.
-      // Second call (rollback) should throw.
-      if (callCount <= 1) {
-        return originalSetQueryData(key, value);
-      }
-      throw new Error("rollback boom");
-    });
+    vi.spyOn(queryClient, "setQueryData").mockImplementation(
+      (key: readonly unknown[], value: unknown) => {
+        callCount++;
+        // First call is the optimistic subtract, let it through.
+        // Second call (rollback) should throw.
+        if (callCount <= 1) {
+          return originalSetQueryData(key, value);
+        }
+        throw new Error("rollback boom");
+      },
+    );
 
     // Suppress the expected unhandled rejection from the rollback error
     // propagating through the mutation executor.

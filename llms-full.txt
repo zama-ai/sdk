@@ -172,7 +172,7 @@ Ask technical questions, discuss with the community, or report a bug.
 
 Pick your stack. Each tab gets you from install to a working confidential transfer.
 
-The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they use native worker threads instead of a Web Worker and store keys in memory.
+The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethers). The **Node.js** tabs are for backend services, scripts, and bots that operate on confidential tokens server-side — they run the same FHE runtime server-side and store keys in memory.
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
@@ -343,7 +343,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -367,7 +367,7 @@ const config = createConfig({
   chains: [mySepolia],
   signer: wallet,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -376,7 +376,7 @@ const sdk = new ZamaSDK(config);
 
 
 > [!INFO]
-> **FHE artifact caching** — Both `web()` and `node()` relayers automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Browser uses IndexedDB (persists across reloads), Node.js uses in-memory storage (lost on restart). The cache revalidates against the CDN every 24 hours. Configure it via the options passed to `web()` / `node()`. See [FheArtifactCache](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/FheArtifactCache.md) for details.
+> **FHE artifact caching** — Both `web()` and `node()` transports automatically cache the multi-MB FHE encryption key and parameters so they are not re-downloaded on every startup. Caching is handled internally by `@fhevm/sdk` — no configuration is required.
 
 
 ## Your first confidential transfer
@@ -523,7 +523,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
@@ -546,7 +546,7 @@ try {
   // Withdraw back to public ERC-20
   await wrappedToken.unshield(500n);
 } finally {
-  sdk.terminate(); // clean up worker threads
+  sdk.terminate(); // release SDK resources
 }
 ```
 
@@ -1699,23 +1699,25 @@ relayers: { [chain.id]: web() }
 
 The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
-`auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
+`auth`) and the SDK resolves the right backend per chain via `ChainRouter`.
 
 
 > [!INFO]
 > **Imported the relayer config types directly?** They followed the constructor →
 > factory move: `node()` / `web()` / `cleartext()` return `NodeRelayerConfig` /
 > `WebRelayerConfig` / `CleartextRelayerConfig` (all extend `RelayerConfig`). The
-> relayer-sdk-level `RelayerWebConfig` / `RelayerWebSecurityConfig` are unchanged
-> but now live under `@zama-fhe/sdk/web`.
+> old constructor-level `RelayerWebConfig` / `RelayerWebSecurityConfig` types were
+> removed with the worker-backed relayer. Put RPC URL and auth on `FheChain`, and
+> pass supported client/request defaults directly to `web()` or `node()`.
 
 
 
 > [!INFO]
 > **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
 > The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
-> and cookie are rejected at the edge). Field names differ — `ApiKeyHeader` uses
-> `value`, `BearerToken` uses `token`. See [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/relayer-api-keys.md).
+> and cookie are rejected at the edge). The `__type` discriminator is unchanged;
+> `ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. See
+> [Relayer API keys](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/relayer-api-keys.md).
 
 
 ## Step 3 — Permits & delegated decryption
@@ -2138,8 +2140,8 @@ Relayers tell the SDK how to run FHE operations on each chain.
 
 | Relayer       | Environment | Description                                  |
 | ------------- | ----------- | -------------------------------------------- |
-| `web()`       | Browser     | Runs WASM in a Web Worker via CDN            |
-| `node()`      | Node.js     | Uses native worker threads                   |
+| `web()`       | Browser     | Runs FHE via bundled WASM in the browser     |
+| `node()`      | Node.js     | Same FHE runtime, server-side                |
 | `cleartext()` | Local dev   | No FHE infrastructure — cleartext operations |
 
 ```ts
@@ -2148,14 +2150,14 @@ import { web } from "@zama-fhe/sdk/web";
 import { node } from "@zama-fhe/sdk/node";
 ```
 
-Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset. The relayer factory only accepts pool/worker options.
+Chain-specific data (`relayerUrl`, `network`, `executorAddress`, etc.) comes from the chain preset, so a bare call is all most apps need. Each factory also accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (e.g. `batchRpcCalls`, `fheEncryptionKey`).
 
 ```ts
 // Browser — uses relayerUrl from the chain preset
 web();
 
-// Node.js — pool options only; chain data comes from the preset
-node({ poolSize: 4 });
+// Node.js — chain data comes from the preset
+node();
 
 // Local dev — no KMS, no gateway; executorAddress comes from the chain preset
 cleartext();
@@ -2306,7 +2308,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2331,7 +2333,7 @@ const config = createConfig({
   signer: myCustomSigner, // implements GenericSigner
   provider: myCustomProvider, // implements GenericProvider
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -2388,7 +2390,7 @@ const config = createConfig({
 });
 ```
 
-When done with the SDK, call `sdk.terminate()` to clean up the Web Worker or thread pool.
+When done with the SDK, call `sdk.terminate()` to unsubscribe wallet listeners and release the SDK's resources.
 
 ### 6. (Optional) Choose a storage backend
 
@@ -2428,9 +2430,43 @@ The `logger` is a minimal four-level interface — `error`, `warn`, `info`, `deb
 | `error` | Unexpected internal failures only — never failures already surfaced via a rejection          |
 | `warn`  | Recoverable or degraded conditions (a fallback path, a retry, a swallowed best-effort write) |
 | `info`  | Reserved for coarse lifecycle milestones; not currently emitted                              |
-| `debug` | Verbose diagnostics — worker lifecycle, request timing, orchestration progress               |
+| `debug` | Verbose diagnostics — relayer request timing, orchestration progress                         |
 
-The logger is configured once here and flows SDK-wide — including into worker request tracing, the credential store, and the artifact cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+The logger is configured once here and flows SDK-wide — including into relayer request tracing, the credential store, and the decrypt cache. There is deliberately no per-relayer logger option; `createConfig({ logger })` is the single source of truth.
+
+### 8. (Optional) Tune the FHE runtime
+
+The `runtime` field configures the underlying `@fhevm/sdk` WASM runtime — threading, WASM asset loading, and module versions. It is process-global: it applies once per process, not per chain or per relayer.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  wagmiConfig,
+  relayers: { [sepolia.id]: web() },
+  runtime: {
+    numberOfThreads: 4, // parallelise FHE work across Web Workers
+  },
+});
+```
+
+The knob most apps reach for is thread count:
+
+| Field             | Effect                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| `numberOfThreads` | Number of Web Workers used to parallelise FHE encryption/decryption |
+| `singleThread`    | `true` forces a single thread — no `SharedArrayBuffer` required     |
+
+
+> [!WARNING]
+> Multi-threaded FHE relies on `SharedArrayBuffer`, which browsers only expose to [cross-origin isolated](https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) pages. To run more than one thread, serve your app with both headers:
+>
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
+>
+> If you can't set those headers (some static hosts and embedded contexts), pass `runtime: { singleThread: true }` instead — the SDK then runs FHE on the main thread with no `SharedArrayBuffer` dependency.
+
 
 ## Shared relayer options
 
@@ -2439,7 +2475,7 @@ When multiple chains use the same relayer, create it once and reference that sin
 ```ts
 import { sepolia, mainnet, type FheChain } from "@zama-fhe/sdk/chains";
 
-const sharedWeb = web({ threads: 8 });
+const sharedWeb = web({ batchRpcCalls: true });
 
 const mySepolia = { ...sepolia, relayerUrl: "/api/relayer/11155111" } as const satisfies FheChain;
 const myMainnet = { ...mainnet, relayerUrl: "/api/relayer/1" } as const satisfies FheChain;
@@ -2452,7 +2488,7 @@ const config = createConfig({
 });
 ```
 
-Chains that reference the _same_ relayer object — the result of a single `web()` call — share one worker, reducing memory usage.
+Chains that reference the _same_ relayer object — the result of a single `web()` call — share one FHE backend instance, reducing memory usage.
 
 ## Next steps
 
@@ -2621,13 +2657,15 @@ auth: { __type: "ApiKeyCookie", value: "your-api-key" }
 auth: { __type: "BearerToken", token: "your-token" }
 ```
 
-When using `RelayerWeb` with a proxy, you can also add CSRF protection via the `security.getCsrfToken` callback. See the [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for details.
+When a browser relayer is routed through your own proxy, enforce CSRF protection
+at the proxy/application boundary (for example, with same-site cookies and your
+framework's CSRF middleware). The `web()` transport does not manage CSRF tokens.
 
 ## Next steps
 
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — full relayer, signer, and storage setup
 - [Shield Tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md) — start converting public tokens to confidential form
-- [RelayerWeb reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — security options and multi-threading
+- [web() transport reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser-side FHE transport options
 - [RelayerNode reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — `node()` transport factory
 
 ## Relayer API keys
@@ -3735,40 +3773,40 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Error                                   | Code                                  | What happened                                                                                  |
-| --------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                             |
-| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                       |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                        |
-| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                          |
-| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                 |
-| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                       |
-| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                            |
-| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                   |
-| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`)                                              |
-| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)               |
-| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                 |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE worker failed to initialize                                          |
-| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                          |
-| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                              |
-| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                   |
-| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                   |
-| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                          |
-| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                  |
-| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Only one delegate/revoke per tuple per block                                                   |
-| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation for this tuple                                                            |
-| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                                                     |
-| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | The delegation has expired                                                                     |
-| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)        |
-| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)          |
-| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`)       |
-| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                                    |
-| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Delegation contract address equals the caller                                                  |
-| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals the contract address                                                           |
-| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                                 |
-| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                                           |
-| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry |
-| `AclPausedError`                        | `ACL_PAUSED`                          | The ACL contract is paused                                                                     |
+| Error                                   | Code                                  | What happened                                                                                       |
+| --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                  |
+| `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity or firmware issue)                                            |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                           |
+| `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                               |
+| `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
+| `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                            |
+| `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                                 |
+| `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                        |
+| `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
+| `NotEntitledError`                      | `NOT_ENTITLED`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
+| `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (retryable)                                   |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                              |
+| `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                               |
+| `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                   |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
+| `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                        |
+| `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                               |
+| `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                       |
+| `DelegationCooldownError`               | `DELEGATION_COOLDOWN`                 | Only one delegate/revoke per tuple per block (retryable)                                            |
+| `DelegationNotFoundError`               | `DELEGATION_NOT_FOUND`                | No active delegation for this tuple                                                                 |
+| `SignerRequiredError`                   | `SIGNER_REQUIRED`                     | Write/sign/decrypt called without a signer                                                          |
+| `DelegationExpiredError`                | `DELEGATION_EXPIRED`                  | The delegation has expired                                                                          |
+| `SignerNotConfiguredError`              | `SIGNER_NOT_CONFIGURED`               | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)             |
+| `WalletNotConnectedError`               | `WALLET_NOT_CONNECTED`                | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)               |
+| `WalletAccountNotReadyError`            | `WALLET_ACCOUNT_NOT_READY`            | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable) |
+| `ChainMismatchError`                    | `CHAIN_MISMATCH`                      | Signer and provider are on different chains                                                         |
+| `DelegationContractIsSelfError`         | `DELEGATION_CONTRACT_IS_SELF`         | Delegation contract address equals the caller                                                       |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals the contract address                                                                |
+| `DelegationExpirationTooSoonError`      | `DELEGATION_EXPIRATION_TOO_SOON`      | Expiration date less than 1 hour in the future                                                      |
+| `DelegationExpiryUnchangedError`        | `DELEGATION_EXPIRY_UNCHANGED`         | New expiry matches the current value                                                                |
+| `DelegationNotPropagatedError`          | `DELEGATION_NOT_PROPAGATED`           | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry      |
+| `AclPausedError`                        | `ACL_PAUSED`                          | The ACL contract is paused                                                                          |
 
 ### 2. Catch with instanceof
 
@@ -3829,34 +3867,35 @@ Each handler receives the error class for its code, so subclass fields are avail
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                                                      |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                                    |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- the Web Worker needs `wasm-unsafe-eval`.                                                                                      |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                              |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                                       |
-| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                    |
-| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                    |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. Inspect `.statusCode`; on a 429, retry after `.retryAfter` seconds. |
-| `WorkerTimeoutError`                   | Retry with client-side backoff (the Node worker is recycled by default). Raise `node({ operationTimeout })` for legitimately long operations.           |
-| `WorkerRecycledError`                  | Just retry — the request was cancelled as collateral of another operation's timeout recycle, not by a failure of its own.                               |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE worker failed to initialize. Check your transport config and CSP headers.                                              |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                            |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                       |
-| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically.              |
-| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).                 |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                                |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                               |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                                          |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                              |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                                    |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                                    |
-| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                                    |
-| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                                         |
-| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                                       |
-| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                                      |
+| Error                                  | Recommended action                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                       |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                    |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                         |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                 |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                      |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                        |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                               |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                          |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically. |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).    |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                   |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                  |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                             |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                 |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                       |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                       |
+| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                       |
+| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                            |
+| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                          |
+| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                         |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -3916,11 +3955,49 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejected the EIP-712 signature       | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.     |
 | Balance always `undefined`                | Encrypted value is zero (never shielded)    | Check if the user has shielded tokens first. Catch `NoCiphertextError`.                                 |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize             | Check your CSP headers -- the worker needs `wasm-unsafe-eval`. Check transport config.                  |
-| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the worker needs `wasm-unsafe-eval`.                                          |
+| `ConfigurationError` on first operation   | FHE runtime failed to initialize            | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.             |
+| `EncryptionFailedError`                   | FHE encryption failed during an operation   | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                     |
 | `DecryptionFailedError` after page reload | Unshield was interrupted                    | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                    |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or tx hash invalid | Check the unwrap tx. If it was already finalized, the unshield is complete -- stop prompting to resume. |
 | `RelayerRequestFailedError`               | Relayer URL wrong or auth missing           | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.           |
+
+### 8. Retry transient failures
+
+Five causes are transient — the operation can simply be retried, ideally with backoff: `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError`. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)` — they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+
+| Cause                          | `retryAfterSeconds`                               | Notes                                                                                                   |
+| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `RpcRateLimitError`            | Usually `undefined` (viem/ethers own the backoff) | Consider a higher-throughput RPC endpoint.                                                              |
+| `RelayerRequestFailedError`    | Set on a 429 with a `Retry-After` header          | Retryable on `.statusCode === 429` or an `@fhevm/sdk` relayer timeout; other statuses are terminal.     |
+| `DelegationNotPropagatedError` | `undefined`                                       | The SDK already rides out the propagation window internally; only surfaces if it's exceeded.            |
+| `DelegationCooldownError`      | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
+| `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
+
+
+### Tab: SDK
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Promise<bigint> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isRetryable(error) || attempt >= maxAttempts) {
+        throw error; // terminal, or out of attempts -- surface it
+      }
+      const delaySeconds = retryAfterSeconds(error) ?? attempt * 2; // backoff when the server gives no hint
+      await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+    }
+  }
+}
+```
+
+
+Never retry when `isRetryable(error)` is `false` -- a `NotEntitledError`, for example, means the ACL grant is missing and retrying just busy-loops.
+
+`isRetryable()` reflects the SDK's own classification, not a guarantee about the underlying cause: a network blip the SDK can't structurally recognize still falls back to a non-retryable `DecryptionFailedError`.
 
 ## Next steps
 
@@ -3937,7 +4014,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main differences are the relayer (native worker threads instead of Web Workers) and storage isolation for concurrent requests.
+The SDK works in Node.js with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
 
 
 > [!INFO]
@@ -3954,7 +4031,7 @@ npm install @zama-fhe/sdk viem
 
 ### 2. Create the config with a `node()` relayer
 
-The `node()` relayer uses native `worker_threads` for FHE operations. Pass `poolSize` to control parallelism (default: `min(CPU cores, 4)`). Bound stuck operations with `operationTimeout` (seconds, default 30) — a timeout rejects with a retryable `WorkerTimeoutError` and recycles the worker (toggle via `recycleWorkerOnTimeout`).
+The `node()` transport runs FHE operations through `@fhevm/sdk`. Chain data comes from the preset, so a bare call is all you need; it also accepts an optional `@fhevm/sdk` options object (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3980,7 +4057,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4065,7 +4142,7 @@ The `auth` field supports three modes. For the **Zama-hosted relayer, use `ApiKe
 
 ### 7. Clean up on shutdown
 
-Terminate the worker pool when your process exits:
+Release the SDK's resources when your process exits:
 
 ```ts
 process.on("SIGTERM", () => {
@@ -4093,7 +4170,7 @@ const config = createConfig({
   signer: myRelayerSigner, // GenericSigner backed by your relayer
   provider: myRpcProvider, // GenericProvider backed by an RPC client
   storage: memoryStorage,
-  relayers: { [mySepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [mySepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -4104,7 +4181,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 ## Next steps
 
 - [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md) -- index confidential transfers and decrypt amounts off event logs
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- `node()` transport factory options
+- [node() transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- the `node()` transport factory reference
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and permit management
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
@@ -4326,17 +4403,17 @@ const sdk = new ZamaSDK(config);
 
 # Next.js / SSR
 
-The SDK relies on browser APIs -- Web Workers, IndexedDB, and WebAssembly -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
+The SDK's browser stack relies on APIs -- IndexedDB, wallet connections, and the browser WASM runtime -- that are not available during server-side rendering. This guide covers the patterns you need to keep FHE operations on the client while still using Next.js App Router and SSR layouts.
 
 ## Steps
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption inside a Web Worker backed by a WASM binary. IndexedDB stores encrypted transport key pairs. None of these APIs exist in Node.js or during SSR.
+The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR.
 
 This means:
 
-- You cannot import `RelayerWeb`, `ZamaProvider`, or any SDK hook in a Server Component
+- You cannot import `ZamaProvider`, the `web()` transport, or any SDK hook in a Server Component
 - You cannot create the relayer or signer at module level in a file that runs on the server
 
 ### 2. Mark SDK components with `"use client"`
@@ -4433,7 +4510,7 @@ A common mistake is initializing the relayer or signer in a shared module that g
 import { web } from "@zama-fhe/sdk/web";
 import { createConfig } from "@zama-fhe/sdk/viem";
 
-// This runs during SSR and crashes — Web Worker is not available
+// This runs during SSR, where browser storage and wallet APIs don't exist
 export const config = createConfig({ ... });
 ```
 
@@ -4442,7 +4519,7 @@ Instead, keep all SDK initialization inside a `"use client"` file (like the `Pro
 ```ts
 // lib/sdk.ts — safe alternative
 export async function getConfig() {
-  const { web } = await import("@zama-fhe/sdk");
+  const { web } = await import("@zama-fhe/sdk/web");
   const { createConfig } = await import("@zama-fhe/sdk/viem");
   return createConfig({ ... });
 }
@@ -4899,10 +4976,10 @@ function ConfidentialRoundTrip() {
 {% endcode %}
 
 
-> [!WARNING]
-> **Required: Cross-Origin headers**
+> [!INFO]
+> **Recommended: Cross-Origin headers for faster encryption**
 >
-> `useEncrypt` loads FHE WASM in a Web Worker, which requires `SharedArrayBuffer`. You must set these HTTP headers:
+> `useEncrypt` runs FHE WASM in the browser. With `SharedArrayBuffer` available, the runtime spawns a worker pool and encrypts using multiple threads; without it, the SDK falls back to single-threaded mode (slower, but it still works — you'll see a console warning). To enable multi-threaded encryption, set these HTTP headers:
 >
 > ```
 > Cross-Origin-Opener-Policy: same-origin
@@ -4948,14 +5025,14 @@ function ConfidentialRoundTrip() {
 >
 
 >
-> See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for full setup instructions.
+> See the [security model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#coop-coep-headers) for details.
 
 
 
 > [!WARNING]
 > **SSR: "window is not defined"**
 >
-> FHE operations use Web Workers and browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
+> FHE operations use browser APIs. In Next.js or other SSR frameworks, ensure all components using encrypt/decrypt hooks are client components:
 >
 > ```tsx
 > "use client"; // Required at the top of the file
@@ -5077,7 +5154,7 @@ function ConfidentialAction() {
 
 
 > [!INFO]
-> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.userDecrypt`, which makes you build the credential bundle by hand, is an escape hatch — reach for it only when you genuinely need that control.
+> **Use the high-level decryption path.** `useDecryptValues` (and its core-SDK equivalent `sdk.decryption.decryptValues`) is the canonical way to decrypt: it assembles the decryption credentials — transport key pair and EIP-712 permit — for you, caches results, and wraps relayer errors. The low-level `sdk.relayer.decryptValuesFromPairs`, which makes you supply the transport key pair and signed permit yourself, is an escape hatch — reach for it only when you genuinely need that control.
 
 
 Decrypting on-chain data requires the user to sign an EIP-712 message that grants your app a **reusable permit** for the relevant contracts. Hooks like `useDecryptValues` and `useConfidentialBalance` trigger this signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited MetaMask popup before they have taken any action — a confusing experience that often leads to rejection.
@@ -5283,9 +5360,9 @@ API reference for the core `@zama-fhe/sdk` package. Each page documents a single
 
 🟨 Go to [**WrappedToken**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for ERC-7984 ERC-20 wrapper operations — shield, unshield, allowance.
 
-🟨 Go to [**RelayerWeb**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via Web Workers and WASM.
+🟨 Go to [**web() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) for browser-side FHE encryption via bundled WASM.
 
-🟨 Go to [**RelayerNode**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) for the `node()` transport factory and server-side FHE operations.
+🟨 Go to [**node() transport**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) for server-side FHE operations in Node.js.
 
 🟨 Go to [**Network presets**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for pre-configured contract addresses on Sepolia, Mainnet, and Hardhat.
 
@@ -5349,7 +5426,7 @@ const config = createConfig({
   signer: myCustomSigner, // GenericSigner
   provider: myCustomProvider, // GenericProvider
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
@@ -5720,7 +5797,7 @@ sdk.dispose();
 
 `() => void`
 
-Full cleanup — calls `dispose()` and terminates the Web Worker (browser) or thread pool (Node.js). Call when the SDK is no longer needed.
+Full cleanup — calls `dispose()` and disposes the signer adapter's own event subscriptions. Call when the SDK is no longer needed.
 
 ```ts
 sdk.terminate();
@@ -6420,32 +6497,24 @@ console.log(sepolia.registryAddress); // "0x2f0750Bb..."
 - [Contract Builders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/contract-builders.md) — low-level registry builders
 - [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) — built-in chain configurations
 
-## RelayerWeb
+## `web()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerWeb.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md
 - logical_path: reference/sdk/RelayerWeb
 
-# RelayerWeb
+# `web()` transport
 
-Browser relayer that runs FHE operations in a Web Worker via WASM. Handles encryption, decryption, and transport key pair management for browser applications.
+The `web()` transport factory configures a chain to run FHE operations in the browser. It drives `@fhevm/sdk`, which handles encryption, decryption, and transport key pair management via bundled WASM — multi-threaded through an internal worker pool when cross-origin isolation is available.
 
 ## Import
 
 ```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
+import { web } from "@zama-fhe/sdk/web";
 ```
 
-
-> [!INFO]
-> For most applications, prefer the `web()` transport factory with `createConfig` instead of constructing `RelayerWeb` directly. See [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for examples.
-
-
 ## Usage
-
-
-### Tab: Recommended (web transport)
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -6460,92 +6529,37 @@ const config = createConfig({
 });
 ```
 
-### Tab: Direct construction
+## Parameters
 
-```ts
-import { RelayerWeb } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
+`web()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `web()` bare; WASM execution and FHE-artifact caching are handled internally, with no special cross-origin headers required.
 
-const relayer = new RelayerWeb({ chain: sepolia, worker: relayerWorkerClient });
-```
+## Return Type
 
-
-## Constructor (`RelayerWebConfig`)
-
-### chain
-
-`FheChain`
-
-FHE chain configuration. Use a built-in chain preset (`sepolia`, `mainnet`, `hoodi`, `hardhat`) or a custom `FheChain` object.
-
-### worker
-
-`RelayerWorkerClient`
-
-Worker client that handles WASM operations off the main thread.
-
-### security
-
-`RelayerWebSecurityConfig | undefined`
-
-Security options for the WASM bundle and relayer requests.
-
-| Field            | Type           | Description                                         |
-| ---------------- | -------------- | --------------------------------------------------- |
-| `integrityCheck` | `boolean`      | Verify SHA-384 of the WASM bundle. Default: `true`. |
-| `getCsrfToken`   | `() => string` | Returns a CSRF token to attach to relayer requests. |
-
-### threads
-
-`number | undefined`
-
-Number of WASM threads for parallel FHE operations inside the Web Worker. Default: `1` (single-threaded). The practical sweet spot is 4-8 threads; beyond that, diminishing returns and higher memory usage.
-
-
-> [!WARNING]
-> Multi-threading requires [COOP/COEP headers](https://web.dev/articles/coop-coep) for `SharedArrayBuffer` access:
->
-> ```
-> Cross-Origin-Opener-Policy: same-origin
-> Cross-Origin-Embedder-Policy: require-corp
-> ```
->
-> Without these headers, the browser blocks `SharedArrayBuffer` and the relayer falls back to single-threaded mode.
-
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage for caching the FHE encryption key and params across sessions.
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-How long cached FHE artifacts remain valid, in seconds.
+`WebRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
-- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the relayer to the SDK constructor
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js variant using worker threads
+- [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — the Node.js variant, running FHE on the calling thread
+- [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the development variant, no FHE
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
-## RelayerNode
+## `node()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerNode.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md
 - logical_path: reference/sdk/RelayerNode
 
-# RelayerNode
+# `node()` transport
 
-Node.js relayer that runs FHE operations in native worker threads. The server-side counterpart to `RelayerWeb`.
+The `node()` transport factory configures a chain to run FHE operations in Node.js. It drives `@fhevm/sdk` directly on the calling thread — the server-side counterpart to [`web()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md).
 
+## Import
 
-> [!WARNING]
-> `RelayerNode`, `NodeWorkerClient`, and `NodeWorkerPool` are internal classes — they are no longer exported from `@zama-fhe/sdk/node`. Use the `node()` transport factory with `createConfig` instead.
-
+```ts
+import { node } from "@zama-fhe/sdk/node";
+```
 
 ## Usage
 
@@ -6561,64 +6575,46 @@ const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-## `node()` options
+## Parameters
 
-### poolSize
+`node()` accepts an optional options object forwarded to `@fhevm/sdk` — per-client tuning such as `batchRpcCalls` (batch RPC requests) and `fheEncryptionKey` (supply a pre-fetched FHE encryption key). Most apps omit it and call `node()` bare; parallelism and FHE-artifact caching are handled internally.
 
-`number | undefined`
+## Return Type
 
-Number of native worker threads. Default: `min(CPU cores, 4)`. Must be a positive integer.
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage for caching the FHE encryption key and params.
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-How long cached FHE artifacts remain valid, in seconds. Must be a non-negative integer.
+`NodeRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
+- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — the browser variant, running FHE via bundled WASM
+- [`cleartext()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md) — the development variant, no FHE
 - [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md) — pass the config to the SDK constructor
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser variant using Web Workers and WASM
+- [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) — server setup and per-request isolation
 - [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — authentication and network presets
 
-## RelayerCleartext
+## `cleartext()` transport
 
 - source_type: official-doc
 - source_path: docs/gitbook/src/reference/sdk/RelayerCleartext.md
 - source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerCleartext.md
 - logical_path: reference/sdk/RelayerCleartext
 
-# RelayerCleartext
+# `cleartext()` transport
 
-Development relayer that operates in cleartext mode. Values are stored as plaintext on-chain via the CleartextFHEVMExecutor contract. Implements the same `RelayerSDK` interface as `RelayerWeb` and `RelayerNode`.
+The `cleartext()` transport factory configures a chain to run in cleartext mode for local development. Values are stored as plaintext on-chain via the `CleartextFHEVMExecutor` contract — no FHE, KMS, or gateway infrastructure is involved. It exposes the same API as [`web()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) and [`node()`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md), so application code is identical across modes.
 
 ## Import
 
 ```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
+import { cleartext } from "@zama-fhe/sdk";
 ```
 
-
-> [!INFO]
-> For most applications, prefer the `cleartext()` transport factory with `createConfig` instead of constructing `RelayerCleartext` directly. See [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) for examples.
-
-
 ## Usage
-
-
-### Tab: Recommended (cleartext transport)
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -6633,75 +6629,24 @@ const config = createConfig({
 });
 ```
 
-### Tab: Direct construction
+## Parameters
 
-```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-import { hardhat } from "@zama-fhe/sdk/chains";
-
-const relayer = new RelayerCleartext(hardhat);
-```
+`cleartext()` accepts an optional options object forwarded to `@fhevm/sdk` for per-client tuning (`batchRpcCalls`, `fheEncryptionKey`); most apps call it bare. It reads `executorAddress` from the chain definition — the address of the `CleartextFHEVMExecutor` contract that stores plaintext values.
 
 
-## Constructor
-
-```ts
-import { RelayerCleartext } from "@zama-fhe/sdk/cleartext";
-
-const relayer = new RelayerCleartext(chain);
-```
-
-Takes a single `FheChain` object directly. Mainnet (1) and Sepolia (11155111) chain IDs are blocked — cleartext mode is for development only.
-
-The `FheChain` fields relevant to cleartext mode are:
-
-| Field                                       | Type                        | Description                                                |
-| ------------------------------------------- | --------------------------- | ---------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain ID (must not be 1 or 11155111)                       |
-| `network`                                   | `EIP1193Provider \| string` | RPC URL or provider for reading on-chain state             |
-| `gatewayChainId`                            | `number`                    | Gateway chain ID for EIP-712 domain construction           |
-| `aclContractAddress`                        | `Address`                   | ACL contract for permission checks                         |
-| `executorAddress`                           | `Address`                   | CleartextFHEVMExecutor contract storing plaintext values   |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations          |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations          |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key (falls back to built-in mock key)   |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key (falls back to built-in mock key) |
-
-Built-in chain presets (`hardhat`, `hoodi`) already include all required fields:
-
-```ts
-import { hardhat, hoodi } from "@zama-fhe/sdk/chains";
-
-const relayer = new RelayerCleartext(hardhat);
-```
-
-## Methods
-
-The cleartext relayer implements the full `RelayerSDK` interface:
-
-| Method                                  | Description                                                         |
-| --------------------------------------- | ------------------------------------------------------------------- |
-| `generateTransportKeyPair()`            | Returns a random mock transport key pair.                           |
-| `encrypt(params)`                       | Computes mock ciphertext handles and signs an input proof.          |
-| `userDecrypt(params)`                   | Reads plaintext from TFHEExecutor after ACL checks.                 |
-| `publicDecrypt(encryptedValues)`        | Reads plaintext for encrypted values allowed for public decryption. |
-| `delegatedUserDecrypt(params)`          | Reads plaintext via delegated authorization.                        |
-| `createEIP712(...)`                     | Returns a user-decrypt EIP-712 typed data object.                   |
-| `createDelegatedUserDecryptEIP712(...)` | Returns a delegated-decrypt EIP-712 typed data object.              |
-| `fetchFheEncryptionKeyBytes()`          | Returns a mock FHE encryption key.                                  |
-| `getPublicParams(bits)`                 | Returns mock public parameters.                                     |
-| `terminate()`                           | No-op — no resources to release.                                    |
+> [!WARNING]
+> The chain must define `executorAddress`, or `createRelayer` throws a `ConfigurationError`. Use a development chain preset that includes it (`hardhat`, `hoodi`) or set it yourself. Production presets (`mainnet`, `sepolia`) do not define it — cleartext mode is for development only.
 
 
-> [!INFO]
-> `requestZKProofVerification` throws a `ConfigurationError` — ZK proofs are not supported in cleartext mode.
+## Return Type
 
+`CleartextRelayerConfig` — a relayer config object you assign per chain in `createConfig({ relayers })`. You do not construct or interact with it directly.
 
 ## Related
 
 - [Local Development guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/local-development.md) — when and how to use cleartext mode
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer with real FHE
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer with real FHE
+- [`web()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser transport with real FHE
+- [`node()` transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js transport with real FHE
 - [Network Presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md) — production network configs
 
 ## GenericProvider
@@ -6745,7 +6690,7 @@ const config = createConfig({
   chains: [sepolia],
   provider: myCustomProvider,
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 const sdk = new ZamaSDK(config);
 ```
@@ -6866,7 +6811,7 @@ const config = createConfig({
   signer: mySigner,
   provider: myProvider,
   storage: memoryStorage,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
+  relayers: { [sepolia.id]: node() },
 });
 const sdk = new ZamaSDK(config);
 ```
@@ -7490,8 +7435,6 @@ import {
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
@@ -7549,7 +7492,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `SigningRejectedError`                  | `SIGNING_REJECTED`                    | User rejected the wallet signature                                                                                                |
 | `SigningFailedError`                    | `SIGNING_FAILED`                      | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the Web Worker                                                                                           |
+| `EncryptionFailedError`                 | `ENCRYPTION_FAILED`                   | FHE encryption failed in the WASM runtime                                                                                         |
 | `DecryptionFailedError`                 | `DECRYPTION_FAILED`                   | FHE decryption failed                                                                                                             |
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -7558,9 +7501,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
-| `WorkerTimeoutError`                    | `OPERATION_TIMEOUT`                   | A worker operation timed out; the Node worker is recycled by default (retryable)                                                  |
-| `WorkerRecycledError`                   | `WORKER_RECYCLED`                     | In-flight op aborted as collateral of another op's timeout recycle (retryable)                                                    |
-| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE worker failed to initialize                                                                      |
+| `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
 | `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                      |
@@ -7659,7 +7600,7 @@ matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing err
 
 **Code:** `ENCRYPTION_FAILED`
 
-FHE encryption failed inside the Web Worker. Usually caused by missing WASM support or restrictive CSP headers.
+FHE encryption failed inside the WASM runtime. Usually caused by missing WASM support or restrictive CSP headers.
 
 ```ts
 matchZamaError(error, {
@@ -7820,52 +7761,6 @@ try {
 
 **How to handle:** Back off and retry. If it persists, raise your RPC provider's rate limit or switch to a higher-throughput endpoint.
 
-### WorkerTimeoutError
-
-**Code:** `OPERATION_TIMEOUT`
-
-A worker operation (encrypt / decrypt / EIP-712 / key fetch) exceeded its configured timeout — typically a stuck relayer or WASM call. On the Node pool the SDK **recycles the affected worker by default** (terminating the hung thread) so it self-heals, and the operation is **retryable**. Recycling is gated by `recycleWorkerOnTimeout` (default `true`) and never applies to the browser worker (a single worker with no pool). It is distinct from a decryption/entitlement failure — a timeout no longer collapses into `DecryptionFailedError`. The error carries `operation`, `timeout` and `elapsed` (both in **seconds**), and (in the Node pool) `worker`.
-
-Configure the bound on the Node transport (all durations in **seconds**) — `operationTimeout` (per-operation, default 30), `initTimeout` (WASM init, default 60), and `recycleWorkerOnTimeout` (default `true`):
-
-```ts
-import { node } from "@zama-fhe/sdk/node";
-
-relayers: {
-  [sepolia.id]: node({ operationTimeout: 10 }),
-}
-```
-
-```ts
-matchZamaError(error, {
-  OPERATION_TIMEOUT: async (e) => {
-    // The worker was recycled; retry with your own backoff.
-    await backoff();
-    retry(); // or raise operationTimeout if the op is legitimately long
-  },
-});
-```
-
-**How to handle:** Retry with client-side backoff. If timeouts are frequent for a legitimately slow operation, raise `operationTimeout`; if a worker is genuinely hung, the recycle already replaced it.
-
-### WorkerRecycledError
-
-**Code:** `WORKER_RECYCLED`
-
-An in-flight operation was **aborted as collateral** when its worker was recycled to recover from _another_ operation's timeout (Node pool self-healing) — this operation itself did not time out. Because it never reached a verdict, it is **retryable**: the next call lazily re-inits a fresh worker. It is intentionally distinct from `WorkerTimeoutError` (this op did not exceed its own bound) and from `DecryptionFailedError` (nothing actually failed to decrypt), so you can retry it rather than treating it as a terminal failure. The error carries `operation` and (in the Node pool) `worker`.
-
-```ts
-matchZamaError(error, {
-  WORKER_RECYCLED: async (e) => {
-    // Transient: the worker was replaced under us. Just retry.
-    await backoff();
-    retry();
-  },
-});
-```
-
-**How to handle:** Retry — the request was cancelled by an unrelated recycle, not by a failure of its own.
-
 ## "No balance" vs "zero balance"
 
 These are distinct states:
@@ -7888,13 +7783,13 @@ try {
 
 **Code:** `CONFIGURATION`
 
-Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE worker fails to initialize (e.g. missing WASM support, terminated relayer).
+Thrown when the SDK configuration is invalid (e.g. forbidden chain ID, unsupported signer type) or when the FHE runtime fails to initialize (e.g. missing WASM support, terminated relayer).
 
 ```ts
 matchZamaError(error, { CONFIGURATION: (e) => console.error("Configuration error:", e.message) });
 ```
 
-**How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions worker initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
+**How to handle:** Check your transport config, CSP headers, and that the relayer has not been terminated. If the error mentions runtime initialization, verify WASM support and `wasm-unsafe-eval` in your CSP.
 
 ### InsufficientConfidentialBalanceError
 
@@ -8155,7 +8050,7 @@ matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily d
 | ----------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `SigningRejectedError` on every decrypt   | Wallet rejects EIP-712 signature             | Verify wallet supports `eth_signTypedData_v4`. Hardware wallets may need firmware updates.      |
 | Balance always `undefined`                | Encrypted value is zero (never shielded)     | Catch `NoCiphertextError` and show an empty state.                                              |
-| `ConfigurationError` on first operation   | FHE worker failed to initialize              | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
+| `ConfigurationError` on first operation   | FHE runtime failed to initialize             | Check CSP headers (`wasm-unsafe-eval`), transport config, and WASM support.                     |
 | `EncryptionFailedError`                   | FHE encryption failed during an operation    | Add `wasm-unsafe-eval` to your CSP headers.                                                     |
 | `DecryptionFailedError` after page reload | Unshield was interrupted mid-flow            | Call `getPendingUnshield()` on mount, then `resumeUnshield()` to complete.                      |
 | `TransactionRevertedError` on finalize    | Unwrap already finalized or invalid tx hash  | Check unwrap state. If already finalized, the unshield is complete -- stop prompting to resume. |
@@ -8365,210 +8260,6 @@ const { address, abi, functionName, args } = wrapContract(wrapperAddress, recipi
 
 - [Token](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Token.md) — high-level API that wraps these builders
 - [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) — decode on-chain logs into typed events
-
-## FheArtifactCache
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/reference/sdk/FheArtifactCache.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/FheArtifactCache.md
-- logical_path: reference/sdk/FheArtifactCache
-
-# FheArtifactCache
-
-Persistent cache for the FHE encryption key and public parameters (CRS). Stores large binary artifacts in a `GenericStorage` backend (e.g. IndexedDB) so they are not re-downloaded on every page load. Cache keys are scoped by chain ID.
-
-`web()` and `node()` relayer transports create an `FheArtifactCache` internally — you configure it through the `fheArtifactStorage` and `fheArtifactCacheTTL` options on the transport factory.
-
-
-> [!INFO]
-> **`web()`** defaults to IndexedDB — artifact caching persists across page reloads.
-> **`node()`** defaults to `MemoryStorage` — artifacts are cached in-process but lost on restart. Pass a custom `GenericStorage` for cross-restart persistence.
-
-
-## Import
-
-`FheArtifactCache` is an **internal class** — it is not exported from `@zama-fhe/sdk`, and you do not import or instantiate it directly. Configure artifact caching through the `web()` / `node()` transport factories (below); the constructor and methods are documented here only as internal reference.
-
-## Usage
-
-In most cases you don't instantiate `FheArtifactCache` directly. Instead, configure artifact caching through the relayer transport factory:
-
-
-### Tab: Default (IndexedDB)
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-// web() uses IndexedDB artifact cache by default — no config needed
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web() },
-});
-```
-
-### Tab: Custom storage
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { IndexedDBStorage } from "@zama-fhe/sdk";
-import { web } from "@zama-fhe/sdk/web";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: {
-    [sepolia.id]: web({
-      // Custom IndexedDB database name
-      fheArtifactStorage: new IndexedDBStorage("MyAppArtifacts", 1, "fhe"),
-      // Revalidate every 12 hours instead of the default 24h
-      fheArtifactCacheTTL: 43_200,
-    }),
-  },
-});
-```
-
-### Tab: node() (default)
-
-```ts
-import { createConfig } from "@zama-fhe/sdk/viem";
-import { node } from "@zama-fhe/sdk/node";
-import { sepolia } from "@zama-fhe/sdk/chains";
-
-// node() defaults to MemoryStorage — artifacts are cached in-process
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: node({ poolSize: 4 }) },
-});
-```
-
-
-> [!INFO]
-> The default `MemoryStorage` caches artifacts for the lifetime of the process but does **not** survive restarts. For cross-restart persistence, pass any `GenericStorage`-compatible backend (e.g. Redis, filesystem adapter). Pass `fheArtifactStorage: null` to disable caching entirely.
-
-
-## Constructor
-
-```ts
-new FheArtifactCache(opts);
-```
-
-| Field        | Type                  | Description                                                                                                                                |
-| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `storage`    | `GenericStorage`      | Persistent key-value backend (e.g. `IndexedDBStorage`, `MemoryStorage`).                                                                   |
-| `chainId`    | `number`              | Chain ID to scope cache keys.                                                                                                              |
-| `relayerUrl` | `string`              | Relayer URL used to fetch the manifest during revalidation.                                                                                |
-| `ttl`        | `number \| undefined` | Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation.                                            |
-| `logger`     | `GenericLogger`       | Logger for cache diagnostics (revalidation, storage degradation). Silent by default — the SDK threads its `createConfig({ logger })` here. |
-
-## Methods
-
-### fetchFheEncryptionKeyBytes
-
-```ts
-cache.fetchFheEncryptionKeyBytes(fetcher): Promise<PublicKeyResult>
-```
-
-Returns the cached FHE encryption key bytes, calling `fetcher` only on a cache miss. Concurrent calls are deduplicated. The result is memoized in memory and persisted to storage as base64.
-
-**Parameters:**
-
-| Name      | Type                             | Description                                                                        |
-| --------- | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `fetcher` | `() => Promise<PublicKeyResult>` | Called when no cached value exists. Return `{ publicKeyId, publicKey }` or `null`. |
-
-**Returns:** `Promise<{ publicKeyId: string; publicKey: Uint8Array } | null>`
-
----
-
-### getPublicParams
-
-```ts
-cache.getPublicParams(bits, fetcher): Promise<PublicParamsResult>
-```
-
-Returns the cached CRS (public parameters) for a given bit size, calling `fetcher` only on a cache miss. Concurrent calls for the same bit size are deduplicated.
-
-**Parameters:**
-
-| Name      | Type                                | Description                                                                              |
-| --------- | ----------------------------------- | ---------------------------------------------------------------------------------------- |
-| `bits`    | `number`                            | Bit size of the CRS to fetch (e.g. `2048`).                                              |
-| `fetcher` | `() => Promise<PublicParamsResult>` | Called when no cached value exists. Return `{ publicParamsId, publicParams }` or `null`. |
-
-**Returns:** `Promise<{ publicParamsId: string; publicParams: Uint8Array } | null>`
-
----
-
-### revalidateIfDue
-
-```ts
-cache.revalidateIfDue(): Promise<boolean>
-```
-
-Checks whether cached artifacts are still fresh by issuing HTTP conditional requests (`ETag` / `If-None-Match`, `Last-Modified` / `If-Modified-Since`) against the artifact CDN URLs discovered from the relayer manifest.
-
-- Returns `true` if the cache was invalidated (caller should re-fetch).
-- Returns `false` if artifacts are still fresh or revalidation is not yet due.
-
-Concurrent calls are coalesced. On transient failures (network errors, 5xx), the cache fails open and retries after 5 minutes.
-
-## Relayer config options
-
-When using `web()` or `node()` transport factories, configure artifact caching with these options:
-
-### fheArtifactStorage
-
-`GenericStorage | undefined`
-
-Persistent storage backend for caching FHE artifacts.
-
-- **`web()`**: defaults to `new IndexedDBStorage("FheArtifactCache", 1, "artifacts")` — caching is enabled automatically.
-- **`node()`**: defaults to `new MemoryStorage()` — in-process caching.
-
-FHE public parameters can be several MB — avoid `localStorage`-backed storage which caps at ~5 MB.
-
-
-> [!WARNING]
-> **Not to be confused with `ZamaProvider.storage`** which stores credentials and decrypted balances.
-
-
-### fheArtifactCacheTTL
-
-`number | undefined`
-
-Cache TTL in **seconds**. Default: `86400` (24 h). Set to `0` to revalidate on every operation. Ignored when `fheArtifactStorage` is not set.
-
-## How it works
-
-1. **First load** — The SDK fetches the FHE encryption key and CRS from the relayer, stores them as base64 in the configured storage backend, and caches them in memory.
-2. **Subsequent loads** — The SDK reads from storage (instant), skipping the multi-MB network download.
-3. **Revalidation** — Periodically (controlled by `ttl`), the cache issues `HEAD` requests with conditional headers to the artifact CDN. If the server returns 405 (Method Not Allowed), the cache falls back to a `GET` request. If artifacts haven't changed (304), only timestamps are updated. If they have changed (200), the entire cache is cleared and artifacts are re-fetched on next use.
-4. **Fail-open** — On network errors or malformed manifests, the cache continues serving stale data and retries revalidation after 5 minutes.
-
-## Storage keys
-
-Cache entries are scoped by chain ID:
-
-| Key pattern                   | Content                                                 |
-| ----------------------------- | ------------------------------------------------------- |
-| `fhe:pubkey:{chainId}`        | FHE encryption key (base64 + metadata)                  |
-| `fhe:params:{chainId}:{bits}` | Public parameters for a given bit size                  |
-| `fhe:params-index:{chainId}`  | Array of cached bit sizes (for cold-start revalidation) |
-
-## Related
-
-- [RelayerWeb](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerWeb.md) — browser relayer that creates an `FheArtifactCache` internally
-- [RelayerNode](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) — Node.js relayer variant
-- [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) — storage interface used by the cache
-- [Configuration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) — network presets and relayer setup
 
 ## Event decoders
 
@@ -9125,7 +8816,7 @@ const mySepolia = {
 
 ### Server apps
 
-On the server, use `node()` with pool options. Chain data (network, relayerUrl) comes from the preset:
+On the server, use `node()`. Chain data (network, relayerUrl) comes from the preset, so a bare call is all you need — it also accepts optional `@fhevm/sdk` client options (`batchRpcCalls`, `fheEncryptionKey`) for per-client tuning:
 
 ```ts
 import { node } from "@zama-fhe/sdk/node";
@@ -9135,7 +8826,7 @@ const mySepolia = {
   ...sepolia,
   network: "https://sepolia.infura.io/v3/YOUR_KEY",
 } as const satisfies FheChain;
-// Then in createConfig: relayers: { [mySepolia.id]: node({ poolSize: 4 }) }
+// Then in createConfig: relayers: { [mySepolia.id]: node() }
 ```
 
 ### Local development
@@ -11171,7 +10862,7 @@ import { usePendingUnshield } from "@zama-fhe/react-sdk";
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 
 function ResumeUnshieldGuard({
   wrapperAddress,
@@ -14349,7 +14040,7 @@ import { type EncryptParams } from "@zama-fhe/sdk";
 
 `EncryptInput[]`
 
-Array of typed inputs. Each entry specifies a plaintext value and its FHE type (`ebool`, `euint64`, `eaddress`, etc.).
+Array of typed inputs. Each entry specifies a plaintext value and its encrypted FHE type — the `e`-prefixed type names (`ebool`, `euint64`, `eaddress`, etc.).
 
 ### contractAddress
 
@@ -14425,16 +14116,18 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 ## Supported FHE Types
 
-| Type       | JS value type       | Range                 |
-| ---------- | ------------------- | --------------------- |
-| `ebool`    | `boolean \| bigint` | `true`/`false` or 0/1 |
-| `euint8`   | `bigint`            | 0–255                 |
-| `euint16`  | `bigint`            | 0–65535               |
-| `euint32`  | `bigint`            | 0–2³²−1               |
-| `euint64`  | `bigint`            | 0–2⁶⁴−1               |
-| `euint128` | `bigint`            | 0–2¹²⁸−1              |
-| `euint256` | `bigint`            | 0–2²⁵⁶−1              |
-| `eaddress` | `` `0x${string}` `` | Ethereum address      |
+Types use the encrypted (`e`-prefixed) FHE type names — a value tagged `euint64` is encrypted to a `euint64` ciphertext on-chain.
+
+| Type       | JS value type         | Range                     |
+| ---------- | --------------------- | ------------------------- |
+| `ebool`    | `boolean \| 0n \| 1n` | `true`/`false` or `0`/`1` |
+| `euint8`   | `bigint`              | 0–255                     |
+| `euint16`  | `bigint`              | 0–65535                   |
+| `euint32`  | `bigint`              | 0–2³²−1                   |
+| `euint64`  | `bigint`              | 0–2⁶⁴−1                   |
+| `euint128` | `bigint`              | 0–2¹²⁸−1                  |
+| `euint256` | `bigint`              | 0–2²⁵⁶−1                  |
+| `eaddress` | `` `0x${string}` ``   | Ethereum address          |
 
 ## Related
 
@@ -14506,12 +14199,12 @@ function DecryptValue({ encryptedValue }: { encryptedValue: string }) {
 
 ### inputs (first argument)
 
-`EncryptedInput[]`
+`DecryptInput[]`
 
 Array of encrypted values to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it. Only entries not yet in the SDK's persistent decrypt cache are sent for decryption — cached ones are returned immediately, even after a page reload.
 
 ```ts
-import { type EncryptedInput } from "@zama-fhe/sdk";
+import { type DecryptInput } from "@zama-fhe/sdk";
 ```
 
 | Field             | Type             | Description                                            |
@@ -15693,17 +15386,17 @@ The SDK is organized into layers, each with a clear responsibility. Higher layer
 
 ![Zama SDK Architecture Layers](../images/layers.svg)
 
-| Layer                          | Responsibility                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                                                            |
-| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                                                |
-| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                                                         |
-| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                                                       |
-| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                                                |
-| **Relayer**                    | `web()` (browser WASM), `node()` (server), `cleartext()` (cleartext chains) — selected by factory, routed per chain by `RelayerDispatcher` |
-| **Worker**                     | Web Worker + WASM in browsers, `worker_threads` pool in Node.js                                                                            |
-| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage)                                 |
-| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                                                 |
+| Layer                          | Responsibility                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **React SDK**                  | `ZamaProvider` context + hooks wrapping `@tanstack/react-query`                                                                      |
+| **Query & Mutation Factories** | Framework-agnostic `queryOptions` / `mutationOptions` consumed by React Query (or directly)                                          |
+| **Contract Abstraction**       | `ZamaSDK`, `Token`, `WrappedToken` — the main developer-facing API                                                                   |
+| **Contract Call Builders**     | Pure functions returning `{ address, abi, functionName, args }` for any Web3 library                                                 |
+| **Provider & Signer Adapters** | `ViemProvider`/`ViemSigner`, `EthersProvider`/`EthersSigner` — read/write split per library                                          |
+| **Relayer**                    | `web()` (browser WASM), `node()` (server), `cleartext()` (cleartext chains) — selected by factory, routed per chain by `ChainRouter` |
+| **FHE runtime**                | `@fhevm/sdk` with bundled WASM; spawns an internal worker pool for multi-threaded encryption where the environment allows            |
+| **Storage & Credentials**      | `TransportKeyPairVault` + `PermissionStore` with pluggable backends (IndexedDB, Memory, AsyncLocalStorage)                           |
+| **Event System**               | `ZamaSDKEvents` lifecycle events + on-chain event decoders                                                                           |
 
 ## `createConfig` pattern
 
@@ -15726,8 +15419,8 @@ Each package exposes multiple entry points for tree-shaking:
 | `@zama-fhe/sdk`           | Core SDK, `createConfig`, `cleartext()` factory, storage, ABIs, event decoders, contract call builders |
 | `@zama-fhe/sdk/viem`      | `ViemProvider`, `ViemSigner` adapters + viem `createConfig`                                            |
 | `@zama-fhe/sdk/ethers`    | `EthersProvider`, `EthersSigner` adapters + ethers `createConfig`                                      |
-| `@zama-fhe/sdk/web`       | `web()` transport factory (and the `RelayerWeb` class)                                                 |
-| `@zama-fhe/sdk/cleartext` | `RelayerCleartext` class (prefer the root `cleartext()` factory)                                       |
+| `@zama-fhe/sdk/web`       | `web()` transport factory                                                                              |
+| `@zama-fhe/sdk/cleartext` | `cleartext()` transport factory (also re-exported from the root)                                       |
 | `@zama-fhe/sdk/node`      | `node()` transport factory, network presets, type-only exports                                         |
 | `@zama-fhe/sdk/query`     | Query/mutation option factories, query keys, invalidation helpers                                      |
 
@@ -15938,60 +15631,42 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 ## WASM bundle integrity
 
-The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
-
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
-});
-```
-
-
-> [!WARNING]
-> Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
-
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
 
 ## Browser security headers
 
 ### COOP/COEP headers
 
-Multi-threaded FHE requires `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. Your server must send these headers:
+Multi-threaded FHE uses `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. To enable multi-threaded encryption, your server must send these headers:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without these headers, `SharedArrayBuffer` is unavailable. The SDK falls back to single-threaded WASM execution, which is slower but functional.
+Without them, `SharedArrayBuffer` is unavailable and the SDK falls back to single-threaded WASM execution — slower, but fully functional. When this happens, `@fhevm/sdk` logs a console warning naming the two headers.
 
 
 > [!INFO]
-> Single-threaded mode works without COOP/COEP headers. Only enable cross-origin isolation if you need the performance benefit of multi-threaded FHE.
+> These headers are a performance setting, not a hard requirement. Encryption works without them in single-threaded mode. Only enable cross-origin isolation if you want the throughput of multi-threaded FHE.
 
 
 ### Content Security Policy (CSP)
 
-The Web Worker loads and executes WASM from a CDN. Your CSP must allow:
+The SDK compiles and executes the bundled WASM in the page, and — in multi-threaded mode — spawns its worker pool from embedded source. Your CSP must allow:
 
-| Directive     | Value                  | Reason                                        |
-| ------------- | ---------------------- | --------------------------------------------- |
-| `worker-src`  | `blob:`                | Workers are created from blob URLs            |
-| `script-src`  | `'wasm-unsafe-eval'`   | Required for WASM execution inside the worker |
-| `connect-src` | `https://cdn.zama.org` | CDN fetch for the WASM bundle                 |
+| Directive     | Value                | Reason                                                     |
+| ------------- | -------------------- | ---------------------------------------------------------- |
+| `script-src`  | `'wasm-unsafe-eval'` | Required for WASM compilation and execution                |
+| `worker-src`  | `blob:`              | Multi-threaded mode creates its worker pool from blob URLs |
+| `connect-src` | your relayer URL     | Encrypt/decrypt requests go to the relayer (or your proxy) |
 
 Example CSP header:
 
 ```
-Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.com;
+Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://relayer.testnet.zama.org https://your-relayer-proxy.com;
 ```
 
 <details>
@@ -16302,8 +15977,6 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
-
-**`getActiveUnshieldToken` bridge** (`src/lib/activeUnshield.ts`): module-level variable that stores the token address of an in-flight unshield. `ZamaSDKEvents.UnshieldPhase1Submitted` does not carry the token address, so `UnshieldCard` sets this variable just before calling `mutate()`. The `onEvent` handler in `providers.tsx` reads it to call `savePendingUnshield` with the correct wrapper address. A module-level variable is safe here — only one unshield can be in flight per browser tab.
 
 **Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
 
@@ -17896,27 +17569,22 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires **after Phase 1 is mined** (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
 ## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
-If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
+If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB automatically by `WrappedToken`. On next load:
 
 ```ts
-const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
+const { data: pendingTxHash } = usePendingUnshield(tokenAddress);
 // → non-null: show a "Finalize" button
 const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
-The `activeUnshield.ts` module-level bridge is needed because `ZamaSDKEvents.UnshieldPhase1Submitted` (fired in `providers.tsx`) carries only the txHash — not the token address. The bridge associates them:
-
-```
-UnshieldCard: setActiveUnshieldToken(tokenAddress) → mutate()
-providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage, wrapperAddress, txHash)
-```
+`usePendingUnshield` and the unshield/resume mutations share a query key, so finalizing automatically clears the pending state — no manual save/load/clear wiring needed.
 
 ---
 
@@ -18336,27 +18004,22 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-`ZamaSDKEvents.UnshieldPhase1Submitted` fires after Phase 1 is mined (the SDK awaits the receipt before emitting). The app uses `setActiveUnshieldToken` + `savePendingUnshield` to persist the pending state so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
 
 ---
 
 ## 7. Pending unshield recovery (`PendingUnshieldCard.tsx`)
 
-If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB. On next load:
+If the user closes the tab between Phase 1 and Phase 2, the pending state is persisted in IndexedDB automatically by `WrappedToken`. On next load:
 
 ```ts
-const pendingTxHash = await loadPendingUnshield(storage, tokenAddress);
+const { data: pendingTxHash } = usePendingUnshield(tokenAddress);
 // → non-null: show a "Finalize" button
 const resume = useResumeUnshield(tokenAddress, { onSuccess });
 resume.mutate({ unwrapTxHash: pendingTxHash });
 ```
 
-The `activeUnshield.ts` module-level bridge is needed because `ZamaSDKEvents.UnshieldPhase1Submitted` (fired in `providers.tsx`) carries only the txHash — not the token address. The bridge associates them:
-
-```
-UnshieldCard: setActiveUnshieldToken(tokenAddress) → mutate()
-providers.tsx onEvent: getActiveUnshieldToken() → savePendingUnshield(storage, wrapperAddress, txHash)
-```
+`usePendingUnshield` and the unshield/resume mutations share a query key, so finalizing automatically clears the pending state — no manual save/load/clear wiring needed.
 
 ---
 
@@ -18852,15 +18515,12 @@ limiting with a private node.
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
 
-1. `onEvent` in `ZamaProvider` intercepts `ZamaSDKEvents.UnshieldPhase1Submitted` and
-   calls `savePendingUnshield(indexedDBStorage, wrapperAddress, txHash)`.
+1. `WrappedToken` persists the unwrap tx hash automatically once Phase 1 is mined —
+   no app-level wiring needed.
 2. On the next page load, `PendingUnshieldCard` reads the pending hash via
-   `loadPendingUnshield(storage, tokenAddress)`.
-3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2.
-
-The `savePendingUnshield` call in `onEvent` and the `storage` prop in `ZamaProvider`
-**must always reference the same `indexedDBStorage` instance**. If you ever change the
-`storage` prop, update `onEvent` to match.
+   `usePendingUnshield(tokenAddress)`.
+3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2, which clears the
+   pending state automatically on success.
 
 ---
 
@@ -19004,10 +18664,10 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 ### Packages
 
-| Package                                        | Description                                                                                                                |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
+| Package                                        | Description                                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                     |
 
 ### Main features
 
@@ -19135,8 +18795,6 @@ pnpm add @zama-fhe/sdk viem
 ```
 
 Other optional peers depend on the adapter you use: `ethers` for `@zama-fhe/sdk/ethers` and `@tanstack/query-core` for `@zama-fhe/sdk/query`.
-
-`@zama-fhe/sdk/node` is ESM-only because it relies on `node:worker_threads`.
 
 ## Minimal example
 

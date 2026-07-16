@@ -2,17 +2,11 @@ import type { FheChain } from "./types";
 
 /**
  * Mainnet network configuration (chainId 1).
- *
- * Contract addresses mirror `MainnetConfigV2` from `@zama-fhe/relayer-sdk`.
- * They are duplicated here because the `/bundle` export path only exposes
- * types at build time (runtime values require `/web` or `/node` which pull
- * in WASM). `satisfies FheChain` ensures structural drift is caught at
- * compile time.
  */
 export const mainnet = {
   id: 1,
   gatewayChainId: 261131,
-  relayerUrl: "https://relayer.mainnet.zama.org/v2",
+  relayerUrl: "https://relayer.mainnet.zama.org",
   network: "https://ethereum-rpc.publicnode.com",
   aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6",
   kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03",
@@ -28,7 +22,7 @@ export const mainnet = {
 export const sepolia = {
   id: 11155111,
   gatewayChainId: 10901,
-  relayerUrl: "https://relayer.testnet.zama.org/v2",
+  relayerUrl: "https://relayer.testnet.zama.org",
   network: "https://ethereum-sepolia-rpc.publicnode.com",
   aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
   kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
@@ -50,8 +44,8 @@ export const hoodi = {
   relayerUrl: "",
   network: "https://rpc.hoodi.ethpandaops.io",
   aclContractAddress: "0x6D3FAf6f86e1fF9F3B0831Dda920AbA1cBd5bd68",
-  kmsContractAddress: "0x901F8942346f7AB3a01F6D7613119Bca447Bb030",
-  inputVerifierContractAddress: "0x36772142b74871f255CbD7A3e89B401d3e45825f",
+  kmsContractAddress: "0x822BE20679CfAfdc352F05dEdfe12a07E912212e",
+  inputVerifierContractAddress: "0xf3D9A51f32D9bC23E1eECb0fAbF1f1DA4d9Bba26",
   verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
   verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
   registryAddress: "0x1807aE2f693F8530DFB126D0eF98F2F2518F292f",

@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import { anvil } from "../../chains";
 import { MAX_UINT64 } from "../../contracts";
 import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -9,7 +10,6 @@ describe("DelegationService", () => {
   test("reads delegation expiry from the ACL contract", async ({
     delegationService,
     provider,
-    aclAddress,
     delegatorAddress,
     delegateAddress,
   }) => {
@@ -24,7 +24,7 @@ describe("DelegationService", () => {
     ).resolves.toBe(1234n);
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        address: aclAddress,
+        address: anvil.aclContractAddress,
         functionName: "getUserDecryptionDelegationExpirationDate",
         args: [delegatorAddress, delegateAddress, CONTRACT],
       }),
@@ -242,7 +242,7 @@ describe("DelegationService", () => {
 
     expect(thrown).toBeInstanceOf(DelegationCooldownError);
     expect(thrown).toMatchObject({ code: "DELEGATION_COOLDOWN" });
-    expect(thrown.cause).toBeInstanceOf(TransactionRevertedError);
-    expect((thrown.cause as Error).cause).toBe(rootCause);
+    expect((thrown as Error).cause).toBeInstanceOf(TransactionRevertedError);
+    expect(((thrown as Error).cause as Error).cause).toBe(rootCause);
   });
 });

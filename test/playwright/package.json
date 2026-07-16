@@ -2,9 +2,9 @@
   "name": "@zama-fhe/playwright",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
+  "type": "module",
   "scripts": {
     "e2e:test": "playwright test",
     "e2e:test:ui": "playwright test --ui",
@@ -17,7 +17,7 @@
     "@playwright/test": "^1.61.0",
     "@zama-fhe/sdk": "workspace:*",
     "ethers": "^6.17.0",
-    "viem": "^2.53.1"
+    "viem": "^2.55.0"
   },
   "devDependencies": {
     "@fhevm/mock-utils": "0.4.2",

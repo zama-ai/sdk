@@ -1,5 +1,7 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import { createMockChain } from "../../test-fixtures/chain";
+import { createMockRelayer } from "../../test-fixtures/relayer";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -10,7 +12,9 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
   const hex = i.toString(16).padStart(40, "0");
   return `0x${hex}` as const;
 });
-const [A, B, C] = ADDRS;
+const A = ADDRS[0]!;
+const B = ADDRS[1]!;
+const C = ADDRS[2]!;
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({
@@ -31,7 +35,7 @@ describe("CredentialService.allow", () => {
     vi.mocked(signer.signTypedData).mockClear();
     const second = await credentialService.grantPermit([A]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
-    expect(second.permits).toHaveLength(1);
+    expect(second.permissions).toHaveLength(1);
   });
 
   test("only prompts for uncovered contracts on partial coverage", async ({
@@ -71,8 +75,59 @@ describe("CredentialService.allow", () => {
   }) => {
     const result = await credentialService.grantPermit([]);
     expect(result.keypair.publicKey).toBeDefined();
-    expect(result.permits).toEqual([]);
+    expect(result.permissions).toEqual([]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService chain switching", () => {
+  test("signs permits against the active chain's relayer after switchChain", async ({
+    createCredentialService,
+  }) => {
+    // A `CredentialService` outlives chain-only switches (LifecycleService keeps
+    // credentials across them). Permits are EIP-712-signed against the *active*
+    // chain's decryption domain, so post-switch grants must route through the new
+    // chain's backend — not the one active at construction (SDK-458 regression).
+    const relayerA = createMockRelayer();
+    const relayerB = createMockRelayer();
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      relayers: { 1: relayerA, 2: relayerB },
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(relayerA.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signDecryptionPermit).not.toHaveBeenCalled();
+
+    router.switchChain(2);
+    await credentialService.grantPermit([B]);
+    expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
+  });
+
+  test("permits are keyed by the router chain, not the wallet account", async ({
+    createCredentialService,
+  }) => {
+    // The permit storage key follows the router's active chain — the same chain
+    // its EIP-712 domain is signed against — so a permit granted on one chain is
+    // invisible on another and reappears on switch-back. The mock signer's fixed
+    // account.chainId (31337) is deliberately unrelated to the router chains
+    // here, proving the key no longer derives from the wallet account.
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+
+    router.switchChain(2);
+    expect(await credentialService.hasPermit([A])).toBe(false);
+
+    router.switchChain(1);
+    expect(await credentialService.hasPermit([A])).toBe(true);
   });
 });
 

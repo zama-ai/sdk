@@ -79,79 +79,67 @@ describe("ZamaSDK credentials lifecycle", () => {
   });
 
   describe("chain-switch isolation", () => {
-    test("isAllowed on a different chain returns false and allow re-signs", async ({
+    test("hasPermit on a different chain returns false and grantPermit re-signs", async ({
       createMockSigner,
       createMockProvider,
+      createMockChain,
+      createMockRelayer,
+      createMockRouter,
       createSDK,
     }) => {
       const CHAIN_A = 31337;
       const CHAIN_B = 11155111;
 
-      const signerAAccount = {
-        address: createMockSigner().walletAccount.getSnapshot()!.address,
-        chainId: CHAIN_A,
-      };
-      const signerA = createMockSigner({
-        walletAccount: {
-          getSnapshot: vi.fn().mockReturnValue(signerAAccount),
-          subscribe: vi.fn((listener) => {
-            listener({ previous: undefined, next: signerAAccount });
-            return () => {};
-          }),
-        },
-        requireWalletAccount: vi.fn().mockReturnValue(signerAAccount),
-      });
-      const providerA = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
-
-      // Shared storage so reconfigured signer/provider can find the keypair —
-      // chain isolation must come from permit scoping, not from storage.
+      // Shared storage and relayer so every reconstruction finds the same FHE
+      // keypair (keyed by signer address, chain-independent) — chain isolation
+      // must come from permit scoping, not from a missing keypair.
       const storage = new MemoryStorage();
+      const relayer = createMockRelayer();
+      const address = createMockSigner().walletAccount.getSnapshot()!.address;
 
-      const sdkA = createSDK({ signer: signerA, provider: providerA, storage });
+      // Permits are keyed by the router's active chain, so the switch has to go
+      // through the router. Signer/provider chains are aligned to the same id
+      // to satisfy `requireChainAlignment` in `grantPermit`.
+      function buildSDK(chainId: number) {
+        const account = { address, chainId };
+        const signer = createMockSigner({
+          walletAccount: {
+            getSnapshot: vi.fn().mockReturnValue(account),
+            isReady: vi.fn().mockReturnValue(true),
+            subscribe: vi.fn((listener) => {
+              listener({ previous: undefined, next: account });
+              return () => {};
+            }),
+          },
+          requireWalletAccount: vi.fn().mockReturnValue(account),
+        });
+        const provider = createMockProvider({ getChainId: vi.fn().mockResolvedValue(chainId) });
+        const router = createMockRouter({ chains: [createMockChain({ id: chainId })], relayer });
+        return createSDK({ signer, provider, router, storage });
+      }
+
+      const sdkA = buildSDK(CHAIN_A);
       await sdkA.permits.grantPermit([CONTRACT_A]);
-      expect(signerA.signTypedData).toHaveBeenCalledOnce();
+      expect(sdkA.signer!.signTypedData).toHaveBeenCalledOnce();
       expect(await sdkA.permits.hasPermit([CONTRACT_A])).toBe(true);
 
       // Reconstruct on chain B with the same backing storage. Same signer
-      // address (default USER), different chain id.
-      const signerBAccount = { address: signerAAccount.address, chainId: CHAIN_B };
-      const signerB = createMockSigner({
-        walletAccount: {
-          getSnapshot: vi.fn().mockReturnValue(signerBAccount),
-          subscribe: vi.fn((listener) => {
-            listener({ previous: undefined, next: signerBAccount });
-            return () => {};
-          }),
-        },
-        requireWalletAccount: vi.fn().mockReturnValue(signerBAccount),
-      });
-      const providerB = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_B) });
-      const sdkB = createSDK({ signer: signerB, provider: providerB, storage });
+      // address, different chain id.
+      const sdkB = buildSDK(CHAIN_B);
 
       // Permit signed on chain A must NOT be considered valid on chain B.
       expect(await sdkB.permits.hasPermit([CONTRACT_A])).toBe(false);
 
       await sdkB.permits.grantPermit([CONTRACT_A]);
-      expect(signerB.signTypedData).toHaveBeenCalledOnce();
+      expect(sdkB.signer!.signTypedData).toHaveBeenCalledOnce();
 
       // Switch back to chain A — the original permit must still be honored.
-      const signerA2 = createMockSigner({
-        walletAccount: {
-          getSnapshot: vi.fn().mockReturnValue(signerAAccount),
-          subscribe: vi.fn((listener) => {
-            listener({ previous: undefined, next: signerAAccount });
-            return () => {};
-          }),
-        },
-        requireWalletAccount: vi.fn().mockReturnValue(signerAAccount),
-      });
-      const providerA2 = createMockProvider({ getChainId: vi.fn().mockResolvedValue(CHAIN_A) });
-      const sdkA2 = createSDK({ signer: signerA2, provider: providerA2, storage });
+      const sdkA2 = buildSDK(CHAIN_A);
 
       expect(await sdkA2.permits.hasPermit([CONTRACT_A])).toBe(true);
       await sdkA2.permits.grantPermit([CONTRACT_A]);
       // No fresh signature requested — the chain-A permit is still cached.
-      expect(signerA2.signTypedData).not.toHaveBeenCalled();
+      expect(sdkA2.signer!.signTypedData).not.toHaveBeenCalled();
     });
   });
 
@@ -160,6 +148,7 @@ describe("ZamaSDK credentials lifecycle", () => {
       createMockSigner,
       createMockProvider,
       createMockRelayer,
+      createMockRouter,
       createSDK,
     }) => {
       const storage = new MemoryStorage();
@@ -167,7 +156,12 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerA = createMockSigner();
       const providerA = createMockProvider();
       const relayerA = createMockRelayer();
-      const sdkA = createSDK({ signer: signerA, provider: providerA, relayer: relayerA, storage });
+      const sdkA = createSDK({
+        signer: signerA,
+        provider: providerA,
+        router: createMockRouter({ relayer: relayerA }),
+        storage,
+      });
 
       await sdkA.permits.grantPermit([CONTRACT_A, CONTRACT_B]);
       expect(signerA.signTypedData).toHaveBeenCalledOnce();
@@ -185,7 +179,12 @@ describe("ZamaSDK credentials lifecycle", () => {
       const signerB = createMockSigner();
       const providerB = createMockProvider();
       const relayerB = createMockRelayer();
-      const sdkB = createSDK({ signer: signerB, provider: providerB, relayer: relayerB, storage });
+      const sdkB = createSDK({
+        signer: signerB,
+        provider: providerB,
+        router: createMockRouter({ relayer: relayerB }),
+        storage,
+      });
 
       expect(await sdkB.permits.hasPermit([CONTRACT_A, CONTRACT_B])).toBe(true);
 

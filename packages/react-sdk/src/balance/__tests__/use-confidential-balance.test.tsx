@@ -1,13 +1,15 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import type { Address, DecryptValuesParameters, TypedValue } from "@zama-fhe/sdk";
 import { act, waitFor } from "@testing-library/react";
-import type { Address, Hex } from "@zama-fhe/sdk";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { useConfidentialBalance } from "../use-confidential-balance";
 
 describe("useConfidentialBalance", () => {
   test("default", async ({ renderWithProviders, relayer, provider, tokenAddress, userAddress }) => {
     const handle = `0x${"aa".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 123n } as TypedValue,
+    ]);
 
     const { result } = renderWithProviders(() =>
       useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -58,7 +60,9 @@ describe("useConfidentialBalance", () => {
   }) => {
     const handle = `0x${"cd".repeat(32)}`;
     vi.mocked(provider.readContract).mockResolvedValue(handle);
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 456n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 456n } as TypedValue,
+    ]);
 
     const OTHER = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
     const { result } = renderWithProviders(() =>
@@ -82,7 +86,9 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"aa".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 123n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue([
+        { type: "uint64", value: 123n } as TypedValue,
+      ]);
 
       const { result } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),
@@ -135,10 +141,10 @@ describe("useConfidentialBalance", () => {
       const handleB = `0x${"bc".repeat(32)}`;
       let currentHandle: string = handleA;
       vi.mocked(provider.readContract).mockImplementation(async () => currentHandle);
-      vi.mocked(relayer.userDecrypt).mockImplementation(
-        async ({ encryptedValues }: { encryptedValues: Hex[] }) => {
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: DecryptValuesParameters) => {
           const value = encryptedValues[0] === handleA ? 111n : 222n;
-          return { [encryptedValues[0]]: value };
+          return [{ type: "uint64", value } as TypedValue];
         },
       );
 
@@ -155,11 +161,11 @@ describe("useConfidentialBalance", () => {
       });
 
       await waitFor(() => expect(result.current.data).toBe(222n), { timeout: 5_000 });
-      expect(relayer.userDecrypt).toHaveBeenNthCalledWith(
+      expect(relayer.decryptValues).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ encryptedValues: [handleA] }),
       );
-      expect(relayer.userDecrypt).toHaveBeenLastCalledWith(
+      expect(relayer.decryptValues).toHaveBeenLastCalledWith(
         expect.objectContaining({ encryptedValues: [handleB] }),
       );
     });
@@ -173,7 +179,9 @@ describe("useConfidentialBalance", () => {
     }) => {
       const handle = `0x${"ad".repeat(32)}`;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValue({ [handle]: 999n });
+      vi.mocked(relayer.decryptValues).mockResolvedValue([
+        { type: "uint64", value: 999n } as TypedValue,
+      ]);
 
       const { result, rerender } = renderWithProviders(() =>
         useConfidentialBalance({ address: tokenAddress, account: userAddress }),

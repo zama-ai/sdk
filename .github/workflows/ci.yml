@@ -1,0 +1,203 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, prerelease]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Safe-chain enforces its own minimum-package-age check independently of
+  # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+
+jobs:
+  # Compile once. This job populates the shared turbo cache under the exact
+  # `turbo-<os>-<sha>` key; lint/test/api-report `needs:` it, so its post-run
+  # cache save completes before they start and they replay the build from cache
+  # instead of recompiling. That turns the old 3× parallel builds into 1× + replays.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Cache turbo
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Build packages
+        run: pnpm build
+
+  lint:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Build packages
+        run: pnpm build
+
+      # Ordered cheapest-first so the fastest, most commonly-failing check
+      # reports red before the slower ones run: format → lint → typecheck → size.
+      - run: pnpm format:check
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - name: Check bundle size
+        run: pnpm exec turbo run size
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # vitest runs at the repo root (not a turbo task) and imports built dist for
+      # cross-package tests, so materialise dist via a turbo cache replay first.
+      - name: Build packages
+        run: pnpm build
+
+      - run: pnpm test:coverage
+
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@02f3c2e641286b7fa308cd3e430783103ce6103b # v2.12.0
+        with:
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+
+  api-report:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+        with:
+          ignore-scripts: "true"
+
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Check API reports are up to date
+        run: pnpm api-report:check
+
+      - name: Extract base branch reports
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p /tmp/api-reports/base
+          git fetch --depth=1 origin "$BASE_SHA"
+          for f in $(git ls-tree -r --name-only "$BASE_SHA" -- packages/sdk/etc packages/react-sdk/etc 2>/dev/null | grep '\.api\.md$'); do
+            git show "$BASE_SHA:$f" > "/tmp/api-reports/base/$(basename "$f")" 2>/dev/null || true
+          done
+
+      - name: Build API diff comment
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/api-reports/pr
+          cp packages/sdk/etc/*.api.md packages/react-sdk/etc/*.api.md /tmp/api-reports/pr/
+          pnpm api-report:diff \
+            --base-dir /tmp/api-reports/base \
+            --pr-dir   /tmp/api-reports/pr \
+            --out      /tmp/api-reports/comment.md \
+            --summary  "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- api-report-diff -->';
+            const body = fs.readFileSync('/tmp/api-reports/comment.md', 'utf8');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

@@ -1,77 +1,31 @@
-import type { FheChain, AtLeastOneChain } from "../chains";
+import type { AtLeastOneChain, FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
-import type { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { RelayerSDK } from "../relayer/relayer-sdk";
-import type { RelayerWebConfig } from "../relayer/relayer-sdk.types";
-import type { RelayerWeb } from "../relayer/relayer-web";
-import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
-import type { GenericLogger } from "../worker/worker.types";
-import type { RelayerWorkerClient } from "../worker/worker.client";
+import type { ChainRouter } from "../chains/router";
+import type { FhevmRuntimeConfig, FhevmRelayerSDK } from "../relayer/types";
+import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
-
-// ── Shared option shapes ─────────────────────────────────────────────────────
-
-/**
- * Options for web() relayer (threads, security, storage).
- *
- * Logging is configured once, SDK-wide, via `createConfig({ logger })` — there
- * is deliberately no per-relayer logger option.
- */
-export type WebRelayerOptions = Partial<
-  Pick<RelayerWebConfig, "threads" | "security" | "fheArtifactStorage" | "fheArtifactCacheTTL">
->;
 
 // ── Relayer config types ─────────────────────────────────────────────────────
 
 /**
- * Base relayer config.
- *
- * Groups chains by config reference identity, calls `createWorker`
- * once per group with all chain configs, then calls `createRelayer`
- * per chain with the shared worker.
+ * Base relayer config. `createRelayer` builds one single-chain relayer; the
+ * dispatcher calls it once per chain.
  */
 export interface RelayerConfig {
   readonly type: string;
-  /**
-   * Create a shared worker/pool for all chains in this relayer group.
-   * `logger` is the SDK-wide logger from `createConfig`, threaded through so
-   * worker diagnostics route through the consumer's logger.
-   */
-  // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-  readonly createWorker?: (chains: FheChain[], logger: GenericLogger) => any;
-  /**
-   * Create a single-chain relayer. `worker` is the return value of
-   * `createWorker`; `logger` is the SDK-wide logger from `createConfig`.
-   */
-  readonly createRelayer: (
-    chain: FheChain,
-    // oxlint-disable-next-line typescript-eslint/no-explicit-any -- bivariant: subtypes narrow this
-    worker: any,
-    logger: GenericLogger,
-  ) => RelayerSDK;
+  /** Create a single-chain relayer. */
+  readonly createRelayer: (chain: FheChain) => FhevmRelayerSDK;
 }
 
-/** Web relayer config — narrows worker type to `RelayerWorkerClient`. */
+/** Web relayer config — drives the FHE backend directly. */
 export interface WebRelayerConfig extends RelayerConfig {
   readonly type: "web";
-  readonly createWorker: (chains: FheChain[], logger: GenericLogger) => RelayerWorkerClient;
-  readonly createRelayer: (
-    chain: FheChain,
-    worker: RelayerWorkerClient,
-    logger: GenericLogger,
-  ) => RelayerWeb;
 }
 
-/** Cleartext relayer config — no worker, returns `RelayerCleartext`. */
+/** Cleartext relayer config — drives the FHE backend in cleartext mode. */
 export interface CleartextRelayerConfig extends RelayerConfig {
   readonly type: "cleartext";
-  readonly createRelayer: (
-    chain: FheChain,
-    worker: unknown,
-    logger: GenericLogger,
-  ) => RelayerCleartext;
 }
 
 /** Shared options across all adapter paths. */
@@ -92,6 +46,12 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
   registryTTL?: number;
   /** SDK lifecycle event listener. */
   onEvent?: ZamaSDKEventListener;
+  /**
+   * Global `@fhevm/sdk` runtime config — WASM load mode, threads, logger, auth,
+   * module versions. `runtime.auth` is the process-wide fallback; each chain's
+   * `auth` is forwarded on that chain's relayer requests and takes precedence.
+   */
+  runtime?: FhevmRuntimeConfig;
   /**
    * Optional logger for SDK diagnostics. Conforms to the four-level
    * {@link GenericLogger} interface (`error`/`warn`/`info`/`debug`), which
@@ -123,7 +83,7 @@ declare const zamaConfigBrand: unique symbol;
  */
 export type ZamaConfig = {
   readonly chains: readonly FheChain[];
-  readonly relayer: RelayerDispatcher;
+  readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
   readonly storage: GenericStorage;

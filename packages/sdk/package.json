@@ -1,17 +1,67 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.3.0-alpha.9",
+  "version": "3.4.0-alpha.2",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
+  "keywords": [
+    "blockchain",
+    "confidential",
+    "erc20",
+    "ethereum",
+    "fhe",
+    "fhevm",
+    "homomorphic-encryption",
+    "privacy",
+    "token",
+    "zama"
+  ],
+  "homepage": "https://github.com/zama-ai/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/zama-ai/sdk/issues"
+  },
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/sdk",
+    "url": "git+https://github.com/zama-ai/sdk.git",
     "directory": "packages/sdk"
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.cjs",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/esm/index.js",
   "types": "./dist/esm/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "cleartext": [
+        "./dist/esm/cleartext/index.d.ts"
+      ],
+      "query": [
+        "./dist/esm/query/index.d.ts"
+      ],
+      "viem": [
+        "./dist/esm/viem/index.d.ts"
+      ],
+      "ethers": [
+        "./dist/esm/ethers/index.d.ts"
+      ],
+      "web": [
+        "./dist/esm/web/index.d.ts"
+      ],
+      "node": [
+        "./dist/esm/node/index.d.ts"
+      ],
+      "chains": [
+        "./dist/esm/chains/index.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "import": {
@@ -84,6 +134,10 @@
         "types": "./dist/esm/node/index.d.ts",
         "default": "./dist/esm/node/index.js"
       },
+      "require": {
+        "types": "./dist/esm/node/index.d.ts",
+        "default": "./dist/cjs/node/index.cjs"
+      },
       "default": "./dist/esm/node/index.js"
     },
     "./chains": {
@@ -101,65 +155,18 @@
       "default": "./package.json"
     }
   },
-  "typesVersions": {
-    "*": {
-      "cleartext": [
-        "./dist/esm/cleartext/index.d.ts"
-      ],
-      "query": [
-        "./dist/esm/query/index.d.ts"
-      ],
-      "viem": [
-        "./dist/esm/viem/index.d.ts"
-      ],
-      "ethers": [
-        "./dist/esm/ethers/index.d.ts"
-      ],
-      "web": [
-        "./dist/esm/web/index.d.ts"
-      ],
-      "node": [
-        "./dist/esm/node/index.d.ts"
-      ],
-      "chains": [
-        "./dist/esm/chains/index.d.ts"
-      ]
-    }
-  },
-  "files": [
-    "dist/**/*.js",
-    "dist/**/*.cjs",
-    "dist/**/*.d.ts",
-    "dist/**/*.map",
-    "README.md",
-    "LICENSE"
-  ],
   "publishConfig": {
     "access": "public"
-  },
-  "keywords": [
-    "fhe",
-    "zama",
-    "fhevm",
-    "confidential",
-    "erc20",
-    "privacy",
-    "homomorphic-encryption",
-    "token",
-    "ethereum",
-    "blockchain"
-  ],
-  "homepage": "https://github.com/zama-ai/sdk#readme",
-  "bugs": {
-    "url": "https://github.com/zama-ai/sdk/issues"
   },
   "scripts": {
     "build": "rm -rf dist && rolldown --config rolldown.config.ts",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api-report": "api-extractor run --local -c api-extractor.json && api-extractor run --local -c api-extractor.web.json && api-extractor run --local -c api-extractor.viem.json && api-extractor run --local -c api-extractor.ethers.json && api-extractor run --local -c api-extractor.node.json && api-extractor run --local -c api-extractor.query.json",
+    "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json"
   },
   "dependencies": {
-    "@zama-fhe/relayer-sdk": "~0.4.4",
+    "@fhevm/sdk": "1.1.0-alpha.8",
     "viem": ">=2",
     "zod": ">=4"
   },
@@ -171,7 +178,6 @@
     "ethers": ">=6",
     "viem": ">=2"
   },
-  "sideEffects": false,
   "peerDependenciesMeta": {
     "@tanstack/query-core": {
       "optional": true

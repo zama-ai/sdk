@@ -21,7 +21,7 @@
     "restriction": "off",
     "nursery": "off"
   },
-  "options": { "denyWarnings": true, "typeAware": true },
+  "options": { "denyWarnings": true, "typeAware": true, "typeCheck": true },
   "env": { "builtin": true },
   "settings": {
     "react": { "version": "19.2.4" },
@@ -42,11 +42,11 @@
     "coverage/**",
     "examples/**",
     "hardhat/**",
-    "packages/playwright/**",
-    "packages/test-nextjs/**",
-    "packages/test-nextjs/playwright/**",
-    "packages/test-vite/**",
-    "packages/test-vite/playwright/**",
+    "codemods/**",
+    "test/playwright/**",
+    "test/test-components/**",
+    "test/test-nextjs/**",
+    "test/test-vite/**",
     "contracts/lib/**",
     "contracts/dependencies/**",
     "docs/api/**",
@@ -132,10 +132,6 @@
     {
       "files": [
         "examples/**",
-        "packages/playwright/**",
-        "packages/test-components/**",
-        "packages/test-nextjs/**",
-        "packages/test-vite/**",
         "test/playwright/**",
         "test/test-components/**",
         "test/test-nextjs/**",

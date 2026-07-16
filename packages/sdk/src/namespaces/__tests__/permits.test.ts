@@ -141,12 +141,12 @@ describe("Permits", () => {
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits();
 
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });
 
     test("revokePermits(addresses) clears the decrypt cache for the requester", async ({
@@ -156,12 +156,12 @@ describe("Permits", () => {
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
 
       await sdk.permits.revokePermits([CONTRACT_A]);
 
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });
 
     test("clear after grantPermit clears the decrypt cache for the signer", async ({
@@ -171,12 +171,12 @@ describe("Permits", () => {
     }) => {
       const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledOnce();
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
 
       await sdk.permits.clear();
 
       await sdk.decryption.decryptValues(handles);
-      expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });
   });
 });

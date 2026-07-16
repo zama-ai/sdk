@@ -1,9 +1,10 @@
 import { ConfigurationError } from "../errors";
-import { RelayerCleartext } from "../relayer/cleartext/relayer-cleartext";
+import { FhevmRelayer } from "../relayer/fhevm-relayer";
+import type { RelayerOptions } from "../relayer/types";
 import type { CleartextRelayerConfig } from "./types";
 
 /**
- * Cleartext relayer — routes to RelayerCleartext (no FHE infrastructure).
+ * Cleartext relayer — drives the FHE backend in cleartext mode (no FHE infrastructure).
  *
  * When `executorAddress` is set on the chain definition (e.g. `hardhat`, `hoodi`),
  * it is picked up automatically.
@@ -11,10 +12,10 @@ import type { CleartextRelayerConfig } from "./types";
  * @example
  * ```ts
  * // executorAddress comes from the chain preset:
- * relayers: { [hardhat.id]: cleartext() }
+ * relayers: { [hardhat.id]: cleartext({ batchRpcCalls: true }) }
  * ```
  */
-export function cleartext(): CleartextRelayerConfig {
+export function cleartext(options?: RelayerOptions): CleartextRelayerConfig {
   return {
     type: "cleartext",
     createRelayer: (chain) => {
@@ -25,7 +26,7 @@ export function cleartext(): CleartextRelayerConfig {
             `or set it on the chain definition.`,
         );
       }
-      return new RelayerCleartext(chain);
+      return new FhevmRelayer({ chain, options, cleartext: true });
     },
   };
 }

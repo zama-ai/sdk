@@ -19,10 +19,13 @@ const NAV_ITEMS = [
   { to: "/unshield-all", label: "Unshield All" },
   { to: "/allow-all", label: "Allow All" },
   { to: "/wrapper-discovery", label: "Wrapper Discovery" },
-  { to: "/fhe-relayer", label: "FHE Relayer" },
+  { to: "/encrypt", label: "Encrypt" },
   { to: "/unwrap-manual", label: "Manual Unwrap" },
   { to: "/wrap-manual", label: "Manual Wrap" },
   { to: "/resume-unshield", label: "Resume Unshield" },
+  { to: "/decrypt", label: "Decrypt" },
+  { to: "/registry", label: "Registry" },
+  { to: "/suspense", label: "Suspense" },
 ] as const;
 
 function NavLinks({ LinkComponent }: { LinkComponent: LinkComponent }) {

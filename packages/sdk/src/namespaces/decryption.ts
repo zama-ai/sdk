@@ -1,8 +1,13 @@
 import type { Address } from "viem";
 import { requireConfigured, wrapDecryptError } from "../errors";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
+import type { ChainRouter } from "../chains/router";
+import type {
+  ClearValue,
+  DecryptPublicValuesResult,
+  EncryptedValue,
+  FhevmRelayerOptions,
+} from "../relayer/types";
 import type {
   BatchDecryptResult,
   DecryptionService,
@@ -10,12 +15,13 @@ import type {
 } from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
+import { assertNonNullable } from "../utils";
 
 /**
  * Public namespace for FHE decryption — the canonical way to decrypt.
  *
  * Exposed as `sdk.decryption`. Prefer these methods over the low-level
- * `sdk.relayer.userDecrypt` / `delegatedUserDecrypt` / `publicDecrypt`: they
+ * `sdk.relayer.decryptValues` / `decryptPublicValues`: they
  * assemble the credential bundle (transport key pair, EIP-712 permit) for you,
  * cache results, and wrap relayer errors. Reach for `sdk.relayer.*` only when
  * you must control credential assembly by hand.
@@ -29,23 +35,27 @@ import { requireAlignedWalletAccount } from "../utils/alignment";
  * **Mixed signer requirement:** `decryptValues` and
  * `delegatedDecryptValues` need a configured signer; `decryptPublicValues`
  * does not. Each method documents its requirement in its JSDoc.
+ *
+ * **Request chunking:** decrypt requests are split internally to stay under
+ * the relayer's 2048-cleartext-bit per-request budget — callers never need to
+ * size batches themselves.
  */
 export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
-    this.#relayer = opts.relayer;
+    this.#router = opts.router;
     this.#decryptionService = opts.decryptionService;
   }
 
@@ -62,6 +72,7 @@ export class Decryption {
    * Relayer errors are wrapped into typed SDK errors.
    *
    * @param encryptedInput - Encrypted values to decrypt, each paired with its contract address.
+   * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
    * @returns A record mapping each encrypted value to its decrypted clear-text value.
    * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if signer and provider are on different chains. {@link ChainMismatchError}
@@ -76,6 +87,7 @@ export class Decryption {
    */
   async decryptValues(
     encryptedInput: EncryptedInput[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const service = this.#requireDecryptionService("decryptValues");
     const account = await requireAlignedWalletAccount(
@@ -83,7 +95,7 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.userDecrypt(encryptedInput, account.address);
+    return service.decryptValues(encryptedInput, account.address, options);
   }
 
   /**
@@ -125,7 +137,7 @@ export class Decryption {
       this.#signer,
       this.#provider,
     );
-    return service.delegatedUserDecrypt(
+    return service.delegatedDecryptValues(
       encryptedInputs,
       delegatorAddress,
       account.address,
@@ -142,6 +154,7 @@ export class Decryption {
    * can submit on-chain finalization transactions (e.g. `finalizeUnwrap`).
    *
    * @param encryptedValues - FHE encrypted values to decrypt publicly.
+   * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
    * @returns Clear-text values, ABI-encoded values, and the decryption proof.
    *
    * @example
@@ -150,13 +163,29 @@ export class Decryption {
    *   await sdk.decryption.decryptPublicValues([encryptedValue]);
    * ```
    */
-  async decryptPublicValues(encryptedValues: EncryptedValue[]): Promise<PublicDecryptResult> {
+  async decryptPublicValues(
+    encryptedValues: EncryptedValue[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<DecryptPublicValuesResult> {
     if (encryptedValues.length === 0) {
       return { clearValues: {}, decryptionProof: "0x", abiEncodedClearValues: "0x" };
     }
 
     try {
-      return await this.#relayer.publicDecrypt(encryptedValues);
+      const result = await this.#router.relayer.decryptPublicValuesWithSignatures({
+        encryptedValues,
+        options,
+      });
+      const clearValues: Record<EncryptedValue, ClearValue> = {};
+      result.checkSignaturesArgs.handlesList.forEach((handle, i) => {
+        assertNonNullable(result.clearValues[i], `result.clearValues[${i}]`);
+        clearValues[handle] = result.clearValues[i].value;
+      });
+      return {
+        clearValues,
+        abiEncodedClearValues: result.checkSignaturesArgs.abiEncodedCleartexts,
+        decryptionProof: result.checkSignaturesArgs.decryptionProof,
+      };
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }

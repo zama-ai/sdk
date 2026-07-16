@@ -43,7 +43,7 @@ describe("swallow", () => {
       new LoggerService(sink),
     );
     expect(sink.warn).toHaveBeenCalledOnce();
-    const [message] = sink.warn.mock.calls[0];
+    const [message] = sink.warn.mock.calls[0]!;
     expect(message).toContain("persist permit");
     expect(sink.error).not.toHaveBeenCalled();
   });

@@ -1,6 +1,6 @@
-import { AllowAllPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
 import { CONFIDENTIAL_TOKEN_ADDRESSES } from "@/constants";
+import { AllowAllPanel } from "@zama-fhe/test-components";
+import { getAddress } from "viem";
 
 export default async function AllowAllPage({
   searchParams,
@@ -9,7 +9,9 @@ export default async function AllowAllPage({
 }) {
   const params = await searchParams;
   const tokensParam = params.tokens;
-  const tokens = tokensParam ? (tokensParam.split(",") as Address[]) : CONFIDENTIAL_TOKEN_ADDRESSES;
+  const tokens = tokensParam
+    ? tokensParam.split(",").map(getAddress)
+    : CONFIDENTIAL_TOKEN_ADDRESSES;
 
   return (
     <div className="space-y-6">

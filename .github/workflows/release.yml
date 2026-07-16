@@ -37,13 +37,14 @@ env:
   # Safe-chain enforces its own minimum-package-age check independently of
   # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
 
 jobs:
   # ── Publish from tag (manual recovery) ──────────────────────────────
   publish-from-tag:
     if: inputs.publish-tag != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout tag
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -146,6 +147,7 @@ jobs:
   validate-branch:
     if: github.event_name == 'workflow_dispatch' && inputs.publish-tag == ''
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Validate target branch
         run: |
@@ -154,25 +156,16 @@ jobs:
             exit 1
           fi
 
-  lint:
+  # build + lint + typecheck + format + size + vitest + api-report, sharing one build
+  ci:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/lint.yml
-
-  vitest:
-    needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/vitest.yml
+    uses: ./.github/workflows/ci.yml
 
   playwright:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/playwright.yml
-
-  api-report:
-    needs: [validate-branch]
-    if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
-    uses: ./.github/workflows/api-report.yml
 
   docs:
     needs: [validate-branch]
@@ -180,9 +173,10 @@ jobs:
     uses: ./.github/workflows/docs.yml
 
   release:
-    needs: [lint, vitest, playwright, api-report, docs]
+    needs: [ci, playwright, docs]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

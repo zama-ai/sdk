@@ -2,9 +2,9 @@
   "name": "@zama-fhe/test-nextjs",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "license": "BSD-3-Clause-Clear",
   "author": "Zama",
+  "type": "module",
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "next build",
@@ -19,8 +19,8 @@
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "viem": "^2.53.1",
-    "wagmi": "^3.6.17"
+    "viem": "^2.55.0",
+    "wagmi": "^3.7.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
@@ -28,11 +28,11 @@
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "^1.0.0",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   },
-  "packageManager": "pnpm@10.30.2",
   "engines": {
     "node": ">=22",
     "pnpm": ">=10"
-  }
+  },
+  "packageManager": "pnpm@10.30.2"
 }

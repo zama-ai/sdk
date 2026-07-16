@@ -1,5 +1,5 @@
 import type { Address, Hex } from "viem";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 
 export const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 export const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;

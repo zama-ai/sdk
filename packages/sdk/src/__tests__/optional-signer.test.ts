@@ -42,7 +42,7 @@ describe("ZamaSDK without signer", () => {
   test("decryptPublicValues works with no signer", async ({ createSDK, relayer }) => {
     const sdk = createSDK({ signer: undefined });
     await sdk.decryption.decryptPublicValues(["0xhandle"]);
-    expect(relayer.publicDecrypt).toHaveBeenCalled();
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalled();
   });
 
   test("permits.hasPermit returns false (pure store lookup, no signer needed)", async ({
