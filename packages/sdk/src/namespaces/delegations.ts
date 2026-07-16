@@ -158,6 +158,7 @@ export class Delegations {
    * @param contractAddress - The confidential contract address.
    * @param delegatorAddress - The address that granted the delegation.
    * @param delegateAddress - The address that received delegation rights.
+   * @returns `{ isActive, expiryTimestamp }` — activity and the raw expiry timestamp together.
    */
   async getStatus(params: {
     contractAddress: Address;

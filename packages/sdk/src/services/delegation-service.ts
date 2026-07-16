@@ -285,23 +285,21 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    const expiry = await this.getDelegationExpiry({
+    const { isActive, expiryTimestamp } = await this.getStatus({
       contractAddress: normalizedContract,
       delegatorAddress: normalizedDelegator,
       delegateAddress: normalizedDelegate,
     });
-    if (expiry === 0n) {
+    if (isActive) {
+      return;
+    }
+    if (expiryTimestamp === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract}`,
       );
     }
-    if (expiry !== MAX_UINT64) {
-      const now = await this.#provider.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
-        );
-      }
-    }
+    throw new DelegationExpiredError(
+      `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
+    );
   }
 }
