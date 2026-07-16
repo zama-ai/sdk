@@ -31,6 +31,23 @@ function setupSdkWithEvents(opts: {
   return { sdk, events, readonlyToken, token };
 }
 
+/** Make `waitForTransactionReceipt` return a receipt with an `UnwrapRequested`
+ * log so `unwrap` / `unwrapAll` can surface an `unwrapRequestId`. */
+function mockUnwrapReceipt(provider: GenericProvider, userAddress: Address): void {
+  vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+    logs: [
+      {
+        topics: [
+          Topics.UnwrapRequested,
+          `0x000000000000000000000000${userAddress.slice(2)}`,
+          `0x${"cd".repeat(32)}`,
+        ],
+        data: `0x${"00".repeat(32)}`,
+      },
+    ],
+  });
+}
+
 describe("ZamaSDKEvents constants", () => {
   test("has all expected event keys", () => {
     expect(ZamaSDKEvents.EncryptStart).toBe("encrypt:start");
@@ -350,7 +367,13 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrap events", () => {
-    test("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+    test("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({
+      createSDK,
+      tokenAddress,
+      userAddress,
+      provider,
+    }) => {
+      mockUnwrapReceipt(provider, userAddress);
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrap(50n);
 
@@ -362,7 +385,8 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrapAll events", () => {
-    test("emits UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+    test("emits UnwrapSubmitted", async ({ createSDK, tokenAddress, userAddress, provider }) => {
+      mockUnwrapReceipt(provider, userAddress);
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrapAll();
 

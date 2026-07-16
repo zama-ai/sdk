@@ -1,3 +1,4 @@
+import { ZamaSDK } from "@zama-fhe/sdk";
 import { createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import {
   useShield,
@@ -10,7 +11,12 @@ import {
 import type { UseIsAllowedConfig } from "@zama-fhe/react-sdk";
 
 export function App(cfg: UseIsAllowedConfig) {
-  const config = createZamaConfig({ chains: [] });
+  const config = createZamaConfig({
+    chains: [],
+    sessionStorage: cfg.sessionStore,
+    keypairTTL: 86400,
+    sessionTTL: 2592000,
+  });
   const tok = useReadonlyToken(cfg.address);
   const s = useShield({ tokenAddress: cfg.address, wrapperAddress: cfg.address });
   const allowed = useIsAllowed(cfg);
@@ -18,4 +24,11 @@ export function App(cfg: UseIsAllowedConfig) {
   const status = useDelegationStatus({ tokenAddress: cfg.address, delegateAddress: cfg.address });
   const u = useUnshield({ tokenAddress: cfg.address });
   return { config, tok, s, allowed, grant, status, u };
+}
+
+const sdk = new ZamaSDK(createZamaConfig({ chains: [] }));
+
+export async function grantAndCheck(contractAddress: string) {
+  await sdk.allow([contractAddress]);
+  return sdk.isAllowed([contractAddress]);
 }

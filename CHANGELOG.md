@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
+
+### Code Refactoring
+
+- **codemod:** rewrite renamed credentials config keys, flag silent drops [SDK-249] ([#544](https://github.com/zama-ai/sdk/issues/544)) ([c0c54ca]())
+
+## [3.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.4...v3.4.0-alpha.5) (2026-07-16)
+
+### Features
+
+- **sdk:** expose wrap() + useWrap for two-signature shield ([#522](https://github.com/zama-ai/sdk/issues/522)) ([5bb88a9]())
+
+## [3.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.3...v3.4.0-alpha.4) (2026-07-16)
+
+### Features
+
+- **credentials:** opt-in shared ML-KEM keypair scope for shared-tenant operators [SDK-142] ([#546](https://github.com/zama-ai/sdk/issues/546)) ([aee2db4]()), closes [#458]()
+
+## [3.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.2...v3.4.0-alpha.3) (2026-07-16)
+
+### Bug Fixes
+
+- **sdk:** unbundle unshield into request + finalize phases ([#530](https://github.com/zama-ai/sdk/issues/530)) ([b3b5835]())
+
 ## [3.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.1...v3.4.0-alpha.2) (2026-07-15)
 
 ### Features

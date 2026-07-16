@@ -1,0 +1,21 @@
+id: rename-config-session-ttl-shorthand
+snapshots:
+  createConfig({ storage, sessionTTL });:
+    fixed: 'createConfig({ storage, permitTTL: sessionTTL });'
+    labels:
+    - source: sessionTTL
+      style: primary
+      start: 24
+      end: 34
+    - source: createConfig({ storage, sessionTTL })
+      style: secondary
+      start: 0
+      end: 37
+    - source: ({ storage, sessionTTL })
+      style: secondary
+      start: 12
+      end: 37
+    - source: '{ storage, sessionTTL }'
+      style: secondary
+      start: 13
+      end: 36

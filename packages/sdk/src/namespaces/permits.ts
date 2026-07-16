@@ -18,6 +18,11 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
  * surfaced; the key pair exists to sign permits and is created automatically when needed.
  * {@link clear} wipes both the permit store and the transport key pair (permits
  * cascade-delete with the key pair).
+ *
+ * When `transportKeyPairScope` is configured (opt-in shared-tenant scope for B2B2C/WaaS
+ * operators), {@link clear} and {@link revokePermits} stay signer-level only — they never
+ * touch the shared key pair. {@link revokeTransportKeyPair} is the distinct,
+ * operator-level operation for that.
  */
 export class Permits {
   readonly #signer: GenericSigner | undefined;
@@ -120,6 +125,11 @@ export class Permits {
    * `switchChain` before fanning the wallet-account change out to listeners,
    * so any downstream caller (including React adapters) observes the
    * dispatcher on the wallet chain by the time it invokes warmup.
+   *
+   * Not for pre-warming a shared `transportKeyPairScope`: this call's wallet-account
+   * precondition doesn't conceptually apply to a scope-wide key, and would silently
+   * no-op precisely when an operator is most likely to be calling it (no end-user
+   * connected yet). Use {@link warmTransportKeyPairScope} instead.
    */
   async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
@@ -183,5 +193,53 @@ export class Permits {
       () => this.#cachingService.clearForRequester(signerAddress),
       this.#logger,
     );
+  }
+
+  /**
+   * Revoke the shared transport key pair for `transportKeyPairScope` (operator-level
+   * action — no wallet account needs to be connected, but a signer must still be
+   * configured on this SDK instance at construction time).
+   *
+   * Deletes the shared key pair; every permit in the scope embeds its public key, so
+   * they're all treated as stale on next access. Signer-level {@link clear} never does
+   * this — it only ever wipes the calling signer's own permits.
+   *
+   * Not best-effort, unlike most credential-store writes: a storage failure rejects
+   * instead of being logged and swallowed. This is the primitive an operator reaches
+   * for on suspected key compromise — a resolved promise must mean the key pair is
+   * actually gone.
+   *
+   * Stops the SDK from reissuing or reusing the deleted key — does not revoke any
+   * permit already issued under it. A permit is a self-contained, bearer-style EIP-712
+   * signature the relayer accepts independently of this SDK; one exfiltrated alongside
+   * the key remains usable until its own `permitTTL` expiry regardless of this call.
+   *
+   * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
+   *   against revoking the wrong scope by mistake.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if the underlying storage delete fails.
+   */
+  async revokeTransportKeyPair(scopeId: string): Promise<void> {
+    const service = this.#requireCredentialService("revokeTransportKeyPair");
+    await service.revokeTransportKeyPair(scopeId);
+  }
+
+  /**
+   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level —
+   * no wallet account needs to be connected, but a signer must still be configured on
+   * this SDK instance at construction time) — the pre-warm counterpart to
+   * {@link revokeTransportKeyPair}. Prefer this over {@link warmTransportKeyPair} for a
+   * scoped key pair: unlike that method, this never silently no-ops for lack of a
+   * connected wallet, because a scope-wide key was never tied to one in the first place.
+   *
+   * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
+   *   against warming the wrong scope by mistake.
+   * @throws if no signer is configured. {@link SignerNotConfiguredError}
+   * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   */
+  async warmTransportKeyPairScope(scopeId: string): Promise<void> {
+    const service = this.#requireCredentialService("warmTransportKeyPairScope");
+    await service.warmTransportKeyPairScope(scopeId);
   }
 }
