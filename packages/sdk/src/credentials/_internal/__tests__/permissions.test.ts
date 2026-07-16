@@ -1,9 +1,9 @@
 import type { Hex } from "viem";
-import { describe, test, expect } from "../../test-fixtures";
-import { checksum } from "../utils";
+import { describe, test, expect } from "../../../test-fixtures";
+import { checksum } from "../../utils";
 import { findPermitToWiden, sortedUnion } from "../permissions";
-import type { Permission } from "../types";
-import type { ChecksummedAddress } from "../../schemas/primitives";
+import type { Permission } from "../../types";
+import type { ChecksummedAddress } from "../../../schemas/primitives";
 
 const A = checksum("0x1111111111111111111111111111111111111111");
 const B = checksum("0x2222222222222222222222222222222222222222");

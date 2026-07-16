@@ -6,11 +6,16 @@ import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
-import { TransportKeyPairVault } from "./keypair-vault";
-import { PermissionStore } from "./permission-store";
-import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
+import { TransportKeyPairVault } from "./_internal/keypair-vault";
+import { PermissionStore } from "./_internal/permission-store";
+import {
+  chunkContracts,
+  findPermitToWiden,
+  sortedUnion,
+  uncoveredContracts,
+} from "./_internal/permissions";
 import { SerializedPermitSchema } from "./schemas";
-import type { PermissionScope } from "./storage-keys";
+import type { PermissionScope } from "./_internal/storage-keys";
 import type {
   Permission,
   SerializedTransportKeyPairWithPermissions,

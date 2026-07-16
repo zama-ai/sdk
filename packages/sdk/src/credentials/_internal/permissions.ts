@@ -1,7 +1,7 @@
 import type { Hex } from "viem";
-import type { Permission } from "./types";
-import type { ChecksummedAddress } from "../schemas/primitives";
-import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
+import type { Permission } from "../types";
+import type { ChecksummedAddress } from "../../schemas/primitives";
+import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "../utils";
 
 /** Contracts in `requested` not covered by the signed payload of any permission. */
 export function uncoveredContracts(

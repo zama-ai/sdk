@@ -1,11 +1,11 @@
 import type { Hex } from "viem";
-import type { GenericLogger, GenericStorage } from "../types";
-import { swallow } from "../utils/swallow";
+import type { GenericLogger, GenericStorage } from "../../types";
+import { swallow } from "../../utils/swallow";
 import { pruneUnusable, withoutPermitsTouching } from "./permissions";
-import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
+import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "../schemas";
 import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
-import type { Permission } from "./types";
-import type { ChecksummedAddress } from "../schemas/primitives";
+import type { Permission } from "../types";
+import type { ChecksummedAddress } from "../../schemas/primitives";
 
 export type { PermissionScope };
 

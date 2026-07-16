@@ -1,8 +1,8 @@
-import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
-import { MemoryStorage } from "../../storage/memory-storage";
+import { test as baseTest, describe, expect, vi } from "../../../test-fixtures";
+import { MemoryStorage } from "../../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import { checksum } from "../utils";
+import { checksum } from "../../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 const OTHER = checksum("0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C");

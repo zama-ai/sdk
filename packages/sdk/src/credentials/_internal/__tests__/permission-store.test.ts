@@ -1,9 +1,9 @@
 import type { Hex } from "viem";
-import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
-import { MemoryStorage } from "../../storage/memory-storage";
+import { test as baseTest, describe, expect, vi } from "../../../test-fixtures";
+import { MemoryStorage } from "../../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
-import type { Permission } from "../types";
-import { checksum } from "../utils";
+import type { Permission } from "../../types";
+import { checksum } from "../../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
 const DELEGATOR = checksum("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC");

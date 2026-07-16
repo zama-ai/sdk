@@ -1,11 +1,11 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import type { ChecksummedAddress } from "../schemas/primitives";
-import type { GenericLogger, GenericStorage } from "../types";
-import { swallow } from "../utils/swallow";
-import { StoredTransportKeyPairSchema } from "./schemas";
+import type { ChecksummedAddress } from "../../schemas/primitives";
+import type { GenericLogger, GenericStorage } from "../../types";
+import { swallow } from "../../utils/swallow";
+import { StoredTransportKeyPairSchema } from "../schemas";
 import { transportKeyPairStorageKey } from "./storage-keys";
-import type { StoredTransportKeyPair } from "./types";
-import { nowSeconds } from "./utils";
+import type { StoredTransportKeyPair } from "../types";
+import { nowSeconds } from "../utils";
 
 interface TransportKeyPairVaultConfig {
   generator: () => Promise<SerializeTransportKeyPairReturnType>;
