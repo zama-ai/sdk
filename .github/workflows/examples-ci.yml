@@ -124,6 +124,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: DEBUG types/node
+        if: matrix.example == 'node-viem'
+        run: |
+          echo "--- npm config list -l ---"
+          npm config list -l
+          echo "--- ~/.npmrc ---"
+          cat ~/.npmrc 2>&1 || true
+          echo "--- /etc/npmrc / global npmrc ---"
+          npm config get globalconfig
+          cat "$(npm config get globalconfig)" 2>&1 || true
+          echo "--- node_modules/@types listing ---"
+          ls -la node_modules/@types/ 2>&1 || echo "NO @types dir"
+          echo "--- npm ls @types/node ---"
+          npm ls @types/node --all 2>&1 || true
+          echo "--- registry metadata for @types/node@22.7.5 ---"
+          npm view @types/node@22.7.5 version dist.tarball 2>&1 || true
+          echo "--- total top-level node_modules count ---"
+          ls node_modules | wc -l
+
       - name: Overlay workspace SDK build
         # Replace whatever published version this example pins with the
         # freshly-built workspace tarballs, without touching its committed
