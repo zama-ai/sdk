@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: "/wrapper-discovery", label: "Wrapper Discovery" },
   { to: "/encrypt", label: "Encrypt" },
   { to: "/unwrap-manual", label: "Manual Unwrap" },
+  { to: "/wrap-manual", label: "Manual Wrap" },
   { to: "/resume-unshield", label: "Resume Unshield" },
   { to: "/decrypt", label: "Decrypt" },
   { to: "/registry", label: "Registry" },

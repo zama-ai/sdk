@@ -2934,6 +2934,36 @@ const { txHash } = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
+## Manual approve + wrap (escape hatch)
+
+`shield()` bundles approval and wrapping into one call and is what almost every app should use. If you need to split the `approve` + `wrap` path across two separately-triggered signatures — for example to render distinct "approve" and "shield" steps in your own UI, or to approve well ahead of the wrap — call `approveUnderlying()` and `wrap()` directly.
+
+This applies only to the `approve` + `wrap` path. Don't use it to recreate `shield()` by hand: `wrap()` never sends `transferAndCall`, so you lose automatic ERC-1363 routing along with the `approvalStrategy` handling.
+
+
+### Tab: Core SDK
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+### Tab: React
+
+```tsx
+const approve = useApproveUnderlying("0xWrapperAddress");
+const wrap = useWrap("0xWrapperAddress");
+
+await approve.mutateAsync({ amount: 1000n });
+await wrap.mutateAsync({ amount: 1000n });
+```
+
+
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+
 ## Next steps
 
 - [Transfer Privately](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md) — send confidential tokens to another address
@@ -3331,10 +3361,53 @@ if (unwrapTxHash) {
 
 All mutation hooks automatically invalidate balance queries on success, so your UI stays in sync without manual cache management.
 
+### 6. Decompose the unshield into explicit phases
+
+`unshield()` orchestrates both on-chain steps for you and should be your default. Drop down to the low-level primitives only when you genuinely need per-phase control -- for example, to submit the unwrap now and let the user finalize later from a different screen.
+
+- **`unwrap(amount)`** (or **`unwrapAll()`**) submits phase 1 and returns an `UnwrapResult`: the `txHash`, mined `receipt`, and the `unwrapRequestId` needed for phase 2.
+- **`finalizeUnwrap(unwrapRequestId)`** fetches the public decryption proof and submits phase 2.
+
+
+### Tab: SDK
+
+```ts
+// Phase 1: request the unwrap on-chain
+const { unwrapRequestId } = await wrappedToken.unwrap(500n);
+
+// ...later, once the request has been processed on-chain
+
+// Phase 2: fetch the decryption proof and finalize
+await wrappedToken.finalizeUnwrap(unwrapRequestId);
+```
+
+### Tab: React
+
+```tsx
+import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
+
+const unwrap = useUnwrap("0xWrapper");
+const finalize = useFinalizeUnwrap("0xWrapper");
+
+// Phase 1 -- the mutation `data` is an UnwrapResult
+const result = await unwrap.mutateAsync({ amount: 500n });
+
+// Phase 2 -- the result's unwrapRequestId feeds straight in
+await finalize.mutateAsync(result);
+```
+
+
+Use `unwrapAll()` / `useUnwrapAll` in place of `unwrap` / `useUnwrap` to request the full confidential balance instead of a fixed amount.
+
+
+> [!WARNING]
+> When you drive the two phases yourself, you own the state between them. `getPendingUnshield()` and `resumeUnshield()` only track unshields started through `unshield()` -- they will not pick up an `unwrap` you submitted directly. Persist the `unwrapRequestId` yourself if the session might end before you finalize.
+
+
 ## Next steps
 
 - See [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) for the full `WrappedToken.unshield` and `WrappedToken.unshieldAll` API.
-- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, and `useResumeUnshield` details.
+- See [Hooks](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) for `useUnshield`, `useUnshieldAll`, `useResumeUnshield`, and the low-level `useUnwrap` / `useUnwrapAll` / `useFinalizeUnwrap` details.
 - If your unshield fails, see [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for troubleshooting `TransactionRevertedError` and related issues.
 
 ## Check balances
@@ -3775,6 +3848,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK config or FHE runtime failed to initialize                                              |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                               |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                   |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                        |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance check impossible (no stored permits)                                                        |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                               |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegation cannot target self                                                                       |
@@ -3852,34 +3926,35 @@ Each handler receives the error class for its code, so subclass fields are avail
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                    |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                 |
-| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                      |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                              |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                       |
-| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                    |
-| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                    |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.     |
-| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                      |
-| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                   |
-| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                     |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                             |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                            |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                       |
-| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets). |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                               |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                          |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                              |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                    |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                    |
-| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                    |
-| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                         |
-| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                       |
-| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                      |
+| Error                                  | Recommended action                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                       |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                    |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                         |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                 |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                      |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                        |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                               |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                          |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically. |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).    |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                   |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                  |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                             |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                 |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                       |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                       |
+| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                       |
+| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                            |
+| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                          |
+| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                         |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -6071,6 +6146,26 @@ await wrappedToken.approveUnderlying();
 await wrappedToken.approveUnderlying(1000n);
 ```
 
+### wrap
+
+`(amount: bigint, options?: WrapOptions) => Promise<TransactionResult>`
+
+Wraps already-approved underlying ERC-20 into confidential tokens — the second half of the manual `approve` + `wrap` flow. Validates the ERC-20 balance and the wrapper's allowance before submitting: throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the allowance is below `amount` (call `approveUnderlying()` first).
+
+Most apps should use `shield()`, which routes ERC-1363 tokens through `transferAndCall` and manages approval automatically. Reach for `wrap()` only when you need the `approve` and `wrap` signatures as separate, independently-triggered steps — see [Shield tokens → Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch).
+
+```ts
+await wrappedToken.approveUnderlying(1000n);
+const { txHash, receipt } = await wrappedToken.wrap(1000n);
+```
+
+Options:
+
+| Option            | Type                    | Default | Description                           |
+| ----------------- | ----------------------- | ------- | ------------------------------------- |
+| `to`              | `Address`               | signer  | Recipient of the confidential balance |
+| `onWrapSubmitted` | `(txHash: Hex) => void` | —       | Called after the wrap tx is submitted |
+
 ## Unshield
 
 ### unshield
@@ -7401,6 +7496,7 @@ import {
   ConfigurationError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   DelegationSelfNotAllowedError,
@@ -7466,6 +7562,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `ConfigurationError`                    | `CONFIGURATION`                       | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
 | `InsufficientConfidentialBalanceError`  | `INSUFFICIENT_CONFIDENTIAL_BALANCE`   | Confidential balance too low for transfer or unshield                                                                             |
 | `InsufficientERC20BalanceError`         | `INSUFFICIENT_ERC20_BALANCE`          | ERC-20 balance too low for shield                                                                                                 |
+| `InsufficientAllowanceError`            | `INSUFFICIENT_ALLOWANCE`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                      |
 | `BalanceCheckUnavailableError`          | `BALANCE_CHECK_UNAVAILABLE`           | Balance validation impossible (no stored permits)                                                                                 |
 | `ERC20ReadFailedError`                  | `ERC20_READ_FAILED`                   | Public ERC-20 read failed (network or contract error)                                                                             |
 | `DelegationSelfNotAllowedError`         | `DELEGATION_SELF_NOT_ALLOWED`         | Delegate equals connected wallet                                                                                                  |
@@ -7803,6 +7900,34 @@ try {
 ```
 
 **How to handle:** Show the user their public token balance and the shortfall. They need to acquire more tokens before shielding.
+
+### InsufficientAllowanceError
+
+**Code:** `INSUFFICIENT_ALLOWANCE`
+
+The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this — it manages approval internally.
+
+| Property    | Type      | Description                                     |
+| ----------- | --------- | ----------------------------------------------- |
+| `requested` | `bigint`  | Amount the caller requested to wrap             |
+| `available` | `bigint`  | Allowance approved to the wrapper at check time |
+| `token`     | `Address` | Underlying ERC-20 token contract address        |
+
+```ts
+import { InsufficientAllowanceError } from "@zama-fhe/sdk";
+
+try {
+  await wrappedToken.wrap(1000n);
+} catch (error) {
+  if (error instanceof InsufficientAllowanceError) {
+    // Approve the wrapper first, then retry the wrap.
+    await wrappedToken.approveUnderlying(1000n);
+    await wrappedToken.wrap(1000n);
+  }
+}
+```
+
+**How to handle:** Call `approveUnderlying()` (or `useApproveUnderlying`) for at least the wrap amount before calling `wrap()`. Most apps avoid this entirely by using `shield()`, which approves and wraps in one call.
 
 ### BalanceCheckUnavailableError
 

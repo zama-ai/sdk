@@ -116,6 +116,26 @@ await wrappedToken.approveUnderlying();
 await wrappedToken.approveUnderlying(1000n);
 ```
 
+### wrap
+
+`(amount: bigint, options?: WrapOptions) => Promise<TransactionResult>`
+
+Wraps already-approved underlying ERC-20 into confidential tokens — the second half of the manual `approve` + `wrap` flow. Validates the ERC-20 balance and the wrapper's allowance before submitting: throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the allowance is below `amount` (call `approveUnderlying()` first).
+
+Most apps should use `shield()`, which routes ERC-1363 tokens through `transferAndCall` and manages approval automatically. Reach for `wrap()` only when you need the `approve` and `wrap` signatures as separate, independently-triggered steps — see [Shield tokens → Manual approve + wrap](../../guides/shield-tokens.md#manual-approve-wrap-escape-hatch).
+
+```ts
+await wrappedToken.approveUnderlying(1000n);
+const { txHash, receipt } = await wrappedToken.wrap(1000n);
+```
+
+Options:
+
+| Option            | Type                    | Default | Description                           |
+| ----------------- | ----------------------- | ------- | ------------------------------------- |
+| `to`              | `Address`               | signer  | Recipient of the confidential balance |
+| `onWrapSubmitted` | `(txHash: Hex) => void` | —       | Called after the wrap tx is submitted |
+
 ## Unshield
 
 ### unshield
