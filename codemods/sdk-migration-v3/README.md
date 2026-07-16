@@ -38,17 +38,31 @@ git diff                   # review the changes
 Idempotent (re-running is a no-op); edits are not formatted (run your formatter
 afterwards); pins are never bumped.
 
-## What it does (9 changes)
+## What it does (11 changes)
 
 - **renames + config-key changes** — native `ast-grep` steps (`rules/*.yml`):
   `useReadonlyToken→useWrappedToken`, `useDelegatedUserDecrypt→useDelegatedDecrypt`,
   `useAllow/useIsAllowed→useGrantPermit/useHasPermit`, `Handle→EncryptedValue`,
-  `useDelegationStatus tokenAddress→contractAddress`.
+  `useDelegationStatus tokenAddress→contractAddress`,
+  `createConfig`/`createZamaConfig` credentials keys
+  `sessionStorage/keypairTTL/sessionTTL→permitStorage/transportKeyPairTTL/permitTTL`
+  (scoped to the call's argument via a relational `inside` guard — `sessionStorage`
+  collides with the browser's `window.sessionStorage` global, so this is
+  deliberately not a bare pattern match).
 - **structural / context-sensitive rewrites** — JSSG transforms (`scripts/*.ts`):
   import-aware `createZamaConfig→createConfig` (leaves local aliases of the new
   export untouched), query-hook config `tokenAddress→address` (any object shape),
   mutation-hook config object → positional `address`, remove the `UseZamaConfig`
-  interface.
+  interface, `ZamaSDK` flat methods → `permits`/`delegations`/`decryption`
+  namespaces (`sdk.allow→sdk.permits.grantPermit`, etc. — 13 methods; scoped by
+  tracing local `new ZamaSDK(...)` bindings, same import-provenance technique as
+  the `createZamaConfig` rewrite above; `isDelegated→isActive` additionally gets a
+  trailing comment flagging that `isActive` also checks expiry, not just presence).
+
+A config assembled via a variable or spread and passed to `createConfig(cfg)` is
+**not** rewritten by the ast-grep step above — the property isn't syntactically
+inside the call, and widening the scope to reach it would reopen the
+`sessionStorage` collision this scoping exists to avoid. See "Known limitations".
 
 ## Optional AI tail
 
@@ -169,3 +183,19 @@ CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
   which `codemod workflow run` never auto-triggers — so the default run is deterministic.
   It only drafts the residual changes (with `// TODO(sdk-3.1.0)` markers) when explicitly
   triggered with an LLM configured.
+- **`ZamaSDK` namespace-method rewrite only follows a local `new ZamaSDK(...)`
+  binding** (`rename-sdk-namespace-methods.ts`), same class of limitation as
+  `createToken` above: method names like `allow`/`isAllowed`/`isDelegated` aren't
+  distinctive enough to rename as bare identifiers (unlike a `useXxx` hook name),
+  so the rule only rewrites `X.method(...)` where `X` is traced, same-file, back to
+  a `new ZamaSDK(...)` call. An SDK instance obtained through a factory function, a
+  React hook, or re-assignment through an intermediate variable is not traced and
+  keeps calling the removed root methods — the typecheck (`TS2339`, the method no
+  longer exists on `ZamaSDK`) surfaces those for manual fix or the `ai` tail.
+- **Credentials config-key rewrite only covers a direct `createConfig`/
+  `createZamaConfig` object-literal argument** (`rename-credentials-config-keys.yml`).
+  A config assembled via a variable or spread is not reachable by this rule without
+  reopening the `sessionStorage`/`window.sessionStorage` collision the scoping
+  exists to prevent — the type has no index signature, so `tsc` only flags a
+  removed key on a direct literal (`TS2353`); the variable/spread case has no
+  automated signal today and relies on manual review.
