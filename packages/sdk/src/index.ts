@@ -124,6 +124,7 @@ export type {
   ApprovalStrategy,
   UnshieldCallbacks,
   UnshieldOptions,
+  UnwrapResult,
   ShieldCallbacks,
   ShieldOptions,
   ShieldPath,
@@ -162,6 +163,8 @@ export type {
 export {
   ZamaError,
   ZamaErrorCode,
+  isRetryable,
+  retryAfterSeconds,
   SigningRejectedError,
   SigningFailedError,
   EncryptionFailedError,
