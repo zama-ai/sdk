@@ -1,9 +1,9 @@
+import type { Address } from "viem";
 import { vi } from "vitest";
-import type { Address, Hex } from "viem";
 import type { EncryptedValue } from "../relayer/types";
 import { Token } from "../token/token";
 import { WrappedToken } from "../token/wrapped-token";
-import type { GenericSigner, TransactionResult } from "../types";
+import type { GenericSigner, TransactionResult, UnwrapResult } from "../types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { AddressFixtures } from "./addresses";
 import type { SdkFixtures } from "./sdk";
@@ -49,8 +49,13 @@ function createMockTokenInternal(address: Address, signer: GenericSigner): Token
 }
 
 const DEFAULT_TX_RESULT: TransactionResult = {
-  txHash: ("0x" + "11".repeat(32)) as Hex,
+  txHash: `0x${"11".repeat(32)}` as const,
   receipt: { logs: [] },
+};
+
+const DEFAULT_UNWRAP_RESULT: UnwrapResult = {
+  ...DEFAULT_TX_RESULT,
+  unwrapRequestId: `0x${"bb".repeat(32)}` as const,
 };
 
 export interface TokenFixtures {
@@ -100,15 +105,13 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
           ? (addressOrArgs?.txResult ?? DEFAULT_TX_RESULT)
           : DEFAULT_TX_RESULT;
       const base = createMockTokenInternal(addr, sig);
-      return {
-        // oxlint-disable-next-line typescript-eslint/no-misused-spread
-        ...base,
+      return Object.assign(base, {
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
         confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFromAndCall: vi.fn().mockResolvedValue(txResult),
         setOperator: vi.fn().mockResolvedValue(txResult),
-      } as unknown as Token;
+      });
     };
     await use(factory);
   },
@@ -124,9 +127,7 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
           ? (addressOrArgs?.txResult ?? DEFAULT_TX_RESULT)
           : DEFAULT_TX_RESULT;
       const base = createMockTokenInternal(addr, sig);
-      return {
-        // oxlint-disable-next-line typescript-eslint/no-misused-spread
-        ...base,
+      return Object.assign(base, {
         confidentialTransfer: vi.fn().mockResolvedValue(txResult),
         confidentialTransferFrom: vi.fn().mockResolvedValue(txResult),
         confidentialTransferAndCall: vi.fn().mockResolvedValue(txResult),
@@ -136,13 +137,13 @@ export const tokenFixtures: FixturesOf<TokenFixtures, TokenDeps> = {
         allowance: vi.fn().mockResolvedValue(0n),
         approveUnderlying: vi.fn().mockResolvedValue(txResult),
         shield: vi.fn().mockResolvedValue(txResult),
-        unwrap: vi.fn().mockResolvedValue(txResult),
-        unwrapAll: vi.fn().mockResolvedValue(txResult),
+        unwrap: vi.fn().mockResolvedValue(DEFAULT_UNWRAP_RESULT),
+        unwrapAll: vi.fn().mockResolvedValue(DEFAULT_UNWRAP_RESULT),
         finalizeUnwrap: vi.fn().mockResolvedValue(txResult),
         unshield: vi.fn().mockResolvedValue(txResult),
         unshieldAll: vi.fn().mockResolvedValue(txResult),
         resumeUnshield: vi.fn().mockResolvedValue(txResult),
-      } as unknown as WrappedToken;
+      }) as unknown as WrappedToken;
     };
     await use(factory);
   },
