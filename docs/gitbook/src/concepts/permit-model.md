@@ -88,6 +88,12 @@ Permits can be removed in two ways:
 
 For a complete "log out" that also removes the transport key pair, use `sdk.permits.clear()`. See the [ZamaSDK reference](../reference/sdk/ZamaSDK.md#permits-revokepermits) for the full API.
 
+### Two revocation tiers with a shared scope
+
+Both `revokePermits()` and `clear()` are **signer-level**: they only ever act on the calling signer's own permits (and, for `clear()`, that signer's own key-pair slot). This holds even when `transportKeyPairScope` is configured — an end-user disconnecting never invalidates other signers sharing the scope's key pair, because the shared key pair was never stored under any individual signer's slot to begin with.
+
+Invalidating the _shared_ key pair is a separate, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair — no permit needs to be touched directly, and no wallet needs to be connected. `hasPermit`/`grantPermit` then treat every permit in the scope as stale on next access, though not via one single mechanism: immediately after the revoke, `hasPermit()` returns `false` because there's no stored key pair left to compare against; once some later caller regenerates a key for the scope, it's the newly-mismatched embedded public key that `pruneUnusable` then filters existing permits on. Same end-user-visible outcome either way. Unlike other credential-store writes, this call is not best-effort: a storage failure rejects rather than being logged and swallowed, since a resolved promise here is expected to mean the key pair is actually gone — the primitive an operator reaches for on suspected compromise. This only stops the SDK from reissuing or reusing the key going forward; it does not revoke any permit already issued under it, which stays independently valid until its own `permitTTL` expiry — see [Security Model](./security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the full explanation and when a shared scope makes sense.
+
 ## Wallet account changes
 
 The SDK automatically manages permits when the wallet state changes:
