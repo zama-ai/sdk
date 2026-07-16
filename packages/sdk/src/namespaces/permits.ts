@@ -37,6 +37,8 @@ export class Permits {
         warmTransportKeyPair(address: Address): Promise<void>;
         revokePermits(contracts?: readonly Address[]): Promise<void>;
         clearCredentials(): Promise<void>;
+        revokeTransportKeyPair(scopeId: string): Promise<void>;
+        warmTransportKeyPairScope(scopeId: string): Promise<void>;
       }
     | undefined;
   readonly #logger: GenericLogger;
@@ -56,6 +58,8 @@ export class Permits {
           warmTransportKeyPair(address: Address): Promise<void>;
           revokePermits(contracts?: readonly Address[]): Promise<void>;
           clearCredentials(): Promise<void>;
+          revokeTransportKeyPair(scopeId: string): Promise<void>;
+          warmTransportKeyPairScope(scopeId: string): Promise<void>;
         }
       | undefined;
     logger: GenericLogger;

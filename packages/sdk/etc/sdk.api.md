@@ -5906,6 +5906,7 @@ export type ErrorForCode = Complete<{
     [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+    [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
     [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
     [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
     [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
@@ -11553,6 +11554,8 @@ export class Permits {
             warmTransportKeyPair(address: Address): Promise<void>;
             revokePermits(contracts?: readonly Address[]): Promise<void>;
             clearCredentials(): Promise<void>;
+            revokeTransportKeyPair(scopeId: string): Promise<void>;
+            warmTransportKeyPairScope(scopeId: string): Promise<void>;
         } | undefined;
         logger: GenericLogger;
     });
@@ -14549,6 +14552,12 @@ export const transactionOperationMetadata: {
             type: "shield:submitted";
             txHash: `0x${string}`;
             shieldPath: "approveAndWrap";
+        };
+    };
+    wrap: {
+        submittedEvent: (txHash: Hex) => {
+            type: "wrap:submitted";
+            txHash: `0x${string}`;
         };
     };
     transfer: {

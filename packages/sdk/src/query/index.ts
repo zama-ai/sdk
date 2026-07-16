@@ -174,6 +174,8 @@ export type {
   TransferOptions,
   UnshieldCallbacks,
   UnshieldOptions,
+  UnwrapResult,
+  WrapOptions,
 } from "../types";
 export { ZamaSDKEvents, transactionOperationMetadata } from "../events/sdk-events";
 export type {
@@ -196,6 +198,7 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
+  WrapSubmittedEvent,
   ZamaSDKEvent,
   ZamaSDKEventInput,
   ZamaSDKEventListener,

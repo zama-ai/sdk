@@ -777,6 +777,8 @@ export class Permits {
             warmTransportKeyPair(address: Address): Promise<void>;
             revokePermits(contracts?: readonly Address[]): Promise<void>;
             clearCredentials(): Promise<void>;
+            revokeTransportKeyPair(scopeId: string): Promise<void>;
+            warmTransportKeyPairScope(scopeId: string): Promise<void>;
         } | undefined;
         logger: GenericLogger;
     });
@@ -786,7 +788,9 @@ export class Permits {
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
     revokePermits(contracts?: Address[]): Promise<void>;
+    revokeTransportKeyPair(scopeId: string): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
+    warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
 
 // @public (undocumented)
@@ -1150,6 +1154,12 @@ export const transactionOperationMetadata: {
             shieldPath: "approveAndWrap";
         };
     };
+    wrap: {
+        submittedEvent: (txHash: Hex) => {
+            type: "wrap:submitted";
+            txHash: `0x${string}`;
+        };
+    };
     transfer: {
         submittedEvent: (txHash: Hex) => {
             type: "transfer:submitted";
@@ -1317,6 +1327,11 @@ export interface UnwrapRequestedEvent {
     readonly unwrapRequestId: EncryptedValue;
 }
 
+// @public
+export interface UnwrapResult extends TransactionResult {
+    unwrapRequestId: EncryptedValue;
+}
+
 // @public (undocumented)
 export interface UnwrapSubmittedEvent extends BaseEvent {
     // (undocumented)
@@ -1362,6 +1377,12 @@ export interface WrapEvent {
 
 // @public (undocumented)
 export function wrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.wrap", Address], WrapParams, TransactionResult>;
+
+// @public
+export interface WrapOptions {
+    onWrapSubmitted?: (txHash: Hex) => void;
+    to?: Address;
+}
 
 // @public
 export interface WrapParams extends WrapOptions {
@@ -1445,6 +1466,14 @@ export interface WrappersRegistryQueryConfig {
 }
 
 // @public
+export interface WrapSubmittedEvent extends BaseEvent {
+    // (undocumented)
+    txHash: Hex;
+    // (undocumented)
+    type: typeof ZamaSDKEvents.WrapSubmitted;
+}
+
+// @public
 export type WriteContractArgs<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>> = ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>;
 
 // @public
@@ -1507,6 +1536,7 @@ export const ZamaErrorCode: {
     readonly DelegationExpired: "DELEGATION_EXPIRED";
     readonly InsufficientConfidentialBalance: "INSUFFICIENT_CONFIDENTIAL_BALANCE";
     readonly InsufficientERC20Balance: "INSUFFICIENT_ERC20_BALANCE";
+    readonly InsufficientAllowance: "INSUFFICIENT_ALLOWANCE";
     readonly BalanceCheckUnavailable: "BALANCE_CHECK_UNAVAILABLE";
     readonly ERC20ReadFailed: "ERC20_READ_FAILED";
     readonly DelegationExpiryUnchanged: "DELEGATION_EXPIRY_UNCHANGED";

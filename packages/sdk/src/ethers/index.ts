@@ -70,6 +70,7 @@ export type {
   TransferFromSubmittedEvent,
   SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
+  WrapSubmittedEvent,
   UnwrapSubmittedEvent,
   FinalizeUnwrapSubmittedEvent,
   DelegationSubmittedEvent,
