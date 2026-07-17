@@ -2097,45 +2097,28 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 [s6]: #step-6-token-wrappedtoken-upgraded-contracts
 [s7]: #step-7-removed-with-no-replacement
 
-## 3.x
+## Alpha
 
 - source_type: official-doc
-- source_path: docs/gitbook/src/changelog/v3.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md
-- logical_path: changelog/v3
+- source_path: docs/gitbook/src/changelog/alpha.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md
+- logical_path: changelog/alpha
 
-# 3.x
+# Alpha
 
-Plain-language release notes for the `3.x` line — what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
 
-## Versions
+> [!WARNING]
+> **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
-- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, typed decryption errors, and the internal `@fhevm/sdk` backend migration.
-- [**3.2.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
-- [**3.1.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
-- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
 
-## 3.3.x
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/changelog/v3-3.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md
-- logical_path: changelog/v3-3
-
-# 3.3.x
-
-This page covers the `3.3.x` line: `3.3.1` and `3.3.0`.
-
-## 3.3.1
-
-The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk` `1.x`. The high-level surface is unchanged — `createConfig`, `Token` / `WrappedToken`, `sdk.encrypt`, `sdk.decryption.*`, and the React hooks all behave exactly as before, so **`Token` and hooks apps need no changes**. What the new backend does add is a richer set of FHE runtime and per-chain tuning knobs on `createConfig`, documented below.
+The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk` `1.x`. The high-level surface is unchanged — `createConfig`, `Token` / `WrappedToken`, `sdk.encrypt`, `sdk.decryption.*`, and the React hooks all behave exactly as before, so **`Token` and hooks apps need no changes**. What the new backend adds is a richer set of FHE runtime and per-chain tuning knobs on `createConfig`, documented below.
 
 
 > [!INFO]
-> **Expect a wallet signature after upgrading.** The new backend persists the full signed [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) (the EIP-712 payload and its signature) where earlier versions stored only the raw signature, and the two formats are not interchangeable. Permits cached by a pre-`3.3.1` version fail validation on read and are discarded rather than migrated, so the first decryption on each chain after upgrading prompts the user to sign a permit once more. Subsequent decrypts reuse the stored permit silently.
+> **Expect a wallet signature after upgrading.** The new backend persists the full signed [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) (the EIP-712 payload and its signature) where earlier versions stored only the raw signature, and the two formats are not interchangeable. Permits cached by an earlier version fail validation on read and are discarded rather than migrated, so the first decryption on each chain after upgrading prompts the user to sign a permit once more. Subsequent decrypts reuse the stored permit silently.
 
 
-### FHE runtime and client tuning
+## FHE runtime and client tuning
 
 `createConfig` accepts a process-wide `runtime` object — the `@fhevm/sdk` runtime config. It configures the FHE engine itself (applied once per process): how the WASM assets load, threading, module versions, and a fallback relayer `auth`.
 
@@ -2205,7 +2188,7 @@ web({
 
 `timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods and [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the full config reference.
 
-### Bug fixes
+## Bug fixes
 
 - **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
 
@@ -2213,6 +2196,34 @@ web({
 > [!INFO]
 > Only code that constructs low-level relayer objects directly should review its usage against the new backend before upgrading. Staying on `createConfig` + `Token` / `WrappedToken` + the React hooks keeps you fully insulated.
 
+## 3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md
+- logical_path: changelog/v3
+
+# 3.x
+
+Plain-language release notes for the `3.x` line — what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
+
+## Versions
+
+- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
+- [**3.2.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
+- [**3.1.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
+- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md
+- logical_path: changelog/v3-3
+
+# 3.3.x
+
+This page covers the `3.3.x` line.
 
 ## 3.3.0
 
@@ -2457,7 +2468,7 @@ relayers: {
 }
 ```
 
-Each transport factory also takes an optional `options` argument for per-chain tuning — in `3.1.0` this parameter was renamed from `relayer` to `options`. Its fields depend on the FHE backend, which changed in `3.3.1`; see [FHE runtime and client tuning](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md#fhe-runtime-and-client-tuning) for the current options.
+Each transport factory also takes an optional `options` argument for per-chain tuning — in `3.1.0` this parameter was renamed from `relayer` to `options`. Its fields depend on the FHE backend; the internal backend migration and its current tuning options are documented under [FHE runtime and client tuning](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md#fhe-runtime-and-client-tuning).
 
 See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#2-pick-a-relayer) for the full list.
 
@@ -2596,6 +2607,120 @@ await wrappedToken.shield(1000n);
 ```
 
 See the [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappersRegistry.md) for how wrapper lookup works.
+
+## 2.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v2.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v2.md
+- logical_path: changelog/v2
+
+# 2.x
+
+Plain-language release notes for the `2.x` line — what changed in each minor version, in plain terms. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list). The `2.x` line is superseded by `3.x` — to move an app forward, follow the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md).
+
+Notes are written in the API vocabulary of the time (`handles`, `keypairTTL`, `WrappersRegistry`, `ReadonlyToken`, `sdk.publicDecrypt`, …); many of those names changed in `3.x`.
+
+## 2.5.0
+
+_Released 2026-04-17._
+
+This release rounds out the decryption surface and keeps pace with upgraded on-chain wrapper contracts.
+
+- **Public-decrypt primitive.** `sdk.publicDecrypt()` is now the primitive for decrypting publicly-decryptable values — no permit signature needed.
+- **Richer decrypt events.** Decrypt events now expose the decrypted handles and result fields directly.
+- **Upgraded unwrap events.** The SDK reads the upgraded unwrap events emitted by the wrapper contracts.
+- **Inferred total supply.** Added a total-supply contract builder that infers the right read for a token.
+- **Fixes.** Centralized `ZERO_HANDLE` with consistent `isZeroHandle` checks, and aligned the example apps with scoped `isAllowed` checks.
+
+## 2.4.0
+
+_Released 2026-04-13._
+
+The headline here is a smoother decrypt experience in React, plus some trimming of the token surface.
+
+- **Unified `useUserDecrypt`.** The React hook now uses a reactive cache and auto-decrypts, so decrypted values stay in sync without manual plumbing.
+- **Slimmer token API.** Removed bespoke fee and admin features that were tied to a specific integration, keeping the token surface generic.
+- **`keypairTTL` cap.** The decrypt key pair TTL is now capped at the FHEVM 365-day maximum.
+- **Examples.** The Node ethers and Node viem examples were upgraded to the 2.x API with full ERC-7984 flows.
+
+## 2.3.0
+
+_Released 2026-04-07._
+
+Delegation and safety checks are the focus.
+
+- **Delegation API alignment.** The delegation API was aligned with the Delegated User Decryption spec.
+- **Balance validation.** Transfers, shields, and unshields now validate balances before submitting, so obviously-doomed operations fail early.
+- **TTL default.** The `keypairTTL` default was aligned with the session TTL (30 days).
+- **Quality.** Improved error handling and code quality, plus new Node + Web end-to-end test infrastructure.
+
+## 2.2.0
+
+_Released 2026-03-30._
+
+This release introduces on-chain wrapper discovery.
+
+- **Wrappers registry.** Added a `WrappersRegistry` class and matching on-chain registry hooks, so an app can look up the confidential wrapper registered for an ERC-20 (and vice versa) on-chain.
+- **Delegation robustness.** Added `DelegationNotPropagatedError` to surface the gateway sync delay after a delegation is set.
+- **Hook naming.** Renamed `useAllowTokens` / `useRevokeTokens` back to `useAllow` / `useRevoke`, and improved the query-wrapper types.
+- **Examples.** Several example apps were upgraded to the current SDK with full ERC-7984 and delegation flows (wagmi v3, react-ethers, react-viem, and Hoodi).
+
+## 2.1.0
+
+_Released 2026-03-24._
+
+A small maintenance release — this one is thin on library-facing changes.
+
+- **Fixes.** Excluded the logger from the web-worker init payload, gated queries on an undefined `tokenAddress`, and colocated the Node worker with the Node entry point.
+- **Examples.** The Hoodi example gained on-chain ACL delegation flows.
+
+## 2.0.0
+
+_Released 2026-03-20._
+
+The `2.0.0` major bump adds delegated decryption and firms up key persistence and worker reliability.
+
+
+> [!DANGER]
+> **Breaking change: `useUserDecrypt` signature change.** The `useUserDecryptFlow` hook was removed, and `useUserDecrypt` now takes the flow hook's signature. The old low-level `useUserDecrypt` that accepted `UserDecryptParams` is gone.
+
+
+- **Delegated decryption.** Added support for delegated decryption — letting another account decrypt your values.
+- **Key persistence.** The FHE public key and params are now persisted with artifact-level revalidation, avoiding redundant refetches.
+- **Worker reliability.** Browser-extension environments are auto-detected with a file-based worker fallback, worker creation is lazy (via a blob URL) to avoid SSR crashes, and session expiry is detected on the `isAllowed` query.
+- **Smaller bundle.** Bundle size was reduced by inlining slim ABI fragments.
+- **Examples.** Added `example-hoodi`, an ERC-7984 demo on the Hoodi testnet.
+
+## 1.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v1.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v1.md
+- logical_path: changelog/v1
+
+# 1.x
+
+Plain-language release notes for the early `1.x` line — what changed in each mainline release, in plain terms. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md), which lists every commit.
+
+## 1.1.0
+
+_Released 2026-03-13._
+
+The first feature release after `1.0` — a cleartext development mode, session-aware signing, better React/wagmi integration, and a round of integrator-friction and security fixes. No breaking changes.
+
+- **Cleartext development mode.** A new cleartext FHEVM mode runs the SDK unencrypted for local development and testing; its configuration was reworked into a flat config shape at the same time.
+- **Session-aware signing.** Sign once and reuse the signature across operations in a session, with a configurable session TTL — plus a read-only signer mode for running the SDK without a signer.
+- **React & wagmi integration.** A wagmi v2 compatibility shim (`useConnection` / `getConnection`); decrypted balances persisted to storage, so a page reload no longer re-decrypts behind a spinner; and React SDK audit fixes (consistent imports, an optimistic `shieldETH` flow, documented error handling, a `mergeEnabled` option).
+- **WASM thread pool.** `RelayerWeb` (the browser relayer transport) gained a thread-pool option to tune how many worker threads FHE operations use.
+- **Integrator-friction & worker fixes.** Smoothed early-integrator rough edges — gas limits, worker bundling, CDN behavior on localhost, React StrictMode restarts, and the Sepolia `/v2` relayer path — and switched the web worker from `importScripts` to fetch-and-eval to fix MIME-type errors. `viem` also became a direct dependency.
+- **Security.** Resolved three high-severity Dependabot alerts and the CodeQL code-scanning alerts, and pinned `minimatch` to `10.2.4` to close a ReDoS vulnerability.
+
+## 1.0.1
+
+_Released 2026-03-09._
+
+A release-plumbing patch with no functional changes — it exists only to trigger a release on top of `1.0.0`. The substance of the initial `1.x` line landed in `1.0.0`; see the [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) for that release's full contents.
 
 ## Configuration
 
