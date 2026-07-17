@@ -4,7 +4,11 @@ import {
   DEFAULT_PERMIT_DURATION_DAYS,
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
 } from "../credentials/credential-service";
-import { PermitTTLSchema, TransportKeyPairTTLSchema } from "../credentials/schemas";
+import {
+  PermitTTLSchema,
+  TransportKeyPairScopeSchema,
+  TransportKeyPairTTLSchema,
+} from "../credentials/schemas";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseConfiguration } from "../validation";
@@ -59,6 +63,10 @@ export function buildZamaConfig(
       PermitTTLSchema,
       params.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS,
     ),
+    transportKeyPairScope:
+      params.transportKeyPairScope === undefined
+        ? undefined
+        : parseConfiguration(TransportKeyPairScopeSchema, params.transportKeyPairScope),
     registryTTL: parseConfiguration(
       RegistryTTLSchema,
       params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS,

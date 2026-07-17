@@ -30,11 +30,13 @@ const CHAIN = [
   ["rule", "rename-use-delegated-user-decrypt.yml"],
   ["rule", "rename-permit-hooks.yml"],
   ["jssg", "core-rename-createzamaconfig-to-createconfig.ts"],
+  ["rule", "rename-credentials-config-keys.yml"],
   ["rule", "core-handle-type-replaced-by-encrypted-value.yml"],
   ["jssg", "react-config-token-field-renamed-to-address.ts"],
   ["rule", "use-delegation-status-config-contract-address.yml"],
   ["jssg", "react-hooks-config-object-to-address-first.ts"],
   ["jssg", "use-zama-config-interface-removed.ts"],
+  ["jssg", "rename-sdk-namespace-methods.ts"],
 ];
 
 // Codemods don't format their output; the committed expected fixtures are

@@ -1,0 +1,21 @@
+id: rename-config-keypair-ttl-shorthand
+snapshots:
+  createConfig({ storage, keypairTTL });:
+    fixed: 'createConfig({ storage, transportKeyPairTTL: keypairTTL });'
+    labels:
+    - source: keypairTTL
+      style: primary
+      start: 24
+      end: 34
+    - source: createConfig({ storage, keypairTTL })
+      style: secondary
+      start: 0
+      end: 37
+    - source: ({ storage, keypairTTL })
+      style: secondary
+      start: 12
+      end: 37
+    - source: '{ storage, keypairTTL }'
+      style: secondary
+      start: 13
+      end: 36

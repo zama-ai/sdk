@@ -1,4 +1,4 @@
-export { ZamaError, ZamaErrorCode } from "./base";
+export { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds } from "./base";
 export { matchZamaError } from "./match";
 export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
@@ -34,6 +34,7 @@ export {
 export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   type BalanceErrorDetails,
