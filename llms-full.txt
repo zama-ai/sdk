@@ -2600,7 +2600,9 @@ In practice this means you can resolve the confidential wrapper for any register
 // The registry resolves the confidential wrapper for a registered ERC-20.
 // On Mainnet, Sepolia, and Hoodi the registry address is built-in.
 const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
-if (!result) throw new Error("No wrapper registered for this token");
+// Check `isValid` before using the result — the registry can return an entry
+// that is not a valid/registered wrapper.
+if (!result || !result.isValid) throw new Error("No valid wrapper registered for this token");
 
 const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
 await wrappedToken.shield(1000n);
