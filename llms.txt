@@ -126,6 +126,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [3.2.0](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md): Configurable, silent-by-default logging; upgrade codemods; and a Wrap event decoding fix.
 - [3.1.0](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md): createConfig, transport factories, the provider/signer split, the Token/WrappedToken hierarchy, and top-level FHE primitives.
 - [3.0.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md): The first stable v3 line — the high-level clear-text-in, clear-text-out SDK — plus upgraded wrapper and registry contract support.
+- [Legacy versions](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/legacy.md): Release notes for the superseded 1.x and 2.x lines. The current, actively-maintained release line is 3.x.
 - [2.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v2.md): Human-readable release notes for the 2.x line — delegated decryption, the wrappers registry, balance validation before transfers, and the public-decrypt primitive.
 - [1.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v1.md): Human-readable release notes for the 1.x line — cleartext local development, session-scoped signing, wagmi v2 compatibility, and early production hardening.
 

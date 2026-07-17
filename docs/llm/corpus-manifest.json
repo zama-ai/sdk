@@ -157,6 +157,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/legacy",
+      "title": "Legacy versions",
+      "source_path": "docs/gitbook/src/changelog/legacy.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/legacy.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/legacy",
+      "description": "Release notes for the superseded 1.x and 2.x lines. The current, actively-maintained release line is 3.x.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:changelog/v2",
       "title": "2.x",
       "source_path": "docs/gitbook/src/changelog/v2.md",
