@@ -122,7 +122,7 @@
     },
     {
       "id": "doc:changelog/v3-2",
-      "title": "3.2.0",
+      "title": "3.2.x",
       "source_path": "docs/gitbook/src/changelog/v3-2.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md",
       "source_type": "official-doc",
@@ -134,7 +134,7 @@
     },
     {
       "id": "doc:changelog/v3-1",
-      "title": "3.1.0",
+      "title": "3.1.x",
       "source_path": "docs/gitbook/src/changelog/v3-1.md",
       "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md",
       "source_type": "official-doc",
