@@ -588,6 +588,21 @@ export const bscTestnet: {
     readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
 };
 
+// @internal
+export class CachingService {
+    constructor(storage: GenericStorage, logger: GenericLogger);
+    // (undocumented)
+    clearAll(): Promise<void>;
+    // (undocumented)
+    clearForRequester(requester: Address): Promise<void>;
+    // (undocumented)
+    delete(requester: Address, contractAddress: Address, encryptedValue: EncryptedValue): Promise<void>;
+    // (undocumented)
+    get(requester: Address, contractAddress: Address, encryptedValue: EncryptedValue): Promise<ClearValue | null>;
+    // (undocumented)
+    set(requester: Address, contractAddress: Address, encryptedValue: EncryptedValue, value: ClearValue): Promise<void>;
+}
+
 // @public
 export class ChainMismatchError extends ZamaError {
     constructor(input: {
@@ -5217,6 +5232,37 @@ export function createConfig<const TChains extends readonly [FheChain, ...FheCha
 // @public
 export function createWalletAccountStore(initial?: WalletAccount): MutableWalletAccountStore;
 
+// @internal
+export class CredentialService {
+    constructor(config: CredentialServiceConfig);
+    clearCredentials(): Promise<void>;
+    grantPermit(contracts: readonly Address[], delegator?: Address): Promise<SerializedTransportKeyPairWithPermissions>;
+    handleWalletAccountChange(prev?: {
+        address: Address;
+    }, next?: {
+        address: Address;
+    }): Promise<void>;
+    hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
+    revokePermits(contracts?: readonly Address[]): Promise<void>;
+    revokeTransportKeyPair(scopeId: string): Promise<void>;
+    warmTransportKeyPair(address: Address): Promise<void>;
+    warmTransportKeyPairScope(scopeId: string): Promise<void>;
+}
+
+// @internal
+export interface CredentialServiceConfig {
+    logger: GenericLogger;
+    permitStorage?: GenericStorage;
+    permitTTL: number;
+    // (undocumented)
+    router: ChainRouter;
+    scope?: string;
+    // (undocumented)
+    signer: GenericSigner;
+    storage: GenericStorage;
+    transportKeyPairTTL: number;
+}
+
 // @public
 export function decimalsContract(tokenAddress: Address): {
     readonly address: `0x${string}`;
@@ -5424,18 +5470,7 @@ export class Decryption {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
         router: ChainRouter;
-        decryptionService: {
-            decryptValues(handles: DecryptInput[], signerAddress: Address, opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
-            delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, delegateAddress: Address, accountAddress: Address, opts?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
-            delegatedBatchDecryptHandlesAs(params: {
-                encryptedInputs: DecryptInput[];
-                delegatorAddress: Address;
-                delegateAddress: Address;
-                accountAddress: Address;
-                maxConcurrency?: number;
-                waitForPropagation?: boolean;
-            }): Promise<BatchDecryptResult>;
-        } | undefined;
+        decryptionService: DecryptionService | undefined;
     });
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
@@ -5451,6 +5486,30 @@ export class Decryption {
 // @public
 export class DecryptionFailedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @internal (undocumented)
+export class DecryptionService {
+    constructor(input: {
+        cache: CachingService;
+        credentialService: CredentialService;
+        delegationService: DelegationService;
+        router: ChainRouter;
+        emitEvent: (input: ZamaSDKEventInput) => void;
+    });
+    // (undocumented)
+    decryptValues(handles: DecryptInput[], signerAddress: Address, opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
+    // (undocumented)
+    delegatedBatchDecryptHandlesAs(input: {
+        encryptedInputs: DecryptInput[];
+        delegatorAddress: Address;
+        delegateAddress: Address;
+        accountAddress: Address;
+        maxConcurrency?: number;
+        waitForPropagation?: boolean;
+    }): Promise<BatchDecryptResult>;
+    // (undocumented)
+    delegatedDecryptValues(encryptedInputs: DecryptInput[], delegatorAddress: Address, delegateAddress: Address, accountAddress: Address, opts?: DelegatedDecryptOptions): Promise<Record<EncryptedValue, ClearValue>>;
 }
 
 // @public
@@ -5751,29 +5810,7 @@ export class Delegations {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        delegationService: {
-            delegateDecryption(signer: GenericSigner, params: {
-                contractAddress: Address;
-                delegateAddress: Address;
-                delegatorAddress: Address;
-                expirationDate?: Date;
-            }): Promise<TransactionResult>;
-            revokeDelegation(signer: GenericSigner, params: {
-                contractAddress: Address;
-                delegateAddress: Address;
-                delegatorAddress: Address;
-            }): Promise<TransactionResult>;
-            isDelegated(params: {
-                contractAddress: Address;
-                delegatorAddress: Address;
-                delegateAddress: Address;
-            }): Promise<boolean>;
-            getDelegationExpiry(params: {
-                contractAddress: Address;
-                delegatorAddress: Address;
-                delegateAddress: Address;
-            }): Promise<bigint>;
-        };
+        delegationService: DelegationService;
     });
     delegateDecryption(input: {
         contractAddress: Address;
@@ -5799,6 +5836,45 @@ export class Delegations {
 // @public
 export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
+}
+
+// @internal (undocumented)
+export class DelegationService {
+    constructor(input: {
+        provider: GenericProvider;
+        router: ChainRouter;
+        logger: GenericLogger;
+        emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
+    });
+    // (undocumented)
+    assertDelegationActive(contractAddress: Address, delegatorAddress: Address, delegateAddress: Address): Promise<void>;
+    // (undocumented)
+    delegateDecryption(signer: GenericSigner, input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        delegatorAddress: Address;
+        expirationDate?: Date;
+    }): Promise<TransactionResult>;
+    // (undocumented)
+    findInactiveDelegations(contractAddresses: readonly Address[], delegatorAddress: Address, delegateAddress: Address): Promise<Map<Address, DelegationNotFoundError | DelegationExpiredError>>;
+    // (undocumented)
+    getDelegationExpiry(input: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<bigint>;
+    // (undocumented)
+    isDelegated(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<boolean>;
+    // (undocumented)
+    revokeDelegation(signer: GenericSigner, input: {
+        contractAddress: Address;
+        delegateAddress: Address;
+        delegatorAddress: Address;
+    }): Promise<TransactionResult>;
 }
 
 // @public (undocumented)
@@ -11545,18 +11621,8 @@ export class Permits {
     constructor(opts: {
         signer: GenericSigner | undefined;
         provider: GenericProvider;
-        cachingService: {
-            clearForRequester(requester: Address): Promise<void>;
-        };
-        credentialService: {
-            grantPermit(contracts: readonly Address[], delegator?: Address): Promise<SerializedTransportKeyPairWithPermissions>;
-            hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
-            warmTransportKeyPair(address: Address): Promise<void>;
-            revokePermits(contracts?: readonly Address[]): Promise<void>;
-            clearCredentials(): Promise<void>;
-            revokeTransportKeyPair(scopeId: string): Promise<void>;
-            warmTransportKeyPairScope(scopeId: string): Promise<void>;
-        } | undefined;
+        cachingService: CachingService;
+        credentialService: CredentialService | undefined;
         logger: GenericLogger;
     });
     clear(): Promise<void>;

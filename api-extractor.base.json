@@ -25,6 +25,7 @@
     "extractorMessageReporting": {
       "default": { "logLevel": "warning" },
       "ae-forgotten-export": { "logLevel": "error", "addToApiReportFile": false },
+      "ae-internal-missing-underscore": { "logLevel": "none", "addToApiReportFile": false },
       "ae-missing-release-tag": { "logLevel": "none" },
       "ae-unresolved-link": { "logLevel": "none" }
     },

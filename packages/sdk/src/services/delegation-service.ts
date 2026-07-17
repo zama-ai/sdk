@@ -31,6 +31,7 @@ type AclTransactionOperation = Extract<
   "delegateDecryption" | "revokeDelegation"
 >;
 
+/** @internal */
 export class DelegationService {
   readonly #router: ChainRouter;
   readonly #provider: GenericProvider;

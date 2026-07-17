@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import type { DelegationService } from "../services/delegation-service";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { requireConfigured } from "../errors";
@@ -8,7 +9,7 @@ import { requireConfigured } from "../errors";
  *
  * Exposed as `sdk.delegations`. Owns the SDK-level guards (signer requirement, chain
  * alignment, delegator address resolution from the wallet account) and delegates the
- * actual work to the internal delegation service.
+ * actual work to the internal {@link DelegationService}.
  *
  * Delegation operations write to the host chain ACL; after a delegation is mined,
  * the gateway syncs the ACL state via cross-chain event propagation — usually
@@ -18,37 +19,13 @@ import { requireConfigured } from "../errors";
 export class Delegations {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #delegationService;
+  readonly #delegationService: DelegationService;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    delegationService: {
-      delegateDecryption(
-        signer: GenericSigner,
-        params: {
-          contractAddress: Address;
-          delegateAddress: Address;
-          delegatorAddress: Address;
-          expirationDate?: Date;
-        },
-      ): Promise<TransactionResult>;
-      revokeDelegation(
-        signer: GenericSigner,
-        params: { contractAddress: Address; delegateAddress: Address; delegatorAddress: Address },
-      ): Promise<TransactionResult>;
-      isDelegated(params: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-      }): Promise<boolean>;
-      getDelegationExpiry(params: {
-        contractAddress: Address;
-        delegatorAddress: Address;
-        delegateAddress: Address;
-      }): Promise<bigint>;
-    };
+    delegationService: DelegationService;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;

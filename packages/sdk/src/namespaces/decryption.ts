@@ -8,7 +8,11 @@ import type {
   EncryptedValue,
   FhevmRelayerOptions,
 } from "../relayer/types";
-import type { BatchDecryptResult, DelegatedDecryptOptions } from "../services/decryption-service";
+import type {
+  BatchDecryptResult,
+  DecryptionService,
+  DelegatedDecryptOptions,
+} from "../services/decryption-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { assertNonNullable } from "../utils";
@@ -25,7 +29,7 @@ import { assertNonNullable } from "../utils";
  * Owns the SDK-level guards (signer requirement on
  * `decryptValues` and `delegatedDecryptValues`, empty-array
  * short-circuit on `decryptPublicValues`, relayer error wrapping) and delegates the
- * actual work to the internal decryption service or the relayer directly for
+ * actual work to the internal {@link DecryptionService} or the relayer directly for
  * `decryptPublicValues`.
  *
  * **Mixed signer requirement:** `decryptValues` and
@@ -40,37 +44,14 @@ export class Decryption {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #router: ChainRouter;
-  readonly #decryptionService;
+  readonly #decryptionService: DecryptionService | undefined;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
     router: ChainRouter;
-    decryptionService:
-      | {
-          decryptValues(
-            handles: EncryptedInput[],
-            signerAddress: Address,
-            opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
-          ): Promise<Record<EncryptedValue, ClearValue>>;
-          delegatedDecryptValues(
-            encryptedInputs: EncryptedInput[],
-            delegatorAddress: Address,
-            delegateAddress: Address,
-            accountAddress: Address,
-            opts?: DelegatedDecryptOptions,
-          ): Promise<Record<EncryptedValue, ClearValue>>;
-          delegatedBatchDecryptHandlesAs(params: {
-            encryptedInputs: EncryptedInput[];
-            delegatorAddress: Address;
-            delegateAddress: Address;
-            accountAddress: Address;
-            maxConcurrency?: number;
-            waitForPropagation?: boolean;
-          }): Promise<BatchDecryptResult>;
-        }
-      | undefined;
+    decryptionService: DecryptionService | undefined;
   }) {
     this.#signer = opts.signer;
     this.#provider = opts.provider;
@@ -78,7 +59,7 @@ export class Decryption {
     this.#decryptionService = opts.decryptionService;
   }
 
-  #requireDecryptionService(operation: string) {
+  #requireDecryptionService(operation: string): DecryptionService {
     return requireConfigured(this.#decryptionService, operation);
   }
 

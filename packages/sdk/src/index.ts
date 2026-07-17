@@ -68,6 +68,10 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
+export type { CachingService } from "./services/caching-service";
+export type { CredentialService, CredentialServiceConfig } from "./credentials/credential-service";
+export type { DelegationService } from "./services/delegation-service";
+export type { DecryptionService } from "./services/decryption-service";
 export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptItem,

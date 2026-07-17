@@ -1,6 +1,7 @@
 import { getAddress, type Address } from "viem";
-import type { SerializedTransportKeyPairWithPermissions } from "../credentials/types";
+import type { CredentialService } from "../credentials/credential-service";
 import { requireConfigured } from "../errors";
+import type { CachingService } from "../services/caching-service";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
 import { swallow } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
@@ -10,7 +11,7 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
  *
  * Exposed as `sdk.permits`. Owns the SDK-level guards (chain alignment, empty-array
  * short-circuit, decrypt-cache invalidation) and delegates the actual work to the
- * internal credential service.
+ * internal {@link CredentialService}.
  *
  * The namespace is named `permits` because the user-facing concept is the signed-permit
  * store. The transport key pair is invisible plumbing — there is no `getTransportKeyPair()`
@@ -26,29 +27,16 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 export class Permits {
   readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
-  readonly #cachingService;
-  readonly #credentialService;
+  readonly #cachingService: CachingService;
+  readonly #credentialService: CredentialService | undefined;
   readonly #logger: GenericLogger;
 
   /** @internal */
   constructor(opts: {
     signer: GenericSigner | undefined;
     provider: GenericProvider;
-    cachingService: { clearForRequester(requester: Address): Promise<void> };
-    credentialService:
-      | {
-          grantPermit(
-            contracts: readonly Address[],
-            delegator?: Address,
-          ): Promise<SerializedTransportKeyPairWithPermissions>;
-          hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean>;
-          warmTransportKeyPair(address: Address): Promise<void>;
-          revokePermits(contracts?: readonly Address[]): Promise<void>;
-          clearCredentials(): Promise<void>;
-          revokeTransportKeyPair(scopeId: string): Promise<void>;
-          warmTransportKeyPairScope(scopeId: string): Promise<void>;
-        }
-      | undefined;
+    cachingService: CachingService;
+    credentialService: CredentialService | undefined;
     logger: GenericLogger;
   }) {
     this.#signer = opts.signer;
@@ -58,7 +46,7 @@ export class Permits {
     this.#logger = opts.logger;
   }
 
-  #requireCredentialService(operation: string) {
+  #requireCredentialService(operation: string): CredentialService {
     return requireConfigured(this.#credentialService, operation);
   }
 

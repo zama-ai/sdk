@@ -239,3 +239,8 @@ export type {
 export { Permits } from "../namespaces/permits";
 export { Delegations } from "../namespaces/delegations";
 export { Decryption } from "../namespaces/decryption";
+export type { CachingService } from "../services/caching-service";
+export type { CredentialService, CredentialServiceConfig } from "../credentials/credential-service";
+export type { DelegationService } from "../services/delegation-service";
+export type { DecryptionService } from "../services/decryption-service";
+export { DelegationNotFoundError, DelegationExpiredError } from "../errors/delegation";
