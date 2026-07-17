@@ -35,15 +35,7 @@ export interface RpcOptions {
    * The UI will show "No tokens available." and token-scoped operation cards will stay hidden.
    */
   emptyRegistry?: boolean;
-  /**
-   * Value returned by the ACL's `getUserDecryptionDelegationExpirationDate`.
-   * Defaults to `0n` (no delegation). Use `MAX_UINT64` for a permanent delegation.
-   */
-  delegationExpiry?: bigint;
 }
-
-/** Sentinel the ACL contract uses for a permanent (no-expiry) delegation. */
-export const MAX_UINT64 = 2n ** 64n - 1n;
 
 // ── ABI encoding helpers (Node.js) ────────────────────────────────────────────
 // These run in the Playwright test process — Buffer and standard Node APIs are available.
@@ -77,8 +69,6 @@ function abiStr(s: string): string {
 // ── Mock contract addresses (lowercase for case-insensitive comparison) ───────
 
 const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
-// Sepolia ACL contract (see sdk chains/configs.ts) — used to mock delegation-status reads.
-const ACL = "0xf0ffdc93b7e186bc2f8cb3daa75d86d1930a433d";
 
 const T1 = MOCK_TOKEN1_ADDRESS.toLowerCase();
 const CT1 = MOCK_CTOKEN1_ADDRESS.toLowerCase();
@@ -127,11 +117,6 @@ function resolveEthCall(params: unknown[] | undefined, options: RpcOptions): str
         abiBool(true) // pair[1]
       );
     }
-  }
-
-  // getUserDecryptionDelegationExpirationDate(address,address,address) → uint64
-  if (to === ACL && sel === "0x3f462dbe") {
-    return "0x" + abiU256(options.delegationExpiry ?? 0n);
   }
 
   // Token metadata: name(), symbol(), decimals(), totalSupply()
