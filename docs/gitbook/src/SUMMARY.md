@@ -13,6 +13,14 @@
 
 - [Migrate from v2 to v3](guides/migrate-v2-to-v3.md)
 
+## Changelog
+
+- [3.x](changelog/v3.md)
+  - [3.3.x](changelog/v3-3.md)
+  - [3.2.0](changelog/v3-2.md)
+  - [3.1.0](changelog/v3-1.md)
+  - [3.0.x](changelog/v3-0.md)
+
 ## Guides
 
 - [Configuration](guides/configuration.md)
@@ -103,10 +111,3 @@
 - [Architecture](concepts/architecture.md)
 - [Permit model](concepts/permit-model.md)
 - [Security model](concepts/security-model.md)
-
-## Changelog
-
-- [3.3.x](changelog/v3-3.md)
-- [3.2.0](changelog/v3-2.md)
-- [3.1.0](changelog/v3-1.md)
-- [3.0.x](changelog/v3-0.md)
