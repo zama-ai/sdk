@@ -45,12 +45,12 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 
 ## How it differs from `react-wagmi`
 
-|           | `react-wagmi`                    | `example-hoodi`                |
-| --------- | -------------------------------- | ------------------------------ |
+|           | `react-wagmi`                    | `example-hoodi`                 |
+| --------- | -------------------------------- | ------------------------------- |
 | Relayer   | Web transport (HTTP proxy route) | `cleartext()` (no proxy needed) |
-| Network   | Sepolia                          | Hoodi (chainId 560048)         |
-| Auth      | Relayer configuration            | None                           |
-| API route | `/api/relayer/[...path]`         | Not present                    |
+| Network   | Sepolia                          | Hoodi (chainId 560048)          |
+| Auth      | Relayer configuration            | None                            |
+| API route | `/api/relayer/[...path]`         | Not present                     |
 
 `cleartext()` reads plaintext values directly from the on-chain executor contract—no external relayer service is required.
 
