@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  examples:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
