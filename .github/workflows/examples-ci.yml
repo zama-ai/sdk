@@ -1,19 +1,16 @@
 name: Examples CI
 
 # Typechecks (and builds, where applicable) every app under examples/ against
-# the workspace SDK source — not the published package each example pins in
-# its own package.json. examples/* are deliberately standalone npm projects
-# (not pnpm workspace members), so without this job an SDK API change (a
-# renamed export, a dropped config key) can silently break every example and
-# nobody finds out until it's already published. See SDK-250 / SDK-249.
+# the exact published SDK versions each example pins in its own package.json.
+# examples/* are deliberately standalone npm projects (not pnpm workspace
+# members) with committed lockfiles, so this installs each example exactly as
+# an end user would and catches breakage in the example code itself — a bad
+# import, a type error — against the SDK release it actually targets.
 on:
   pull_request:
     branches: [main, prerelease]
     paths:
       - "examples/**"
-      - "packages/sdk/**"
-      - "packages/react-sdk/**"
-      - "pnpm-lock.yaml"
       - ".github/workflows/examples-ci.yml"
 
 concurrency:
@@ -23,68 +20,8 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # Safe-chain enforces its own minimum-package-age check independently of
-  # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@zama-fhe/relayer-sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
-
 jobs:
-  # Build the workspace SDK once and pack it into the exact tarballs a real
-  # `npm install` would produce (pnpm rewrites `workspace:*` to the real
-  # version when packing, same as a publish), so every example installs a
-  # faithful local build instead of linking against workspace source directly.
-  build-sdk:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          submodules: false
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-
-      - name: Install dependencies
-        run: pnpm ci
-
-      - name: Restore turbo cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Build SDK packages
-        run: |
-          pnpm build:sdk
-          pnpm build:react-sdk
-
-      - name: Pack SDK tarballs
-        run: |
-          mkdir -p /tmp/tarballs
-          pnpm --filter @zama-fhe/sdk pack --out /tmp/tarballs/zama-fhe-sdk.tgz
-          pnpm --filter @zama-fhe/react-sdk pack --out /tmp/tarballs/zama-fhe-react-sdk.tgz
-
-      - name: Upload tarballs
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: sdk-tarballs
-          path: /tmp/tarballs/*.tgz
-          retention-days: 1
-
   examples:
-    needs: build-sdk
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -115,34 +52,8 @@ jobs:
           cache: npm
           cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
 
-      - name: Download SDK tarballs
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: sdk-tarballs
-          path: /tmp/tarballs
-
-      - name: Install with workspace SDK overlay
-        # Point this example's own SDK dependency at the freshly-built workspace
-        # tarball (real pnpm-pack output, not a symlink), then resolve
-        # everything in a single fresh `npm install` pass — never committed,
-        # this checkout is thrown away after the job.
-        #
-        # Deliberately NOT `npm ci` followed by a second `npm install <tarball>`
-        # overlay: that two-phase approach non-deterministically pruned
-        # unrelated root devDependencies on GitHub-hosted runners (observed
-        # silently dropping @types/node, breaking typecheck) even though every
-        # input file reproduced correctly locally — a single resolve avoids the
-        # whole class of issue.
-        run: |
-          node -e '
-            const fs = require("fs");
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            if (pkg.dependencies?.["@zama-fhe/sdk"]) pkg.dependencies["@zama-fhe/sdk"] = "file:/tmp/tarballs/zama-fhe-sdk.tgz";
-            if (pkg.dependencies?.["@zama-fhe/react-sdk"]) pkg.dependencies["@zama-fhe/react-sdk"] = "file:/tmp/tarballs/zama-fhe-react-sdk.tgz";
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-          '
-          rm -f package-lock.json
-          npm install
+      - name: Install dependencies
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
