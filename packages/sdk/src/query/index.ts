@@ -125,7 +125,7 @@ export {
 export { revokeDelegationMutationOptions, type RevokeDelegationParams } from "./revoke-delegation";
 export {
   delegationStatusQueryOptions,
-  type DelegationStatusData,
+  type DelegationStatus,
   type DelegationStatusQueryConfig,
 } from "./delegation-status";
 export type { RawLog } from "../events/onchain-events";
