@@ -11,5 +11,3 @@ export type {
 } from "./types";
 export type { ZamaConfigViem } from "../viem/types";
 export type { ZamaConfigEthers } from "../ethers/types";
-
-export { resolveStorage } from "./resolve";

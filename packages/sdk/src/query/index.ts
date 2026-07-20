@@ -185,7 +185,6 @@ export type {
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,

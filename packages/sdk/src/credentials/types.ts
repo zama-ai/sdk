@@ -17,6 +17,8 @@ export interface SerializedTransportKeyPair {
  *
  * The shape mirrors {@link StoredTransportKeyPairSchema} — a `.test-d.ts` guard
  * asserts the two stay in sync, so the schema can remain an internal detail.
+ *
+ * @internal
  */
 export interface StoredTransportKeyPair {
   publicKey: Hex;

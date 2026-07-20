@@ -13,6 +13,7 @@ function getDefaultStorage(): GenericStorage {
     : new MemoryStorage();
 }
 
+/** @internal */
 export function resolveStorage(
   storage: GenericStorage | undefined = getDefaultStorage(),
   permitStorage: GenericStorage | undefined = storage,

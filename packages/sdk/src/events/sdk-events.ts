@@ -199,7 +199,11 @@ export type ZamaSDKEvent =
 
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
-/** Distributive Omit that preserves the discriminated union. */
+/**
+ * Distributive Omit that preserves the discriminated union. Internal emit-side
+ * shape — consumers only ever receive fully-populated {@link ZamaSDKEvent}.
+ * @internal
+ */
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
   ? E extends ZamaSDKEvent
     ? Omit<E, "timestamp" | "tokenAddress">

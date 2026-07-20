@@ -10,7 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export { createConfig, cleartext, resolveStorage } from "./config";
+export { createConfig, cleartext } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -82,12 +82,7 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type {
-  SerializedTransportKeyPair,
-  StoredTransportKeyPair,
-  Permission,
-  ChecksummedAddress,
-} from "./credentials";
+export type { SerializedTransportKeyPair, Permission, ChecksummedAddress } from "./credentials";
 export type { SerializedPermit, SerializedPermitEip712 } from "./credentials/types";
 export type {
   GenericSigner,
@@ -123,7 +118,6 @@ export { ZamaSDKEvents } from "./events";
 export type {
   ZamaSDKEventType,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   BaseEvent,
   ShieldSubmittedEvent,
