@@ -134,7 +134,6 @@ export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
  * round-trip (mirrors its `RelayerCommonOptions`). Distinct from
  * {@link RelayerOptions}, which configures a transport once at construction —
  * these are applied per call.
- *
  */
 export interface FhevmRelayerOptions {
   /** Relayer authentication for the chain. Defaulted from the chain's config. */
