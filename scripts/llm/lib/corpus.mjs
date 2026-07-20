@@ -458,6 +458,9 @@ export function categoryFromLogicalPath(logicalPath) {
   if (logicalPath.startsWith("concepts/")) {
     return "concepts";
   }
+  if (logicalPath.startsWith("changelog/")) {
+    return "changelog";
+  }
   if (logicalPath === "README" || logicalPath === "overview") {
     return "introduction";
   }

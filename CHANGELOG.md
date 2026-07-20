@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.6...v3.4.0-alpha.7) (2026-07-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk to 1.1.0-alpha.9 ([#566](https://github.com/zama-ai/sdk/issues/566)) ([66ca1ad]())
+
 ## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
 
 ### Code Refactoring
