@@ -10,7 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
+export { createConfig, cleartext, resolveStorage } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -20,10 +20,7 @@ export type {
   RelayerConfig,
   CleartextRelayerConfig,
   AtLeastOneChain,
-  ResolvedChainRelayer,
 } from "./config";
-export type { ChainRouter } from "./chains/router";
-export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
   EncryptResult,
   EncryptParams,
@@ -33,6 +30,9 @@ export type {
   EIP712TypedData,
   TypedValue,
   DecryptValuesParameters,
+  RelayerOptions,
+  FhevmRelayerOptions,
+  FhevmRuntimeConfig,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.

@@ -4,9 +4,7 @@
 
 ```ts
 
-import { Address } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
-import { EIP1193Provider } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 
 // @public

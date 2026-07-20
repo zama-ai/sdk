@@ -75,6 +75,7 @@ export interface BatchDecryptResult {
   items: BatchDecryptItem[];
 }
 
+/** @internal */
 export class DecryptionService {
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService;

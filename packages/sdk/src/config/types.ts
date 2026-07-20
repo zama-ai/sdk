@@ -14,7 +14,10 @@ export type { AtLeastOneChain };
  */
 export interface RelayerConfig {
   readonly type: string;
-  /** Create a single-chain relayer. */
+  /**
+   * Create a single-chain relayer.
+   * @internal
+   */
   readonly createRelayer: (chain: FheChain) => FhevmRelayerSDK;
 }
 
@@ -92,6 +95,7 @@ declare const zamaConfigBrand: unique symbol;
  */
 export type ZamaConfig = {
   readonly chains: readonly FheChain[];
+  /** @internal */
   readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;

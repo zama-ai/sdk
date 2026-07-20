@@ -20,7 +20,6 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
 import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
-import { z } from 'zod/mini';
 
 // @public
 export const ACL_TOPICS: readonly [`0x${string}`, `0x${string}`];
@@ -601,17 +600,6 @@ export class ChainMismatchError extends ZamaError {
     readonly providerChainId: number;
     // (undocumented)
     readonly signerChainId: number;
-}
-
-// @public
-export class ChainRouter {
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    get relayer(): RelayerSDK;
-    switchChain(chainId: number): void;
 }
 
 // @public
@@ -5411,13 +5399,6 @@ export interface DecryptInput {
 
 // @public
 export class Decryption {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        router: ChainRouter;
-        decryptionService: DecryptionService | undefined;
-    });
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
@@ -5728,12 +5709,6 @@ export class DelegationNotPropagatedError extends ZamaError {
 
 // @public
 export class Delegations {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        delegationService: DelegationService;
-    });
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -5883,6 +5858,20 @@ export type FheChainAuth = {
     cookie?: string;
     value: string;
 };
+
+// @public
+export interface FhevmRelayerOptions {
+    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly debug?: boolean;
+    readonly fetchRetries?: number;
+    readonly fetchRetryDelayInMilliseconds?: number;
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly timeout?: number;
+}
+
+// @public
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
@@ -11419,18 +11408,21 @@ export interface PaginatedResult<T> {
 }
 
 // @public
-export type Permission = z.infer<typeof PermissionSchema>;
+export interface Permission {
+    // (undocumented)
+    contractAddresses: ChecksummedAddress[];
+    // (undocumented)
+    durationDays: number;
+    // (undocumented)
+    keypairPublicKey: Hex;
+    // (undocumented)
+    serializedPermit: SerializedPermit;
+    // (undocumented)
+    startTimestamp: number;
+}
 
 // @public
 export class Permits {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        cachingService: CachingService;
-        credentialService: CredentialService | undefined;
-        logger: GenericLogger;
-    });
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
     grantPermit(contracts: Address[]): Promise<void>;
@@ -12603,9 +12595,15 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: string;
+}
+
+// @public
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+    readonly batchRpcCalls?: boolean;
+    readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+    readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
 }
 
 // @public
@@ -12616,23 +12614,6 @@ export class RelayerRequestFailedError extends ZamaError {
     });
     readonly retryAfter: number | undefined;
     readonly statusCode: number | undefined;
-}
-
-// @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
-}
-
-// @public (undocumented)
-export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
-
-// @public (undocumented)
-export interface ResolvedChainRelayer {
-    // (undocumented)
-    chain: FheChain;
-    // (undocumented)
-    relayerConfig: RelayerConfig;
 }
 
 // @public (undocumented)
@@ -14094,7 +14075,16 @@ export class SigningRejectedError extends ZamaError {
 }
 
 // @public
-export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
+export interface StoredTransportKeyPair {
+    // (undocumented)
+    createdAt: number;
+    // (undocumented)
+    expiresAt: number;
+    // (undocumented)
+    privateKey: Hex;
+    // (undocumented)
+    publicKey: Hex;
+}
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -14265,8 +14255,6 @@ export class Token {
     constructor(sdk: ZamaSDK, address: Address);
     // (undocumented)
     readonly address: Address;
-    // @internal
-    protected assertConfidentialBalance(amount: bigint): Promise<void>;
     balanceOf(owner: Address): Promise<bigint>;
     static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
@@ -14280,23 +14268,13 @@ export class Token {
         delegatorAddress: Address;
         accountAddress?: Address;
     }): Promise<bigint>;
-    // @internal
-    protected emit(input: ZamaSDKEventInput): void;
     isConfidential(): Promise<boolean>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     name(): Promise<string>;
-    // @internal
-    protected readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
     // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
-    // @internal
-    protected submitTransaction(params: {
-        operation: TransactionOperation;
-        config: WriteContractConfig;
-        onSubmitted?: (txHash: Hex) => void;
-    }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
 
@@ -14347,7 +14325,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = keyof typeof transactionOperationMetadata;
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -19432,7 +19410,6 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -19551,19 +19528,11 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
-    // @internal
-    get logger(): GenericLogger;
-    // @internal
-    onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // @internal
-    get relayer(): RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

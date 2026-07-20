@@ -6,6 +6,7 @@ import type { RelayerOptions } from "../relayer/types";
 /** Node transport — drives the FHE backend directly on the calling thread. */
 export interface NodeRelayerConfig extends RelayerConfig {
   readonly type: "node";
+  /** @internal */
   readonly createRelayer: (chain: FheChain) => FhevmRelayer;
 }
 

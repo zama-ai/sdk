@@ -69,7 +69,10 @@ export interface DecryptPublicValuesResult {
  */
 export type EIP712TypedData = Eip712Like;
 
-/** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
+/**
+ * The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`.
+ * @internal
+ */
 export type FhevmClient = ReturnType<typeof createFhevmClient>;
 
 /** @internal Capability-scoped `@fhevm/sdk` clients used by {@link FhevmRelayer}. */
@@ -201,6 +204,8 @@ export interface FhevmRelayerOptions {
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.
+ *
+ * @internal
  */
 export interface FhevmRelayerSDK extends Pick<
   FhevmClient,

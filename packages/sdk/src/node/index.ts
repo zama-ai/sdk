@@ -11,7 +11,6 @@ export { node } from "./config";
 export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig } from "../config/types";
-export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { GenericLogger } from "../types/logger";
 
 // Relayer types used in the node transport's public API

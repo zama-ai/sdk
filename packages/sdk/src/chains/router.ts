@@ -9,6 +9,8 @@ import type { FhevmRelayerSDK } from "../relayer/types";
  * hands out the single-chain {@link FhevmRelayerSDK} backend for the currently active
  * chain via {@link ChainRouter.relayer}. Builds one backend per chain from its
  * {@link RelayerConfig}.
+ *
+ * @internal
  */
 export class ChainRouter {
   readonly #chains: Map<number, FheChain>;
