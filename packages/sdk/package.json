@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.3.1-alpha.2",
+  "version": "3.4.0-alpha.6",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
@@ -22,7 +22,7 @@
   "author": "Zama",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zama-ai/sdk",
+    "url": "git+https://github.com/zama-ai/sdk.git",
     "directory": "packages/sdk"
   },
   "files": [

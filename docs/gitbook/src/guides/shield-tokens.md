@@ -182,6 +182,39 @@ const { txHash } = await shield({ amount: 1000n });
 
 In React, balance caches are automatically invalidated after a successful shield. The `useConfidentialBalance` hook will pick up the new balance on its next poll cycle.
 
+## Manual approve + wrap (escape hatch)
+
+`shield()` bundles approval and wrapping into one call and is what almost every app should use. If you need to split the `approve` + `wrap` path across two separately-triggered signatures — for example to render distinct "approve" and "shield" steps in your own UI, or to approve well ahead of the wrap — call `approveUnderlying()` and `wrap()` directly.
+
+This applies only to the `approve` + `wrap` path. Don't use it to recreate `shield()` by hand: `wrap()` never sends `transferAndCall`, so you lose automatic ERC-1363 routing along with the `approvalStrategy` handling.
+
+{% tabs %}
+{% tab title="Core SDK" %}
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+{% endtab %}
+{% tab title="React" %}
+
+```tsx
+const approve = useApproveUnderlying("0xWrapperAddress");
+const wrap = useWrap("0xWrapperAddress");
+
+await approve.mutateAsync({ amount: 1000n });
+await wrap.mutateAsync({ amount: 1000n });
+```
+
+{% endtab %}
+{% endtabs %}
+
+`wrap()` validates the ERC-20 balance and the current allowance before submitting: it throws `InsufficientERC20BalanceError` if the balance is too low, and `InsufficientAllowanceError` if the wrapper is not approved for the amount (call `approveUnderlying()` first). Pass `{ to }` to mint the confidential balance to a different recipient.
+
 ## Next steps
 
 - [Transfer Privately](./transfer-privately.md) — send confidential tokens to another address

@@ -19,9 +19,10 @@ import type {
   DelegationNotPropagatedError,
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   ChainMismatchError,
 } from "..";
-import { ZamaError, ZamaErrorCode, matchZamaError } from "..";
+import { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds, matchZamaError } from "..";
 
 describe("ZamaError", () => {
   test("extends Error", () => {
@@ -30,6 +31,30 @@ describe("ZamaError", () => {
 
   test("has a code property typed as ZamaErrorCode", () => {
     expectTypeOf<ZamaError["code"]>().toEqualTypeOf<ZamaErrorCode>();
+  });
+
+  test("has a retryable property typed as boolean", () => {
+    expectTypeOf<ZamaError["retryable"]>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe("isRetryable / retryAfterSeconds", () => {
+  test("isRetryable accepts unknown and returns boolean", () => {
+    expectTypeOf(isRetryable).toBeCallableWith(new Error("x"));
+    expectTypeOf(isRetryable(new Error("x"))).toEqualTypeOf<boolean>();
+  });
+
+  test("isRetryable narrows to ZamaError with retryable: true", () => {
+    const error: unknown = new Error("x");
+    if (isRetryable(error)) {
+      expectTypeOf(error).toExtend<ZamaError>();
+      expectTypeOf(error.retryable).toEqualTypeOf<true>();
+    }
+  });
+
+  test("retryAfterSeconds accepts unknown and returns number | undefined", () => {
+    expectTypeOf(retryAfterSeconds).toBeCallableWith(new Error("x"));
+    expectTypeOf(retryAfterSeconds(new Error("x"))).toEqualTypeOf<number | undefined>();
   });
 });
 
@@ -107,6 +132,9 @@ describe("matchZamaError", () => {
       },
       INSUFFICIENT_ERC20_BALANCE: (e) => {
         expectTypeOf(e).toEqualTypeOf<InsufficientERC20BalanceError>();
+      },
+      INSUFFICIENT_ALLOWANCE: (e) => {
+        expectTypeOf(e).toEqualTypeOf<InsufficientAllowanceError>();
       },
       RELAYER_REQUEST_FAILED: (e) => {
         expectTypeOf(e).toEqualTypeOf<RelayerRequestFailedError>();

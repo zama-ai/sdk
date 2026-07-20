@@ -93,6 +93,7 @@ export class ZamaSDK {
         signer: config.signer,
         transportKeyPairTTL: config.transportKeyPairTTL,
         permitTTL: config.permitTTL,
+        scope: config.transportKeyPairScope,
         storage: this.storage,
         permitStorage: config.permitStorage,
         logger: this.#logger,

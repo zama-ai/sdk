@@ -448,6 +448,9 @@ export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tok
 export function invalidateAfterUnwrap(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
+export function invalidateAfterWrap(queryClient: QueryClientLike, tokenAddress: Address): void;
+
+// @public (undocumented)
 export function invalidateBalanceQueries(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public (undocumented)
@@ -854,7 +857,7 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 }
 
 // @public (undocumented)
-export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, TransactionResult>;
+export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, UnwrapResult>;
 
 // @public
 export interface UnwrapFinalizedEvent {
@@ -863,11 +866,11 @@ export interface UnwrapFinalizedEvent {
     // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public (undocumented)
-export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, TransactionResult>;
+export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrap", Address], UnwrapParams, UnwrapResult>;
 
 // @public
 export interface UnwrapParams {
@@ -881,7 +884,7 @@ export interface UnwrapRequestedEvent {
     // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
-    readonly unwrapRequestId?: EncryptedValue;
+    readonly unwrapRequestId: EncryptedValue;
 }
 
 // @public (undocumented)
@@ -920,6 +923,15 @@ export interface WrapEvent {
     readonly to: Address;
 }
 
+// @public (undocumented)
+export function wrapMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.wrap", Address], WrapParams, TransactionResult>;
+
+// @public
+export interface WrapParams extends WrapOptions {
+    // (undocumented)
+    amount: bigint;
+}
+
 // @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
@@ -932,8 +944,9 @@ export class WrappedToken extends Token {
     underlying(): Promise<Address>;
     unshield(amount: bigint, options?: UnshieldOptions): Promise<TransactionResult>;
     unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
-    unwrap(amount: bigint): Promise<TransactionResult>;
-    unwrapAll(): Promise<TransactionResult>;
+    unwrap(amount: bigint): Promise<UnwrapResult>;
+    unwrapAll(): Promise<UnwrapResult>;
+    wrap(amount: bigint, options?: WrapOptions): Promise<TransactionResult>;
 }
 
 // @public (undocumented)
@@ -966,6 +979,7 @@ export type ZamaConfig = {
     readonly permitStorage: GenericStorage;
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
+    readonly transportKeyPairScope: string | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;
@@ -1197,10 +1211,10 @@ export class ZamaSDK {
 }
 
 // @public
-export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
+export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
-export type ZamaSDKEventInput = ZamaSDKEvent extends infer E ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
+export type ZamaSDKEventInput = ZamaSDKEvent extends (infer E) ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
 
 // @public (undocumented)
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
@@ -1219,6 +1233,7 @@ export const ZamaSDKEvents: {
     readonly TransferFromSubmitted: "transferFrom:submitted";
     readonly SetOperatorSubmitted: "setOperator:submitted";
     readonly ApproveUnderlyingSubmitted: "approveUnderlying:submitted";
+    readonly WrapSubmitted: "wrap:submitted";
     readonly UnwrapSubmitted: "unwrap:submitted";
     readonly FinalizeUnwrapSubmitted: "finalizeUnwrap:submitted";
     readonly DelegationSubmitted: "delegation:submitted";
