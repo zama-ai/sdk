@@ -2,7 +2,7 @@
   "name": "react-ethers-example",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --webpack -p 3002",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",

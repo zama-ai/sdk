@@ -2,7 +2,7 @@
   "name": "react-viem-example",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
