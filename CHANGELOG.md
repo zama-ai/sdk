@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.8...v3.4.0-alpha.9) (2026-07-20)
+
+### Features
+
+- **sdk:** add DelegationService.getStatus ([#572](https://github.com/zama-ai/sdk/issues/572)) ([2f91c58]())
+
 ## [3.4.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.7...v3.4.0-alpha.8) (2026-07-20)
 
 ### Code Refactoring
