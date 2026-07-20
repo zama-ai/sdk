@@ -89,7 +89,7 @@ const { data } = useDelegationStatus({
 ## Return Type
 
 ```ts
-import { type DelegationStatusData } from "@zama-fhe/sdk/query";
+import { type DelegationStatus } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to:

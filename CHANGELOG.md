@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.4.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.8...v3.4.0-alpha.9) (2026-07-20)
+
+### Features
+
+- **sdk:** add DelegationService.getStatus ([#572](https://github.com/zama-ai/sdk/issues/572)) ([2f91c58]())
+
+## [3.4.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.7...v3.4.0-alpha.8) (2026-07-20)
+
+### Code Refactoring
+
+- **sdk:** extract duplicated decrypt-cache invalidation in Permits ([#573](https://github.com/zama-ai/sdk/issues/573)) ([33f44cd]())
+
 ## [3.4.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.6...v3.4.0-alpha.7) (2026-07-20)
 
 ### Build System

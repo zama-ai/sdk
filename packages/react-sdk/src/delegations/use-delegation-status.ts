@@ -2,7 +2,7 @@
 
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Address } from "@zama-fhe/sdk";
-import { delegationStatusQueryOptions, type DelegationStatusData } from "@zama-fhe/sdk/query";
+import { delegationStatusQueryOptions, type DelegationStatus } from "@zama-fhe/sdk/query";
 import { useQuery } from "../utils/query";
 import { useZamaSDK } from "../provider";
 
@@ -34,12 +34,12 @@ export interface UseDelegationStatusConfig {
  */
 export function useDelegationStatus(
   config: UseDelegationStatusConfig,
-  options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">,
+  options?: Omit<UseQueryOptions<DelegationStatus>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const baseOpts = delegationStatusQueryOptions(sdk, config);
 
-  return useQuery<DelegationStatusData>({
+  return useQuery<DelegationStatus>({
     ...baseOpts,
     ...options,
     enabled: (baseOpts.enabled ?? true) && (options?.enabled ?? true),

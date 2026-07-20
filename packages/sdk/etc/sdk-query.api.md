@@ -332,6 +332,11 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    getStatus(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<DelegationStatus>;
     isActive(params: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -343,8 +348,8 @@ export class Delegations {
     }): Promise<TransactionResult>;
 }
 
-// @public (undocumented)
-export interface DelegationStatusData {
+// @public
+export interface DelegationStatus {
     // (undocumented)
     expiryTimestamp: bigint;
     // (undocumented)
@@ -364,7 +369,7 @@ export interface DelegationStatusQueryConfig {
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(sdk: ZamaSDK, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: ZamaSDK, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatus, Error, DelegationStatus, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {

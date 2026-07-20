@@ -20,7 +20,7 @@ import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
-import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { DelegationStatus } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
@@ -159,7 +159,7 @@ export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${strin
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatus>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatus, Error>;
 
 // @public (undocumented)
 export interface UseDelegationStatusConfig {

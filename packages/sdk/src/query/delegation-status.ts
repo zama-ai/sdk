@@ -1,16 +1,12 @@
 import type { Address } from "viem";
-import { MAX_UINT64 } from "../contracts";
-import { getDelegationExpiryContract } from "../contracts/acl";
+import type { DelegationStatus } from "../services/delegation-service";
 import type { ZamaSDK } from "../zama-sdk";
 import type { QueryFactoryOptions } from "./factory-types";
 import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 import { assertNonNullable } from "../utils";
 
-export interface DelegationStatusData {
-  isActive: boolean;
-  expiryTimestamp: bigint;
-}
+export type { DelegationStatus } from "../services/delegation-service";
 
 export interface DelegationStatusQueryConfig {
   contractAddress: Address | undefined;
@@ -23,9 +19,9 @@ export function delegationStatusQueryOptions(
   sdk: ZamaSDK,
   config: DelegationStatusQueryConfig,
 ): QueryFactoryOptions<
-  DelegationStatusData,
+  DelegationStatus,
   Error,
-  DelegationStatusData,
+  DelegationStatus,
   ReturnType<typeof zamaQueryKeys.delegationStatus.scope>
 > {
   return {
@@ -40,22 +36,7 @@ export function delegationStatusQueryOptions(
       assertNonNullable(contractAddress, "delegationStatusQueryOptions: contractAddress");
       assertNonNullable(delegatorAddress, "delegationStatusQueryOptions: delegatorAddress");
       assertNonNullable(delegateAddress, "delegationStatusQueryOptions: delegateAddress");
-      const acl = sdk.relayer.chain.aclContractAddress;
-      const expiryTimestamp = await sdk.provider.readContract(
-        getDelegationExpiryContract(acl, delegatorAddress, delegateAddress, contractAddress),
-      );
-      // Derive isActive from expiry + chain time to stay consistent
-      // with sdk.delegations.isActive() (avoids client-clock skew).
-      let isActive: boolean;
-      if (expiryTimestamp === 0n) {
-        isActive = false;
-      } else if (expiryTimestamp === MAX_UINT64) {
-        isActive = true;
-      } else {
-        const now = await sdk.provider.getBlockTimestamp();
-        isActive = expiryTimestamp > now;
-      }
-      return { isActive, expiryTimestamp };
+      return sdk.delegations.getStatus({ contractAddress, delegatorAddress, delegateAddress });
     },
     enabled:
       Boolean(config.contractAddress && config.delegatorAddress && config.delegateAddress) &&

@@ -31,6 +31,12 @@ type AclTransactionOperation = Extract<
   "delegateDecryption" | "revokeDelegation"
 >;
 
+/** Delegation activity and expiry, resolved from a single expiry read. */
+export interface DelegationStatus {
+  isActive: boolean;
+  expiryTimestamp: bigint;
+}
+
 /** @internal */
 export class DelegationService {
   readonly #router: ChainRouter;
@@ -169,15 +175,28 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
+    return (await this.getStatus(params)).isActive;
+  }
+
+  /**
+   * Resolve activity and expiry together from a single {@link getDelegationExpiry} read,
+   * instead of two separate round trips through {@link isDelegated} and
+   * {@link getDelegationExpiry}.
+   */
+  async getStatus(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<DelegationStatus> {
+    const expiryTimestamp = await this.getDelegationExpiry(params);
+    if (expiryTimestamp === 0n) {
+      return { isActive: false, expiryTimestamp };
     }
-    if (expiry === MAX_UINT64) {
-      return true;
+    if (expiryTimestamp === MAX_UINT64) {
+      return { isActive: true, expiryTimestamp };
     }
     const now = await this.#provider.getBlockTimestamp();
-    return expiry > now;
+    return { isActive: expiryTimestamp > now, expiryTimestamp };
   }
 
   async getDelegationExpiry({
@@ -267,23 +286,21 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    const expiry = await this.getDelegationExpiry({
+    const { isActive, expiryTimestamp } = await this.getStatus({
       contractAddress: normalizedContract,
       delegatorAddress: normalizedDelegator,
       delegateAddress: normalizedDelegate,
     });
-    if (expiry === 0n) {
+    if (isActive) {
+      return;
+    }
+    if (expiryTimestamp === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract}`,
       );
     }
-    if (expiry !== MAX_UINT64) {
-      const now = await this.#provider.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
-        );
-      }
-    }
+    throw new DelegationExpiredError(
+      `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
+    );
   }
 }
