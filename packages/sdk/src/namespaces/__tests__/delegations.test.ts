@@ -59,6 +59,21 @@ describe("Delegations", () => {
       });
       expect(active).toBe(false);
     });
+
+    test("getStatus works without a signer and returns activity + expiry together", async ({
+      createSDK,
+      provider,
+    }) => {
+      const sdk = createSDK({ signer: undefined });
+      vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64);
+
+      const status = await sdk.delegations.getStatus({
+        contractAddress: TOKEN,
+        delegatorAddress: DELEGATOR,
+        delegateAddress: DELEGATE,
+      });
+      expect(status).toEqual({ isActive: true, expiryTimestamp: MAX_UINT64 });
+    });
   });
 
   describe("delegator address resolution", () => {

@@ -283,8 +283,8 @@ export interface DelegateDecryptionParams {
     expirationDate?: Date;
 }
 
-// @public (undocumented)
-export interface DelegationStatusData {
+// @public
+export interface DelegationStatus {
     // (undocumented)
     expiryTimestamp: bigint;
     // (undocumented)
@@ -304,7 +304,7 @@ export interface DelegationStatusQueryConfig {
 }
 
 // @public (undocumented)
-export function delegationStatusQueryOptions(sdk: ZamaSDK, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatusData, Error, DelegationStatusData, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
+export function delegationStatusQueryOptions(sdk: ZamaSDK, config: DelegationStatusQueryConfig): QueryFactoryOptions<DelegationStatus, Error, DelegationStatus, ReturnType<typeof zamaQueryKeys.delegationStatus.scope>>;
 
 // @public (undocumented)
 export interface DelegationSubmittedEvent extends BaseEvent {

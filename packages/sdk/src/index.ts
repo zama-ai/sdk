@@ -69,6 +69,7 @@ export type {
   BatchDecryptResult,
   DelegatedDecryptOptions,
 } from "./services/decryption-service";
+export type { DelegationStatus } from "./services/delegation-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export { Token, WrappedToken, type BatchBalancesResult, type BatchDecryptAsOptions } from "./token";
