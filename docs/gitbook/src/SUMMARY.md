@@ -13,6 +13,18 @@
 
 - [Migrate from v2 to v3](guides/migrate-v2-to-v3.md)
 
+## Changelog
+
+- [Alpha (unreleased)](changelog/alpha.md)
+- [3.x (current)](changelog/v3.md)
+  - [3.3.x](changelog/v3-3.md)
+  - [3.2.x](changelog/v3-2.md)
+  - [3.1.x](changelog/v3-1.md)
+  - [3.0.x](changelog/v3-0.md)
+- [Legacy versions](changelog/legacy.md)
+  - [2.x](changelog/v2.md)
+  - [1.x](changelog/v1.md)
+
 ## Guides
 
 - [Configuration](guides/configuration.md)
