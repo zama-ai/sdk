@@ -606,6 +606,11 @@ export class ChainMismatchError extends ZamaError {
 export const chains: Record<number, FheChain>;
 
 // @public
+export type ChecksummedAddress = Address & {
+    readonly [checksummedTag]: true;
+};
+
+// @public
 export class ChromeSessionStorage implements GenericStorage {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -5821,6 +5826,72 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
+export interface ErrorForCode {
+    // (undocumented)
+    [ZamaErrorCode.AclPaused]: AclPausedError;
+    // (undocumented)
+    [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
+    // (undocumented)
+    [ZamaErrorCode.ChainMismatch]: ChainMismatchError;
+    // (undocumented)
+    [ZamaErrorCode.Configuration]: ConfigurationError;
+    // (undocumented)
+    [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationExpirationTooSoon]: DelegationExpirationTooSoonError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationNotFound]: DelegationNotFoundError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
+    // (undocumented)
+    [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
+    // (undocumented)
+    [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
+    // (undocumented)
+    [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
+    // (undocumented)
+    [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
+    // (undocumented)
+    [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
+    // (undocumented)
+    [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+    // (undocumented)
+    [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    // (undocumented)
+    [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
+    // (undocumented)
+    [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
+    // (undocumented)
+    [ZamaErrorCode.NotEntitled]: NotEntitledError;
+    // (undocumented)
+    [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+    // (undocumented)
+    [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
+    // (undocumented)
+    [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
+    // (undocumented)
+    [ZamaErrorCode.SigningFailed]: SigningFailedError;
+    // (undocumented)
+    [ZamaErrorCode.SigningRejected]: SigningRejectedError;
+    // (undocumented)
+    [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+    // (undocumented)
+    [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+    // (undocumented)
+    [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
+}
+
+// @public
 export interface FheChain<TId extends number = number> {
     // (undocumented)
     readonly aclContractAddress: Address;
@@ -5858,6 +5929,9 @@ export type FheChainAuth = {
     cookie?: string;
     value: string;
 };
+
+// @public
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
 
 // @public
 export interface FhevmRelayerOptions {
@@ -12875,6 +12949,33 @@ export const sepolia: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
 };
+
+// @public
+export interface SerializedPermit {
+    // (undocumented)
+    eip712: SerializedPermitEip712;
+    // (undocumented)
+    signature: Hex;
+    // (undocumented)
+    signerAddress: ChecksummedAddress;
+    // (undocumented)
+    version: number;
+}
+
+// @public
+export interface SerializedPermitEip712 {
+    // (undocumented)
+    domain: Record<string, unknown>;
+    // (undocumented)
+    message: Record<string, unknown>;
+    // (undocumented)
+    primaryType?: string;
+    // (undocumented)
+    types: Record<string, {
+        name: string;
+        type: string;
+    }[]>;
+}
 
 // @public
 export interface SerializedTransportKeyPair {

@@ -33,6 +33,7 @@ export type {
   RelayerOptions,
   FhevmRelayerOptions,
   FhevmRuntimeConfig,
+  FhevmClientOptions,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
@@ -81,7 +82,13 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { SerializedTransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
+export type {
+  SerializedTransportKeyPair,
+  StoredTransportKeyPair,
+  Permission,
+  ChecksummedAddress,
+} from "./credentials";
+export type { SerializedPermit, SerializedPermitEip712 } from "./credentials/types";
 export type {
   GenericSigner,
   GenericProvider,
@@ -180,6 +187,7 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   matchZamaError,
+  type ErrorForCode,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";

@@ -7,7 +7,16 @@
 
 export type { ZamaConfigViem } from "./types";
 export type { Hex } from "viem";
-export type { EncryptedValue } from "../relayer/types";
+export type { EncryptedValue, EIP712TypedData } from "../relayer/types";
+export type { AtLeastOneChain, FheChain } from "../chains/types";
+export type { ZamaConfig, ZamaConfigBase } from "../config/types";
+export type {
+  GenericProvider,
+  ReadContractConfig,
+  WriteContractConfig,
+  TransactionReceipt,
+} from "../types";
+export { BaseSigner } from "../signer/base-signer";
 
 export { createConfig } from "./config";
 

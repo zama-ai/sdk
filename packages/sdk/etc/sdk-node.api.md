@@ -88,6 +88,20 @@ export interface EncryptParams {
 }
 
 // @public
+export type FheChainAuth = {
+    __type: "BearerToken";
+    token: string;
+} | {
+    __type: "ApiKeyHeader";
+    header?: string;
+    value: string;
+} | {
+    __type: "ApiKeyCookie";
+    cookie?: string;
+    value: string;
+};
+
+// @public
 export interface GenericLogger {
     // (undocumented)
     debug: (message: string, data?: Record<string, unknown>) => void;
@@ -97,6 +111,13 @@ export interface GenericLogger {
     info: (message: string, data?: Record<string, unknown>) => void;
     // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
+}
+
+// @public
+export interface GenericStorage {
+    delete(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public

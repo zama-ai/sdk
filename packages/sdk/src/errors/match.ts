@@ -38,21 +38,12 @@ import type { SigningFailedError, SigningRejectedError } from "./signing";
 import type { TransactionRevertedError } from "./transaction";
 
 /**
- * Identity type that fails to instantiate unless `T` maps every code to a `ZamaError`.
- * Guards presence + value type only: a wrong-but-valid mapping (a code pointing at a
- * structurally identical sibling class) still compiles — `errors.test-d.ts` backstops that.
- */
-type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
-
-/**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
  * {@link matchZamaError} handlers receive the matched subtype instead of the base
- * `ZamaError`. Hand-maintained; the `Complete` wrapper fails the build if a code is
- * added without an entry here (or mapped to a non-`ZamaError`). Kept local (not
- * exported) so it stays inline in `matchZamaError`'s signature rather than becoming
- * a named public type.
+ * `ZamaError`. Hand-maintained; the `Complete` guard below fails the build if a code
+ * is added without an entry here (or mapped to a non-`ZamaError`).
  */
-type ErrorForCode = Complete<{
+export interface ErrorForCode {
   [ZamaErrorCode.SigningRejected]: SigningRejectedError;
   [ZamaErrorCode.SigningFailed]: SigningFailedError;
   [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
@@ -84,7 +75,7 @@ type ErrorForCode = Complete<{
   [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
-}>;
+}
 
 /**
  * Pattern-match on a {@link ZamaError} by its error code. Each handler receives the

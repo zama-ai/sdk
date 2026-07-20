@@ -18,10 +18,68 @@ import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
 
 // @public
+export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
+
+// @public
+export abstract class BaseSigner implements GenericSigner, Disposable {
+    // (undocumented)
+    [Symbol.dispose](): void;
+    constructor(initial?: WalletAccount);
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
+    protected onDispose(): void;
+    // (undocumented)
+    requireWalletAccount(operation: string): WalletAccount;
+    // (undocumented)
+    abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
+    // (undocumented)
+    readonly walletAccount: MutableWalletAccountStore;
+    // (undocumented)
+    abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+}
+
+// @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigViem<TChains>): ZamaConfig;
 
 // @public
+export type EIP712TypedData = Eip712Like;
+
+// @public
 export type EncryptedValue = Hex;
+
+// @public
+export interface FheChain<TId extends number = number> {
+    // (undocumented)
+    readonly aclContractAddress: Address;
+    readonly auth?: FheChainAuth;
+    readonly executorAddress?: Address | undefined;
+    // (undocumented)
+    readonly gatewayChainId: number;
+    // (undocumented)
+    readonly id: TId;
+    // (undocumented)
+    readonly inputVerifierContractAddress: Address;
+    // (undocumented)
+    readonly kmsContractAddress: Address;
+    // (undocumented)
+    readonly network: EIP1193Provider | string;
+    readonly registryAddress: Address | undefined;
+    // (undocumented)
+    readonly relayerUrl: string;
+    // (undocumented)
+    readonly verifyingContractAddressDecryption: Address;
+    // (undocumented)
+    readonly verifyingContractAddressInputVerification: Address;
+}
+
+// @public
+export interface GenericProvider {
+    getBlockTimestamp(): Promise<bigint>;
+    getChainId(): Promise<number>;
+    readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
+    waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
+}
 
 export { Hex }
 
@@ -30,6 +88,14 @@ export function readConfidentialBalanceOfContract(client: PublicClient, tokenAdd
 
 // @public (undocumented)
 export function readConfidentialTokenAddressContract(client: PublicClient, registry: Address, tokenAddress: Address): Promise<readonly [boolean, `0x${string}`]>;
+
+// @public
+export interface ReadContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends ReadFunctionName<TAbi> = ReadFunctionName<TAbi>, TArgs extends ReadContractArgs<TAbi, TFunctionName> = ReadContractArgs<TAbi, TFunctionName>> {
+    readonly abi: TAbi;
+    readonly address: Address;
+    readonly args: TArgs;
+    readonly functionName: TFunctionName;
+}
 
 // @public (undocumented)
 export function readIsConfidentialTokenValidContract(client: PublicClient, registry: Address, confidentialTokenAddress: Address): Promise<boolean>;
@@ -66,6 +132,11 @@ export function readTokenPairsSliceContract(client: PublicClient, registry: Addr
 
 // @public (undocumented)
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address): Promise<`0x${string}`>;
+
+// @public
+export interface TransactionReceipt {
+    readonly logs: readonly RawLog[];
+}
 
 // @public
 export class ViemProvider implements GenericProvider {
@@ -106,6 +177,16 @@ export interface ViemSignerConfig {
 // @public (undocumented)
 export function writeConfidentialTransferContract(client: WalletClient, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
+// @public
+export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFunctionName extends WriteFunctionName<TAbi> = WriteFunctionName<TAbi>, TArgs extends WriteContractArgs<TAbi, TFunctionName> = WriteContractArgs<TAbi, TFunctionName>> {
+    readonly abi: TAbi;
+    readonly address: Address;
+    readonly args: TArgs;
+    readonly functionName: TFunctionName;
+    readonly gas?: bigint;
+    readonly value?: bigint;
+}
+
 // @public (undocumented)
 export function writeFinalizeUnwrapContract(client: WalletClient, wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
@@ -120,6 +201,38 @@ export function writeUnwrapFromBalanceContract(client: WalletClient, encryptedEr
 
 // @public (undocumented)
 export function writeWrapContract(client: WalletClient, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
+
+// @public
+export type ZamaConfig = {
+    readonly chains: readonly FheChain[];
+    readonly provider: GenericProvider;
+    readonly signer: GenericSigner | undefined;
+    readonly storage: GenericStorage;
+    readonly permitStorage: GenericStorage;
+    readonly transportKeyPairTTL: number;
+    readonly permitTTL: number;
+    readonly transportKeyPairScope: string | undefined;
+    readonly registryTTL: number;
+    readonly onEvent: ZamaSDKEventListener | undefined;
+    readonly logger: GenericLogger;
+} & {
+    readonly [zamaConfigBrand]: true;
+};
+
+// @public
+export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
+    chains: TChains;
+    logger?: GenericLogger;
+    onEvent?: ZamaSDKEventListener;
+    permitStorage?: GenericStorage;
+    permitTTL?: number;
+    registryTTL?: number;
+    relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
+    runtime?: FhevmRuntimeConfig;
+    storage?: GenericStorage;
+    transportKeyPairScope?: string;
+    transportKeyPairTTL?: number;
+}
 
 // @public
 export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
