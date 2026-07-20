@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.4.0-alpha.6",
+  "version": "3.4.0-alpha.7",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
