@@ -14850,7 +14850,7 @@ Re-fetch when the browser tab regains focus. Defaults to `true`.
 ## Return Type
 
 ```ts
-import { type DelegationStatusData } from "@zama-fhe/sdk/query";
+import { type DelegationStatus } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to:

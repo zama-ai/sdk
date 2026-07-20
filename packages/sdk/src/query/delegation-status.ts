@@ -6,7 +6,7 @@ import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 import { assertNonNullable } from "../utils";
 
-export type { DelegationStatus as DelegationStatusData } from "../services/delegation-service";
+export type { DelegationStatus } from "../services/delegation-service";
 
 export interface DelegationStatusQueryConfig {
   contractAddress: Address | undefined;
