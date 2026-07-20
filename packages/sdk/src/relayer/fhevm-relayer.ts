@@ -58,6 +58,8 @@ export interface FhevmRelayerConfig {
  *   are spread in first, then the per-call `options`, so a per-call value always
  *   wins over the chain default. Serialization helpers make no relayer
  *   round-trip, so they inject no options.
+ *
+ * @internal
  */
 export class FhevmRelayer implements FhevmRelayerSDK {
   readonly #chain: FheChain;

@@ -140,32 +140,27 @@ export type { ClearValue, EncryptParams, EncryptResult, EncryptedValue } from ".
 export type { EncryptInput, EIP712TypedData } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
-export type {
-  FhevmRelayerSDK as RelayerSDK,
-  FhevmRelayerOptions,
-  FhevmRuntimeConfig,
-  FhevmClient,
-} from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
 export type { ZamaSDK } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
-export type {
-  SerializedTransportKeyPair,
-  SerializedTransportKeyPairWithPermissions,
-  Permission,
-} from "../credentials";
-export { PermissionSchema, StoredTransportKeyPairSchema } from "../credentials";
-export type { ChecksummedAddress } from "../schemas/primitives";
+export type { SerializedTransportKeyPair } from "../credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
+  GenericLogger,
   ApprovalStrategy,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,
+  WalletAccountStore,
+  ContractAbi,
+  WriteFunctionName,
+  WriteContractArgs,
+  WriteContractConfig,
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,
@@ -174,10 +169,31 @@ export type {
   TransferOptions,
   UnshieldCallbacks,
   UnshieldOptions,
-  UnwrapResult,
   WrapOptions,
+  UnwrapResult,
 } from "../types";
-export { ZamaSDKEvents, transactionOperationMetadata } from "../events/sdk-events";
+export type { FheChain, FheChainAuth } from "../chains/types";
+export type { FhevmRelayerOptions, FhevmRuntimeConfig } from "../relayer/types";
+export type {
+  ReadFunctionName,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadContractReturnType,
+} from "../types";
+export type { ZamaError, ZamaErrorCode } from "../errors";
+export type {
+  WrappersRegistry,
+  WrappersRegistryConfig,
+  ListPairsOptions,
+} from "../wrappers-registry";
+export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
+export type { Permits, Delegations, Decryption } from "../namespaces";
+export type {
+  DelegatedDecryptOptions,
+  BatchDecryptResult,
+  BatchDecryptItem,
+} from "../services/decryption-service";
+export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
   SetOperatorSubmittedEvent,
   ApproveUnderlyingSubmittedEvent,
@@ -200,47 +216,7 @@ export type {
   UnwrapSubmittedEvent,
   WrapSubmittedEvent,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,
 } from "../events/sdk-events";
-
-export type { FheChain, FheChainAuth } from "../chains/types";
-export type { ChainRouter } from "../chains/router";
-export type { WalletAccountStore } from "../types/signer";
-export type {
-  ContractAbi,
-  ReadContractArgs,
-  ReadContractConfig,
-  ReadContractReturnType,
-  ReadFunctionName,
-  WriteContractArgs,
-  WriteContractConfig,
-  WriteFunctionName,
-} from "../types/contract";
-export type { GenericProvider } from "../types/provider";
-export type { RelayerConfig } from "../config/types";
-export type { WrappersRegistryConfig, ListPairsOptions } from "../wrappers-registry";
-export { ZamaErrorCode } from "../errors/base";
-export type {
-  DelegatedDecryptOptions,
-  BatchDecryptResult,
-  BatchDecryptItem,
-} from "../services/decryption-service";
-export type { GenericLogger } from "../types/logger";
-export { ZamaError } from "../errors/base";
-export { WrappersRegistry } from "../wrappers-registry";
-export type {
-  PaginatedResult,
-  TokenWrapperPair,
-  TokenWrapperPairWithMetadata,
-} from "../contracts/wrappers-registry";
-export { Permits } from "../namespaces/permits";
-export { Delegations } from "../namespaces/delegations";
-export { Decryption } from "../namespaces/decryption";
-export type { CachingService } from "../services/caching-service";
-export type { CredentialService, CredentialServiceConfig } from "../credentials/credential-service";
-export type { DelegationService } from "../services/delegation-service";
-export type { DecryptionService } from "../services/decryption-service";
-export { DelegationNotFoundError, DelegationExpiredError } from "../errors/delegation";

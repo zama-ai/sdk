@@ -4,52 +4,8 @@
 
 ```ts
 
-import { Address } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
-import { EIP1193Provider } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
-
-// @public
-export interface FheChain<TId extends number = number> {
-    // (undocumented)
-    readonly aclContractAddress: Address;
-    readonly auth?: FheChainAuth;
-    readonly executorAddress?: Address | undefined;
-    // (undocumented)
-    readonly gatewayChainId: number;
-    // (undocumented)
-    readonly id: TId;
-    // (undocumented)
-    readonly inputVerifierContractAddress: Address;
-    // (undocumented)
-    readonly kmsContractAddress: Address;
-    // (undocumented)
-    readonly network: EIP1193Provider | string;
-    readonly registryAddress: Address | undefined;
-    // (undocumented)
-    readonly relayerUrl: string;
-    // (undocumented)
-    readonly verifyingContractAddressDecryption: Address;
-    // (undocumented)
-    readonly verifyingContractAddressInputVerification: Address;
-}
-
-// @public
-export type FheChainAuth = {
-    __type: "BearerToken";
-    token: string;
-} | {
-    __type: "ApiKeyHeader";
-    header?: string;
-    value: string;
-} | {
-    __type: "ApiKeyCookie";
-    cookie?: string;
-    value: string;
-};
-
-// @public
-export type FhevmClient = ReturnType<typeof createFhevmClient>;
 
 // @public
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
@@ -66,17 +22,10 @@ export interface FhevmRelayerOptions {
 }
 
 // @public
-export interface FhevmRelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
-}
-
-// @public
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => FhevmRelayerSDK;
     // (undocumented)
     readonly type: string;
 }

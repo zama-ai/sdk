@@ -69,7 +69,10 @@ export interface DecryptPublicValuesResult {
  */
 export type EIP712TypedData = Eip712Like;
 
-/** The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`. */
+/**
+ * The underlying client returned by `@fhevm/sdk`'s `createFhevmClient`.
+ * @internal
+ */
 export type FhevmClient = ReturnType<typeof createFhevmClient>;
 
 /** @internal Capability-scoped `@fhevm/sdk` clients used by {@link FhevmRelayer}. */
@@ -131,7 +134,6 @@ export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
  * round-trip (mirrors its `RelayerCommonOptions`). Distinct from
  * {@link RelayerOptions}, which configures a transport once at construction —
  * these are applied per call.
- *
  */
 export interface FhevmRelayerOptions {
   /** Relayer authentication for the chain. Defaulted from the chain's config. */
@@ -201,6 +203,8 @@ export interface FhevmRelayerOptions {
 /**
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.
+ *
+ * @internal
  */
 export interface FhevmRelayerSDK extends Pick<
   FhevmClient,

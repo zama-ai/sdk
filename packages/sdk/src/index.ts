@@ -10,7 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
+export { createConfig, cleartext } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -20,10 +20,7 @@ export type {
   RelayerConfig,
   CleartextRelayerConfig,
   AtLeastOneChain,
-  ResolvedChainRelayer,
 } from "./config";
-export type { ChainRouter } from "./chains/router";
-export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
   EncryptResult,
   EncryptParams,
@@ -36,7 +33,6 @@ export type {
   RelayerOptions,
   FhevmRelayerOptions,
   FhevmRuntimeConfig,
-  FhevmClient,
   FhevmClientOptions,
 } from "./relayer/types";
 
@@ -68,10 +64,6 @@ export {
 // Token abstraction layer
 export { ZamaSDK } from "./zama-sdk";
 export { Permits, Delegations, Decryption } from "./namespaces";
-export type { CachingService } from "./services/caching-service";
-export type { CredentialService, CredentialServiceConfig } from "./credentials/credential-service";
-export type { DelegationService } from "./services/delegation-service";
-export type { DecryptionService } from "./services/decryption-service";
 export type { EncryptedInput as DecryptInput, DecryptResult } from "./query/user-decrypt";
 export type {
   BatchDecryptItem,
@@ -90,13 +82,8 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type {
-  SerializedTransportKeyPair,
-  SerializedTransportKeyPairWithPermissions,
-  StoredTransportKeyPair,
-  Permission,
-} from "./credentials";
-export { StoredTransportKeyPairSchema, PermissionSchema } from "./credentials";
+export type { SerializedTransportKeyPair, Permission, ChecksummedAddress } from "./credentials";
+export type { SerializedPermit, SerializedPermitEip712 } from "./credentials/types";
 export type {
   GenericSigner,
   GenericProvider,
@@ -127,11 +114,10 @@ export type {
   WrapOptions,
 } from "./types";
 export type { Address, Hex } from "viem";
-export { ZamaSDKEvents, transactionOperationMetadata } from "./events";
+export { ZamaSDKEvents } from "./events";
 export type {
   ZamaSDKEventType,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   BaseEvent,
   ShieldSubmittedEvent,
@@ -196,9 +182,7 @@ export {
   DelegationNotPropagatedError,
   matchZamaError,
   type ErrorForCode,
-  type Complete,
 } from "./errors";
-export type { ChecksummedAddress } from "./schemas/primitives";
 export { BaseSigner } from "./signer/base-signer";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 

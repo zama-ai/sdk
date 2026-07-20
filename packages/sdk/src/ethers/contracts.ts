@@ -37,6 +37,7 @@ interface TransactionRequestConfig {
   value?: bigint;
 }
 
+/** Minimal transaction request accepted by the ethers contract helpers. */
 export interface EthersTransactionRequest {
   to: Address;
   data: Hex;
@@ -44,14 +45,17 @@ export interface EthersTransactionRequest {
   value?: bigint;
 }
 
+/** Minimal transaction response returned by an {@link EthersTransactionSigner}. */
 export interface EthersTransactionResponse {
   hash: string;
 }
 
+/** Minimal read-only ethers provider shape used by the read contract helpers. */
 export interface EthersCallProvider {
   call(tx: EthersTransactionRequest): Promise<string>;
 }
 
+/** Minimal ethers signer shape used by the write contract helpers. */
 export interface EthersTransactionSigner extends EthersCallProvider {
   sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }

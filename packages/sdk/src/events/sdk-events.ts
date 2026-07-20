@@ -199,7 +199,11 @@ export type ZamaSDKEvent =
 
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
-/** Distributive Omit that preserves the discriminated union. */
+/**
+ * Distributive Omit that preserves the discriminated union. Internal emit-side
+ * shape — consumers only ever receive fully-populated {@link ZamaSDKEvent}.
+ * @internal
+ */
 export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
   ? E extends ZamaSDKEvent
     ? Omit<E, "timestamp" | "tokenAddress">
@@ -207,14 +211,38 @@ export type ZamaSDKEventInput = ZamaSDKEvent extends infer E
   : never;
 
 /**
+ * SDK transaction operations that emit submitted/error lifecycle events.
+ *
+ * Operation strings encode the execution-path discriminator for flows that have
+ * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
+ * and success events on a single field — see {@link transactionOperationMetadata}.
+ */
+export type TransactionOperation =
+  | "approveUnderlying"
+  | "approveUnderlying:reset"
+  | "delegateDecryption"
+  | "finalizeUnwrap"
+  | "revokeDelegation"
+  | "setOperator"
+  | "shield:transferAndCall"
+  | "shield:approveAndWrap"
+  | "wrap"
+  | "transfer"
+  | "transferAndCall"
+  | "transferFrom"
+  | "transferFromAndCall"
+  | "unwrap"
+  | "unwrapAll";
+
+/**
  * Single source of truth for each transaction operation's submitted-event payload.
  *
- * Adding a write op = adding one entry here. `TransactionOperation` is then
- * `keyof typeof transactionOperationMetadata`, so the dispatch table and the
- * operation union cannot drift.
+ * Adding a write op = adding one entry here plus its {@link TransactionOperation}
+ * member; the `satisfies Record<TransactionOperation, …>` check enforces that the
+ * table and the union stay in lockstep (missing or extra keys fail the build) and
+ * that every entry produces a valid {@link ZamaSDKEventInput}.
  *
- * The `satisfies` check enforces that every entry produces a valid
- * {@link ZamaSDKEventInput}.
+ * @internal
  */
 export const transactionOperationMetadata = {
   approveUnderlying: {
@@ -272,13 +300,4 @@ export const transactionOperationMetadata = {
   },
   unwrap: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
   unwrapAll: { submittedEvent: (txHash: Hex) => ({ type: ZamaSDKEvents.UnwrapSubmitted, txHash }) },
-} satisfies Record<string, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;
-
-/**
- * SDK transaction operations that emit submitted/error lifecycle events.
- *
- * Operation strings encode the execution-path discriminator for flows that have
- * one (`shield:transferAndCall` vs. `shield:approveAndWrap`), routing both error
- * and success events on a single field — see {@link transactionOperationMetadata}.
- */
-export type TransactionOperation = keyof typeof transactionOperationMetadata;
+} satisfies Record<TransactionOperation, { submittedEvent: (txHash: Hex) => ZamaSDKEventInput }>;

@@ -35,6 +35,7 @@ export const TransportKeyPairScopeSchema = z
   .string({ error: transportKeyPairScopeError })
   .check(z.minLength(1, transportKeyPairScopeError));
 
+/** @internal */
 export const StoredTransportKeyPairSchema = z.object({
   publicKey: hex,
   privateKey: hex,
@@ -56,6 +57,7 @@ export const SerializedPermitSchema = z.object({
   signerAddress: checksummedAddress,
 });
 
+/** @internal */
 export const PermissionSchema = z.object({
   keypairPublicKey: hex,
   contractAddresses: z.array(checksummedAddress).check(z.maxLength(MAX_CONTRACTS_PER_PERMIT)),

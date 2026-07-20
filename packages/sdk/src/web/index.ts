@@ -10,12 +10,8 @@
 
 export { web } from "../config/web";
 export type { WebRelayerConfig, RelayerConfig } from "../config/types";
-
-export type { FheChain, FheChainAuth } from "../chains/types";
 export type {
-  FhevmRelayerSDK,
   RelayerOptions,
-  FhevmClient,
   FhevmRelayerOptions,
   FhevmClientOptions,
   FhevmRuntimeConfig,

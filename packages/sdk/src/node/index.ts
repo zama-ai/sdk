@@ -11,8 +11,12 @@ export { node } from "./config";
 export type { NodeRelayerConfig } from "./config";
 export { cleartext } from "../config/cleartext";
 export type { RelayerConfig, CleartextRelayerConfig } from "../config/types";
-export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
+export type { FheChain } from "../chains/types";
 export type { GenericLogger } from "../types/logger";
+// Surfaced by the node entry's public API: `AsyncLocalMapStorage implements GenericStorage`,
+// and the exported chain presets carry `auth?: FheChainAuth`.
+export type { GenericStorage } from "../types/storage";
+export type { FheChainAuth } from "../chains/types";
 
 // Relayer types used in the node transport's public API
 export type {
@@ -21,19 +25,13 @@ export type {
   EncryptParams,
   EncryptInput,
   EncryptedValue,
-} from "../relayer/types";
-// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
-export type { DecryptPublicValuesResult } from "../relayer/types";
-
-export type { FheChain, FheChainAuth } from "../chains/types";
-export type { GenericStorage } from "../types/storage";
-export type {
   RelayerOptions,
-  FhevmClient,
   FhevmRelayerOptions,
   FhevmClientOptions,
   FhevmRuntimeConfig,
 } from "../relayer/types";
+// Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
+export type { DecryptPublicValuesResult } from "../relayer/types";
 
 // Storage
 export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-storage";

@@ -148,9 +148,6 @@ export type FheChainAuth = {
 };
 
 // @public
-export type FhevmClient = ReturnType<typeof createFhevmClient>;
-
-// @public
 export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
 
 // @public
@@ -256,7 +253,6 @@ export interface NodeRelayerConfig extends RelayerConfig {
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
     // (undocumented)
     readonly type: string;
 }
@@ -266,12 +262,6 @@ export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "d
     readonly batchRpcCalls?: boolean;
     readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
     readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
-}
-
-// @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
 }
 
 // @public

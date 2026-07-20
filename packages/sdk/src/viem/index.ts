@@ -7,43 +7,42 @@
 
 export type { ZamaConfigViem } from "./types";
 export type { Hex } from "viem";
-export type { EncryptedValue, EIP712TypedData, ClearValue } from "../relayer/types";
-export { transactionOperationMetadata } from "../events/sdk-events";
-
-export { createConfig } from "./config";
-
-export { BaseSigner } from "../signer/base-signer";
-export { MutableWalletAccountStore } from "../signer/wallet-account-store";
-export type { ChainRouter } from "../chains/router";
+export type {
+  EncryptedValue,
+  EIP712TypedData,
+  FhevmRuntimeConfig,
+  ClearValue,
+} from "../relayer/types";
 export type { AtLeastOneChain, FheChain, FheChainAuth } from "../chains/types";
 export type { ZamaConfig, ZamaConfigBase, RelayerConfig } from "../config/types";
-export type { GenericProvider } from "../types/provider";
 export type {
+  GenericProvider,
+  GenericStorage,
+  GenericLogger,
   GenericSigner,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,
   WalletAccountStore,
-} from "../types/signer";
-export type {
   ContractAbi,
-  ReadContractArgs,
-  ReadContractConfig,
-  ReadContractReturnType,
   ReadFunctionName,
+  ReadContractArgs,
+  ReadContractReturnType,
+  ReadContractConfig,
+  WriteFunctionName,
   WriteContractArgs,
   WriteContractConfig,
-  WriteFunctionName,
-} from "../types/contract";
-export type { TransactionReceipt, RawLog } from "../types/transaction";
-export type { GenericStorage } from "../types/storage";
-export type { ShieldPath } from "../types/token";
-export type { GenericLogger } from "../types/logger";
+  TransactionReceipt,
+  ShieldPath,
+} from "../types";
+export type { MutableWalletAccountStore } from "../signer/wallet-account-store";
+export type { RawLog } from "../events";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
-  ZamaSDKEventListener,
-  ZamaSDKEvent,
   BaseEvent,
+  ZamaSDKEvent,
+  ZamaSDKEventType,
+  ZamaSDKEventListener,
   TransactionOperation,
   EncryptStartEvent,
   EncryptEndEvent,
@@ -66,7 +65,9 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
 } from "../events/sdk-events";
-export type { FhevmRelayerSDK, FhevmRuntimeConfig, FhevmClient } from "../relayer/types";
+export { BaseSigner } from "../signer/base-signer";
+
+export { createConfig } from "./config";
 
 export { ViemSigner, type ViemSignerConfig } from "./viem-signer";
 export { ViemProvider, type ViemProviderConfig } from "./viem-provider";

@@ -9,7 +9,6 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
-import { createFhevmClient } from '@fhevm/sdk/viem';
 import { EIP1193EventMap } from 'viem';
 import { EIP1193Events } from 'viem';
 import { EIP1193Provider } from 'viem';
@@ -62,17 +61,6 @@ export abstract class BaseSigner implements GenericSigner, Disposable {
     readonly walletAccount: MutableWalletAccountStore;
     // (undocumented)
     abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
-}
-
-// @public
-export class ChainRouter {
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    get relayer(): FhevmRelayerSDK;
-    switchChain(chainId: number): void;
 }
 
 // @public
@@ -154,7 +142,7 @@ export interface EncryptStartEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.EncryptStart;
 }
 
-// @public (undocumented)
+// @public
 export interface EthersCallProvider {
     // (undocumented)
     call(tx: EthersTransactionRequest): Promise<string>;
@@ -202,7 +190,7 @@ export type EthersSignerConfig = {
     signer: Signer;
 };
 
-// @public (undocumented)
+// @public
 export interface EthersTransactionRequest {
     // (undocumented)
     data: Hex;
@@ -214,13 +202,13 @@ export interface EthersTransactionRequest {
     value?: bigint;
 }
 
-// @public (undocumented)
+// @public
 export interface EthersTransactionResponse {
     // (undocumented)
     hash: string;
 }
 
-// @public (undocumented)
+// @public
 export interface EthersTransactionSigner extends EthersCallProvider {
     // (undocumented)
     sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
@@ -264,15 +252,6 @@ export type FheChainAuth = {
     cookie?: string;
     value: string;
 };
-
-// @public
-export type FhevmClient = ReturnType<typeof createFhevmClient>;
-
-// @public
-export interface FhevmRelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
-}
 
 // @public
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
@@ -396,7 +375,6 @@ export function readUnderlyingTokenContract(provider: EthersCallProvider, wrappe
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => FhevmRelayerSDK;
     // (undocumented)
     readonly type: string;
 }
@@ -438,105 +416,7 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
-export type TransactionOperation = keyof typeof transactionOperationMetadata;
-
-// @public
-export const transactionOperationMetadata: {
-    approveUnderlying: {
-        submittedEvent: (txHash: Hex) => {
-            type: "approveUnderlying:submitted";
-            txHash: `0x${string}`;
-            step: "approve";
-        };
-    };
-    "approveUnderlying:reset": {
-        submittedEvent: (txHash: Hex) => {
-            type: "approveUnderlying:submitted";
-            txHash: `0x${string}`;
-            step: "reset";
-        };
-    };
-    delegateDecryption: {
-        submittedEvent: (txHash: Hex) => {
-            type: "delegation:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    finalizeUnwrap: {
-        submittedEvent: (txHash: Hex) => {
-            type: "finalizeUnwrap:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    revokeDelegation: {
-        submittedEvent: (txHash: Hex) => {
-            type: "revokeDelegation:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    setOperator: {
-        submittedEvent: (txHash: Hex) => {
-            type: "setOperator:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    "shield:transferAndCall": {
-        submittedEvent: (txHash: Hex) => {
-            type: "shield:submitted";
-            txHash: `0x${string}`;
-            shieldPath: "transferAndCall";
-        };
-    };
-    "shield:approveAndWrap": {
-        submittedEvent: (txHash: Hex) => {
-            type: "shield:submitted";
-            txHash: `0x${string}`;
-            shieldPath: "approveAndWrap";
-        };
-    };
-    wrap: {
-        submittedEvent: (txHash: Hex) => {
-            type: "wrap:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    transfer: {
-        submittedEvent: (txHash: Hex) => {
-            type: "transfer:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    transferAndCall: {
-        submittedEvent: (txHash: Hex) => {
-            type: "transfer:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    transferFrom: {
-        submittedEvent: (txHash: Hex) => {
-            type: "transferFrom:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    transferFromAndCall: {
-        submittedEvent: (txHash: Hex) => {
-            type: "transferFrom:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    unwrap: {
-        submittedEvent: (txHash: Hex) => {
-            type: "unwrap:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-    unwrapAll: {
-        submittedEvent: (txHash: Hex) => {
-            type: "unwrap:submitted";
-            txHash: `0x${string}`;
-        };
-    };
-};
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -660,7 +540,6 @@ export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddres
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -734,6 +613,9 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
+
+// @public
+export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
 // (No @packageDocumentation comment for this package)
 

@@ -22,11 +22,7 @@ import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 
-/**
- * Configuration for {@link CredentialService}. TTLs are pre-validated by the caller.
- *
- * @internal
- */
+/** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
   router: ChainRouter;
   signer: GenericSigner;
