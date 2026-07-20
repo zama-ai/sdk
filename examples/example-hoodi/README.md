@@ -1,6 +1,6 @@
 # Example Hoodi app with cleartext Zama Protocol support
 
-Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet and **ethers** — including on-chain ACL delegation.
+Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet with **wagmi 3** and **viem 2** — including on-chain ACL delegation.
 
 ## Cleartext Zama Protocol
 
@@ -15,8 +15,10 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 ## Stack
 
 - **Next.js** (App Router)
-- **ethers v6** — via `EthersSigner` from `@zama-fhe/sdk/ethers`
-- **RelayerCleartext** — cleartext FHE backend (no external relayer service required)
+- **wagmi 3** — injected-wallet connection and chain lifecycle
+- **viem 2** — EVM types and utilities
+- **`@zama-fhe/react-sdk/wagmi`** — Zama signer adapter for the active wagmi connection
+- **`cleartext()`** — cleartext FHE backend (no external relayer service required)
 - **@tanstack/react-query** — async state management
 - Any injected **EIP-1193 wallet** (Rabby, Phantom, …)
 - **Chain:** Hoodi testnet (chainId 560048)
@@ -26,31 +28,31 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 | Operation                    | SDK API                                       |
 | ---------------------------- | --------------------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  |
+| Shield (ERC-20 → cToken)     | `useShield`                                   |
 | Confidential transfer        | `useConfidentialTransfer`                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                 |
 | Grant decryption access      | `useDelegateDecryption`                       |
 | Revoke decryption access     | `useRevokeDelegation`                         |
 | Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
-> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
+> **Shield** uses `useShield`. The SDK owns balance checks, allowance handling—including USDT-style reset when needed—and wrapper routing. The app passes an exact approval strategy and does not recompose ERC-20 approval and wrapper calls.
 
-> **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
+> **Wallet lifecycle** is owned by wagmi. `useConnection` exposes the active account and chain; `useConnect` and `useSwitchChain` use their wagmi v3 mutation functions. The app does not install application-owned `accountsChanged` or `chainChanged` listeners.
 
-> **Separate IndexedDB instances** for `storage` and `permitStorage` in `ZamaProvider`: not required for correctness — the SDK namespaces transport-key-pair and permit keys internally, and defaults `permitStorage` to `storage` when omitted. This example keeps them as separate `IndexedDBStorage` instances for clarity between the two storage responsibilities.
+> **IndexedDB storage** persists SDK transport material and permits. Both configuration fields use the SDK's `indexedDBStorage`; keys are namespaced internally.
 
 > **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
 
-## How it differs from `react-ethers`
+## How it differs from `react-wagmi`
 
-|           | `react-ethers`                   | `example-hoodi`                      |
-| --------- | -------------------------------- | ------------------------------------ |
-| Relayer   | `RelayerWeb` (HTTP, proxy route) | `RelayerCleartext` (no proxy needed) |
-| Network   | Mainnet / Sepolia                | Hoodi (chainId 560048)               |
-| Auth      | Relayer API key                  | None                                 |
-| API route | `/api/relayer/[...path]`         | Not present                          |
+|           | `react-wagmi`                    | `example-hoodi`                |
+| --------- | -------------------------------- | ------------------------------ |
+| Relayer   | Web transport (HTTP proxy route) | `cleartext()` (no proxy needed) |
+| Network   | Sepolia                          | Hoodi (chainId 560048)         |
+| Auth      | Relayer configuration            | None                           |
+| API route | `/api/relayer/[...path]`         | Not present                    |
 
-`RelayerCleartext` reads plaintext values directly from the on-chain executor contract — no external relayer service is required.
+`cleartext()` reads plaintext values directly from the on-chain executor contract—no external relayer service is required.
 
 ## Setup
 
@@ -114,15 +116,31 @@ Both tokens have a permissionless `mint(address to, uint256 amount)` function.
 **Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
 
 ```ts
-import { Contract, BrowserProvider, parseUnits } from "ethers";
+import { parseUnits } from "viem";
+import { useConnection, useWriteContract } from "wagmi";
 
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
-// USDT Mock — 6 decimals: 10 USDT = parseUnits("10", 6)
-const token = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await token.mint(await signer.getAddress(), parseUnits("10", 6));
+const { address } = useConnection();
+const { mutate: writeContract } = useWriteContract();
+
+writeContract({
+  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
+  abi: mintAbi,
+  functionName: "mint",
+  args: [address!, parseUnits("10", 6)],
+});
 ```
 
 For a detailed partner-facing guide including prerequisites, step-by-step flow, and troubleshooting, see [WALKTHROUGH.md](./WALKTHROUGH.md).

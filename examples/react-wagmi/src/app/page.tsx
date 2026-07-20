@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
-import { useAccount, useBalance, useConnect, useReadContract, useSwitchChain } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useBalance, useConnect, useConnection, useReadContract, useSwitchChain } from "wagmi";
+import { injected } from "wagmi/connectors/injected";
 import { sepolia } from "wagmi/chains";
 import {
   useConfidentialBalance,
@@ -39,9 +39,9 @@ export default function Home() {
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
   // so account and chain changes are handled automatically — no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
-  const { address, chainId, isConnected } = useAccount();
-  const { connect, isPending: isConnecting, error: connectError } = useConnect();
-  const { switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
+  const { address, chainId, isConnected } = useConnection();
+  const { mutate: connect, isPending: isConnecting, error: connectError } = useConnect();
+  const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
 
   const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
@@ -97,77 +97,83 @@ export default function Home() {
     // but the injected() connector does throw it at runtime when window.ethereum is absent.
     const isNoWallet = (connectError?.name as string) === "ProviderNotFoundError";
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
         <p className="subtitle">
           Connect your wallet to interact with ERC-7984 tokens on Sepolia testnet.
         </p>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => connect({ connector: injected() })}
-          disabled={isConnecting}
-        >
-          {isConnecting ? "Connecting…" : "Connect Wallet"}
-        </button>
+        <form action={() => connect({ connector: injected() })}>
+          <button type="submit" className="btn btn-primary" disabled={isConnecting}>
+            {isConnecting ? "Connecting…" : "Connect Wallet"}
+          </button>
+        </form>
         {isNoWallet && (
-          <div className="alert alert-error card-status">
+          <div className="alert alert-error card-status" role="alert">
             No Ethereum wallet found. Please install an EIP-1193 browser wallet (e.g. Rabby,
             MetaMask, or Phantom).
           </div>
         )}
         {connectError && !isNoWallet && (
-          <div className="alert alert-error card-status">{connectError.message}</div>
+          <div className="alert alert-error card-status" role="alert">
+            {connectError.message}
+          </div>
         )}
-      </div>
+      </main>
     );
   }
 
   // ── Screen 2: Wrong network ────────────────────────────────────────────────
   if (!isSepolia) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Network Required</h1>
         <p className="subtitle">
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}). Switch your
           wallet to continue.
         </p>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => switchChain({ chainId: sepolia.id })}
-          disabled={isSwitching}
-        >
-          {isSwitching ? "Switching…" : "Switch to Sepolia"}
-        </button>
+        <form action={() => switchChain({ chainId: sepolia.id })}>
+          <button type="submit" className="btn btn-primary" disabled={isSwitching}>
+            {isSwitching ? "Switching…" : "Switch to Sepolia"}
+          </button>
+        </form>
         {switchError && (
-          <div className="alert alert-error card-status">
+          <div className="alert alert-error card-status" role="alert">
             Could not switch to Sepolia. Please switch manually in your wallet.
           </div>
         )}
-      </div>
+      </main>
     );
   }
 
   // ── Screen 3: Connected on Sepolia — main UI ───────────────────────────────
   return (
-    <div className="app-container">
+    <main className="app-container">
       {/* Header */}
-      <div className="app-header">
+      <header className="app-header">
         <h1>Sepolia Confidential Token Quickstart</h1>
-        <div className="connected-address">Connected: {address}</div>
-        <div className="connected-address">
+        <p className="connected-address">
+          Connected: <code>{address}</code>
+        </p>
+        <p className="connected-address">
           ETH:{" "}
-          {ethBalanceData !== undefined
-            ? Number(formatEther(ethBalanceData.value)).toFixed(4)
-            : "—"}
-        </div>
-      </div>
+          <output>
+            {ethBalanceData !== undefined
+              ? Number(formatEther(ethBalanceData.value)).toFixed(4)
+              : "—"}
+          </output>
+        </p>
+      </header>
 
       {/* Token selector — populated from the on-chain WrappersRegistry */}
-      <div className="card">
-        <div className="card-title">Token</div>
+      <section className="card" aria-labelledby="token-selector-title">
+        <h2 className="card-title" id="token-selector-title">
+          Token
+        </h2>
+        <label className="sr-only" htmlFor="token-selector">
+          Confidential token
+        </label>
         <select
+          id="token-selector"
           className="select"
           value={selectedTokenAddress ?? ""}
           onChange={(e) => {
@@ -186,14 +192,16 @@ export default function Home() {
             </option>
           ))}
         </select>
-        {isRegistryPending && <p className="token-meta">Loading tokens from registry…</p>}
+        {isRegistryPending && <output className="token-meta">Loading tokens from registry…</output>}
         {!isRegistryPending && isRegistryError && (
-          <p className="token-meta">Failed to load tokens from registry.</p>
+          <p className="token-meta" role="alert">
+            Failed to load tokens from registry.
+          </p>
         )}
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
         )}
-      </div>
+      </section>
 
       {token && (
         <TokenWorkspace
@@ -205,7 +213,7 @@ export default function Home() {
         />
       )}
       {!token && !isRegistryPending && <NoTokenWorkspace />}
-    </div>
+    </main>
   );
 }
 
@@ -229,28 +237,28 @@ function NoTokenWorkspace() {
         decryptError={null}
       />
 
-      <div className="section-label">Operations</div>
+      <h2 className="section-label">Operations</h2>
 
-      <div className="card">
-        <div className="card-title">Shield — ERC-20 → Confidential</div>
+      <section className="card">
+        <h3 className="card-title">Shield — ERC-20 → Confidential</h3>
         <button type="button" className="btn btn-primary" disabled>
           Shield
         </button>
-      </div>
+      </section>
 
-      <div className="card">
-        <div className="card-title">Confidential Transfer</div>
+      <section className="card">
+        <h3 className="card-title">Confidential Transfer</h3>
         <button type="button" className="btn btn-primary" disabled>
           Transfer
         </button>
-      </div>
+      </section>
 
-      <div className="card">
-        <div className="card-title">Unshield — Confidential → ERC-20</div>
+      <section className="card">
+        <h3 className="card-title">Unshield — Confidential → ERC-20</h3>
         <button type="button" className="btn btn-primary" disabled>
           Unshield
         </button>
-      </div>
+      </section>
     </>
   );
 }
@@ -375,7 +383,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
         />
       ))}
 
-      <div className="section-label">Operations</div>
+      <h2 className="section-label">Operations</h2>
 
       {/* key includes address and token so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
@@ -413,7 +421,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
           the beneficiary reveals and withdraws their confidential position. */}
       {token.confidentialTokenAddress.toLowerCase() === VAULT_CONFIDENTIAL_TOKEN.toLowerCase() && (
         <>
-          <div className="section-label">Reacting contract — ConfidentialVault</div>
+          <h2 className="section-label">Reacting contract — ConfidentialVault</h2>
 
           <VaultDepositCard
             key={`vault-deposit-${address}-${token.confidentialTokenAddress}`}
@@ -444,7 +452,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
       {/* ── Delegation — token owner perspective ──────────────────────────────
           These cards are used by the wallet that OWNS the token.
           Grant or revoke another wallet's right to decrypt your balance. */}
-      <div className="section-label">Delegation — as owner</div>
+      <h2 className="section-label">Delegation — as owner</h2>
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
@@ -461,7 +469,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
       {/* ── Delegation — delegate perspective ────────────────────────────────
           This card is used by the wallet that RECEIVED a delegation.
           Decrypt another wallet's confidential balance on their behalf. */}
-      <div className="section-label">Delegation — as delegate</div>
+      <h2 className="section-label">Delegation — as delegate</h2>
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}

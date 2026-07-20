@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, createConfig, WagmiProvider } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
+import { injected } from "wagmi/connectors/injected";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { indexedDBStorage } from "@zama-fhe/sdk";
@@ -38,19 +38,17 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
-const RELAYER_PROXY_URL = "http://localhost:3000/api/relayer";
-
 // Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
-const mySepolia = {
+const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: RELAYER_PROXY_URL,
+  relayerUrl: "http://localhost:3000/api/relayer",
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
-  chains: [mySepolia],
+  chains: [zamaSepolia],
   wagmiConfig,
-  relayers: { [mySepolia.id]: web() },
+  relayers: { [zamaSepolia.id]: web() },
   storage: indexedDBStorage,
   permitStorage: indexedDBStorage,
 });

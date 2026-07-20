@@ -211,7 +211,7 @@ function SelectedTokenPanel({
         />
       ))}
 
-      <div className="section-label">Operations</div>
+      <h2 className="section-label">Operations</h2>
 
       {/* key includes address and selected token so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
@@ -243,7 +243,7 @@ function SelectedTokenPanel({
         onSuccess={refreshBalances}
       />
 
-      <div className="section-label">Delegation — as owner</div>
+      <h2 className="section-label">Delegation — as owner</h2>
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
@@ -257,7 +257,7 @@ function SelectedTokenPanel({
         disabled={actionsDisabled}
       />
 
-      <div className="section-label">Delegation — as delegate</div>
+      <h2 className="section-label">Delegation — as delegate</h2>
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
@@ -428,69 +428,80 @@ export default function Home() {
   // ZamaProvider remount (wallet switch or chain change).
   if (isInitializing) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
-      </div>
+      </main>
     );
   }
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
         <p className="subtitle">
           Connect your wallet to interact with ERC-7984 tokens on Sepolia testnet.
         </p>
-        <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
-          {isConnecting ? "Connecting…" : "Connect Wallet"}
-        </button>
-        {connectError && <div className="alert alert-error card-status">{connectError}</div>}
-      </div>
+        <form action={connect}>
+          <button type="submit" className="btn btn-primary" disabled={isConnecting}>
+            {isConnecting ? "Connecting…" : "Connect Wallet"}
+          </button>
+        </form>
+        {connectError && (
+          <div className="alert alert-error card-status" role="alert">
+            {connectError}
+          </div>
+        )}
+      </main>
     );
   }
 
   // ── Screen 2: Wrong network ────────────────────────────────────────────────
   if (!isSepolia) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Network Required</h1>
         <p className="subtitle">
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}).
         </p>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSwitchToSepolia}
-          disabled={isSwitching}
-        >
-          {isSwitching ? "Switching…" : "Switch to Sepolia"}
-        </button>
+        <form action={handleSwitchToSepolia}>
+          <button type="submit" className="btn btn-primary" disabled={isSwitching}>
+            {isSwitching ? "Switching…" : "Switch to Sepolia"}
+          </button>
+        </form>
         {switchFailed && (
-          <div className="alert alert-error card-status">
+          <div className="alert alert-error card-status" role="alert">
             Could not switch to Sepolia. Please switch manually in your wallet.
           </div>
         )}
-      </div>
+      </main>
     );
   }
 
   // ── Screen 3: Connected on Sepolia — main UI ───────────────────────────────
   return (
-    <div className="app-container">
+    <main className="app-container">
       {/* Header */}
-      <div className="app-header">
+      <header className="app-header">
         <h1>Sepolia Confidential Token Quickstart</h1>
-        <div className="connected-address">Connected: {address}</div>
-        <div className="connected-address">
-          ETH: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
-        </div>
-      </div>
+        <p className="connected-address">
+          Connected: <code>{address}</code>
+        </p>
+        <p className="connected-address">
+          ETH: <output>{ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}</output>
+        </p>
+      </header>
 
       {/* Token selector — populated from the on-chain WrappersRegistry */}
-      <div className="card">
-        <div className="card-title">Token</div>
+      <section className="card" aria-labelledby="token-selector-title">
+        <h2 className="card-title" id="token-selector-title">
+          Token
+        </h2>
+        <label className="sr-only" htmlFor="token-selector">
+          Confidential token
+        </label>
         <select
+          id="token-selector"
           className="select"
           value={selectedTokenAddress ?? ""}
           onChange={(e) => setSelectedTokenAddress(e.target.value as Address)}
@@ -507,14 +518,16 @@ export default function Home() {
             </option>
           ))}
         </select>
-        {isRegistryPending && <p className="token-meta">Loading tokens from registry…</p>}
+        {isRegistryPending && <output className="token-meta">Loading tokens from registry…</output>}
         {!isRegistryPending && isRegistryError && (
-          <p className="token-meta">Failed to load tokens from registry.</p>
+          <p className="token-meta" role="alert">
+            Failed to load tokens from registry.
+          </p>
         )}
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
         )}
-      </div>
+      </section>
 
       {token && (
         <SelectedTokenPanel
@@ -526,6 +539,6 @@ export default function Home() {
           ethBalanceKey={ethBalanceKey}
         />
       )}
-    </div>
+    </main>
   );
 }

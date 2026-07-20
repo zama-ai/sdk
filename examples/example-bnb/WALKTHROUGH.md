@@ -1,6 +1,6 @@
 # Integrating Zama Confidential Tokens (ERC-7984) on BNB
 
-**Audience:** Partners integrating Zama confidential tokens on BNB Smart Chain Testnet (ethers-based stack), including on-chain ACL delegation.
+**Audience:** Partners integrating Zama confidential tokens on BNB Smart Chain Testnet with wagmi and viem, including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
@@ -25,7 +25,7 @@ This example uses the **cleartext stack** (`cleartext()`), which is Zama's light
 
 ## What this example demonstrates
 
-> Any EIP-1193 browser wallet (e.g. Trust Wallet) can interact with ERC-7984 confidential tokens on BNB using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
+> Any EIP-1193 browser wallet (e.g. Trust Wallet) can interact with ERC-7984 confidential tokens on BNB using the Zama SDK's wagmi integration and the cleartext backend — with no external relayer service and no API key.
 
 Specifically:
 
@@ -96,18 +96,17 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
   │
   ▼
-@zama-fhe/sdk (ZamaSDK)  ← createConfig({ chains: [zamaBscTestnetCleartext], ethereum, provider, relayers })
-  ├─ ethers adapter
-  │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(BSC_TESTNET_RPC_URL)
-  │    └─ writes + EIP-712 signing → injected EIP-1193 wallet
-  └─ cleartext() relayer (resolved from the inline zamaBscTestnetCleartext chain config)
+@zama-fhe/react-sdk/wagmi  ← createConfig({ wagmiConfig, chains, relayers })
+  ├─ reads → viem HTTP transport(BSC_TESTNET_RPC_URL)
+  ├─ writes + EIP-712 signing → active wagmi injected connection
+  └─ cleartext() relayer (resolved from the bscTestnet SDK chain preset)
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, BNB Smart Chain Testnet)
        └─ produces mock KMS signatures locally (no external call)
 ```
 
-**Reads vs writes:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` pointed at `BSC_TESTNET_RPC_URL` for fast, wallet-independent reads, while wallet writes and EIP-712 signing go through the injected EIP-1193 provider. This split is configured by passing both `provider` and `ethereum` to `createConfig` in `src/providers.tsx`.
+**Reads vs writes:** wagmi's viem HTTP transport handles reads through `BSC_TESTNET_RPC_URL`; writes and EIP-712 signing use the active injected connector. The Zama wagmi adapter consumes that same connection.
 
-**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts (via an incrementing `walletKey`) with a fresh ethers adapter bound to the new account. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. An EIP-712 permit is persisted in IndexedDB and survives page reloads within its TTL.
+**Wallet-switch lifecycle:** wagmi owns account and chain subscriptions. The UI reads them with wagmi v3's `useConnection`; connection and switching use the mutation functions returned by `useConnect` and `useSwitchChain`. No manual `accountsChanged` or `chainChanged` listeners—or forced `ZamaProvider` remounts—are needed. Permits persist in IndexedDB.
 
 ---
 
@@ -173,21 +172,31 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 ### Via code
 
 ```ts
-import { Contract, BrowserProvider, parseUnits } from "ethers";
+import { parseUnits } from "viem";
+import { useConnection, useWriteContract } from "wagmi";
 
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
-// Amounts are raw integers: use parseUnits to convert from human-readable values.
-// USDC Mock has 6 decimals — 10 USDC = parseUnits("10", 6) = 10_000_000n
-const usdcMock = new Contract("0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c", MINT_ABI, signer);
-await usdcMock.mint(await signer.getAddress(), parseUnits("10", 6));
+const { address } = useConnection();
+const { mutate: writeContract } = useWriteContract();
 
-// USDT Mock — verify its decimals on BscScan or via useListPairs() before minting.
-const usdtMockDecimals = 18; // replace with the actual value from pair.underlying.decimals
-const usdtMock = new Contract("0xaA3E4C4db8D44711B6fc0E4ffdCBb3749C1A3A72", MINT_ABI, signer);
-await usdtMock.mint(await signer.getAddress(), parseUnits("10", usdtMockDecimals));
+writeContract({
+  address: "0x1b3BC224c233D38Db8A92DA3fC44d01A9232b64c",
+  abi: mintAbi,
+  functionName: "mint",
+  args: [address!, parseUnits("10", 6)],
+});
 ```
 
 ---
@@ -304,48 +313,40 @@ Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter
 ### Providers setup
 
 ```tsx
-// src/providers.tsx (simplified — see the file for the full wallet-reactivity handling)
-import { cleartext, indexedDBStorage, IndexedDBStorage } from "@zama-fhe/sdk";
-import { createConfig } from "@zama-fhe/sdk/ethers";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { JsonRpcProvider } from "ethers";
-import { BSC_TESTNET_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL || fallback
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
+import { bscTestnet as fheBscTestnet } from "@zama-fhe/sdk/chains";
+import { createConfig, http, WagmiProvider } from "wagmi";
+import { bscTestnet } from "wagmi/chains";
+import { injected } from "wagmi/connectors/injected";
 
-// Inline BNB Smart Chain Testnet (chain 97) cleartext/mock FHEVM host stack — no shipped preset for chain 97.
-const zamaBscTestnetCleartext = {
-  id: 97,
-  gatewayChainId: 10901,
-  relayerUrl: "",
-  network: BSC_TESTNET_RPC_URL,
-  aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
-  kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
-  inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",
-  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
-  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
-  executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54",
-} as const;
-
-// Separate IndexedDB DBs for credentials vs. EIP-712 permits — optional, since the SDK
-// namespaces its keys internally so one shared DB is safe; kept separate here for clarity.
-const permitDBStorage = new IndexedDBStorage("PermitStore");
-
-const config = createConfig({
-  chains: [zamaBscTestnetCleartext],
-  ethereum: getEthereumProvider(), //         injected EIP-1193 wallet (writes + EIP-712 signing)
-  provider: new JsonRpcProvider(BSC_TESTNET_RPC_URL), // direct RPC for fast, wallet-independent reads
+const wagmiConfig = createConfig({
+  chains: [bscTestnet],
+  connectors: [injected()],
+  transports: { [bscTestnet.id]: http(BSC_TESTNET_RPC_URL) },
+});
+const zamaBscTestnet = { ...fheBscTestnet, network: BSC_TESTNET_RPC_URL } as const;
+const zamaConfig = createZamaConfig({
+  wagmiConfig,
+  chains: [zamaBscTestnet],
+  relayers: { [zamaBscTestnet.id]: cleartext() },
   storage: indexedDBStorage,
-  permitStorage: permitDBStorage,
-  relayers: { [zamaBscTestnetCleartext.id]: cleartext() }, //  cleartext transport — no relayer/KMS network
+  permitStorage: indexedDBStorage,
 });
 
-<ZamaProvider config={config}>...</ZamaProvider>;
+<WagmiProvider config={wagmiConfig}>
+  <QueryClientProvider client={queryClient}>
+    <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+  </QueryClientProvider>
+</WagmiProvider>;
 ```
 
 ### Hook usage
 
 ```tsx
-import { parseUnits } from "ethers";
+import { parseUnits } from "viem";
 import {
   useShield,
   useListPairs,
@@ -504,7 +505,7 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_BSC_TESTNET_RPC_URL
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                              |
 | Shield stuck on "Shielding… (1/2)"                        | Ran out of tBNB after the approval transaction                                                                                                           | Top up your wallet with tBNB and try again                                                                                                                                                                                                                                                                                                                            |
 | Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                     |
-| "nonce too low: next nonce X, tx nonce Y"                 | The BNB public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                    | Retry the transaction. The injected wallet submits transactions and tracks its own nonce, so this is rare; if you build transactions yourself, source the nonce from the same node that will receive your `eth_sendTransaction` rather than a load-balanced read RPC                                                                                                  |
+| "nonce too low: next nonce X, tx nonce Y"                 | The wallet or RPC observed a stale nonce                                                                                                                   | Retry the transaction. The injected wallet submits transactions and tracks its own nonce, so this is rare; if you build transactions yourself, source the nonce from the same node that will receive your `eth_sendTransaction` rather than a load-balanced read RPC                                                                                                  |
 | "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on BNB (chainId 97) and have sufficient tokens                                                                                                                                                                                                                                                                                                         |
 | Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on BNB — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                               |
 | Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                              |
@@ -553,9 +554,10 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 | Package                 | Version            | Role                                                                                                                                                                                                                             |
 | ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, the ethers adapter, contract builders                                                                                                                                                                  |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, chain presets, contract builders                                                                                                                                                                       |
 | `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via the ethers adapter)                                                                                                                                                                                         |
+| `wagmi`                 | ^3.7.1             | Injected-wallet and chain lifecycle                                                                                                                                                                                              |
+| `viem`                  | ^2.55.0            | EVM types, encoding, and utilities                                                                                                                                                                                               |
 | `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
 | `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
 | **Chain**               | BNB testnet        | chainId 97                                                                                                                                                                                                                       |

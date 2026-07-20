@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { encodeAbiParameters, isAddress } from "viem";
+import { useActionState, useState } from "react";
+import { getAddress, encodeAbiParameters } from "viem";
 import { useConfidentialTransferAndCall } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { parseAmount } from "@/lib/parseAmount";
+import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface VaultDepositCardProps {
@@ -41,76 +41,96 @@ export function VaultDepositCard({
   balanceDecryptRequired,
   onSuccess,
 }: VaultDepositCardProps) {
-  const [amount, setAmount] = useState("");
-  const [beneficiary, setBeneficiary] = useState<string>(connectedAddress);
   const [step, setStep] = useState<1 | 2>(1);
 
   const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
 
-  const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 
-  function handleDeposit() {
-    setStep(1);
-    // The vault decodes `data` as the beneficiary address to credit. Encoding a real
-    // domain message — not an opaque blob — is the whole point of the AndCall pattern:
-    // value moves and the receiver reacts to it in a single atomic transaction.
-    const data = encodeAbiParameters([{ type: "address" }], [beneficiary as Address]);
-    deposit.mutate({
-      to: vaultAddress,
-      amount: parsedAmount,
-      data,
-      onEncryptComplete: () => setStep(2),
-    });
-  }
+  const [errorMessage, submitDeposit, isPending] = useActionState<string | null, FormData>(
+    async (_prev, formData) => {
+      const amount = parseAmount(formData.get("amount") as string, decimals);
+      if (amount === 0n) return "Enter a valid amount.";
+      const beneficiary = formData.get("beneficiary") as string;
+      setStep(1);
+      // The vault decodes `data` as the beneficiary address to credit. Encoding a real
+      // domain message — not an opaque blob — is the whole point of the AndCall pattern:
+      // value moves and the receiver reacts to it in a single atomic transaction.
+      const data = encodeAbiParameters([{ type: "address" }], [getAddress(beneficiary)]);
+      try {
+        await deposit.mutateAsync({
+          to: vaultAddress,
+          amount,
+          data,
+          onEncryptComplete: () => setStep(2),
+        });
+        return null;
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error(String(e));
+        return depositErrorText(error);
+      }
+    },
+    null,
+  );
 
   return (
-    <div className="card">
-      <div className="card-title">Deposit into Vault — confidentialTransferAndCall</div>
-      <div className="input-row card-gap">
+    <section className="card" aria-labelledby="vault-deposit-title">
+      <h2 className="card-title" id="vault-deposit-title">
+        Deposit into Vault — confidentialTransferAndCall
+      </h2>
+      <form action={submitDeposit}>
+        <label className="sr-only" htmlFor="vault-amount">
+          Deposit amount
+        </label>
+        <div className="input-row card-gap">
+          <input
+            id="vault-amount"
+            name="amount"
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min={minAmount(decimals)}
+            step="any"
+            required
+            placeholder="0.00"
+            data-testid="vault-amount-input"
+          />
+          <span className="input-unit">{symbol}</span>
+        </div>
+        <label className="token-meta" htmlFor="vault-beneficiary">
+          Beneficiary (credited in the vault)
+        </label>
         <input
-          className="input"
+          id="vault-beneficiary"
+          name="beneficiary"
+          className="input card-gap"
           type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          data-testid="vault-amount-input"
+          pattern="0x[a-fA-F0-9]{40}"
+          title="Enter a valid address: 0x followed by 40 hexadecimal characters."
+          defaultValue={connectedAddress}
+          required
+          placeholder="0x…"
+          data-testid="vault-beneficiary-input"
         />
-        <span className="input-unit">{symbol}</span>
-      </div>
-      <label className="token-meta">Beneficiary (credited in the vault)</label>
-      <input
-        className="input card-gap"
-        type="text"
-        value={beneficiary}
-        onChange={(e) => setBeneficiary(e.target.value)}
-        placeholder="0x…"
-        data-testid="vault-beneficiary-input"
-      />
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleDeposit}
-        data-testid="vault-deposit-button"
-        disabled={
-          disabled ||
-          balanceDecryptRequired ||
-          parsedAmount === 0n ||
-          !isAddress(beneficiary) ||
-          deposit.isPending
-        }
-      >
-        {deposit.isPending ? pendingLabel : "Deposit"}
-      </button>
+        <button
+          type="submit"
+          className="btn btn-primary btn-full"
+          data-testid="vault-deposit-button"
+          disabled={disabled || balanceDecryptRequired || isPending}
+        >
+          {isPending ? pendingLabel : "Deposit"}
+        </button>
+      </form>
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable deposits.</p>
       )}
-      {deposit.isError && (
-        <div className="alert alert-error card-status">{depositErrorText(deposit.error)}</div>
+      {errorMessage && (
+        <div className="alert alert-error card-status" role="alert">
+          {errorMessage}
+        </div>
       )}
       {deposit.isSuccess && deposit.data?.txHash && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Deposited!{" "}
           <a
             href={`${SEPOLIA_EXPLORER_URL}/tx/${deposit.data.txHash}`}
@@ -119,8 +139,8 @@ export function VaultDepositCard({
           >
             {deposit.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

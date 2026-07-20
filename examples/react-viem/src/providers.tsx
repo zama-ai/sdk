@@ -52,6 +52,8 @@ import { getEthereumProvider } from "@/lib/ethereum";
 
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
+const relayerProxyUrl =
+  process.env.NEXT_PUBLIC_RELAYER_PROXY_URL || "http://localhost:3000/api/relayer";
 
 export function Providers({ children }: { children: ReactNode }) {
   // Created once per Providers mount — avoids sharing the QueryClient across
@@ -131,7 +133,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new ViemProvider({ publicClient });
     const zamaSepolia = {
       ...fheSepolia,
-      relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+      relayerUrl: relayerProxyUrl,
       network: SEPOLIA_RPC_URL,
     } as const;
 

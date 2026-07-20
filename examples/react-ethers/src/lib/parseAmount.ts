@@ -12,3 +12,12 @@ export function parseAmount(value: string, decimals: number): bigint {
     return 0n;
   }
 }
+
+/**
+ * The smallest positive amount the token can represent (10^-decimals), as a
+ * decimal string. Used as the `min` for amount inputs so native form validation
+ * rejects zero and sub-precision values without a manual check.
+ */
+export function minAmount(decimals: number): string {
+  return decimals > 0 ? `0.${"0".repeat(decimals - 1)}1` : "1";
+}

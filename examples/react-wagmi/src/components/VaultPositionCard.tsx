@@ -83,8 +83,10 @@ export function VaultPositionCard({
     clearShares !== undefined ? `${formatUnits(BigInt(clearShares), decimals)} ${symbol}` : "—";
 
   return (
-    <div className="card">
-      <div className="card-title">Your Vault Position</div>
+    <section className="card" aria-labelledby="vault-position-title">
+      <h2 className="card-title" id="vault-position-title">
+        Your Vault Position
+      </h2>
 
       {!hasPosition ? (
         <p className="token-meta" data-testid="vault-no-position">
@@ -114,41 +116,42 @@ export function VaultPositionCard({
                   : "Reveal position"}
           </button>
 
-          <button
-            type="button"
-            className="btn btn-primary btn-full"
-            onClick={() => withdraw.mutate()}
-            disabled={withdraw.isPending}
-            data-testid="vault-withdraw-button"
-          >
-            {withdraw.isPending ? "Withdrawing…" : "Withdraw all"}
-          </button>
+          <form action={() => withdraw.mutate()}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-full"
+              disabled={withdraw.isPending}
+              data-testid="vault-withdraw-button"
+            >
+              {withdraw.isPending ? "Withdrawing…" : "Withdraw all"}
+            </button>
+          </form>
         </>
       )}
 
       {grantPermit.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {grantPermit.error?.message ?? "Signing failed"}
         </div>
       )}
       {decrypt.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {decrypt.error?.message ?? "Decryption failed"}
         </div>
       )}
       {withdraw.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {withdraw.error?.message ?? "Withdrawal failed"}
         </div>
       )}
       {withdraw.isSuccess && withdraw.data && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Withdrawn!{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${withdraw.data}`} target="_blank" rel="noreferrer">
             {withdraw.data.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

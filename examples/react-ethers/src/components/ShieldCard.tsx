@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { parseAmount } from "@/lib/parseAmount";
+import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
@@ -21,10 +21,8 @@ export function ShieldCard({
   disabled,
   onSuccess,
 }: ShieldCardProps) {
-  const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<"shield" | "approve" | "submit">("shield");
 
-  const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel =
     phase === "approve"
       ? "Shielding… (approval)"
@@ -34,43 +32,61 @@ export function ShieldCard({
 
   const shield = useShield({ address: tokenAddress }, { onSuccess });
 
-  function handleShield() {
-    setPhase("shield");
-    shield.mutate({
-      amount: parsedAmount,
-      approvalStrategy: "exact",
-      onApprovalSubmitted: () => setPhase("approve"),
-      onShieldSubmitted: () => setPhase("submit"),
-    });
-  }
+  const [errorMessage, submitShield, isPending] = useActionState<string | null, FormData>(
+    async (_, formData) => {
+      const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+      if (parsedAmount === 0n) return "Enter a valid amount.";
+      setPhase("shield");
+      try {
+        await shield.mutateAsync({
+          amount: parsedAmount,
+          approvalStrategy: "exact",
+          onApprovalSubmitted: () => setPhase("approve"),
+          onShieldSubmitted: () => setPhase("submit"),
+        });
+        return null;
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error(String(e));
+        return error.message;
+      }
+    },
+    null,
+  );
 
   return (
-    <div className="card">
-      <div className="card-title">Shield — ERC-20 → Confidential</div>
-      <div className="input-row card-gap">
-        <input
-          className="input"
-          type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-        />
-        <span className="input-unit">{symbol}</span>
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleShield}
-        disabled={disabled || parsedAmount === 0n || shield.isPending}
-      >
-        {shield.isPending ? pendingLabel : "Shield"}
-      </button>
-      {shield.isError && (
-        <div className="alert alert-error card-status">{shield.error?.message}</div>
+    <section className="card" aria-labelledby="shield-title">
+      <h2 className="card-title" id="shield-title">
+        Shield — ERC-20 → Confidential
+      </h2>
+      <form action={submitShield}>
+        <label className="sr-only" htmlFor="shield-amount">
+          Amount to shield
+        </label>
+        <div className="input-row card-gap">
+          <input
+            id="shield-amount"
+            name="amount"
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min={minAmount(decimals)}
+            step="any"
+            required
+            placeholder="0.00"
+          />
+          <span className="input-unit">{symbol}</span>
+        </div>
+        <button type="submit" className="btn btn-primary btn-full" disabled={disabled || isPending}>
+          {isPending ? pendingLabel : "Shield"}
+        </button>
+      </form>
+      {errorMessage && (
+        <div className="alert alert-error card-status" role="alert">
+          {errorMessage}
+        </div>
       )}
       {shield.isSuccess && shield.data?.txHash && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Shielded!{" "}
           <a
             href={`${SEPOLIA_EXPLORER_URL}/tx/${shield.data.txHash}`}
@@ -79,8 +95,8 @@ export function ShieldCard({
           >
             {shield.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

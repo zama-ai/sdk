@@ -1,19 +1,22 @@
 import { test, expect, WRONG_CHAIN_ID, BSC_TESTNET_CHAIN_ID_HEX, TEST_ADDRESS } from "./fixtures";
 
 test.describe("wrong network screen", () => {
-  // Start with the wallet connected on BNB and wait for the main screen to be visible
-  // before each test. Emitting chainChanged while the page is still initializing could
-  // race with the auto-switch logic in page.tsx (handleSwitchToBnb on load).
+  // Connect explicitly, then exercise wagmi's reactive chain state.
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
+    await mockWallet({
+      accounts: [],
+      chainId: BSC_TESTNET_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
     await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
     await expect(page.getByText("Balances")).toBeVisible();
   });
 
   test("shows wrong network screen when user switches away from BNB", async ({ page }) => {
     // Simulate the user switching away from BNB in their wallet — fires the chainChanged
-    // event that page.tsx listens for to set isBnb = false and render Screen 2.
+    // event consumed by wagmi's connector.
     await page.evaluate((chainId) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__emitChainChanged(chainId);
@@ -42,7 +45,7 @@ test.describe("wrong network screen", () => {
     await expect(page.getByText("BNB Network Required")).toBeVisible();
 
     // Simulate the user switching back to BNB in their wallet — fires the chainChanged
-    // event that page.tsx listens for to set isBnb = true and render Screen 3.
+    // event consumed by wagmi's connector.
     await page.evaluate((chainId) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__emitChainChanged(chainId);

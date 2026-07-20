@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { isAddress } from "ethers";
+import { useState, useActionState } from "react";
+import { getAddress } from "ethers";
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
 import type { Address } from "@zama-fhe/sdk";
-import { parseAmount } from "@/lib/parseAmount";
+import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface TransferCardProps {
@@ -24,67 +24,87 @@ export function TransferCard({
   balanceDecryptRequired,
   onSuccess,
 }: TransferCardProps) {
-  const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
 
   const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
 
-  const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 
-  function handleTransfer() {
-    setStep(1);
-    transfer.mutate({
-      to: recipient as Address,
-      amount: parsedAmount,
-      onEncryptComplete: () => setStep(2),
-    });
-  }
+  const [errorMessage, submitTransfer, isPending] = useActionState<string | null, FormData>(
+    async (_, formData) => {
+      const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+      if (parsedAmount === 0n) return "Enter a valid amount.";
+      const recipient = formData.get("recipient") as string;
+      setStep(1);
+      try {
+        await transfer.mutateAsync({
+          to: getAddress(recipient) as Address,
+          amount: parseAmount(formData.get("amount") as string, decimals),
+          onEncryptComplete: () => setStep(2),
+        });
+        return null;
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error(String(e));
+        return error.message;
+      }
+    },
+    null,
+  );
 
   return (
-    <div className="card">
-      <div className="card-title">Confidential Transfer</div>
-      <div className="input-row card-gap">
+    <section className="card" aria-labelledby="confidential-transfer-title">
+      <h2 className="card-title" id="confidential-transfer-title">
+        Confidential Transfer
+      </h2>
+      <form action={submitTransfer}>
+        <label className="sr-only" htmlFor="transfer-amount">
+          Amount
+        </label>
+        <div className="input-row card-gap">
+          <input
+            id="transfer-amount"
+            name="amount"
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min={minAmount(decimals)}
+            step="any"
+            required
+            placeholder="0.00"
+          />
+          <span className="input-unit">{symbol}</span>
+        </div>
+        <label className="sr-only" htmlFor="transfer-recipient">
+          Recipient address
+        </label>
         <input
-          className="input"
+          id="transfer-recipient"
+          className="input card-gap"
           type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
+          pattern="0x[a-fA-F0-9]{40}"
+          title="Enter a valid address: 0x followed by 40 hexadecimal characters."
+          name="recipient"
+          required
+          placeholder="0x…"
         />
-        <span className="input-unit">{symbol}</span>
-      </div>
-      <input
-        className="input card-gap"
-        type="text"
-        value={recipient}
-        onChange={(e) => setRecipient(e.target.value)}
-        placeholder="0x…"
-      />
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleTransfer}
-        disabled={
-          disabled ||
-          balanceDecryptRequired ||
-          parsedAmount === 0n ||
-          !isAddress(recipient) ||
-          transfer.isPending
-        }
-      >
-        {transfer.isPending ? pendingLabel : "Transfer"}
-      </button>
+        <button
+          type="submit"
+          className="btn btn-primary btn-full"
+          disabled={disabled || balanceDecryptRequired || isPending}
+        >
+          {isPending ? pendingLabel : "Transfer"}
+        </button>
+      </form>
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable transfers.</p>
       )}
-      {transfer.isError && (
-        <div className="alert alert-error card-status">{transfer.error?.message}</div>
+      {errorMessage && (
+        <div className="alert alert-error card-status" role="alert">
+          {errorMessage}
+        </div>
       )}
       {transfer.isSuccess && transfer.data?.txHash && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Transferred!{" "}
           <a
             href={`${SEPOLIA_EXPLORER_URL}/tx/${transfer.data.txHash}`}
@@ -93,8 +113,8 @@ export function TransferCard({
           >
             {transfer.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }
