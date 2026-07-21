@@ -24,7 +24,8 @@
     "compilerMessageReporting": { "default": { "logLevel": "warning" } },
     "extractorMessageReporting": {
       "default": { "logLevel": "warning" },
-      "ae-forgotten-export": { "logLevel": "warning", "addToApiReportFile": false },
+      "ae-undocumented": { "logLevel": "warning" },
+      "ae-forgotten-export": { "logLevel": "warning" },
       "ae-missing-release-tag": { "logLevel": "none" },
       "ae-unresolved-link": { "logLevel": "none" }
     },
