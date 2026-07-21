@@ -174,7 +174,7 @@ export type {
 } from "../types";
 export type { FheChain, FheChainAuth } from "../chains/types";
 export type { FhevmRelayerOptions, FhevmRuntimeConfig } from "../relayer/types";
-export type { FhevmClient, FhevmRelayerSDK } from "../relayer/types";
+export type { FhevmClient, RelayerSDK } from "../relayer/types";
 export type {
   ReadFunctionName,
   ReadContractArgs,

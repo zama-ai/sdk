@@ -495,12 +495,6 @@ export interface FhevmRelayerOptions {
 }
 
 // @public
-export interface FhevmRelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
-}
-
-// @public
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
@@ -747,6 +741,12 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 
 // @public
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
+
+// @public
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    // (undocumented)
+    chain: FheChain;
+}
 
 // @public (undocumented)
 export function resumeUnshieldMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.resumeUnshield", Address], ResumeUnshieldParams, TransactionResult>;
@@ -1527,7 +1527,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    get relayer(): FhevmRelayerSDK;
+    get relayer(): RelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

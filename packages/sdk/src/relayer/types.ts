@@ -205,7 +205,7 @@ export interface FhevmRelayerOptions {
  * Single-chain FHE backend contract. Implemented by `FhevmRelayer` (drives
  * `@fhevm/sdk`); translates between the domain shapes above and the engine's API.
  */
-export interface FhevmRelayerSDK extends Pick<
+export interface RelayerSDK extends Pick<
   FhevmClient,
   | "encryptValue"
   | "encryptValues"

@@ -3,7 +3,7 @@
 import { vi } from "vitest";
 import { ChainRouter } from "../chains/router";
 import type { FheChain } from "../chains/types";
-import type { FhevmRelayerSDK } from "../relayer/types";
+import type { RelayerSDK } from "../relayer/types";
 import { createMockChain } from "./chain";
 import { createMockRelayer } from "./relayer";
 import type { FixturesOf } from "./types";
@@ -12,9 +12,9 @@ export interface CreateMockRouterOverrides {
   /** Chains the router knows about. Defaults to a single chain `31337`. */
   chains?: readonly [FheChain, ...FheChain[]];
   /** Single backend shared by every chain. Falls back to a fresh mock relayer. */
-  relayer?: FhevmRelayerSDK;
+  relayer?: RelayerSDK;
   /** Per-chain backends, keyed by chain id. Takes precedence over `relayer`. */
-  relayers?: Record<number, FhevmRelayerSDK>;
+  relayers?: Record<number, RelayerSDK>;
   /** Initially active chain id. Defaults to the first chain. */
   activeChainId?: number;
   /**
@@ -35,8 +35,8 @@ export interface CreateMockRouterOverrides {
  */
 class MockChainRouter extends ChainRouter {
   readonly #chainList: readonly [FheChain, ...FheChain[]];
-  readonly #backends: Map<number, FhevmRelayerSDK>;
-  readonly #backendFor: (id: number) => FhevmRelayerSDK;
+  readonly #backends: Map<number, RelayerSDK>;
+  readonly #backendFor: (id: number) => RelayerSDK;
   readonly #switchChainImpl: ChainRouter["switchChain"];
   #activeChainId: number;
 
@@ -44,7 +44,7 @@ class MockChainRouter extends ChainRouter {
     const chains: readonly [FheChain, ...FheChain[]] = overrides.chains ?? [
       createMockChain({ id: 31337 }),
     ];
-    const backendFor = (id: number): FhevmRelayerSDK =>
+    const backendFor = (id: number): RelayerSDK =>
       overrides.relayers?.[id] ?? overrides.relayer ?? createMockRelayer();
 
     const configs = Object.fromEntries(
@@ -77,7 +77,7 @@ class MockChainRouter extends ChainRouter {
     return this.#chainList.find((c) => c.id === this.#activeChainId) ?? this.#chainList[0];
   }
 
-  override get relayer(): FhevmRelayerSDK {
+  override get relayer(): RelayerSDK {
     let backend = this.#backends.get(this.#activeChainId);
     if (!backend) {
       backend = this.#backendFor(this.#activeChainId);

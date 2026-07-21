@@ -2,11 +2,11 @@ import type { FheChain } from "./types";
 import { resolveChainRelayers } from "../config/resolve";
 import type { RelayerConfig } from "../config/types";
 import { ConfigurationError } from "../errors";
-import type { FhevmRelayerSDK } from "../relayer/types";
+import type { RelayerSDK } from "../relayer/types";
 
 /**
  * Multichain router. Owns chain management (chains / chain / switchChain) and
- * hands out the single-chain {@link FhevmRelayerSDK} backend for the currently active
+ * hands out the single-chain {@link RelayerSDK} backend for the currently active
  * chain via {@link ChainRouter.relayer}. Builds one backend per chain from its
  * {@link RelayerConfig}.
  *
@@ -14,7 +14,7 @@ import type { FhevmRelayerSDK } from "../relayer/types";
  */
 export class ChainRouter {
   readonly #chains: Map<number, FheChain>;
-  readonly #relayers: Map<number, FhevmRelayerSDK>;
+  readonly #relayers: Map<number, RelayerSDK>;
   #chainId: number;
 
   constructor(
@@ -29,7 +29,7 @@ export class ChainRouter {
 
     // One backend per chain. A shared config object can yield the same backend
     // instance for several chains (createRelayer decides); terminate() dedupes.
-    const relayers = new Map<number, FhevmRelayerSDK>();
+    const relayers = new Map<number, RelayerSDK>();
     for (const [chainId, { relayerConfig, chain }] of resolveChainRelayers(chains, configs)) {
       relayers.set(chainId, relayerConfig.createRelayer(chain));
     }
@@ -64,7 +64,7 @@ export class ChainRouter {
   }
 
   /** The single-chain backend for the currently active chain. */
-  get relayer(): FhevmRelayerSDK {
+  get relayer(): RelayerSDK {
     const relayer = this.#relayers.get(this.chain.id);
     if (relayer === undefined) {
       throw new ConfigurationError(

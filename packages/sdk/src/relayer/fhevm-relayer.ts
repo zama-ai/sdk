@@ -17,7 +17,7 @@ import type {
   FhevmDecryptClient,
   FhevmEncryptClient,
   FhevmRelayerOptions,
-  FhevmRelayerSDK,
+  RelayerSDK,
   RelayerOptions,
 } from "./types";
 import { ConfigurationError } from "../errors";
@@ -61,7 +61,7 @@ export interface FhevmRelayerConfig {
  *
  * @internal
  */
-export class FhevmRelayer implements FhevmRelayerSDK {
+export class FhevmRelayer implements RelayerSDK {
   readonly #chain: FheChain;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
