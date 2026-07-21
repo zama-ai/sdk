@@ -33,7 +33,9 @@ type AclTransactionOperation = Extract<
 
 /** Delegation activity and expiry, resolved from a single expiry read. */
 export interface DelegationStatus {
+  /** Whether the delegation is currently active (exists and not expired). */
   isActive: boolean;
+  /** Unix timestamp (seconds) when the delegation expires; `0n` if none exists. */
   expiryTimestamp: bigint;
 }
 

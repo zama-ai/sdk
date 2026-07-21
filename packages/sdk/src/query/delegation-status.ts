@@ -8,13 +8,19 @@ import { assertNonNullable } from "../utils";
 
 export type { DelegationStatus } from "../services/delegation-service";
 
+/** Configuration for {@link delegationStatusQueryOptions}. */
 export interface DelegationStatusQueryConfig {
+  /** Contract the delegation applies to; pass `undefined` to keep the query disabled. */
   contractAddress: Address | undefined;
+  /** Address granting the delegated decryption rights; the query stays disabled until provided. */
   delegatorAddress?: Address;
+  /** Address receiving the delegated decryption rights; the query stays disabled until provided. */
   delegateAddress?: Address;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading the decryption-delegation status between a delegator and a delegate on a contract. */
 export function delegationStatusQueryOptions(
   sdk: ZamaSDK,
   config: DelegationStatusQueryConfig,

@@ -43,36 +43,67 @@ import type { TransactionRevertedError } from "./transaction";
  * `ZamaError`.
  */
 export interface ErrorForCode {
+  /** Thrown for {@link ZamaErrorCode.SigningRejected}. */
   [ZamaErrorCode.SigningRejected]: SigningRejectedError;
+  /** Thrown for {@link ZamaErrorCode.SigningFailed}. */
   [ZamaErrorCode.SigningFailed]: SigningFailedError;
+  /** Thrown for {@link ZamaErrorCode.EncryptionFailed}. */
   [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
+  /** Thrown for {@link ZamaErrorCode.DecryptionFailed}. */
   [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
+  /** Thrown for {@link ZamaErrorCode.TransactionReverted}. */
   [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+  /** Thrown for {@link ZamaErrorCode.TransportKeyPairExpired}. */
   [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
+  /** Thrown for {@link ZamaErrorCode.InvalidTransportKeyPair}. */
   [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+  /** Thrown for {@link ZamaErrorCode.NoCiphertext}. */
   [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
+  /** Thrown for {@link ZamaErrorCode.RelayerRequestFailed}. */
   [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+  /** Thrown for {@link ZamaErrorCode.NotEntitled}. */
   [ZamaErrorCode.NotEntitled]: NotEntitledError;
+  /** Thrown for {@link ZamaErrorCode.RpcRateLimited}. */
   [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
+  /** Thrown for {@link ZamaErrorCode.Configuration}. */
   [ZamaErrorCode.Configuration]: ConfigurationError;
+  /** Thrown for {@link ZamaErrorCode.DelegationSelfNotAllowed}. */
   [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
+  /** Thrown for {@link ZamaErrorCode.DelegationCooldown}. */
   [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
+  /** Thrown for {@link ZamaErrorCode.DelegationNotFound}. */
   [ZamaErrorCode.DelegationNotFound]: DelegationNotFoundError;
+  /** Thrown for {@link ZamaErrorCode.DelegationExpired}. */
   [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
+  /** Thrown for {@link ZamaErrorCode.InsufficientConfidentialBalance}. */
   [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
+  /** Thrown for {@link ZamaErrorCode.InsufficientERC20Balance}. */
   [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+  /** Thrown for {@link ZamaErrorCode.InsufficientAllowance}. */
   [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
+  /** Thrown for {@link ZamaErrorCode.BalanceCheckUnavailable}. */
   [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
+  /** Thrown for {@link ZamaErrorCode.ERC20ReadFailed}. */
   [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
+  /** Thrown for {@link ZamaErrorCode.DelegationExpiryUnchanged}. */
   [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
+  /** Thrown for {@link ZamaErrorCode.DelegationDelegateEqualsContract}. */
   [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
+  /** Thrown for {@link ZamaErrorCode.DelegationContractIsSelf}. */
   [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
+  /** Thrown for {@link ZamaErrorCode.AclPaused}. */
   [ZamaErrorCode.AclPaused]: AclPausedError;
+  /** Thrown for {@link ZamaErrorCode.DelegationExpirationTooSoon}. */
   [ZamaErrorCode.DelegationExpirationTooSoon]: DelegationExpirationTooSoonError;
+  /** Thrown for {@link ZamaErrorCode.DelegationNotPropagated}. */
   [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
+  /** Thrown for {@link ZamaErrorCode.ChainMismatch}. */
   [ZamaErrorCode.ChainMismatch]: ChainMismatchError;
+  /** Thrown for {@link ZamaErrorCode.SignerNotConfigured}. */
   [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
+  /** Thrown for {@link ZamaErrorCode.WalletNotConnected}. */
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
+  /** Thrown for {@link ZamaErrorCode.WalletAccountNotReady}. */
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
 }
 

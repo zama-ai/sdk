@@ -5,9 +5,11 @@ import type { Address, Hex } from "viem";
 
 /** Variables for {@link resumeUnshieldMutationOptions}. */
 export interface ResumeUnshieldParams extends UnshieldCallbacks {
+  /** Hash of the earlier unwrap request transaction to resume from. */
   unwrapTxHash: Hex;
 }
 
+/** Builds TanStack Query mutation options for {@link WrappedToken.resumeUnshield | resuming} an interrupted unshield from its unwrap request transaction. @see {@link ResumeUnshieldParams} */
 export function resumeUnshieldMutationOptions(
   token: WrappedToken,
 ): MutationFactoryOptions<

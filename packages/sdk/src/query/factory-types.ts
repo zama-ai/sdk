@@ -5,6 +5,11 @@ import type {
   skipToken,
 } from "@tanstack/query-core";
 
+/**
+ * TanStack Query options object returned by the SDK's `*QueryOptions` factories:
+ * `QueryObserverOptions` with `queryKey` and `queryFn` required and the
+ * cache-internal keys (`queryHash`, `queryKeyHashFn`, `throwOnError`) removed.
+ */
 export type QueryFactoryOptions<
   TQueryFnData = unknown,
   TError = Error,
@@ -23,14 +28,18 @@ export type QueryFactoryOptions<
   >;
 };
 
+/** TanStack Query mutation options object returned by the SDK's `*MutationOptions` factories. */
 export interface MutationFactoryOptions<
   TMutationKey extends readonly unknown[],
   TVariables,
   TData,
   TOnMutateResult = unknown,
 > {
+  /** Cache key identifying the mutation. */
   mutationKey: TMutationKey;
+  /** Runs the mutation for the given variables. */
   mutationFn: (variables: TVariables) => Promise<TData>;
+  /** Optional callback invoked after the mutation succeeds. */
   onSuccess?: (
     data: TData,
     variables: TVariables,

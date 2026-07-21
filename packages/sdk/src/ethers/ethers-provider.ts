@@ -50,11 +50,13 @@ export class EthersProvider implements GenericProvider {
     }
   }
 
+  /** Return the chain ID of the connected network. */
   async getChainId(): Promise<number> {
     const network = await this.#readProvider.getNetwork();
     return Number(network.chainId);
   }
 
+  /** Execute a read-only call and return the decoded result. */
   async readContract<
     const TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
@@ -73,6 +75,7 @@ export class EthersProvider implements GenericProvider {
     >;
   }
 
+  /** Return the latest block timestamp in seconds. */
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#readProvider.getBlock("latest");
     if (!block) {
@@ -84,6 +87,7 @@ export class EthersProvider implements GenericProvider {
     return BigInt(block.timestamp);
   }
 
+  /** Wait for a transaction to be mined and return its receipt. */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     const receipt = await this.#readProvider.waitForTransaction(hash);
     if (!receipt) {

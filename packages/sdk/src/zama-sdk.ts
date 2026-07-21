@@ -33,8 +33,11 @@ import { WrappersRegistry } from "./wrappers-registry";
  */
 export class ZamaSDK {
   readonly #router: ChainRouter;
+  /** Read-only chain access used for all contract reads. */
   readonly provider: GenericProvider;
+  /** Wallet signer used for write operations, or `undefined` when the SDK is read-only. */
   readonly signer: GenericSigner | undefined;
+  /** Storage for cached permits and transport key pairs. */
   readonly storage: GenericStorage;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.

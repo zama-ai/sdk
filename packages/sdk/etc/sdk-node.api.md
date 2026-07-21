@@ -29,12 +29,9 @@ export const anvil: {
 
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
     run<R>(fn: () => R | Promise<R>): R | Promise<R>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -64,7 +61,6 @@ export function cleartext(options?: RelayerOptions): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
-    // (undocumented)
     readonly type: "cleartext";
 }
 
@@ -73,11 +69,8 @@ export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public
 export interface DecryptPublicValuesResult {
-    // (undocumented)
     abiEncodedClearValues: Hex;
-    // (undocumented)
     readonly clearValues: Record<EncryptedValue, ClearValue>;
-    // (undocumented)
     decryptionProof: Hex;
 }
 
@@ -101,35 +94,24 @@ export type EncryptInput = {
 
 // @public
 export interface EncryptParams {
-    // (undocumented)
     contractAddress: Address;
-    // (undocumented)
     userAddress: Address;
     readonly values: readonly EncryptInput[];
 }
 
 // @public
 export interface FheChain<TId extends number = number> {
-    // (undocumented)
     readonly aclContractAddress: Address;
     readonly auth?: FheChainAuth;
     readonly executorAddress?: Address | undefined;
-    // (undocumented)
     readonly gatewayChainId: number;
-    // (undocumented)
     readonly id: TId;
-    // (undocumented)
     readonly inputVerifierContractAddress: Address;
-    // (undocumented)
     readonly kmsContractAddress: Address;
-    // (undocumented)
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
-    // (undocumented)
     readonly relayerUrl: string;
-    // (undocumented)
     readonly verifyingContractAddressDecryption: Address;
-    // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
 }
 
@@ -166,13 +148,9 @@ export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export interface GenericLogger {
-    // (undocumented)
     debug: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     error: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     info: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
 }
 
@@ -247,13 +225,11 @@ export function node(options?: RelayerOptions): NodeRelayerConfig;
 
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
-    // (undocumented)
     readonly type: "node";
 }
 
 // @public
 export interface RelayerConfig {
-    // (undocumented)
     readonly type: string;
 }
 

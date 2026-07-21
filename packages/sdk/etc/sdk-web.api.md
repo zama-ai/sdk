@@ -26,7 +26,6 @@ export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export interface RelayerConfig {
-    // (undocumented)
     readonly type: string;
 }
 
@@ -42,7 +41,6 @@ export function web(options?: RelayerOptions): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
-    // (undocumented)
     readonly type: "web";
 }
 

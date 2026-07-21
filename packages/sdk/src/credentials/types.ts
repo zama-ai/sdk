@@ -8,7 +8,9 @@ import type { ChecksummedAddress } from "../schemas/primitives";
  * as sensitive.
  */
 export interface SerializedTransportKeyPair {
+  /** ML-KEM public key, hex-encoded. */
   publicKey: Hex;
+  /** ML-KEM private key, hex-encoded (plaintext — treat as sensitive). */
   privateKey: Hex;
 }
 
@@ -29,9 +31,13 @@ export interface StoredTransportKeyPair {
 
 /** EIP-712 typed-data payload carried by a {@link SerializedPermit}. */
 export interface SerializedPermitEip712 {
+  /** EIP-712 domain separator fields. */
   domain: Record<string, unknown>;
+  /** Name of the primary type being signed. */
   primaryType?: string;
+  /** EIP-712 type definitions keyed by type name. */
   types: Record<string, { name: string; type: string }[]>;
+  /** The typed-data message being signed. */
   message: Record<string, unknown>;
 }
 
@@ -42,9 +48,13 @@ export interface SerializedPermitEip712 {
  * Mirrors {@link SerializedPermitSchema}; kept in sync by a `.test-d.ts` guard.
  */
 export interface SerializedPermit {
+  /** Serialization format version. */
   version: number;
+  /** The EIP-712 typed data that was signed. */
   eip712: SerializedPermitEip712;
+  /** The signer's EIP-712 signature, hex-encoded. */
   signature: Hex;
+  /** Address that produced the signature. */
   signerAddress: ChecksummedAddress;
 }
 
@@ -57,10 +67,15 @@ export interface SerializedPermit {
  * Mirrors {@link PermissionSchema}; kept in sync by a `.test-d.ts` guard.
  */
 export interface Permission {
+  /** Public key of the transport key pair this permit is bound to, hex-encoded. */
   keypairPublicKey: Hex;
+  /** Contract addresses this permit grants decrypt access to. */
   contractAddresses: ChecksummedAddress[];
+  /** The signed serialized permit. */
   serializedPermit: SerializedPermit;
+  /** Unix timestamp (seconds) when the permit becomes valid. */
   startTimestamp: number;
+  /** Validity window length in days from {@link Permission.startTimestamp}. */
   durationDays: number;
 }
 

@@ -13,6 +13,7 @@ export type { AtLeastOneChain };
  * dispatcher calls it once per chain.
  */
 export interface RelayerConfig {
+  /** Discriminant identifying the relayer transport (e.g. `"web"`, `"node"`, `"cleartext"`). */
   readonly type: string;
   /**
    * Create a single-chain relayer.
@@ -23,11 +24,13 @@ export interface RelayerConfig {
 
 /** Web relayer config — drives the FHE backend directly. */
 export interface WebRelayerConfig extends RelayerConfig {
+  /** Discriminant for the web transport. */
   readonly type: "web";
 }
 
 /** Cleartext relayer config — drives the FHE backend in cleartext mode. */
 export interface CleartextRelayerConfig extends RelayerConfig {
+  /** Discriminant for the cleartext transport. */
   readonly type: "cleartext";
 }
 
@@ -84,6 +87,7 @@ export interface ZamaConfigGeneric<
    * `SignerNotConfiguredError` when invoked without a signer.
    */
   signer?: GenericSigner;
+  /** Provider for public host-chain reads. */
   provider: GenericProvider;
 }
 

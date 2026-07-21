@@ -23,43 +23,32 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
 import { TypedValue } from '@fhevm/sdk/types';
 
-// @public (undocumented)
+// @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     step: "reset" | "approve";
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
 
 // @public
 export type AtLeastOneChain = readonly [FheChain, ...FheChain[]];
 
-// @public (undocumented)
+// @public
 export interface BaseEvent {
     operationId?: string;
-    // (undocumented)
     timestamp: number;
-    // (undocumented)
     tokenAddress?: Address;
 }
 
 // @public
 export abstract class BaseSigner implements GenericSigner, Disposable {
-    // (undocumented)
     [Symbol.dispose](): void;
     constructor(initial?: WalletAccount);
-    // (undocumented)
     dispose(): void;
-    // (undocumented)
     protected onDispose(): void;
-    // (undocumented)
     requireWalletAccount(operation: string): WalletAccount;
-    // (undocumented)
     abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
     readonly walletAccount: MutableWalletAccountStore;
-    // (undocumented)
     abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -72,38 +61,31 @@ export type ContractAbi = Abi | readonly unknown[];
 // @public
 export function createConfig<const TChains extends readonly [FheChain, ...FheChain[]]>(params: ZamaConfigEthers<TChains>): ZamaConfig;
 
-// @public (undocumented)
+// @public
 export interface DecryptEndEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
     result: Record<EncryptedValue, ClearValue>;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface DecryptErrorEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
     error: Error;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
-// @public (undocumented)
+// @public
 export interface DecryptStartEvent extends BaseEvent {
     encryptedValues: EncryptedValue[];
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
-// @public (undocumented)
+// @public
 export interface DelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DelegationSubmitted;
 }
 
@@ -119,45 +101,35 @@ export type EIP712TypedData = Eip712Like;
 // @public
 export type EncryptedValue = Hex;
 
-// @public (undocumented)
+// @public
 export interface EncryptEndEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface EncryptErrorEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     error: Error;
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptError;
 }
 
-// @public (undocumented)
+// @public
 export interface EncryptStartEvent extends BaseEvent {
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
 
 // @public
 export interface EthersCallProvider {
-    // (undocumented)
     call(tx: EthersTransactionRequest): Promise<string>;
 }
 
 // @public
 export class EthersProvider implements GenericProvider {
     constructor(config: EthersProviderConfig);
-    // (undocumented)
     getBlockTimestamp(): Promise<bigint>;
-    // (undocumented)
     getChainId(): Promise<number>;
-    // (undocumented)
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    // (undocumented)
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
@@ -171,15 +143,10 @@ export type EthersProviderConfig = {
 // @public
 export class EthersSigner extends BaseSigner {
     constructor(config: EthersSignerConfig);
-    // (undocumented)
     protected onDispose(): void;
-    // (undocumented)
     refreshWalletAccount(): Promise<WalletAccount | undefined>;
-    // (undocumented)
     requireWalletAccount(operation: string): WalletAccount;
-    // (undocumented)
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
     writeContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">, const TArgs extends ContractFunctionArgs<TAbi, "nonpayable" | "payable", TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -192,50 +159,35 @@ export type EthersSignerConfig = {
 
 // @public
 export interface EthersTransactionRequest {
-    // (undocumented)
     data: Hex;
-    // (undocumented)
     gasLimit?: bigint;
-    // (undocumented)
     to: Address;
-    // (undocumented)
     value?: bigint;
 }
 
 // @public
 export interface EthersTransactionResponse {
-    // (undocumented)
     hash: string;
 }
 
 // @public
 export interface EthersTransactionSigner extends EthersCallProvider {
-    // (undocumented)
     sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }
 
 // @public
 export interface FheChain<TId extends number = number> {
-    // (undocumented)
     readonly aclContractAddress: Address;
     readonly auth?: FheChainAuth;
     readonly executorAddress?: Address | undefined;
-    // (undocumented)
     readonly gatewayChainId: number;
-    // (undocumented)
     readonly id: TId;
-    // (undocumented)
     readonly inputVerifierContractAddress: Address;
-    // (undocumented)
     readonly kmsContractAddress: Address;
-    // (undocumented)
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
-    // (undocumented)
     readonly relayerUrl: string;
-    // (undocumented)
     readonly verifyingContractAddressDecryption: Address;
-    // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
 }
 
@@ -256,23 +208,17 @@ export type FheChainAuth = {
 // @public
 export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
-// @public (undocumented)
+// @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
 }
 
 // @public
 export interface GenericLogger {
-    // (undocumented)
     debug: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     error: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     info: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
 }
 
@@ -306,11 +252,9 @@ export { Hex }
 // @public
 export class MutableWalletAccountStore implements WalletAccountStore {
     constructor(initial?: WalletAccount);
-    // (undocumented)
     getSnapshot(): WalletAccount | undefined;
     isReady(): boolean;
     setSnapshot(next: WalletAccount | undefined): void;
-    // (undocumented)
     subscribe(listener: WalletAccountListener): () => void;
 }
 
@@ -326,10 +270,10 @@ export interface RawLog {
     readonly topics: readonly Hex[];
 }
 
-// @public (undocumented)
+// @public
 export function readConfidentialBalanceOfContract(provider: EthersCallProvider, tokenAddress: Address, userAddress: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readConfidentialTokenAddressContract(provider: EthersCallProvider, registry: Address, tokenAddress: Address): Promise<unknown>;
 
 // @public
@@ -349,69 +293,61 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 // @public
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
-// @public (undocumented)
+// @public
 export function readIsConfidentialTokenValidContract(provider: EthersCallProvider, registry: Address, confidentialTokenAddress: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readSupportsInterfaceContract(provider: EthersCallProvider, tokenAddress: Address, interfaceId: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readTokenAddressContract(provider: EthersCallProvider, registry: Address, confidentialTokenAddress: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readTokenPairContract(provider: EthersCallProvider, registry: Address, index: bigint): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readTokenPairsContract(provider: EthersCallProvider, registry: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readTokenPairsLengthContract(provider: EthersCallProvider, registry: Address): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readTokenPairsSliceContract(provider: EthersCallProvider, registry: Address, fromIndex: bigint, toIndex: bigint): Promise<unknown>;
 
-// @public (undocumented)
+// @public
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address): Promise<unknown>;
 
 // @public
 export interface RelayerConfig {
-    // (undocumented)
     readonly type: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export interface SetOperatorSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.SetOperatorSubmitted;
 }
 
 // @public
 export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
-// @public (undocumented)
+// @public
 export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
     operation: TransactionOperation;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
@@ -423,65 +359,50 @@ export interface TransactionReceipt {
     readonly logs: readonly RawLog[];
 }
 
-// @public (undocumented)
+// @public
 export interface TransferFromSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export interface TransferSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase1Submitted;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase2StartedEvent extends BaseEvent {
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase2Started;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
 }
 
-// @public (undocumented)
+// @public
 export interface UnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
 
 // @public
 export interface WalletAccount {
-    // (undocumented)
     address: Address;
-    // (undocumented)
     chainId: number;
 }
 
 // @public
 export interface WalletAccountChange {
-    // (undocumented)
     next?: WalletAccount;
-    // (undocumented)
     previous?: WalletAccount;
 }
 
@@ -497,13 +418,11 @@ export interface WalletAccountStore {
 
 // @public
 export interface WrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.WrapSubmitted;
 }
 
-// @public (undocumented)
+// @public
 export function writeConfidentialTransferContract(signer: EthersTransactionSigner, tokenAddress: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
 // @public
@@ -519,22 +438,22 @@ export interface WriteContractConfig<TAbi extends ContractAbi = ContractAbi, TFu
     readonly value?: bigint;
 }
 
-// @public (undocumented)
+// @public
 export function writeFinalizeUnwrapContract(signer: EthersTransactionSigner, wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): Promise<`0x${string}`>;
 
 // @public
 export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "nonpayable" | "payable">;
 
-// @public (undocumented)
+// @public
 export function writeSetOperatorContract(signer: EthersTransactionSigner, tokenAddress: Address, operator: Address, until?: number): Promise<`0x${string}`>;
 
-// @public (undocumented)
+// @public
 export function writeUnwrapContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): Promise<`0x${string}`>;
 
-// @public (undocumented)
+// @public
 export function writeUnwrapFromBalanceContract(signer: EthersTransactionSigner, encryptedErc20: Address, from: Address, to: Address, encryptedBalance: EncryptedValue): Promise<`0x${string}`>;
 
-// @public (undocumented)
+// @public
 export function writeWrapContract(signer: EthersTransactionSigner, wrapperAddress: Address, to: Address, amount: bigint): Promise<`0x${string}`>;
 
 // @public
@@ -587,7 +506,7 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
 // @public
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
-// @public (undocumented)
+// @public
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
 // @public

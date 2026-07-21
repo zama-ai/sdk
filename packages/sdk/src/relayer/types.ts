@@ -43,20 +43,27 @@ export type EncryptInput =
 export interface EncryptParams {
   /** Typed inputs for encryption. Each value must specify its FHE type. */
   readonly values: readonly EncryptInput[];
+  /** Contract the encrypted inputs will be sent to (bound into the input proof). */
   contractAddress: Address;
+  /** Address of the user producing the encrypted inputs (bound into the input proof). */
   userAddress: Address;
 }
 
 /** Result from encryption — contract-ready hex encrypted values and input proof. */
 export interface EncryptResult {
+  /** Encrypted values, in the same order as the inputs, ready to pass to the contract. */
   readonly encryptedValues: readonly EncryptedValue[];
+  /** Zero-knowledge proof authorizing the encrypted values as valid contract inputs. */
   inputProof: Hex;
 }
 
 /** Result from public decryption. */
 export interface DecryptPublicValuesResult {
+  /** Decrypted clear-text values keyed by their encrypted value. */
   readonly clearValues: Record<EncryptedValue, ClearValue>;
+  /** The clear values ABI-encoded, as passed to on-chain verification. */
   abiEncodedClearValues: Hex;
+  /** KMS signature proving the decryption is authentic. */
   decryptionProof: Hex;
 }
 
@@ -223,5 +230,6 @@ export interface RelayerSDK extends Pick<
   | "parseTransportKeyPair"
   | "parseSignedDecryptionPermit"
 > {
+  /** The single FHE-enabled chain this backend instance is bound to. */
   chain: FheChain;
 }

@@ -6,6 +6,7 @@ import { delegationStatusQueryOptions, type DelegationStatus } from "@zama-fhe/s
 import { useQuery } from "../utils/query";
 import { useZamaSDK } from "../provider";
 
+/** Configuration for {@link useDelegationStatus}. */
 export interface UseDelegationStatusConfig {
   /** Address of the confidential contract. Pass `undefined` to disable the query. */
   contractAddress: Address | undefined;
