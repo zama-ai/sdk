@@ -18,15 +18,6 @@ overrides:
   "@walletconnect/ethereum-provider": "^2.23.7"
   lodash: ">=4.18.0"
   lodash-es: ">=4.18.0"
-  # Pin TanStack Query to a single version across the workspace. Patch drift
-  # (5.101.0 vs 5.101.2) makes pnpm resolve these as distinct peers, which in
-  # turn produces multiple physical `wagmi` instances — each with its own
-  # WagmiContext. That breaks context lookups across package boundaries (e.g.
-  # a WagmiProvider in test-nextjs and a `useConfig` in test-components read
-  # different contexts), surfacing as `useConfig must be used within
-  # WagmiProvider` during Next.js SSR prerender. One version → one wagmi.
-  "@tanstack/react-query": "^5.101.2"
-  "@tanstack/query-core": "^5.101.2"
   # undici-types@6.19.3+ dropped provenance attestation (likely a switch away
   # from CI publish), triggering trustPolicy:no-downgrade on every install.
   # 6.19.2 is the last version with a sigstore attestation. Pin here until

@@ -10,8 +10,6 @@ overrides:
   '@walletconnect/ethereum-provider': ^2.23.7
   lodash: '>=4.18.0'
   lodash-es: '>=4.18.0'
-  '@tanstack/react-query': ^5.101.2
-  '@tanstack/query-core': ^5.101.2
   undici-types: 6.19.2
 
 importers:
@@ -52,7 +50,7 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0(size-limit@12.1.0(jiti@2.7.0))
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: ^5.101.0
         version: 5.101.2(react@19.2.7)
       '@terrastruct/d2':
         specifier: ^0.1.33
@@ -166,7 +164,7 @@ importers:
   packages/react-sdk:
     dependencies:
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: '>=5'
         version: 5.101.2(react@19.2.7)
       react:
         specifier: '>=18'
@@ -244,7 +242,7 @@ importers:
   test/test-nextjs:
     dependencies:
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: ^5.101.0
         version: 5.101.2(react@19.2.7)
       '@zama-fhe/react-sdk':
         specifier: workspace:*
@@ -293,7 +291,7 @@ importers:
   test/test-vite:
     dependencies:
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: ^5.101.0
         version: 5.101.2(react@19.2.7)
       '@zama-fhe/react-sdk':
         specifier: workspace:*
@@ -1755,7 +1753,7 @@ packages:
   '@wagmi/core@3.6.1':
     resolution: {integrity: sha512-lmMLIBq0V+WM98ypeG6f4skowPlyuf8n+bWCD9SVJw3tww5sZL7Ab9rq2Js9+Yif1w9OKPy7yLWboIRT/EhRIA==}
     peerDependencies:
-      '@tanstack/query-core': ^5.101.2
+      '@tanstack/query-core': '>=5.0.0'
       accounts: ~0.14
       typescript: '>=5.9.3'
       viem: 2.x
@@ -3834,7 +3832,7 @@ packages:
   wagmi@3.7.1:
     resolution: {integrity: sha512-CTocC9w6TW3X14d1NB2dDRpDz4qSM4IDttIGVaSAArjoHlptfJZIkBNXLktUNXk52dUfitLucvTwCWngy8NBAQ==}
     peerDependencies:
-      '@tanstack/react-query': ^5.101.2
+      '@tanstack/react-query': '>=5.0.0'
       react: '>=18'
       typescript: '>=5.9.3'
       viem: 2.x
