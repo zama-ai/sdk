@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.9...v3.4.0-alpha.10) (2026-07-21)
+
+### Code Refactoring
+
+- **sdk:** API surface audit — resolve all ae-forgotten-export leaks [SDK-209] ([#539](https://github.com/zama-ai/sdk/issues/539)) ([c01102c]()), closes [#406]() [#458]()
+
 ## [3.4.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.8...v3.4.0-alpha.9) (2026-07-20)
 
 ### Features
