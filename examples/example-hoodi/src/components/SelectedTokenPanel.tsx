@@ -118,3 +118,57 @@ export function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProp
     </>
   );
 }
+
+// Static placeholder shown when the registry resolves with no token pairs. The
+// self-contained cards require a selected token, so instead of mounting them we render
+// an inert, disabled shell that mirrors the connected layout — the action buttons exist
+// but stay disabled until a token is available.
+export function NoTokenWorkspace() {
+  return (
+    <>
+      <section className="card" aria-labelledby="balances-title">
+        <h2 className="card-title" id="balances-title">
+          Balances
+        </h2>
+        <div className="balance-row">
+          <div className="balance-label-group">
+            <span className="balance-label">ERC-20 (public)</span>
+            <button type="button" className="btn btn-sm btn-secondary" disabled>
+              Mint
+            </button>
+          </div>
+          <output className="balance-value">—</output>
+        </div>
+        <div className="balance-row">
+          <span className="balance-label">Confidential (private)</span>
+          <button type="button" className="btn btn-sm btn-secondary" disabled>
+            Decrypt Balance
+          </button>
+        </div>
+      </section>
+
+      <h2 className="section-label">Operations</h2>
+
+      <section className="card">
+        <h2 className="card-title">Shield — ERC-20 → Confidential</h2>
+        <button type="button" className="btn btn-primary btn-full" disabled>
+          Shield
+        </button>
+      </section>
+
+      <section className="card">
+        <h2 className="card-title">Confidential Transfer</h2>
+        <button type="button" className="btn btn-primary btn-full" disabled>
+          Transfer
+        </button>
+      </section>
+
+      <section className="card">
+        <h2 className="card-title">Unshield — Confidential → ERC-20</h2>
+        <button type="button" className="btn btn-primary btn-full" disabled>
+          Unshield
+        </button>
+      </section>
+    </>
+  );
+}

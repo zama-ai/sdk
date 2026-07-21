@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionScreen, AppHeader, TokenSelector } from "@/components/PageChrome";
-import { SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { NoTokenWorkspace, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import { HOODI_CHAIN_ID } from "@/lib/config";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
@@ -119,6 +119,7 @@ export default function Home() {
           validPairs={validPairs}
         />
       )}
+      {!token && !isRegistryPending && <NoTokenWorkspace />}
     </main>
   );
 }
