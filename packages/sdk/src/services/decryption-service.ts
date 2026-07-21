@@ -64,17 +64,25 @@ interface DecryptionStrategy {
   delegated?: boolean;
 }
 
+/** Per-handle outcome of a batch decrypt: the decrypted value, or a per-item error. */
 export interface BatchDecryptItem {
+  /** The encrypted value (handle) being decrypted. */
   encryptedValue: EncryptedValue;
+  /** Address of the contract the handle belongs to. */
   contractAddress: Address;
+  /** Decrypted clear value; set when this item succeeded. */
   value?: ClearValue;
+  /** Error for this item; set when this item failed. */
   error?: ZamaError;
 }
 
+/** Result of a batch decrypt: one entry per requested handle, in input order. */
 export interface BatchDecryptResult {
+  /** Per-handle outcomes. */
   items: BatchDecryptItem[];
 }
 
+/** @internal */
 export class DecryptionService {
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService;

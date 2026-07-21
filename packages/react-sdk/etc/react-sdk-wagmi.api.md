@@ -14,7 +14,6 @@ export function createConfig<const TChains extends AtLeastOneChain>(params: Zama
 
 // @public
 export interface ZamaConfigWagmi<TChains extends AtLeastOneChain = AtLeastOneChain, T = Config> extends ZamaConfigBase<TChains> {
-    // (undocumented)
     wagmiConfig: T;
 }
 

@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
-import type { FhevmRelayerSDK } from "../../relayer/types";
+import type { RelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
 
-function mockRelayerConfig(relayer: FhevmRelayerSDK): RelayerConfig {
+function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
   return { type: "test", createRelayer: vi.fn(() => relayer) };
 }
 

@@ -140,7 +140,6 @@ export type { ClearValue, EncryptParams, EncryptResult, EncryptedValue } from ".
 export type { EncryptInput, EIP712TypedData } from "../relayer/types";
 // Decrypt parameter/result types — aligned with the canonical Zama glossary (see main entry).
 export type { DecryptPublicValuesResult } from "../relayer/types";
-export type { FhevmRelayerSDK as RelayerSDK } from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
@@ -149,12 +148,19 @@ export type { ZamaConfig } from "../config";
 export type { SerializedTransportKeyPair } from "../credentials";
 export type {
   GenericSigner,
+  GenericProvider,
   GenericStorage,
+  GenericLogger,
   ApprovalStrategy,
   ShieldCallbacks,
   WalletAccount,
   WalletAccountChange,
   WalletAccountListener,
+  WalletAccountStore,
+  ContractAbi,
+  WriteFunctionName,
+  WriteContractArgs,
+  WriteContractConfig,
   TransactionReceipt,
   TransactionResult,
   ShieldOptions,
@@ -163,7 +169,31 @@ export type {
   TransferOptions,
   UnshieldCallbacks,
   UnshieldOptions,
+  WrapOptions,
+  UnwrapResult,
 } from "../types";
+export type { FheChain, FheChainAuth } from "../chains/types";
+export type { FhevmRelayerOptions, FhevmRuntimeConfig } from "../relayer/types";
+export type { FhevmClient, RelayerSDK } from "../relayer/types";
+export type {
+  ReadFunctionName,
+  ReadContractArgs,
+  ReadContractConfig,
+  ReadContractReturnType,
+} from "../types";
+export type { ZamaError, ZamaErrorCode } from "../errors";
+export type {
+  WrappersRegistry,
+  WrappersRegistryConfig,
+  ListPairsOptions,
+} from "../wrappers-registry";
+export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
+export type { Permits, Delegations, Decryption } from "../namespaces";
+export type {
+  DelegatedDecryptOptions,
+  BatchDecryptResult,
+  BatchDecryptItem,
+} from "../services/decryption-service";
 export { ZamaSDKEvents } from "../events/sdk-events";
 export type {
   SetOperatorSubmittedEvent,
@@ -185,8 +215,8 @@ export type {
   UnshieldPhase2StartedEvent,
   UnshieldPhase2SubmittedEvent,
   UnwrapSubmittedEvent,
+  WrapSubmittedEvent,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   DelegationSubmittedEvent,
   RevokeDelegationSubmittedEvent,

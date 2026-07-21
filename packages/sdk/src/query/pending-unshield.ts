@@ -4,7 +4,9 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
+/** Configuration for {@link pendingUnshieldQueryOptions}. */
 export interface PendingUnshieldQueryConfig {
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 

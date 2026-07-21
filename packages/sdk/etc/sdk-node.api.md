@@ -29,12 +29,9 @@ export const anvil: {
 
 // @public
 export class AsyncLocalMapStorage implements GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
     run<R>(fn: () => R | Promise<R>): R | Promise<R>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -63,15 +60,17 @@ export const chains: Record<number, FheChain>;
 export function cleartext(options?: RelayerOptions): CleartextRelayerConfig;
 
 // @public
+export interface CleartextRelayerConfig extends RelayerConfig {
+    readonly type: "cleartext";
+}
+
+// @public
 export type ClearValue = TypedValue["value"] | bigint | string | undefined;
 
 // @public
 export interface DecryptPublicValuesResult {
-    // (undocumented)
     abiEncodedClearValues: Hex;
-    // (undocumented)
     readonly clearValues: Record<EncryptedValue, ClearValue>;
-    // (undocumented)
     decryptionProof: Hex;
 }
 
@@ -79,24 +78,87 @@ export interface DecryptPublicValuesResult {
 export type EIP712TypedData = Eip712Like;
 
 // @public
+export type EncryptedValue = Hex;
+
+// @public
+export type EncryptInput = {
+    readonly type: `e${Exclude<TypedValue["type"], "bool" | "address">}`;
+    readonly value: bigint;
+} | {
+    readonly type: `e${Extract<TypedValue["type"], "bool">}`;
+    readonly value: boolean | 1n | 0n;
+} | {
+    readonly type: `e${Extract<TypedValue["type"], "address">}`;
+    readonly value: Address;
+};
+
+// @public
 export interface EncryptParams {
-    // (undocumented)
     contractAddress: Address;
-    // (undocumented)
     userAddress: Address;
     readonly values: readonly EncryptInput[];
 }
 
 // @public
+export interface FheChain<TId extends number = number> {
+    readonly aclContractAddress: Address;
+    readonly auth?: FheChainAuth;
+    readonly executorAddress?: Address | undefined;
+    readonly gatewayChainId: number;
+    readonly id: TId;
+    readonly inputVerifierContractAddress: Address;
+    readonly kmsContractAddress: Address;
+    readonly network: EIP1193Provider | string;
+    readonly registryAddress: Address | undefined;
+    readonly relayerUrl: string;
+    readonly verifyingContractAddressDecryption: Address;
+    readonly verifyingContractAddressInputVerification: Address;
+}
+
+// @public
+export type FheChainAuth = {
+    __type: "BearerToken";
+    token: string;
+} | {
+    __type: "ApiKeyHeader";
+    header?: string;
+    value: string;
+} | {
+    __type: "ApiKeyCookie";
+    cookie?: string;
+    value: string;
+};
+
+// @public
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+// @public
+export interface FhevmRelayerOptions {
+    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly debug?: boolean;
+    readonly fetchRetries?: number;
+    readonly fetchRetryDelayInMilliseconds?: number;
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly timeout?: number;
+}
+
+// @public
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
+
+// @public
 export interface GenericLogger {
-    // (undocumented)
     debug: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     error: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     info: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
+}
+
+// @public
+export interface GenericStorage {
+    delete(key: string): Promise<void>;
+    get<T = unknown>(key: string): Promise<T | null>;
+    set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
 // @public
@@ -163,23 +225,19 @@ export function node(options?: RelayerOptions): NodeRelayerConfig;
 
 // @public
 export interface NodeRelayerConfig extends RelayerConfig {
-    // (undocumented)
-    readonly createRelayer: (chain: FheChain) => FhevmRelayer;
-    // (undocumented)
     readonly type: "node";
 }
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
-    // (undocumented)
     readonly type: string;
 }
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
-    chain: FheChain;
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+    readonly batchRpcCalls?: boolean;
+    readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+    readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
 }
 
 // @public

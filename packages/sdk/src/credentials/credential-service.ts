@@ -58,6 +58,8 @@ export interface CredentialServiceConfig {
  * stored there, so it's untouched. {@link revokeTransportKeyPair} (operator-level) is
  * the only way to invalidate a scope's shared key pair, and it does so for every signer
  * in the scope at once.
+ *
+ * @internal
  */
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;

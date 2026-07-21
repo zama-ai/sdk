@@ -9,4 +9,10 @@
  */
 
 export { web } from "../config/web";
-export type { WebRelayerConfig } from "../config/types";
+export type { WebRelayerConfig, RelayerConfig } from "../config/types";
+export type {
+  RelayerOptions,
+  FhevmRelayerOptions,
+  FhevmClientOptions,
+  FhevmRuntimeConfig,
+} from "../relayer/types";

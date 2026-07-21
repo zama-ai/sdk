@@ -1,7 +1,7 @@
 // oxlint-disable no-empty-pattern
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import { vi } from "vitest";
-import type { FhevmRelayerSDK } from "../relayer/types";
+import type { RelayerSDK } from "../relayer/types";
 import type { FixturesOf } from "./types";
 import {
   TEST_PRIVATE_KEY,
@@ -12,7 +12,7 @@ import {
 } from "./constants";
 import { anvil } from "../chains";
 
-export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): FhevmRelayerSDK {
+export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerSDK {
   return {
     chain: anvil,
     generateTransportKeyPair: vi
@@ -106,11 +106,11 @@ export function createMockRelayer(overrides: Partial<FhevmRelayerSDK> = {}): Fhe
       .fn()
       .mockResolvedValue({ publicKeyId: "pk-1", publicKey: new Uint8Array([1]) }),
     ...overrides,
-  } satisfies FhevmRelayerSDK;
+  } satisfies RelayerSDK;
 }
 
 export interface RelayerFixtures {
-  relayer: FhevmRelayerSDK;
+  relayer: RelayerSDK;
   createMockRelayer: typeof createMockRelayer;
 }
 

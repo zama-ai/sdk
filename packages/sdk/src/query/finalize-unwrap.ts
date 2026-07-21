@@ -9,6 +9,7 @@ export type FinalizeUnwrapParams = {
   unwrapRequestId: EncryptedValue;
 };
 
+/** Builds TanStack Query mutation options for {@link WrappedToken.finalizeUnwrap | finalizing} a previously requested unwrap. @see {@link FinalizeUnwrapParams} */
 export function finalizeUnwrapMutationOptions(
   token: WrappedToken,
 ): MutationFactoryOptions<
