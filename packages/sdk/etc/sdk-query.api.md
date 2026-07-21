@@ -9,6 +9,7 @@ import { Address } from 'viem';
 import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
+import { createFhevmClient } from '@fhevm/sdk/viem';
 import { EIP1193Provider } from 'viem';
 import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
@@ -1517,6 +1518,7 @@ export class ZamaSDK {
     // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
+    get relayer(): FhevmRelayerSDK;
     // (undocumented)
     readonly signer: GenericSigner | undefined;
     // (undocumented)

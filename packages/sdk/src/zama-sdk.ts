@@ -165,8 +165,6 @@ export class ZamaSDK {
 
   /**
    * The single-chain relayer backend for the **currently active** chain.
-   *
-   * @internal
    */
   get relayer(): FhevmRelayerSDK {
     return this.#router.relayer;
