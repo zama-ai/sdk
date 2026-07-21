@@ -5,26 +5,30 @@ import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { useMutation } from "@tanstack/react-query";
 import { useDecryptValues, useGrantPermit, useHasPermit, useZamaSDK } from "@zama-fhe/react-sdk";
-import type { Address, EncryptedValue } from "@zama-fhe/sdk";
+import type { Address, EncryptedValue, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { isEncryptedValueZero } from "@zama-fhe/sdk";
 import { VAULT_ABI } from "@/lib/vaultAbi";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface VaultPositionCardProps {
+  /** The confidential token pair bound to the vault — supplies display units. */
+  token: TokenWrapperPairWithMetadata;
+  /** The connected wallet whose vault position is read. */
+  account: Address;
+  /** The ConfidentialVault contract holding the position. */
   vaultAddress: Address;
-  connectedAddress: Address;
-  decimals: number;
-  symbol: string;
   onWithdraw?: () => void;
 }
 
 export function VaultPositionCard({
+  token,
+  account,
   vaultAddress,
-  connectedAddress,
-  decimals,
-  symbol,
   onWithdraw,
 }: VaultPositionCardProps) {
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const sdk = useZamaSDK();
   const [revealed, setRevealed] = useState(false);
 
@@ -33,7 +37,7 @@ export function VaultPositionCard({
     address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "sharesOf",
-    args: [connectedAddress],
+    args: [account],
   });
 
   const handle = shareHandle as EncryptedValue | undefined;

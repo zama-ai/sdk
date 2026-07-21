@@ -1,7 +1,7 @@
 "use client";
 
 import { useDecryptBalanceAs, useDelegationStatus } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { DelegationExpiredError, DelegationNotFoundError } from "@zama-fhe/sdk";
 import { useActionState } from "react";
 import { formatUnits, getAddress, isAddress } from "viem";
@@ -10,11 +10,9 @@ import { formatUnits, getAddress, isAddress } from "viem";
 const MAX_UINT64 = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
+  account: Address;
   disabled: boolean;
-  connectedAddress: Address;
 }
 
 function formatExpiry(expiryTimestamp: bigint): string {
@@ -32,13 +30,11 @@ function delegationErrorMessage(error: Error): string {
   return error.message;
 }
 
-export function DecryptAsCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  connectedAddress,
-}: DecryptAsCardProps) {
+export function DecryptAsCard({ token, account, disabled }: DecryptAsCardProps) {
+  const tokenAddress = token.confidentialTokenAddress;
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   // Note: useDecryptBalanceAs takes a positional tokenAddress argument, unlike
   // useDelegateDecryption / useRevokeDelegation which use a config object { tokenAddress }.
   // This asymmetry is a current SDK API design decision.
@@ -52,7 +48,7 @@ export function DecryptAsCard({
   const delegationStatus = useDelegationStatus({
     contractAddress: tokenAddress,
     delegatorAddress: isAddress(delegatorAddress) ? delegatorAddress : undefined,
-    delegateAddress: connectedAddress,
+    delegateAddress: account,
   });
 
   const [errorMessage, submitDecrypt, isPending] = useActionState<string | null, FormData>(

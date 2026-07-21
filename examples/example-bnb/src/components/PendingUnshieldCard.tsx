@@ -1,16 +1,18 @@
 "use client";
 
 import { useResumeUnshield, usePendingUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { BSC_TESTNET_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
-  tokenAddress: Address;
-  label: string;
+  token: TokenWrapperPairWithMetadata;
   onSuccess?: () => void;
 }
 
-export function PendingUnshieldCard({ tokenAddress, label, onSuccess }: PendingUnshieldCardProps) {
+export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardProps) {
+  const tokenAddress = token.confidentialTokenAddress;
+  const label = token.underlying.symbol;
+
   const { data: pendingTxHash, isError: loadError } = usePendingUnshield(tokenAddress);
 
   const resume = useResumeUnshield(tokenAddress, {

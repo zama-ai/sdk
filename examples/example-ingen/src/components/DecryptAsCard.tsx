@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { getAddress, formatUnits, isAddress } from "viem";
 import { useDelegationStatus, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 
 // Sentinel value used by the ACL contract to represent permanent (no-expiry) delegations.
@@ -13,11 +13,9 @@ import { DelegationNotFoundError, DelegationExpiredError } from "@zama-fhe/sdk";
 const PERMANENT_DELEGATION = 2n ** 64n - 1n;
 
 interface DecryptAsCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
+  account: Address;
   disabled: boolean;
-  connectedAddress: Address;
 }
 
 function formatExpiry(expiryTimestamp: bigint): string {
@@ -35,13 +33,11 @@ function delegationErrorMessage(error: Error): string {
   return error.message;
 }
 
-export function DecryptAsCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  connectedAddress,
-}: DecryptAsCardProps) {
+export function DecryptAsCard({ token, account, disabled }: DecryptAsCardProps) {
+  const tokenAddress = token.confidentialTokenAddress;
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const decryptAs = useDecryptBalanceAs(tokenAddress);
   const delegatorAddress = decryptAs.variables?.delegatorAddress ?? "";
   const ownerIsValid = isAddress(delegatorAddress);
@@ -52,7 +48,7 @@ export function DecryptAsCard({
   const delegationStatus = useDelegationStatus({
     contractAddress: tokenAddress,
     delegatorAddress: ownerIsValid ? delegatorAddress : undefined,
-    delegateAddress: connectedAddress,
+    delegateAddress: account,
   });
 
   const [errorMessage, submitDecrypt, isPending] = useActionState<string | null, FormData>(

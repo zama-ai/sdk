@@ -2,22 +2,19 @@
 
 import { useActionState, useState } from "react";
 import { getAddress, encodeAbiParameters } from "viem";
-import { useConfidentialTransferAndCall } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import { useConfidentialTransferAndCall, useHasPermit } from "@zama-fhe/react-sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface VaultDepositCardProps {
-  /** The confidential token bound to the vault (cUSDC). */
-  tokenAddress: Address;
+  /** The confidential token pair bound to the vault (cUSDC). */
+  token: TokenWrapperPairWithMetadata;
+  /** The connected wallet, used as the default beneficiary. */
+  account: Address;
   /** The ConfidentialVault contract — the receiver of the `…AndCall`. */
   vaultAddress: Address;
-  /** The connected wallet, used as the default beneficiary. */
-  connectedAddress: Address;
-  decimals: number;
-  symbol: string;
   disabled: boolean;
-  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
@@ -32,18 +29,25 @@ function depositErrorText(error: (Error & { cause?: unknown }) | null): string {
 }
 
 export function VaultDepositCard({
-  tokenAddress,
+  token,
+  account,
   vaultAddress,
-  connectedAddress,
-  decimals,
-  symbol,
   disabled,
-  balanceDecryptRequired,
   onSuccess,
 }: VaultDepositCardProps) {
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const [step, setStep] = useState<1 | 2>(1);
 
-  const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
+  // A deposit spends the caller's confidential balance, so it needs a decryption permit first.
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
+  const balanceDecryptRequired = !isAllowed;
+
+  const deposit = useConfidentialTransferAndCall(
+    { address: token.confidentialTokenAddress },
+    { onSuccess },
+  );
 
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 
@@ -107,7 +111,7 @@ export function VaultDepositCard({
           type="text"
           pattern="0x[a-fA-F0-9]{40}"
           title="Enter a valid address: 0x followed by 40 hexadecimal characters."
-          defaultValue={connectedAddress}
+          defaultValue={account}
           required
           placeholder="0x…"
           data-testid="vault-beneficiary-input"

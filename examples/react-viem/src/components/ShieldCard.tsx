@@ -2,25 +2,21 @@
 
 import { useState, useActionState } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
   disabled: boolean;
   onSuccess?: () => void;
 }
 
-export function ShieldCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  onSuccess,
-}: ShieldCardProps) {
+export function ShieldCard({ token, disabled, onSuccess }: ShieldCardProps) {
+  // Shielding takes an amount of the public underlying ERC-20, so it uses the underlying's units.
+  const decimals = token.underlying.decimals;
+  const symbol = token.underlying.symbol;
+
   const [phase, setPhase] = useState<"shield" | "approve" | "submit">("shield");
 
   const pendingLabel =
@@ -30,7 +26,7 @@ export function ShieldCard({
         ? "Shielding… (submitting)"
         : "Shielding…";
 
-  const shield = useShield({ address: tokenAddress }, { onSuccess });
+  const shield = useShield({ address: token.confidentialTokenAddress }, { onSuccess });
 
   const [errorMessage, submitShield, isPending] = useActionState<string | null, FormData>(
     async (_, formData) => {

@@ -1,31 +1,28 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useUnshield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import { useUnshield, useHasPermit } from "@zama-fhe/react-sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface UnshieldCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
   disabled: boolean;
-  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
-export function UnshieldCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  balanceDecryptRequired,
-  onSuccess,
-}: UnshieldCardProps) {
+export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) {
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const [step, setStep] = useState<1 | 2>(1);
 
-  const unshield = useUnshield(tokenAddress, {
+  // Unshielding reads the confidential balance, so it needs a decryption permit first.
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
+  const balanceDecryptRequired = !isAllowed;
+
+  const unshield = useUnshield(token.confidentialTokenAddress, {
     onSuccess: () => {
       onSuccess?.();
     },

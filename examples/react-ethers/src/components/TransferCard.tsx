@@ -2,31 +2,31 @@
 
 import { useState, useActionState } from "react";
 import { getAddress } from "ethers";
-import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import { useConfidentialTransfer, useHasPermit } from "@zama-fhe/react-sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface TransferCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
   disabled: boolean;
-  balanceDecryptRequired: boolean;
   onSuccess?: () => void;
 }
 
-export function TransferCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  balanceDecryptRequired,
-  onSuccess,
-}: TransferCardProps) {
+export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) {
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const [step, setStep] = useState<1 | 2>(1);
 
-  const transfer = useConfidentialTransfer({ address: tokenAddress }, { onSuccess });
+  // A confidential transfer needs the sender's balance decrypted first — gate on the permit.
+  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
+  const balanceDecryptRequired = !isAllowed;
+
+  const transfer = useConfidentialTransfer(
+    { address: token.confidentialTokenAddress },
+    { onSuccess },
+  );
 
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 

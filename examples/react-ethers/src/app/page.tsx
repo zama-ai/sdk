@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
-import {
-  useConfidentialBalance,
-  useHasPermit,
-  useGrantPermit,
-  useListPairs,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
-import { balanceOfContract } from "@zama-fhe/sdk";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatEther, JsonRpcProvider } from "ethers";
+import { useListPairs } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPair, TokenWrapperPairWithMetadata, Address } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
+import { erc20BalanceKey } from "@/lib/queryKeys";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -28,10 +22,6 @@ import {
   SEPOLIA_RPC_URL,
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
-
-// mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
-// function added to both test tokens for easy balance top-ups during development.
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
 
 // useListPairs through ethers can return objects backed by ethers Result, where named
 // ABI fields are non-enumerable. Read named fields first and fall back to tuple indexes.
@@ -99,40 +89,9 @@ function SelectedTokenPanel({
   ethBalanceKey,
 }: SelectedTokenPanelProps) {
   const queryClient = useQueryClient();
-  const sdk = useZamaSDK();
-
-  // Check whether cached credentials cover the selected confidential token.
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
-
-  const decimals = token.confidential.decimals;
-  const erc20Decimals = token.underlying.decimals;
-  const confidentialSymbol = token.confidential.symbol;
-  const erc20Symbol = token.underlying.symbol;
-
-  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
-  // All registry pairs are passed at once — a single signature covers all tokens,
-  // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useGrantPermit();
-  function handleDecrypt() {
-    if (validPairs.length === 0) return;
-    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
-  }
-
-  // ERC-20 balance for the selected token.
-  const erc20BalanceKey = ["erc20-balance", token.tokenAddress, address] as const;
-  const { data: erc20Balance } = useQuery({
-    queryKey: erc20BalanceKey,
-    queryFn: async () => {
-      const result = await sdk.provider.readContract(
-        balanceOfContract(token.tokenAddress, address),
-      );
-      return result as bigint;
-    },
-    enabled: isSepolia,
-  });
 
   const refreshBalances = () => {
-    queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
+    queryClient.invalidateQueries({ queryKey: erc20BalanceKey(token.tokenAddress, address) });
     queryClient.invalidateQueries({ queryKey: ethBalanceKey });
     // Invalidate the encrypted handle so useConfidentialBalance re-polls after
     // any operation that changes the confidential balance (shield, unshield, transfer).
@@ -141,63 +100,16 @@ function SelectedTokenPanel({
     });
   };
 
-  // Only run once the user has explicitly authorized decrypt for the selected token.
-  // Prevents the hook from firing an EIP-712 prompt on mount.
-  const balance = useConfidentialBalance(
-    { address: token.confidentialTokenAddress, account: address },
-    { enabled: isSepolia && !!isAllowed },
-  );
-
-  // Mint 10 whole tokens on the underlying ERC-20 contract.
-  const mint = useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) {
-        throw new Error("Connect a wallet before minting tokens.");
-      }
-      const txHash = await signer.writeContract({
-        address: token.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [address, parseUnits("10", erc20Decimals)],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
-    onSuccess: refreshBalances,
-  });
-
-  // Clear stale mutation state when the wallet account or selected token changes.
-  useEffect(() => {
-    mint.reset();
-    allowTokens.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, token.confidentialTokenAddress]);
-
-  const formattedErc20 =
-    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
-  const formattedConfidential =
-    balance.data !== undefined
-      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
-      : "—";
   const actionsDisabled = !isSepolia;
 
   return (
     <>
       <BalancesCard
-        formattedErc20={formattedErc20}
-        formattedConfidential={formattedConfidential}
-        isLoadingConfidential={balance.isLoading || balance.isFetching}
-        erc20Symbol={erc20Symbol}
-        onMint={() => mint.mutate()}
-        isMinting={mint.isPending}
-        mintDisabled={actionsDisabled}
-        mintError={mint.isError ? (mint.error?.message ?? null) : null}
-        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
-        isAllowed={!!isAllowed}
-        onDecrypt={handleDecrypt}
-        isDecrypting={allowTokens.isPending}
-        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
+        token={token}
+        account={address}
+        validPairs={validPairs}
+        disabled={actionsDisabled}
+        onSuccess={refreshBalances}
       />
 
       {/* Pending unshield resume — checked for every registered token, not just the selected one.
@@ -205,8 +117,7 @@ function SelectedTokenPanel({
       {validPairs.map((pair) => (
         <PendingUnshieldCard
           key={`${pair.confidentialTokenAddress}-${address}`}
-          tokenAddress={pair.confidentialTokenAddress}
-          label={pair.underlying.symbol}
+          token={pair}
           onSuccess={refreshBalances}
         />
       ))}
@@ -216,30 +127,22 @@ function SelectedTokenPanel({
       {/* key includes address and selected token so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
         key={`shield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={erc20Decimals}
-        symbol={erc20Symbol}
+        token={token}
         disabled={actionsDisabled}
         onSuccess={refreshBalances}
       />
 
       <TransferCard
         key={`transfer-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
       <UnshieldCard
         key={`unshield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
@@ -247,13 +150,13 @@ function SelectedTokenPanel({
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={actionsDisabled}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={actionsDisabled}
       />
 
@@ -261,11 +164,9 @@ function SelectedTokenPanel({
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
+        account={address}
         disabled={actionsDisabled}
-        connectedAddress={address}
       />
     </>
   );

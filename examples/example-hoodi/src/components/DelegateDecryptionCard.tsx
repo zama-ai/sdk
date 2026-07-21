@@ -3,16 +3,16 @@
 import { useActionState } from "react";
 import { getAddress } from "viem";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
-  tokenAddress: Address;
-  disabled: boolean;
+  token: TokenWrapperPairWithMetadata;
+  disabled?: boolean;
 }
 
-export function DelegateDecryptionCard({ tokenAddress, disabled }: DelegateDecryptionCardProps) {
-  const delegate = useDelegateDecryption(tokenAddress);
+export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecryptionCardProps) {
+  const delegate = useDelegateDecryption(token.confidentialTokenAddress);
 
   const [errorMessage, submitGrant, isPending] = useActionState<string | null, FormData>(
     async (_, formData) => {

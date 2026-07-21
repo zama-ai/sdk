@@ -9,143 +9,56 @@ import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
 import { UnshieldCard } from "@/components/UnshieldCard";
-import { BSC_TESTNET_CHAIN_ID, BSC_TESTNET_RPC_URL } from "@/lib/config";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  useConfidentialBalance,
-  useGrantPermit,
-  useHasPermit,
-  useListPairs,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { BSC_TESTNET_CHAIN_ID } from "@/lib/config";
+import { erc20BalanceKey } from "@/lib/queryKeys";
+import { useQueryClient } from "@tanstack/react-query";
+import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
-import { balanceOfContract } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { useEffect, useMemo, useState } from "react";
-import { createPublicClient, formatEther, formatUnits, http, parseAbi, parseUnits } from "viem";
+import { formatEther } from "viem";
 import { bscTestnet } from "viem/chains";
-import { useConnect, useConnection, useSwitchChain } from "wagmi";
+import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 
-// mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
-// function added to both test tokens for easy balance top-ups during development.
-const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
-
-// Routes native tBNB balance reads through the direct BNB Smart Chain Testnet RPC so polling is fast
-// and independent of the injected wallet's own RPC endpoint.
-const rpcClient = createPublicClient({ chain: bscTestnet, transport: http(BSC_TESTNET_RPC_URL) });
-
 interface SelectedTokenPanelProps {
-  address: Address;
   token: TokenWrapperPairWithMetadata;
   validPairs: TokenWrapperPairWithMetadata[];
-  isBnb: boolean;
-  ethBalanceKey: readonly unknown[];
 }
 
-function SelectedTokenPanel({
-  address,
-  token,
-  validPairs,
-  isBnb,
-  ethBalanceKey,
-}: SelectedTokenPanelProps) {
+function SelectedTokenPanel({ token, validPairs }: SelectedTokenPanelProps) {
   const queryClient = useQueryClient();
-  const sdk = useZamaSDK();
+  // Wallet state read straight from wagmi in place — nothing wallet-derived is passed in.
+  const { address, chainId } = useConnection(); // Native balance lives in the header, but its refetch is triggered here after a mint;
+  // useBalance shares wagmi's query cache by key, so the header's copy updates too.
+  const { refetch: refetchNativeBalance } = useBalance({ address });
 
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
-
-  const decimals = token.confidential.decimals;
-  const erc20Decimals = token.underlying.decimals;
-  const confidentialSymbol = token.confidential.symbol;
-  const erc20Symbol = token.underlying.symbol;
-
-  const allowTokens = useGrantPermit();
-  function handleDecrypt() {
-    if (validPairs.length === 0) return;
-    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
-  }
-
-  const erc20BalanceKey = ["erc20-balance", token.tokenAddress, address] as const;
-  const { data: erc20Balance } = useQuery({
-    queryKey: erc20BalanceKey,
-    queryFn: async () => {
-      const result = await sdk.provider.readContract(
-        balanceOfContract(token.tokenAddress, address),
-      );
-      return result as bigint;
-    },
-    enabled: isBnb,
-  });
+  if (!address) return null;
 
   const refreshBalances = () => {
-    queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
-    queryClient.invalidateQueries({ queryKey: ethBalanceKey });
+    queryClient.invalidateQueries({ queryKey: erc20BalanceKey(token.tokenAddress, address) });
+    void refetchNativeBalance();
     queryClient.invalidateQueries({
       queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
     });
   };
 
-  const balance = useConfidentialBalance(
-    { address: token.confidentialTokenAddress, account: address },
-    { enabled: isBnb && !!isAllowed },
-  );
-
-  const mint = useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) {
-        throw new Error("Connect a wallet before minting tokens.");
-      }
-      const txHash = await signer.writeContract({
-        address: token.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [address, parseUnits("10", erc20Decimals)],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
-    onSuccess: refreshBalances,
-  });
-
-  useEffect(() => {
-    mint.reset();
-    allowTokens.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, token.confidentialTokenAddress]);
-
-  const formattedErc20 =
-    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
-  const formattedConfidential =
-    balance.data !== undefined
-      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
-      : "—";
-  const actionsDisabled = !isBnb;
+  const actionsDisabled = chainId !== BSC_TESTNET_CHAIN_ID;
 
   return (
     <>
       <BalancesCard
-        formattedErc20={formattedErc20}
-        formattedConfidential={formattedConfidential}
-        isLoadingConfidential={balance.isLoading || balance.isFetching}
-        erc20Symbol={erc20Symbol}
-        onMint={() => mint.mutate()}
-        isMinting={mint.isPending}
-        mintDisabled={actionsDisabled}
-        mintError={mint.isError ? (mint.error?.message ?? null) : null}
-        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
-        isAllowed={!!isAllowed}
-        onDecrypt={handleDecrypt}
-        isDecrypting={allowTokens.isPending}
-        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
+        token={token}
+        account={address}
+        validPairs={validPairs}
+        disabled={actionsDisabled}
+        onSuccess={refreshBalances}
       />
 
       {validPairs.map((pair) => (
         <PendingUnshieldCard
           key={`${pair.confidentialTokenAddress}-${address}`}
-          tokenAddress={pair.confidentialTokenAddress}
-          label={pair.underlying.symbol}
+          token={pair}
           onSuccess={refreshBalances}
         />
       ))}
@@ -154,30 +67,22 @@ function SelectedTokenPanel({
 
       <ShieldCard
         key={`shield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={erc20Decimals}
-        symbol={erc20Symbol}
+        token={token}
         disabled={actionsDisabled}
         onSuccess={refreshBalances}
       />
 
       <TransferCard
         key={`transfer-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
       <UnshieldCard
         key={`unshield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshBalances}
       />
 
@@ -185,13 +90,13 @@ function SelectedTokenPanel({
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={actionsDisabled}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={actionsDisabled}
       />
 
@@ -199,11 +104,9 @@ function SelectedTokenPanel({
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
+        account={address}
         disabled={actionsDisabled}
-        connectedAddress={address}
       />
     </>
   );
@@ -241,12 +144,9 @@ export default function Home() {
 
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
-  const ethBalanceKey = ["eth-balance", address];
-  const { data: ethBalance } = useQuery({
-    queryKey: ethBalanceKey,
-    queryFn: () => rpcClient.getBalance({ address: address as Address }).then(formatEther),
-    enabled: !!address && isBnb,
-  });
+  // Native tBNB balance via wagmi's useBalance — routed through the configured BNB testnet
+  // transport, so it stays independent of the injected wallet's own RPC endpoint.
+  const { data: nativeBalance } = useBalance({ address, query: { enabled: isConnected && isBnb } });
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!isConnected || !address) {
@@ -290,7 +190,9 @@ export default function Home() {
         title="BNB Confidential Token Quickstart"
         address={address}
         balanceLabel="tBNB"
-        balance={ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
+        balance={
+          nativeBalance !== undefined ? Number(formatEther(nativeBalance.value)).toFixed(4) : "—"
+        }
       />
       <TokenSelector
         value={selectedTokenAddress ?? ""}
@@ -306,11 +208,8 @@ export default function Home() {
       {token && (
         <SelectedTokenPanel
           key={`${address}-${token.confidentialTokenAddress}`}
-          address={address as Address}
           token={token}
           validPairs={validPairs}
-          isBnb={isBnb}
-          ethBalanceKey={ethBalanceKey}
         />
       )}
     </main>

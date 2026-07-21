@@ -2,16 +2,16 @@
 
 import { getAddress } from "viem";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { HOODI_EXPLORER_URL } from "@/lib/config";
 
 interface RevokeDelegationCardProps {
-  tokenAddress: Address;
-  disabled: boolean;
+  token: TokenWrapperPairWithMetadata;
+  disabled?: boolean;
 }
 
-export function RevokeDelegationCard({ tokenAddress, disabled }: RevokeDelegationCardProps) {
-  const revoke = useRevokeDelegation(tokenAddress);
+export function RevokeDelegationCard({ token, disabled = false }: RevokeDelegationCardProps) {
+  const revoke = useRevokeDelegation(token.confidentialTokenAddress);
 
   function submitRevoke(formData: FormData) {
     const delegateAddress = formData.get("delegateAddress") as string;

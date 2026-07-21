@@ -1,19 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { formatEther, formatUnits, parseAbi, parseUnits } from "viem";
-import { useBalance, useConnect, useConnection, useReadContract, useSwitchChain } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatEther } from "viem";
+import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 import { sepolia } from "wagmi/chains";
-import {
-  useConfidentialBalance,
-  useHasPermit,
-  useGrantPermit,
-  useListPairs,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
+import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { erc20BalanceKey } from "@/lib/queryKeys";
 import { BalancesCard } from "@/components/BalancesCard";
 import { ShieldCard } from "@/components/ShieldCard";
 import { TransferCard } from "@/components/TransferCard";
@@ -25,14 +20,6 @@ import { DecryptAsCard } from "@/components/DecryptAsCard";
 import { VaultDepositCard } from "@/components/VaultDepositCard";
 import { VaultPositionCard } from "@/components/VaultPositionCard";
 import { SEPOLIA_CHAIN_ID, VAULT_ADDRESS, VAULT_CONFIDENTIAL_TOKEN } from "@/lib/config";
-
-// Standard ERC-20 balanceOf ABI — used by useReadContract for public balance polling.
-// parseAbi is required — viem does not parse human-readable ABI strings automatically.
-const BALANCE_ABI = parseAbi(["function balanceOf(address) view returns (uint256)"]);
-
-// mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
-// function added to both test tokens for easy balance top-ups during development.
-const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
@@ -85,7 +72,9 @@ export default function Home() {
   const token = validPairs.find((p) => p.confidentialTokenAddress === selectedTokenAddress);
 
   // ETH balance via wagmi transport (SEPOLIA_RPC_URL) — auto-updates on account switch.
-  const { data: ethBalanceData, refetch: refetchEth } = useBalance({
+  // The workspace panel refetches this same key after actions; useBalance shares wagmi's
+  // query cache by key, so this header copy updates too.
+  const { data: ethBalanceData } = useBalance({
     address,
     query: { enabled: isConnected && isSepolia },
   });
@@ -206,10 +195,8 @@ export default function Home() {
       {token && (
         <TokenWorkspace
           key={`${address}-${token.confidentialTokenAddress}`}
-          address={address as Address}
           token={token}
           validPairs={validPairs}
-          refetchEth={refetchEth}
         />
       )}
       {!token && !isRegistryPending && <NoTokenWorkspace />}
@@ -220,22 +207,21 @@ export default function Home() {
 function NoTokenWorkspace() {
   return (
     <>
-      <BalancesCard
-        formattedErc20="—"
-        formattedConfidential="—"
-        isLoadingConfidential={false}
-        erc20Symbol=""
-        onMint={() => {}}
-        isMinting={false}
-        mintDisabled
-        mintError={null}
-        mintTxHash={null}
-        isAllowed={false}
-        onDecrypt={() => {}}
-        isDecrypting={false}
-        decryptDisabled
-        decryptError={null}
-      />
+      {/* Static placeholder — BalancesCard is self-contained and needs a selected token,
+          so with no token available we render the empty shell directly. */}
+      <section className="card" aria-labelledby="balances-title">
+        <h2 className="card-title" id="balances-title">
+          Balances
+        </h2>
+        <div className="balance-row">
+          <span className="balance-label">ERC-20 (public)</span>
+          <output className="balance-value">—</output>
+        </div>
+        <div className="balance-row">
+          <span className="balance-label">Confidential (private)</span>
+          <output className="balance-value">—</output>
+        </div>
+      </section>
 
       <h2 className="section-label">Operations</h2>
 
@@ -264,112 +250,41 @@ function NoTokenWorkspace() {
 }
 
 interface TokenWorkspaceProps {
-  address: Address;
   token: TokenWrapperPairWithMetadata;
   validPairs: TokenWrapperPairWithMetadata[];
-  refetchEth: () => unknown;
 }
 
-function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspaceProps) {
-  const sdk = useZamaSDK();
-
-  // Check whether cached credentials cover the selected confidential token.
-  // This component only mounts once a token is selected, so no placeholder address is needed.
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
-
-  // Metadata for the selected token pair is sourced directly from the registry response
-  // (useListPairs with metadata: true), removing separate metadata queries.
-  const decimals = token.confidential.decimals;
-  const erc20Decimals = token.underlying.decimals;
-  const confidentialSymbol = token.confidential.symbol;
-  const erc20Symbol = token.underlying.symbol;
-
-  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
-  // All registry pairs are passed at once — a single signature covers all tokens,
-  // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useGrantPermit();
-  function handleDecrypt() {
-    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
-  }
+function TokenWorkspace({ token, validPairs }: TokenWorkspaceProps) {
+  const queryClient = useQueryClient();
+  // Wallet state read straight from wagmi in place — nothing wallet-derived is passed in.
+  const { address } = useConnection();
+  // The native balance lives in the header, but its refetch is triggered here after an
+  // action; useBalance shares wagmi's query cache by key, so the header's copy updates too.
+  const { refetch: refetchNativeBalance } = useBalance({ address });
 
   // Bumped after a vault deposit to remount VaultPositionCard so it re-reads sharesOf
   // (the deposit changed the position; the previously revealed value is now stale).
   const [vaultNonce, setVaultNonce] = useState(0);
 
-  // ERC-20 balance via wagmi — auto-refetches when args (address) change on account switch.
-  // Uses the wagmi HTTP transport, not window.ethereum, so polling is fast.
-  const { data: erc20Balance, refetch: refetchErc20 } = useReadContract({
-    address: token.tokenAddress,
-    abi: BALANCE_ABI,
-    functionName: "balanceOf",
-    args: [address],
-  });
+  // Narrow the address once (runtime guard, no cast) so the cards below get a definite
+  // Address prop. The workspace only renders on the connected screen, so this is a formality.
+  if (!address) return null;
 
+  // Invalidate the shared public ERC-20 balance key (read by the self-contained
+  // BalancesCard) and refetch the native ETH balance shown in the header.
   const refreshPublicBalances = () => {
-    void refetchErc20();
-    void refetchEth();
+    queryClient.invalidateQueries({ queryKey: erc20BalanceKey(token.tokenAddress, address) });
+    void refetchNativeBalance();
   };
-
-  // Only run once the user has explicitly authorized decrypt for the selected token.
-  // Prevents the hook from firing an EIP-712 prompt on mount (blind-signing anti-pattern).
-  const balance = useConfidentialBalance(
-    { address: token.confidentialTokenAddress, account: address },
-    { enabled: !!isAllowed },
-  );
-
-  // Mint 10 whole tokens on the underlying ERC-20 contract.
-  const mint = useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) {
-        throw new Error("Connect a wallet before minting tokens.");
-      }
-      const txHash = await signer.writeContract({
-        address: token.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [address, parseUnits("10", erc20Decimals)],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
-    onSuccess: refreshPublicBalances,
-  });
-
-  // Clear stale mutation state when the wallet account changes so the BalancesCard
-  // does not show a pending/success/error badge belonging to the previous account.
-  // Both reset functions are omitted from deps: useMutation returns a new object every
-  // render, so including them would re-run this effect on every render. The resets are
-  // idempotent so running them only on address changes is both correct and sufficient.
-  useEffect(() => {
-    mint.reset();
-    allowTokens.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
-
-  const formattedErc20 =
-    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
-  const formattedConfidential =
-    balance.data !== undefined
-      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
-      : "—";
 
   return (
     <>
       <BalancesCard
-        formattedErc20={formattedErc20}
-        formattedConfidential={formattedConfidential}
-        isLoadingConfidential={balance.isLoading}
-        erc20Symbol={erc20Symbol}
-        onMint={() => mint.mutate()}
-        isMinting={mint.isPending}
-        mintDisabled={false}
-        mintError={mint.isError ? (mint.error?.message ?? null) : null}
-        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
-        isAllowed={!!isAllowed}
-        onDecrypt={handleDecrypt}
-        isDecrypting={allowTokens.isPending}
-        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
+        token={token}
+        account={address}
+        validPairs={validPairs}
+        disabled={false}
+        onSuccess={refreshPublicBalances}
       />
 
       {/* Pending unshield resume — checked for every registered token, not just the selected one.
@@ -377,8 +292,7 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
       {validPairs.map((pair) => (
         <PendingUnshieldCard
           key={`${pair.confidentialTokenAddress}-${address}`}
-          tokenAddress={pair.confidentialTokenAddress}
-          label={pair.underlying.symbol}
+          token={pair}
           onSuccess={refreshPublicBalances}
         />
       ))}
@@ -388,30 +302,22 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
       {/* key includes address and token so cards remount (inputs + state reset) on wallet or token change */}
       <ShieldCard
         key={`shield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={erc20Decimals}
-        symbol={erc20Symbol}
+        token={token}
         disabled={false}
         onSuccess={refreshPublicBalances}
       />
 
       <TransferCard
         key={`transfer-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={false}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshPublicBalances}
       />
 
       <UnshieldCard
         key={`unshield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
         disabled={false}
-        balanceDecryptRequired={!isAllowed}
         onSuccess={refreshPublicBalances}
       />
 
@@ -425,13 +331,10 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
           <VaultDepositCard
             key={`vault-deposit-${address}-${token.confidentialTokenAddress}`}
-            tokenAddress={token.confidentialTokenAddress}
+            token={token}
+            account={address}
             vaultAddress={VAULT_ADDRESS}
-            connectedAddress={address}
-            decimals={decimals}
-            symbol={confidentialSymbol}
             disabled={false}
-            balanceDecryptRequired={!isAllowed}
             onSuccess={() => {
               refreshPublicBalances();
               setVaultNonce((n) => n + 1);
@@ -440,10 +343,9 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
           <VaultPositionCard
             key={`vault-position-${address}-${token.confidentialTokenAddress}-${vaultNonce}`}
+            token={token}
+            account={address}
             vaultAddress={VAULT_ADDRESS}
-            connectedAddress={address}
-            decimals={decimals}
-            symbol={confidentialSymbol}
             onWithdraw={refreshPublicBalances}
           />
         </>
@@ -456,13 +358,13 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
       <DelegateDecryptionCard
         key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={false}
       />
 
       <RevokeDelegationCard
         key={`revoke-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
+        token={token}
         disabled={false}
       />
 
@@ -473,11 +375,9 @@ function TokenWorkspace({ address, token, validPairs, refetchEth }: TokenWorkspa
 
       <DecryptAsCard
         key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
+        token={token}
+        account={address}
         disabled={false}
-        connectedAddress={address}
       />
     </>
   );

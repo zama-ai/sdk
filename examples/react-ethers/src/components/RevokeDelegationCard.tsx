@@ -2,19 +2,16 @@
 
 import { getAddress } from "ethers";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface RevokeDelegationCardProps {
-  tokenAddress: Address;
+  token: TokenWrapperPairWithMetadata;
   disabled?: boolean;
 }
 
-export function RevokeDelegationCard({
-  tokenAddress,
-  disabled = false,
-}: RevokeDelegationCardProps) {
-  const revoke = useRevokeDelegation(tokenAddress);
+export function RevokeDelegationCard({ token, disabled = false }: RevokeDelegationCardProps) {
+  const revoke = useRevokeDelegation(token.confidentialTokenAddress);
 
   function submitRevoke(formData: FormData) {
     const delegateAddress = formData.get("delegateAddress") as string;
