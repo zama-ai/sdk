@@ -6,7 +6,7 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
 import { ingenTestnet } from "@zama-fhe/sdk/chains";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 
@@ -26,9 +26,9 @@ const zamaConfig = createZamaConfig({
   permitStorage: indexedDBStorage,
 });
 
-export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+const queryClient = new QueryClient();
 
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
