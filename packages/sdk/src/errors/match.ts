@@ -40,8 +40,7 @@ import type { TransactionRevertedError } from "./transaction";
 /**
  * Maps each {@link ZamaErrorCode} to the error class thrown with that code, so
  * {@link matchZamaError} handlers receive the matched subtype instead of the base
- * `ZamaError`. Hand-maintained; the `Complete` guard below fails the build if a code
- * is added without an entry here (or mapped to a non-`ZamaError`).
+ * `ZamaError`.
  */
 export interface ErrorForCode {
   [ZamaErrorCode.SigningRejected]: SigningRejectedError;
