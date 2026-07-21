@@ -34,6 +34,8 @@ export type {
   FhevmRelayerOptions,
   FhevmRuntimeConfig,
   FhevmClientOptions,
+  FhevmClient,
+  FhevmRelayerSDK,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.

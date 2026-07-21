@@ -481,6 +481,9 @@ export type FheChainAuth = {
 };
 
 // @public
+export type FhevmClient = ReturnType<typeof createFhevmClient>;
+
+// @public
 export interface FhevmRelayerOptions {
     readonly auth?: FhevmRuntimeConfig["auth"];
     readonly debug?: boolean;
@@ -489,6 +492,12 @@ export interface FhevmRelayerOptions {
     readonly headers?: Record<string, string>;
     readonly signal?: AbortSignal;
     readonly timeout?: number;
+}
+
+// @public
+export interface FhevmRelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+    // (undocumented)
+    chain: FheChain;
 }
 
 // @public
