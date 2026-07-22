@@ -5,10 +5,13 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link delegateDecryptionMutationOptions}. */
 export interface DelegateDecryptionParams {
+  /** Address to grant delegated decryption rights to. */
   delegateAddress: Address;
+  /** When the delegation expires; omit for no expiry. */
   expirationDate?: Date;
 }
 
+/** Builds TanStack Query mutation options for {@link Delegations.delegateDecryption | granting} delegated decryption rights on a contract. @see {@link DelegateDecryptionParams} */
 export function delegateDecryptionMutationOptions(
   sdk: ZamaSDK,
   contractAddress: Address,

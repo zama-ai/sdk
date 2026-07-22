@@ -6,7 +6,7 @@ import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./ev
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
 import { Permits } from "./namespaces/permits";
-import type { EncryptParams, FhevmRelayerOptions, FhevmRelayerSDK } from "./relayer/types";
+import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
 import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
@@ -33,8 +33,11 @@ import { WrappersRegistry } from "./wrappers-registry";
  */
 export class ZamaSDK {
   readonly #router: ChainRouter;
+  /** Read-only chain access used for all contract reads. */
   readonly provider: GenericProvider;
+  /** Wallet signer used for write operations, or `undefined` when the SDK is read-only. */
   readonly signer: GenericSigner | undefined;
+  /** Storage for cached permits and transport key pairs. */
   readonly storage: GenericStorage;
   /**
    * A {@link WrappersRegistry} instance auto-configured for the current chain.
@@ -165,10 +168,8 @@ export class ZamaSDK {
 
   /**
    * The single-chain relayer backend for the **currently active** chain.
-   *
-   * @internal
    */
-  get relayer(): FhevmRelayerSDK {
+  get relayer(): RelayerSDK {
     return this.#router.relayer;
   }
 

@@ -12,6 +12,8 @@ const CacheIndexSchema = z.array(z.string());
  *
  * Each entry is keyed by `(requester, contractAddress, handle)` so different
  * signers cannot read each other's cached decryptions.
+ *
+ * @internal
  */
 export class CachingService {
   readonly #storage: GenericStorage;

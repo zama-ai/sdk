@@ -20,7 +20,6 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
 import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
-import { z } from 'zod/mini';
 
 // @public
 export const ACL_TOPICS: readonly [`0x${string}`, `0x${string}`];
@@ -343,12 +342,10 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
     readonly args: readonly [`0x${string}`, bigint];
 };
 
-// @public (undocumented)
+// @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     step: "reset" | "approve";
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.ApproveUnderlyingSubmitted;
 }
 
@@ -362,11 +359,8 @@ export class BalanceCheckUnavailableError extends ZamaError {
 
 // @public
 export interface BalanceErrorDetails {
-    // (undocumented)
     readonly available: bigint;
-    // (undocumented)
     readonly requested: bigint;
-    // (undocumented)
     readonly token: Address;
 }
 
@@ -512,31 +506,22 @@ export function balanceOfContract(tokenAddress: Address, account: Address): {
     readonly args: readonly [`0x${string}`];
 };
 
-// @public (undocumented)
+// @public
 export interface BaseEvent {
     operationId?: string;
-    // (undocumented)
     timestamp: number;
-    // (undocumented)
     tokenAddress?: Address;
 }
 
 // @public
 export abstract class BaseSigner implements GenericSigner, Disposable {
-    // (undocumented)
     [Symbol.dispose](): void;
     constructor(initial?: WalletAccount);
-    // (undocumented)
     dispose(): void;
-    // (undocumented)
     protected onDispose(): void;
-    // (undocumented)
     requireWalletAccount(operation: string): WalletAccount;
-    // (undocumented)
     abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-    // (undocumented)
     readonly walletAccount: MutableWalletAccountStore;
-    // (undocumented)
     abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
@@ -555,21 +540,16 @@ export interface BatchDecryptAsOptions {
     onError?: (error: Error, address: Address) => bigint;
 }
 
-// @public (undocumented)
+// @public
 export interface BatchDecryptItem {
-    // (undocumented)
     contractAddress: Address;
-    // (undocumented)
     encryptedValue: EncryptedValue;
-    // (undocumented)
     error?: ZamaError;
-    // (undocumented)
     value?: ClearValue;
 }
 
-// @public (undocumented)
+// @public
 export interface BatchDecryptResult {
-    // (undocumented)
     items: BatchDecryptItem[];
 }
 
@@ -595,35 +575,23 @@ export class ChainMismatchError extends ZamaError {
         signerChainId: number;
         providerChainId: number;
     }, options?: ErrorOptions);
-    // (undocumented)
     readonly operation: string;
-    // (undocumented)
     readonly providerChainId: number;
-    // (undocumented)
     readonly signerChainId: number;
-}
-
-// @public
-export class ChainRouter {
-    constructor(chains: readonly [FheChain, ...FheChain[]], configs: Readonly<Record<number, RelayerConfig>>);
-    // (undocumented)
-    get chain(): FheChain;
-    // (undocumented)
-    get chains(): readonly FheChain[];
-    get relayer(): RelayerSDK;
-    switchChain(chainId: number): void;
 }
 
 // @public
 export const chains: Record<number, FheChain>;
 
 // @public
+export type ChecksummedAddress = Address & {
+    readonly [checksummedTag]: true;
+};
+
+// @public
 export class ChromeSessionStorage implements GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
     set(key: string, value: unknown): Promise<void>;
 }
 
@@ -635,7 +603,6 @@ export function cleartext(options?: RelayerOptions): CleartextRelayerConfig;
 
 // @public
 export interface CleartextRelayerConfig extends RelayerConfig {
-    // (undocumented)
     readonly type: "cleartext";
 }
 
@@ -4053,7 +4020,6 @@ export function confidentialTransferContract(encryptedErc20: Address, to: Addres
 // @public
 export interface ConfidentialTransferEvent {
     readonly encryptedAmount: EncryptedValue;
-    // (undocumented)
     readonly eventName: "ConfidentialTransfer";
     readonly from: Address;
     readonly to: Address;
@@ -5381,43 +5347,30 @@ export function decodeUnwrapRequested(log: RawLog): UnwrapRequestedEvent | null;
 // @public
 export function decodeWrap(log: RawLog): WrapEvent | null;
 
-// @public (undocumented)
+// @public
 export interface DecryptEndEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
     result: Record<EncryptedValue, ClearValue>;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface DecryptErrorEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     encryptedValues: EncryptedValue[];
     error: Error;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptError;
 }
 
-// @public (undocumented)
+// @public
 export interface DecryptInput {
-    // (undocumented)
     contractAddress: Address;
-    // (undocumented)
     encryptedValue: EncryptedValue;
 }
 
 // @public
 export class Decryption {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        router: ChainRouter;
-        decryptionService: DecryptionService | undefined;
-    });
     decryptPublicValues(encryptedValues: EncryptedValue[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<DecryptPublicValuesResult>;
     decryptValues(encryptedInput: DecryptInput[], options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<Record<EncryptedValue, ClearValue>>;
     delegatedBatchDecryptValues(input: {
@@ -5436,21 +5389,17 @@ export class DecryptionFailedError extends ZamaError {
 
 // @public
 export interface DecryptPublicValuesResult {
-    // (undocumented)
     abiEncodedClearValues: Hex;
-    // (undocumented)
     readonly clearValues: Record<EncryptedValue, ClearValue>;
-    // (undocumented)
     decryptionProof: Hex;
 }
 
 // @public
 export type DecryptResult = Readonly<Record<EncryptedValue, ClearValue>>;
 
-// @public (undocumented)
+// @public
 export interface DecryptStartEvent extends BaseEvent {
     encryptedValues: EncryptedValue[];
-    // (undocumented)
     type: typeof ZamaSDKEvents.DecryptStart;
 }
 
@@ -5470,7 +5419,6 @@ export interface DelegatedForUserDecryptionEvent {
     readonly delegate: Address;
     readonly delegationCounter: bigint;
     readonly delegator: Address;
-    // (undocumented)
     readonly eventName: "DelegatedForUserDecryption";
     readonly newExpirationDate: bigint;
     readonly oldExpirationDate: bigint;
@@ -5728,12 +5676,6 @@ export class DelegationNotPropagatedError extends ZamaError {
 
 // @public
 export class Delegations {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        delegationService: DelegationService;
-    });
     delegateDecryption(input: {
         contractAddress: Address;
         delegateAddress: Address;
@@ -5744,6 +5686,11 @@ export class Delegations {
         delegatorAddress: Address;
         delegateAddress: Address;
     }): Promise<bigint>;
+    getStatus(params: {
+        contractAddress: Address;
+        delegatorAddress: Address;
+        delegateAddress: Address;
+    }): Promise<DelegationStatus>;
     isActive(params: {
         contractAddress: Address;
         delegatorAddress: Address;
@@ -5760,11 +5707,15 @@ export class DelegationSelfNotAllowedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
-// @public (undocumented)
+// @public
+export interface DelegationStatus {
+    expiryTimestamp: bigint;
+    isActive: boolean;
+}
+
+// @public
 export interface DelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.DelegationSubmitted;
 }
 
@@ -5774,20 +5725,16 @@ export type EIP712TypedData = Eip712Like;
 // @public
 export type EncryptedValue = Hex;
 
-// @public (undocumented)
+// @public
 export interface EncryptEndEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptEnd;
 }
 
-// @public (undocumented)
+// @public
 export interface EncryptErrorEvent extends BaseEvent {
-    // (undocumented)
     durationMs: number;
     error: Error;
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptError;
 }
 
@@ -5810,24 +5757,19 @@ export class EncryptionFailedError extends ZamaError {
 
 // @public
 export interface EncryptParams {
-    // (undocumented)
     contractAddress: Address;
-    // (undocumented)
     userAddress: Address;
     readonly values: readonly EncryptInput[];
 }
 
 // @public
 export interface EncryptResult {
-    // (undocumented)
     readonly encryptedValues: readonly EncryptedValue[];
-    // (undocumented)
     inputProof: Hex;
 }
 
-// @public (undocumented)
+// @public
 export interface EncryptStartEvent extends BaseEvent {
-    // (undocumented)
     type: typeof ZamaSDKEvents.EncryptStart;
 }
 
@@ -5846,29 +5788,57 @@ export const ERC7984_INTERFACE_ID: "0x4958f2a4";
 export const ERC7984_WRAPPER_INTERFACE_ID: "0x1f1c62b2";
 
 // @public
+export interface ErrorForCode {
+    [ZamaErrorCode.AclPaused]: AclPausedError;
+    [ZamaErrorCode.BalanceCheckUnavailable]: BalanceCheckUnavailableError;
+    [ZamaErrorCode.ChainMismatch]: ChainMismatchError;
+    [ZamaErrorCode.Configuration]: ConfigurationError;
+    [ZamaErrorCode.DecryptionFailed]: DecryptionFailedError;
+    [ZamaErrorCode.DelegationContractIsSelf]: DelegationContractIsSelfError;
+    [ZamaErrorCode.DelegationCooldown]: DelegationCooldownError;
+    [ZamaErrorCode.DelegationDelegateEqualsContract]: DelegationDelegateEqualsContractError;
+    [ZamaErrorCode.DelegationExpirationTooSoon]: DelegationExpirationTooSoonError;
+    [ZamaErrorCode.DelegationExpired]: DelegationExpiredError;
+    [ZamaErrorCode.DelegationExpiryUnchanged]: DelegationExpiryUnchangedError;
+    [ZamaErrorCode.DelegationNotFound]: DelegationNotFoundError;
+    [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
+    [ZamaErrorCode.DelegationSelfNotAllowed]: DelegationSelfNotAllowedError;
+    [ZamaErrorCode.EncryptionFailed]: EncryptionFailedError;
+    [ZamaErrorCode.ERC20ReadFailed]: ERC20ReadFailedError;
+    [ZamaErrorCode.InsufficientAllowance]: InsufficientAllowanceError;
+    [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
+    [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
+    [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.KeyDigestMismatch]: KeyDigestMismatchError;
+    [ZamaErrorCode.KeyDigestVerificationFailed]: KeyDigestVerificationFailedError;
+    [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
+    [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
+    [ZamaErrorCode.NotEntitled]: NotEntitledError;
+    [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
+    [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
+    [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
+    [ZamaErrorCode.SigningFailed]: SigningFailedError;
+    [ZamaErrorCode.SigningRejected]: SigningRejectedError;
+    [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
+    [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+    [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
+}
+
+// @public
 export interface FheChain<TId extends number = number> {
-    // (undocumented)
     readonly aclContractAddress: Address;
     readonly auth?: FheChainAuth;
     readonly executorAddress?: Address | undefined;
-    // (undocumented)
     readonly gatewayChainId: number;
-    // (undocumented)
     readonly id: TId;
-    // (undocumented)
     readonly inputVerifierContractAddress: Address;
-    // (undocumented)
     readonly kmsContractAddress: Address;
     readonly kmsGenerationContractAddress?: Address | undefined;
-    // (undocumented)
     readonly network: EIP1193Provider | string;
     readonly protocolConfigContractAddress?: Address | undefined;
     readonly registryAddress: Address | undefined;
-    // (undocumented)
     readonly relayerUrl: string;
-    // (undocumented)
     readonly verifyingContractAddressDecryption: Address;
-    // (undocumented)
     readonly verifyingContractAddressInputVerification: Address;
 }
 
@@ -5885,6 +5855,26 @@ export type FheChainAuth = {
     cookie?: string;
     value: string;
 };
+
+// @public
+export type FhevmClient = ReturnType<typeof createFhevmClient>;
+
+// @public
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+// @public
+export interface FhevmRelayerOptions {
+    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly debug?: boolean;
+    readonly fetchRetries?: number;
+    readonly fetchRetryDelayInMilliseconds?: number;
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly timeout?: number;
+}
+
+// @public
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
 
 // @public
 export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: EncryptedValue, unwrapAmountCleartext: bigint, decryptionProof: Hex): {
@@ -7022,11 +7012,9 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Encryp
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
 };
 
-// @public (undocumented)
+// @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
 }
 
@@ -7044,13 +7032,9 @@ export function findWrap(logs: readonly RawLog[]): WrapEvent | null;
 
 // @public
 export interface GenericLogger {
-    // (undocumented)
     debug: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     error: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     info: (message: string, data?: Record<string, unknown>) => void;
-    // (undocumented)
     warn: (message: string, data?: Record<string, unknown>) => void;
 }
 
@@ -9876,13 +9860,9 @@ export const hoodi: {
 // @public
 export class IndexedDBStorage implements GenericStorage {
     constructor(dbName?: string, dbVersion?: number, storeName?: string);
-    // (undocumented)
     clear(): Promise<void>;
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -12688,11 +12668,8 @@ export function matchZamaError<R>(error: unknown, handlers: { [K in ZamaErrorCod
 
 // @public
 export class MemoryStorage implements GenericStorage {
-    // (undocumented)
     delete(key: string): Promise<void>;
-    // (undocumented)
     get<T = unknown>(key: string): Promise<T | null>;
-    // (undocumented)
     set<T = unknown>(key: string, value: T): Promise<void>;
 }
 
@@ -12702,11 +12679,9 @@ export const memoryStorage: MemoryStorage;
 // @public
 export class MutableWalletAccountStore implements WalletAccountStore {
     constructor(initial?: WalletAccount);
-    // (undocumented)
     getSnapshot(): WalletAccount | undefined;
     isReady(): boolean;
     setSnapshot(next: WalletAccount | undefined): void;
-    // (undocumented)
     subscribe(listener: WalletAccountListener): () => void;
 }
 
@@ -12874,29 +12849,23 @@ export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequest
 
 // @public
 export interface PaginatedResult<T> {
-    // (undocumented)
     readonly items: readonly T[];
-    // (undocumented)
     readonly page: number;
-    // (undocumented)
     readonly pageSize: number;
-    // (undocumented)
     readonly total: number;
 }
 
 // @public
-export type Permission = z.infer<typeof PermissionSchema>;
+export interface Permission {
+    contractAddresses: ChecksummedAddress[];
+    durationDays: number;
+    keypairPublicKey: Hex;
+    serializedPermit: SerializedPermit;
+    startTimestamp: number;
+}
 
 // @public
 export class Permits {
-    // @internal
-    constructor(opts: {
-        signer: GenericSigner | undefined;
-        provider: GenericProvider;
-        cachingService: CachingService;
-        credentialService: CredentialService | undefined;
-        logger: GenericLogger;
-    });
     clear(): Promise<void>;
     grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void>;
     grantPermit(contracts: Address[]): Promise<void>;
@@ -14069,9 +14038,14 @@ export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractF
 
 // @public
 export interface RelayerConfig {
-    readonly createRelayer: (chain: FheChain) => RelayerSDK;
-    // (undocumented)
     readonly type: string;
+}
+
+// @public
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+    readonly batchRpcCalls?: boolean;
+    readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+    readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
 }
 
 // @public
@@ -14086,26 +14060,8 @@ export class RelayerRequestFailedError extends ZamaError {
 
 // @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
-    // (undocumented)
     chain: FheChain;
 }
-
-// @public (undocumented)
-export function resolveChainRelayers(chains: readonly FheChain[], relayers: Readonly<Record<number, RelayerConfig>>): Map<number, ResolvedChainRelayer>;
-
-// @public (undocumented)
-export interface ResolvedChainRelayer {
-    // (undocumented)
-    chain: FheChain;
-    // (undocumented)
-    relayerConfig: RelayerConfig;
-}
-
-// @public (undocumented)
-export function resolveStorage(storage?: GenericStorage | undefined, permitStorage?: GenericStorage | undefined): {
-    storage: GenericStorage;
-    permitStorage: GenericStorage;
-};
 
 // @public
 export function retryAfterSeconds(error: unknown): number | undefined;
@@ -14116,7 +14072,6 @@ export interface RevokedDelegationForUserDecryptionEvent {
     readonly delegate: Address;
     readonly delegationCounter: bigint;
     readonly delegator: Address;
-    // (undocumented)
     readonly eventName: "RevokedDelegationForUserDecryption";
     readonly oldExpirationDate: bigint;
 }
@@ -14331,11 +14286,9 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
-// @public (undocumented)
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
 }
 
@@ -14362,10 +14315,27 @@ export const sepolia: {
 };
 
 // @public
+export interface SerializedPermit {
+    eip712: SerializedPermitEip712;
+    signature: Hex;
+    signerAddress: ChecksummedAddress;
+    version: number;
+}
+
+// @public
+export interface SerializedPermitEip712 {
+    domain: Record<string, unknown>;
+    message: Record<string, unknown>;
+    primaryType?: string;
+    types: Record<string, {
+        name: string;
+        type: string;
+    }[]>;
+}
+
+// @public
 export interface SerializedTransportKeyPair {
-    // (undocumented)
     privateKey: Hex;
-    // (undocumented)
     publicKey: Hex;
 }
 
@@ -15505,11 +15475,9 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
     readonly args: readonly [`0x${string}`, number];
 };
 
-// @public (undocumented)
+// @public
 export interface SetOperatorSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.SetOperatorSubmitted;
 }
 
@@ -15528,12 +15496,10 @@ export interface ShieldOptions extends ShieldCallbacks {
 // @public
 export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
-// @public (undocumented)
+// @public
 export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.ShieldSubmitted;
 }
 
@@ -15545,7 +15511,6 @@ export class SignerNotConfiguredError extends SignerRequiredError {
 // @public
 export class SignerRequiredError extends ZamaError {
     constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions);
-    // (undocumented)
     readonly operation: string;
 }
 
@@ -15558,9 +15523,6 @@ export class SigningFailedError extends ZamaError {
 export class SigningRejectedError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
-
-// @public
-export type StoredTransportKeyPair = z.infer<typeof StoredTransportKeyPairSchema>;
 
 // @public
 export function supportsInterfaceContract(tokenAddress: Address, interfaceId: Address): {
@@ -15729,10 +15691,7 @@ export function symbolContract(tokenAddress: Address): {
 // @public
 export class Token {
     constructor(sdk: ZamaSDK, address: Address);
-    // (undocumented)
     readonly address: Address;
-    // @internal
-    protected assertConfidentialBalance(amount: bigint): Promise<void>;
     balanceOf(owner: Address): Promise<bigint>;
     static batchBalancesOf(tokens: Token[], owner: Address): Promise<BatchBalancesResult>;
     static batchDecryptBalancesAs(tokens: Token[], options: BatchDecryptAsOptions): Promise<Map<Address, bigint>>;
@@ -15746,48 +15705,32 @@ export class Token {
         delegatorAddress: Address;
         accountAddress?: Address;
     }): Promise<bigint>;
-    // @internal
-    protected emit(input: ZamaSDKEventInput): void;
     isConfidential(): Promise<boolean>;
     isOperator(holder: Address, spender: Address): Promise<boolean>;
     isWrapper(): Promise<boolean>;
     name(): Promise<string>;
-    // @internal
-    protected readConfidentialBalanceOf(owner: Address): Promise<EncryptedValue>;
-    // (undocumented)
     readonly sdk: ZamaSDK;
     setOperator(operator: Address, until?: number): Promise<TransactionResult>;
-    // @internal
-    protected submitTransaction(params: {
-        operation: TransactionOperation;
-        config: WriteContractConfig;
-        onSubmitted?: (txHash: Hex) => void;
-    }): Promise<TransactionResult>;
     symbol(): Promise<string>;
 }
 
 // @public
 export const TOKEN_TOPICS: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 
-// @public (undocumented)
+// @public
 export interface TokenWrapperPair {
-    // (undocumented)
     readonly confidentialTokenAddress: Address;
-    // (undocumented)
     readonly isValid: boolean;
-    // (undocumented)
     readonly tokenAddress: Address;
 }
 
 // @public
 export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
-    // (undocumented)
     readonly confidential: {
         readonly name: string;
         readonly symbol: string;
         readonly decimals: number;
     };
-    // (undocumented)
     readonly underlying: {
         readonly name: string;
         readonly symbol: string;
@@ -15804,16 +15747,15 @@ export const Topics: {
     readonly UnwrapFinalized: `0x${string}`;
 };
 
-// @public (undocumented)
+// @public
 export interface TransactionErrorEvent extends BaseEvent {
     error: Error;
     operation: TransactionOperation;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransactionError;
 }
 
 // @public
-export type TransactionOperation = keyof typeof transactionOperationMetadata;
+export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
 export interface TransactionReceipt {
@@ -16127,11 +16069,9 @@ export interface TransferCallbacks {
     onTransferSubmitted?: (txHash: Hex) => void;
 }
 
-// @public (undocumented)
+// @public
 export interface TransferFromSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransferFromSubmitted;
 }
 
@@ -16140,11 +16080,9 @@ export interface TransferOptions extends TransferCallbacks {
     skipBalanceCheck?: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface TransferSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.TransferSubmitted;
 }
 
@@ -17303,25 +17241,20 @@ export interface UnshieldOptions extends UnshieldCallbacks {
     skipBalanceCheck?: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase1SubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase1Submitted;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase2StartedEvent extends BaseEvent {
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase2Started;
 }
 
-// @public (undocumented)
+// @public
 export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
 }
 
@@ -18465,7 +18398,6 @@ export function unwrapContract(encryptedErc20: Address, from: Address, to: Addre
 export interface UnwrapFinalizedEvent {
     readonly cleartextAmount: bigint;
     readonly encryptedAmount: EncryptedValue;
-    // (undocumented)
     readonly eventName: "UnwrapFinalized";
     readonly receiver: Address;
     readonly unwrapRequestId: EncryptedValue;
@@ -19610,7 +19542,6 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 // @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
-    // (undocumented)
     readonly eventName: "UnwrapRequested";
     readonly receiver: Address;
     readonly unwrapRequestId: EncryptedValue;
@@ -19621,27 +19552,21 @@ export interface UnwrapResult extends TransactionResult {
     unwrapRequestId: EncryptedValue;
 }
 
-// @public (undocumented)
+// @public
 export interface UnwrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.UnwrapSubmitted;
 }
 
 // @public
 export interface WalletAccount {
-    // (undocumented)
     address: Address;
-    // (undocumented)
     chainId: number;
 }
 
 // @public
 export interface WalletAccountChange {
-    // (undocumented)
     next?: WalletAccount;
-    // (undocumented)
     previous?: WalletAccount;
 }
 
@@ -20804,7 +20729,6 @@ export function wrapContract(wrapperAddress: Address, to: Address, amount: bigin
 // @public
 export interface WrapEvent {
     readonly encryptedWrappedAmount: EncryptedValue;
-    // (undocumented)
     readonly eventName: "Wrap";
     readonly roundedAmount: bigint;
     readonly to: Address;
@@ -20856,9 +20780,7 @@ export class WrappersRegistry {
     listPairs(options: ListPairsOptions & {
         metadata: true;
     }): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
-    // (undocumented)
     listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
-    // (undocumented)
     readonly provider: GenericProvider;
     refresh(): void;
     get ttlMs(): number;
@@ -20873,9 +20795,7 @@ export interface WrappersRegistryConfig {
 
 // @public
 export interface WrapSubmittedEvent extends BaseEvent {
-    // (undocumented)
     txHash: Hex;
-    // (undocumented)
     type: typeof ZamaSDKEvents.WrapSubmitted;
 }
 
@@ -20898,7 +20818,6 @@ export type WriteFunctionName<TAbi extends ContractAbi = ContractAbi> = Contract
 // @public
 export type ZamaConfig = {
     readonly chains: readonly FheChain[];
-    readonly router: ChainRouter;
     readonly provider: GenericProvider;
     readonly signer: GenericSigner | undefined;
     readonly storage: GenericStorage;
@@ -20945,18 +20864,14 @@ export type ZamaConfigEthers<TChains extends AtLeastOneChain = AtLeastOneChain> 
 
 // @public
 export interface ZamaConfigGeneric<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
-    // (undocumented)
     provider: GenericProvider;
     signer?: GenericSigner;
 }
 
 // @public
 export interface ZamaConfigViem<TChains extends AtLeastOneChain = AtLeastOneChain> extends ZamaConfigBase<TChains> {
-    // (undocumented)
     ethereum?: EIP1193Provider;
-    // (undocumented)
     publicClient: PublicClient;
-    // (undocumented)
     walletClient: WalletClient;
 }
 
@@ -21019,22 +20934,12 @@ export class ZamaSDK {
     readonly decryption: Decryption;
     readonly delegations: Delegations;
     dispose(): void;
-    // @internal
-    emitEvent(input: ZamaSDKEventInput, tokenAddress?: Address): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
-    // @internal
-    get logger(): GenericLogger;
-    // @internal
-    onWalletAccountChange(listener: WalletAccountListener): () => void;
     readonly permits: Permits;
-    // (undocumented)
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;
-    // @internal
     get relayer(): RelayerSDK;
-    // (undocumented)
     readonly signer: GenericSigner | undefined;
-    // (undocumented)
     readonly storage: GenericStorage;
     terminate(): void;
 }
@@ -21043,9 +20948,6 @@ export class ZamaSDK {
 export type ZamaSDKEvent = EncryptStartEvent | EncryptEndEvent | EncryptErrorEvent | DecryptStartEvent | DecryptEndEvent | DecryptErrorEvent | TransactionErrorEvent | ShieldSubmittedEvent | TransferSubmittedEvent | TransferFromSubmittedEvent | SetOperatorSubmittedEvent | ApproveUnderlyingSubmittedEvent | WrapSubmittedEvent | UnwrapSubmittedEvent | FinalizeUnwrapSubmittedEvent | DelegationSubmittedEvent | RevokeDelegationSubmittedEvent | UnshieldPhase1SubmittedEvent | UnshieldPhase2StartedEvent | UnshieldPhase2SubmittedEvent;
 
 // @public
-export type ZamaSDKEventInput = ZamaSDKEvent extends (infer E) ? E extends ZamaSDKEvent ? Omit<E, "timestamp" | "tokenAddress"> : never : never;
-
-// @public (undocumented)
 export type ZamaSDKEventListener = (event: ZamaSDKEvent) => void;
 
 // @public
@@ -21075,7 +20977,7 @@ export const ZamaSDKEvents: {
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
 
-// @public (undocumented)
+// @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 // (No @packageDocumentation comment for this package)

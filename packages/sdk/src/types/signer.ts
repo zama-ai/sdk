@@ -9,13 +9,17 @@ import type {
 
 /** Snapshot of the connected wallet account at a point in time. */
 export interface WalletAccount {
+  /** Address of the connected wallet account. */
   address: Address;
+  /** Chain ID the wallet is currently connected to. */
   chainId: number;
 }
 
 /** A wallet account transition emitted by signer adapters. */
 export interface WalletAccountChange {
+  /** Account before the transition; `undefined` if none was connected. */
   previous?: WalletAccount;
+  /** Account after the transition; `undefined` on disconnect. */
   next?: WalletAccount;
 }
 

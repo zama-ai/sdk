@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { hardhat } from "../../chains";
-import { ConfigurationError } from "../../errors";
 import type { FhevmRuntimeConfig } from "../../relayer/types";
 import type { RelayerConfig, ZamaConfigBase } from "../types";
 
@@ -65,26 +64,24 @@ describe("buildZamaConfig FHEVM runtime configuration", () => {
     expect(logger.debug).toHaveBeenCalledWith("debug");
   });
 
-  test("allows later configs that do not specify runtime options", () => {
-    const provider = {} as never;
-    buildZamaConfig(undefined, provider, params());
-
-    expect(() => buildZamaConfig(undefined, provider, params())).not.toThrow();
-    expect(fhevmRuntime.setFhevmRuntimeConfig).toHaveBeenCalledOnce();
-  });
-
+  // Once the runtime is set, every later config warns and never re-applies —
+  // whether or not it passes its own `runtime` options.
   test.each([
-    { label: "identical", secondValue: true },
-    { label: "different", secondValue: false },
-  ])("rejects later $label explicit runtime options", ({ secondValue }) => {
+    { label: "that passes runtime options", secondRuntime: { singleThread: false } },
+    { label: "that omits runtime options", secondRuntime: undefined },
+  ])("warns without throwing on a later config $label", ({ secondRuntime }) => {
     const provider = {} as never;
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
     buildZamaConfig(undefined, provider, params({ singleThread: true }));
 
     expect(() =>
-      buildZamaConfig(undefined, provider, params({ singleThread: secondValue })),
-    ).toThrow(ConfigurationError);
-    expect(() =>
-      buildZamaConfig(undefined, provider, params({ singleThread: secondValue })),
-    ).toThrow("FHEVM runtime configuration is already set and cannot be changed.");
+      buildZamaConfig(undefined, provider, { ...params(secondRuntime), logger }),
+    ).not.toThrow();
+    // LoggerService forwards `(prefixedMessage, data?)`, so assert the message
+    // arg rather than an exact call shape.
+    expect(logger.warn.mock.calls[0]?.[0]).toBe(
+      "[zama-sdk] runtime configuration is already set and cannot be changed.",
+    );
+    expect(fhevmRuntime.setFhevmRuntimeConfig).toHaveBeenCalledOnce();
   });
 });

@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import type { DelegationService } from "../services/delegation-service";
+import type { DelegationService, DelegationStatus } from "../services/delegation-service";
 import type { GenericProvider, GenericSigner, TransactionResult } from "../types";
 import { requireAlignedWalletAccount } from "../utils/alignment";
 import { requireConfigured } from "../errors";
@@ -147,5 +147,24 @@ export class Delegations {
     delegateAddress: Address;
   }): Promise<bigint> {
     return this.#delegationService.getDelegationExpiry(params);
+  }
+
+  /**
+   * Get activity and expiry together in a single on-chain read, instead of
+   * calling {@link isActive} and {@link getExpiry} separately.
+   *
+   * Signer-independent: works without a configured signer.
+   *
+   * @param contractAddress - The confidential contract address.
+   * @param delegatorAddress - The address that granted the delegation.
+   * @param delegateAddress - The address that received delegation rights.
+   * @returns `{ isActive, expiryTimestamp }` — activity and the raw expiry timestamp together.
+   */
+  async getStatus(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<DelegationStatus> {
+    return this.#delegationService.getStatus(params);
   }
 }

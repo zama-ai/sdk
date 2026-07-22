@@ -6,12 +6,17 @@ import { filterQueryOptions } from "./utils";
 import { zamaQueryKeys } from "./query-keys";
 import type { Address } from "viem";
 
+/** Configuration for {@link confidentialIsOperatorQueryOptions}. */
 export interface ConfidentialIsOperatorQueryConfig {
+  /** Token holder whose operator authorization to check; the query stays disabled until provided. */
   holder?: Address;
+  /** Spender address to check for operator authorization; the query stays disabled until provided. */
   spender?: Address;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading whether a spender is an authorized operator of a holder on a confidential token. */
 export function confidentialIsOperatorQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address | undefined,

@@ -5,6 +5,7 @@ import { zamaQueryKeys } from "./query-keys";
 import { assertNonNullable } from "../utils/assertions";
 import { filterQueryOptions } from "./utils";
 
+/** Configuration for {@link wrapperDiscoveryQueryOptions}. */
 export interface WrapperDiscoveryQueryConfig {
   /**
    * Address of any confidential token you control.
@@ -24,9 +25,11 @@ export interface WrapperDiscoveryQueryConfig {
    * yet known — the query will be disabled.
    */
   registryAddress?: Address;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for discovering the confidential wrapper address for a given ERC-20 token (resolves to `null` when none is registered). */
 export function wrapperDiscoveryQueryOptions(
   registry: WrappersRegistry,
   config: WrapperDiscoveryQueryConfig,

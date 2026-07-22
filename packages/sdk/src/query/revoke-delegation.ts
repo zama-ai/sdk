@@ -5,9 +5,11 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link revokeDelegationMutationOptions}. */
 export interface RevokeDelegationParams {
+  /** Address whose delegated decryption rights to revoke. */
   delegateAddress: Address;
 }
 
+/** Builds TanStack Query mutation options for {@link Delegations.revokeDelegation | revoking} delegated decryption rights on a contract. @see {@link RevokeDelegationParams} */
 export function revokeDelegationMutationOptions(
   sdk: ZamaSDK,
   contractAddress: Address,

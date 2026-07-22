@@ -15,14 +15,23 @@ export type FheChainAuth =
  * `@zama-fhe/sdk/chains`.
  */
 export interface FheChain<TId extends number = number> {
+  /** EVM chain ID of the host chain. */
   readonly id: TId;
+  /** Chain ID of the FHE gateway serving this chain. */
   readonly gatewayChainId: number;
+  /** Base URL of this chain's relayer endpoint. */
   readonly relayerUrl: string;
+  /** RPC network for host-chain reads — an EIP-1193 provider or an RPC URL. */
   readonly network: EIP1193Provider | string;
+  /** Address of the ACL (access-control list) contract. */
   readonly aclContractAddress: Address;
+  /** Address of the KMS verifier contract. */
   readonly kmsContractAddress: Address;
+  /** Address of the input verifier contract. */
   readonly inputVerifierContractAddress: Address;
+  /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
+  /** EIP-712 verifying contract address for input verification. */
   readonly verifyingContractAddressInputVerification: Address;
   /**
    * Address of the `ConfidentialTokenWrappersRegistry` contract.

@@ -23,6 +23,7 @@ import type {
   ChainMismatchError,
   KeyDigestVerificationFailedError,
   KeyDigestMismatchError,
+  ErrorForCode,
 } from "..";
 import { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds, matchZamaError } from "..";
 
@@ -174,5 +175,12 @@ describe("matchZamaError", () => {
     const baseHandler = (e: ZamaError) => e.code;
     const fromBaseHandler = matchZamaError(new Error("any"), { SIGNING_REJECTED: baseHandler });
     expectTypeOf(fromBaseHandler).toEqualTypeOf<ZamaErrorCode | undefined>();
+  });
+
+  describe("ErrorForCode", () => {
+    test("maps out each error code to an error", () => {
+      type Complete<T extends Record<ZamaErrorCode, ZamaError>> = T;
+      expectTypeOf<ErrorForCode>().toEqualTypeOf<Complete<ErrorForCode>>();
+    });
   });
 });
