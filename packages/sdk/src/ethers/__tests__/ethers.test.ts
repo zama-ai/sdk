@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import { encodeAbiParameters } from "viem";
-import { Wallet } from "ethers";
+import { Wallet, ParamType } from "ethers";
 import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
@@ -346,10 +346,20 @@ describe("EthersProvider", () => {
   });
 
   describe("readContract", () => {
+    // The mocked contract's `getFunction` hands back `mockContractMethod`; give it the
+    // `fragment.outputs` the real ethers method exposes so the provider can walk the parsed
+    // output types. Types are Solidity strings ethers parses into `ParamType`s.
+    const setOutputs = (...types: string[]) => {
+      (mockContractMethod as unknown as { fragment: { outputs: ParamType[] } }).fragment = {
+        outputs: types.map((type) => ParamType.from(type)),
+      };
+    };
+
     test("creates an ethers Contract and calls the function with args", async ({
       tokenAddress,
       userAddress,
     }) => {
+      setOutputs("uint256");
       mockContractMethod.mockResolvedValueOnce(42n);
       const mockProvider = { getNetwork: vi.fn() };
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
@@ -363,7 +373,57 @@ describe("EthersProvider", () => {
 
       const result = await ethersProvider.readContract(config);
       expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
+      // uint256 is wider than 48 bits, so it stays a `bigint` — matching viem.
       expect(result).toBe(42n);
+    });
+
+    test("narrows a small integer output (uint8) to a number, like viem", async ({
+      tokenAddress,
+    }) => {
+      setOutputs("uint8");
+      mockContractMethod.mockResolvedValueOnce(6n);
+      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
+
+      const result = await ethersProvider.readContract({
+        address: tokenAddress,
+        abi: [{ name: "decimals" }],
+        functionName: "decimals",
+        args: [] as const,
+      });
+
+      expect(result).toBe(6);
+      expect(typeof result).toBe("number");
+    });
+
+    test("normalizes small integers inside an array output", async ({ tokenAddress }) => {
+      setOutputs("uint8[]");
+      mockContractMethod.mockResolvedValueOnce([6n, 18n]);
+      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
+
+      const result = await ethersProvider.readContract({
+        address: tokenAddress,
+        abi: [{ name: "manyDecimals" }],
+        functionName: "manyDecimals",
+        args: [] as const,
+      });
+
+      expect(result).toEqual([6, 18]);
+    });
+
+    test("normalizes each value of a multi-output call independently", async ({ tokenAddress }) => {
+      setOutputs("uint8", "uint256");
+      mockContractMethod.mockResolvedValueOnce([6n, 100n]);
+      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
+
+      const result = await ethersProvider.readContract({
+        address: tokenAddress,
+        abi: [{ name: "meta" }],
+        functionName: "meta",
+        args: [] as const,
+      });
+
+      // uint8 → number, uint256 → bigint.
+      expect(result).toEqual([6, 100n]);
     });
   });
 

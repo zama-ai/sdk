@@ -1,4 +1,5 @@
 import { ethers, BrowserProvider } from "ethers";
+import type { ParamType } from "ethers";
 import type {
   Abi,
   ContractFunctionArgs,
@@ -8,6 +9,46 @@ import type {
   Hex,
 } from "viem";
 import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+
+/**
+ * Bit width at or below which viem decodes a Solidity integer to `number` rather than `bigint`.
+ * ethers v6 decodes *every* integer as a `bigint`, so {@link EthersProvider} narrows the small ones
+ * to keep parity with `ViemProvider` — and with the return type both providers are declared
+ * against. 48 bits stays well inside `Number.MAX_SAFE_INTEGER` (53 bits), which is why viem draws
+ * the line there.
+ */
+const VIEM_NUMBER_INT_MAX_BITS = 48;
+
+/**
+ * Recursively coerce an ethers-decoded value to match how viem decodes the same output, walking
+ * ethers' own parsed {@link ParamType} tree, so callers see identical shapes regardless of which
+ * provider backs the SDK. The only real divergence is integers: viem narrows widths of
+ * {@link VIEM_NUMBER_INT_MAX_BITS} bits or fewer to `number` (e.g. a token's `decimals`, a `uint8`),
+ * whereas ethers hands back a `bigint`. Everything else — addresses, booleans, `bytes`, strings —
+ * already decodes to compatible JS types in both.
+ */
+function toViemShape(value: unknown, param: ParamType): unknown {
+  // Arrays (`T[]`, `T[3]`): normalize each element against the parsed element type.
+  const { arrayChildren, components } = param;
+  if (param.isArray() && arrayChildren && Array.isArray(value)) {
+    return value.map((element) => toViemShape(element, arrayChildren));
+  }
+
+  // Tuples/structs: ethers returns an array-like `Result`; normalize each component positionally.
+  if (param.isTuple() && components && Array.isArray(value)) {
+    return components.map((component, index) =>
+      toViemShape((value as unknown[])[index], component),
+    );
+  }
+
+  // Integers: narrow the small widths viem decodes as `number`; leave the wide ones as `bigint`.
+  const intMatch = /^u?int(\d+)$/.exec(param.type);
+  if (intMatch && typeof value === "bigint") {
+    return Number(intMatch[1]) <= VIEM_NUMBER_INT_MAX_BITS ? Number(value) : value;
+  }
+
+  return value;
+}
 
 /**
  * Configuration for {@link EthersProvider}.
@@ -70,8 +111,28 @@ export class EthersProvider implements GenericProvider {
       this.#readProvider,
     );
     const fn = contract.getFunction(config.functionName);
-    return fn(...(config.args as readonly unknown[])) as Promise<
-      ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
+    const result = await fn(...(config.args as readonly unknown[]));
+
+    // ethers decodes every integer as a `bigint`; reshape the result to match viem so both
+    // providers honour the same return-type contract (e.g. `decimals` is a `number`, not a
+    // `bigint`). ethers unwraps a single-output call to the bare value and returns an array-like
+    // `Result` for multi-output ones — mirror that split when walking the parsed output types.
+    const outputs = fn.fragment.outputs;
+    const [firstOutput] = outputs;
+
+    const fallback =
+      outputs.length === 0
+        ? result
+        : outputs.map((output, index) => toViemShape((result as unknown[])[index], output));
+
+    const normalized =
+      outputs.length === 1 && firstOutput ? toViemShape(result, firstOutput) : fallback;
+
+    return normalized satisfies ContractFunctionReturnType<
+      TAbi,
+      "pure" | "view",
+      TFunctionName,
+      TArgs
     >;
   }
 
