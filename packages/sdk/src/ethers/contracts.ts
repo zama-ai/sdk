@@ -37,22 +37,33 @@ interface TransactionRequestConfig {
   value?: bigint;
 }
 
-interface EthersTransactionRequest {
+/** Minimal transaction request accepted by the ethers contract helpers. */
+export interface EthersTransactionRequest {
+  /** Target contract address. */
   to: Address;
+  /** ABI-encoded call data. */
   data: Hex;
+  /** Optional gas limit for the transaction. */
   gasLimit?: bigint;
+  /** Optional native-token value to send with the call, in wei. */
   value?: bigint;
 }
 
-interface EthersTransactionResponse {
+/** Minimal transaction response returned by an {@link EthersTransactionSigner}. */
+export interface EthersTransactionResponse {
+  /** Hash of the submitted transaction. */
   hash: string;
 }
 
-interface EthersCallProvider {
+/** Minimal read-only ethers provider shape used by the read contract helpers. */
+export interface EthersCallProvider {
+  /** Performs an `eth_call` and resolves to the raw hex return data. */
   call(tx: EthersTransactionRequest): Promise<string>;
 }
 
-interface EthersTransactionSigner extends EthersCallProvider {
+/** Minimal ethers signer shape used by the write contract helpers. */
+export interface EthersTransactionSigner extends EthersCallProvider {
+  /** Signs and broadcasts a transaction, resolving to the transaction response. */
   sendTransaction(tx: EthersTransactionRequest): Promise<EthersTransactionResponse>;
 }
 
@@ -97,6 +108,7 @@ async function ethersWrite(
 
 // ── Read helpers ────────────────────────────────────────────
 
+/** Reads a token's confidential (encrypted) balance handle for `userAddress` via an ethers provider. */
 export function readConfidentialBalanceOfContract(
   provider: EthersCallProvider,
   tokenAddress: Address,
@@ -105,10 +117,12 @@ export function readConfidentialBalanceOfContract(
   return ethersRead(provider, confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
+/** Reads the underlying ERC-20 address wrapped by a confidential wrapper via an ethers provider. */
 export function readUnderlyingTokenContract(provider: EthersCallProvider, wrapperAddress: Address) {
   return ethersRead(provider, underlyingContract(wrapperAddress));
 }
 
+/** Reads whether a token implements the given ERC-165 interface id via an ethers provider. */
 export function readSupportsInterfaceContract(
   provider: EthersCallProvider,
   tokenAddress: Address,
@@ -119,6 +133,7 @@ export function readSupportsInterfaceContract(
 
 // ── Write helpers ───────────────────────────────────────────
 
+/** Submits a confidential transfer of an encrypted amount to `to` via an ethers signer. */
 export function writeConfidentialTransferContract(
   signer: EthersTransactionSigner,
   tokenAddress: Address,
@@ -132,6 +147,7 @@ export function writeConfidentialTransferContract(
   );
 }
 
+/** Submits an unwrap of an encrypted amount from `from` to `to` on a confidential ERC-20 via an ethers signer. */
 export function writeUnwrapContract(
   signer: EthersTransactionSigner,
   encryptedErc20: Address,
@@ -143,6 +159,7 @@ export function writeUnwrapContract(
   return ethersWrite(signer, unwrapContract(encryptedErc20, from, to, encryptedAmount, inputProof));
 }
 
+/** Submits an unwrap of the full encrypted balance from `from` to `to` via an ethers signer. */
 export function writeUnwrapFromBalanceContract(
   signer: EthersTransactionSigner,
   encryptedErc20: Address,
@@ -153,6 +170,7 @@ export function writeUnwrapFromBalanceContract(
   return ethersWrite(signer, unwrapFromBalanceContract(encryptedErc20, from, to, encryptedBalance));
 }
 
+/** Finalizes a pending unwrap request with the decrypted amount and decryption proof via an ethers signer. */
 export function writeFinalizeUnwrapContract(
   signer: EthersTransactionSigner,
   wrapper: Address,
@@ -166,6 +184,7 @@ export function writeFinalizeUnwrapContract(
   );
 }
 
+/** Authorizes `operator` on a token, until an optional expiry timestamp, via an ethers signer. */
 export function writeSetOperatorContract(
   signer: EthersTransactionSigner,
   tokenAddress: Address,
@@ -175,6 +194,7 @@ export function writeSetOperatorContract(
   return ethersWrite(signer, setOperatorContract(tokenAddress, operator, until));
 }
 
+/** Wraps `amount` of the underlying ERC-20 into confidential tokens credited to `to` via an ethers signer. */
 export function writeWrapContract(
   signer: EthersTransactionSigner,
   wrapperAddress: Address,
@@ -186,14 +206,17 @@ export function writeWrapContract(
 
 // ── Registry read helpers ──────────────────────────────────
 
+/** Reads all underlying/confidential token pairs from a wrappers registry via an ethers provider. */
 export function readTokenPairsContract(provider: EthersCallProvider, registry: Address) {
   return ethersRead(provider, getTokenPairsContract(registry));
 }
 
+/** Reads the number of token pairs in a wrappers registry via an ethers provider. */
 export function readTokenPairsLengthContract(provider: EthersCallProvider, registry: Address) {
   return ethersRead(provider, getTokenPairsLengthContract(registry));
 }
 
+/** Reads a slice of token pairs (`fromIndex` to `toIndex`) from a wrappers registry via an ethers provider. */
 export function readTokenPairsSliceContract(
   provider: EthersCallProvider,
   registry: Address,
@@ -203,6 +226,7 @@ export function readTokenPairsSliceContract(
   return ethersRead(provider, getTokenPairsSliceContract(registry, fromIndex, toIndex));
 }
 
+/** Reads the token pair at `index` from a wrappers registry via an ethers provider. */
 export function readTokenPairContract(
   provider: EthersCallProvider,
   registry: Address,
@@ -211,6 +235,7 @@ export function readTokenPairContract(
   return ethersRead(provider, getTokenPairContract(registry, index));
 }
 
+/** Reads the confidential token registered for a given underlying token in a wrappers registry via an ethers provider. */
 export function readConfidentialTokenAddressContract(
   provider: EthersCallProvider,
   registry: Address,
@@ -219,6 +244,7 @@ export function readConfidentialTokenAddressContract(
   return ethersRead(provider, getConfidentialTokenAddressContract(registry, tokenAddress));
 }
 
+/** Reads the underlying token registered for a given confidential token in a wrappers registry via an ethers provider. */
 export function readTokenAddressContract(
   provider: EthersCallProvider,
   registry: Address,
@@ -227,6 +253,7 @@ export function readTokenAddressContract(
   return ethersRead(provider, getTokenAddressContract(registry, confidentialTokenAddress));
 }
 
+/** Reads whether a confidential token is registered and valid in a wrappers registry via an ethers provider. */
 export function readIsConfidentialTokenValidContract(
   provider: EthersCallProvider,
   registry: Address,

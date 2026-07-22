@@ -1,6 +1,7 @@
 import type { EncryptedValue } from "../relayer/types";
 import { encryptionBitsFromFheTypeId, isFheTypeId } from "./fhe-type";
 
+/** All-zero encrypted-value sentinel — a 32-byte zero handle representing the cleartext value `0`. */
 export const ZERO_ENCRYPTED_VALUE =
   "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 

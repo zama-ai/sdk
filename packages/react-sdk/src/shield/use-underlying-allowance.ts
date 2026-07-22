@@ -8,6 +8,7 @@ import { useZamaSDK } from "../provider";
 
 export { underlyingAllowanceQueryOptions };
 
+/** Configuration for {@link useUnderlyingAllowance}. */
 export interface UseUnderlyingAllowanceConfig {
   /** Address of the confidential wrapper contract. */
   address: Address;
@@ -15,6 +16,7 @@ export interface UseUnderlyingAllowanceConfig {
   owner: Address | undefined;
 }
 
+/** Configuration for {@link useUnderlyingAllowanceSuspense}. */
 export interface UseUnderlyingAllowanceSuspenseConfig {
   /** Address of the confidential wrapper contract. */
   address: Address;

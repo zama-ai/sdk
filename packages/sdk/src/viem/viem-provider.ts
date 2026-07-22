@@ -34,10 +34,12 @@ export class ViemProvider implements GenericProvider {
     this.#publicClient = config.publicClient;
   }
 
+  /** Return the chain ID of the connected network. */
   async getChainId(): Promise<number> {
     return this.#publicClient.getChainId();
   }
 
+  /** Execute a read-only call and return the decoded result. */
   async readContract<
     const TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
@@ -48,10 +50,12 @@ export class ViemProvider implements GenericProvider {
     return this.#publicClient.readContract(config);
   }
 
+  /** Wait for a transaction to be mined and return its receipt. */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return this.#publicClient.waitForTransactionReceipt({ hash });
   }
 
+  /** Return the latest block timestamp in seconds. */
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#publicClient.getBlock();
     return block.timestamp;

@@ -13,6 +13,7 @@ function getDefaultStorage(): GenericStorage {
     : new MemoryStorage();
 }
 
+/** @internal */
 export function resolveStorage(
   storage: GenericStorage | undefined = getDefaultStorage(),
   permitStorage: GenericStorage | undefined = storage,
@@ -22,11 +23,13 @@ export function resolveStorage(
 
 // ── Chain relayer resolution ────────────────────────────────────────────────
 
+/** @internal */
 export interface ResolvedChainRelayer {
   chain: FheChain;
   relayerConfig: RelayerConfig;
 }
 
+/** @internal */
 export function resolveChainRelayers(
   chains: readonly FheChain[],
   relayers: Readonly<Record<number, RelayerConfig>>,

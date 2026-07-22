@@ -6,6 +6,7 @@ import type { Address } from "@zama-fhe/sdk";
 import { confidentialIsOperatorQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 
+/** Configuration for {@link useConfidentialIsOperator}. */
 export interface UseConfidentialIsOperatorConfig {
   /** Address of the confidential token contract. The query is disabled while `undefined`. */
   address: Address | undefined;
@@ -15,6 +16,7 @@ export interface UseConfidentialIsOperatorConfig {
   holder: Address | undefined;
 }
 
+/** Configuration for {@link useConfidentialIsOperatorSuspense}. */
 export interface UseConfidentialIsOperatorSuspenseConfig {
   /** Address of the confidential token contract. */
   address: Address;

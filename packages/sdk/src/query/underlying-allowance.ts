@@ -6,11 +6,15 @@ import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 import type { Address } from "viem";
 
+/** Configuration for {@link underlyingAllowanceQueryOptions}. */
 export interface UnderlyingAllowanceQueryConfig {
+  /** Owner whose underlying-token allowance to read; the query stays disabled until provided. */
   owner?: Address;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading the ERC-20 allowance the owner has granted a confidential wrapper on its underlying token. */
 export function underlyingAllowanceQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address,

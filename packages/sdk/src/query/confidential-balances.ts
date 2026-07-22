@@ -6,11 +6,15 @@ import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
+/** Configuration for {@link confidentialBalancesQueryOptions}. */
 export interface ConfidentialBalancesQueryConfig {
+  /** Account whose confidential balances to read; the query stays disabled until provided. */
   account?: Address;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading the confidential balances of several tokens for one account in a single batch. */
 export function confidentialBalancesQueryOptions(
   tokens: Token[],
   config?: ConfidentialBalancesQueryConfig,

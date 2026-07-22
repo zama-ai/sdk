@@ -85,6 +85,10 @@ export class IndexedDBStorage implements GenericStorage {
     });
   }
 
+  /**
+   * Retrieve a value by key.
+   * @returns The stored value, or `null` if the key does not exist.
+   */
   async get<T = unknown>(key: string): Promise<T | null> {
     const result = await this.#withTransaction<{ value: T } | undefined>("readonly", (store) =>
       store.get(key),
@@ -92,14 +96,17 @@ export class IndexedDBStorage implements GenericStorage {
     return result?.value ?? null;
   }
 
+  /** Store a value under the given key, overwriting any existing entry. */
   async set<T = unknown>(key: string, value: T): Promise<void> {
     await this.#withTransaction<void>("readwrite", (store) => store.put({ key, value }));
   }
 
+  /** Remove the entry for the given key (no-op if absent). */
   async delete(key: string): Promise<void> {
     await this.#withTransaction<void>("readwrite", (store) => store.delete(key));
   }
 
+  /** Remove all stored entries. */
   async clear(): Promise<void> {
     await this.#withTransaction<void>("readwrite", (store) => store.clear());
   }

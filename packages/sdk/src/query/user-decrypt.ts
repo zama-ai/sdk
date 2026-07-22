@@ -5,14 +5,18 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 
+/** A single encrypted value to decrypt, paired with the contract that owns it. */
 export interface EncryptedInput {
+  /** Encrypted handle to decrypt. */
   encryptedValue: EncryptedValue;
+  /** Address of the contract the encrypted value belongs to. */
   contractAddress: Address;
 }
 
 /** Decrypted clear values keyed by encrypted handle. */
 export type DecryptResult = Readonly<Record<EncryptedValue, ClearValue>>;
 
+/** Builds TanStack Query options for decrypting a batch of encrypted handles into their clear values. */
 export function decryptValuesQueryOptions(
   sdk: ZamaSDK,
   encryptedInputs: EncryptedInput[],

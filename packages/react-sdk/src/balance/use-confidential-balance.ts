@@ -7,6 +7,7 @@ import { useToken } from "../token/use-token";
 import { useQuery } from "../utils/query";
 import { useWalletAccount } from "../utils/wallet-account";
 
+/** Configuration for {@link useConfidentialBalance}. */
 export interface UseConfidentialBalanceConfig {
   /** Address of the confidential token contract. */
   address: Address;
@@ -14,6 +15,7 @@ export interface UseConfidentialBalanceConfig {
   account: Address | undefined;
 }
 
+/** TanStack Query options accepted by {@link useConfidentialBalance} (excluding `queryKey`/`queryFn`). */
 export interface UseConfidentialBalanceOptions extends Omit<
   UseQueryOptions<bigint>,
   "queryKey" | "queryFn" | "enabled"

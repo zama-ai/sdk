@@ -1,6 +1,9 @@
 # dependencies
 node_modules
 
+# pnpm store (falls back into the repo when the global store isn't writable, e.g. a sandbox)
+.pnpm-store/
+
 # soldeer (contracts/) — installed via `pnpm contracts:install`
 contracts/dependencies/
 
