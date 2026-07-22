@@ -57,11 +57,11 @@ function parseOnChainId(dataId: string, label: "key" | "CRS"): bigint {
  * produced for this id?), not a **freshness** check (is this the currently
  * active key?) — the latter is out of scope here.
  *
- * @throws {KeyDigestVerificationFailedError} if the on-chain read fails (RPC
+ * @throws if the on-chain read fails (RPC
  * error, or the id doesn't exist on-chain yet) — retryable, not a security
- * finding.
- * @throws {KeyDigestMismatchError} if the read succeeds and the computed
- * digest doesn't match — terminal, never silently ignored.
+ * finding. {@link KeyDigestVerificationFailedError}
+ * @throws if the read succeeds and the computed
+ * digest doesn't match — terminal, never silently ignored. {@link KeyDigestMismatchError}
  */
 export async function verifyFheEncryptionKeyDigest(
   publicClient: PublicClient,
