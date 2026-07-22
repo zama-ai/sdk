@@ -52,6 +52,7 @@
     "e2e:test:node": "pnpm build:sdk && pnpm --filter @zama-fhe/playwright e2e:test:node",
     "docs:diagrams": "node scripts/docs/generate-diagrams.mjs",
     "docs:check-links": "node scripts/docs/check-links.mjs",
+    "docs:changelog": "node scripts/docs/changelog.mjs",
     "docs:retarget": "node scripts/docs/retarget.mjs",
     "docs:check-target": "node scripts/docs/check-target.mjs",
     "api-report": "turbo run api-report --filter='./packages/*'",
