@@ -3,8 +3,11 @@ import { ZamaError, ZamaErrorCode } from "./base";
 
 /** Structured details shared by balance-related errors. */
 export interface BalanceErrorDetails {
+  /** Amount the caller requested, in the token's base units. */
   readonly requested: bigint;
+  /** Amount available at the time of the check, in the token's base units. */
   readonly available: bigint;
+  /** Address of the token contract involved. */
   readonly token: Address;
 }
 

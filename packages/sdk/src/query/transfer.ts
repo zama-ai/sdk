@@ -5,10 +5,13 @@ import type { Address } from "viem";
 
 /** Variables for {@link confidentialTransferMutationOptions}. */
 export interface ConfidentialTransferParams extends TransferOptions {
+  /** Recipient address. */
   to: Address;
+  /** Amount of tokens to transfer, in the token's base units. */
   amount: bigint;
 }
 
+/** Builds TanStack Query mutation options for {@link Token.confidentialTransfer | transferring} confidential tokens. @see {@link ConfidentialTransferParams} */
 export function confidentialTransferMutationOptions(
   token: Token,
 ): MutationFactoryOptions<

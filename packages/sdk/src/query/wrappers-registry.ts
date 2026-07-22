@@ -19,11 +19,15 @@ import type { QueryFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 
+/** Base configuration shared by the wrappers-registry query option factories. */
 export interface WrappersRegistryQueryConfig {
+  /** Registry contract address for the current chain; used as a query key discriminator. */
   registryAddress: Address | undefined;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading all token wrapper pairs registered in the wrappers registry. */
 export function tokenPairsQueryOptions(
   sdk: ZamaSDK,
   config: WrappersRegistryQueryConfig,
@@ -47,10 +51,13 @@ export function tokenPairsQueryOptions(
   };
 }
 
+/** Configuration for {@link confidentialTokenAddressQueryOptions}. */
 export interface ConfidentialTokenAddressQueryConfig extends WrappersRegistryQueryConfig {
+  /** Underlying ERC-20 token address whose confidential counterpart to look up. */
   tokenAddress?: Address;
 }
 
+/** Builds TanStack Query options for reading the confidential token address registered for a given underlying ERC-20 token. */
 export function confidentialTokenAddressQueryOptions(
   sdk: ZamaSDK,
   config: ConfidentialTokenAddressQueryConfig,
@@ -82,10 +89,13 @@ export function confidentialTokenAddressQueryOptions(
   };
 }
 
+/** Configuration for {@link tokenAddressQueryOptions}. */
 export interface TokenAddressQueryConfig extends WrappersRegistryQueryConfig {
+  /** Confidential token address whose underlying ERC-20 counterpart to look up. */
   confidentialTokenAddress?: Address;
 }
 
+/** Builds TanStack Query options for reading the underlying ERC-20 token address registered for a given confidential token. */
 export function tokenAddressQueryOptions(
   sdk: ZamaSDK,
   config: TokenAddressQueryConfig,
@@ -117,6 +127,7 @@ export function tokenAddressQueryOptions(
   };
 }
 
+/** Builds TanStack Query options for reading the total number of token wrapper pairs in the registry. */
 export function tokenPairsLengthQueryOptions(
   sdk: ZamaSDK,
   config: WrappersRegistryQueryConfig,
@@ -142,11 +153,15 @@ export function tokenPairsLengthQueryOptions(
   };
 }
 
+/** Configuration for {@link tokenPairsSliceQueryOptions}. */
 export interface TokenPairsSliceQueryConfig extends WrappersRegistryQueryConfig {
+  /** Zero-based index of the first pair in the slice (inclusive). */
   fromIndex?: bigint;
+  /** Index bounding the end of the slice. */
   toIndex?: bigint;
 }
 
+/** Builds TanStack Query options for reading a contiguous slice of the registry's token wrapper pairs. */
 export function tokenPairsSliceQueryOptions(
   sdk: ZamaSDK,
   config: TokenPairsSliceQueryConfig,
@@ -180,10 +195,13 @@ export function tokenPairsSliceQueryOptions(
   };
 }
 
+/** Configuration for {@link tokenPairQueryOptions}. */
 export interface TokenPairQueryConfig extends WrappersRegistryQueryConfig {
+  /** Zero-based index of the token wrapper pair to read. */
   index?: bigint;
 }
 
+/** Builds TanStack Query options for reading a single token wrapper pair by its index in the registry. */
 export function tokenPairQueryOptions(
   sdk: ZamaSDK,
   config: TokenPairQueryConfig,
@@ -213,10 +231,13 @@ export function tokenPairQueryOptions(
   };
 }
 
+/** Configuration for {@link isConfidentialTokenValidQueryOptions}. */
 export interface IsConfidentialTokenValidQueryConfig extends WrappersRegistryQueryConfig {
+  /** Confidential token address to validate against the registry. */
   confidentialTokenAddress?: Address;
 }
 
+/** Builds TanStack Query options for checking whether a confidential token is registered and valid in the registry. */
 export function isConfidentialTokenValidQueryOptions(
   sdk: ZamaSDK,
   config: IsConfidentialTokenValidQueryConfig,
@@ -248,6 +269,7 @@ export function isConfidentialTokenValidQueryOptions(
   };
 }
 
+/** Configuration for {@link listPairsQueryOptions}. */
 export interface ListPairsQueryConfig {
   /**
    * The registry address for this chain — used as a query key discriminator.
@@ -256,9 +278,13 @@ export interface ListPairsQueryConfig {
    * per registry contract.
    */
   registryAddress: Address | undefined;
+  /** 1-based page number to fetch; defaults to `1`. */
   page?: number;
+  /** Number of pairs per page; defaults to `100`. */
   pageSize?: number;
+  /** When `true`, resolve each pair's on-chain metadata; defaults to `false`. */
   metadata?: boolean;
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 

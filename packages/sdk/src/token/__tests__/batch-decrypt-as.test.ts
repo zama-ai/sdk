@@ -59,7 +59,8 @@ describe("Token.batchDecryptBalancesAs", () => {
     vi.mocked(delegateProvider.readContract)
       .mockResolvedValueOnce(HANDLE_A) // confidentialBalanceOf(tokenA)
       .mockResolvedValueOnce(HANDLE_B) // confidentialBalanceOf(tokenB)
-      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry → permanent
+      .mockResolvedValueOnce(MAX_UINT64) // getDelegationExpiry(tokenA) → permanent
+      .mockResolvedValueOnce(MAX_UINT64); // getDelegationExpiry(tokenB) → permanent
     vi.mocked(relayer.decryptValues)
       .mockResolvedValueOnce([{ type: "uint64", value: 100n } as TypedValue])
       .mockResolvedValueOnce([{ type: "uint64", value: 200n } as TypedValue]);

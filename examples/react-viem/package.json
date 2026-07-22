@@ -2,7 +2,7 @@
   "name": "react-viem-example",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "typescript": "6.0.3"
   }

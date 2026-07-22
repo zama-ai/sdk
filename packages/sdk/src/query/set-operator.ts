@@ -5,10 +5,13 @@ import type { Address } from "viem";
 
 /** Variables for {@link confidentialSetOperatorMutationOptions}. */
 export interface ConfidentialSetOperatorParams {
+  /** Operator address to authorize. */
   operator: Address;
+  /** Unix timestamp (seconds) when the operator authorization expires; defaults to one hour from now. */
   until?: number;
 }
 
+/** Builds TanStack Query mutation options for {@link Token.setOperator | authorizing} an operator on a confidential token. @see {@link ConfidentialSetOperatorParams} */
 export function confidentialSetOperatorMutationOptions(
   token: Token,
 ): MutationFactoryOptions<

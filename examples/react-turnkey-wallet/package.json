@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3005",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
-    "@turnkey/react-wallet-kit": "^2.1.1",
+    "@turnkey/react-wallet-kit": "^2.2.0",
     "@turnkey/viem": "^0.14.31",
     "@zama-fhe/react-sdk": "3.3.0-alpha.9",
     "@zama-fhe/sdk": "3.3.0-alpha.9",

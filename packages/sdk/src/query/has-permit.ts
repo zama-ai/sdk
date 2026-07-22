@@ -5,6 +5,7 @@ import { zamaQueryKeys } from "./query-keys";
 import type { SignerQueryContext } from "./signer-query-context";
 import { filterQueryOptions } from "./utils";
 
+/** Configuration for {@link hasPermitQueryOptions}. */
 export interface HasPermitQueryConfig {
   /** Contract addresses to check credentials against. */
   contractAddresses: Address[];
@@ -16,6 +17,7 @@ export interface HasPermitQueryConfig {
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading whether the connected wallet holds a valid decryption permit for the given contracts. */
 export function hasPermitQueryOptions(
   sdk: ZamaSDK,
   config: HasPermitQueryConfig,

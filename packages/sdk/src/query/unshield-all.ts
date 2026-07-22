@@ -6,6 +6,7 @@ import type { Address } from "viem";
 /** Variables for {@link unshieldAllMutationOptions}. */
 export interface UnshieldAllParams extends UnshieldCallbacks {}
 
+/** Builds TanStack Query mutation options for {@link WrappedToken.unshieldAll | unshielding} the entire confidential balance back into the public ERC-20. @see {@link UnshieldAllParams} */
 export function unshieldAllMutationOptions(
   token: WrappedToken,
 ): MutationFactoryOptions<

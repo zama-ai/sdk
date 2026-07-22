@@ -5,10 +5,13 @@ import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 import type { Address } from "viem";
 
+/** Configuration for {@link totalSupplyQueryOptions}. */
 export interface TotalSupplyQueryConfig {
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading a token's total supply. */
 export function totalSupplyQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address,

@@ -17,7 +17,7 @@ import type {
   FhevmDecryptClient,
   FhevmEncryptClient,
   FhevmRelayerOptions,
-  FhevmRelayerSDK,
+  RelayerSDK,
   RelayerOptions,
 } from "./types";
 import { ConfigurationError } from "../errors";
@@ -58,8 +58,10 @@ export interface FhevmRelayerConfig {
  *   are spread in first, then the per-call `options`, so a per-call value always
  *   wins over the chain default. Serialization helpers make no relayer
  *   round-trip, so they inject no options.
+ *
+ * @internal
  */
-export class FhevmRelayer implements FhevmRelayerSDK {
+export class FhevmRelayer implements RelayerSDK {
   readonly #chain: FheChain;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
