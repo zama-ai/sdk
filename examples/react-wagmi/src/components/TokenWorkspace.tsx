@@ -27,12 +27,19 @@ export function NoTokenWorkspace() {
           Balances
         </h2>
         <div className="balance-row">
-          <span className="balance-label">ERC-20 (public)</span>
+          <div className="balance-label-group">
+            <span className="balance-label">ERC-20 (public)</span>
+            <button type="button" className="btn btn-sm btn-secondary" disabled>
+              Mint
+            </button>
+          </div>
           <output className="balance-value">—</output>
         </div>
         <div className="balance-row">
           <span className="balance-label">Confidential (private)</span>
-          <output className="balance-value">—</output>
+          <button type="button" className="btn btn-sm btn-secondary" disabled>
+            Decrypt Balance
+          </button>
         </div>
       </section>
 
