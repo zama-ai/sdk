@@ -1,6 +1,6 @@
 # Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
 
-**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack), including on-chain ACL delegation.
+**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet with wagmi and viem, including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
@@ -20,7 +20,7 @@ This example uses the **cleartext stack** (`cleartext()`), which is Zama's light
 
 ## What this example demonstrates
 
-> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
+> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's wagmi integration and the cleartext backend — with no external relayer service and no API key.
 
 Specifically:
 
@@ -91,24 +91,17 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
   │
   ▼
-@zama-fhe/sdk (ZamaSDK)
-  ├─ ethers adapter   → hybrid EIP-1193 provider
-  │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(HOODI_RPC_URL)
-  │    └─ writes + polling (signing, eth_sendTransaction,
-  │         eth_blockNumber, eth_getTransactionReceipt) → injected wallet
-  └─ cleartext() → the hoodi preset
+@zama-fhe/react-sdk/wagmi  ← createConfig({ wagmiConfig, chains, relayers })
+  ├─ reads → viem HTTP transport(HOODI_RPC_URL)
+  ├─ writes + EIP-712 signing → active wagmi injected connection
+  └─ cleartext() → the Hoodi SDK chain preset
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
 
-**Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
+**Reads vs writes:** wagmi's viem HTTP transport handles reads through `HOODI_RPC_URL`; writes and EIP-712 signing use the active injected connector. The Zama wagmi adapter consumes that same connection.
 
-- **`eth_getTransactionCount` (nonce):** a stale backend can return an outdated nonce, causing ethers to build a transaction with a nonce lower than MetaMask's actual next nonce and triggering a "nonce too low" rejection. The wallet is the authoritative nonce source.
-- **Post-submission polling (`eth_blockNumber`, `eth_getTransactionReceipt`, `eth_getTransactionByHash`):** a stale backend causes `eth_blockNumber` to return non-monotonic values (blocking ethers' `PollingBlockSubscriber`) and `eth_getTransactionReceipt` to return `null` indefinitely. The wallet's node, which received the transaction directly, is the consistent source of truth.
-
-To ensure ethers' `PollingBlockSubscriber` checks for new receipts on every poll interval (4 s rather than once per block at ~12 s), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the returned block number has not advanced, the counter increments by 1.
-
-**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `ethers adapter` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `ethers adapter` is created with the live account ref already populated. An EIP-712 permit is persisted in IndexedDB and survives page reloads within the 30-day TTL.
+**Wallet-switch lifecycle:** wagmi owns account and chain subscriptions. The UI reads them with wagmi v3's `useConnection`; connection and switching use the mutation functions returned by `useConnect` and `useSwitchChain`. No manual `accountsChanged` or `chainChanged` listeners—or forced `ZamaProvider` remounts—are needed. Permits persist in IndexedDB.
 
 ---
 
@@ -175,21 +168,31 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 ### Via code
 
 ```ts
-import { Contract, BrowserProvider, parseUnits } from "ethers";
+import { parseUnits } from "viem";
+import { useConnection, useWriteContract } from "wagmi";
 
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
-// Amounts are raw integers: use parseUnits to convert from human-readable values.
-// USDC Mock has 6 decimals — 10 USDC = parseUnits("10", 6) = 10_000_000n
-const usdcMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await usdcMock.mint(await signer.getAddress(), parseUnits("10", 6));
+const { address } = useConnection();
+const { mutate: writeContract } = useWriteContract();
 
-// USDT Mock — verify its decimals on Etherscan or via useListPairs() before minting.
-const usdtMockDecimals = 18; // replace with the actual value from pair.underlying.decimals
-const usdtMock = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
-await usdtMock.mint(await signer.getAddress(), parseUnits("10", usdtMockDecimals));
+writeContract({
+  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
+  abi: mintAbi,
+  functionName: "mint",
+  args: [address!, parseUnits("10", 6)],
+});
 ```
 
 ---
@@ -306,45 +309,40 @@ Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter
 ### Providers setup
 
 ```tsx
-// src/providers.tsx
-import { createConfig } from "@zama-fhe/sdk/ethers";
-import { cleartext, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/sdk";
-import { hoodi } from "@zama-fhe/sdk/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { JsonRpcProvider } from "ethers";
-import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_RPC_URL || fallback
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
+import { hoodi as fheHoodi } from "@zama-fhe/sdk/chains";
+import { createConfig, http, WagmiProvider } from "wagmi";
+import { hoodi } from "wagmi/chains";
+import { injected } from "wagmi/connectors/injected";
 
-// The hybrid EIP-1193 provider routes reads to a direct JsonRpcProvider and wallet calls
-// (signing, nonce, receipt polling) to the injected wallet — see providers.tsx for
-// createHybridEthereum and its liveAccountsRef cache. It is passed as `ethereum`; SDK reads
-// also use `provider` (the direct Hoodi RPC).
-const ethereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
-const provider = new JsonRpcProvider(HOODI_RPC_URL);
-
-// A separate IndexedDBStorage instance for permitStorage is optional — the SDK
-// namespaces its keys internally, so storage and permitStorage can safely share one
-// database. Kept separate here for clarity between the two storage responsibilities.
-const permitDBStorage = new IndexedDBStorage("PermitStore");
-
-// `hoodi` is the shipped Hoodi cleartext chain preset (chain 560048). cleartext() is the
-// relayer transport — Hoodi runs the cleartext FHEVM host stack, so there is no real
-// relayer/KMS network to call.
-const config = createConfig({
+const wagmiConfig = createConfig({
   chains: [hoodi],
-  ethereum,
-  provider,
-  storage: indexedDBStorage, // "CredentialStore" DB — encrypted FHE keypair
-  permitStorage: permitDBStorage, // "PermitStore" DB — EIP-712 permit signatures
-  relayers: { [hoodi.id]: cleartext() },
+  connectors: [injected()],
+  transports: { [hoodi.id]: http(HOODI_RPC_URL) },
+});
+const zamaHoodi = { ...fheHoodi, network: HOODI_RPC_URL } as const;
+const zamaConfig = createZamaConfig({
+  wagmiConfig,
+  chains: [zamaHoodi],
+  relayers: { [zamaHoodi.id]: cleartext() },
+  storage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 
-<ZamaProvider config={config}>...</ZamaProvider>;
+<WagmiProvider config={wagmiConfig}>
+  <QueryClientProvider client={queryClient}>
+    <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+  </QueryClientProvider>
+</WagmiProvider>;
 ```
 
 ### Hook usage
 
 ```tsx
-import { parseUnits } from "ethers";
+import { parseUnits } from "viem";
 import {
   useShield,
   useListPairs,
@@ -503,7 +501,7 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                              |
 | Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                       |
 | Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                     |
-| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                          |
+| "nonce too low: next nonce X, tx nonce Y"                 | The wallet or Hoodi RPC observed a stale nonce                                                                                                           | Retry the transaction. The injected connector submits transactions through the wallet; if you build transactions yourself, ensure the nonce comes from the same node that receives `eth_sendTransaction` rather than a load-balanced read RPC                                                                                                                         |
 | "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                                   |
 | Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                             |
 | Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                              |
@@ -552,9 +550,10 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 | Package                 | Version            | Role                                                                                                                                                                                                                             |
 | ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, `createConfig`, contract builders                                                                                                                                                                      |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, chain presets, contract builders                                                                                                                                                                       |
 | `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `ethers adapter`)                                                                                                                                                                                           |
+| `wagmi`                 | ^3.7.1             | Injected-wallet and chain lifecycle                                                                                                                                                                                              |
+| `viem`                  | ^2.55.0            | EVM types, encoding, and utilities                                                                                                                                                                                               |
 | `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
 | `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
 | **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |

@@ -9,9 +9,11 @@
 //
 // Uses the cleartext() relayer transport — no real relayer/KMS network.
 
-import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
+import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
+import { bscTestnet } from "viem/chains";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ZamaSDK, MemoryStorage, cleartext } from "@zama-fhe/sdk";
-import { createConfig } from "@zama-fhe/sdk/ethers";
+import { createConfig } from "@zama-fhe/sdk/viem";
 
 const RPC = process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL || "https://bsc-testnet-rpc.publicnode.com";
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -41,27 +43,38 @@ const SHIELD_AMOUNT = 100n * 10n ** DECIMALS;
 const TRANSFER_AMOUNT = 10n * 10n ** DECIMALS;
 const UNSHIELD_AMOUNT = 50n * 10n ** DECIMALS;
 
-const ERC20_ABI = [
+const ERC20_ABI = parseAbi([
   "function mint(address account, uint256 amount)",
   "function balanceOf(address account) view returns (uint256)",
-];
+]);
 
 const fmt = (a) => `${formatUnits(a, Number(DECIMALS))}`;
 const section = (t) => console.log(`\n${"═".repeat(56)}\n  ${t}\n${"═".repeat(56)}`);
 
 async function main() {
   section("SECTION 1 — Setup");
-  const provider = new JsonRpcProvider(RPC);
-  const walletA = new Wallet(PRIVATE_KEY, provider);
-  const walletB = Wallet.createRandom(provider);
-  console.log("Account A:", walletA.address);
-  console.log("Account B:", walletB.address, "(delegate / transfer recipient)");
+  const accountA = privateKeyToAccount(PRIVATE_KEY);
+  const accountB = privateKeyToAccount(generatePrivateKey());
+  const publicClient = createPublicClient({ chain: bscTestnet, transport: http(RPC) });
+  const walletClientA = createWalletClient({
+    account: accountA,
+    chain: bscTestnet,
+    transport: http(RPC),
+  });
+  const walletClientB = createWalletClient({
+    account: accountB,
+    chain: bscTestnet,
+    transport: http(RPC),
+  });
+  console.log("Account A:", accountA.address);
+  console.log("Account B:", accountB.address, "(delegate / transfer recipient)");
 
   const relayers = { [zamaBscTestnetCleartext.id]: cleartext() };
   const sdkA = new ZamaSDK(
     createConfig({
       chains: [zamaBscTestnetCleartext],
-      signer: walletA,
+      publicClient,
+      walletClient: walletClientA,
       storage: new MemoryStorage(),
       relayers,
     }),
@@ -69,7 +82,8 @@ async function main() {
   const sdkB = new ZamaSDK(
     createConfig({
       chains: [zamaBscTestnetCleartext],
-      signer: walletB,
+      publicClient,
+      walletClient: walletClientB,
       storage: new MemoryStorage(),
       relayers,
     }),
@@ -81,35 +95,54 @@ async function main() {
   console.log("USDC:               ", USDC);
   console.log("Confidential wrapper:", confidentialTokenAddress);
 
-  const tokenA = sdkA.createToken(confidentialTokenAddress);
+  const tokenA = sdkA.createWrappedToken(confidentialTokenAddress);
   const tokenB = sdkB.createToken(confidentialTokenAddress);
 
   section("SECTION 2 — Mint USDC");
-  const erc20 = new Contract(USDC, ERC20_ABI, walletA);
-  const before = await erc20.balanceOf(walletA.address);
+  const before = await publicClient.readContract({
+    address: USDC,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [accountA.address],
+  });
   console.log("USDC balance before:", fmt(before));
-  const mintTx = await erc20.mint(walletA.address, MINT_AMOUNT);
-  console.log("  mint tx:", mintTx.hash);
-  await mintTx.wait();
-  console.log("USDC balance after: ", fmt(await erc20.balanceOf(walletA.address)));
+  const mintHash = await walletClientA.writeContract({
+    address: USDC,
+    abi: ERC20_ABI,
+    functionName: "mint",
+    args: [accountA.address, MINT_AMOUNT],
+  });
+  console.log("  mint tx:", mintHash);
+  await publicClient.waitForTransactionReceipt({ hash: mintHash });
+  console.log(
+    "USDC balance after: ",
+    fmt(
+      await publicClient.readContract({
+        address: USDC,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [accountA.address],
+      }),
+    ),
+  );
 
   section("SECTION 3 — Confidential lifecycle");
-  console.log("cUSDC balance (A) initial:", fmt(await tokenA.balanceOf(walletA.address)));
+  console.log("cUSDC balance (A) initial:", fmt(await tokenA.balanceOf(accountA.address)));
 
   console.log(`\n── Shield ${fmt(SHIELD_AMOUNT)} USDC → cUSDC ──`);
   await tokenA.shield(SHIELD_AMOUNT, {
     onApprovalSubmitted: (t) => console.log("  approval:", t),
     onShieldSubmitted: (t) => console.log("  shield:  ", t),
   });
-  console.log("cUSDC balance (A) after shield:", fmt(await tokenA.balanceOf(walletA.address)));
+  console.log("cUSDC balance (A) after shield:", fmt(await tokenA.balanceOf(accountA.address)));
 
   console.log(`\n── Confidential transfer ${fmt(TRANSFER_AMOUNT)} cUSDC: A → B ──`);
-  await tokenA.confidentialTransfer(walletB.address, TRANSFER_AMOUNT, {
+  await tokenA.confidentialTransfer(accountB.address, TRANSFER_AMOUNT, {
     onEncryptComplete: () => console.log("  encryption complete"),
     onTransferSubmitted: (t) => console.log("  transfer:", t),
   });
-  console.log("cUSDC balance (A) after transfer:", fmt(await tokenA.balanceOf(walletA.address)));
-  console.log("cUSDC balance (B) after transfer:", fmt(await tokenB.balanceOf(walletB.address)));
+  console.log("cUSDC balance (A) after transfer:", fmt(await tokenA.balanceOf(accountA.address)));
+  console.log("cUSDC balance (B) after transfer:", fmt(await tokenB.balanceOf(accountB.address)));
 
   console.log(`\n── Unshield ${fmt(UNSHIELD_AMOUNT)} cUSDC → USDC ──`);
   await tokenA.unshield(UNSHIELD_AMOUNT, {
@@ -117,28 +150,38 @@ async function main() {
     onFinalizing: () => console.log("  finalizing..."),
     onFinalizeSubmitted: (t) => console.log("  finalize:", t),
   });
-  console.log("cUSDC balance (A) final:", fmt(await tokenA.balanceOf(walletA.address)));
-  console.log("USDC  balance (A) final:", fmt(await erc20.balanceOf(walletA.address)));
+  console.log("cUSDC balance (A) final:", fmt(await tokenA.balanceOf(accountA.address)));
+  console.log(
+    "USDC  balance (A) final:",
+    fmt(
+      await publicClient.readContract({
+        address: USDC,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [accountA.address],
+      }),
+    ),
+  );
 
   // Delegation is part of the validated flow — failures here are fatal (they propagate
   // to main().catch below), so a regression cannot pass silently.
   section("SECTION 4 — Delegation");
-  await tokenA.delegateDecryption({ delegateAddress: walletB.address });
+  await tokenA.delegateDecryption({ delegateAddress: accountB.address });
   console.log(
     "delegation active:",
     await tokenA.isDelegated({
-      delegatorAddress: walletA.address,
-      delegateAddress: walletB.address,
+      delegatorAddress: accountA.address,
+      delegateAddress: accountB.address,
     }),
   );
-  const seenByB = await tokenB.decryptBalanceAs({ delegatorAddress: walletA.address });
+  const seenByB = await tokenB.decryptBalanceAs({ delegatorAddress: accountA.address });
   console.log("cUSDC balance (A, seen by B):", fmt(seenByB));
-  await tokenA.revokeDelegation({ delegateAddress: walletB.address });
+  await tokenA.revokeDelegation({ delegateAddress: accountB.address });
   console.log(
     "delegation active after revoke:",
     await tokenA.isDelegated({
-      delegatorAddress: walletA.address,
-      delegateAddress: walletB.address,
+      delegatorAddress: accountA.address,
+      delegateAddress: accountB.address,
     }),
   );
 

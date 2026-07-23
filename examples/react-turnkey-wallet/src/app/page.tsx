@@ -42,15 +42,11 @@ export default function Home() {
         body="Your Turnkey session is authenticated, but no embedded wallet is available yet. Create one to continue with the Zama flows."
         error={walletCreationError}
         action={
-          <button
-            onClick={() => {
-              void createEmbeddedWallet();
-            }}
-            disabled={isCreatingWallet}
-            className="btn btn-primary min-w-44"
-          >
-            {isCreatingWallet ? "Creating…" : "Create wallet"}
-          </button>
+          <form action={() => void createEmbeddedWallet()}>
+            <button type="submit" disabled={isCreatingWallet} className="btn btn-primary min-w-44">
+              {isCreatingWallet ? "Creating…" : "Create wallet"}
+            </button>
+          </form>
         }
       />
     );

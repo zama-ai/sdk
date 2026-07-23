@@ -1,51 +1,73 @@
-# InGen Confidential Token Quickstart — react-ethers
+# InGen Confidential Token Quickstart — wagmi
 
 Next.js 16 example app demonstrating `@zama-fhe/react-sdk` integration with
-[ethers v6](https://docs.ethers.org/v6/) on the **T-Rex InGen** private testnet
-(chain ID `364301`), backed by a cleartext FHEVM stack deployed for this demo.
+[wagmi](https://wagmi.sh/) and [viem](https://viem.sh/) on the **T-Rex InGen**
+private testnet (chain ID `364301`). The network uses a cleartext FHEVM stack
+deployed for this demo.
 
-Forked from `examples/react-ethers` (Sepolia + real relayer) and adapted to use
-the `cleartext()` relayer transport against InGen.
+The example is adapted from the other React token examples but remains
+standalone. It uses the SDK's `cleartext()` transport and built-in
+`ingenTestnet` chain preset.
 
-> ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM deployment — a lightweight
-> stand-in for the full FHE stack, where values are kept in cleartext on-chain rather than encrypted.
-> It's intended for integrating and testing the Zama SDK end-to-end on the T-Rex InGen testnet, not
-> for production use.
+> ℹ️ **Demo / development setup.** This example uses a _cleartext_ FHEVM
+> deployment—a lightweight stand-in for the full FHE stack, where values are
+> kept in cleartext on-chain rather than encrypted. It is intended for SDK
+> integration and end-to-end testing on InGen, not production use.
 
-Covers: connect wallet, shield ERC-20 → confidential, confidential transfer,
-unshield, grant/revoke/use delegation, pending unshield recovery.
+It covers wallet connection, shielding ERC-20 tokens, confidential transfers,
+unshielding, granting/revoking/using decryption delegation, and pending
+unshield recovery.
 
 ## Stack
 
-- **Next.js 16** (App Router, Webpack)
-- **React 19** + **ethers v6**
-- **TanStack Query v5**
-- **@zama-fhe/react-sdk@3.0.0-alpha.34** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/sdk/ethers** — `createConfig` wires ethers-compatible provider/signer adapters
-- **`cleartext()` transport** — no relayer/KMS network, signatures verified by mock keys baked into the SDK
+- **Next.js 16** with the App Router
+- **React 19**
+- **wagmi 3** for injected-wallet connection and chain state
+- **viem 2** for EVM types and utilities
+- **TanStack Query 5**
+- **`@zama-fhe/react-sdk`** — `ZamaProvider`, `useShield`,
+  `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, and the
+  other token hooks
+- **`@zama-fhe/react-sdk/wagmi`** — adapts the active wagmi connection into the
+  Zama SDK signer
+- **`@zama-fhe/sdk/chains`** — supplies the `ingenTestnet` protocol addresses
+- **`cleartext()`** — runs without relayer or KMS services; the cleartext
+  deployment handles the demo flow on-chain
+
+The app uses wagmi v3's `useConnection`. `useConnect` and `useSwitchChain`
+expose their actions through TanStack mutation `mutate` functions, so the app
+does not own EIP-1193 account or chain listeners.
 
 ## Setup
 
 ```bash
-cp .env.example .env.local   # optional — defaults work out of the box
+cp .env.example .env.local   # optional; the checked-in defaults work
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect MetaMask (or any
-EIP-1193 wallet). The app will prompt you to add and switch to the InGen network
-on first connection.
+Open [http://localhost:3000](http://localhost:3000) and connect MetaMask or
+another injected EIP-1193 wallet. The app can add and switch to InGen when the
+wallet is connected to another network.
 
-## Getting TREX (native gas token)
+Useful checks:
 
-Use the [InGen faucet](https://faucet.ingen.gateway.fm/) to fund your wallet
-with TREX before interacting with the app.
+```bash
+npm run typecheck
+npm run build
+```
+
+## Getting TREX
+
+TREX is the native gas token. Use the
+[InGen faucet](https://faucet.ingen.gateway.fm/) to fund the connected wallet
+before submitting transactions.
 
 ## Network details
 
 | Field         | Value                                  |
 | ------------- | -------------------------------------- |
-| Network name  | InGen                                  |
+| Network name  | T-Rex InGen                            |
 | Chain ID      | `364301`                               |
 | RPC URL       | `https://rpc.ingen.t-rex.network`      |
 | Explorer      | `https://explorer.ingen.t-rex.network` |
@@ -59,8 +81,9 @@ with TREX before interacting with the app.
 
 ## Deployed contracts on InGen
 
-The chain config in `src/providers.tsx` already wires these addresses in — no
-manual setup needed. They are reproduced here for reference.
+`ingenTestnet` from `@zama-fhe/sdk/chains` supplies the FHE protocol addresses,
+while the wrapper registry supplies the token pairs. No contract addresses need
+to be copied into application code.
 
 | Contract               | Address                                      |
 | ---------------------- | -------------------------------------------- |
@@ -73,3 +96,15 @@ manual setup needed. They are reproduced here for reference.
 | USDT mock              | `0x7CC6EB5E82f5ae84BC08cC58734E6aD2c2510068` |
 | cUSDC                  | `0x1D0480a22d9ff7DF4dcf94bB70D9B761C358A8a8` |
 | cUSDT                  | `0x604fFb6b71bfEe1B155B4093bdCF19a7c7029Efd` |
+
+## Application structure
+
+- `src/providers.tsx` creates the wagmi, TanStack Query, and Zama providers.
+- `src/lib/config.ts` defines the EVM chain shown to the wallet.
+- `src/app/page.tsx` owns connection, network, registry, and token-selection
+  state, then composes the operation cards.
+- `src/components/` contains focused cards for balances, shield, transfer,
+  unshield, and delegation.
+
+Token operations use the high-level SDK hooks. The app does not manually
+compose ERC-20 approval/wrap calls or the two unshield phases.

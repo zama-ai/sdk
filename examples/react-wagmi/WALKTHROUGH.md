@@ -72,7 +72,7 @@ The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
   wallet switch. This eliminates the `walletKey` bump and `refSeededRef` guard used in the
   ethers and viem examples.
 - **No manual `eth_accounts` polling** — wagmi's store tracks the connected account;
-  `page.tsx` reads it via `useAccount()`.
+  `page.tsx` reads it via wagmi v3's `useConnection()`.
 - **No manual `eth_chainId` polling** — wagmi's `useChainId()` updates reactively when
   the user switches chains (driven by the `chainChanged` event on the injected provider).
 
@@ -107,7 +107,7 @@ switchChain({ chainId: sepolia.id });
 most wallets). Add an error fallback if testing with custom wallets that don't know Sepolia.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
-because `useAccount()` is synchronous and never returns a transient loading state — wagmi's
+because `useConnection()` is synchronous and never returns a transient loading state — wagmi's
 store tracks the connection state reactively.
 
 ---

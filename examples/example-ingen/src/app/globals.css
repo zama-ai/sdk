@@ -15,6 +15,18 @@ body {
   background: #f8fafc;
   color: #0f172a;
   line-height: 1.5;
+  min-height: 100vh;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Layout */
@@ -119,6 +131,13 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.btn:focus-visible,
+.input:focus-visible,
+.select:focus-visible,
+.checkbox-label:has(input:focus-visible) {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+}
 .btn-full {
   width: 100%;
 }
@@ -186,10 +205,31 @@ body {
   font-size: 14px;
   background: #fff;
   cursor: pointer;
+  max-width: 100%;
+}
+
+@media (max-width: 520px) {
+  .app-container {
+    padding: 24px 14px;
+  }
+  .connect-screen {
+    padding-top: 56px;
+  }
+  .card {
+    padding: 18px;
+  }
+  .input-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .input-unit {
+    min-width: 0;
+  }
 }
 
 /* Alerts */
 .alert {
+  display: block;
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
