@@ -22,11 +22,7 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
   const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
   const balanceDecryptRequired = !isAllowed;
 
-  const unshield = useUnshield(token.confidentialTokenAddress, {
-    onSuccess: () => {
-      onSuccess?.();
-    },
-  });
+  const unshield = useUnshield(token.confidentialTokenAddress, { onSuccess });
 
   const pendingLabel = step === 2 ? "Unshielding… (2/2)" : "Unshielding… (1/2)";
 

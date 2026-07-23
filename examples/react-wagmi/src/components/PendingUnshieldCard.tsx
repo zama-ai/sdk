@@ -15,11 +15,7 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
 
   const { data: pendingTxHash, isError: loadError } = usePendingUnshield(tokenAddress);
 
-  const resume = useResumeUnshield(tokenAddress, {
-    onSuccess: () => {
-      onSuccess?.();
-    },
-  });
+  const resume = useResumeUnshield(tokenAddress, { onSuccess });
 
   if (loadError) {
     return (
