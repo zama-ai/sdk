@@ -84,7 +84,9 @@ export interface BatchBalancesResult {
  * that delegate to `sdk.decryption.decryptValues` and `sdk.permits.grantPermit`.
  */
 export class Token {
+  /** The SDK instance this token operates through. */
   readonly sdk: ZamaSDK;
+  /** Checksummed address of the confidential token contract. */
   readonly address: Address;
 
   constructor(sdk: ZamaSDK, address: Address) {

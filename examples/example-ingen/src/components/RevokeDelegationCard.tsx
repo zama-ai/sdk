@@ -1,51 +1,57 @@
 "use client";
 
-import { useState } from "react";
-import { isAddress } from "ethers";
+import { getAddress } from "viem";
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { INGEN_EXPLORER_URL } from "@/lib/config";
 
 interface RevokeDelegationCardProps {
-  tokenAddress: Address;
+  token: TokenWrapperPairWithMetadata;
   disabled?: boolean;
 }
 
-export function RevokeDelegationCard({
-  tokenAddress,
-  disabled = false,
-}: RevokeDelegationCardProps) {
-  const [delegateAddress, setDelegateAddress] = useState("");
+export function RevokeDelegationCard({ token, disabled = false }: RevokeDelegationCardProps) {
+  const revoke = useRevokeDelegation(token.confidentialTokenAddress);
 
-  const revoke = useRevokeDelegation(tokenAddress, { onSuccess: () => setDelegateAddress("") });
-
-  function handleRevoke() {
-    revoke.mutate({ delegateAddress: delegateAddress as Address });
+  function submitRevoke(formData: FormData) {
+    const delegateAddress = formData.get("delegateAddress") as string;
+    revoke.mutate({ delegateAddress: getAddress(delegateAddress) });
   }
 
   return (
-    <div className="card">
-      <div className="card-title">Revoke Decryption Access</div>
-      <input
-        className="input card-gap"
-        type="text"
-        value={delegateAddress}
-        onChange={(e) => setDelegateAddress(e.target.value)}
-        placeholder="Delegate address (0x…)"
-      />
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleRevoke}
-        disabled={disabled || !isAddress(delegateAddress) || revoke.isPending}
-      >
-        {revoke.isPending ? "Revoking…" : "Revoke Access"}
-      </button>
+    <section className="card" aria-labelledby="revoke-access-title">
+      <h2 className="card-title" id="revoke-access-title">
+        Revoke Decryption Access
+      </h2>
+      <form action={submitRevoke}>
+        <label className="sr-only" htmlFor="revoke-delegate-address">
+          Delegate address
+        </label>
+        <input
+          id="revoke-delegate-address"
+          name="delegateAddress"
+          className="input card-gap"
+          type="text"
+          pattern="0x[a-fA-F0-9]{40}"
+          title="0x followed by 40 hexadecimal characters."
+          required
+          placeholder="Delegate address (0x…)"
+        />
+        <button
+          type="submit"
+          className="btn btn-primary btn-full"
+          disabled={disabled || revoke.isPending}
+        >
+          {revoke.isPending ? "Revoking…" : "Revoke Access"}
+        </button>
+      </form>
       {revoke.isError && (
-        <div className="alert alert-error card-status">{revoke.error?.message}</div>
+        <div className="alert alert-error card-status" role="alert">
+          {revoke.error?.message}
+        </div>
       )}
       {revoke.isSuccess && revoke.data?.txHash && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Access revoked!{" "}
           <a
             href={`${INGEN_EXPLORER_URL}/tx/${revoke.data.txHash}`}
@@ -54,8 +60,8 @@ export function RevokeDelegationCard({
           >
             {revoke.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

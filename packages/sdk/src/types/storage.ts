@@ -6,7 +6,10 @@
  * structured clone, `MemoryStorage` stores values as-is.
  */
 export interface GenericStorage {
-  /** Retrieve a value by key. Returns `null` if the key does not exist. */
+  /**
+   * Retrieve a value by key.
+   * @returns The stored value, or `null` if the key does not exist.
+   */
   get<T = unknown>(key: string): Promise<T | null>;
   /** Store a value under the given key, overwriting any existing entry. */
   set<T = unknown>(key: string, value: T): Promise<void>;

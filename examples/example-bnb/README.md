@@ -1,8 +1,9 @@
 # BNB Confidential Token Quickstart
 
 Next.js 16 example app demonstrating `@zama-fhe/react-sdk` integration with
-[ethers v6](https://docs.ethers.org/v6/) on **BNB Smart Chain Testnet**
-(chain ID `97`), backed by a cleartext FHEVM stack deployed for this demo.
+[wagmi](https://wagmi.sh/) and [viem](https://viem.sh/) on **BNB Smart Chain
+Testnet** (chain ID `97`), backed by a cleartext FHEVM stack deployed for this
+demo.
 
 Uses the `cleartext()` relayer transport — there is no real relayer/KMS network
 on this chain.
@@ -18,10 +19,11 @@ unshield, grant/revoke/use delegation, pending unshield recovery.
 ## Stack
 
 - **Next.js 16** (App Router, Webpack)
-- **React 19** + **ethers v6**
-- **TanStack Query v5**
-- **@zama-fhe/react-sdk@3.0.0-alpha.34** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
-- **@zama-fhe/sdk/ethers** — `createConfig` wires ethers-compatible provider/signer adapters
+- **React 19**, **wagmi 3**, and **viem 2**
+- **TanStack Query 5**
+- **`@zama-fhe/react-sdk`** — `ZamaProvider`, `useShield`, `useConfidentialBalance`, `useUnshield`, `useDelegateDecryption`, etc.
+- **`@zama-fhe/react-sdk/wagmi`** — adapts wagmi's active connection into the Zama SDK signer
+- **`@zama-fhe/sdk/chains`** — supplies the BNB cleartext deployment addresses
 - **`cleartext()` transport** — no relayer/KMS network, signatures verified by mock keys baked into the SDK
 
 ## Setup

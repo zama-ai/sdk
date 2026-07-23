@@ -13,6 +13,7 @@ export interface ZamaConfigWagmi<
   TChains extends AtLeastOneChain = AtLeastOneChain,
   T = Config,
 > extends ZamaConfigBase<TChains> {
+  /** Wagmi `Config` instance from which the signer and provider are derived. */
   wagmiConfig: T;
 }
 

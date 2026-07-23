@@ -43,11 +43,9 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
-export function Providers({ children }: { children: ReactNode }) {
-  // Created once per Providers mount — avoids sharing the QueryClient across
-  // SSR requests and React Strict Mode double-invocations.
-  const [queryClient] = useState(() => new QueryClient());
+const queryClient = new QueryClient();
 
+export function Providers({ children }: { children: ReactNode }) {
   // Updated synchronously in accountsChanged (before setWalletKey re-renders) so the
   // next ethers adapter config sees the correct accounts immediately.
   const liveAccountsRef = useRef<readonly string[]>([]);
@@ -102,7 +100,7 @@ export function Providers({ children }: { children: ReactNode }) {
       ethereum.removeListener("accountsChanged", handleAccountsChanged);
       ethereum.removeListener("chainChanged", handleChainChanged);
     };
-  }, [queryClient]);
+  }, []);
 
   // Build the SDK config. The chain preset supplies contract addresses; only relayerUrl
   // and network are overridden for this app's proxy and RPC endpoint.

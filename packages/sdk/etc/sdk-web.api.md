@@ -4,17 +4,43 @@
 
 ```ts
 
-import { Address } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
-import { EIP1193Provider } from 'viem';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
+
+// @public
+export type FhevmClientOptions = NonNullable<Parameters<typeof createFhevmClient>[0]["options"]>;
+
+// @public
+export interface FhevmRelayerOptions {
+    readonly auth?: FhevmRuntimeConfig["auth"];
+    readonly debug?: boolean;
+    readonly fetchRetries?: number;
+    readonly fetchRetryDelayInMilliseconds?: number;
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly timeout?: number;
+}
+
+// @public
+export type FhevmRuntimeConfig = Parameters<typeof setFhevmRuntimeConfig>[0];
+
+// @public
+export interface RelayerConfig {
+    readonly type: string;
+}
+
+// @public
+export interface RelayerOptions extends Pick<FhevmRelayerOptions, "timeout" | "debug"> {
+    readonly batchRpcCalls?: boolean;
+    readonly fheEncryptionKey?: FhevmClientOptions["fheEncryptionKey"];
+    readonly moduleVersions?: FhevmClientOptions["moduleVersions"];
+}
 
 // @public
 export function web(options?: RelayerOptions): WebRelayerConfig;
 
 // @public
 export interface WebRelayerConfig extends RelayerConfig {
-    // (undocumented)
     readonly type: "web";
 }
 

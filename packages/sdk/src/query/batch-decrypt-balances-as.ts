@@ -5,6 +5,7 @@ import type { MutationFactoryOptions } from "./factory-types";
 /** Variables for {@link batchDecryptBalancesAsMutationOptions}. */
 export type BatchDecryptBalancesAsParams = BatchDecryptAsOptions;
 
+/** Builds TanStack Query mutation options for {@link Token.batchDecryptBalancesAs | decrypting} multiple token balances via delegated decryption credentials. @see {@link BatchDecryptBalancesAsParams} */
 export function batchDecryptBalancesAsMutationOptions(
   tokens: Token[],
 ): MutationFactoryOptions<

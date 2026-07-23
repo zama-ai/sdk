@@ -16,12 +16,14 @@ export function ShieldCard({
   onSuccess: () => void;
 }) {
   const shield = useShield({ address: tokenAddress });
-  const [amount, setAmount] = useState("");
   const [phase, setPhase] = useState<"prepare" | "approve" | "wrap">("prepare");
 
-  function handleShield() {
-    const parsed = parseAmountSafe(amount, decimals);
-    if (!parsed) return;
+  function handleShield(formData: FormData) {
+    const parsed = parseAmountSafe(formData.get("amount") as string, decimals);
+    if (!parsed) {
+      shield.reset();
+      return;
+    }
     setPhase("prepare");
     shield.mutate(
       {
@@ -31,12 +33,7 @@ export function ShieldCard({
         onApprovalSubmitted: () => setPhase("approve"),
         onShieldSubmitted: () => setPhase("wrap"),
       },
-      {
-        onSuccess: () => {
-          setAmount("");
-          onSuccess();
-        },
-      },
+      { onSuccess },
     );
   }
 
@@ -47,27 +44,32 @@ export function ShieldCard({
     : "Shield";
 
   return (
-    <div className="card">
-      <div className="card-title">Shield — ERC-20 → Confidential</div>
-      <div className="flex items-center gap-2 mb-3">
-        <input
-          className="input flex-1"
-          type="number"
-          min="0"
-          placeholder="Amount"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-        />
-        <span className="token-badge">{symbol}</span>
-      </div>
-      <button
-        onClick={handleShield}
-        disabled={shield.isPending || !parseAmountSafe(amount, decimals)}
-        className="btn btn-primary w-full"
-      >
-        {buttonLabel}
-      </button>
+    <section className="card" aria-labelledby="turnkey-shield-title">
+      <h2 className="card-title" id="turnkey-shield-title">
+        Shield — ERC-20 → Confidential
+      </h2>
+      <form action={handleShield}>
+        <label className="sr-only" htmlFor="turnkey-shield-amount">
+          Amount to shield
+        </label>
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            id="turnkey-shield-amount"
+            name="amount"
+            className="input flex-1"
+            type="number"
+            min="0"
+            step="any"
+            required
+            placeholder="Amount"
+          />
+          <span className="token-badge">{symbol}</span>
+        </div>
+        <button type="submit" disabled={shield.isPending} className="btn btn-primary w-full">
+          {buttonLabel}
+        </button>
+      </form>
       <MutationStatus mutation={shield} />
-    </div>
+    </section>
   );
 }

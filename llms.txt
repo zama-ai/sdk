@@ -118,9 +118,21 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Permit model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md): How EIP-712 signed permits authorize FHE decryption for specific contracts.
 - [Security model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md): Threat model, trust assumptions, and security architecture of the Zama SDK.
 
+### Changelog
+
+- [Alpha](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md): Unreleased changes on the prerelease (alpha) line — not yet in a stable release. Currently the internal @fhevm/sdk backend migration and its FHE runtime/client tuning knobs.
+- [3.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md): Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.
+- [3.3.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md): confidentialTransferAndCall, automatic pending-unshield recovery, and typed decryption error causes.
+- [3.2.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md): Configurable, silent-by-default logging; upgrade codemods; and a Wrap event decoding fix.
+- [3.1.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md): createConfig, transport factories, the provider/signer split, the Token/WrappedToken hierarchy, and top-level FHE primitives.
+- [3.0.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md): The first stable v3 line — the high-level clear-text-in, clear-text-out SDK — plus upgraded wrapper and registry contract support.
+- [Legacy versions](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/legacy.md): Release notes for the superseded 1.x and 2.x lines. The current, actively-maintained release line is 3.x.
+- [2.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v2.md): Human-readable release notes for the 2.x line — delegated decryption, the wrappers registry, balance validation before transfers, and the public-decrypt primitive.
+- [1.x](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v1.md): Human-readable release notes for the 1.x line — cleartext local development, session-scoped signing, wagmi v2 compatibility, and early production hardening.
+
 ## Official Examples
 
-- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet and ethers — including on-chain ACL delegation.
+- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet with wagmi 3 and viem 2 — including on-chain ACL delegation.
 - [example-hoodi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 - [node-ethers README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/node-ethers/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with ethers v6.
 - [node-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/node-ethers/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.

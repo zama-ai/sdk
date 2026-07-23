@@ -2097,6 +2097,656 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 [s6]: #step-6-token-wrappedtoken-upgraded-contracts
 [s7]: #step-7-removed-with-no-replacement
 
+## Alpha
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/alpha.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md
+- logical_path: changelog/alpha
+
+# Alpha
+
+
+> [!WARNING]
+> **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
+
+
+The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk` `1.x`. The high-level surface is unchanged — `createConfig`, `Token` / `WrappedToken`, `sdk.encrypt`, `sdk.decryption.*`, and the React hooks all behave exactly as before, so **`Token` and hooks apps need no changes**. What the new backend adds is a richer set of FHE runtime and per-chain tuning knobs on `createConfig`, documented below.
+
+
+> [!INFO]
+> **Expect a wallet signature after upgrading.** The new backend persists the full signed [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) (the EIP-712 payload and its signature) where earlier versions stored only the raw signature, and the two formats are not interchangeable. Permits cached by an earlier version fail validation on read and are discarded rather than migrated, so the first decryption on each chain after upgrading prompts the user to sign a permit once more. Subsequent decrypts reuse the stored permit silently.
+
+
+## FHE runtime and client tuning
+
+`createConfig` accepts a process-wide `runtime` object — the `@fhevm/sdk` runtime config. It configures the FHE engine itself (applied once per process): how the WASM assets load, threading, module versions, and a fallback relayer `auth`.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  runtime: {
+    // How the TFHE/KMS WASM is loaded (default "auto")
+    wasmAssetLoadMode: "auto",
+    // Set true to force single-threaded WASM (no SharedArrayBuffer)
+    singleThread: false,
+    // Size of the multi-threaded WASM worker pool (defaults to hardware concurrency)
+    numberOfThreads: 8,
+    // Fallback auth applied to every chain's relayer requests.
+    auth: { type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! },
+  },
+});
+```
+
+Every field of `runtime` is optional:
+
+| Option              | Type                                               | Default              | Purpose                                                                                                                                                                         |
+| ------------------- | -------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wasmAssetLoadMode` | `WasmAssetLoadMode`                                | `"auto"`             | How the TFHE/KMS WASM assets are fetched and instantiated (modes below).                                                                                                        |
+| `singleThread`      | `boolean`                                          | `false`              | Force single-threaded WASM. Required when `SharedArrayBuffer` is unavailable (no [cross-origin isolation headers](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md)).                               |
+| `numberOfThreads`   | `number`                                           | hardware concurrency | Size of the multi-threaded WASM worker pool. Ignored when `singleThread` is `true`.                                                                                             |
+| `moduleVersions`    | `"auto"` \| `{ tfhe?; kms?; checkCompatibility? }` | `"auto"`             | Pin the TFHE/KMS WASM module versions instead of auto-resolving from the chain's on-chain protocol version. `checkCompatibility` is `"throw"` (default) \| `"warn"` \| `"off"`. |
+| `locateFile`        | `(file: string) => URL`                            | —                    | Remap where the WASM assets are served from — set this when self-hosting them.                                                                                                  |
+| `auth`              | `{ type; value; … }`                               | —                    | Process-wide fallback relayer authentication, applied to any chain that doesn't set its own `auth`.                                                                             |
+
+The runtime's `logger` field is managed by the SDK — pass your logger via `createConfig`'s top-level `logger` instead.
+
+`wasmAssetLoadMode` controls how the FHE WASM assets are fetched and instantiated:
+
+| Mode                  | Behavior                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `auto` (default)      | Pick the best mode available in the current environment.                                        |
+| `embedded-base64`     | Use the WASM inlined as base64 — no separate network fetch. Useful under strict CSP or offline. |
+| `verified-blob`       | Fetch the WASM, verify its integrity, then instantiate from the verified blob.                  |
+| `precheck-direct-url` | Load directly from the asset URL after a precheck request.                                      |
+| `trusted-direct-url`  | Load directly from the asset URL with no precheck (fastest, least defensive).                   |
+
+`runtime.auth` is a process-wide fallback; a per-chain `auth` on the chain preset takes precedence for that chain. Note the discriminator differs by scope: `runtime.auth` uses `@fhevm/sdk`'s native `type` field (`{ type: "ApiKeyHeader", value }`), whereas a chain's `auth` uses the SDK's `__type` field. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods.
+
+
+> [!WARNING]
+> **`runtime` is applied once per process and can't be changed afterward.** The `@fhevm/sdk` runtime is a process-global singleton, applied by the first `createConfig` call. A later `createConfig` never reconfigures it — the original stays in effect, and a warning is logged (`"runtime configuration is already set and cannot be changed."`). Set `runtime` on your first `createConfig`; per-chain tuning that must vary belongs in each transport factory's `options`, not in `runtime`.
+
+
+Each transport factory (`web()` / `node()` / `cleartext()`) also takes an optional `options` object that tunes the `@fhevm/sdk` client for that one chain, at construction:
+
+```ts
+web({
+  // Batch the client's version-resolution RPC reads into one request (default false)
+  batchRpcCalls: true,
+  // Reuse a pre-fetched public key to skip the ~50 MB fetch on init
+  fheEncryptionKey,
+  // Pin TFHE/KMS WASM versions, or auto-resolve (default)
+  moduleVersions: "auto",
+  // Default per-request timeout for this chain's relayer round-trips
+  timeout: 60_000,
+});
+```
+
+`timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods and [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the full config reference.
+
+## Bug fixes
+
+- **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
+
+
+> [!INFO]
+> Only code that constructs low-level relayer objects directly should review its usage against the new backend before upgrading. Staying on `createConfig` + `Token` / `WrappedToken` + the React hooks keeps you fully insulated.
+
+## 3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md
+- logical_path: changelog/v3
+
+# 3.x
+
+Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
+
+## Versions
+
+- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
+- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
+- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
+- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md
+- logical_path: changelog/v3-3
+
+# 3.3.x
+
+This page covers the `3.3.x` line.
+
+## 3.3.0
+
+_Released 2026-07-08._
+
+This release adds a one-transaction "transfer and notify" primitive for ERC-7984 tokens, moves interrupted-unshield recovery fully inside the SDK, and gives decryption failures typed causes you can branch on. There are **no breaking changes** — every `3.1.x`/`3.2.x` app upgrades cleanly.
+
+### Encrypted transfer with a receiver hook
+
+`Token.confidentialTransferAndCall()` performs an encrypted transfer and invokes the recipient's ERC-7984 receiver hook (`onConfidentialTransferReceived`) in a single transaction. Use it when the recipient is a contract that needs to react to the transfer — for example a vault that credits a deposit the moment tokens arrive.
+
+The amount is encrypted client-side for you. The `data` argument is an opaque payload the SDK forwards verbatim to the receiver hook — you encode and interpret it; the SDK never touches it.
+
+```ts
+// Transfer 1000 tokens to a vault contract and trigger its deposit hook in one tx.
+const { txHash } = await token.confidentialTransferAndCall(
+  "0xVaultContract",
+  1000n,
+  "0xabcd", // caller-encoded payload forwarded to onConfidentialTransferReceived
+);
+```
+
+Balance validation, chain-alignment checks, and error handling match [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md): the SDK reads your confidential balance first and throws `InsufficientConfidentialBalanceError` before sending anything if it is too low. Pass `{ skipBalanceCheck: true }` to bypass the check for wallets that cannot produce EIP-712 signatures.
+
+
+> [!WARNING]
+> The recipient **must** implement the ERC-7984 receiver hook. Sending to a plain wallet address or a contract without the hook will revert with `TransactionRevertedError`. Use plain [`confidentialTransfer`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/transfer-privately.md) for ordinary recipients.
+
+
+### Automatic pending-unshield recovery
+
+Unshielding is a two-phase flow — an `unwrap` transaction, then a `finalize` transaction after the decryption proof arrives. If the user closes the tab in between, the first transaction is on-chain but the withdrawal is unfinished.
+
+The SDK now **persists the pending unwrap automatically** when phase one is submitted and clears it once finalization confirms. You no longer wire up any storage helpers yourself — you only detect and resume on the next load:
+
+```ts
+// On next page load, check for an interrupted unshield and offer to resume it.
+const pending = await wrappedToken.getPendingUnshield();
+if (pending) {
+  await wrappedToken.resumeUnshield(pending);
+}
+```
+
+`getPendingUnshield()` returns the unwrap transaction hash of an interrupted unshield, or `null`. `resumeUnshield()` polls for the proof, submits the finalize transaction, and clears the persisted state on success.
+
+In React, the same lifecycle is exposed through [`usePendingUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePendingUnshield.md) and [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useResumeUnshield.md).
+
+
+> [!INFO]
+> Resume is intentionally caller-driven: surface a "resume withdrawal" prompt rather than finalizing automatically on load, so you never trigger a wallet transaction the user did not initiate. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields) for the full flow.
+
+
+### Typed decryption error causes
+
+Decryption can fail for reasons that call for very different responses — some are terminal, others are worth retrying. The SDK now distinguishes them with dedicated error subclasses so you can branch correctly instead of parsing messages:
+
+| Error               | Code               | Meaning                                                                        | Retry?                |
+| ------------------- | ------------------ | ------------------------------------------------------------------------------ | --------------------- |
+| `NotEntitledError`  | `NOT_ENTITLED`     | The account is not authorized by the on-chain ACL to decrypt this value        | No — wait for a grant |
+| `RpcRateLimitError` | `RPC_RATE_LIMITED` | Your RPC provider rate-limited an on-chain read (HTTP 429 / JSON-RPC `-32005`) | Yes                   |
+
+Relayer back-pressure surfaces the same way — as a typed, retryable cause rather than an opaque failure. Route them with `matchZamaError`:
+
+```ts
+import { matchZamaError } from "@zama-fhe/sdk";
+
+try {
+  const balance = await wrappedToken.balanceOf(owner);
+} catch (error) {
+  matchZamaError(error, {
+    NOT_ENTITLED: () => toast("You don't have access to decrypt this value yet"),
+    RPC_RATE_LIMITED: () => retryWithBackoff(),
+    _: () => toast("Decryption failed — please retry"),
+  });
+}
+```
+
+See [Handle errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for the full error hierarchy.
+
+### Reliability improvements
+
+- **Self-healing Node worker timeouts.** The Node relayer's worker timeouts are now configurable and diagnosable, and the pool recovers on its own from a stalled worker instead of wedging. See the [`node()` transport reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md).
+- **SSR-safe worker resolution.** The Node worker resolves without `import.meta.resolve`, so server-side bundlers (Next.js and similar) load it correctly. See the [Next.js SSR guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/nextjs-ssr.md).
+- **Delegation propagation absorbed internally.** Delegated decryption transparently retries across the short window while a new delegation propagates to the gateway, so first-attempt `delegatedUserDecrypt` calls no longer fail spuriously. See [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md).
+
+## 3.2.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-2.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md
+- logical_path: changelog/v3-2
+
+# 3.2.x
+
+This page covers the `3.2.x` line.
+
+## 3.2.0
+
+_Released 2026-06-24._
+
+This release makes SDK diagnostics observable without imposing a logging library, ships codemods to automate the `3.1.0` upgrade, and fixes decoding of the on-chain `Wrap` event. There are **no breaking changes**.
+
+### Configurable, silent-by-default logging
+
+The SDK is silent by default — it emits no console output of its own. When you want visibility into what it's doing, pass a `logger` to `createConfig`. Any object matching the four-level `GenericLogger` interface (`error` / `warn` / `info` / `debug`) works, so `console`, [pino](https://getpino.io/), [winston](https://github.com/winstonjs/winston), and OpenTelemetry's `DiagLogger` all satisfy it directly:
+
+```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import { web } from "@zama-fhe/sdk/web";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  logger: console, // opt in to diagnostics — omit for total silence
+});
+```
+
+Bring your own structured logger the same way:
+
+```ts
+import pino from "pino";
+
+const config = createConfig({
+  // ...chains, clients, relayers
+  logger: pino({ level: "debug" }),
+});
+```
+
+
+> [!INFO]
+> The SDK never bundles a logging library and never imposes a format. When `logger` is omitted, no output is produced — safe for production by default. This also fixed workers logging `console.error` on failures they had already handled, which previously produced misleading noise in the console.
+
+
+### Upgrade codemods
+
+Automated codemods (built on [Codemod-OSS / JSSG](https://codemod.com/)) migrate a `3.0.x` codebase to the `3.1.0` API — the `createConfig` rename, flat config props, and the transport-map shape. Run them against your source tree instead of editing call sites by hand:
+
+```sh
+npx codemod @zama-fhe/sdk/3.1.0
+```
+
+Review the diff before committing — codemods handle the mechanical rewrites, but you should still verify the result compiles and your tests pass.
+
+### Bug fixes
+
+- **Decode the 3-field `Wrap` event.** The SDK now decodes the current 3-field `Wrap` event emitted by the wrapper contracts, rather than the legacy 2-field `Wrapped` event. If you read shield activity from event logs, wrapped balances now decode correctly. See [Decrypt values from event logs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/decrypt-from-event-logs.md).
+- **Quieter workers.** Relayer workers no longer emit `console.error` for failures that were caught and handled upstream, so your logs only show genuine problems.
+
+## 3.1.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-1.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md
+- logical_path: changelog/v3-1
+
+# 3.1.x
+
+This page covers the `3.1.x` line.
+
+## 3.1.0
+
+_Released 2026-06-22._
+
+This is the release where the `v3` public API reached its current shape. Configuration is now a single `createConfig` call, relayers are wired in through transport factories, read access and wallet authority are separated into a provider and an optional signer, and the token surface splits into `Token` (ERC-7984) and `WrappedToken` (shield/unshield). It also introduces top-level FHE primitives for apps whose contracts use encrypted types directly.
+
+
+> [!DANGER]
+> **Breaking change: `buildRelayer` is removed from the public API.**
+>
+> Relayers are no longer constructed directly. Build them with the transport factories (`web()`, `node()`, `cleartext()`) and pass them to `createConfig` in a `relayers` map keyed by chain ID. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md).
+>
+> `createZamaConfig` was also renamed to `createConfig` — the package path already namespaces it. Config props are now flat (no `viem: {}` / `ethers: {}` wrapper objects).
+
+
+### `createConfig`: one call to wire everything
+
+`createConfig` takes your chains, relayers, provider, and optional signer and returns a single config object you hand to `ZamaSDK`. Import it from the entry point that matches your Web3 library:
+
+```ts
+import { createConfig } from "@zama-fhe/sdk/viem"; // or @zama-fhe/sdk/ethers
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient, // viem PublicClient — read access
+  walletClient, // viem WalletClient — signing (optional, see below)
+  relayers: { [sepolia.id]: web() },
+});
+
+const sdk = new ZamaSDK(config);
+```
+
+React apps build the config with `createConfig` from `@zama-fhe/react-sdk/wagmi` and pass it to `<ZamaProvider config={config}>`.
+
+#### Migrate from `createZamaConfig` / `buildRelayer`
+
+
+### Tab: Before (3.0.x)
+
+```ts
+import { createZamaConfig, buildRelayer } from "@zama-fhe/sdk";
+
+const relayer = buildRelayer(/* ... */);
+const config = createZamaConfig({
+  viem: { publicClient, walletClient },
+  // ...
+});
+```
+
+### Tab: After (3.1.0)
+
+```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+});
+```
+
+
+### Transport factories per chain
+
+Relayers tell the SDK how to run FHE operations on each chain. Pick a transport per environment and map it to the chains it serves. Chain-specific data (relayer URL, network, contract addresses) comes from the chain preset, so a bare call is all most apps need.
+
+| Transport     | Environment | Import               |
+| ------------- | ----------- | -------------------- |
+| `web()`       | Browser     | `@zama-fhe/sdk/web`  |
+| `node()`      | Node.js     | `@zama-fhe/sdk/node` |
+| `cleartext()` | Local dev   | `@zama-fhe/sdk`      |
+
+```ts
+import { web } from "@zama-fhe/sdk/web";
+import { node } from "@zama-fhe/sdk/node";
+import { cleartext } from "@zama-fhe/sdk";
+
+// Multi-chain: map each chain ID to its transport.
+relayers: {
+  [sepolia.id]: web(),
+  [hoodi.id]: web(),
+}
+```
+
+Each transport factory also takes an optional `options` argument for per-chain tuning — in `3.1.0` this parameter was renamed from `relayer` to `options`. Its fields depend on the FHE backend; the internal backend migration and its current tuning options are documented under [FHE runtime and client tuning](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md#fhe-runtime-and-client-tuning).
+
+See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#2-pick-a-relayer) for the full list.
+
+### Provider / signer split and optional signer
+
+The SDK now separates **read access** (the provider) from **wallet authority** (the signer). The provider handles contract reads and receipt polling; the signer handles signing and write transactions. Both are built for you by `createConfig` from your library's native objects.
+
+The signer is **optional**. Omit it to build a read-only SDK — perfect for dashboards, indexers, or server-side balance displays that never write. Calling a method that needs to sign without a signer throws `SignerRequiredError`, so misuse fails loudly:
+
+```ts
+// Read-only SDK — no walletClient/signer supplied.
+const config = createConfig({ chains: [sepolia], publicClient, relayers: { [sepolia.id]: web() } });
+const sdk = new ZamaSDK(config);
+
+// Reads work; writes throw SignerRequiredError.
+```
+
+The concrete adapters — `ViemProvider` / `ViemSigner` and `EthersProvider` / `EthersSigner` — are documented in the [SDK reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/README.md). For custom integrations, implement [`GenericProvider`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericProvider.md) and [`GenericSigner`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericSigner.md).
+
+### `Token` and `WrappedToken`
+
+The token surface splits into two classes so each API only exposes what applies:
+
+- **`Token`** — an ERC-7984 confidential token: `balanceOf`, `confidentialTransfer`, `setOperator`, and so on.
+- **`WrappedToken`** — a `Token` that also wraps a public ERC-20, adding `shield`, `unshield`, and `unshieldAll`.
+
+```ts
+// A wrapper is itself the confidential token — pass the wrapper's own address.
+const wrappedToken = sdk.createWrappedToken("0xWrapperAddress");
+
+await wrappedToken.shield(1000n); // public ERC-20 → confidential
+await wrappedToken.confidentialTransfer("0xRecipient", 500n);
+await wrappedToken.unshield(500n); // confidential → public ERC-20
+
+// For a plain ERC-7984 token that isn't a wrapper:
+const token = sdk.createToken("0xConfidentialToken");
+```
+
+#### Explicit owner on token reads
+
+Token reads now require an **explicit owner address** rather than implicitly using the connected account. This keeps reads deterministic and makes read-only (signer-less) usage possible:
+
+```ts
+const balance = await wrappedToken.balanceOf("0xOwnerAddress");
+```
+
+### FHE encryption and decryption primitives
+
+For contracts that use FHE types directly — a sealed-bid auction, a confidential vote, any non-token contract storing `euint` values — the SDK exposes the underlying operations. Encryption is a top-level method; decryption is grouped under the `sdk.decryption` namespace:
+
+```ts
+// Encrypt values for a specific contract + user, ready to submit on-chain.
+const { encryptedValues, inputProof } = await sdk.encrypt({
+  values: [{ value: 42n, type: "euint64" }],
+  contractAddress: "0xYourContract",
+  userAddress: "0xYourAddress",
+});
+
+// Decrypt a publicly-decryptable value (no signature required).
+const clear = await sdk.decryption.decryptPublicValues([encryptedValue]);
+
+// Decrypt values you're entitled to under the ACL (prompts for a permit signature).
+const values = await sdk.decryption.decryptValues([
+  { encryptedValue, contractAddress: "0xYourContract" },
+]);
+```
+
+In React, use [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useEncrypt.md) and [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptValues.md) — see the [Encrypt & decrypt](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md) guide.
+
+### SDK-level delegation primitives
+
+Delegated decryption — letting another account decrypt your values under the ACL — is now a first-class SDK primitive. `sdk.decryption.delegatedDecryptValues()` decrypts on behalf of a delegator, and the on-chain delegation lifecycle is managed through `sdk.delegations` and the React delegation hooks. See [Delegated decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md).
+
+### Automatic ERC-1363 shield routing
+
+`WrappedToken.shield()` now detects whether the underlying ERC-20 implements [ERC-1363](https://eips.ethereum.org/EIPS/eip-1363) (via ERC-165) and routes accordingly — `transferAndCall` for a single-transaction shield when supported, or `approve` + `wrap` otherwise. This is fully transparent: **your code doesn't change and you never pick a path**.
+
+```ts
+// Identical call regardless of the underlying token — the SDK picks the optimal path.
+await wrappedToken.shield(1000n);
+```
+
+See the routing table in [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths).
+
+### Glossary alignment (naming)
+
+Several public field and method names were aligned with the [FHEVM glossary](https://docs.zama.org/protocol) for consistency — decrypt wording, `key`/`keypair` terminology, and the remaining `*Handle` fields. The credentials model was also replaced with a keypair vault plus a permission store internally. If you referenced these names directly, update them to the current terms; the [3.2.0 codemods](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md#upgrade-codemods) automate most of the mechanical renames.
+
+## 3.0.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-0.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md
+- logical_path: changelog/v3-0
+
+# 3.0.x
+
+This page covers the two stable releases of the `3.0.x` line, newest first: `3.0.1` (a wrapper/registry contract fix) and `3.0.0` (the major baseline).
+
+## 3.0.1
+
+_Released 2026-05-28._
+
+### Upgraded wrapper + registry contract support
+
+This patch aligns the SDK with the upgraded on-chain confidential-wrapper and `ConfidentialTokenWrappersRegistry` contracts. The SDK reads the current wrapper and registry interfaces, so wrapper resolution and shield/unshield work against the deployed protocol contracts.
+
+In practice this means you can resolve the confidential wrapper for any registered ERC-20 through the built-in registry, then operate on it as a `WrappedToken`:
+
+```ts
+// The registry resolves the confidential wrapper for a registered ERC-20.
+// On Mainnet, Sepolia, and Hoodi the registry address is built-in.
+const result = await sdk.registry.getConfidentialToken("0xUnderlyingERC20");
+// Check `isValid` before using the result — the registry can return an entry
+// that is not a valid/registered wrapper.
+if (!result || !result.isValid) throw new Error("No valid wrapper registered for this token");
+
+const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
+await wrappedToken.shield(1000n);
+```
+
+See the [`WrappersRegistry` reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappersRegistry.md) for how wrapper lookup works.
+
+## 3.0.0
+
+_Released 2026-04-22._
+
+`3.0.0` is the first stable release of the high-level `@zama-fhe/sdk`. Its guiding principle is **clear-text in, clear-text out**: you work with familiar primitives — ERC-20-style balances and transfers for tokens — while the SDK hides the FHE protocol details (encryption, proofs, permits, access control) underneath.
+
+This is a different package from the legacy low-level [`@zama-fhe/relayer-sdk`](https://github.com/zama-ai/relayer-sdk). If your prior experience centers on `createInstance`, `initSDK`, or direct relayer calls, those belong to the legacy SDK. The `v3` line introduces the higher-level surface instead:
+
+- **`ZamaSDK`** — the entry point that owns configuration, chain management, and the relayer lifecycle.
+- **`Token` / `WrappedToken`** — confidential ERC-7984 tokens with `shield`, `unshield`, `confidentialTransfer`, and `balanceOf`.
+- **`createConfig`** — one call to wire chains, relayers, a provider, and an optional signer together.
+- **React hooks** — TanStack Query-based hooks with cached decryption, automatic cache invalidation, and one-signature permit management.
+
+
+> [!INFO]
+> The public configuration API and several primitives were finalized in [**3.1.0**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) (the `createConfig` name, transport factories, the provider/signer split, and the top-level `encrypt`/`decrypt` methods). Read the 3.1.0 notes for the API as it stands today, and start new projects from the [Quick start](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/quick-start.md).
+
+## Legacy versions
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/legacy.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/legacy.md
+- logical_path: changelog/legacy
+
+# Legacy versions
+
+Release notes for the **superseded** major lines. These are no longer actively developed — the current, actively-maintained release line is [**3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md). To move an app off `1.x` or `2.x`, follow the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md).
+
+## Lines
+
+- [**2.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v2.md) — delegated decryption, the wrappers registry, balance validation before transfers, and the public-decrypt primitive.
+- [**1.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v1.md) — cleartext local development, session-aware signing, wagmi v2 compatibility, and early production hardening.
+
+## 2.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v2.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v2.md
+- logical_path: changelog/v2
+
+# 2.x
+
+Plain-language release notes for the `2.x` line — what changed in each minor version, in plain terms. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list). The `2.x` line is superseded by `3.x` — to move an app forward, follow the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md).
+
+Notes are written in the API vocabulary of the time (`handles`, `keypairTTL`, `WrappersRegistry`, `ReadonlyToken`, `sdk.publicDecrypt`, …); many of those names changed in `3.x`.
+
+## 2.5.0
+
+_Released 2026-04-17._
+
+This release rounds out the decryption surface and keeps pace with upgraded on-chain wrapper contracts.
+
+- **Public-decrypt primitive.** `sdk.publicDecrypt()` is now the primitive for decrypting publicly-decryptable values — no permit signature needed.
+- **Richer decrypt events.** Decrypt events now expose the decrypted handles and result fields directly.
+- **Upgraded unwrap events.** The SDK reads the upgraded unwrap events emitted by the wrapper contracts.
+- **Inferred total supply.** Added a total-supply contract builder that infers the right read for a token.
+- **Fixes.** Centralized `ZERO_HANDLE` with consistent `isZeroHandle` checks, and aligned the example apps with scoped `isAllowed` checks.
+
+## 2.4.0
+
+_Released 2026-04-13._
+
+The headline here is a smoother decrypt experience in React, plus some trimming of the token surface.
+
+- **Unified `useUserDecrypt`.** The React hook now uses a reactive cache and auto-decrypts, so decrypted values stay in sync without manual plumbing.
+- **Slimmer token API.** Removed bespoke fee and admin features that were tied to a specific integration, keeping the token surface generic.
+- **`keypairTTL` cap.** The decrypt key pair TTL is now capped at the FHEVM 365-day maximum.
+- **Examples.** The Node ethers and Node viem examples were upgraded to the 2.x API with full ERC-7984 flows.
+
+## 2.3.0
+
+_Released 2026-04-07._
+
+Delegation and safety checks are the focus.
+
+- **Delegation API alignment.** The delegation API was aligned with the Delegated User Decryption spec.
+- **Balance validation.** Transfers, shields, and unshields now validate balances before submitting, so obviously-doomed operations fail early.
+- **TTL default.** The `keypairTTL` default was aligned with the session TTL (30 days).
+- **Quality.** Improved error handling and code quality, plus new Node + Web end-to-end test infrastructure.
+
+## 2.2.0
+
+_Released 2026-03-30._
+
+This release introduces on-chain wrapper discovery.
+
+- **Wrappers registry.** Added a `WrappersRegistry` class and matching on-chain registry hooks, so an app can look up the confidential wrapper registered for an ERC-20 (and vice versa) on-chain.
+- **Delegation robustness.** Added `DelegationNotPropagatedError` to surface the gateway sync delay after a delegation is set.
+- **Hook naming.** Renamed `useAllowTokens` / `useRevokeTokens` back to `useAllow` / `useRevoke`, and improved the query-wrapper types.
+- **Examples.** Several example apps were upgraded to the current SDK with full ERC-7984 and delegation flows (wagmi v3, react-ethers, react-viem, and Hoodi).
+
+## 2.1.0
+
+_Released 2026-03-24._
+
+A small maintenance release — this one is thin on library-facing changes.
+
+- **Fixes.** Excluded the logger from the web-worker init payload, gated queries on an undefined `tokenAddress`, and colocated the Node worker with the Node entry point.
+- **Examples.** The Hoodi example gained on-chain ACL delegation flows.
+
+## 2.0.0
+
+_Released 2026-03-20._
+
+The `2.0.0` major bump adds delegated decryption and firms up key persistence and worker reliability.
+
+
+> [!DANGER]
+> **Breaking change: `useUserDecrypt` signature change.** The `useUserDecryptFlow` hook was removed, and `useUserDecrypt` now takes the flow hook's signature. The old low-level `useUserDecrypt` that accepted `UserDecryptParams` is gone.
+
+
+- **Delegated decryption.** Added support for delegated decryption — letting another account decrypt your values.
+- **Key persistence.** The FHE public key and params are now persisted with artifact-level revalidation, avoiding redundant refetches.
+- **Worker reliability.** Browser-extension environments are auto-detected with a file-based worker fallback, worker creation is lazy (via a blob URL) to avoid SSR crashes, and session expiry is detected on the `isAllowed` query.
+- **Smaller bundle.** Bundle size was reduced by inlining slim ABI fragments.
+- **Examples.** Added `example-hoodi`, an ERC-7984 demo on the Hoodi testnet.
+
+## 1.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v1.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v1.md
+- logical_path: changelog/v1
+
+# 1.x
+
+Plain-language release notes for the early `1.x` line — what changed in each mainline release, in plain terms. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md), which lists every commit.
+
+## 1.1.0
+
+_Released 2026-03-13._
+
+The first feature release after `1.0` — a cleartext development mode, session-aware signing, better React/wagmi integration, and a round of integrator-friction and security fixes. No breaking changes.
+
+- **Cleartext development mode.** A new cleartext FHEVM mode runs the SDK unencrypted for local development and testing; its configuration was reworked into a flat config shape at the same time.
+- **Session-aware signing.** Sign once and reuse the signature across operations in a session, with a configurable session TTL — plus a read-only signer mode for running the SDK without a signer.
+- **React & wagmi integration.** A wagmi v2 compatibility shim (`useConnection` / `getConnection`); decrypted balances persisted to storage, so a page reload no longer re-decrypts behind a spinner; and React SDK audit fixes (consistent imports, an optimistic `shieldETH` flow, documented error handling, a `mergeEnabled` option).
+- **WASM thread pool.** `RelayerWeb` (the browser relayer transport) gained a thread-pool option to tune how many worker threads FHE operations use.
+- **Integrator-friction & worker fixes.** Smoothed early-integrator rough edges — gas limits, worker bundling, CDN behavior on localhost, React StrictMode restarts, and the Sepolia `/v2` relayer path — and switched the web worker from `importScripts` to fetch-and-eval to fix MIME-type errors. `viem` also became a direct dependency.
+- **Security.** Resolved three high-severity Dependabot alerts and the CodeQL code-scanning alerts, and pinned `minimatch` to `10.2.4` to close a ReDoS vulnerability.
+
+## 1.0.1
+
+_Released 2026-03-09._
+
+A release-plumbing patch with no functional changes — it exists only to trigger a release on top of `1.0.0`. The substance of the initial `1.x` line landed in `1.0.0`; see the [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) for that release's full contents.
+
 ## Configuration
 
 - source_type: official-doc
@@ -8598,6 +9248,7 @@ sdk.delegations.delegateDecryption(/* ... */);
 sdk.delegations.revokeDelegation(/* ... */);
 sdk.delegations.isActive(/* ... */);
 sdk.delegations.getExpiry(/* ... */);
+sdk.delegations.getStatus(/* ... */);
 ```
 
 ## Methods
@@ -8712,6 +9363,22 @@ const expiryDate = new Date(Number(expiry) * 1000);
 | `0n`         | No delegation (never set or revoked) |
 | `2^64 - 1`   | Permanent                            |
 | Other        | UTC Unix timestamp in seconds        |
+
+### getStatus
+
+`(params: { contractAddress: Address; delegatorAddress: Address; delegateAddress: Address }) => Promise<DelegationStatus>`
+
+Returns activity and expiry together (`{ isActive: boolean; expiryTimestamp: bigint }`) from a single on-chain read, instead of calling `isActive()` and `getExpiry()` separately.
+
+Signer-independent — works without a configured signer.
+
+```ts
+const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
+  contractAddress: "0xConfidentialToken",
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+```
 
 ## Events
 
@@ -14852,7 +15519,7 @@ Re-fetch when the browser tab regains focus. Defaults to `true`.
 ## Return Type
 
 ```ts
-import { type DelegationStatusData } from "@zama-fhe/sdk/query";
+import { type DelegationStatus } from "@zama-fhe/sdk/query";
 ```
 
 `data` resolves to:
@@ -15859,7 +16526,7 @@ If you discover a security vulnerability in the SDK, report it to **security@zam
 
 # Example Hoodi app with cleartext Zama Protocol support
 
-Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet and **ethers** — including on-chain ACL delegation.
+Next.js app demonstrating ERC-7984 confidential token operations on the **Hoodi** testnet with **wagmi 3** and **viem 2** — including on-chain ACL delegation.
 
 ## Cleartext Zama Protocol
 
@@ -15874,8 +16541,10 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 ## Stack
 
 - **Next.js** (App Router)
-- **ethers v6** — via `EthersSigner` from `@zama-fhe/sdk/ethers`
-- **RelayerCleartext** — cleartext FHE backend (no external relayer service required)
+- **wagmi 3** — injected-wallet connection and chain lifecycle
+- **viem 2** — EVM types and utilities
+- **`@zama-fhe/react-sdk/wagmi`** — Zama signer adapter for the active wagmi connection
+- **`cleartext()`** — cleartext FHE backend (no external relayer service required)
 - **@tanstack/react-query** — async state management
 - Any injected **EIP-1193 wallet** (Rabby, Phantom, …)
 - **Chain:** Hoodi testnet (chainId 560048)
@@ -15885,31 +16554,31 @@ This mode allows developers to test **smart contracts** and **app/backend integr
 | Operation                    | SDK API                                       |
 | ---------------------------- | --------------------------------------------- |
 | Decrypt confidential balance | `useConfidentialBalance`                      |
-| Shield (ERC-20 → cToken)     | `sdk.createToken().shield()`                  |
+| Shield (ERC-20 → cToken)     | `useShield`                                   |
 | Confidential transfer        | `useConfidentialTransfer`                     |
 | Unshield (cToken → ERC-20)   | `useUnshield`                                 |
 | Grant decryption access      | `useDelegateDecryption`                       |
 | Revoke decryption access     | `useRevokeDelegation`                         |
 | Decrypt balance as delegate  | `useDecryptBalanceAs` + `useDelegationStatus` |
 
-> **Shield** uses `token.shield()` directly (via `sdk.createToken()`) rather than the `useShield` hook, with a manual approval step. The spend cap is set to the user's full ERC-20 balance (not the exact shield amount), so subsequent shields within the remaining allowance require only the wrap transaction — no re-approval. USDT-style detection uses an optimistic approach: `writeContract` is tried directly (gas estimation uses `from = userAddress`, so USDT reverts fail pre-wallet), with a silent fallback to reset + approve only for tokens that actually need it.
+> **Shield** uses `useShield`. The SDK owns balance checks, allowance handling—including USDT-style reset when needed—and wrapper routing. The app passes an exact approval strategy and does not recompose ERC-20 approval and wrapper calls.
 
-> **Hybrid EIP-1193 provider** (`src/providers.tsx`): read calls (`eth_call`, `eth_estimateGas`) go to a direct `JsonRpcProvider` for speed; signing, nonce (`eth_getTransactionCount`), and post-submission polling go through the injected wallet. The public Hoodi RPC is a load balancer — routing nonce reads or receipt polling through it causes "nonce too low" errors and stale receipts.
+> **Wallet lifecycle** is owned by wagmi. `useConnection` exposes the active account and chain; `useConnect` and `useSwitchChain` use their wagmi v3 mutation functions. The app does not install application-owned `accountsChanged` or `chainChanged` listeners.
 
-> **Separate IndexedDB instances** for `storage` and `permitStorage` in `ZamaProvider`: not required for correctness — the SDK namespaces transport-key-pair and permit keys internally, and defaults `permitStorage` to `storage` when omitted. This example keeps them as separate `IndexedDBStorage` instances for clarity between the two storage responsibilities.
+> **IndexedDB storage** persists SDK transport material and permits. Both configuration fields use the SDK's `indexedDBStorage`; keys are namespaced internally.
 
 > **Delegation revocation cache:** `useDecryptBalanceAs` caches decrypted values in IndexedDB keyed by `(token, owner, handle)`. When delegation is revoked, the cached plaintext is still served until the owner's balance changes (via shield, transfer, or unshield), which produces a new on-chain handle and invalidates the cache entry. No TTL is applied — the handle itself is the cache key.
 
-## How it differs from `react-ethers`
+## How it differs from `react-wagmi`
 
-|           | `react-ethers`                   | `example-hoodi`                      |
-| --------- | -------------------------------- | ------------------------------------ |
-| Relayer   | `RelayerWeb` (HTTP, proxy route) | `RelayerCleartext` (no proxy needed) |
-| Network   | Mainnet / Sepolia                | Hoodi (chainId 560048)               |
-| Auth      | Relayer API key                  | None                                 |
-| API route | `/api/relayer/[...path]`         | Not present                          |
+|           | `react-wagmi`                    | `example-hoodi`                 |
+| --------- | -------------------------------- | ------------------------------- |
+| Relayer   | Web transport (HTTP proxy route) | `cleartext()` (no proxy needed) |
+| Network   | Sepolia                          | Hoodi (chainId 560048)          |
+| Auth      | Relayer configuration            | None                            |
+| API route | `/api/relayer/[...path]`         | Not present                     |
 
-`RelayerCleartext` reads plaintext values directly from the on-chain executor contract — no external relayer service is required.
+`cleartext()` reads plaintext values directly from the on-chain executor contract—no external relayer service is required.
 
 ## Setup
 
@@ -15973,15 +16642,31 @@ Both tokens have a permissionless `mint(address to, uint256 amount)` function.
 **Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
 
 ```ts
-import { Contract, BrowserProvider, parseUnits } from "ethers";
+import { parseUnits } from "viem";
+import { useConnection, useWriteContract } from "wagmi";
 
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
-// USDT Mock — 6 decimals: 10 USDT = parseUnits("10", 6)
-const token = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await token.mint(await signer.getAddress(), parseUnits("10", 6));
+const { address } = useConnection();
+const { mutate: writeContract } = useWriteContract();
+
+writeContract({
+  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
+  abi: mintAbi,
+  functionName: "mint",
+  args: [address!, parseUnits("10", 6)],
+});
 ```
 
 For a detailed partner-facing guide including prerequisites, step-by-step flow, and troubleshooting, see [WALKTHROUGH.md](./WALKTHROUGH.md).
@@ -15995,7 +16680,7 @@ For a detailed partner-facing guide including prerequisites, step-by-step flow, 
 
 # Integrating Zama Confidential Tokens (ERC-7984) on Hoodi
 
-**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet (ethers-based stack), including on-chain ACL delegation.
+**Audience:** Partners integrating Zama confidential tokens on the Hoodi testnet with wagmi and viem, including on-chain ACL delegation.
 
 **What this document covers:** context and motivation, how the cleartext stack works, prerequisites, step-by-step operation walkthrough, minting instructions, environment variable reference, and troubleshooting.
 
@@ -16015,7 +16700,7 @@ This example uses the **cleartext stack** (`cleartext()`), which is Zama's light
 
 ## What this example demonstrates
 
-> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's ethers integration and the cleartext backend — with no external relayer service and no API key.
+> Any EIP-1193 browser wallet (Rabby, Phantom…) can interact with ERC-7984 confidential tokens on Hoodi using the Zama SDK's wagmi integration and the cleartext backend — with no external relayer service and no API key.
 
 Specifically:
 
@@ -16086,24 +16771,17 @@ page.tsx — useShield / useConfidentialTransfer / useUnshield / useConfidential
 @zama-fhe/react-sdk (React hooks + ZamaProvider)
   │
   ▼
-@zama-fhe/sdk (ZamaSDK)
-  ├─ ethers adapter   → hybrid EIP-1193 provider
-  │    ├─ reads (eth_call, eth_estimateGas) → JsonRpcProvider(HOODI_RPC_URL)
-  │    └─ writes + polling (signing, eth_sendTransaction,
-  │         eth_blockNumber, eth_getTransactionReceipt) → injected wallet
-  └─ cleartext() → the hoodi preset
+@zama-fhe/react-sdk/wagmi  ← createConfig({ wagmiConfig, chains, relayers })
+  ├─ reads → viem HTTP transport(HOODI_RPC_URL)
+  ├─ writes + EIP-712 signing → active wagmi injected connection
+  └─ cleartext() → the Hoodi SDK chain preset
        └─ reads plaintexts from CleartextFHEVMExecutor (on-chain, Hoodi)
        └─ produces mock KMS signatures locally (no external call)
 ```
 
-**Hybrid EIP-1193 provider:** contract read calls (`eth_call`, `eth_estimateGas`) are routed to a direct `JsonRpcProvider` for fast, wallet-independent reads. The following calls are routed to the injected wallet's node instead, because `rpc.hoodi.ethpandaops.io` is a load balancer whose backends can be at different chain heights:
+**Reads vs writes:** wagmi's viem HTTP transport handles reads through `HOODI_RPC_URL`; writes and EIP-712 signing use the active injected connector. The Zama wagmi adapter consumes that same connection.
 
-- **`eth_getTransactionCount` (nonce):** a stale backend can return an outdated nonce, causing ethers to build a transaction with a nonce lower than MetaMask's actual next nonce and triggering a "nonce too low" rejection. The wallet is the authoritative nonce source.
-- **Post-submission polling (`eth_blockNumber`, `eth_getTransactionReceipt`, `eth_getTransactionByHash`):** a stale backend causes `eth_blockNumber` to return non-monotonic values (blocking ethers' `PollingBlockSubscriber`) and `eth_getTransactionReceipt` to return `null` indefinitely. The wallet's node, which received the transaction directly, is the consistent source of truth.
-
-To ensure ethers' `PollingBlockSubscriber` checks for new receipts on every poll interval (4 s rather than once per block at ~12 s), `eth_blockNumber` responses are adjusted to always be strictly increasing — if the returned block number has not advanced, the counter increments by 1.
-
-**Wallet-switch lifecycle:** on every account change, `ZamaProvider` remounts with a fresh `ethers adapter` so the new account's address is used immediately. The `accountsChanged` listener ignores events that fire before the initial `eth_accounts` call resolves (some wallets emit it on page load before the ref is seeded), preventing spurious remounts that would clear the in-memory credential cache. First connection is handled correctly: once `eth_accounts` resolves and the user connects, `walletKey` increments and a new `ethers adapter` is created with the live account ref already populated. An EIP-712 permit is persisted in IndexedDB and survives page reloads within the 30-day TTL.
+**Wallet-switch lifecycle:** wagmi owns account and chain subscriptions. The UI reads them with wagmi v3's `useConnection`; connection and switching use the mutation functions returned by `useConnect` and `useSwitchChain`. No manual `accountsChanged` or `chainChanged` listeners—or forced `ZamaProvider` remounts—are needed. Permits persist in IndexedDB.
 
 ---
 
@@ -16170,21 +16848,31 @@ Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens
 ### Via code
 
 ```ts
-import { Contract, BrowserProvider, parseUnits } from "ethers";
+import { parseUnits } from "viem";
+import { useConnection, useWriteContract } from "wagmi";
 
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
-const provider = new BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
+const mintAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
 
-// Amounts are raw integers: use parseUnits to convert from human-readable values.
-// USDC Mock has 6 decimals — 10 USDC = parseUnits("10", 6) = 10_000_000n
-const usdcMock = new Contract("0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b", MINT_ABI, signer);
-await usdcMock.mint(await signer.getAddress(), parseUnits("10", 6));
+const { address } = useConnection();
+const { mutate: writeContract } = useWriteContract();
 
-// USDT Mock — verify its decimals on Etherscan or via useListPairs() before minting.
-const usdtMockDecimals = 18; // replace with the actual value from pair.underlying.decimals
-const usdtMock = new Contract("0x7740F913dC24D4F9e1A72531372c3170452B2F87", MINT_ABI, signer);
-await usdtMock.mint(await signer.getAddress(), parseUnits("10", usdtMockDecimals));
+writeContract({
+  address: "0x51a63b5621D78dE54D2F4D098A23a5A69e76F30b",
+  abi: mintAbi,
+  functionName: "mint",
+  args: [address!, parseUnits("10", 6)],
+});
 ```
 
 ---
@@ -16301,45 +16989,40 @@ Switch back to the owner wallet. In the **Revoke Decryption Access** card, enter
 ### Providers setup
 
 ```tsx
-// src/providers.tsx
-import { createConfig } from "@zama-fhe/sdk/ethers";
-import { cleartext, IndexedDBStorage, indexedDBStorage } from "@zama-fhe/sdk";
-import { hoodi } from "@zama-fhe/sdk/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
-import { JsonRpcProvider } from "ethers";
-import { HOODI_RPC_URL } from "@/lib/config"; // process.env.NEXT_PUBLIC_HOODI_RPC_URL || fallback
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
+import { hoodi as fheHoodi } from "@zama-fhe/sdk/chains";
+import { createConfig, http, WagmiProvider } from "wagmi";
+import { hoodi } from "wagmi/chains";
+import { injected } from "wagmi/connectors/injected";
 
-// The hybrid EIP-1193 provider routes reads to a direct JsonRpcProvider and wallet calls
-// (signing, nonce, receipt polling) to the injected wallet — see providers.tsx for
-// createHybridEthereum and its liveAccountsRef cache. It is passed as `ethereum`; SDK reads
-// also use `provider` (the direct Hoodi RPC).
-const ethereum = createHybridEthereum(getEthereumProvider(), liveAccountsRef);
-const provider = new JsonRpcProvider(HOODI_RPC_URL);
-
-// A separate IndexedDBStorage instance for permitStorage is optional — the SDK
-// namespaces its keys internally, so storage and permitStorage can safely share one
-// database. Kept separate here for clarity between the two storage responsibilities.
-const permitDBStorage = new IndexedDBStorage("PermitStore");
-
-// `hoodi` is the shipped Hoodi cleartext chain preset (chain 560048). cleartext() is the
-// relayer transport — Hoodi runs the cleartext FHEVM host stack, so there is no real
-// relayer/KMS network to call.
-const config = createConfig({
+const wagmiConfig = createConfig({
   chains: [hoodi],
-  ethereum,
-  provider,
-  storage: indexedDBStorage, // "CredentialStore" DB — encrypted FHE keypair
-  permitStorage: permitDBStorage, // "PermitStore" DB — EIP-712 permit signatures
-  relayers: { [hoodi.id]: cleartext() },
+  connectors: [injected()],
+  transports: { [hoodi.id]: http(HOODI_RPC_URL) },
+});
+const zamaHoodi = { ...fheHoodi, network: HOODI_RPC_URL } as const;
+const zamaConfig = createZamaConfig({
+  wagmiConfig,
+  chains: [zamaHoodi],
+  relayers: { [zamaHoodi.id]: cleartext() },
+  storage: indexedDBStorage,
+  permitStorage: indexedDBStorage,
 });
 
-<ZamaProvider config={config}>...</ZamaProvider>;
+<WagmiProvider config={wagmiConfig}>
+  <QueryClientProvider client={queryClient}>
+    <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+  </QueryClientProvider>
+</WagmiProvider>;
 ```
 
 ### Hook usage
 
 ```tsx
-import { parseUnits } from "ethers";
+import { parseUnits } from "viem";
 import {
   useShield,
   useListPairs,
@@ -16498,7 +17181,7 @@ Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_HOODI_RPC_URL` if y
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                               | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                              |
 | Shield stuck on "Shielding… (approving)"                  | Ran out of Hoodi ETH after the approval transaction                                                                                                      | Top up your wallet with Hoodi ETH and try again                                                                                                                                                                                                                                                                                                                       |
 | Shield completes but balances unchanged                   | Decimal mismatch — wrong number of decimals used to parse the amount                                                                                     | Ensure the amount input uses the ERC-20 contract's decimals (not the ERC-7984 token's); decimals are available as `pair.underlying.decimals` and `pair.confidential.decimals` from `useListPairs`                                                                                                                                                                     |
-| "nonce too low: next nonce X, tx nonce Y"                 | The Hoodi public RPC returned a stale nonce; ethers built the tx with an outdated value                                                                  | This is fixed by routing `eth_getTransactionCount` through the wallet in the hybrid provider. If you see this in your own integration, ensure `eth_getTransactionCount` is NOT routed to a load-balanced RPC — it must go through the same node that will receive your `eth_sendTransaction`                                                                          |
+| "nonce too low: next nonce X, tx nonce Y"                 | The wallet or Hoodi RPC observed a stale nonce                                                                                                           | Retry the transaction. The injected connector submits transactions through the wallet; if you build transactions yourself, ensure the nonce comes from the same node that receives `eth_sendTransaction` rather than a load-balanced read RPC                                                                                                                         |
 | "Transaction reverted" on any operation                   | Insufficient token balance, or wrong network                                                                                                             | Verify you are on Hoodi (chainId 560048) and have sufficient tokens                                                                                                                                                                                                                                                                                                   |
 | Unshield shows "Unshielding… (2/2)" for longer than usual | Finalize phase waiting for the Phase 2 receipt                                                                                                           | Normal on Hoodi — the public RPC can be slow; the app polls receipt via the wallet's node for consistency                                                                                                                                                                                                                                                             |
 | Pending unshield card appears on reload                   | Tab was closed between Phase 1 and Phase 2 of an unshield                                                                                                | Click **Finalize** in the Pending Unshield card to complete the operation and receive your ERC-20 tokens                                                                                                                                                                                                                                                              |
@@ -16547,9 +17230,10 @@ Tests run automatically on CI for every pull request that touches `examples/exam
 
 | Package                 | Version            | Role                                                                                                                                                                                                                             |
 | ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, `createConfig`, contract builders                                                                                                                                                                      |
+| `@zama-fhe/sdk`         | see `package.json` | FHE core — `cleartext()`, chain presets, contract builders                                                                                                                                                                       |
 | `@zama-fhe/react-sdk`   | see `package.json` | React hooks — `useListPairs`, `useHasPermit`, `useGrantPermit`, `useConfidentialTransfer`, `useUnshield`, `useConfidentialBalance`, `useDelegateDecryption`, `useRevokeDelegation`, `useDelegationStatus`, `useDecryptBalanceAs` |
-| `ethers`                | ^6.13.0            | Ethereum client (via `ethers adapter`)                                                                                                                                                                                           |
+| `wagmi`                 | ^3.7.1             | Injected-wallet and chain lifecycle                                                                                                                                                                                              |
+| `viem`                  | ^2.55.0            | EVM types, encoding, and utilities                                                                                                                                                                                               |
 | `@tanstack/react-query` | ^5.90.0            | Async state management                                                                                                                                                                                                           |
 | `next`                  | ^16.0.0            | React framework (App Router)                                                                                                                                                                                                     |
 | **Chain**               | Hoodi testnet      | chainId 560048                                                                                                                                                                                                                   |
@@ -18443,7 +19127,7 @@ The wagmi config adapter creates a `WagmiSigner` internally. It subscribes to
   wallet switch. This eliminates the `walletKey` bump and `refSeededRef` guard used in the
   ethers and viem examples.
 - **No manual `eth_accounts` polling** — wagmi's store tracks the connected account;
-  `page.tsx` reads it via `useAccount()`.
+  `page.tsx` reads it via wagmi v3's `useConnection()`.
 - **No manual `eth_chainId` polling** — wagmi's `useChainId()` updates reactively when
   the user switches chains (driven by the `chainChanged` event on the injected provider).
 
@@ -18478,7 +19162,7 @@ switchChain({ chainId: sepolia.id });
 most wallets). Add an error fallback if testing with custom wallets that don't know Sepolia.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
-because `useAccount()` is synchronous and never returns a transient loading state — wagmi's
+because `useConnection()` is synchronous and never returns a transient loading state — wagmi's
 store tracks the connection state reactively.
 
 ---

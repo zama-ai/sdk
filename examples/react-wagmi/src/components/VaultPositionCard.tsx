@@ -5,26 +5,30 @@ import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { useMutation } from "@tanstack/react-query";
 import { useDecryptValues, useGrantPermit, useHasPermit, useZamaSDK } from "@zama-fhe/react-sdk";
-import type { Address, EncryptedValue } from "@zama-fhe/sdk";
+import type { Address, EncryptedValue, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { isEncryptedValueZero } from "@zama-fhe/sdk";
 import { VAULT_ABI } from "@/lib/vaultAbi";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface VaultPositionCardProps {
+  /** The confidential token pair bound to the vault — supplies display units. */
+  token: TokenWrapperPairWithMetadata;
+  /** The connected wallet whose vault position is read. */
+  account: Address;
+  /** The ConfidentialVault contract holding the position. */
   vaultAddress: Address;
-  connectedAddress: Address;
-  decimals: number;
-  symbol: string;
   onWithdraw?: () => void;
 }
 
 export function VaultPositionCard({
+  token,
+  account,
   vaultAddress,
-  connectedAddress,
-  decimals,
-  symbol,
   onWithdraw,
 }: VaultPositionCardProps) {
+  const decimals = token.confidential.decimals;
+  const symbol = token.confidential.symbol;
+
   const sdk = useZamaSDK();
   const [revealed, setRevealed] = useState(false);
 
@@ -33,7 +37,7 @@ export function VaultPositionCard({
     address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "sharesOf",
-    args: [connectedAddress],
+    args: [account],
   });
 
   const handle = shareHandle as EncryptedValue | undefined;
@@ -83,8 +87,10 @@ export function VaultPositionCard({
     clearShares !== undefined ? `${formatUnits(BigInt(clearShares), decimals)} ${symbol}` : "—";
 
   return (
-    <div className="card">
-      <div className="card-title">Your Vault Position</div>
+    <section className="card" aria-labelledby="vault-position-title">
+      <h2 className="card-title" id="vault-position-title">
+        Your Vault Position
+      </h2>
 
       {!hasPosition ? (
         <p className="token-meta" data-testid="vault-no-position">
@@ -114,41 +120,42 @@ export function VaultPositionCard({
                   : "Reveal position"}
           </button>
 
-          <button
-            type="button"
-            className="btn btn-primary btn-full"
-            onClick={() => withdraw.mutate()}
-            disabled={withdraw.isPending}
-            data-testid="vault-withdraw-button"
-          >
-            {withdraw.isPending ? "Withdrawing…" : "Withdraw all"}
-          </button>
+          <form action={() => withdraw.mutate()}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-full"
+              disabled={withdraw.isPending}
+              data-testid="vault-withdraw-button"
+            >
+              {withdraw.isPending ? "Withdrawing…" : "Withdraw all"}
+            </button>
+          </form>
         </>
       )}
 
       {grantPermit.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {grantPermit.error?.message ?? "Signing failed"}
         </div>
       )}
       {decrypt.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {decrypt.error?.message ?? "Decryption failed"}
         </div>
       )}
       {withdraw.isError && (
-        <div className="alert alert-error card-status">
+        <div className="alert alert-error card-status" role="alert">
           {withdraw.error?.message ?? "Withdrawal failed"}
         </div>
       )}
       {withdraw.isSuccess && withdraw.data && (
-        <div className="alert alert-success card-status">
+        <output className="alert alert-success card-status">
           Withdrawn!{" "}
           <a href={`${SEPOLIA_EXPLORER_URL}/tx/${withdraw.data}`} target="_blank" rel="noreferrer">
             {withdraw.data.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

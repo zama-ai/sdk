@@ -13,23 +13,31 @@ export function TokenSelectorCard({
   onSelect: (address: Address) => void;
 }) {
   return (
-    <div className="card">
-      <div className="card-title">Token</div>
+    <section className="card" aria-labelledby="turnkey-token-selector-title">
+      <h2 className="card-title" id="turnkey-token-selector-title">
+        Token
+      </h2>
       {isRegistryPending ? (
-        <p className="text-sm text-zinc-500">Loading tokens from registry…</p>
+        <output className="block text-sm text-zinc-500">Loading tokens from registry…</output>
       ) : (
-        <select
-          value={selectedTokenAddress ?? ""}
-          onChange={(event) => onSelect(event.target.value as Address)}
-          className="input w-full"
-        >
-          {validPairs.map((pair) => (
-            <option key={pair.confidentialTokenAddress} value={pair.confidentialTokenAddress}>
-              {pair.confidential.symbol} / {pair.underlying.symbol}
-            </option>
-          ))}
-        </select>
+        <>
+          <label className="sr-only" htmlFor="turnkey-token-selector">
+            Confidential token
+          </label>
+          <select
+            id="turnkey-token-selector"
+            value={selectedTokenAddress ?? ""}
+            onChange={(event) => onSelect(event.target.value as Address)}
+            className="input w-full"
+          >
+            {validPairs.map((pair) => (
+              <option key={pair.confidentialTokenAddress} value={pair.confidentialTokenAddress}>
+                {pair.confidential.symbol} / {pair.underlying.symbol}
+              </option>
+            ))}
+          </select>
+        </>
       )}
-    </div>
+    </section>
   );
 }
