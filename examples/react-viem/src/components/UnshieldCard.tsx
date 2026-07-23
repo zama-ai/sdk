@@ -30,25 +30,25 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
 
   const pendingLabel = step === 2 ? "Unshielding… (2/2)" : "Unshielding… (1/2)";
 
-  const [errorMessage, submitUnshield, isPending] = useActionState<string | null, FormData>(
-    async (_, formData) => {
-      const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
-      if (parsedAmount === 0n) return "Enter a valid amount.";
-      setStep(1);
-      try {
-        await unshield.mutateAsync({
-          amount: parsedAmount,
-          // onFinalizing fires between the two on-chain transactions, marking step 2.
-          onFinalizing: () => setStep(2),
-        });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return error.message;
-      }
-    },
-    null,
-  );
+  const [state, submitUnshield, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof unshield.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+    if (parsedAmount === 0n) return { error: "Enter a valid amount." };
+    setStep(1);
+    try {
+      const data = await unshield.mutateAsync({
+        amount: parsedAmount,
+        // onFinalizing fires between the two on-chain transactions, marking step 2.
+        onFinalizing: () => setStep(2),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="unshield-title">
@@ -84,20 +84,20 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable unshielding.</p>
       )}
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {unshield.isSuccess && unshield.data?.txHash && (
+      {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Unshielded!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${unshield.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {unshield.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
         </output>
       )}

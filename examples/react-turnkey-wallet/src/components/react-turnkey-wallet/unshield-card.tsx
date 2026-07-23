@@ -20,7 +20,9 @@ export function UnshieldCard({
 
   function handleUnshield(formData: FormData) {
     const parsed = parseAmountSafe(formData.get("amount") as string, decimals);
-    if (!parsed) return;
+    if (!parsed) {
+      return unshield.reset();
+    }
     setPhase(1);
     unshield.mutate(
       { amount: parsed, onFinalizing: () => setPhase(2) },

@@ -30,26 +30,26 @@ export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) 
 
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 
-  const [errorMessage, submitTransfer, isPending] = useActionState<string | null, FormData>(
-    async (_, formData) => {
-      const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
-      if (parsedAmount === 0n) return "Enter a valid amount.";
-      const recipient = formData.get("recipient") as string;
-      setStep(1);
-      try {
-        await transfer.mutateAsync({
-          to: getAddress(recipient),
-          amount: parsedAmount,
-          onEncryptComplete: () => setStep(2),
-        });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return error.message;
-      }
-    },
-    null,
-  );
+  const [state, submitTransfer, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof transfer.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+    if (parsedAmount === 0n) return { error: "Enter a valid amount." };
+    const recipient = formData.get("recipient") as string;
+    setStep(1);
+    try {
+      const data = await transfer.mutateAsync({
+        to: getAddress(recipient),
+        amount: parsedAmount,
+        onEncryptComplete: () => setStep(2),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="confidential-transfer-title">
@@ -98,20 +98,20 @@ export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) 
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable transfers.</p>
       )}
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {transfer.isSuccess && transfer.data?.txHash && (
+      {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Transferred!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${transfer.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {transfer.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
         </output>
       )}

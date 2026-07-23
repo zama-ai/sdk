@@ -21,28 +21,28 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
     .toISOString()
     .slice(0, 16);
 
-  const [errorMessage, submitGrant, isPending] = useActionState<string | null, FormData>(
-    async (_, formData) => {
-      const delegateAddress = formData.get("delegateAddress") as string;
-      const noExpiry = formData.has("noExpiry");
-      const expirationInput = formData.get("expirationDate") as string;
-      if (!noExpiry && new Date(expirationInput).getTime() <= Date.now() + 60 * 60 * 1000) {
-        return "Choose an expiration date at least 1 hour in the future.";
-      }
-      try {
-        await delegate.mutateAsync({
-          delegateAddress: getAddress(delegateAddress),
-          // undefined → SDK sends PERMANENT_DELEGATION on-chain (permanent, no expiry).
-          expirationDate: noExpiry ? undefined : new Date(expirationInput),
-        });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return error.message;
-      }
-    },
-    null,
-  );
+  const [state, submitGrant, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof delegate.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const delegateAddress = formData.get("delegateAddress") as string;
+    const noExpiry = formData.has("noExpiry");
+    const expirationInput = formData.get("expirationDate") as string;
+    if (!noExpiry && new Date(expirationInput).getTime() <= Date.now() + 60 * 60 * 1000) {
+      return { error: "Choose an expiration date at least 1 hour in the future." };
+    }
+    try {
+      const data = await delegate.mutateAsync({
+        delegateAddress: getAddress(delegateAddress),
+        // undefined → SDK sends PERMANENT_DELEGATION on-chain (permanent, no expiry).
+        expirationDate: noExpiry ? undefined : new Date(expirationInput),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="grant-access-title">
@@ -81,20 +81,20 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
           {isPending ? "Granting…" : "Grant Access"}
         </button>
       </form>
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {delegate.isSuccess && delegate.data?.txHash && (
+      {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Access granted!{" "}
           <a
-            href={`${INGEN_EXPLORER_URL}/tx/${delegate.data.txHash}`}
+            href={`${INGEN_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {delegate.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
         </output>
       )}

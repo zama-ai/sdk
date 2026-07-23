@@ -51,19 +51,19 @@ export function DecryptAsCard({ token, account, disabled }: DecryptAsCardProps) 
     delegateAddress: account,
   });
 
-  const [errorMessage, submitDecrypt, isPending] = useActionState<string | null, FormData>(
-    async (_, formData) => {
-      const delegatorAddress = formData.get("delegatorAddress") as string;
-      try {
-        await decryptAs.mutateAsync({ delegatorAddress: getAddress(delegatorAddress) });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return delegationErrorMessage(error);
-      }
-    },
-    null,
-  );
+  const [state, submitDecrypt, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof decryptAs.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const delegatorAddress = formData.get("delegatorAddress") as string;
+    try {
+      const data = await decryptAs.mutateAsync({ delegatorAddress: getAddress(delegatorAddress) });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: delegationErrorMessage(error) };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="decrypt-as-title">
@@ -109,14 +109,14 @@ export function DecryptAsCard({ token, account, disabled }: DecryptAsCardProps) 
           {isPending ? "Decrypting…" : "Decrypt Balance"}
         </button>
       </form>
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {decryptAs.isSuccess && decryptAs.data !== undefined && (
+      {state && "data" in state && (
         <output className="alert alert-success card-status">
-          {formatUnits(decryptAs.data, decimals)} {symbol}
+          {formatUnits(state.data, decimals)} {symbol}
         </output>
       )}
     </section>

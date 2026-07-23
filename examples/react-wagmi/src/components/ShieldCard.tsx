@@ -28,28 +28,28 @@ export function ShieldCard({ token, disabled, onSuccess }: ShieldCardProps) {
         ? "Shielding… (wrapping)"
         : "Shielding…";
 
-  const [errorMessage, submitShield, isPending] = useActionState<string | null, FormData>(
-    async (_, formData) => {
-      const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
-      if (parsedAmount === 0n) return "Enter a valid amount.";
-      setPhase("prepare");
-      try {
-        await shield.mutateAsync({
-          amount: parsedAmount,
-          // Let the SDK handle ERC-20 balance checks, allowance reads, USDT-style allowance reset,
-          // approval transaction(s), shield submission, and cache invalidation.
-          approvalStrategy: "exact",
-          onApprovalSubmitted: () => setPhase("approve"),
-          onShieldSubmitted: () => setPhase("wrap"),
-        });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return error.message;
-      }
-    },
-    null,
-  );
+  const [state, submitShield, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof shield.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+    if (parsedAmount === 0n) return { error: "Enter a valid amount." };
+    setPhase("prepare");
+    try {
+      const data = await shield.mutateAsync({
+        amount: parsedAmount,
+        // Let the SDK handle ERC-20 balance checks, allowance reads, USDT-style allowance reset,
+        // approval transaction(s), shield submission, and cache invalidation.
+        approvalStrategy: "exact",
+        onApprovalSubmitted: () => setPhase("approve"),
+        onShieldSubmitted: () => setPhase("wrap"),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="shield-title">
@@ -78,20 +78,20 @@ export function ShieldCard({ token, disabled, onSuccess }: ShieldCardProps) {
           {isPending ? pendingLabel : "Shield"}
         </button>
       </form>
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {shield.isSuccess && shield.data?.txHash && (
+      {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Shielded!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${shield.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {shield.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
         </output>
       )}

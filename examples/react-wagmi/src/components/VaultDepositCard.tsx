@@ -51,31 +51,31 @@ export function VaultDepositCard({
 
   const pendingLabel = step === 2 ? "Submitting…" : "Encrypting…";
 
-  const [errorMessage, submitDeposit, isPending] = useActionState<string | null, FormData>(
-    async (_prev, formData) => {
-      const amount = parseAmount(formData.get("amount") as string, decimals);
-      if (amount === 0n) return "Enter a valid amount.";
-      const beneficiary = formData.get("beneficiary") as string;
-      setStep(1);
-      // The vault decodes `data` as the beneficiary address to credit. Encoding a real
-      // domain message — not an opaque blob — is the whole point of the AndCall pattern:
-      // value moves and the receiver reacts to it in a single atomic transaction.
-      const data = encodeAbiParameters([{ type: "address" }], [getAddress(beneficiary)]);
-      try {
-        await deposit.mutateAsync({
-          to: vaultAddress,
-          amount,
-          data,
-          onEncryptComplete: () => setStep(2),
-        });
-        return null;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        return depositErrorText(error);
-      }
-    },
-    null,
-  );
+  const [state, submitDeposit, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof deposit.data> } | null,
+    FormData
+  >(async (_prev, formData) => {
+    const amount = parseAmount(formData.get("amount") as string, decimals);
+    if (amount === 0n) return { error: "Enter a valid amount." };
+    const beneficiary = formData.get("beneficiary") as string;
+    setStep(1);
+    // The vault decodes `data` as the beneficiary address to credit. Encoding a real
+    // domain message — not an opaque blob — is the whole point of the AndCall pattern:
+    // value moves and the receiver reacts to it in a single atomic transaction.
+    const data = encodeAbiParameters([{ type: "address" }], [getAddress(beneficiary)]);
+    try {
+      const result = await deposit.mutateAsync({
+        to: vaultAddress,
+        amount,
+        data,
+        onEncryptComplete: () => setStep(2),
+      });
+      return { data: result };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: depositErrorText(error) };
+    }
+  }, null);
 
   return (
     <section className="card" aria-labelledby="vault-deposit-title">
@@ -128,20 +128,20 @@ export function VaultDepositCard({
       {balanceDecryptRequired && !disabled && (
         <p className="token-meta">Decrypt your balance first to enable deposits.</p>
       )}
-      {errorMessage && (
+      {state && "error" in state && (
         <div className="alert alert-error card-status" role="alert">
-          {errorMessage}
+          {state.error}
         </div>
       )}
-      {deposit.isSuccess && deposit.data?.txHash && (
+      {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">
           Deposited!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${deposit.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {deposit.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
         </output>
       )}

@@ -20,7 +20,10 @@ export function ShieldCard({
 
   function handleShield(formData: FormData) {
     const parsed = parseAmountSafe(formData.get("amount") as string, decimals);
-    if (!parsed) return;
+    if (!parsed) {
+      shield.reset();
+      return;
+    }
     setPhase("prepare");
     shield.mutate(
       {

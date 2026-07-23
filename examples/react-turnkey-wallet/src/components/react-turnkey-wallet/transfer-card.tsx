@@ -16,7 +16,10 @@ export function TransferCard({
   function handleTransfer(formData: FormData) {
     const parsed = parseAmountSafe(formData.get("amount") as string, decimals);
     const to = formData.get("recipient") as string;
-    if (!parsed || !isAddress(to)) return;
+    if (!parsed || !isAddress(to)) {
+      transfer.reset();
+      return;
+    }
     transfer.mutate({ to: getAddress(to), amount: parsed });
   }
 
