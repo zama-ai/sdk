@@ -37,8 +37,10 @@ export function BalancesCard({
   );
 
   return (
-    <div className="card">
-      <div className="card-title">Balances</div>
+    <section className="card" aria-labelledby="turnkey-balances-title">
+      <h2 className="card-title" id="turnkey-balances-title">
+        Balances
+      </h2>
 
       <div className="flex items-center justify-between py-2.5 border-b border-zinc-100 dark:border-zinc-800">
         <span className="text-sm text-zinc-500">Public (ERC-20)</span>
@@ -49,13 +51,15 @@ export function BalancesCard({
             symbol={selectedPair.underlying.symbol}
           />
           {isTestnet && (
-            <button
-              onClick={onMint}
-              disabled={isMinting}
-              className="btn btn-secondary py-0.5 px-2 text-xs"
-            >
-              {isMinting ? "Minting…" : "Mint 10"}
-            </button>
+            <form action={onMint}>
+              <button
+                type="submit"
+                disabled={isMinting}
+                className="btn btn-secondary py-0.5 px-2 text-xs"
+              >
+                {isMinting ? "Minting…" : "Mint 10"}
+              </button>
+            </form>
           )}
         </div>
       </div>
@@ -63,7 +67,11 @@ export function BalancesCard({
       <div className="flex items-center justify-between py-2.5">
         <span className="text-sm text-zinc-500">Confidential (Private)</span>
         {!isBalanceRequested ? (
-          <button onClick={onReveal} className="btn btn-secondary py-0.5 px-2 text-xs">
+          <button
+            type="button"
+            onClick={onReveal}
+            className="btn btn-secondary py-0.5 px-2 text-xs"
+          >
             Reveal
           </button>
         ) : isBalanceLoading ? (
@@ -80,13 +88,15 @@ export function BalancesCard({
       </div>
 
       {isTestnet && mintError && (
-        <p className="text-xs text-red-600 dark:text-red-400 mt-1 break-all">{mintError}</p>
+        <p className="text-xs text-red-600 dark:text-red-400 mt-1 break-all" role="alert">
+          {mintError}
+        </p>
       )}
       {isBalanceError && balanceError && (
-        <p className="text-xs text-red-600 dark:text-red-400 font-mono mt-1 break-all">
+        <p className="text-xs text-red-600 dark:text-red-400 font-mono mt-1 break-all" role="alert">
           {balanceError instanceof Error ? balanceError.message : String(balanceError)}
         </p>
       )}
-    </div>
+    </section>
   );
 }

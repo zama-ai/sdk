@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
-    "@zama-fhe/react-sdk": "3.3.0-alpha.9",
-    "@zama-fhe/sdk": "3.3.0-alpha.9",
+    "@zama-fhe/react-sdk": "3.4.0-alpha.10",
+    "@zama-fhe/sdk": "3.4.0-alpha.10",
     "ethers": "^6.17.0",
     "next": "^16.2.5",
     "react": "^19.2.0",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "typescript": "6.0.3"
   }

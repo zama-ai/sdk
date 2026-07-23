@@ -132,7 +132,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ## Official Examples
 
-- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet and ethers — including on-chain ACL delegation.
+- [example-hoodi README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/README.md): Next.js app demonstrating ERC-7984 confidential token operations on the Hoodi testnet with wagmi 3 and viem 2 — including on-chain ACL delegation.
 - [example-hoodi WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/example-hoodi/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Instead of storing plaintext balances on-chain, balances are stored as encrypted handles. Only the token owner can decrypt their own balance.
 - [node-ethers README](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/node-ethers/README.md): Node.js script demonstrating the full ERC-7984 confidential token lifecycle using `@zama-fhe/sdk` with ethers v6.
 - [node-ethers WALKTHROUGH](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/examples/node-ethers/WALKTHROUGH.md): ERC-7984 is a token standard that adds confidential balances and transfer amounts to ERC-20 tokens. Balances are stored as encrypted handles on-chain; only the token owner (or an authorized delegate) can decrypt them.

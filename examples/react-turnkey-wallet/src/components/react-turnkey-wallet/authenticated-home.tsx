@@ -83,7 +83,7 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
   }, [refetchPublicBalance]);
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-10 space-y-4 font-sans">
+    <main className="mx-auto max-w-xl px-4 py-10 space-y-4 font-sans">
       <WalletHeader
         walletAddressLabel={walletAddressLabel}
         networkName={viemChain.name}
@@ -156,12 +156,12 @@ export function AuthenticatedHome({ walletAddress }: { walletAddress: Address })
       )}
 
       {!isRegistryPending && validPairs.length === 0 && (
-        <div className="card">
+        <section className="card" aria-label="Token registry status">
           <p className="text-sm text-zinc-500">
             No supported confidential token pairs were found for this network.
           </p>
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }

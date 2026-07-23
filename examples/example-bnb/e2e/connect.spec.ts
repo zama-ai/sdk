@@ -21,18 +21,13 @@ test.describe("connect flow", () => {
     ).toBeVisible();
   });
 
-  test("auto-detects existing connection and shows main screen", async ({
+  test("does not bypass wagmi connection state when eth_accounts is populated", async ({
     page,
-    mockRpc,
     mockWallet,
   }) => {
-    await mockRpc();
-    // Wallet already connected on BNB — page auto-detects via useEffect.
     await mockWallet({ accounts: [TEST_ADDRESS], chainId: BSC_TESTNET_CHAIN_ID_HEX });
     await page.goto("/");
-
-    await expect(page.getByText("Balances")).toBeVisible();
-    await expect(page.getByText(/Connected:/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
   });
 
   test("connects after clicking and shows main screen", async ({ page, mockRpc, mockWallet }) => {
