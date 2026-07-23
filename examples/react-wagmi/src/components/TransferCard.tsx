@@ -82,7 +82,7 @@ export function TransferCard({ token, disabled, onSuccess }: TransferCardProps) 
           className="input card-gap"
           type="text"
           pattern="0x[a-fA-F0-9]{40}"
-          title="Enter a valid address: 0x followed by 40 hexadecimal characters."
+          title="0x followed by 40 hexadecimal characters."
           name="recipient"
           required
           placeholder="0x…"

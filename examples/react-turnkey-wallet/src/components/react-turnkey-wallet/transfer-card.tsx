@@ -51,7 +51,7 @@ export function TransferCard({
           className="input w-full mb-3"
           type="text"
           pattern="0x[a-fA-F0-9]{40}"
-          title="Enter a valid address: 0x followed by 40 hexadecimal characters."
+          title="0x followed by 40 hexadecimal characters."
           placeholder="Recipient address (0x…)"
           required
         />

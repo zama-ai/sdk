@@ -110,7 +110,7 @@ export function VaultDepositCard({
           className="input card-gap"
           type="text"
           pattern="0x[a-fA-F0-9]{40}"
-          title="Enter a valid address: 0x followed by 40 hexadecimal characters."
+          title="0x followed by 40 hexadecimal characters."
           defaultValue={account}
           required
           placeholder="0x…"
