@@ -22,8 +22,8 @@ export function useUnderlyingBalance(
   const sdk = useZamaSDK();
   return useQuery({
     queryKey: erc20BalanceKey(token.tokenAddress, account),
-    queryFn: async () =>
-      (await sdk.provider.readContract(balanceOfContract(token.tokenAddress, account))) as bigint,
+    queryFn: async ({ queryKey: [, tokenAddress, account] }) =>
+      (await sdk.provider.readContract(balanceOfContract(tokenAddress, account))) as bigint,
     enabled: options?.enabled ?? true,
   });
 }
