@@ -14,6 +14,13 @@ interface DelegateDecryptionCardProps {
 export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecryptionCardProps) {
   const delegate = useDelegateDecryption(token.confidentialTokenAddress);
 
+  // datetime-local min: one hour from now, in the browser's local wall-clock time.
+  const minExpiration = new Date(
+    Date.now() + 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60 * 1000,
+  )
+    .toISOString()
+    .slice(0, 16);
+
   const [errorMessage, submitGrant, isPending] = useActionState<string | null, FormData>(
     async (_, formData) => {
       const delegateAddress = formData.get("delegateAddress") as string;
@@ -57,7 +64,13 @@ export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecr
           placeholder="Delegate address (0x…)"
         />
         <div className="input-row card-gap">
-          <input name="expirationDate" className="input" type="datetime-local" />
+          <input
+            name="expirationDate"
+            className="input"
+            type="datetime-local"
+            min={minExpiration}
+            title="Expiration must be at least one hour in the future."
+          />
           <label className="checkbox-label">
             <input name="noExpiry" type="checkbox" defaultChecked />
             No expiration
