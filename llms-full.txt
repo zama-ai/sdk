@@ -4137,6 +4137,10 @@ Decrypted balances are automatically cached in your storage backend (IndexedDB, 
 
 The cache is keyed by `token address + owner address + encrypted value`.
 
+A single `balanceOf()` call reads the on-chain encrypted value and decrypts it in one pass — the relayer is only hit when the encrypted value has changed since the last decryption:
+
+![Reading a confidential balance](../images/balance-read.svg)
+
 ### 4. Work with raw encrypted values
 
 Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
@@ -4272,7 +4276,11 @@ const tokenABalance = data?.results.get("0xTokenA");
 
 ### 9. Force a manual refresh
 
-Mutations automatically invalidate balance caches, but if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
+Mutations automatically invalidate balance caches, so the balance refreshes on its own after a shield, transfer, or unshield:
+
+![Mutation-triggered balance refresh](../images/balance-refresh.svg)
+
+But if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
 
 
 ### Tab: React
@@ -10672,6 +10680,236 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [Operator Approvals guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/operator-approvals.md)
 - [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
 
+## useConfidentialTransferFromAndCall
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useConfidentialTransferFromAndCall.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialTransferFromAndCall.md
+- logical_path: reference/react/useConfidentialTransferFromAndCall
+
+# useConfidentialTransferFromAndCall
+
+Operator-initiated `confidentialTransferFromAndCall` — an ERC-7984 confidential transfer on behalf of another address that also invokes the recipient's receiver hook in a single transaction. The caller must be an approved operator for `from` (grant approval via [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialSetOperator.md)). The caller crafts the opaque `data` payload; the SDK does not encode, validate, or interpret it. Invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+
+## Import
+
+```ts
+import { useConfidentialTransferFromAndCall } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useConfidentialTransferFromAndCall } from "@zama-fhe/react-sdk";
+
+function OperatorTransferAndCall({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { mutateAsync: transferFromAndCall, isPending } =
+    useConfidentialTransferFromAndCall(tokenAddress);
+
+  async function handleTransfer() {
+    const { txHash, receipt } = await transferFromAndCall({
+      from: "0xOwner",
+      to: "0xReceiverContract",
+      amount: 500n,
+      data: "0xabcd",
+    });
+    console.log("Confirmed in block", receipt.blockNumber);
+  }
+
+  return (
+    <button onClick={handleTransfer} disabled={isPending}>
+      {isPending ? "Transferring..." : "Transfer"}
+    </button>
+  );
+}
+```
+
+### Tab: config.ts
+
+```ts
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
+});
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
+```
+
+
+## Parameters
+
+### address
+
+`Address`
+
+Contract address of the confidential token. Passed positionally as the first argument.
+
+```ts
+const { mutateAsync: transferFromAndCall } = useConfidentialTransferFromAndCall("0xToken");
+```
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type ConfidentialTransferFromAndCallParams } from "@zama-fhe/sdk/query";
+```
+
+The function passed to `mutate` / `mutateAsync` accepts:
+
+### from
+
+`Address`
+
+Owner address whose tokens are being transferred. The connected wallet must have operator approval from this address.
+
+### to
+
+`Address`
+
+Recipient address.
+
+### amount
+
+`bigint`
+
+Number of tokens to transfer (in the token's base units). Encrypted before submission.
+
+### data
+
+`Hex`
+
+Opaque bytes forwarded to the recipient's ERC-7984 receiver hook. The caller is responsible for encoding this payload.
+
+### callbacks
+
+`TransferCallbacks | undefined`
+
+Optional progress callbacks for the multi-step transfer flow: `onEncryptComplete` (fires after FHE encryption of the amount completes) and `onTransferSubmitted` (fires after the transfer transaction is submitted).
+
+```ts
+await transferFromAndCall({
+  from: "0xOwner",
+  to: "0xReceiverContract",
+  amount: 500n,
+  data: "0xabcd",
+});
+```
+
+**Throws:**
+
+- `SigningRejectedError` -- if the user rejects the wallet prompt
+- `EncryptionFailedError` -- if FHE encryption of the transfer amount fails
+- `TransactionRevertedError` -- if the on-chain transaction reverts
+
+## Return Type
+
+The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
+
+- **`txHash`** -- Transaction hash submitted to the network.
+- **`receipt`** -- Confirmed transaction receipt from the chain.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useConfidentialTransferFrom](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialTransferFrom.md) -- operator transfer without a receiver hook
+- [useConfidentialTransfer](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialTransfer.md) -- direct transfer (no operator)
+- [useConfidentialSetOperator](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) -- grant operator approval
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
+
 ## useShield
 
 - source_type: official-doc
@@ -10913,6 +11151,427 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 - [useUnshield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnshield.md) — reverse operation, unshield back to public ERC-20
 - [WrappedToken.shield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md#shield) — imperative equivalent on the `WrappedToken` class
+
+## useApproveUnderlying
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useApproveUnderlying.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md
+- logical_path: reference/react/useApproveUnderlying
+
+# useApproveUnderlying
+
+Approve the confidential wrapper contract to spend the underlying ERC-20. Defaults to a max `uint256` approval, and resets an existing non-zero allowance to zero first when required (as tokens like USDT demand).
+
+
+> [!WARNING]
+> This is a low-level escape hatch for pre-approving outside a shield call. Product code should prefer [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useShield.md), which validates the ERC-20 balance, manages approvals, and submits the shield in a single call. Don't combine `useApproveUnderlying` with [`useWrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md) to recreate `useShield` by hand.
+
+
+## Import
+
+```ts
+import { useApproveUnderlying } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useApproveUnderlying } from "@zama-fhe/react-sdk";
+
+function ApproveButton() {
+  const { mutateAsync: approve, isPending, error } = useApproveUnderlying("0xWrapper");
+
+  async function handleApprove() {
+    // Omit `amount` for a max approval, or pass an exact amount.
+    const { txHash } = await approve({ amount: 1000n });
+    console.log("Approved in", txHash);
+  }
+
+  return (
+    <button onClick={handleApprove} disabled={isPending}>
+      {isPending ? "Approving..." : "Approve"}
+    </button>
+  );
+}
+```
+
+### Tab: config.ts
+
+```ts
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
+});
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
+```
+
+
+## Parameters
+
+### address
+
+`Address`
+
+Address of the confidential wrapper contract. Passed positionally as the first argument.
+
+```ts
+const { mutateAsync: approve } = useApproveUnderlying("0xWrapper");
+```
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type ApproveUnderlyingParams } from "@zama-fhe/sdk/query";
+```
+
+The function passed to `mutate` / `mutateAsync` accepts:
+
+### amount
+
+`bigint | undefined`
+
+Amount of the underlying ERC-20 to approve, in its base units. Omit for a max (`type(uint256).max`) approval.
+
+```ts
+await approve({}); // max approval
+await approve({ amount: 1000n }); // exact amount
+```
+
+**Throws:**
+
+- `SigningRejectedError` -- if the user rejects the wallet prompt
+- `TransactionRevertedError` -- if the approval transaction reverts
+
+## Return Type
+
+The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
+
+- **`txHash`** -- Transaction hash submitted to the network.
+- **`receipt`** -- Confirmed transaction receipt from the chain.
+
+Auto-invalidates the `underlyingAllowance` cache on success.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useShield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useShield.md) -- recommended path; handles approval and wrapping in one call
+- [useWrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md) -- wrap already-approved underlying into confidential tokens
+- [useUnderlyingAllowance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useUnderlyingAllowance.md) -- read the current allowance (auto-invalidated on success)
+
+## useWrap
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useWrap.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md
+- logical_path: reference/react/useWrap
+
+# useWrap
+
+Wrap already-approved underlying ERC-20 into confidential tokens.
+
+
+> [!WARNING]
+> This is a low-level escape hatch for splitting shield across two signatures: call [`useApproveUnderlying`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md) first, then this. Product code should prefer [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useShield.md), which routes and orchestrates the approval in one call. Don't combine `useApproveUnderlying` + `useWrap` to recreate `useShield` by hand.
+
+
+## Import
+
+```ts
+import { useWrap } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useApproveUnderlying, useWrap } from "@zama-fhe/react-sdk";
+
+function WrapButton() {
+  const { mutateAsync: approve } = useApproveUnderlying("0xWrapper");
+  const { mutateAsync: wrap, isPending } = useWrap("0xWrapper");
+
+  async function handleWrap() {
+    await approve({ amount: 1000n });
+    const { txHash } = await wrap({ amount: 1000n });
+    console.log("Wrapped in", txHash);
+  }
+
+  return (
+    <button onClick={handleWrap} disabled={isPending}>
+      {isPending ? "Wrapping..." : "Wrap"}
+    </button>
+  );
+}
+```
+
+### Tab: config.ts
+
+```ts
+// config.ts
+import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+import type { FheChain } from "@zama-fhe/sdk/chains";
+import { config as wagmiConfig } from "./wagmi";
+
+const mySepolia = {
+  ...sepolia,
+  relayerUrl: "https://your-app.com/api/relayer/11155111",
+} as const satisfies FheChain;
+
+export const zamaConfig = createZamaConfig({
+  chains: [mySepolia],
+  wagmiConfig,
+  relayers: { [mySepolia.id]: web() },
+});
+
+// In your app layout:
+// <ZamaProvider config={zamaConfig}>
+//   <App />
+// </ZamaProvider>
+```
+
+
+## Parameters
+
+### address
+
+`Address`
+
+Address of the confidential wrapper contract. Passed positionally as the first argument.
+
+```ts
+const { mutateAsync: wrap } = useWrap("0xWrapper");
+```
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type WrapParams } from "@zama-fhe/sdk/query";
+```
+
+The function passed to `mutate` / `mutateAsync` accepts:
+
+### amount
+
+`bigint`
+
+Amount of the public ERC-20 to wrap, in the token's base units.
+
+### to
+
+`Address | undefined`
+
+Recipient of the confidential tokens. Defaults to the signer address.
+
+### onWrapSubmitted
+
+`((txHash: Hex) => void) | undefined`
+
+Fires with the wrap transaction hash once submitted.
+
+```ts
+await wrap({
+  amount: 1000n,
+  onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHash}`),
+});
+```
+
+**Throws:**
+
+- `SigningRejectedError` -- if the user rejects the wallet prompt
+- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than the amount
+- `InsufficientAllowanceError` -- if the allowance is less than the amount (approve first)
+- `TransactionRevertedError` -- if the wrap transaction reverts
+
+## Return Type
+
+The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: TransactionReceipt }`.
+
+- **`txHash`** -- Transaction hash submitted to the network.
+- **`receipt`** -- Confirmed transaction receipt from the chain.
+
+Auto-invalidates the `confidentialBalance` cache on success.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useShield](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useShield.md) -- recommended path; handles approval and wrapping in one call
+- [useApproveUnderlying](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md) -- approve the wrapper before wrapping
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- auto-invalidated on success
 
 ## useUnshield
 
@@ -14526,6 +15185,141 @@ function TokenHeader({ tokenAddress }: { tokenAddress: `0x${string}` }) {
 - [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted confidential balance
 - [Hooks overview](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) -- all available hooks
 
+## useTotalSupply
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useTotalSupply.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useTotalSupply.md
+- logical_path: reference/react/useTotalSupply
+
+# useTotalSupply
+
+Read the total supply of a token. The result goes stale after 30 seconds to balance freshness against RPC cost.
+
+## Import
+
+```ts
+import { useTotalSupply } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: TotalSupply.tsx
+
+```tsx
+import { useTotalSupply } from "@zama-fhe/react-sdk";
+
+function TotalSupply({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { data: totalSupply, isLoading } = useTotalSupply(tokenAddress);
+
+  if (isLoading) return <span>Loading total supply...</span>;
+  return <span>Total supply: {totalSupply?.toString() ?? "0"}</span>;
+}
+```
+
+
+## Parameters
+
+### tokenAddress
+
+`Address`
+
+Address of the token contract to read the total supply from.
+
+```ts
+const { data: totalSupply } = useTotalSupply("0xToken");
+```
+
+### options
+
+`Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn"> | undefined`
+
+Standard React Query options, forwarded to `useQuery`. Passed as the second argument.
+
+## Return Type
+
+`data` is `bigint` — the token's total supply in its base units.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The last successfully resolved data for the query.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the query failed, otherwise `null`.
+
+### `isLoading`
+
+**Type:** `boolean`
+
+`true` on the first fetch when there is no cached data. Equivalent to `isPending && isFetching`.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` when there is no cached data and no query attempt has finished yet.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` when the query has received a successful response.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` when the query encountered an error.
+
+### `isFetching`
+
+**Type:** `boolean`
+
+`true` whenever the query is fetching, including background re-fetches. Use this for subtle loading indicators that do not replace content.
+
+### `refetch`
+
+**Type:** `() => Promise<QueryObserverResult>`
+
+Manually trigger a re-fetch. Returns a promise that resolves with the query result.
+
+### `status`
+
+**Type:** `"pending" | "error" | "success"`
+
+The current status of the query. Prefer the boolean flags above for conditional rendering.
+
+
+## Caching
+
+The query uses a 30-second `staleTime`. Within that window the cached value is served without re-fetching; afterwards it re-fetches on the next access.
+
+## Suspense
+
+Use `useTotalSupplySuspense` inside a `<Suspense>` boundary to avoid manual loading state handling. The hook suspends rendering until the total supply is loaded, so `data` is always defined.
+
+```tsx
+import { useTotalSupplySuspense } from "@zama-fhe/react-sdk";
+
+function TotalSupply({ tokenAddress }: { tokenAddress: `0x${string}` }) {
+  const { data: totalSupply } = useTotalSupplySuspense(tokenAddress);
+
+  // data is always defined — no loading state needed
+  return <span>Total supply: {totalSupply.toString()}</span>;
+}
+```
+
+## Related
+
+- [useMetadata](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useMetadata.md) -- read token name, symbol, and decimals
+- [useConfidentialBalance](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialBalance.md) -- read the decrypted confidential balance
+
 ## useZamaSDK
 
 - source_type: official-doc
@@ -15062,6 +15856,168 @@ This means users only see a wallet signature prompt once per TTL window, even if
 - [`useEncrypt`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useEncrypt.md) — reverse operation, encrypt a plaintext value for on-chain submission
 - [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md) — full walkthrough with end-to-end examples
 
+## useDecryptPublicValues
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useDecryptPublicValues.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptPublicValues.md
+- logical_path: reference/react/useDecryptPublicValues
+
+# useDecryptPublicValues
+
+Mutation hook that decrypts FHE encrypted values using the network public key. Unlike [`useDecryptValues`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptValues.md), this requires no permit or wallet signature — it only works for values the contract has marked publicly decryptable. On success the results are available via `data.clearValues` and written to the persistent decrypt cache.
+
+## Import
+
+```ts
+import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useDecryptPublicValues } from "@zama-fhe/react-sdk";
+
+function RevealResult({ encryptedValues }: { encryptedValues: string[] }) {
+  const { mutate: decryptPublicValues, data, isPending } = useDecryptPublicValues();
+
+  return (
+    <div>
+      <button onClick={() => decryptPublicValues(encryptedValues)} disabled={isPending}>
+        {isPending ? "Decrypting..." : "Reveal"}
+      </button>
+      {data && <output>{JSON.stringify(data.clearValues)}</output>}
+    </div>
+  );
+}
+```
+
+
+## Parameters
+
+This hook takes no arguments.
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+The function passed to `mutate` / `mutateAsync` accepts:
+
+### encryptedValues (first argument)
+
+`EncryptedValue[]`
+
+Array of encrypted values (hex strings) to decrypt with the network public key.
+
+```ts
+import { type EncryptedValue } from "@zama-fhe/sdk";
+```
+
+```ts
+decryptPublicValues(["0xEncryptedValue1", "0xEncryptedValue2"]);
+```
+
+## Return Type
+
+```ts
+import { type DecryptPublicValuesResult } from "@zama-fhe/sdk";
+```
+
+The `data` property (after a successful mutation) is a `DecryptPublicValuesResult`:
+
+| Field                  | Type                                  | Description                                              |
+| ---------------------- | ------------------------------------- | -------------------------------------------------------- |
+| `clearValues`          | `Record<EncryptedValue, ClearValue>`  | Decrypted clear-text values keyed by their encrypted value. |
+| `abiEncodedClearValues` | `Hex`                                | The clear values ABI-encoded, as passed to on-chain verification. |
+| `decryptionProof`      | `Hex`                                 | KMS signature proving the decryption is authentic.       |
+
+```ts
+// data.clearValues => { "0xEncryptedValue1": 500n, ... }
+```
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useDecryptValues](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptValues.md) -- user decryption (requires a permit / wallet signature)
+- [useDelegatedDecryptValues](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegatedDecryptValues.md) -- decrypt using delegated user credentials
+- [Encrypt & Decrypt guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/encrypt-decrypt.md) -- full walkthrough with end-to-end examples
+
 ## useDelegateDecryption
 
 - source_type: official-doc
@@ -15224,6 +16180,193 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [`useRevokeDelegation`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useRevokeDelegation.md) -- revoke a previously granted delegation
 - [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegationStatus.md) -- check whether a delegation is active
 - [`useDecryptBalanceAs`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- decrypt a balance as the delegate
+- [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
+
+## useDelegatedDecryptValues
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useDelegatedDecryptValues.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegatedDecryptValues.md
+- logical_path: reference/react/useDelegatedDecryptValues
+
+# useDelegatedDecryptValues
+
+Mutation hook that decrypts FHE encrypted values on behalf of a delegator who granted the connected wallet decryption rights (via [`useDelegateDecryption`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegateDecryption.md)). Returns a map of encrypted value to plaintext.
+
+## Import
+
+```ts
+import { useDelegatedDecryptValues } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+
+### Tab: component.tsx
+
+```tsx
+import { useDelegatedDecryptValues } from "@zama-fhe/react-sdk";
+
+const CONTRACT = "0xYourContract" as const;
+
+function DecryptAsDelegate({
+  encryptedValue,
+  delegatorAddress,
+}: {
+  encryptedValue: string;
+  delegatorAddress: `0x${string}`;
+}) {
+  const { mutate: decrypt, data, isPending } = useDelegatedDecryptValues();
+
+  return (
+    <div>
+      <button
+        onClick={() =>
+          decrypt({
+            encryptedInputs: [{ encryptedValue, contractAddress: CONTRACT }],
+            delegatorAddress,
+          })
+        }
+        disabled={isPending}
+      >
+        {isPending ? "Decrypting..." : "Decrypt"}
+      </button>
+      {data && <output>{data[encryptedValue]?.toString()}</output>}
+    </div>
+  );
+}
+```
+
+
+## Parameters
+
+This hook takes no arguments.
+
+---
+
+### `onSuccess`
+
+**Type:** `(data: TData, variables: TVariables, context: TContext) => void`
+
+Callback fired when the mutation completes without error. Receives the return data, the variables passed to `mutate`, and any context from `onMutate`.
+
+### `onError`
+
+**Type:** `(error: Error, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired when the mutation throws. Receives the error, the variables passed to `mutate`, and the context from `onMutate` (if it ran).
+
+### `onSettled`
+
+**Type:** `(data: TData | undefined, error: Error | null, variables: TVariables, context: TContext | undefined) => void`
+
+Callback fired after the mutation finishes, regardless of success or failure. Useful for cleanup like closing modals or resetting form state.
+
+### `onMutate`
+
+**Type:** `(variables: TVariables) => Promise<TContext> | TContext`
+
+Callback fired before the mutation function runs. Return a context value to pass through to `onSuccess`, `onError`, and `onSettled`. Commonly used for optimistic updates.
+
+
+## Mutation variables
+
+```ts
+import { type DelegatedDecryptValuesMutationParams } from "@zama-fhe/sdk/query";
+```
+
+The function passed to `mutate` / `mutateAsync` accepts:
+
+### encryptedInputs
+
+`DecryptInput[]`
+
+Encrypted values (with their contract addresses) to decrypt. Each entry pairs an encrypted value with the address of the contract that owns it.
+
+```ts
+import { type DecryptInput } from "@zama-fhe/sdk";
+```
+
+| Field             | Type             | Description                                            |
+| ----------------- | ---------------- | ------------------------------------------------------ |
+| `encryptedValue`  | `EncryptedValue` | The encrypted value (hex string) to decrypt.           |
+| `contractAddress` | `Address`        | Address of the contract that owns the encrypted value. |
+
+### delegatorAddress
+
+`Address`
+
+Address of the account that delegated decryption rights to the connected wallet.
+
+```ts
+decrypt({
+  encryptedInputs: [{ encryptedValue: "0xEncryptedValue1", contractAddress: "0xContract" }],
+  delegatorAddress: "0xDelegator",
+});
+```
+
+## Return Type
+
+The `data` property (after a successful mutation) is `Record<EncryptedValue, ClearValue>` — a map from each encrypted value to its decrypted plaintext value (`bigint`, `boolean`, or `string`).
+
+```ts
+// data => { "0xEncryptedValue1": 1000n }
+```
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+## Related
+
+- [useDelegateDecryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegateDecryption.md) -- grant decryption rights to another address
+- [useDecryptBalanceAs](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptBalanceAs.md) -- decrypt a token balance as the delegate
+- [useDecryptValues](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptValues.md) -- decrypt your own values (non-delegated)
 - [Delegated Decryption](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/delegation.md) -- SDK reference
 
 ## useRevokeDelegation
@@ -16340,6 +17483,8 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
+![Transport key pair storage](../images/credential-storage.svg)
+
 | Parameter  | Value                                                                    |
 | ---------- | ------------------------------------------------------------------------ |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
@@ -16386,6 +17531,8 @@ The security model relies on same-origin isolation: only JavaScript running on t
 The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
 For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
+
+![WASM loading and integrity](../images/security-wasm-integrity.svg)
 
 ## Browser security headers
 
@@ -16476,13 +17623,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation        | Algorithm       | Key size    | Source                        |
-| ---------------- | --------------- | ----------- | ----------------------------- |
-| CDN integrity    | SHA-384         | --          | Web Crypto API                |
-| FHE encryption   | TFHE            | Network key | WASM (`@zama-fhe/sdk (WASM)`) |
-| ZK proofs        | WASM prover     | --          | WASM (`@zama-fhe/sdk (WASM)`) |
-| Wallet signing   | ECDSA secp256k1 | 256-bit     | User wallet                   |
-| Request tracking | UUID v4         | 128-bit     | `crypto.randomUUID()`         |
+| Operation                       | Algorithm       | Key size    | Source                    |
+| ------------------------------- | --------------- | ----------- | ------------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API            |
+| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)       |
+| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)       |
+| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet               |
+| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()`     |
 
 ## Reporting vulnerabilities
 
@@ -17352,7 +18499,7 @@ on behalf of users (Account A) without holding their private key:
 | Grant               | Account A grants Account B decrypt rights via `delegateDecryption()` |
 | Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()`   |
 | Revoke              | Account A revokes delegation via `revokeDelegation()`                |
-| Verify              | Confirm delegation is inactive with `isDelegated()`                  |
+| Verify              | Confirm delegation is inactive with `isActive()`                     |
 
 ---
 
@@ -17802,7 +18949,7 @@ behalf of users (Account A) without holding their private key:
 | Grant               | Account A grants Account B decrypt rights via `delegateDecryption()` |
 | Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()`   |
 | Revoke              | Account A revokes delegation via `revokeDelegation()`                |
-| Verify              | Confirm delegation is inactive with `isDelegated()`                  |
+| Verify              | Confirm delegation is inactive with `isActive()`                     |
 
 The script retries `DelegationNotPropagatedError` because Sepolia ACL propagation can
 take one or two minutes.
@@ -19473,7 +20620,7 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 
 ### Development
 
-**Prerequisites:** Node.js >= 22, pnpm >= 10
+**Prerequisites:** Node.js >= 22, pnpm >= 11
 
 ```bash
 pnpm install                # Install dependencies
@@ -19488,8 +20635,8 @@ pnpm format:check           # Formatting check
 **E2E tests:**
 
 ```bash
-pnpm e2e:test               # Run Playwright E2E tests
-pnpm e2e:test:ui            # Playwright UI mode
+pnpm e2e:test                 # Run Playwright E2E tests
+pnpm e2e:test:ui              # Playwright UI mode
 ```
 
 > **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.

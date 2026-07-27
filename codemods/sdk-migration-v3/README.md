@@ -6,11 +6,11 @@ the **mechanical** breaking changes (symbol/type renames, config-key changes,
 structural removals) so the upgrade doesn't have to be done by hand.
 
 This is the **single codemod for the v3 major line**: it assumes a **3.0.x floor** and
-brings code up to the latest v3.x. Transforms **accrue per breaking minor** (currently
-**3.0 → 3.1**); each future minor with breaks adds its transforms here and bumps the
-codemod version, rather than spawning a new package. Codemods are idempotent, so running
-it from any 3.x floor is safe — already-applied steps are no-ops. (A future v4 major would
-get its own `sdk-migration-v4` package.)
+brings code up to the current v3.x API. Transforms **accrue per breaking minor**; each
+future minor with breaks adds its transforms here and bumps the codemod version, rather
+than spawning a new package. Codemods are idempotent, so running it from any 3.x floor is
+safe — already-applied steps are no-ops. (A future v4 major would get its own
+`sdk-migration-v4` package.)
 
 ## Run
 
@@ -89,11 +89,11 @@ finished migration.
 ## Scope
 
 Derived by diffing the api-reports (not the changelog): released stable
-`2.5.0`/`3.0.0`/`3.0.1` are API-identical, so 3.1.0 is the first release since to
-carry breaking changes. `3.1.0` is unreleased — this package is **provisional**,
-derived from the `v3.0.1 → v3.1.0-alpha.14` diff, and covers the **mechanical
-subset** deterministically (the non-mechanical tail is left to the optional AI step
-above and to manual review).
+`2.5.0`/`3.0.0`/`3.0.1` are API-identical, so the breaking changes here are the ones
+introduced later in the v3.x line. This package brings v3.0 code up to the current
+v3.x API by applying the renames listed above, covering the **mechanical subset**
+deterministically — the non-mechanical tail is left to the optional AI step above and
+to manual review.
 
 ## Layout
 

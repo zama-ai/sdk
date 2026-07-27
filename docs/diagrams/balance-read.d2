@@ -1,0 +1,90 @@
+direction: down
+
+title: {
+  label: "Reading a Confidential Balance"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+# --- Single entry point ---
+call: "balanceOf(owner)\n(one queryFn — useConfidentialBalance)" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+  style.bold: true
+}
+
+# --- Step 1: read the encrypted value (cheap) ---
+read: "Read encrypted value\nconfidentialBalanceOf (eth_call)\n→ bytes32 encryptedValue" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+# --- Step 2: clear-value cache lookup ---
+lookup: "Look up clear-value cache\nkey: token + owner + encryptedValue" {
+  style.fill: "#E8EAF6"
+  style.stroke: "#283593"
+  style.font-size: 14
+}
+
+hit: "Cache hit\n→ return cached clear value\n(no relayer call)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+}
+
+# --- Step 3: decrypt on miss (expensive) ---
+decrypt: "Cache miss — decrypt via relayer" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+
+  send: "Send encryptedValue + permit\nto relayer KMS" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  reencrypt: "KMS re-encrypts\nunder user's public key" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  local: "WASM decrypts locally\nwith transport private key" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+  store: "Store clear value\n(keyed by encryptedValue)" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+  }
+
+  send -> reencrypt
+  reencrypt -> local
+  local -> store
+}
+
+result: "Return bigint balance → UI" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+note: "Polling is opt-in via refetchInterval (no default).\nPersisted clear values make reloads instant." {
+  shape: text
+  style.font-size: 12
+  style.italic: true
+}
+
+# --- Connections ---
+call -> read
+read -> lookup
+lookup -> hit: "unchanged encryptedValue" {
+  style.stroke: "#388E3C"
+}
+lookup -> decrypt: "new encryptedValue" {
+  style.stroke: "#6A1B9A"
+}
+hit -> result
+decrypt.store -> result

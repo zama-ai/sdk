@@ -7,7 +7,7 @@ Thank you for your interest in contributing to the Zama SDK! This guide will hel
 ### Prerequisites
 
 - **Node.js** >= 22
-- **pnpm** >= 10
+- **pnpm** >= 11
 - **Foundry** >= 1.0.0
 
 ### Getting Started
@@ -29,11 +29,25 @@ pnpm test:run
 
 ### Monorepo Structure
 
+pnpm workspaces are defined in `pnpm-workspace.yaml` (`packages/*`, `tools/*`, `test/*`, `codemods/*`):
+
 ```
 packages/
-  sdk/          # Core SDK
-  react-sdk/    # React hooks
-  test-nextjs/           # E2E test app (Playwright + Hardhat)
+  sdk/            # Core @zama-fhe/sdk (framework-agnostic + viem/ethers adapters)
+  react-sdk/      # @zama-fhe/react-sdk — React hooks over TanStack Query
+tools/
+  ast-grep/       # Custom AST lint rules (pnpm ast-grep:scan)
+test/
+  playwright/     # E2E runner (@zama-fhe/playwright) driving the test apps
+  test-nextjs/    # Next.js test app
+  test-vite/      # Vite test app
+  test-components/, test-tanstack-start/
+codemods/
+  sdk-migration-v3/   # Upgrade codemod for the v3.x line
+examples/         # 9 runnable example apps (react-viem/wagmi/ethers, node-*, example-*)
+contracts/        # Foundry contracts + fhevm submodules (soldeer deps)
+docs/             # GitBook source (docs/gitbook/src), agent guides (docs/agents), diagrams
+scripts/          # Build, docs, LLM-corpus, and api-report tooling
 ```
 
 ## Development Workflow

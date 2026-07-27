@@ -76,6 +76,10 @@ Decrypted balances are automatically cached in your storage backend (IndexedDB, 
 
 The cache is keyed by `token address + owner address + encrypted value`.
 
+A single `balanceOf()` call reads the on-chain encrypted value and decrypts it in one pass — the relayer is only hit when the encrypted value has changed since the last decryption:
+
+![Reading a confidential balance](../images/balance-read.svg)
+
 ### 4. Work with raw encrypted values
 
 Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
@@ -220,7 +224,11 @@ const tokenABalance = data?.results.get("0xTokenA");
 
 ### 9. Force a manual refresh
 
-Mutations automatically invalidate balance caches, but if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
+Mutations automatically invalidate balance caches, so the balance refreshes on its own after a shield, transfer, or unshield:
+
+![Mutation-triggered balance refresh](../images/balance-refresh.svg)
+
+But if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
 
 {% tabs %}
 {% tab title="React" %}

@@ -61,6 +61,8 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
+![Transport key pair storage](../images/credential-storage.svg)
+
 | Parameter  | Value                                                                    |
 | ---------- | ------------------------------------------------------------------------ |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
@@ -105,6 +107,8 @@ Use `sdk.permits.warmTransportKeyPairScope(scopeId)`, not `sdk.permits.warmTrans
 The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
 For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
+
+![WASM loading and integrity](../images/security-wasm-integrity.svg)
 
 ## Browser security headers
 
@@ -194,13 +198,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation        | Algorithm       | Key size    | Source                        |
-| ---------------- | --------------- | ----------- | ----------------------------- |
-| CDN integrity    | SHA-384         | --          | Web Crypto API                |
-| FHE encryption   | TFHE            | Network key | WASM (`@zama-fhe/sdk (WASM)`) |
-| ZK proofs        | WASM prover     | --          | WASM (`@zama-fhe/sdk (WASM)`) |
-| Wallet signing   | ECDSA secp256k1 | 256-bit     | User wallet                   |
-| Request tracking | UUID v4         | 128-bit     | `crypto.randomUUID()`         |
+| Operation                       | Algorithm       | Key size    | Source                    |
+| ------------------------------- | --------------- | ----------- | ------------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API            |
+| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)       |
+| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)       |
+| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet               |
+| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()`     |
 
 ## Reporting vulnerabilities
 
