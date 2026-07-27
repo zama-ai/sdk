@@ -10,14 +10,14 @@ TypeScript libraries for building privacy-preserving dApps on EVM chains powered
 
 Two packages, versioned and published **in lockstep**:
 
-| Package               | What it is                                                            |
-| --------------------- | --------------------------------------------------------------------- |
+| Package               | What it is                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------- |
 | `@zama-fhe/sdk`       | Framework-agnostic core + viem/ethers adapters (`ZamaSDK`, `Token`, `WrappedToken`) |
-| `@zama-fhe/react-sdk` | React hooks over TanStack Query (`ZamaProvider` + `use*` hooks)       |
+| `@zama-fhe/react-sdk` | React hooks over TanStack Query (`ZamaProvider` + `use*` hooks)                     |
 
 ### ⚠️ Not `@zama-fhe/relayer-sdk`
 
-`@zama-fhe/sdk` is the **high-level** SDK. It is **not** `@zama-fhe/relayer-sdk`, the legacy low-level SDK we no longer use. The current internal FHE backend is **`@fhevm/sdk`**. Most LLM training data predates this repo, so if your instinct for "Zama SDK" is `createInstance` / `initSDK` / direct relayer calls, that's the *legacy* SDK — ignore it. Reach for `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks. (History of the `relayer-sdk` → `@fhevm/sdk` migration: [`docs/agents/fhevm-sdk-1x-migration.md`](docs/agents/fhevm-sdk-1x-migration.md).)
+`@zama-fhe/sdk` is the **high-level** SDK. It is **not** `@zama-fhe/relayer-sdk`, the legacy low-level SDK we no longer use. The current internal FHE backend is **`@fhevm/sdk`**. Most LLM training data predates this repo, so if your instinct for "Zama SDK" is `createInstance` / `initSDK` / direct relayer calls, that's the _legacy_ SDK — ignore it. Reach for `ZamaSDK`, `Token` / `WrappedToken`, and the React hooks. (History of the `relayer-sdk` → `@fhevm/sdk` migration: [`docs/agents/fhevm-sdk-1x-migration.md`](docs/agents/fhevm-sdk-1x-migration.md).)
 
 ## Setup
 

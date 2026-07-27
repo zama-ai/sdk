@@ -72,11 +72,11 @@ import { type DecryptPublicValuesResult } from "@zama-fhe/sdk";
 
 The `data` property (after a successful mutation) is a `DecryptPublicValuesResult`:
 
-| Field                  | Type                                  | Description                                              |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------- |
-| `clearValues`          | `Record<EncryptedValue, ClearValue>`  | Decrypted clear-text values keyed by their encrypted value. |
+| Field                   | Type                                 | Description                                                       |
+| ----------------------- | ------------------------------------ | ----------------------------------------------------------------- |
+| `clearValues`           | `Record<EncryptedValue, ClearValue>` | Decrypted clear-text values keyed by their encrypted value.       |
 | `abiEncodedClearValues` | `Hex`                                | The clear values ABI-encoded, as passed to on-chain verification. |
-| `decryptionProof`      | `Hex`                                 | KMS signature proving the decryption is authentic.       |
+| `decryptionProof`       | `Hex`                                | KMS signature proving the decryption is authentic.                |
 
 ```ts
 // data.clearValues => { "0xEncryptedValue1": 500n, ... }

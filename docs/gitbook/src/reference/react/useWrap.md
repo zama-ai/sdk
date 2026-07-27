@@ -117,10 +117,7 @@ Recipient of the confidential tokens. Defaults to the signer address.
 Fires with the wrap transaction hash once submitted.
 
 ```ts
-await wrap({
-  amount: 1000n,
-  onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHash}`),
-});
+await wrap({ amount: 1000n, onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHash}`) });
 ```
 
 **Throws:**

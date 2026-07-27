@@ -44,12 +44,12 @@ Current state on this branch:
 
 What the migration replaced (kept for reference — the `@fhevm/sdk` column is the current model):
 
-  |          | Old (`relayer-sdk@0.4.3`)                            | `@fhevm/sdk@1.x` (current)                                                       |
-  | -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-  | Model    | `createInstance()` → global `FhevmInstance`           | viem/ethers client + decorators/actions (`createFhevmClient`, `decryptActions`) |
-  | Decrypt  | `instance.userDecrypt()` / `instance.publicDecrypt()` | `decryptValue` / `decryptValues` / `decryptValuesFromPairs`                     |
-  | Subpaths | `/bundle`, `/node`, `/web`                            | `./viem`, `./ethers`, `./actions/*`, `./base`, `./chains`, `./types`            |
-  | Init     | `initSDK()`                                           | `initFhevmRuntime()` + `runtimeConfig` (`moduleVersions` lives here)            |
+|          | Old (`relayer-sdk@0.4.3`)                             | `@fhevm/sdk@1.x` (current)                                                      |
+| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Model    | `createInstance()` → global `FhevmInstance`           | viem/ethers client + decorators/actions (`createFhevmClient`, `decryptActions`) |
+| Decrypt  | `instance.userDecrypt()` / `instance.publicDecrypt()` | `decryptValue` / `decryptValues` / `decryptValuesFromPairs`                     |
+| Subpaths | `/bundle`, `/node`, `/web`                            | `./viem`, `./ethers`, `./actions/*`, `./base`, `./chains`, `./types`            |
+| Init     | `initSDK()`                                           | `initFhevmRuntime()` + `runtimeConfig` (`moduleVersions` lives here)            |
 
 ## Finding 2 — decrypt wording alignment (DONE, plain rename in prerelease)
 

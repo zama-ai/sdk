@@ -11496,10 +11496,7 @@ Recipient of the confidential tokens. Defaults to the signer address.
 Fires with the wrap transaction hash once submitted.
 
 ```ts
-await wrap({
-  amount: 1000n,
-  onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHash}`),
-});
+await wrap({ amount: 1000n, onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHash}`) });
 ```
 
 **Throws:**
@@ -15953,11 +15950,11 @@ import { type DecryptPublicValuesResult } from "@zama-fhe/sdk";
 
 The `data` property (after a successful mutation) is a `DecryptPublicValuesResult`:
 
-| Field                  | Type                                  | Description                                              |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------- |
-| `clearValues`          | `Record<EncryptedValue, ClearValue>`  | Decrypted clear-text values keyed by their encrypted value. |
+| Field                   | Type                                 | Description                                                       |
+| ----------------------- | ------------------------------------ | ----------------------------------------------------------------- |
+| `clearValues`           | `Record<EncryptedValue, ClearValue>` | Decrypted clear-text values keyed by their encrypted value.       |
 | `abiEncodedClearValues` | `Hex`                                | The clear values ABI-encoded, as passed to on-chain verification. |
-| `decryptionProof`      | `Hex`                                 | KMS signature proving the decryption is authentic.       |
+| `decryptionProof`       | `Hex`                                | KMS signature proving the decryption is authentic.                |
 
 ```ts
 // data.clearValues => { "0xEncryptedValue1": 500n, ... }
@@ -17623,13 +17620,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation                       | Algorithm       | Key size    | Source                    |
-| ------------------------------- | --------------- | ----------- | ------------------------- |
-| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API            |
-| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)       |
-| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)       |
-| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet               |
-| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()`     |
+| Operation                       | Algorithm       | Key size    | Source                |
+| ------------------------------- | --------------- | ----------- | --------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API        |
+| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)   |
+| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)   |
+| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet           |
+| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()` |
 
 ## Reporting vulnerabilities
 

@@ -198,13 +198,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation                       | Algorithm       | Key size    | Source                    |
-| ------------------------------- | --------------- | ----------- | ------------------------- |
-| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API            |
-| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)       |
-| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)       |
-| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet               |
-| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()`     |
+| Operation                       | Algorithm       | Key size    | Source                |
+| ------------------------------- | --------------- | ----------- | --------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API        |
+| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)   |
+| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)   |
+| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet           |
+| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()` |
 
 ## Reporting vulnerabilities
 
