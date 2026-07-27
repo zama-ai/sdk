@@ -5,7 +5,9 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link refreshPreparedMutationOptions}. */
 export interface RefreshPreparedParams {
+  /** The prepared unsigned transaction to re-stamp with current chain state. */
   readonly preparedTx: PreparedFor<TransactionKind>;
+  /** Optional overrides for the offline-signing refresh step. */
   readonly options?: OfflineSigningOptions;
 }
 

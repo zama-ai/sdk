@@ -86,6 +86,7 @@ export type SignerCapability = "writeContract" | "signTransaction";
  * perform the requested operation.
  */
 export class SignerCapabilityError extends SignerRequiredError {
+  /** The signer capability that was required but not implemented. */
   readonly capability: SignerCapability;
 
   constructor(
@@ -115,8 +116,11 @@ export class SignerCapabilityError extends SignerRequiredError {
  * raises this error to catch wiring mistakes.
  */
 export class SignerAddressMismatchError extends ZamaError {
+  /** The operation that triggered the mismatch. */
   readonly operation: string;
+  /** The `request.from` address the caller passed. */
   readonly requested: Address;
+  /** The connected wallet address of the configured signer. */
   readonly configured: Address;
 
   constructor(

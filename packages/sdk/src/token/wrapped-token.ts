@@ -333,20 +333,6 @@ export class WrappedToken extends Token {
   }
 
   /**
-   * Approve this wrapper contract to spend the underlying ERC-20.
-   * Defaults to max uint256. Resets to zero first if there's an existing
-   * non-zero allowance (required by tokens like USDT).
-   *
-   * @param amount - Optional approval amount. Defaults to max uint256.
-   * @returns The transaction hash and mined receipt.
-   *
-   * @example
-   * ```ts
-   * await wrappedToken.approveUnderlying(); // max approval
-   * await wrappedToken.approveUnderlying(1000n); // exact amount
-   * ```
-   */
-  /**
    * Build an offline-signing plan for {@link shield}. Routes between the
    * single-tx ERC-1363 `transferAndCall` path and the two-tx `approve + wrap`
    * path the same way the atomic `shield` does. The caller runs each step in
@@ -424,6 +410,20 @@ export class WrappedToken extends Token {
     return { path: "approveAndWrap", steps: [approveStep, wrapStep] };
   }
 
+  /**
+   * Approve this wrapper contract to spend the underlying ERC-20.
+   * Defaults to max uint256. Resets to zero first if there's an existing
+   * non-zero allowance (required by tokens like USDT).
+   *
+   * @param amount - Optional approval amount. Defaults to max uint256.
+   * @returns The transaction hash and mined receipt.
+   *
+   * @example
+   * ```ts
+   * await wrappedToken.approveUnderlying(); // max approval
+   * await wrappedToken.approveUnderlying(1000n); // exact amount
+   * ```
+   */
   async approveUnderlying(amount?: bigint): Promise<TransactionResult> {
     this.#requireSigner("approveUnderlying");
     const account = await requireAlignedWalletAccount(

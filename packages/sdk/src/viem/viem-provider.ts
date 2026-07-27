@@ -73,10 +73,12 @@ export class ViemProvider implements GenericProvider {
     return block.timestamp;
   }
 
+  /** Broadcast a previously-signed transaction and return its hash. */
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
     return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
   }
 
+  /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
   async prepareTransaction<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,

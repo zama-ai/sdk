@@ -88,6 +88,7 @@ export interface OfflineSigningServiceConfig {
  * pin generous fee bounds up front rather than expecting to re-stamp later.
  */
 export interface OfflineSigningOptions {
+  /** Optional {@link AbortSignal} to cancel the in-flight chain reads. */
   readonly signal?: AbortSignal;
   /** Override the nonce. Otherwise the provider reads `getTransactionCount("pending")`. */
   readonly nonce?: number;

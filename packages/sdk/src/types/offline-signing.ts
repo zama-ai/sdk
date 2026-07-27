@@ -9,6 +9,7 @@ import type { EncryptedValue } from "../relayer/types";
  * unsigned EIP-1559 transaction off of this for offline signing.
  */
 export interface ConfidentialTransferRequest {
+  /** Discriminator tag. */
   readonly kind: "ConfidentialTransfer";
   /** Tx-sender wallet address (the originator). */
   readonly from: Address;
@@ -26,22 +27,31 @@ export interface ConfidentialTransferRequest {
  * `owner` is the token holder whose balance is debited.
  */
 export interface ConfidentialTransferFromRequest {
+  /** Discriminator tag. */
   readonly kind: "ConfidentialTransferFrom";
   /** Operator/tx-sender wallet address. */
   readonly from: Address;
+  /** Confidential token contract address. */
   readonly token: Address;
   /** Token holder whose balance is being moved. */
   readonly owner: Address;
+  /** Recipient address. */
   readonly to: Address;
+  /** Plaintext amount; encrypted by the SDK during `prepare`. */
   readonly amount: bigint;
 }
 
 /** Approve/revoke an operator. `until` is a unix timestamp; omit for permanent. */
 export interface SetOperatorRequest {
+  /** Discriminator tag. */
   readonly kind: "SetOperator";
+  /** Tx-sender wallet address (the token holder granting the operator). */
   readonly from: Address;
+  /** Confidential token contract address. */
   readonly token: Address;
+  /** Operator address to approve or revoke. */
   readonly operator: Address;
+  /** Unix timestamp the approval expires at; omit for permanent. */
   readonly until?: number;
 }
 
@@ -51,7 +61,9 @@ export interface SetOperatorRequest {
  * Encryption happens during `prepare`.
  */
 export interface UnwrapRequest {
+  /** Discriminator tag. */
   readonly kind: "Unwrap";
+  /** Tx-sender wallet address (the originator). */
   readonly from: Address;
   /** Confidential token (== wrapper for ERC-7984 wrappers). */
   readonly token: Address;
@@ -66,9 +78,13 @@ export interface UnwrapRequest {
  * handle as input, skipping the encrypted-amount path.
  */
 export interface UnwrapAllRequest {
+  /** Discriminator tag. */
   readonly kind: "UnwrapAll";
+  /** Tx-sender wallet address (the originator). */
   readonly from: Address;
+  /** Confidential token (== wrapper for ERC-7984 wrappers). */
   readonly token: Address;
+  /** Underlying-token recipient. */
   readonly to: Address;
 }
 
@@ -78,8 +94,11 @@ export interface UnwrapAllRequest {
  * `wrapper.finalizeUnwrap(handle, clear, proof)` tx.
  */
 export interface FinalizeUnwrapRequest {
+  /** Discriminator tag. */
   readonly kind: "FinalizeUnwrap";
+  /** Tx-sender wallet address (the originator). */
   readonly from: Address;
+  /** Wrapper (confidential token) contract address. */
   readonly wrapper: Address;
   /** From the `UnwrapRequested` event log (`unwrapRequestId` on upgraded wrappers, the encrypted amount handle on legacy ones). */
   readonly unwrapRequestIdOrAmount: EncryptedValue;
@@ -96,19 +115,29 @@ export interface FinalizeUnwrapRequest {
  * underlyings.
  */
 export interface ApproveUnderlyingRequest {
+  /** Discriminator tag. */
   readonly kind: "ApproveUnderlying";
+  /** Tx-sender wallet address (the underlying-token holder). */
   readonly from: Address;
+  /** Underlying ERC-20 token contract address. */
   readonly underlying: Address;
+  /** Spender granted the allowance (the wrapper contract). */
   readonly spender: Address;
+  /** Allowance amount to approve. */
   readonly amount: bigint;
 }
 
 /** Wrapper `wrap(to, amount)` call — the second leg of the non-1363 shield path. */
 export interface WrapRequest {
+  /** Discriminator tag. */
   readonly kind: "Wrap";
+  /** Tx-sender wallet address (the originator). */
   readonly from: Address;
+  /** Wrapper (confidential token) contract address. */
   readonly wrapper: Address;
+  /** Recipient of the confidential wrapped balance. */
   readonly to: Address;
+  /** Plaintext amount to wrap. */
   readonly amount: bigint;
 }
 
@@ -118,20 +147,31 @@ export interface WrapRequest {
  * 20 raw bytes (or `0x` for self-shield).
  */
 export interface TransferAndCallRequest {
+  /** Discriminator tag. */
   readonly kind: "TransferAndCall";
+  /** Tx-sender wallet address (the underlying-token holder). */
   readonly from: Address;
+  /** Underlying ERC-20 (ERC-1363) token contract address. */
   readonly underlying: Address;
+  /** Wrapper (confidential token) contract address, the `transferAndCall` target. */
   readonly wrapper: Address;
+  /** Plaintext amount to shield. */
   readonly amount: bigint;
+  /** Recipient encoded as 20 raw bytes, or `0x` for a self-shield. */
   readonly recipientData?: Hex;
 }
 
 /** ACL `delegateForUserDecryption(delegate, contract, expirationDate)`. */
 export interface DelegateDecryptionRequest {
+  /** Discriminator tag. */
   readonly kind: "DelegateDecryption";
+  /** Tx-sender wallet address (the delegator). */
   readonly from: Address;
+  /** ACL contract address. */
   readonly aclAddress: Address;
+  /** Contract the delegation grants decryption rights over. */
   readonly contractAddress: Address;
+  /** Address being granted decryption rights. */
   readonly delegateAddress: Address;
   /** Optional expiration date; omit for permanent (uint64.max). */
   readonly expirationDate?: Date;
@@ -139,10 +179,15 @@ export interface DelegateDecryptionRequest {
 
 /** ACL `revokeDelegationForUserDecryption(delegate, contract)`. */
 export interface RevokeDelegationRequest {
+  /** Discriminator tag. */
   readonly kind: "RevokeDelegation";
+  /** Tx-sender wallet address (the delegator). */
   readonly from: Address;
+  /** ACL contract address. */
   readonly aclAddress: Address;
+  /** Contract the delegation being revoked covers. */
   readonly contractAddress: Address;
+  /** Address whose decryption rights are being revoked. */
   readonly delegateAddress: Address;
 }
 
@@ -193,11 +238,17 @@ export type PrepareTransactionRequest =
  * stringify `request` before `JSON.stringify`.
  */
 export interface PreparedTransaction {
+  /** The kind of the originating request. */
   readonly kind: TransactionKind;
+  /** The originating request, preserved for diagnostics. */
   readonly request: PrepareTransactionRequest;
+  /** RLP-encoded unsigned transaction, ready to sign. */
   readonly unsignedTx: Hex;
+  /** Originating wallet address. */
   readonly from: Address;
+  /** Target contract address. */
   readonly to: Address;
+  /** Chain ID the transaction is bound to. */
   readonly chainId: number;
 }
 
@@ -210,6 +261,8 @@ export interface PreparedTransaction {
  * assignable to the wide {@link PreparedTransaction}.
  */
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+  /** The request kind, pinned to `K`. */
   readonly kind: K;
+  /** The originating request, narrowed to the `K` variant. */
   readonly request: Extract<PrepareTransactionRequest, { kind: K }>;
 }

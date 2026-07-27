@@ -119,11 +119,13 @@ export class EthersProvider implements GenericProvider {
     };
   }
 
+  /** Broadcast a previously-signed transaction and return its hash. */
   async sendRawTransaction(signedTx: Hex): Promise<Hex> {
     const response = await this.#readProvider.broadcastTransaction(signedTx);
     return response.hash as Hex;
   }
 
+  /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
   async prepareTransaction<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,

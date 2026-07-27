@@ -344,15 +344,10 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 
 // @public
 export interface ApproveUnderlyingRequest {
-    // (undocumented)
     readonly amount: bigint;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "ApproveUnderlying";
-    // (undocumented)
     readonly spender: Address;
-    // (undocumented)
     readonly underlying: Address;
 }
 
@@ -5176,15 +5171,11 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 
 // @public
 export interface ConfidentialTransferFromRequest {
-    // (undocumented)
     readonly amount: bigint;
     readonly from: Address;
-    // (undocumented)
     readonly kind: "ConfidentialTransferFrom";
     readonly owner: Address;
-    // (undocumented)
     readonly to: Address;
-    // (undocumented)
     readonly token: Address;
 }
 
@@ -5192,7 +5183,6 @@ export interface ConfidentialTransferFromRequest {
 export interface ConfidentialTransferRequest {
     readonly amount: bigint;
     readonly from: Address;
-    // (undocumented)
     readonly kind: "ConfidentialTransfer";
     readonly to: Address;
     readonly token: Address;
@@ -5452,16 +5442,11 @@ export interface DelegatedDecryptOptions {
 
 // @public
 export interface DelegateDecryptionRequest {
-    // (undocumented)
     readonly aclAddress: Address;
-    // (undocumented)
     readonly contractAddress: Address;
-    // (undocumented)
     readonly delegateAddress: Address;
     readonly expirationDate?: Date;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "DelegateDecryption";
 }
 
@@ -7067,12 +7052,9 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Encryp
 
 // @public
 export interface FinalizeUnwrapRequest {
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "FinalizeUnwrap";
     readonly unwrapRequestIdOrAmount: EncryptedValue;
-    // (undocumented)
     readonly wrapper: Address;
 }
 
@@ -11471,7 +11453,6 @@ export interface OfflineSigningOptions {
     readonly maxFeePerGas?: bigint;
     readonly maxPriorityFeePerGas?: bigint;
     readonly nonce?: number;
-    // (undocumented)
     readonly signal?: AbortSignal;
 }
 
@@ -11510,9 +11491,7 @@ export class Permits {
 
 // @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
-    // (undocumented)
     readonly kind: K;
-    // (undocumented)
     readonly request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>;
@@ -11520,17 +11499,11 @@ export interface PreparedFor<K extends TransactionKind> extends PreparedTransact
 
 // @public
 export interface PreparedTransaction {
-    // (undocumented)
     readonly chainId: number;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: TransactionKind;
-    // (undocumented)
     readonly request: PrepareTransactionRequest;
-    // (undocumented)
     readonly to: Address;
-    // (undocumented)
     readonly unsignedTx: Hex;
 }
 
@@ -12948,15 +12921,10 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
 
 // @public
 export interface RevokeDelegationRequest {
-    // (undocumented)
     readonly aclAddress: Address;
-    // (undocumented)
     readonly contractAddress: Address;
-    // (undocumented)
     readonly delegateAddress: Address;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "RevokeDelegation";
 }
 
@@ -14151,15 +14119,10 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
 
 // @public
 export interface SetOperatorRequest {
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "SetOperator";
-    // (undocumented)
     readonly operator: Address;
-    // (undocumented)
     readonly token: Address;
-    // (undocumented)
     readonly until?: number;
 }
 
@@ -14207,11 +14170,8 @@ export class SignerAddressMismatchError extends ZamaError {
         configured: Address;
         operation: string;
     }, options?: ErrorOptions);
-    // (undocumented)
     readonly configured: Address;
-    // (undocumented)
     readonly operation: string;
-    // (undocumented)
     readonly requested: Address;
 }
 
@@ -14219,8 +14179,6 @@ export class SignerAddressMismatchError extends ZamaError {
 export class SignerCapabilityError extends SignerRequiredError {
     constructor(operation: string, capability: SignerCapability, hint?: string, options?: ErrorOptions);
     // Warning: (ae-forgotten-export) The symbol "SignerCapability" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly capability: SignerCapability;
 }
 
@@ -14789,17 +14747,11 @@ export function transferAndCallContract(tokenAddress: Address, to: Address, amou
 
 // @public
 export interface TransferAndCallRequest {
-    // (undocumented)
     readonly amount: bigint;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "TransferAndCall";
-    // (undocumented)
     readonly recipientData?: Hex;
-    // (undocumented)
     readonly underlying: Address;
-    // (undocumented)
     readonly wrapper: Address;
 }
 
@@ -16000,13 +15952,9 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 
 // @public
 export interface UnwrapAllRequest {
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "UnwrapAll";
-    // (undocumented)
     readonly to: Address;
-    // (undocumented)
     readonly token: Address;
 }
 
@@ -18294,9 +18242,7 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 // @public
 export interface UnwrapRequest {
     readonly amount: bigint;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "Unwrap";
     readonly to: Address;
     readonly token: Address;
@@ -19506,7 +19452,6 @@ export interface WrapOptions {
 // @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
-    // (undocumented)
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     getPendingUnshield(): Promise<Hex | null>;
@@ -19562,15 +19507,10 @@ export interface WrappersRegistryConfig {
 
 // @public
 export interface WrapRequest {
-    // (undocumented)
     readonly amount: bigint;
-    // (undocumented)
     readonly from: Address;
-    // (undocumented)
     readonly kind: "Wrap";
-    // (undocumented)
     readonly to: Address;
-    // (undocumented)
     readonly wrapper: Address;
 }
 

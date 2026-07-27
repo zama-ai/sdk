@@ -6,7 +6,9 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link broadcastMutationOptions}. */
 export interface BroadcastParams {
+  /** The prepared unsigned transaction that was signed. */
   readonly preparedTx: PreparedTransaction;
+  /** The signed transaction bytes to broadcast. */
   readonly signedTx: Hex;
 }
 
@@ -26,7 +28,9 @@ export function broadcastMutationOptions(
 
 /** Variables for {@link resumeMutationOptions}. */
 export interface ResumeParams {
+  /** The prepared unsigned transaction that was broadcast externally. */
   readonly preparedTx: PreparedTransaction;
+  /** The hash of the externally-broadcast transaction. */
   readonly txHash: Hex;
 }
 

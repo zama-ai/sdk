@@ -85,10 +85,7 @@ export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<r
 // @public
 export interface BroadcastParams {
     // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly preparedTx: PreparedTransaction;
-    // (undocumented)
     readonly signedTx: Hex;
 }
 
@@ -627,12 +624,8 @@ export function prepareMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<rea
 // @public
 export interface PrepareParams {
     // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly options?: OfflineSigningOptions;
     // Warning: (ae-forgotten-export) The symbol "PrepareTransactionRequest" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly request: PrepareTransactionRequest;
 }
 
@@ -692,9 +685,7 @@ export function refreshPreparedMutationOptions(sdk: ZamaSDK): MutationFactoryOpt
 
 // @public
 export interface RefreshPreparedParams {
-    // (undocumented)
     readonly options?: OfflineSigningOptions;
-    // (undocumented)
     readonly preparedTx: PreparedFor<TransactionKind>;
 }
 
@@ -708,9 +699,7 @@ export function resumeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<read
 
 // @public
 export interface ResumeParams {
-    // (undocumented)
     readonly preparedTx: PreparedTransaction;
-    // (undocumented)
     readonly txHash: Hex;
 }
 
@@ -791,7 +780,6 @@ export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readon
 
 // @public
 export interface SignParams {
-    // (undocumented)
     readonly preparedTx: PreparedTransaction;
 }
 
@@ -1082,7 +1070,6 @@ export interface WrapParams extends WrapOptions {
 // @public
 export class WrappedToken extends Token {
     allowance(owner: Address): Promise<bigint>;
-    // (undocumented)
     approveUnderlying(amount?: bigint): Promise<TransactionResult>;
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     getPendingUnshield(): Promise<Hex | null>;

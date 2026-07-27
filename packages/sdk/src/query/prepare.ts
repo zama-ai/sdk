@@ -11,7 +11,9 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link prepareMutationOptions}. */
 export interface PrepareParams {
+  /** The transaction request describing the operation to prepare. */
   readonly request: PrepareTransactionRequest;
+  /** Optional overrides for the offline-signing prepare step. */
   readonly options?: OfflineSigningOptions;
 }
 
@@ -35,6 +37,7 @@ export function prepareMutationOptions(
 
 /** Variables for {@link signMutationOptions}. */
 export interface SignParams {
+  /** The prepared unsigned transaction to sign. */
   readonly preparedTx: PreparedTransaction;
 }
 
