@@ -33,7 +33,7 @@
     "format:check": "oxfmt --check",
     "release:ci": "pnpm exec semantic-release",
     "release:dry-run": "pnpm exec semantic-release --dry-run --no-ci --debug",
-    "postinstall": "test -n \"$CI\" || (pnpm submodule:install && pnpm contracts:install && e2e:install)",
+    "postinstall": "test -n \"$CI\" || (pnpm submodule:install && pnpm contracts:install && pnpm e2e:install)",
     "forge-fhevm:install": "cd contracts/lib/forge-fhevm && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
     "fhevm:install": "cd contracts/lib/fhevm/sdk/js-sdk/contracts && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
     "contracts:install": "pnpm forge-fhevm:install && pnpm fhevm:install && cd contracts && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
