@@ -1,6 +1,11 @@
 {
   "$schema": "https://v2-10-4.turborepo.dev/schema.json",
-  "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"],
+  "globalDependencies": [
+    "pnpm-lock.yaml",
+    "tsconfig.base.json",
+    "tsconfig.json",
+    "api-extractor.base.json"
+  ],
   "tasks": {
     "typecheck": { "outputs": [] },
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },

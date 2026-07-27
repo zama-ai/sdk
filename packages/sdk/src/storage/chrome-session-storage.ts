@@ -35,15 +35,21 @@ declare const chrome: {
  * ```
  */
 export class ChromeSessionStorage implements GenericStorage {
+  /**
+   * Retrieve a value by key.
+   * @returns The stored value, or `null` if the key does not exist.
+   */
   async get<T = unknown>(key: string): Promise<T | null> {
     const result = await chrome.storage.session.get(key);
     return (result[key] as T) ?? null;
   }
 
+  /** Store a value under the given key, overwriting any existing entry. */
   async set(key: string, value: unknown): Promise<void> {
     await chrome.storage.session.set({ [key]: value });
   }
 
+  /** Remove the entry for the given key (no-op if absent). */
   async delete(key: string): Promise<void> {
     await chrome.storage.session.remove(key);
   }

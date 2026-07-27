@@ -1,26 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatEther, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
-import {
-  useConfidentialBalance,
-  useHasPermit,
-  useGrantPermit,
-  useListPairs,
-  useZamaSDK,
-} from "@zama-fhe/react-sdk";
-import { balanceOfContract } from "@zama-fhe/sdk";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatEther, JsonRpcProvider } from "ethers";
+import { useListPairs } from "@zama-fhe/react-sdk";
 import type { TokenWrapperPair, TokenWrapperPairWithMetadata, Address } from "@zama-fhe/sdk";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query"; // query key builders for SDK-managed caches — /query subpath export
-import { BalancesCard } from "@/components/BalancesCard";
-import { ShieldCard } from "@/components/ShieldCard";
-import { TransferCard } from "@/components/TransferCard";
-import { UnshieldCard } from "@/components/UnshieldCard";
-import { PendingUnshieldCard } from "@/components/PendingUnshieldCard";
-import { DelegateDecryptionCard } from "@/components/DelegateDecryptionCard";
-import { RevokeDelegationCard } from "@/components/RevokeDelegationCard";
-import { DecryptAsCard } from "@/components/DecryptAsCard";
+import { SelectedTokenPanel } from "@/components/SelectedTokenPanel";
 import {
   SEPOLIA_CHAIN_ID,
   SEPOLIA_CHAIN_ID_HEX,
@@ -28,10 +13,6 @@ import {
   SEPOLIA_RPC_URL,
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
-
-// mint(address, uint256) is not part of the ERC-20 standard — it is a convenience
-// function added to both test tokens for easy balance top-ups during development.
-const MINT_ABI = ["function mint(address to, uint256 amount)"];
 
 // useListPairs through ethers can return objects backed by ethers Result, where named
 // ABI fields are non-enumerable. Read named fields first and fall back to tuple indexes.
@@ -81,194 +62,6 @@ async function switchToSepolia(ethereum: NonNullable<ReturnType<typeof getEthere
     // wallet_switchEthereumChain errors other than 4902 (including 4001 rejection) are
     // intentionally ignored — chainId is re-read in the finally block of the caller.
   }
-}
-
-interface SelectedTokenPanelProps {
-  address: Address;
-  token: TokenWrapperPairWithMetadata;
-  validPairs: TokenWrapperPairWithMetadata[];
-  isSepolia: boolean;
-  ethBalanceKey: readonly unknown[];
-}
-
-function SelectedTokenPanel({
-  address,
-  token,
-  validPairs,
-  isSepolia,
-  ethBalanceKey,
-}: SelectedTokenPanelProps) {
-  const queryClient = useQueryClient();
-  const sdk = useZamaSDK();
-
-  // Check whether cached credentials cover the selected confidential token.
-  const { data: isAllowed } = useHasPermit({ contractAddresses: [token.confidentialTokenAddress] });
-
-  const decimals = token.confidential.decimals;
-  const erc20Decimals = token.underlying.decimals;
-  const confidentialSymbol = token.confidential.symbol;
-  const erc20Symbol = token.underlying.symbol;
-
-  // Triggers the EIP-712 wallet signature to create FHE decrypt credentials.
-  // All registry pairs are passed at once — a single signature covers all tokens,
-  // so switching tokens does not require a second wallet prompt.
-  const allowTokens = useGrantPermit();
-  function handleDecrypt() {
-    if (validPairs.length === 0) return;
-    allowTokens.mutate(validPairs.map((p) => p.confidentialTokenAddress));
-  }
-
-  // ERC-20 balance for the selected token.
-  const erc20BalanceKey = ["erc20-balance", token.tokenAddress, address] as const;
-  const { data: erc20Balance } = useQuery({
-    queryKey: erc20BalanceKey,
-    queryFn: async () => {
-      const result = await sdk.provider.readContract(
-        balanceOfContract(token.tokenAddress, address),
-      );
-      return result as bigint;
-    },
-    enabled: isSepolia,
-  });
-
-  const refreshBalances = () => {
-    queryClient.invalidateQueries({ queryKey: erc20BalanceKey });
-    queryClient.invalidateQueries({ queryKey: ethBalanceKey });
-    // Invalidate the encrypted handle so useConfidentialBalance re-polls after
-    // any operation that changes the confidential balance (shield, unshield, transfer).
-    queryClient.invalidateQueries({
-      queryKey: zamaQueryKeys.confidentialBalance.token(token.confidentialTokenAddress),
-    });
-  };
-
-  // Only run once the user has explicitly authorized decrypt for the selected token.
-  // Prevents the hook from firing an EIP-712 prompt on mount.
-  const balance = useConfidentialBalance(
-    { address: token.confidentialTokenAddress, account: address },
-    { enabled: isSepolia && !!isAllowed },
-  );
-
-  // Mint 10 whole tokens on the underlying ERC-20 contract.
-  const mint = useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) {
-        throw new Error("Connect a wallet before minting tokens.");
-      }
-      const txHash = await signer.writeContract({
-        address: token.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [address, parseUnits("10", erc20Decimals)],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
-    onSuccess: refreshBalances,
-  });
-
-  // Clear stale mutation state when the wallet account or selected token changes.
-  useEffect(() => {
-    mint.reset();
-    allowTokens.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, token.confidentialTokenAddress]);
-
-  const formattedErc20 =
-    erc20Balance !== undefined ? `${formatUnits(erc20Balance, erc20Decimals)} ${erc20Symbol}` : "—";
-  const formattedConfidential =
-    balance.data !== undefined
-      ? `${formatUnits(balance.data, decimals)} ${confidentialSymbol}`
-      : "—";
-  const actionsDisabled = !isSepolia;
-
-  return (
-    <>
-      <BalancesCard
-        formattedErc20={formattedErc20}
-        formattedConfidential={formattedConfidential}
-        isLoadingConfidential={balance.isLoading || balance.isFetching}
-        erc20Symbol={erc20Symbol}
-        onMint={() => mint.mutate()}
-        isMinting={mint.isPending}
-        mintDisabled={actionsDisabled}
-        mintError={mint.isError ? (mint.error?.message ?? null) : null}
-        mintTxHash={mint.isSuccess && mint.data ? mint.data : null}
-        isAllowed={!!isAllowed}
-        onDecrypt={handleDecrypt}
-        isDecrypting={allowTokens.isPending}
-        decryptError={allowTokens.isError ? (allowTokens.error?.message ?? "Signing failed") : null}
-      />
-
-      {/* Pending unshield resume — checked for every registered token, not just the selected one.
-          key includes address so the component remounts (re-checks IndexedDB) on wallet change. */}
-      {validPairs.map((pair) => (
-        <PendingUnshieldCard
-          key={`${pair.confidentialTokenAddress}-${address}`}
-          tokenAddress={pair.confidentialTokenAddress}
-          label={pair.underlying.symbol}
-          onSuccess={refreshBalances}
-        />
-      ))}
-
-      <div className="section-label">Operations</div>
-
-      {/* key includes address and selected token so cards remount (inputs + state reset) on wallet or token change */}
-      <ShieldCard
-        key={`shield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={erc20Decimals}
-        symbol={erc20Symbol}
-        disabled={actionsDisabled}
-        onSuccess={refreshBalances}
-      />
-
-      <TransferCard
-        key={`transfer-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
-        disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
-      />
-
-      <UnshieldCard
-        key={`unshield-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
-        disabled={actionsDisabled}
-        balanceDecryptRequired={!isAllowed}
-        onSuccess={refreshBalances}
-      />
-
-      <div className="section-label">Delegation — as owner</div>
-
-      <DelegateDecryptionCard
-        key={`grant-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        disabled={actionsDisabled}
-      />
-
-      <RevokeDelegationCard
-        key={`revoke-delegation-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        disabled={actionsDisabled}
-      />
-
-      <div className="section-label">Delegation — as delegate</div>
-
-      <DecryptAsCard
-        key={`decrypt-as-${address}-${token.confidentialTokenAddress}`}
-        tokenAddress={token.confidentialTokenAddress}
-        decimals={decimals}
-        symbol={confidentialSymbol}
-        disabled={actionsDisabled}
-        connectedAddress={address}
-      />
-    </>
-  );
 }
 
 export default function Home() {
@@ -428,69 +221,80 @@ export default function Home() {
   // ZamaProvider remount (wallet switch or chain change).
   if (isInitializing) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
-      </div>
+      </main>
     );
   }
 
   // ── Screen 1: No wallet connected ─────────────────────────────────────────
   if (!address) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Confidential Token Quickstart</h1>
         <p className="subtitle">
           Connect your wallet to interact with ERC-7984 tokens on Sepolia testnet.
         </p>
-        <button type="button" className="btn btn-primary" onClick={connect} disabled={isConnecting}>
-          {isConnecting ? "Connecting…" : "Connect Wallet"}
-        </button>
-        {connectError && <div className="alert alert-error card-status">{connectError}</div>}
-      </div>
+        <form action={connect}>
+          <button type="submit" className="btn btn-primary" disabled={isConnecting}>
+            {isConnecting ? "Connecting…" : "Connect Wallet"}
+          </button>
+        </form>
+        {connectError && (
+          <div className="alert alert-error card-status" role="alert">
+            {connectError}
+          </div>
+        )}
+      </main>
     );
   }
 
   // ── Screen 2: Wrong network ────────────────────────────────────────────────
   if (!isSepolia) {
     return (
-      <div className="app-container connect-screen">
+      <main className="app-container connect-screen">
         <h1>Sepolia Network Required</h1>
         <p className="subtitle">
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}).
         </p>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSwitchToSepolia}
-          disabled={isSwitching}
-        >
-          {isSwitching ? "Switching…" : "Switch to Sepolia"}
-        </button>
+        <form action={handleSwitchToSepolia}>
+          <button type="submit" className="btn btn-primary" disabled={isSwitching}>
+            {isSwitching ? "Switching…" : "Switch to Sepolia"}
+          </button>
+        </form>
         {switchFailed && (
-          <div className="alert alert-error card-status">
+          <div className="alert alert-error card-status" role="alert">
             Could not switch to Sepolia. Please switch manually in your wallet.
           </div>
         )}
-      </div>
+      </main>
     );
   }
 
   // ── Screen 3: Connected on Sepolia — main UI ───────────────────────────────
   return (
-    <div className="app-container">
+    <main className="app-container">
       {/* Header */}
-      <div className="app-header">
+      <header className="app-header">
         <h1>Sepolia Confidential Token Quickstart</h1>
-        <div className="connected-address">Connected: {address}</div>
-        <div className="connected-address">
-          ETH: {ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}
-        </div>
-      </div>
+        <p className="connected-address">
+          Connected: <code>{address}</code>
+        </p>
+        <p className="connected-address">
+          ETH: <output>{ethBalance !== undefined ? Number(ethBalance).toFixed(4) : "—"}</output>
+        </p>
+      </header>
 
       {/* Token selector — populated from the on-chain WrappersRegistry */}
-      <div className="card">
-        <div className="card-title">Token</div>
+      <section className="card" aria-labelledby="token-selector-title">
+        <h2 className="card-title" id="token-selector-title">
+          Token
+        </h2>
+        <label className="sr-only" htmlFor="token-selector">
+          Confidential token
+        </label>
         <select
+          id="token-selector"
           className="select"
           value={selectedTokenAddress ?? ""}
           onChange={(e) => setSelectedTokenAddress(e.target.value as Address)}
@@ -507,14 +311,16 @@ export default function Home() {
             </option>
           ))}
         </select>
-        {isRegistryPending && <p className="token-meta">Loading tokens from registry…</p>}
+        {isRegistryPending && <output className="token-meta">Loading tokens from registry…</output>}
         {!isRegistryPending && isRegistryError && (
-          <p className="token-meta">Failed to load tokens from registry.</p>
+          <p className="token-meta" role="alert">
+            Failed to load tokens from registry.
+          </p>
         )}
         {!isRegistryPending && !isRegistryError && validPairs.length === 0 && (
           <p className="token-meta">No tokens available.</p>
         )}
-      </div>
+      </section>
 
       {token && (
         <SelectedTokenPanel
@@ -526,6 +332,6 @@ export default function Home() {
           ethBalanceKey={ethBalanceKey}
         />
       )}
-    </div>
+    </main>
   );
 }

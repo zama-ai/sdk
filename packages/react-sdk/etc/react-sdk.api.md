@@ -21,7 +21,7 @@ import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
-import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { DelegationStatus } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
@@ -73,13 +73,13 @@ export function useClearCredentials(options?: UseMutationOptions<void>): UseMuta
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): UseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalanceConfig {
     account: Address | undefined;
     address: Address;
 }
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -87,13 +87,13 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): UseQueryResult<BatchBalancesResult, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalancesConfig {
     account: Address | undefined;
     addresses: Address[];
 }
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -101,7 +101,7 @@ export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<Bat
 // @public
 export function useConfidentialIsOperator(config: UseConfidentialIsOperatorConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialIsOperatorConfig {
     address: Address | undefined;
     holder: Address | undefined;
@@ -111,7 +111,7 @@ export interface UseConfidentialIsOperatorConfig {
 // @public
 export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOperatorSuspenseConfig): UseSuspenseQueryResult<boolean, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialIsOperatorSuspenseConfig {
     address: Address;
     holder: Address;
@@ -169,9 +169,9 @@ export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${strin
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatus>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatus, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseDelegationStatusConfig {
     contractAddress: Address | undefined;
     delegateAddress?: Address;
@@ -295,7 +295,7 @@ export function useTotalSupplySuspense(tokenAddress: Address): UseSuspenseQueryR
 // @public
 export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseUnderlyingAllowanceConfig {
     address: Address;
     owner: Address | undefined;
@@ -304,7 +304,7 @@ export interface UseUnderlyingAllowanceConfig {
 // @public
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig): UseSuspenseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseUnderlyingAllowanceSuspenseConfig {
     address: Address;
     owner: Address;

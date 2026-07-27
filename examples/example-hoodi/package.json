@@ -2,7 +2,7 @@
   "name": "hoodi-example",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "test:e2e": "playwright test",
@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
-    "@zama-fhe/react-sdk": "3.3.0-alpha.9",
-    "@zama-fhe/sdk": "3.3.0-alpha.9",
-    "ethers": "^6.17.0",
+    "@zama-fhe/react-sdk": "3.4.0-alpha.10",
+    "@zama-fhe/sdk": "3.4.0-alpha.10",
     "next": "^16.2.6",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "viem": "^2.55.0",
+    "wagmi": "^3.7.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",

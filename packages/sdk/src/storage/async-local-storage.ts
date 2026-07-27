@@ -28,14 +28,20 @@ export class AsyncLocalMapStorage implements GenericStorage {
     return this.#als.run(new Map(), fn);
   }
 
+  /**
+   * Retrieve a value by key.
+   * @returns The stored value, or `null` if the key does not exist.
+   */
   async get<T = unknown>(key: string): Promise<T | null> {
     return (this.#als.getStore()?.get(key) as T) ?? null;
   }
 
+  /** Store a value under the given key, overwriting any existing entry. */
   async set<T = unknown>(key: string, value: T): Promise<void> {
     this.#als.getStore()?.set(key, value);
   }
 
+  /** Remove the entry for the given key (no-op if absent). */
   async delete(key: string): Promise<void> {
     this.#als.getStore()?.delete(key);
   }

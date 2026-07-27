@@ -68,6 +68,8 @@ export interface CredentialServiceConfig {
  * stored there, so it's untouched. {@link revokeTransportKeyPair} (operator-level) is
  * the only way to invalidate a scope's shared key pair, and it does so for every signer
  * in the scope at once.
+ *
+ * @internal
  */
 export class CredentialService {
   readonly #vault: TransportKeyPairVault;
@@ -274,6 +276,7 @@ export class CredentialService {
    * @throws if the underlying storage delete fails.
    */
   async revokeTransportKeyPair(scopeId: string): Promise<void> {
+    this.#requireSigner("revokeTransportKeyPair");
     if (this.#scope === undefined) {
       throw new ConfigurationError(
         "revokeTransportKeyPair() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to revoke.",
@@ -313,6 +316,7 @@ export class CredentialService {
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
+    this.#requireSigner("warmTransportKeyPairScope");
     if (this.#scope === undefined) {
       throw new ConfigurationError(
         "warmTransportKeyPairScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to warm.",

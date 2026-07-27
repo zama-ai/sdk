@@ -1,107 +1,103 @@
 "use client";
 
-import { useState } from "react";
-import { isAddress } from "ethers";
+import { useActionState } from "react";
+import { getAddress } from "ethers";
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface DelegateDecryptionCardProps {
-  tokenAddress: Address;
+  token: TokenWrapperPairWithMetadata;
   disabled?: boolean;
 }
 
-export function DelegateDecryptionCard({
-  tokenAddress,
-  disabled = false,
-}: DelegateDecryptionCardProps) {
-  const [delegateAddress, setDelegateAddress] = useState("");
-  // Checked by default so a developer can grant access in one click during testing.
-  const [noExpiry, setNoExpiry] = useState(true);
-  const [expirationInput, setExpirationInput] = useState("");
+export function DelegateDecryptionCard({ token, disabled = false }: DelegateDecryptionCardProps) {
+  const delegate = useDelegateDecryption(token.confidentialTokenAddress);
 
-  const delegate = useDelegateDecryption(tokenAddress, {
-    onSuccess: () => {
-      setDelegateAddress("");
-      setNoExpiry(true);
-      setExpirationInput("");
-    },
-  });
+  // datetime-local min: one hour from now, in the browser's local wall-clock time.
+  const minExpiration = new Date(
+    Date.now() + 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60 * 1000,
+  )
+    .toISOString()
+    .slice(0, 16);
 
-  // ACL contract enforces a minimum of 1 hour — reject anything shorter at the UI level.
-  const isExpiryValid =
-    noExpiry ||
-    (!!expirationInput && new Date(expirationInput) > new Date(Date.now() + 60 * 60 * 1000));
-  const canSubmit = isAddress(delegateAddress) && isExpiryValid;
-
-  function handleGrant() {
-    delegate.mutate({
-      delegateAddress: delegateAddress as Address,
-      // undefined → SDK sends PERMANENT_DELEGATION on-chain (permanent, no expiry).
-      expirationDate: noExpiry ? undefined : new Date(expirationInput),
-    });
-  }
+  const [state, submitGrant, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof delegate.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const delegateAddress = formData.get("delegateAddress") as string;
+    const noExpiry = formData.has("noExpiry");
+    const expirationInput = formData.get("expirationDate") as string;
+    if (!noExpiry && new Date(expirationInput).getTime() <= Date.now() + 60 * 60 * 1000) {
+      return { error: "Choose an expiration date at least 1 hour in the future." };
+    }
+    try {
+      const data = await delegate.mutateAsync({
+        delegateAddress: getAddress(delegateAddress) as Address,
+        // undefined → SDK sends PERMANENT_DELEGATION on-chain (permanent, no expiry).
+        expirationDate: noExpiry ? undefined : new Date(expirationInput),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
-    <div className="card">
-      <div className="card-title">Grant Decryption Access</div>
-      <input
-        className="input card-gap"
-        type="text"
-        value={delegateAddress}
-        onChange={(e) => setDelegateAddress(e.target.value)}
-        placeholder="Delegate address (0x…)"
-      />
-      <div className="input-row card-gap">
-        <input
-          className="input"
-          type="datetime-local"
-          value={expirationInput}
-          onChange={(e) => setExpirationInput(e.target.value)}
-          disabled={noExpiry}
-        />
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={noExpiry}
-            onChange={(e) => setNoExpiry(e.target.checked)}
-          />
-          No expiration
+    <section className="card" aria-labelledby="grant-access-title">
+      <h2 className="card-title" id="grant-access-title">
+        Grant Decryption Access
+      </h2>
+      <form action={submitGrant}>
+        <label className="sr-only" htmlFor="delegate-address">
+          Delegate address
         </label>
-      </div>
-      {!noExpiry && !expirationInput && (
-        <p className="token-meta card-gap">
-          Select an expiration date and time (ACL contract requires at least 1 hour from now).
-        </p>
+        <input
+          id="delegate-address"
+          name="delegateAddress"
+          className="input card-gap"
+          type="text"
+          pattern="0x[a-fA-F0-9]{40}"
+          title="0x followed by 40 hexadecimal characters."
+          required
+          placeholder="Delegate address (0x…)"
+        />
+        <div className="input-row card-gap">
+          <input
+            name="expirationDate"
+            className="input"
+            type="datetime-local"
+            min={minExpiration}
+            title="Expiration must be at least one hour in the future."
+          />
+          <label className="checkbox-label">
+            <input name="noExpiry" type="checkbox" defaultChecked />
+            No expiration
+          </label>
+        </div>
+        <p className="token-meta card-gap">Expiration must be at least one hour from now.</p>
+        <button type="submit" className="btn btn-primary btn-full" disabled={disabled || isPending}>
+          {isPending ? "Granting…" : "Grant Access"}
+        </button>
+      </form>
+      {state && "error" in state && (
+        <div className="alert alert-error card-status" role="alert">
+          {state.error}
+        </div>
       )}
-      {!noExpiry && expirationInput && !isExpiryValid && (
-        <p className="token-meta token-meta-error card-gap">
-          Date must be at least 1 hour from now (ACL minimum).
-        </p>
-      )}
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleGrant}
-        disabled={disabled || !canSubmit || delegate.isPending}
-      >
-        {delegate.isPending ? "Granting…" : "Grant Access"}
-      </button>
-      {delegate.isError && (
-        <div className="alert alert-error card-status">{delegate.error?.message}</div>
-      )}
-      {delegate.isSuccess && delegate.data?.txHash && (
-        <div className="alert alert-success card-status">
+      {state && "data" in state && state.data.txHash && (
+        <output className="alert alert-success card-status">
           Access granted!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${delegate.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {delegate.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

@@ -22,8 +22,11 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * ```
  */
 export class ChainMismatchError extends ZamaError {
+  /** Name of the operation that triggered the check. */
   readonly operation: string;
+  /** Chain ID the signer is connected to. */
   readonly signerChainId: number;
+  /** Chain ID the provider is connected to. */
   readonly providerChainId: number;
 
   constructor(

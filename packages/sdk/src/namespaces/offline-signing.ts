@@ -40,6 +40,7 @@ import type {
 export class OfflineSigning {
   readonly #offlineSigningService: OfflineSigningService;
 
+  /** @internal */
   constructor(offlineSigningService: OfflineSigningService) {
     this.#offlineSigningService = offlineSigningService;
   }

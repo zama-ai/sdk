@@ -53,7 +53,11 @@ import { toError } from "../utils";
 import { assertBigint } from "../utils/assertions";
 import type { EncryptionService } from "./encryption-service";
 
-/** Configuration for {@link OfflineSigningService}. */
+/**
+ * Configuration for {@link OfflineSigningService}.
+ *
+ * @internal
+ */
 export interface OfflineSigningServiceConfig {
   /**
    * Optional signer. `prepare`, `broadcast`, `resume`, and `refresh` work

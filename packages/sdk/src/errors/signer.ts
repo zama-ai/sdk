@@ -5,6 +5,7 @@ import { ZamaError, ZamaErrorCode } from "./base";
  * Base class for signer/account readiness failures.
  */
 export class SignerRequiredError extends ZamaError {
+  /** Name of the operation that required a signer. */
   readonly operation: string;
 
   constructor(code: ZamaErrorCode, operation: string, message: string, options?: ErrorOptions) {

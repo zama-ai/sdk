@@ -30,6 +30,7 @@ export class MutableWalletAccountStore implements WalletAccountStore {
     this.#resolved = initial !== undefined;
   }
 
+  /** Return the current wallet account snapshot, or `undefined` when none is set. */
   getSnapshot(): WalletAccount | undefined {
     return this.#snapshot;
   }
@@ -59,6 +60,11 @@ export class MutableWalletAccountStore implements WalletAccountStore {
     this.#emit({ previous, next });
   }
 
+  /**
+   * Register a listener for wallet account changes, emitting the current
+   * snapshot immediately if one exists.
+   * @returns An unsubscribe function.
+   */
   subscribe(listener: WalletAccountListener): () => void {
     this.#listeners.add(listener);
     const snapshot = this.#snapshot;

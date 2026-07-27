@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.4.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.10...v3.4.0-alpha.11) (2026-07-23)
+
+### Code Refactoring
+
+- **examples:** improve example apps — viem/wagmi, React 19 form actions, a11y ([#576](https://github.com/zama-ai/sdk/issues/576)) ([14d385b]())
+
+## [3.4.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.9...v3.4.0-alpha.10) (2026-07-21)
+
+### Code Refactoring
+
+- **sdk:** API surface audit — resolve all ae-forgotten-export leaks [SDK-209] ([#539](https://github.com/zama-ai/sdk/issues/539)) ([c01102c]()), closes [#406]() [#458]()
+
+## [3.4.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.8...v3.4.0-alpha.9) (2026-07-20)
+
+### Features
+
+- **sdk:** add DelegationService.getStatus ([#572](https://github.com/zama-ai/sdk/issues/572)) ([2f91c58]())
+
+## [3.4.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.7...v3.4.0-alpha.8) (2026-07-20)
+
+### Code Refactoring
+
+- **sdk:** extract duplicated decrypt-cache invalidation in Permits ([#573](https://github.com/zama-ai/sdk/issues/573)) ([33f44cd]())
+
+## [3.4.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.6...v3.4.0-alpha.7) (2026-07-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk to 1.1.0-alpha.9 ([#566](https://github.com/zama-ai/sdk/issues/566)) ([66ca1ad]())
+
+## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
+
+### Code Refactoring
+
+- **codemod:** rewrite renamed credentials config keys, flag silent drops [SDK-249] ([#544](https://github.com/zama-ai/sdk/issues/544)) ([c0c54ca]())
+
 ## [3.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.4...v3.4.0-alpha.5) (2026-07-16)
 
 ### Features

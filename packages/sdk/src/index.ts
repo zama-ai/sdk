@@ -10,7 +10,7 @@
 // Note: web() and node() transport factories live in their own entry points
 // (@zama-fhe/sdk/web and @zama-fhe/sdk/node) to keep environment-specific
 // dependencies out of this barrel.
-export { createConfig, cleartext, resolveChainRelayers, resolveStorage } from "./config";
+export { createConfig, cleartext } from "./config";
 export type {
   ZamaConfig,
   ZamaConfigBase,
@@ -20,10 +20,7 @@ export type {
   RelayerConfig,
   CleartextRelayerConfig,
   AtLeastOneChain,
-  ResolvedChainRelayer,
 } from "./config";
-export type { ChainRouter } from "./chains/router";
-export type { FhevmRelayerSDK as RelayerSDK } from "./relayer/types";
 export type {
   EncryptResult,
   EncryptParams,
@@ -33,6 +30,12 @@ export type {
   EIP712TypedData,
   TypedValue,
   DecryptValuesParameters,
+  RelayerOptions,
+  FhevmRelayerOptions,
+  FhevmRuntimeConfig,
+  FhevmClientOptions,
+  FhevmClient,
+  RelayerSDK,
 } from "./relayer/types";
 
 // Decrypt parameter/result types — aligned with the canonical Zama glossary.
@@ -69,6 +72,7 @@ export type {
   BatchDecryptResult,
   DelegatedDecryptOptions,
 } from "./services/decryption-service";
+export type { DelegationStatus } from "./services/delegation-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
 export {
@@ -87,7 +91,8 @@ export {
   ChromeSessionStorage,
   chromeSessionStorage,
 } from "./storage";
-export type { SerializedTransportKeyPair, StoredTransportKeyPair, Permission } from "./credentials";
+export type { SerializedTransportKeyPair, Permission, ChecksummedAddress } from "./credentials";
+export type { SerializedPermit, SerializedPermitEip712 } from "./credentials/types";
 export type {
   GenericSigner,
   GenericProvider,
@@ -137,7 +142,6 @@ export { ZamaSDKEvents } from "./events";
 export type {
   ZamaSDKEventType,
   ZamaSDKEvent,
-  ZamaSDKEventInput,
   ZamaSDKEventListener,
   BaseEvent,
   ShieldSubmittedEvent,
@@ -203,6 +207,7 @@ export {
   DelegationExpirationTooSoonError,
   DelegationNotPropagatedError,
   matchZamaError,
+  type ErrorForCode,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
 export { ensureHexSignature } from "./signer/util";

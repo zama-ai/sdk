@@ -8,6 +8,7 @@ import { confidentialBalancesQueryOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
 import { useWalletAccount } from "../utils/wallet-account";
 
+/** Configuration for {@link useConfidentialBalances}. */
 export interface UseConfidentialBalancesConfig {
   /** Addresses of the confidential token contracts to batch-query. The query is disabled while empty. */
   addresses: Address[];
@@ -15,6 +16,7 @@ export interface UseConfidentialBalancesConfig {
   account: Address | undefined;
 }
 
+/** TanStack Query options accepted by {@link useConfidentialBalances} (excluding `queryKey`/`queryFn`). */
 export interface UseConfidentialBalancesOptions extends Omit<
   UseQueryOptions<BatchBalancesResult>,
   "queryKey" | "queryFn" | "enabled"

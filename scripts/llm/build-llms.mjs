@@ -49,6 +49,7 @@ function formatGroupedDocsSection(entries) {
     { title: "SDK Reference", categories: ["reference-sdk"] },
     { title: "React Reference", categories: ["reference-react"] },
     { title: "Concepts", categories: ["concepts"] },
+    { title: "Changelog", categories: ["changelog"] },
   ];
 
   const lines = ["## Official Documentation", ""];

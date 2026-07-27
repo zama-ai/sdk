@@ -7,14 +7,21 @@ import {
   MOCK_CTOKEN2_ADDRESS,
 } from "./fixtures";
 
-// All tests in this suite start with the wallet already connected on Hoodi.
+// Wagmi reconnects from persisted connector state, so these isolated tests use
+// the explicit connect flow before reaching the main screen.
 // The RPC interceptor returns ABI-encoded registry data so that useListPairs
 // resolves with two token pairs (USDC Mock / USDT Mock).
 test.describe("main screen", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc();
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: HOODI_CHAIN_ID_HEX });
+    await mockWallet({
+      accounts: [],
+      chainId: HOODI_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
     await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("Balances")).toBeVisible();
   });
 
   test("renders all operation cards", async ({ page }) => {
@@ -35,7 +42,7 @@ test.describe("main screen", () => {
 
   test("shows token selector populated from the registry", async ({ page }) => {
     // useListPairs resolves via the mock eth_call handler in the RPC interceptor
-    // (the hybrid provider routes eth_call directly to the Hoodi HTTP RPC).
+    // (wagmi routes eth_call through its viem HTTP transport).
     // Wait for the registry to load before asserting option content.
     const select = page.getByRole("combobox");
     await expect(select).toBeVisible();
@@ -83,13 +90,18 @@ test.describe("main screen", () => {
 });
 
 // Tests for the registry empty state — simulates a registry that has no valid pairs.
-// emptyRegistry is passed to mockRpc (not mockWallet) because the hybrid provider
-// routes eth_call directly to the Hoodi HTTP RPC, bypassing window.ethereum.
+// emptyRegistry is passed to mockRpc because wagmi routes reads over HTTP.
 test.describe("registry empty state", () => {
   test.beforeEach(async ({ page, mockRpc, mockWallet }) => {
     await mockRpc({ emptyRegistry: true });
-    await mockWallet({ accounts: [TEST_ADDRESS], chainId: HOODI_CHAIN_ID_HEX });
+    await mockWallet({
+      accounts: [],
+      chainId: HOODI_CHAIN_ID_HEX,
+      requestAccounts: [TEST_ADDRESS],
+    });
     await page.goto("/");
+    await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
+    await expect(page.getByText("No tokens available.")).toBeVisible();
   });
 
   test("shows no tokens available when registry returns no pairs", async ({ page }) => {

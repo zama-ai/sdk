@@ -1,5 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import type { TypedValue } from "@zama-fhe/sdk";
+import { MAX_UINT64 } from "@zama-fhe/sdk/contracts";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useDelegatedDecryptValues } from "../use-delegated-decrypt";
 
@@ -7,8 +8,10 @@ describe("useDelegatedDecryptValues", () => {
   test("delegates to sdk.decryption.delegatedDecryptValues", async ({
     renderWithProviders,
     relayer,
+    provider,
     handle,
   }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64); // getDelegationExpiry → permanent
     vi.mocked(relayer.decryptValues).mockResolvedValue([
       { type: "uint64", value: 300n } as TypedValue,
     ]);

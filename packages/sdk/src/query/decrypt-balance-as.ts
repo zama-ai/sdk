@@ -4,10 +4,13 @@ import type { MutationFactoryOptions } from "./factory-types";
 
 /** Variables for {@link decryptBalanceAsMutationOptions}. */
 export interface DecryptBalanceAsParams {
+  /** Address of the account that delegated decryption rights to the connected wallet. */
   delegatorAddress: Address;
+  /** Account whose on-chain balance to read; defaults to the delegator address. */
   accountAddress?: Address;
 }
 
+/** Builds TanStack Query mutation options for {@link Token.decryptBalanceAs | decrypting} a balance via delegated decryption credentials. @see {@link DecryptBalanceAsParams} */
 export function decryptBalanceAsMutationOptions(
   token: Token,
 ): MutationFactoryOptions<

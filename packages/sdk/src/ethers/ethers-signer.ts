@@ -81,6 +81,11 @@ export class EthersSigner extends BaseSigner implements GenericSigner {
     }
   }
 
+  /**
+   * Return the connected wallet account, or throw {@link WalletAccountNotReadyError}
+   * while the initial async lookup is pending, or {@link WalletNotConnectedError}
+   * when no wallet is connected.
+   */
   override requireWalletAccount(operation: string): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account && !this.walletAccount.isReady()) {
@@ -92,6 +97,7 @@ export class EthersSigner extends BaseSigner implements GenericSigner {
     return account;
   }
 
+  /** Re-fetch the wallet account from the provider or signer and update `walletAccount`. */
   refreshWalletAccount(): Promise<WalletAccount | undefined> {
     if (this.#eip1193) {
       return this.#refreshFromEthereum();
@@ -102,6 +108,7 @@ export class EthersSigner extends BaseSigner implements GenericSigner {
     return Promise.resolve(undefined);
   }
 
+  /** Unsubscribe from the EIP-1193 provider's wallet lifecycle events. */
   protected override onDispose(): void {
     this.#unsubscribeProvider();
   }
@@ -125,6 +132,7 @@ export class EthersSigner extends BaseSigner implements GenericSigner {
     return { address: getAddress(address), chainId: Number(network.chainId) };
   }
 
+  /** Sign EIP-712 typed data (used for decrypt authorization). */
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const signer = await this.#resolveSigner();
     const { domain, types, message } = typedData;
@@ -139,6 +147,7 @@ export class EthersSigner extends BaseSigner implements GenericSigner {
     return sig;
   }
 
+  /** Send a write transaction and return the tx hash. */
   async writeContract<
     const TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,

@@ -16,6 +16,7 @@ import { MutableWalletAccountStore } from "./wallet-account-store";
  * with {@link createWalletAccountStore} remains fully supported.
  */
 export abstract class BaseSigner implements Disposable {
+  /** Observable wallet account readiness state. */
   readonly walletAccount: MutableWalletAccountStore;
   #disposed = false;
 
@@ -23,6 +24,7 @@ export abstract class BaseSigner implements Disposable {
     this.walletAccount = new MutableWalletAccountStore(initial);
   }
 
+  /** Return the connected wallet account or throw {@link WalletNotConnectedError}. */
   requireWalletAccount(operation: string): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account) {
@@ -31,8 +33,10 @@ export abstract class BaseSigner implements Disposable {
     return account;
   }
 
+  /** Sign EIP-712 typed data (used for decrypt authorization). */
   abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
 
+  /** Release adapter-owned wallet watchers or provider event listeners; idempotent. */
   dispose(): void {
     if (this.#disposed) {
       return;
@@ -41,9 +45,11 @@ export abstract class BaseSigner implements Disposable {
     this.onDispose();
   }
 
+  /** `Disposable` support; delegates to {@link BaseSigner.dispose}. */
   [Symbol.dispose](): void {
     this.dispose();
   }
 
+  /** Subclass cleanup hook, invoked once on the first {@link BaseSigner.dispose} call. */
   protected onDispose(): void {}
 }

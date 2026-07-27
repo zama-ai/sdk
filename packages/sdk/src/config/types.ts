@@ -1,7 +1,7 @@
 import type { AtLeastOneChain, FheChain } from "../chains";
 import type { ZamaSDKEventListener } from "../events";
 import type { ChainRouter } from "../chains/router";
-import type { FhevmRuntimeConfig, FhevmRelayerSDK } from "../relayer/types";
+import type { FhevmRuntimeConfig, RelayerSDK } from "../relayer/types";
 import type { GenericLogger, GenericProvider, GenericSigner, GenericStorage } from "../types";
 
 export type { AtLeastOneChain };
@@ -13,18 +13,24 @@ export type { AtLeastOneChain };
  * dispatcher calls it once per chain.
  */
 export interface RelayerConfig {
+  /** Discriminant identifying the relayer transport (e.g. `"web"`, `"node"`, `"cleartext"`). */
   readonly type: string;
-  /** Create a single-chain relayer. */
-  readonly createRelayer: (chain: FheChain) => FhevmRelayerSDK;
+  /**
+   * Create a single-chain relayer.
+   * @internal
+   */
+  readonly createRelayer: (chain: FheChain) => RelayerSDK;
 }
 
 /** Web relayer config — drives the FHE backend directly. */
 export interface WebRelayerConfig extends RelayerConfig {
+  /** Discriminant for the web transport. */
   readonly type: "web";
 }
 
 /** Cleartext relayer config — drives the FHE backend in cleartext mode. */
 export interface CleartextRelayerConfig extends RelayerConfig {
+  /** Discriminant for the cleartext transport. */
   readonly type: "cleartext";
 }
 
@@ -81,6 +87,7 @@ export interface ZamaConfigGeneric<
    * `SignerNotConfiguredError` when invoked without a signer.
    */
   signer?: GenericSigner;
+  /** Provider for public host-chain reads. */
   provider: GenericProvider;
 }
 
@@ -92,6 +99,7 @@ declare const zamaConfigBrand: unique symbol;
  */
 export type ZamaConfig = {
   readonly chains: readonly FheChain[];
+  /** @internal */
   readonly router: ChainRouter;
   readonly provider: GenericProvider;
   readonly signer: GenericSigner | undefined;
