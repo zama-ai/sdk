@@ -235,16 +235,18 @@ But if you need manual control (for example, after an external contract interact
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
-// Invalidate all balance queries
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
-
-// Invalidate one token
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
+// Refresh a token's balance. `invalidateBalanceQueries` is the same helper the SDK's
+// own mutations use — it invalidates both the single-token (`confidentialBalance`) and
+// batched (`confidentialBalances`) caches, which are disjoint namespaces. Hand-composing
+// `zamaQueryKeys.confidentialBalance.*` keys only hits one and silently leaves the other stale.
+invalidateBalanceQueries(queryClient, "0xToken");
 ```
+
+See the [query keys reference](../reference/react/query-keys.md#invalidatebalancequeries) for the raw key factories when you need finer targeting.
 
 {% endtab %}
 {% endtabs %}
