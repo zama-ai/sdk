@@ -47,8 +47,8 @@ importers:
         specifier: ^14.1.1
         version: 14.1.1(semantic-release@25.0.5(typescript@6.0.3))
       '@size-limit/file':
-        specifier: ^12.1.0
-        version: 12.1.0(size-limit@12.1.0(jiti@2.7.0))
+        specifier: ^13.0.1
+        version: 13.0.1(size-limit@12.1.0(jiti@2.7.0))
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.2(react@19.2.7)
@@ -1437,11 +1437,11 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
-  '@size-limit/file@12.1.0':
-    resolution: {integrity: sha512-eGwDcIufnNnvJRzv3liDOn6MAOGgmOTUdpeGQ2KuRTlgIgO54AJH1ilvktlJc6PIjNfwpYY0dOGyap1QgM1swQ==}
+  '@size-limit/file@13.0.1':
+    resolution: {integrity: sha512-qdbGUxRAjym5gnkYEjsNsdOfmkDUvDX06FLhLGUxQ0oJtIWDd2lsOmTMwh5JuAV1XmJCplbqpMJ2b5eIhHl7Lg==}
     engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
     peerDependencies:
-      size-limit: 12.1.0
+      size-limit: 13.0.1
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -4797,7 +4797,7 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@size-limit/file@12.1.0(size-limit@12.1.0(jiti@2.7.0))':
+  '@size-limit/file@13.0.1(size-limit@12.1.0(jiti@2.7.0))':
     dependencies:
       size-limit: 12.1.0(jiti@2.7.0)
 
