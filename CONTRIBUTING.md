@@ -41,7 +41,7 @@ test/
   playwright/     # E2E runner (@zama-fhe/playwright) driving the test apps
   test-nextjs/    # Next.js test app
   test-vite/      # Vite test app
-  test-components/, test-tanstack-start/
+  test-components/  # Shared React components/forms reused across the test apps
 codemods/
   sdk-migration-v3/   # Upgrade codemod for the v3.x line
 examples/         # 9 runnable example apps (react-viem/wagmi/ethers, node-*, example-*)

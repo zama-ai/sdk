@@ -106,7 +106,7 @@ Use `sdk.permits.warmTransportKeyPairScope(scopeId)`, not `sdk.permits.warmTrans
 
 The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the integrity guarantee depends on the mode: `verified-blob` SHA-verifies the fetched bytes against hashes pinned in the library and fails initialization on mismatch, `precheck-direct-url` runs a precheck request before loading directly from the URL, and `trusted-direct-url` loads directly with no verification (fastest, least defensive). The `embedded-base64` mode inlines the WASM as base64 with no network fetch at all. See the [`wasmAssetLoadMode` mode table](../changelog/alpha.md) for the full list.
 
 ![WASM loading and integrity](../images/security-wasm-integrity.svg)
 

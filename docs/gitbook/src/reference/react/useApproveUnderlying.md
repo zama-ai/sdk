@@ -5,7 +5,7 @@ description: Low-level escape hatch that approves the wrapper contract to spend 
 
 # useApproveUnderlying
 
-Approve the confidential wrapper contract to spend the underlying ERC-20. Defaults to a max `uint256` approval, and resets an existing non-zero allowance to zero first when required (as tokens like USDT demand).
+Approve the confidential wrapper contract to spend the underlying ERC-20. Defaults to a max `uint256` approval. When required — as tokens like USDT demand — it first resets an existing non-zero allowance to zero.
 
 {% hint style="warning" %}
 This is a low-level escape hatch for pre-approving outside a shield call. Product code should prefer [`useShield`](./useShield.md), which validates the ERC-20 balance, manages approvals, and submits the shield in a single call. Don't combine `useApproveUnderlying` with [`useWrap`](./useWrap.md) to recreate `useShield` by hand.

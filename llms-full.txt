@@ -10266,8 +10266,8 @@ function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: tokenAddress });
 
   async function handleSend() {
-    const { txHash, receipt } = await transfer({ to: "0xRecipient", amount: 1000n });
-    console.log("Confirmed in block", receipt.blockNumber);
+    const { txHash } = await transfer({ to: "0xRecipient", amount: 1000n });
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (
@@ -10502,12 +10502,12 @@ function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom(tokenAddress);
 
   async function handleTransfer() {
-    const { txHash, receipt } = await transferFrom({
+    const { txHash } = await transferFrom({
       from: "0xOwner",
       to: "0xRecipient",
       amount: 500n,
     });
-    console.log("Confirmed in block", receipt.blockNumber);
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (
@@ -10712,13 +10712,13 @@ function OperatorTransferAndCall({ tokenAddress }: { tokenAddress: `0x${string}`
     useConfidentialTransferFromAndCall(tokenAddress);
 
   async function handleTransfer() {
-    const { txHash, receipt } = await transferFromAndCall({
+    const { txHash } = await transferFromAndCall({
       from: "0xOwner",
       to: "0xReceiverContract",
       amount: 500n,
       data: "0xabcd",
     });
-    console.log("Confirmed in block", receipt.blockNumber);
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (
@@ -11163,7 +11163,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useApproveUnderlying
 
-Approve the confidential wrapper contract to spend the underlying ERC-20. Defaults to a max `uint256` approval, and resets an existing non-zero allowance to zero first when required (as tokens like USDT demand).
+Approve the confidential wrapper contract to spend the underlying ERC-20. Defaults to a max `uint256` approval. When required — as tokens like USDT demand — it first resets an existing non-zero allowance to zero.
 
 
 > [!WARNING]
@@ -13776,6 +13776,7 @@ function App() {
 ## Related
 
 - [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useShield.md) — shield tokens (handles approval automatically)
+- [`useApproveUnderlying`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md) — the write counterpart; approve the wrapper to spend the underlying ERC-20
 - [`zamaQueryKeys.underlyingAllowance`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/query-keys.md) — cache keys for manual invalidation
 
 ## useWrapperDiscovery
@@ -17549,7 +17550,7 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the SDK SHA-verifies fetched bytes against hashes pinned in the library before executing them; a hash mismatch always fails initialization rather than falling back.
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the integrity guarantee depends on the mode: `verified-blob` SHA-verifies the fetched bytes against hashes pinned in the library and fails initialization on mismatch, `precheck-direct-url` runs a precheck request before loading directly from the URL, and `trusted-direct-url` loads directly with no verification (fastest, least defensive). The `embedded-base64` mode inlines the WASM as base64 with no network fetch at all. See the [`wasmAssetLoadMode` mode table](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md) for the full list.
 
 ![WASM loading and integrity](../images/security-wasm-integrity.svg)
 

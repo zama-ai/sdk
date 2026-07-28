@@ -101,4 +101,5 @@ function App() {
 ## Related
 
 - [`useShield`](./useShield.md) — shield tokens (handles approval automatically)
+- [`useApproveUnderlying`](./useApproveUnderlying.md) — the write counterpart; approve the wrapper to spend the underlying ERC-20
 - [`zamaQueryKeys.underlyingAllowance`](./query-keys.md) — cache keys for manual invalidation

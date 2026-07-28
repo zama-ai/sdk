@@ -22,7 +22,7 @@
 Internal feedback that originally set this split (track 1 was deferred first, then completed):
 _"going from relayer-sdk to fhevm/sdk is not in scope for now until future network upgrades. However,
 aligning on a single public glossary is something we can do already to be consistent across all
-products — just updating our public APIs."_ The dependency swap was subsequently prioritised and
+products — just updating our public APIs."_ The dependency swap was subsequently prioritized and
 landed in #458.
 
 ## Finding 1 — the dependency swap (SHIPPED in #458)

@@ -26,13 +26,13 @@ function OperatorTransferAndCall({ tokenAddress }: { tokenAddress: `0x${string}`
     useConfidentialTransferFromAndCall(tokenAddress);
 
   async function handleTransfer() {
-    const { txHash, receipt } = await transferFromAndCall({
+    const { txHash } = await transferFromAndCall({
       from: "0xOwner",
       to: "0xReceiverContract",
       amount: 500n,
       data: "0xabcd",
     });
-    console.log("Confirmed in block", receipt.blockNumber);
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (

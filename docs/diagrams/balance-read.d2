@@ -24,7 +24,7 @@ read: "Read encrypted value\nconfidentialBalanceOf (eth_call)\n→ bytes32 encry
 }
 
 # --- Step 2: clear-value cache lookup ---
-lookup: "Look up clear-value cache\nkey: token + owner + encryptedValue" {
+lookup: "Look up clear-value cache\nkey: requester + contractAddress + encryptedValue" {
   style.fill: "#E8EAF6"
   style.stroke: "#283593"
   style.font-size: 14

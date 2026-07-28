@@ -51,7 +51,7 @@ Run the example checks:
 ```bash
 npm run lint
 npm run typecheck
-npm run build
+npm run build -- --webpack
 ```
 
 ## Environment

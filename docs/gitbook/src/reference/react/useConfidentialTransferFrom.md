@@ -25,12 +25,12 @@ function OperatorTransfer({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transferFrom, isPending } = useConfidentialTransferFrom(tokenAddress);
 
   async function handleTransfer() {
-    const { txHash, receipt } = await transferFrom({
+    const { txHash } = await transferFrom({
       from: "0xOwner",
       to: "0xRecipient",
       amount: 500n,
     });
-    console.log("Confirmed in block", receipt.blockNumber);
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (
