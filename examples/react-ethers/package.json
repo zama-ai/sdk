@@ -13,7 +13,7 @@
     "@zama-fhe/react-sdk": "3.3.0-alpha.9",
     "@zama-fhe/sdk": "3.3.0-alpha.9",
     "ethers": "^6.17.0",
-    "next": "^16.2.5",
+    "next": "^16.2.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
