@@ -64,7 +64,7 @@ const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner
 
 ## Return Type
 
-`data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
+`data` is `bigint` — the current ERC-20 allowance in the token's base units.
 
 {% include ".gitbook/includes/query-result.md" %}
 

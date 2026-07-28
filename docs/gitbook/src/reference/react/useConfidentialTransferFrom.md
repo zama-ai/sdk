@@ -114,7 +114,7 @@ Recipient address.
 
 `bigint`
 
-Number of tokens to transfer (in the token's smallest unit). Encrypted before submission.
+Number of tokens to transfer (in the token's base units). Encrypted before submission.
 
 {% tabs %}
 {% tab title="component.tsx" %}

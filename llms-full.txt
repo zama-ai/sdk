@@ -10377,7 +10377,7 @@ Recipient address.
 
 `bigint`
 
-Number of tokens to transfer (in the token's smallest unit). Encrypted before submission.
+Number of tokens to transfer (in the token's base units). Encrypted before submission.
 
 ### skipBalanceCheck
 
@@ -10609,7 +10609,7 @@ Recipient address.
 
 `bigint`
 
-Number of tokens to transfer (in the token's smallest unit). Encrypted before submission.
+Number of tokens to transfer (in the token's base units). Encrypted before submission.
 
 
 ### Tab: component.tsx
@@ -11042,7 +11042,7 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 `bigint`
 
-Number of tokens to shield (in the token's smallest unit).
+Number of tokens to shield (in the token's base units).
 
 ```ts
 await shield({ amount: 1000n });
@@ -13686,7 +13686,7 @@ const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner
 
 ## Return Type
 
-`data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
+`data` is `bigint` — the current ERC-20 allowance in the token's base units.
 
 ### `data`
 
@@ -18568,12 +18568,12 @@ operation routing.
 
 ## What This Example Demonstrates
 
-| Section                    | Operations                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| 1 — Setup                  | Wallets, provider, SDK config, Node.js relayer transport                       |
-| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                              |
-| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`            |
-| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isDelegated` |
+| Section                    | Operations                                                                  |
+| -------------------------- | --------------------------------------------------------------------------- |
+| 1 — Setup                  | Wallets, provider, SDK config, Node.js relayer transport                    |
+| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                           |
+| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`         |
+| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isActive` |
 
 ## Architecture
 
@@ -18753,13 +18753,17 @@ Delegation lets Account B decrypt Account A's confidential balance without holdi
 Account A's private key.
 
 ```ts
-await tokenA.delegateDecryption({ delegateAddress: walletB.address as Address });
+await sdkA.delegations.delegateDecryption({
+  contractAddress: confidentialTokenAddress,
+  delegateAddress: walletB.address as Address,
+});
 ```
 
 The example then verifies the grant:
 
 ```ts
-const isDelegated = await tokenA.isDelegated({
+const isDelegated = await sdkA.delegations.isActive({
+  contractAddress: confidentialTokenAddress,
   delegatorAddress: walletA.address as Address,
   delegateAddress: walletB.address as Address,
 });
@@ -19017,12 +19021,12 @@ operation routing.
 
 ## What This Example Demonstrates
 
-| Section                    | Operations                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| 1 — Setup                  | Accounts, viem clients, SDK config, Node.js relayer transport                  |
-| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                              |
-| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`            |
-| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isDelegated` |
+| Section                    | Operations                                                                  |
+| -------------------------- | --------------------------------------------------------------------------- |
+| 1 — Setup                  | Accounts, viem clients, SDK config, Node.js relayer transport               |
+| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                           |
+| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`         |
+| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isActive` |
 
 ## Architecture
 
@@ -19212,13 +19216,17 @@ Delegation lets Account B decrypt Account A's confidential balance without holdi
 Account A's private key.
 
 ```ts
-await tokenA.delegateDecryption({ delegateAddress: accountB.address as Address });
+await sdkA.delegations.delegateDecryption({
+  contractAddress: confidentialTokenAddress,
+  delegateAddress: accountB.address as Address,
+});
 ```
 
 The example verifies the grant:
 
 ```ts
-const isDelegated = await tokenA.isDelegated({
+const isDelegated = await sdkA.delegations.isActive({
+  contractAddress: confidentialTokenAddress,
   delegatorAddress: accountA.address as Address,
   delegateAddress: accountB.address as Address,
 });

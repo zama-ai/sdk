@@ -137,9 +137,9 @@ golden `etc/sdk-*.api.md`), so their decrypt-wording exports fall under the rule
 
 ### Why a plain rename, not a breaking change
 
-We are at `@zama-fhe/sdk@3.1.0-alpha.1` (prerelease/alpha line). The reviewer asked to drop the
-`@deprecated` aliases, so the old names are removed outright — **but not to mark it as a breaking
-change**, since we're still in prerelease where this kind of rename is expected. Concretely the commit
+This landed on the `@zama-fhe/sdk` `3.x` prerelease/alpha line. The reviewer asked to drop the
+`@deprecated` aliases, so the old names were removed outright — **but not marked as a breaking
+change**, since prerelease is where this kind of rename is expected. Concretely the commit
 stays `refactor(sdk):` with **no `!` and no `BREAKING CHANGE:` footer**, so semantic-release keeps it
 on the alpha channel without a major bump. (Note: `.releaserc.cjs` disables `BREAKING CHANGE:` notes
 via a `noteKeywords` sentinel, but a header `!` would still escalate to major — hence no `!`.)
