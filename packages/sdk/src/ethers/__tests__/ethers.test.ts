@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
-import { encodeAbiParameters } from "viem";
-import { Wallet, ParamType } from "ethers";
+import { decodeFunctionResult, encodeAbiParameters, encodeFunctionResult } from "viem";
+import { Wallet } from "ethers";
 import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
@@ -346,84 +346,125 @@ describe("EthersProvider", () => {
   });
 
   describe("readContract", () => {
-    // The mocked contract's `getFunction` hands back `mockContractMethod`; give it the
-    // `fragment.outputs` the real ethers method exposes so the provider can walk the parsed
-    // output types. Types are Solidity strings ethers parses into `ParamType`s.
-    const setOutputs = (...types: string[]) => {
-      (mockContractMethod as unknown as { fragment: { outputs: ParamType[] } }).fragment = {
-        outputs: types.map((type) => ParamType.from(type)),
-      };
-    };
+    // EthersProvider uses ethers as transport only: it performs an `eth_call` and decodes the raw
+    // return data with viem. These tests stub `call` with real ABI-encoded return data (encoded via
+    // viem, i.e. exactly what a node returns) and assert the provider hands back viem-identical
+    // shapes — the return-type contract both providers implement. The earlier tests mocked
+    // `ethers.Contract` and injected `fragment.outputs`, so they exercised neither real decoding nor
+    // the ethers/viem divergence, which is how the named-tuple shape regressed unnoticed.
+    const providerReturning = (data: Hex) =>
+      new EthersProvider({ provider: { call: vi.fn().mockResolvedValue(data) } as never });
 
-    test("creates an ethers Contract and calls the function with args", async ({
-      tokenAddress,
-      userAddress,
-    }) => {
-      setOutputs("uint256");
-      mockContractMethod.mockResolvedValueOnce(42n);
-      const mockProvider = { getNetwork: vi.fn() };
-      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
+    // Builds a single `read()` view function whose outputs are the given ABI params, keeping the
+    // const type precise so viem can infer the encode/decode result shape.
+    const abiWith = <const TOutputs extends readonly unknown[]>(outputs: TOutputs) =>
+      [{ type: "function", name: "read", stateMutability: "view", inputs: [], outputs }] as const;
 
-      const config = {
+    test("returns a wide integer (uint256) as a bigint, like viem", async ({ tokenAddress }) => {
+      const abi = abiWith([{ type: "uint256" }]);
+      const data = encodeFunctionResult({ abi, functionName: "read", result: 42n });
+      const result = await providerReturning(data).readContract({
         address: tokenAddress,
-        abi: [{ name: "balanceOf" }],
-        functionName: "balanceOf",
-        args: [userAddress] as const,
-      };
+        abi,
+        functionName: "read",
+        args: [],
+      });
 
-      const result = await ethersProvider.readContract(config);
-      expect(mockContractMethod).toHaveBeenCalledWith(userAddress);
-      // uint256 is wider than 48 bits, so it stays a `bigint` — matching viem.
       expect(result).toBe(42n);
+      expect(result).toEqual(decodeFunctionResult({ abi, functionName: "read", data }));
     });
 
     test("narrows a small integer output (uint8) to a number, like viem", async ({
       tokenAddress,
     }) => {
-      setOutputs("uint8");
-      mockContractMethod.mockResolvedValueOnce(6n);
-      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
-
-      const result = await ethersProvider.readContract({
+      const abi = abiWith([{ type: "uint8" }]);
+      const data = encodeFunctionResult({ abi, functionName: "read", result: 6 });
+      const result = await providerReturning(data).readContract({
         address: tokenAddress,
-        abi: [{ name: "decimals" }],
-        functionName: "decimals",
-        args: [] as const,
+        abi,
+        functionName: "read",
+        args: [],
       });
 
       expect(result).toBe(6);
       expect(typeof result).toBe("number");
     });
 
-    test("normalizes small integers inside an array output", async ({ tokenAddress }) => {
-      setOutputs("uint8[]");
-      mockContractMethod.mockResolvedValueOnce([6n, 18n]);
-      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
-
-      const result = await ethersProvider.readContract({
+    test("narrows small integers nested inside an array output, like viem", async ({
+      tokenAddress,
+    }) => {
+      const abi = abiWith([{ type: "uint8[]" }]);
+      const data = encodeFunctionResult({ abi, functionName: "read", result: [6, 18] });
+      const result = await providerReturning(data).readContract({
         address: tokenAddress,
-        abi: [{ name: "manyDecimals" }],
-        functionName: "manyDecimals",
-        args: [] as const,
+        abi,
+        functionName: "read",
+        args: [],
       });
 
       expect(result).toEqual([6, 18]);
     });
 
-    test("normalizes each value of a multi-output call independently", async ({ tokenAddress }) => {
-      setOutputs("uint8", "uint256");
-      mockContractMethod.mockResolvedValueOnce([6n, 100n]);
-      const ethersProvider = new EthersProvider({ provider: { getNetwork: vi.fn() } as never });
-
-      const result = await ethersProvider.readContract({
+    test("decodes a named tuple/struct to a keyed object, like viem (not a positional array)", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      // Mirrors the registry's `TokenWrapperPair` struct, which callers read via `pair.tokenAddress`.
+      const abi = abiWith([
+        {
+          type: "tuple",
+          components: [
+            { name: "tokenAddress", type: "address" },
+            { name: "confidentialTokenAddress", type: "address" },
+            { name: "isValid", type: "bool" },
+          ],
+        },
+      ]);
+      const pair = {
+        tokenAddress: tokenAddress,
+        confidentialTokenAddress: userAddress,
+        isValid: true,
+      };
+      const data = encodeFunctionResult({ abi, functionName: "read", result: pair });
+      const result = await providerReturning(data).readContract({
         address: tokenAddress,
-        abi: [{ name: "meta" }],
-        functionName: "meta",
-        args: [] as const,
+        abi,
+        functionName: "read",
+        args: [],
+      });
+
+      expect(result).toEqual(pair);
+      expect(result).toEqual(decodeFunctionResult({ abi, functionName: "read", data }));
+    });
+
+    test("decodes each value of a multi-output call independently, like viem", async ({
+      tokenAddress,
+    }) => {
+      const abi = abiWith([{ type: "uint8" }, { type: "uint256" }]);
+      const data = encodeFunctionResult({ abi, functionName: "read", result: [6, 100n] });
+      const result = await providerReturning(data).readContract({
+        address: tokenAddress,
+        abi,
+        functionName: "read",
+        args: [],
       });
 
       // uint8 → number, uint256 → bigint.
       expect(result).toEqual([6, 100n]);
+    });
+
+    test("returns undefined for a function with no outputs, like viem", async ({
+      tokenAddress,
+    }) => {
+      const abi = abiWith([]);
+      const result = await providerReturning("0x").readContract({
+        address: tokenAddress,
+        abi,
+        functionName: "read",
+        args: [],
+      });
+
+      expect(result).toBeUndefined();
     });
   });
 
