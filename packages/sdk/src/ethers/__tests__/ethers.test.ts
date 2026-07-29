@@ -346,12 +346,6 @@ describe("EthersProvider", () => {
   });
 
   describe("readContract", () => {
-    // EthersProvider uses ethers as transport only: it performs an `eth_call` and decodes the raw
-    // return data with viem. These tests stub `call` with real ABI-encoded return data (encoded via
-    // viem, i.e. exactly what a node returns) and assert the provider hands back viem-identical
-    // shapes — the return-type contract both providers implement. The earlier tests mocked
-    // `ethers.Contract` and injected `fragment.outputs`, so they exercised neither real decoding nor
-    // the ethers/viem divergence, which is how the named-tuple shape regressed unnoticed.
     const providerReturning = (data: Hex) =>
       new EthersProvider({ provider: { call: vi.fn().mockResolvedValue(data) } as never });
 
