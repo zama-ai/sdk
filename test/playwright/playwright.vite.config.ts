@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
+import { ANVIL_DEPLOY_TIMEOUT_MS, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -31,7 +31,7 @@ export default defineConfig<{}, WorkerFixtures>({
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
       wait: { stdout: /Anvil ready on port (\d+)/ },
-      timeout: 90_000,
+      timeout: ANVIL_DEPLOY_TIMEOUT_MS,
     },
     {
       command: CI
