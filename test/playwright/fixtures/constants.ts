@@ -19,14 +19,5 @@ export const VITE_ANVIL_PORT = 8546;
 /** Anvil port assigned to the node project. */
 export const NODE_ANVIL_PORT = 8547;
 
-/**
- * Playwright `webServer.timeout` for the `start-anvil.sh` boot, i.e. the budget
- * for anvil to come up AND the cleartext fhevm host stack to deploy before the
- * "Anvil ready" line. That deploy cold-compiles the v13 host contracts (not in
- * the forge build cache) and broadcasts the stack `--slow` (one tx per block),
- * so on a loaded CI runner it lands close to the old 90s budget and tips over
- * on variance. 180s gives the compile + serial broadcast headroom without
- * masking a genuinely stuck deploy — `start-anvil.sh` still bounds real
- * failures via its own retry loop.
- */
-export const ANVIL_DEPLOY_TIMEOUT_MS = 180_000;
+/** Anvil deployment timeout */
+export const ANVIL_DEPLOY_TIMEOUT_MS = 90_000;
