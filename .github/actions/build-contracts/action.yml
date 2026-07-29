@@ -21,13 +21,6 @@ runs:
 
     # Key includes every soldeer.lock so a dependency bump busts the cache —
     # building stale deps is the failure mode a lockfile is meant to prevent.
-    #
-    # Each `out` is paired with its `cache` (solidity-files-cache.json): forge
-    # decides "No files changed, compilation skipped" from the cache dir, not
-    # out/. Without it the e2e cleartext deploy re-invokes `forge script` under
-    # the fhevm host contracts and recompiles the whole v0.13 host stack (~60s
-    # on a CI runner) inside the Playwright webServer boot window, blowing the
-    # deploy timeout. Restoring the cache dir turns that into a no-op.
     - name: Restore Forge build cache
       id: forge-build-cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
