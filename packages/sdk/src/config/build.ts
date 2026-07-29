@@ -1,5 +1,6 @@
 import { hasFhevmRuntimeConfig, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { ChainRouter } from "../chains/router";
+import { toFhevmAuth } from "../chains/to-fhevm-auth";
 import {
   DEFAULT_PERMIT_DURATION_DAYS,
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
@@ -32,6 +33,11 @@ export function buildZamaConfig(
   if (hasFhevmRuntimeConfig()) {
     logger.warn("runtime configuration is already set and cannot be changed.");
   } else {
+    // `@fhevm/sdk`'s eager FHE-key fetch reads `auth` only from this global
+    // config, never per-request, so seed it from the chains or the mainnet
+    // relayer's first key fetch 403s. Single-valued: first chain with `auth`
+    // wins; explicit `runtime.auth` overrides.
+    const { auth } = params.chains.find((chain) => chain.auth !== undefined) ?? {};
     setFhevmRuntimeConfig({
       wasmAssetLoadMode: "auto",
       moduleVersions: "auto",
@@ -40,6 +46,7 @@ export function buildZamaConfig(
         warn: (message) => params.logger?.warn(message),
         debug: (message) => params.logger?.debug(message),
       },
+      ...(auth !== undefined && { auth: toFhevmAuth(auth) }),
       ...params.runtime,
     });
   }
