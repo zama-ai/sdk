@@ -29,7 +29,7 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n });
-    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
@@ -143,7 +143,7 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
@@ -166,7 +166,7 @@ describe("DecryptionService", () => {
       ),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n, [HANDLE_B]: 20n });
 
-    expect(relayer.signDecryptionPermit).toHaveBeenCalledWith(
+    expect(relayer.signLegacyDecryptionPermit).toHaveBeenCalledWith(
       expect.objectContaining({ contractAddresses: [CONTRACT_A, CONTRACT_B] }),
     );
     expect(relayer.decryptValues).toHaveBeenCalledWith(
@@ -215,7 +215,7 @@ describe("DecryptionService", () => {
         userAddress,
       ),
     ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
-    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 

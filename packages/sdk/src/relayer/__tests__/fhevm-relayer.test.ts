@@ -10,7 +10,7 @@ const clients = vi.hoisted(() => {
       checkSignaturesArgs: { handlesList: [], abiEncodedCleartexts: "0x", decryptionProof: "0x" },
     })),
     fetchFheEncryptionKeyBytes: vi.fn(async () => new Uint8Array()),
-    signDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
+    signLegacyDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
     serializeTransportKeyPair: vi.fn(() => "serialized-keypair"),
     serializeSignedDecryptionPermit: vi.fn(() => "serialized-permit"),
     parseTransportKeyPair: vi.fn(async () => ({ publicKey: "0x" })),
@@ -260,12 +260,12 @@ describe("FhevmRelayer request options", () => {
     }
   });
 
-  test("signDecryptionPermit forwards parameters without request options", async () => {
+  test("signLegacyDecryptionPermit forwards parameters without request options", async () => {
     const relayer = new FhevmRelayer({ chain: anvil, options: { timeout: 5_000 } });
     const params = { verifyingContract: CONTRACT } as never;
-    await relayer.signDecryptionPermit(params);
+    await relayer.signLegacyDecryptionPermit(params);
 
-    expect(clients.baseClient.signDecryptionPermit).toHaveBeenCalledWith(params);
+    expect(clients.baseClient.signLegacyDecryptionPermit).toHaveBeenCalledWith(params);
   });
 });
 

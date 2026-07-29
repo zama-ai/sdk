@@ -353,11 +353,11 @@ export class CredentialService {
         signer: this.#signer,
       };
       const signedPermit = isDelegated
-        ? await relayer.signDecryptionPermit({
+        ? await relayer.signLegacyDecryptionPermit({
             ...permitInput,
             delegatorAddress: scope.delegatorAddress,
           })
-        : await relayer.signDecryptionPermit(permitInput);
+        : await relayer.signLegacyDecryptionPermit(permitInput);
 
       const serializedPermit = SerializedPermitSchema.parse(
         relayer.serializeSignedDecryptionPermit({ signedPermit }),

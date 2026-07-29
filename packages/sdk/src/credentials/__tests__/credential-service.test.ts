@@ -100,12 +100,12 @@ describe("CredentialService chain switching", () => {
     const credentialService = createCredentialService({ router });
 
     await credentialService.grantPermit([A]);
-    expect(relayerA.signDecryptionPermit).toHaveBeenCalledOnce();
-    expect(relayerB.signDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayerA.signLegacyDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signLegacyDecryptionPermit).not.toHaveBeenCalled();
 
     router.switchChain(2);
     await credentialService.grantPermit([B]);
-    expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signLegacyDecryptionPermit).toHaveBeenCalledOnce();
   });
 
   test("permits are keyed by the router chain, not the wallet account", async ({

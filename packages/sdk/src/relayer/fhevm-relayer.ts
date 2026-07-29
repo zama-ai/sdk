@@ -79,13 +79,12 @@ export class FhevmRelayer implements RelayerSDK {
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
     const auth = this.#chain.auth ? toFhevmAuth(this.#chain.auth) : undefined;
+    const transport =
+      typeof this.#chain.network === "string"
+        ? http(this.#chain.network)
+        : custom(this.#chain.network);
     const params = {
-      publicClient: createPublicClient({
-        transport:
-          typeof this.#chain.network === "string"
-            ? http(this.#chain.network)
-            : custom(this.#chain.network),
-      }),
+      publicClient: createPublicClient({ transport }),
       chain: toFhevmChain(this.#chain),
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
@@ -232,7 +231,7 @@ export class FhevmRelayer implements RelayerSDK {
    * to the ephemeral transport key pair, gated by the signed permit, and this
    * returns the typed clear value. Build the key pair with
    * {@link generateTransportKeyPair} and the permit with
-   * {@link signDecryptionPermit}.
+   * {@link signLegacyDecryptionPermit}.
    *
    * @example
    * ```ts
@@ -329,7 +328,7 @@ export class FhevmRelayer implements RelayerSDK {
    *
    * @example
    * ```ts
-   * const signedPermit = await relayer.signDecryptionPermit({
+   * const signedPermit = await relayer.signLegacyDecryptionPermit({
    *   transportKeyPair,
    *   contractAddresses: ["0xToken…"],
    *   startTimestamp: Math.floor(Date.now() / 1000),
@@ -340,9 +339,9 @@ export class FhevmRelayer implements RelayerSDK {
    * });
    * ```
    */
-  signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
+  signLegacyDecryptionPermit: FhevmClient["signLegacyDecryptionPermit"] = async (parameters) => {
     await this.#base.init();
-    return this.#base.signDecryptionPermit(parameters);
+    return this.#base.signLegacyDecryptionPermit(parameters);
   };
 
   // Permit/key-pair helpers carry no request options. Parsing initializes the
@@ -418,7 +417,7 @@ export class FhevmRelayer implements RelayerSDK {
    * Generates a fresh ephemeral transport key pair for a user-decrypt session.
    * The relayer re-encrypts decrypted values to this pair's public key, so only
    * the holder of the private key can read them; bind it to a permit via
-   * {@link signDecryptionPermit}.
+   * {@link signLegacyDecryptionPermit}.
    *
    * @example
    * ```ts
