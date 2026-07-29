@@ -444,7 +444,7 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     // `generateTransportKeyPair` returns an opaque, unconstructable key-pair handle
     // post-#458, so the distinct value is injected at `serializeTransportKeyPair` —
     // the step that actually produces the hex the vault stores — instead.
-    vi.mocked(relayer.serializeTransportKeyPair).mockReturnValueOnce({
+    vi.mocked(relayer.serializeTransportKeyPair).mockResolvedValueOnce({
       publicKey:
         `0x${"33".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["publicKey"],
       privateKey:
