@@ -992,7 +992,7 @@ const balance = await token.balanceOf(owner); // connected wallet
 const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
@@ -1037,7 +1037,7 @@ Amounts are encrypted client-side before submission. The SDK builds the input pr
 const { txHash, receipt } = await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
@@ -1086,7 +1086,7 @@ await wrappedToken.shield(1000n, { to: "0xExchangeWallet" });
 await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
@@ -1121,7 +1121,7 @@ await wrappedToken.unshield(500n, {
 await wrappedToken.unshieldAll();
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
@@ -1168,7 +1168,7 @@ if (result?.isValid) {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
@@ -1187,7 +1187,7 @@ const { data } = useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
 const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
@@ -1212,7 +1212,7 @@ for (const pair of page.items) {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useListPairs } from "@zama-fhe/react-sdk";
@@ -3477,7 +3477,7 @@ if (!result) throw new Error("No wrapper registered for this token");
 const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useWrappedToken } from "@zama-fhe/react-sdk";
@@ -3500,7 +3500,7 @@ const { txHash } = await wrappedToken.shield(1000n);
 console.log("Shield tx:", txHash);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
@@ -3528,7 +3528,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "max" });
 await wrappedToken.shield(500n, { approvalStrategy: "max" });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 await shield({ amount: 1000n, approvalStrategy: "max" });
@@ -3546,7 +3546,7 @@ If the user has already approved the wrapper contract (for example, through a se
 await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 await shield({ amount: 1000n, approvalStrategy: "skip" });
@@ -3570,7 +3570,7 @@ const receipt = await sdk.provider.waitForTransactionReceipt(txHash);
 console.log("Confirmed in block:", receipt.blockNumber);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 const { mutateAsync: shield, isPending, isSuccess } = useShield({ address: "0xWrapperAddress" });
@@ -3601,7 +3601,7 @@ await wrappedToken.approveUnderlying(1000n);
 const { txHash } = await wrappedToken.wrap(1000n);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 const approve = useApproveUnderlying("0xWrapperAddress");
@@ -3644,7 +3644,7 @@ Start from a configured SDK instance (see [Configuration](https://raw.githubuser
 const token = sdk.createToken("0xEncryptedERC20Address");
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useToken } from "@zama-fhe/react-sdk";
@@ -3667,7 +3667,7 @@ const { txHash } = await token.confidentialTransfer("0xRecipientAddress", 500n);
 console.log("Transfer tx:", txHash);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
@@ -3697,7 +3697,7 @@ const { txHash } = await token.confidentialTransferFrom(
 );
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
@@ -3730,7 +3730,7 @@ const balance = await token.balanceOf(address);
 console.log("New balance:", balance);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 const {
@@ -3812,7 +3812,7 @@ const { txHash } = await token.confidentialTransferAndCall(VAULT, 500n, data);
 console.log("Deposit tx:", txHash);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTransferAndCall } from "@zama-fhe/react-sdk";
@@ -3887,7 +3887,7 @@ const wrappedToken = sdk.createWrappedToken("0xWrappedEncryptedERC20");
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
@@ -3921,7 +3921,7 @@ await wrappedToken.unshield(500n, {
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
@@ -3954,7 +3954,7 @@ If you want to convert all confidential tokens back to public, use `unshieldAll(
 await wrappedToken.unshieldAll();
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
@@ -3982,7 +3982,7 @@ if (pending) {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
@@ -4031,7 +4031,7 @@ const { unwrapRequestId } = await wrappedToken.unwrap(500n);
 await wrappedToken.finalizeUnwrap(unwrapRequestId);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";
@@ -4101,7 +4101,7 @@ const balance = await token.balanceOf(address);
 console.log(`Confidential balance: ${balance}`);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialBalance, useHasPermit } from "@zama-fhe/react-sdk";
@@ -4148,7 +4148,7 @@ const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useGrantPermit } from "@zama-fhe/react-sdk";
@@ -4228,7 +4228,7 @@ try {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
@@ -4269,7 +4269,7 @@ for (const [address, balance] of results) {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
@@ -4301,7 +4301,7 @@ const [name, symbol, decimals] = await Promise.all([
 ]);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useMetadata } from "@zama-fhe/react-sdk";
@@ -4601,7 +4601,7 @@ try {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 Hooks surface the same error classes on `.error` — narrow them with the same `instanceof` checks, no `try/catch` needed:
 
@@ -4707,7 +4707,7 @@ try {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { NoCiphertextError } from "@zama-fhe/sdk";
@@ -4793,7 +4793,7 @@ async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Pro
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 Feed the same helpers into React Query's `retry` and `retryDelay` — per hook, or globally on your `QueryClient`:
 
@@ -5413,7 +5413,7 @@ const token = sdk.createToken("0xEncryptedERC20");
 await token.setOperator("0xOperator");
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
@@ -5438,7 +5438,7 @@ const expiry = Math.floor(Date.now() / 1000) + 86400;
 await token.setOperator("0xOperator", expiry);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 const expiry = Math.floor(Date.now() / 1000) + 86400;
@@ -5458,7 +5458,7 @@ Query whether a spender is currently an approved operator. This returns `true` o
 const approved = await token.isOperator("0xHolder", "0xSpender");
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialIsOperator } from "@zama-fhe/react-sdk";
@@ -5485,7 +5485,7 @@ const token = sdk.createToken("0xEncryptedERC20");
 await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
@@ -5598,7 +5598,7 @@ const { txHash } = await sdk.delegations.delegateDecryption({
 const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useDelegateDecryption, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
@@ -5639,7 +5639,7 @@ await sdk.delegations.delegateDecryption({
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
@@ -5685,7 +5685,7 @@ const other = await token.decryptBalanceAs({
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useDecryptBalanceAs } from "@zama-fhe/react-sdk";
@@ -5716,7 +5716,7 @@ const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useDelegationStatus } from "@zama-fhe/react-sdk";
@@ -5760,7 +5760,7 @@ for (const [address, balance] of balances) {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useMemo } from "react";
@@ -5793,7 +5793,7 @@ await sdk.delegations.revokeDelegation({
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
@@ -5846,7 +5846,7 @@ try {
 }
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 import { DelegationNotPropagatedError, SigningRejectedError } from "@zama-fhe/sdk";
@@ -5973,7 +5973,7 @@ console.log(decrypted[encryptedValue]); // 42n
 
 {% endcode %}
 
-### Tab: React
+### Tab: React SDK
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
@@ -6138,7 +6138,7 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
 // inputProof — `0x`-prefixed hex proof, required alongside the encrypted values in contract calls
 ```
 
-### Tab: React
+### Tab: React SDK
 
 {% code title="EncryptExample.tsx" %}
 
@@ -6197,7 +6197,7 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
 // inputProof — shared proof for all encrypted values
 ```
 
-### Tab: React
+### Tab: React SDK
 
 ```tsx
 const result = await encrypt.mutateAsync({
@@ -6256,7 +6256,7 @@ await signer.writeContract({
 });
 ```
 
-### Tab: React
+### Tab: React SDK
 
 {% code title="ConfidentialAction.tsx" %}
 
@@ -6323,7 +6323,7 @@ const decrypted = await sdk.decryption.decryptValues([
 
 On a backend signer (a local private key), the permit is signed silently. In a browser, the first call surfaces a wallet prompt — trigger it from an explicit user action, not on load. Reuse the same `sdk` instance so cached permits and decrypted values persist across calls.
 
-### Tab: React
+### Tab: React SDK
 
 Hooks like `useDecryptValues` and `useConfidentialBalance` trigger the permit signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited wallet popup before they have taken any action — a confusing experience that often leads to rejection.
 
@@ -6498,7 +6498,7 @@ const { clearValues } = await sdk.decryption.decryptPublicValues(["0xEncryptedVa
 
 `decryptPublicValues` also returns `decryptionProof` and `abiEncodedClearValues` alongside `clearValues`, so you can submit on-chain finalization transactions that verify the decryption.
 
-### Tab: React
+### Tab: React SDK
 
 {% code title="PublicDecryptExample.tsx" %}
 

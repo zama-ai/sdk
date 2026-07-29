@@ -24,7 +24,7 @@ await token.setOperator("0xOperator");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialSetOperator } from "@zama-fhe/react-sdk";
@@ -52,7 +52,7 @@ await token.setOperator("0xOperator", expiry);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 const expiry = Math.floor(Date.now() / 1000) + 86400;
@@ -75,7 +75,7 @@ const approved = await token.isOperator("0xHolder", "0xSpender");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialIsOperator } from "@zama-fhe/react-sdk";
@@ -105,7 +105,7 @@ await token.confidentialTransferFrom("0xFrom", "0xTo", 500n);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";

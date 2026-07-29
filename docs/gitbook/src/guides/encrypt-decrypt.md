@@ -98,7 +98,7 @@ console.log(decrypted[encryptedValue]); // 42n
 {% endcode %}
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 {% code title="ConfidentialRoundTrip.tsx" %}
 
@@ -261,7 +261,7 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 {% code title="EncryptExample.tsx" %}
 
@@ -323,7 +323,7 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 const result = await encrypt.mutateAsync({
@@ -385,7 +385,7 @@ await signer.writeContract({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 {% code title="ConfidentialAction.tsx" %}
 
@@ -454,7 +454,7 @@ const decrypted = await sdk.decryption.decryptValues([
 On a backend signer (a local private key), the permit is signed silently. In a browser, the first call surfaces a wallet prompt — trigger it from an explicit user action, not on load. Reuse the same `sdk` instance so cached permits and decrypted values persist across calls.
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 Hooks like `useDecryptValues` and `useConfidentialBalance` trigger the permit signature automatically the first time they run. If your app calls these hooks on render without gating, users see an unsolicited wallet popup before they have taken any action — a confusing experience that often leads to rejection.
 
@@ -635,7 +635,7 @@ const { clearValues } = await sdk.decryption.decryptPublicValues(["0xEncryptedVa
 `decryptPublicValues` also returns `decryptionProof` and `abiEncodedClearValues` alongside `clearValues`, so you can submit on-chain finalization transactions that verify the decryption.
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 {% code title="PublicDecryptExample.tsx" %}
 

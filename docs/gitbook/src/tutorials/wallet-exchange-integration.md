@@ -68,7 +68,7 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
@@ -116,7 +116,7 @@ const { txHash, receipt } = await token.confidentialTransfer("0xRecipient", 500n
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
@@ -168,7 +168,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
@@ -206,7 +206,7 @@ await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
@@ -255,7 +255,7 @@ if (result?.isValid) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
@@ -277,7 +277,7 @@ const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
@@ -305,7 +305,7 @@ for (const pair of page.items) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useListPairs } from "@zama-fhe/react-sdk";

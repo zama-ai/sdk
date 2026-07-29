@@ -38,7 +38,7 @@ console.log(`Confidential balance: ${balance}`);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialBalance, useHasPermit } from "@zama-fhe/react-sdk";
@@ -87,7 +87,7 @@ const tokenB = sdk.createToken("0xTokenB");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useGrantPermit } from "@zama-fhe/react-sdk";
@@ -172,7 +172,7 @@ try {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialBalance } from "@zama-fhe/react-sdk";
@@ -216,7 +216,7 @@ for (const [address, balance] of results) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
@@ -251,7 +251,7 @@ const [name, symbol, decimals] = await Promise.all([
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useMetadata } from "@zama-fhe/react-sdk";

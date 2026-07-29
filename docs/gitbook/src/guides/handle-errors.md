@@ -74,7 +74,7 @@ try {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 Hooks surface the same error classes on `.error` — narrow them with the same `instanceof` checks, no `try/catch` needed:
 
@@ -182,7 +182,7 @@ try {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { NoCiphertextError } from "@zama-fhe/sdk";
@@ -271,7 +271,7 @@ async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Pro
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 Feed the same helpers into React Query's `retry` and `retryDelay` — per hook, or globally on your `QueryClient`:
 

@@ -41,7 +41,7 @@ const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" }
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useDelegateDecryption, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
@@ -85,7 +85,7 @@ await sdk.delegations.delegateDecryption({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useDelegateDecryption } from "@zama-fhe/react-sdk";
@@ -132,7 +132,7 @@ const other = await token.decryptBalanceAs({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useDecryptBalanceAs } from "@zama-fhe/react-sdk";
@@ -166,7 +166,7 @@ const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useDelegationStatus } from "@zama-fhe/react-sdk";
@@ -213,7 +213,7 @@ for (const [address, balance] of balances) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useMemo } from "react";
@@ -249,7 +249,7 @@ await sdk.delegations.revokeDelegation({
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useRevokeDelegation } from "@zama-fhe/react-sdk";
@@ -305,7 +305,7 @@ try {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { DelegationNotPropagatedError, SigningRejectedError } from "@zama-fhe/sdk";

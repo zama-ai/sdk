@@ -61,7 +61,7 @@ const wrappedToken = sdk.createWrappedToken(result.confidentialTokenAddress);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useWrappedToken } from "@zama-fhe/react-sdk";
@@ -87,7 +87,7 @@ console.log("Shield tx:", txHash);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
@@ -118,7 +118,7 @@ await wrappedToken.shield(500n, { approvalStrategy: "max" });
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 await shield({ amount: 1000n, approvalStrategy: "max" });
@@ -139,7 +139,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 await shield({ amount: 1000n, approvalStrategy: "skip" });
@@ -166,7 +166,7 @@ console.log("Confirmed in block:", receipt.blockNumber);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 const { mutateAsync: shield, isPending, isSuccess } = useShield({ address: "0xWrapperAddress" });
@@ -200,7 +200,7 @@ const { txHash } = await wrappedToken.wrap(1000n);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 const approve = useApproveUnderlying("0xWrapperAddress");

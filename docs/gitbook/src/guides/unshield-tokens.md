@@ -38,7 +38,7 @@ const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
@@ -75,7 +75,7 @@ await wrappedToken.unshield(500n, {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnshield } from "@zama-fhe/react-sdk";
@@ -111,7 +111,7 @@ await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnshieldAll } from "@zama-fhe/react-sdk";
@@ -142,7 +142,7 @@ if (pending) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
@@ -193,7 +193,7 @@ await wrappedToken.finalizeUnwrap(unwrapRequestId);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnwrap, useFinalizeUnwrap } from "@zama-fhe/react-sdk";

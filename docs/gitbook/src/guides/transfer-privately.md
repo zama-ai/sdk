@@ -21,7 +21,7 @@ const token = sdk.createToken("0xEncryptedERC20Address");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useToken } from "@zama-fhe/react-sdk";
@@ -47,7 +47,7 @@ console.log("Transfer tx:", txHash);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
@@ -80,7 +80,7 @@ const { txHash } = await token.confidentialTransferFrom(
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransferFrom } from "@zama-fhe/react-sdk";
@@ -116,7 +116,7 @@ console.log("New balance:", balance);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 const {
@@ -201,7 +201,7 @@ console.log("Deposit tx:", txHash);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransferAndCall } from "@zama-fhe/react-sdk";
