@@ -11,8 +11,8 @@ const clients = vi.hoisted(() => {
     })),
     fetchFheEncryptionKeyBytes: vi.fn(async () => new Uint8Array()),
     signLegacyDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
-    serializeTransportKeyPair: vi.fn(() => "serialized-keypair"),
-    serializeSignedDecryptionPermit: vi.fn(() => "serialized-permit"),
+    serializeTransportKeyPair: vi.fn(async () => "serialized-keypair"),
+    serializeSignedDecryptionPermit: vi.fn(async () => "serialized-permit"),
     parseTransportKeyPair: vi.fn(async () => ({ publicKey: "0x" })),
     parseSignedDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
   });
@@ -145,11 +145,15 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.encryptClient.init).toHaveBeenCalledOnce();
   });
 
-  test("serialization does not initialize any capability", () => {
+  test("serialization does not initialize any capability", async () => {
     const relayer = new FhevmRelayer({ chain: anvil });
 
-    expect(relayer.serializeTransportKeyPair({} as never)).toBe("serialized-keypair");
-    expect(relayer.serializeSignedDecryptionPermit({} as never)).toBe("serialized-permit");
+    await expect(relayer.serializeTransportKeyPair({} as never)).resolves.toBe(
+      "serialized-keypair",
+    );
+    await expect(relayer.serializeSignedDecryptionPermit({} as never)).resolves.toBe(
+      "serialized-permit",
+    );
     expect(clients.baseClient.init).not.toHaveBeenCalled();
     expect(clients.decryptClient.init).not.toHaveBeenCalled();
     expect(clients.encryptClient.init).not.toHaveBeenCalled();

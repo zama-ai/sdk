@@ -21,7 +21,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     parseTransportKeyPair: vi.fn().mockImplementation((kp: unknown) => kp),
     serializeTransportKeyPair: vi
       .fn()
-      .mockReturnValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
+      .mockResolvedValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
     // Route through the passed signer so `signer.signTypedData` call-count and
     // rejection assertions stay observable through the new permit-signing flow.
     signLegacyDecryptionPermit: vi
@@ -61,7 +61,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     serializeSignedDecryptionPermit: vi
       .fn()
       .mockImplementation(
-        (params: {
+        async (params: {
           signedPermit: {
             version: number;
             eip712: unknown;

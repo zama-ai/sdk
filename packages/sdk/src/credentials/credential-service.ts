@@ -360,7 +360,7 @@ export class CredentialService {
         : await relayer.signLegacyDecryptionPermit(permitInput);
 
       const serializedPermit = SerializedPermitSchema.parse(
-        relayer.serializeSignedDecryptionPermit({ signedPermit }),
+        await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
       return {
