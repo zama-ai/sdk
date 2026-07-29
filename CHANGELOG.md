@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.11...v3.4.0-alpha.12) (2026-07-29)
+
+### Bug Fixes
+
+- **sdk:** normalize ethers readContract integers to match viem ([#580](https://github.com/zama-ai/sdk/issues/580)) ([b60b86e]()), closes [#576]() [#576]()
+
 ## [3.4.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.10...v3.4.0-alpha.11) (2026-07-23)
 
 ### Code Refactoring
