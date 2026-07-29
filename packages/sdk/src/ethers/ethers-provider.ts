@@ -1,4 +1,5 @@
-import { ethers, BrowserProvider } from "ethers";
+import { BrowserProvider } from "ethers";
+import type { ethers } from "ethers";
 import type {
   Abi,
   ContractFunctionArgs,
@@ -8,6 +9,7 @@ import type {
   Hex,
 } from "viem";
 import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+import { ethersRead } from "./contracts";
 
 /**
  * Configuration for {@link EthersProvider}.
@@ -56,7 +58,15 @@ export class EthersProvider implements GenericProvider {
     return Number(network.chainId);
   }
 
-  /** Execute a read-only call and return the decoded result. */
+  /**
+   * Execute a read-only call and return the decoded result.
+   *
+   * ethers is the transport only: the call goes out over `provider.call`, and viem does the
+   * encoding and decoding (via {@link ethersRead}). That keeps the result identical to
+   * `ViemProvider` — the return-type contract both providers implement — rather than re-deriving
+   * viem's decoding rules (small ints as `number`, named tuples as keyed objects, empty output as
+   * `undefined`) from ethers' own decoded values.
+   */
   async readContract<
     const TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">,
@@ -64,15 +74,12 @@ export class EthersProvider implements GenericProvider {
   >(
     config: ReadContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>> {
-    const contract = new ethers.Contract(
-      config.address,
-      config.abi as ethers.InterfaceAbi,
-      this.#readProvider,
-    );
-    const fn = contract.getFunction(config.functionName);
-    return fn(...(config.args as readonly unknown[])) as Promise<
-      ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>
-    >;
+    return ethersRead(this.#readProvider, {
+      address: config.address,
+      abi: config.abi as readonly unknown[],
+      functionName: config.functionName,
+      args: config.args as readonly unknown[],
+    });
   }
 
   /** Return the latest block timestamp in seconds. */
