@@ -53,7 +53,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 Use standard `try/catch` with `instanceof` to handle specific error types:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { ZamaError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
@@ -74,16 +74,37 @@ try {
 ```
 
 {% endtab %}
+{% tab title="React SDK" %}
+
+Hooks surface the same error classes on `.error` — narrow them with the same `instanceof` checks, no `try/catch` needed:
+
+```tsx
+import { ZamaError, SigningRejectedError, EncryptionFailedError } from "@zama-fhe/sdk";
+import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
+
+const { error } = useConfidentialTransfer({ address: "0xToken" });
+
+if (error instanceof SigningRejectedError) {
+  // User clicked "Reject" in their wallet
+} else if (error instanceof EncryptionFailedError) {
+  // FHE encryption failed
+} else if (error instanceof ZamaError) {
+  // Some other SDK error -- check error.code
+}
+```
+
+{% endtab %}
 {% endtabs %}
+
+{% hint style="info" %}
+The "no `try/catch`" note applies to the declarative `.error` field shown above. If you instead `await` a mutation's `mutateAsync(...)` directly (as several guides do for shield/unshield/transfer), that promise **rejects** on failure — wrap those calls in `try/catch`, or read the hook's `.error` field rather than awaiting.
+{% endhint %}
 
 Always check the most specific types first and fall back to `ZamaError` last.
 
 ### 3. Use matchZamaError for cleaner code
 
-Instead of `instanceof` chains, use `matchZamaError` to route errors by code:
-
-{% tabs %}
-{% tab title="SDK" %}
+Instead of `instanceof` chains, use `matchZamaError` to route errors by code. This helper is framework-neutral — it works the same on a caught error in the core SDK and on a hook's `.error` in React (see the reusable React component in step 6):
 
 ```ts
 import { matchZamaError } from "@zama-fhe/sdk";
@@ -99,9 +120,6 @@ matchZamaError(error, {
   _: () => toast("Something went wrong"),
 });
 ```
-
-{% endtab %}
-{% endtabs %}
 
 The `_` wildcard catches any `ZamaError` not explicitly handled. If the error is not a `ZamaError` at all (and no `_` is provided), `matchZamaError` returns `undefined`.
 
@@ -146,7 +164,7 @@ Here is a quick reference for the most common errors and how to respond:
 This is a common source of confusion. They require different UI treatments:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { NoCiphertextError } from "@zama-fhe/sdk";
@@ -164,6 +182,22 @@ try {
 ```
 
 {% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { NoCiphertextError } from "@zama-fhe/sdk";
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+
+const { data: balance, error } = useConfidentialBalance({ address: "0xToken", account });
+
+if (error instanceof NoCiphertextError) {
+  // No encrypted balance exists -- "no balance"
+  return <EmptyState label="Shield tokens to get started" />;
+}
+// balance can still be 0n -- render "Balance: 0" in that case
+```
+
+{% endtab %}
 {% endtabs %}
 
 See [Check Balances](check-balances.md) for more detail on balance handling patterns.
@@ -171,9 +205,6 @@ See [Check Balances](check-balances.md) for more detail on balance handling patt
 ### 6. Use matchZamaError in React components
 
 The `matchZamaError` helper works the same way in React. Here is a reusable error component:
-
-{% tabs %}
-{% tab title="React" %}
 
 ```tsx
 import { matchZamaError } from "@zama-fhe/sdk";
@@ -191,9 +222,6 @@ function ErrorMessage({ error }: { error: Error | null }) {
   return <p className="error">{message ?? error.message}</p>;
 }
 ```
-
-{% endtab %}
-{% endtabs %}
 
 When `matchZamaError` returns `undefined` (because the error is not a `ZamaError`), the component falls back to `error.message`.
 
@@ -222,7 +250,7 @@ Five causes are transient — the operation can simply be retried, ideally with 
 | `WalletAccountNotReadyError`   | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
@@ -240,6 +268,24 @@ async function decryptWithRetry(fn: () => Promise<bigint>, maxAttempts = 3): Pro
     }
   }
 }
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+Feed the same helpers into React Query's `retry` and `retryDelay` — per hook, or globally on your `QueryClient`:
+
+```tsx
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+
+const { data } = useConfidentialBalance(
+  { address: "0xToken", account },
+  {
+    retry: (attempt, error) => isRetryable(error) && attempt < 3,
+    retryDelay: (attempt, error) => (retryAfterSeconds(error) ?? attempt * 2) * 1000,
+  },
+);
 ```
 
 {% endtab %}
