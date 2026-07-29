@@ -195,14 +195,10 @@ import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
-
-for (const [address, balance] of balances) {
-  console.log(`${address}: ${balance}`);
-}
-
-// Handle errors per token and cap concurrency:
-await Token.batchDecryptBalancesAs(tokens, {
+// Without `onError`, a single failing token rejects the whole call and discards the
+// map. Pass `onError` for a partial result: it's called once per failed token and its
+// return value becomes that token's entry. `maxConcurrency` caps parallel decryptions.
+const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
   maxConcurrency: 3,
   onError: (err, addr) => {
@@ -210,19 +206,31 @@ await Token.batchDecryptBalancesAs(tokens, {
     return 0n;
   },
 });
+
+for (const [address, balance] of balances) {
+  console.log(`${address}: ${balance}`);
+}
 ```
 
 {% endtab %}
 {% tab title="React" %}
 
 ```tsx
-import { useBatchDecryptBalancesAs, useToken } from "@zama-fhe/react-sdk";
+import { useMemo } from "react";
+import { useBatchDecryptBalancesAs, useZamaSDK } from "@zama-fhe/react-sdk";
 
-const tokens = addresses.map((a) => useToken(a));
+// Build Token instances with the SDK factory, not `useToken` — hooks can't be called in a loop.
+const sdk = useZamaSDK();
+const tokens = useMemo(() => addresses.map((a) => sdk.createToken(a)), [sdk, addresses]);
+
 const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
 
-const balances = await batchDecryptAs({ delegatorAddress: "0xDelegator" });
-// balances is a Map<Address, bigint>
+try {
+  const balances = await batchDecryptAs({ delegatorAddress: "0xDelegator" });
+  // balances is a Map<Address, bigint>. Any single token failing rejects the whole call.
+} catch (err) {
+  console.error(err);
+}
 ```
 
 {% endtab %}

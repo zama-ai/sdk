@@ -22,8 +22,48 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="confidentialRoundTrip.ts" %}
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, SignerNotConfiguredError } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+// Minimal ABI for the custom FHE contract this example reads and writes.
+const yourContractABI = [
+  {
+    type: "function",
+    name: "store",
+    stateMutability: "nonpayable",
+    inputs: [{ type: "bytes32" }, { type: "bytes" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "getHandle",
+    stateMutability: "view",
+    inputs: [{ type: "address" }],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+// `publicClient`, `walletClient`, and `storage` come from the Configuration guide.
+const sdk = new ZamaSDK(
+  createConfig({
+    chains: [sepolia],
+    publicClient,
+    walletClient,
+    storage,
+    relayers: { [sepolia.id]: web() },
+  }),
+);
+
 const contractAddress = "0xYourContract";
 const [userAddress] = await walletClient.getAddresses();
+
+// Writes need a signer; `sdk.signer` is `undefined` on a read-only SDK. Guarding with the
+// typed error keeps it catchable via the patterns in Handle errors — unlike `!`, which
+// would throw a raw, uncatchable `TypeError`.
+const signer = sdk.signer;
+if (!signer) throw new SignerNotConfiguredError("writeContract");
 
 // 1. Encrypt
 const { encryptedValues, inputProof } = await sdk.encrypt({
@@ -32,13 +72,15 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
   userAddress,
 });
 
-// 2. Send to contract
-await sdk.signer!.writeContract({
+// 2. Send to contract, then wait for inclusion — writeContract resolves on broadcast, so
+//    reading back before the receipt lands can see a stale (zero) handle.
+const txHash = await signer.writeContract({
   address: contractAddress,
   abi: yourContractABI,
   functionName: "store",
   args: [encryptedValues[0]!, inputProof],
 });
+await sdk.provider.waitForTransactionReceipt(txHash);
 
 // 3. Read the encrypted value back
 const encryptedValue = (await sdk.provider.readContract({
@@ -62,6 +104,7 @@ console.log(decrypted[encryptedValue]); // 42n
 
 ```tsx
 import { useEncrypt, useDecryptValues, useZamaSDK } from "@zama-fhe/react-sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 import { useState, type FormEvent } from "react";
 
@@ -89,13 +132,18 @@ function ConfidentialRoundTrip() {
       userAddress: userAddress!,
     });
 
-    // 2. Send to contract
-    await sdk.signer!.writeContract({
+    // 2. Send to contract, then wait for inclusion. `sdk.signer` is undefined on a
+    //    read-only SDK, so guard it; writeContract resolves on broadcast, so wait for
+    //    the receipt before reading back or the handle can still be stale (zero).
+    const signer = sdk.signer;
+    if (!signer) throw new SignerNotConfiguredError("writeContract");
+    const txHash = await signer.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
       args: [encrypted.encryptedValues[0]!, encrypted.inputProof],
     });
+    await sdk.provider.waitForTransactionReceipt(txHash);
 
     // 3. Read the encrypted value back — setting inputs triggers decryption
     const encryptedValue = (await sdk.provider.readContract({
@@ -125,6 +173,10 @@ function ConfidentialRoundTrip() {
 
 {% endtab %}
 {% endtabs %}
+
+{% hint style="info" %}
+**Running this on a Node.js backend?** Swap the `web()` relayer for `node()` (from `@zama-fhe/sdk/node`) and drop the browser wallet client — everything else in the Core SDK flow above is identical. The [Node.js backend guide](./node-js-backend.md) walks through the setup, and [`examples/node-viem`](https://github.com/zama-ai/sdk/tree/main/examples/node-viem) / [`examples/node-ethers`](https://github.com/zama-ai/sdk/tree/main/examples/node-ethers) are runnable end-to-end versions.
+{% endhint %}
 
 {% hint style="info" %}
 **Recommended: Cross-Origin headers for faster encryption**
@@ -172,7 +224,7 @@ export default defineConfig({
 {% endtab %}
 {% endtabs %}
 
-This applies to browser environments only. In Node.js, encryption is always multi-threaded and needs no headers — see the [Node.js backend guide](./node-js-backend.md). See the [security model](../concepts/security-model.md#coop-coep-headers) for details.
+This applies to browser environments only. In Node.js there are no COOP/COEP headers to set; the SDK drives the FHE backend on the calling thread and spawns a worker pool for multi-threaded encryption where the environment allows (opt out process-wide with the `runtime.singleThread` option). See the [Node.js backend guide](./node-js-backend.md) and the [security model](../concepts/security-model.md#coop-coep-headers) for details.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -320,8 +372,11 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
   userAddress,
 });
 
-// 2. Call your contract with the encrypted data
-await sdk.signer!.writeContract({
+// 2. Call your contract with the encrypted data. Guard `sdk.signer` (undefined on a
+//    read-only SDK) instead of using `!`, which throws an uncatchable TypeError.
+const signer = sdk.signer;
+if (!signer) throw new SignerNotConfiguredError("writeContract");
+await signer.writeContract({
   address: "0xYourContract",
   abi: yourContractABI,
   functionName: "yourFunction",
@@ -336,6 +391,7 @@ await sdk.signer!.writeContract({
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 
 function ConfidentialAction() {
@@ -351,8 +407,11 @@ function ConfidentialAction() {
       userAddress: address!,
     });
 
-    // 2. Call your contract with the encrypted data
-    await sdk.signer!.writeContract({
+    // 2. Call your contract with the encrypted data. Guard `sdk.signer` (undefined on a
+    //    read-only SDK) instead of using `!`, which throws an uncatchable TypeError.
+    const signer = sdk.signer;
+    if (!signer) throw new SignerNotConfiguredError("writeContract");
+    await signer.writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",

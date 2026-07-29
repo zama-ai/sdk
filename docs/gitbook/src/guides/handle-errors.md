@@ -96,6 +96,10 @@ if (error instanceof SigningRejectedError) {
 {% endtab %}
 {% endtabs %}
 
+{% hint style="info" %}
+The "no `try/catch`" note applies to the declarative `.error` field shown above. If you instead `await` a mutation's `mutateAsync(...)` directly (as several guides do for shield/unshield/transfer), that promise **rejects** on failure — wrap those calls in `try/catch`, or read the hook's `.error` field rather than awaiting.
+{% endhint %}
+
 Always check the most specific types first and fall back to `ZamaError` last.
 
 ### 3. Use matchZamaError for cleaner code

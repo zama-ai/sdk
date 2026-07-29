@@ -3945,7 +3945,7 @@ Callbacks are safe to use -- if one throws, the unshield still completes. The ty
 
 ### 3. Unshield your entire balance
 
-If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance and unshields the full amount directly, without decrypting it first. It accepts the same callback options as `unshield()`.
+If you want to convert all confidential tokens back to public, use `unshieldAll()`. It reads the current encrypted balance and unshields the full amount directly, without decrypting it first. It accepts the same lifecycle **callbacks** as `unshield()` — but not the `skipBalanceCheck` option from step 1, which is specific to `unshield()`.
 
 
 ### Tab: Core SDK
@@ -4104,15 +4104,23 @@ console.log(`Confidential balance: ${balance}`);
 ### Tab: React
 
 ```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useHasPermit } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 
 const { address } = useAccount();
+
+// Gate the read behind an existing permit so it never triggers a wallet signature on
+// render (see step 2). Flip `enabled` on from an explicit "Decrypt" action once the
+// user opts in.
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xEncryptedERC20"] });
 const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({ address: "0xEncryptedERC20", account: address });
+} = useConfidentialBalance(
+  { address: "0xEncryptedERC20", account: address },
+  { enabled: hasPermit },
+);
 ```
 
 
@@ -4127,7 +4135,7 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature, so no subsequent `balanceOf()` call prompts the wallet:
+You can pre-authorize multiple tokens up front with `grantPermit`. It signs in batches of up to 10 contracts — so a set of ≤10 is a single signature (larger sets prompt once per batch) — after which `balanceOf()` calls for those tokens are silent:
 
 
 ### Tab: Core SDK
@@ -4306,42 +4314,18 @@ const { data: meta } = useMetadata("0xToken");
 
 See the [useMetadata reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useMetadata.md) for full options.
 
-### 8. (React) Use the balance hooks in a component
+### 8. (React) Poll for balance updates
 
-The React SDK hooks handle polling, caching, and React Query integration out of the box. Pass `refetchInterval` to poll for updates:
-
-
-### Tab: Single token
+`useConfidentialBalance` (step 1) and `useConfidentialBalances` (step 6) integrate with React Query out of the box. Pass `refetchInterval` to either to poll on a timer:
 
 ```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
-
-const { address } = useAccount();
-const {
-  data: balance,
-  isLoading,
-  error,
-} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
+const { data: balance } = useConfidentialBalance(
+  { address: "0xToken", account: address },
+  { refetchInterval: 5_000 },
+);
 ```
 
-### Tab: Multiple tokens
-
-```tsx
-import { useConfidentialBalances } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
-
-const { address } = useAccount();
-const { data } = useConfidentialBalances({
-  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
-  account: address,
-});
-
-const tokenABalance = data?.results.get("0xTokenA");
-```
-
-
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Clear values are persisted in storage, so page reloads show the balance instantly.
+Under the hood, `useConfidentialBalance` calls `token.balanceOf(owner)` — reading the on-chain encrypted value and decrypting via the SDK. Cached clear values are served instantly; the relayer is only hit when the encrypted value changes, and clear values are persisted in storage so page reloads show the balance without a spinner.
 
 ### 9. (React) Force a manual refresh
 
@@ -4635,6 +4619,11 @@ if (error instanceof SigningRejectedError) {
   // Some other SDK error -- check error.code
 }
 ```
+
+
+
+> [!INFO]
+> The "no `try/catch`" note applies to the declarative `.error` field shown above. If you instead `await` a mutation's `mutateAsync(...)` directly (as several guides do for shield/unshield/transfer), that promise **rejects** on failure — wrap those calls in `try/catch`, or read the hook's `.error` field rather than awaiting.
 
 
 Always check the most specific types first and fall back to `ZamaError` last.
@@ -5754,14 +5743,10 @@ import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
-
-for (const [address, balance] of balances) {
-  console.log(`${address}: ${balance}`);
-}
-
-// Handle errors per token and cap concurrency:
-await Token.batchDecryptBalancesAs(tokens, {
+// Without `onError`, a single failing token rejects the whole call and discards the
+// map. Pass `onError` for a partial result: it's called once per failed token and its
+// return value becomes that token's entry. `maxConcurrency` caps parallel decryptions.
+const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
   maxConcurrency: 3,
   onError: (err, addr) => {
@@ -5769,18 +5754,30 @@ await Token.batchDecryptBalancesAs(tokens, {
     return 0n;
   },
 });
+
+for (const [address, balance] of balances) {
+  console.log(`${address}: ${balance}`);
+}
 ```
 
 ### Tab: React
 
 ```tsx
-import { useBatchDecryptBalancesAs, useToken } from "@zama-fhe/react-sdk";
+import { useMemo } from "react";
+import { useBatchDecryptBalancesAs, useZamaSDK } from "@zama-fhe/react-sdk";
 
-const tokens = addresses.map((a) => useToken(a));
+// Build Token instances with the SDK factory, not `useToken` — hooks can't be called in a loop.
+const sdk = useZamaSDK();
+const tokens = useMemo(() => addresses.map((a) => sdk.createToken(a)), [sdk, addresses]);
+
 const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
 
-const balances = await batchDecryptAs({ delegatorAddress: "0xDelegator" });
-// balances is a Map<Address, bigint>
+try {
+  const balances = await batchDecryptAs({ delegatorAddress: "0xDelegator" });
+  // balances is a Map<Address, bigint>. Any single token failing rejects the whole call.
+} catch (err) {
+  console.error(err);
+}
 ```
 
 
@@ -5901,8 +5898,48 @@ Here is a complete flow that encrypts a value, sends it to a custom FHE contract
 {% code title="confidentialRoundTrip.ts" %}
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK, SignerNotConfiguredError } from "@zama-fhe/sdk";
+import { web } from "@zama-fhe/sdk/web";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+// Minimal ABI for the custom FHE contract this example reads and writes.
+const yourContractABI = [
+  {
+    type: "function",
+    name: "store",
+    stateMutability: "nonpayable",
+    inputs: [{ type: "bytes32" }, { type: "bytes" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "getHandle",
+    stateMutability: "view",
+    inputs: [{ type: "address" }],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+// `publicClient`, `walletClient`, and `storage` come from the Configuration guide.
+const sdk = new ZamaSDK(
+  createConfig({
+    chains: [sepolia],
+    publicClient,
+    walletClient,
+    storage,
+    relayers: { [sepolia.id]: web() },
+  }),
+);
+
 const contractAddress = "0xYourContract";
 const [userAddress] = await walletClient.getAddresses();
+
+// Writes need a signer; `sdk.signer` is `undefined` on a read-only SDK. Guarding with the
+// typed error keeps it catchable via the patterns in Handle errors — unlike `!`, which
+// would throw a raw, uncatchable `TypeError`.
+const signer = sdk.signer;
+if (!signer) throw new SignerNotConfiguredError("writeContract");
 
 // 1. Encrypt
 const { encryptedValues, inputProof } = await sdk.encrypt({
@@ -5911,13 +5948,15 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
   userAddress,
 });
 
-// 2. Send to contract
-await sdk.signer!.writeContract({
+// 2. Send to contract, then wait for inclusion — writeContract resolves on broadcast, so
+//    reading back before the receipt lands can see a stale (zero) handle.
+const txHash = await signer.writeContract({
   address: contractAddress,
   abi: yourContractABI,
   functionName: "store",
   args: [encryptedValues[0]!, inputProof],
 });
+await sdk.provider.waitForTransactionReceipt(txHash);
 
 // 3. Read the encrypted value back
 const encryptedValue = (await sdk.provider.readContract({
@@ -5940,6 +5979,7 @@ console.log(decrypted[encryptedValue]); // 42n
 
 ```tsx
 import { useEncrypt, useDecryptValues, useZamaSDK } from "@zama-fhe/react-sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 import { useState, type FormEvent } from "react";
 
@@ -5967,13 +6007,18 @@ function ConfidentialRoundTrip() {
       userAddress: userAddress!,
     });
 
-    // 2. Send to contract
-    await sdk.signer!.writeContract({
+    // 2. Send to contract, then wait for inclusion. `sdk.signer` is undefined on a
+    //    read-only SDK, so guard it; writeContract resolves on broadcast, so wait for
+    //    the receipt before reading back or the handle can still be stale (zero).
+    const signer = sdk.signer;
+    if (!signer) throw new SignerNotConfiguredError("writeContract");
+    const txHash = await signer.writeContract({
       address: contractAddress,
       abi: yourContractABI,
       functionName: "store",
       args: [encrypted.encryptedValues[0]!, encrypted.inputProof],
     });
+    await sdk.provider.waitForTransactionReceipt(txHash);
 
     // 3. Read the encrypted value back — setting inputs triggers decryption
     const encryptedValue = (await sdk.provider.readContract({
@@ -6000,6 +6045,11 @@ function ConfidentialRoundTrip() {
 ```
 
 {% endcode %}
+
+
+
+> [!INFO]
+> **Running this on a Node.js backend?** Swap the `web()` relayer for `node()` (from `@zama-fhe/sdk/node`) and drop the browser wallet client — everything else in the Core SDK flow above is identical. The [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) walks through the setup, and [`examples/node-viem`](https://github.com/zama-ai/sdk/tree/main/examples/node-viem) / [`examples/node-ethers`](https://github.com/zama-ai/sdk/tree/main/examples/node-ethers) are runnable end-to-end versions.
 
 
 
@@ -6052,7 +6102,7 @@ function ConfidentialRoundTrip() {
 >
 
 >
-> This applies to browser environments only. In Node.js, encryption is always multi-threaded and needs no headers — see the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md). See the [security model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#coop-coep-headers) for details.
+> This applies to browser environments only. In Node.js there are no COOP/COEP headers to set; the SDK drives the FHE backend on the calling thread and spawns a worker pool for multi-threaded encryption where the environment allows (opt out process-wide with the `runtime.singleThread` option). See the [Node.js backend guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) and the [security model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#coop-coep-headers) for details.
 
 
 
@@ -6194,8 +6244,11 @@ const { encryptedValues, inputProof } = await sdk.encrypt({
   userAddress,
 });
 
-// 2. Call your contract with the encrypted data
-await sdk.signer!.writeContract({
+// 2. Call your contract with the encrypted data. Guard `sdk.signer` (undefined on a
+//    read-only SDK) instead of using `!`, which throws an uncatchable TypeError.
+const signer = sdk.signer;
+if (!signer) throw new SignerNotConfiguredError("writeContract");
+await signer.writeContract({
   address: "0xYourContract",
   abi: yourContractABI,
   functionName: "yourFunction",
@@ -6209,6 +6262,7 @@ await sdk.signer!.writeContract({
 
 ```tsx
 import { useEncrypt, useZamaSDK } from "@zama-fhe/react-sdk";
+import { SignerNotConfiguredError } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 
 function ConfidentialAction() {
@@ -6224,8 +6278,11 @@ function ConfidentialAction() {
       userAddress: address!,
     });
 
-    // 2. Call your contract with the encrypted data
-    await sdk.signer!.writeContract({
+    // 2. Call your contract with the encrypted data. Guard `sdk.signer` (undefined on a
+    //    read-only SDK) instead of using `!`, which throws an uncatchable TypeError.
+    const signer = sdk.signer;
+    if (!signer) throw new SignerNotConfiguredError("writeContract");
+    await signer.writeContract({
       address: "0xYourContract",
       abi: yourContractABI,
       functionName: "yourFunction",

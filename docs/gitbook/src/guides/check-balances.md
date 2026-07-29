@@ -41,15 +41,23 @@ console.log(`Confidential balance: ${balance}`);
 {% tab title="React" %}
 
 ```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { useConfidentialBalance, useHasPermit } from "@zama-fhe/react-sdk";
 import { useAccount } from "wagmi";
 
 const { address } = useAccount();
+
+// Gate the read behind an existing permit so it never triggers a wallet signature on
+// render (see step 2). Flip `enabled` on from an explicit "Decrypt" action once the
+// user opts in.
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xEncryptedERC20"] });
 const {
   data: balance,
   isLoading,
   error,
-} = useConfidentialBalance({ address: "0xEncryptedERC20", account: address });
+} = useConfidentialBalance(
+  { address: "0xEncryptedERC20", account: address },
+  { enabled: hasPermit },
+);
 ```
 
 {% endtab %}
@@ -65,7 +73,7 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature, so no subsequent `balanceOf()` call prompts the wallet:
+You can pre-authorize multiple tokens up front with `grantPermit`. It signs in batches of up to 10 contracts — so a set of ≤10 is a single signature (larger sets prompt once per batch) — after which `balanceOf()` calls for those tokens are silent:
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -258,45 +266,18 @@ const { data: meta } = useMetadata("0xToken");
 
 See the [useMetadata reference](../reference/react/useMetadata.md) for full options.
 
-### 8. (React) Use the balance hooks in a component
+### 8. (React) Poll for balance updates
 
-The React SDK hooks handle polling, caching, and React Query integration out of the box. Pass `refetchInterval` to poll for updates:
-
-{% tabs %}
-{% tab title="Single token" %}
+`useConfidentialBalance` (step 1) and `useConfidentialBalances` (step 6) integrate with React Query out of the box. Pass `refetchInterval` to either to poll on a timer:
 
 ```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
-
-const { address } = useAccount();
-const {
-  data: balance,
-  isLoading,
-  error,
-} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
+const { data: balance } = useConfidentialBalance(
+  { address: "0xToken", account: address },
+  { refetchInterval: 5_000 },
+);
 ```
 
-{% endtab %}
-{% tab title="Multiple tokens" %}
-
-```tsx
-import { useConfidentialBalances } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
-
-const { address } = useAccount();
-const { data } = useConfidentialBalances({
-  addresses: ["0xTokenA", "0xTokenB", "0xTokenC"],
-  account: address,
-});
-
-const tokenABalance = data?.results.get("0xTokenA");
-```
-
-{% endtab %}
-{% endtabs %}
-
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Clear values are persisted in storage, so page reloads show the balance instantly.
+Under the hood, `useConfidentialBalance` calls `token.balanceOf(owner)` — reading the on-chain encrypted value and decrypting via the SDK. Cached clear values are served instantly; the relayer is only hit when the encrypted value changes, and clear values are persisted in storage so page reloads show the balance without a spinner.
 
 ### 9. (React) Force a manual refresh
 
