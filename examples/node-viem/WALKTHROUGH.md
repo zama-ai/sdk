@@ -16,12 +16,12 @@ operation routing.
 
 ## What This Example Demonstrates
 
-| Section                    | Operations                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| 1 — Setup                  | Accounts, viem clients, SDK config, Node.js relayer transport                  |
-| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                              |
-| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`            |
-| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isDelegated` |
+| Section                    | Operations                                                                  |
+| -------------------------- | --------------------------------------------------------------------------- |
+| 1 — Setup                  | Accounts, viem clients, SDK config, Node.js relayer transport               |
+| 2 — Mint                   | Fund Account A through the ERC-20 mock's `mint()`                           |
+| 3 — Confidential lifecycle | `balanceOf(owner)` → `shield` → `confidentialTransfer` → `unshield`         |
+| 4 — Delegation             | `delegateDecryption` → `decryptBalanceAs` → `revokeDelegation` → `isActive` |
 
 ## Architecture
 
@@ -211,13 +211,17 @@ Delegation lets Account B decrypt Account A's confidential balance without holdi
 Account A's private key.
 
 ```ts
-await tokenA.delegateDecryption({ delegateAddress: accountB.address as Address });
+await sdkA.delegations.delegateDecryption({
+  contractAddress: confidentialTokenAddress,
+  delegateAddress: accountB.address as Address,
+});
 ```
 
 The example verifies the grant:
 
 ```ts
-const isDelegated = await tokenA.isDelegated({
+const isDelegated = await sdkA.delegations.isActive({
+  contractAddress: confidentialTokenAddress,
   delegatorAddress: accountA.address as Address,
   delegateAddress: accountB.address as Address,
 });

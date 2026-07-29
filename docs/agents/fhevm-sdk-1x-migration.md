@@ -1,43 +1,55 @@
 # Low-level SDK migration & decrypt terminology
 
-**Status:** Updated 2026-06-05. Two separate tracks, two separate decisions:
+**Status:** Updated 2026-07-27. Both tracks are now **done** and shipped on the `3.x` line:
 
-1. **Swapping the low-level dependency** (`@zama-fhe/relayer-sdk` → `@fhevm/sdk@1.x`) — **parked.**
-   It is a re-architecture, not a bump. Revisit at a future network upgrade. (Finding 1 below.)
+1. **Swapping the low-level dependency** (`@zama-fhe/relayer-sdk` → `@fhevm/sdk@1.x`) — **shipped**
+   ([PR #458](https://github.com/zama-ai/sdk/pull/458)). The internal FHE backend is now `@fhevm/sdk`;
+   `packages/sdk/package.json` depends on `@fhevm/sdk@1.1.0-alpha.9` and `@zama-fhe/relayer-sdk` is no
+   longer a runtime dependency. (Finding 1 below.)
 2. **Aligning our public decrypt wording** to the Zama glossary — **done** on branch
    `align/decrypt-glossary` as a plain **rename, no back-compat aliases**. Covers: glossary names
    (no `userDecrypt`/`publicDecrypt`), the **single-entrypoint** decision (`decryptValues`, dropping the
    `FromPairs` suffix), and **handle → encryptedValue** terminology. **Not flagged as a breaking
-   change**: we're still in the `3.x` prerelease/alpha line, so it's absorbed there without a major bump
-   (no `!`/`BREAKING CHANGE:`). (Finding 2 below.)
+   change**: we were still in the `3.x` prerelease/alpha line, so it was absorbed there without a major
+   bump (no `!`/`BREAKING CHANGE:`). (Finding 2 below.)
 
-Internal feedback that set this split: _"going from relayer-sdk to fhevm/sdk is not in scope for now
-until future network upgrades. However, aligning on a single public glossary is something we can do
-already to be consistent across all products — just updating our public APIs."_
+> **This doc is now a historical record** of two migrations that have both landed. Keep it for the
+> rationale and the rename mapping (still an accurate reference for the current API); it no longer
+> describes pending work. For the user-facing description of the current backend, see
+> [`changelog/alpha.md`](../gitbook/src/changelog/alpha.md) and
+> [`concepts/architecture.md`](../gitbook/src/concepts/architecture.md).
 
-## Finding 1 — the dependency swap is a rewrite, not a bump (PARKED)
+Internal feedback that originally set this split (track 1 was deferred first, then completed):
+_"going from relayer-sdk to fhevm/sdk is not in scope for now until future network upgrades. However,
+aligning on a single public glossary is something we can do already to be consistent across all
+products — just updating our public APIs."_ The dependency swap was subsequently prioritized and
+landed in #458.
 
-- We consume `@zama-fhe/relayer-sdk@~0.4.3` (the legacy low-level SDK).
-- `@fhevm/sdk` is the **rebrand** of that SDK. `1.1.0-alpha.2` exists (line already at `1.1.0-alpha.4`;
-  there is **no stable `1.x`** — dist-tag `latest` is the placeholder `0.0.1`, `alpha` is the live line).
-- The Slack changelog ("breaking renames", `moduleVersions`, `extraData` fix) only describes the
-  **`1.1.0-alpha.1 → alpha.2` delta** — hence the "it's just renaming" impression. That is true only
-  _between those two alphas_, not relative to our `0.4.3` baseline.
-- Between `0.4.3` and `1.x` the architecture was **entirely refactored**:
+## Finding 1 — the dependency swap (SHIPPED in #458)
 
-  |          | We consume (`relayer-sdk@0.4.3`)                      | `@fhevm/sdk@1.1.0-alpha.4`                                                      |
-  | -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-  | Model    | `createInstance()` → global `FhevmInstance`           | viem/ethers client + decorators/actions (`createFhevmClient`, `decryptActions`) |
-  | Decrypt  | `instance.userDecrypt()` / `instance.publicDecrypt()` | `decryptValue` / `decryptValues` / `decryptValuesFromPairs`                     |
-  | Subpaths | `/bundle`, `/node`, `/web`                            | `./viem`, `./ethers`, `./actions/*`, `./base`, `./chains`, `./types`            |
-  | Init     | `initSDK()`                                           | `initFhevmRuntime()` + `runtimeConfig` (`moduleVersions` lives here)            |
+The swap **has been completed**. It was the full re-architecture this section originally warned it
+would be — not a version bump — and it landed in [PR #458](https://github.com/zama-ai/sdk/pull/458).
 
-- Blast radius if we ever migrate: **~15 source files** import the low-level SDK; **~4,850 LOC**
-  across `packages/sdk/src/relayer/` (~2,664) + `packages/sdk/src/worker/` (~2,190) are built on the
-  old `createInstance`/`FhevmInstance` model. Plus `@fhevm/mock-utils@0.4.2` (test infra) is tied to
-  the old line and would need a 1.x-compatible equivalent.
-- **Verdict:** multi-week re-architecture against a moving alpha target. Do not attempt as a "bump".
-  Re-evaluation trigger: a network upgrade that requires `@fhevm/sdk@1.x`, ideally once it is stable.
+Current state on this branch:
+
+- The internal FHE backend is **`@fhevm/sdk@1.1.0-alpha.9`** (`packages/sdk/package.json`).
+  `@zama-fhe/relayer-sdk` is **no longer a runtime dependency** — only `utils/fhe-type.ts` still
+  references its types.
+- `packages/sdk/src/worker/` — the ~2,190 LOC worker pool built on the old
+  `createInstance`/`FhevmInstance` model — **has been removed**. `@fhevm/sdk` now owns its worker pool
+  internally.
+- `packages/sdk/src/relayer/` is now a thin adapter (`fhevm-relayer.ts`, `types.ts`) over `@fhevm/sdk`,
+  with `web()` / `node()` / `cleartext()` transport factories routed per chain by `ChainRouter`
+  (`packages/sdk/src/chains/router.ts`).
+
+What the migration replaced (kept for reference — the `@fhevm/sdk` column is the current model):
+
+|          | Old (`relayer-sdk@0.4.3`)                             | `@fhevm/sdk@1.x` (current)                                                      |
+| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Model    | `createInstance()` → global `FhevmInstance`           | viem/ethers client + decorators/actions (`createFhevmClient`, `decryptActions`) |
+| Decrypt  | `instance.userDecrypt()` / `instance.publicDecrypt()` | `decryptValue` / `decryptValues` / `decryptValuesFromPairs`                     |
+| Subpaths | `/bundle`, `/node`, `/web`                            | `./viem`, `./ethers`, `./actions/*`, `./base`, `./chains`, `./types`            |
+| Init     | `initSDK()`                                           | `initFhevmRuntime()` + `runtimeConfig` (`moduleVersions` lives here)            |
 
 ## Finding 2 — decrypt wording alignment (DONE, plain rename in prerelease)
 
@@ -125,9 +137,9 @@ golden `etc/sdk-*.api.md`), so their decrypt-wording exports fall under the rule
 
 ### Why a plain rename, not a breaking change
 
-We are at `@zama-fhe/sdk@3.1.0-alpha.1` (prerelease/alpha line). The reviewer asked to drop the
-`@deprecated` aliases, so the old names are removed outright — **but not to mark it as a breaking
-change**, since we're still in prerelease where this kind of rename is expected. Concretely the commit
+This landed on the `@zama-fhe/sdk` `3.x` prerelease/alpha line. The reviewer asked to drop the
+`@deprecated` aliases, so the old names were removed outright — **but not marked as a breaking
+change**, since prerelease is where this kind of rename is expected. Concretely the commit
 stays `refactor(sdk):` with **no `!` and no `BREAKING CHANGE:` footer**, so semantic-release keeps it
 on the alpha channel without a major bump. (Note: `.releaserc.cjs` disables `BREAKING CHANGE:` notes
 via a `noteKeywords` sentinel, but a header `!` would still escalate to major — hence no `!`.)
