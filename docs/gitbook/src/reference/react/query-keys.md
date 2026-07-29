@@ -19,21 +19,24 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { invalidateBalanceQueries, zamaQueryKeys } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
-// Invalidate all balances
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
+// Recommended: invalidate a token's balance across BOTH balance namespaces
+// (single-token and batched) in one call.
+invalidateBalanceQueries(queryClient, "0xToken");
 
-// Invalidate one token's balances
+// Lower-level: raw key factories for finer targeting.
 queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
-
-// Invalidate a specific owner's balance
 queryClient.invalidateQueries({
   queryKey: zamaQueryKeys.confidentialBalance.owner("0xToken", "0xOwner"),
 });
 ```
+
+{% hint style="warning" %}
+`confidentialBalance` (single-token) and `confidentialBalances` (batched, multi-token) are **disjoint** root namespaces with no shared prefix, so invalidating one never touches the other. `useConfidentialBalance` writes to the first and the batched `useConfidentialBalances` to the second — a manual `invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all })` silently leaves every batched entry stale. Prefer [`invalidateBalanceQueries`](#invalidatebalancequeries), which invalidates both.
+{% endhint %}
 
 ## Key factories
 
@@ -55,6 +58,16 @@ Multi-token batch balances.
 | ----------------------- | ----------------------------------------- |
 | `.all`                  | All batch balance queries                 |
 | `.tokens(addrs, owner)` | Batch query for specific tokens and owner |
+
+### `invalidateBalanceQueries`
+
+Because the two balance namespaces above are disjoint, invalidating a token's balance correctly means hitting both. `invalidateBalanceQueries` does exactly that — invalidate a token in `confidentialBalance` and refetch every batched `confidentialBalances` query — so callers don't have to compose two keys and risk dropping half the cache. This is the same helper the SDK's own mutations use to auto-invalidate after a shield, transfer, or unshield.
+
+```ts
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
+
+invalidateBalanceQueries(queryClient, "0xToken");
+```
 
 ### `zamaQueryKeys.hasPermit`
 
@@ -109,8 +122,10 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 ### Invalidate after an external transaction
 
 ```tsx
-// After a transfer made outside the SDK
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
+
+// After a transfer made outside the SDK — refreshes both balance namespaces
+invalidateBalanceQueries(queryClient, "0xToken");
 ```
 
 ### Prefetch balances on hover
@@ -124,8 +139,12 @@ queryClient.prefetchQuery({
 
 ### Clear all cached data on disconnect
 
+Use `invalidateWalletLifecycleQueries` — it removes wallet-local caches (decrypted values, permits) and invalidates every Zama query across all namespaces, so a stale entitlement can't leak across accounts. Hand-composing `removeQueries` on a single balance namespace would miss the batched balances, permits, and decryption caches.
+
 ```tsx
-queryClient.removeQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
+import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
+
+invalidateWalletLifecycleQueries(queryClient);
 ```
 
 ## Related

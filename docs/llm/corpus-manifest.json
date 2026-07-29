@@ -697,6 +697,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/useConfidentialTransferFromAndCall",
+      "title": "useConfidentialTransferFromAndCall",
+      "source_path": "docs/gitbook/src/reference/react/useConfidentialTransferFromAndCall.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useConfidentialTransferFromAndCall.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useConfidentialTransferFromAndCall",
+      "description": "Operator-initiated confidential transfer that also invokes the recipient's receiver hook in one transaction.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useShield",
       "title": "useShield",
       "source_path": "docs/gitbook/src/reference/react/useShield.md",
@@ -705,6 +717,30 @@
       "category": "reference-react",
       "logical_path": "reference/react/useShield",
       "description": "Mutation hook that shields public ERC-20 tokens into confidential form.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useApproveUnderlying",
+      "title": "useApproveUnderlying",
+      "source_path": "docs/gitbook/src/reference/react/useApproveUnderlying.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useApproveUnderlying",
+      "description": "Low-level escape hatch that approves the wrapper contract to spend the underlying ERC-20.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useWrap",
+      "title": "useWrap",
+      "source_path": "docs/gitbook/src/reference/react/useWrap.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useWrap",
+      "description": "Low-level escape hatch that wraps already-approved underlying ERC-20 into confidential tokens.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -1009,6 +1045,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/useTotalSupply",
+      "title": "useTotalSupply",
+      "source_path": "docs/gitbook/src/reference/react/useTotalSupply.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useTotalSupply.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useTotalSupply",
+      "description": "Read the total supply of a token.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useZamaSDK",
       "title": "useZamaSDK",
       "source_path": "docs/gitbook/src/reference/react/useZamaSDK.md",
@@ -1069,6 +1117,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/react/useDecryptPublicValues",
+      "title": "useDecryptPublicValues",
+      "source_path": "docs/gitbook/src/reference/react/useDecryptPublicValues.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDecryptPublicValues.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useDecryptPublicValues",
+      "description": "Mutation hook that decrypts publicly-decryptable FHE values using the network public key — no credential required.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/react/useDelegateDecryption",
       "title": "useDelegateDecryption",
       "source_path": "docs/gitbook/src/reference/react/useDelegateDecryption.md",
@@ -1077,6 +1137,18 @@
       "category": "reference-react",
       "logical_path": "reference/react/useDelegateDecryption",
       "description": "Mutation hook that grants FHE decryption rights for a token to another address.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/react/useDelegatedDecryptValues",
+      "title": "useDelegatedDecryptValues",
+      "source_path": "docs/gitbook/src/reference/react/useDelegatedDecryptValues.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegatedDecryptValues.md",
+      "source_type": "official-doc",
+      "category": "reference-react",
+      "logical_path": "reference/react/useDelegatedDecryptValues",
+      "description": "Mutation hook that decrypts FHE encrypted values using delegated user credentials.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.10...v3.4.0-alpha.11) (2026-07-23)
+
+### Code Refactoring
+
+- **examples:** improve example apps — viem/wagmi, React 19 form actions, a11y ([#576](https://github.com/zama-ai/sdk/issues/576)) ([14d385b]())
+
 ## [3.4.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.9...v3.4.0-alpha.10) (2026-07-21)
 
 ### Code Refactoring
