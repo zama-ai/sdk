@@ -100,7 +100,7 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 
 ### Development
 
-**Prerequisites:** Node.js >= 22, pnpm >= 10
+**Prerequisites:** Node.js >= 22, pnpm >= 11
 
 ```bash
 pnpm install                # Install dependencies
@@ -115,8 +115,8 @@ pnpm format:check           # Formatting check
 **E2E tests:**
 
 ```bash
-pnpm e2e:test               # Run Playwright E2E tests
-pnpm e2e:test:ui            # Playwright UI mode
+pnpm e2e:test                 # Run Playwright E2E tests
+pnpm e2e:test:ui              # Playwright UI mode
 ```
 
 > **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.

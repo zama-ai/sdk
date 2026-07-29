@@ -106,7 +106,7 @@ Passed to `mutate` / `mutateAsync` at call time.
 
 `bigint`
 
-Number of tokens to shield (in the token's smallest unit).
+Number of tokens to shield (in the token's base units).
 
 ```ts
 await shield({ amount: 1000n });

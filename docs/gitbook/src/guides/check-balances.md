@@ -103,6 +103,10 @@ Decrypted balances are automatically cached in your storage backend (IndexedDB, 
 
 The cache is keyed by `token address + owner address + encrypted value`.
 
+A single `balanceOf()` call reads the on-chain encrypted value and decrypts it in one pass — the relayer is only hit when the encrypted value has changed since the last decryption:
+
+![Reading a confidential balance](../images/balance-read.svg)
+
 ### 4. Work with raw encrypted values
 
 Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption. This is a core-SDK concern — reach for `confidentialBalanceOf` and `decryptValues` directly:
@@ -296,20 +300,26 @@ const tokenABalance = data?.results.get("0xTokenA");
 
 ### 9. (React) Force a manual refresh
 
-Mutations automatically invalidate balance caches, but if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
+Mutations automatically invalidate balance caches, so the balance refreshes on its own after a shield, transfer, or unshield:
+
+![Mutation-triggered balance refresh](../images/balance-refresh.svg)
+
+But if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
 
 const queryClient = useQueryClient();
 
-// Invalidate all balance queries
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
-
-// Invalidate one token
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
+// Refresh a token's balance. `invalidateBalanceQueries` is the same helper the SDK's
+// own mutations use — it invalidates both the single-token (`confidentialBalance`) and
+// batched (`confidentialBalances`) caches, which are disjoint namespaces. Hand-composing
+// `zamaQueryKeys.confidentialBalance.*` keys only hits one and silently leaves the other stale.
+invalidateBalanceQueries(queryClient, "0xToken");
 ```
+
+See the [query keys reference](../reference/react/query-keys.md#invalidatebalancequeries) for the raw key factories when you need finer targeting.
 
 ## Next steps
 
