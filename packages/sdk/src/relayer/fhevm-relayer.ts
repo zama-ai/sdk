@@ -354,7 +354,7 @@ export class FhevmRelayer implements RelayerSDK {
    *
    * @example
    * ```ts
-   * const stored = relayer.serializeTransportKeyPair({ transportKeyPair });
+   * const stored = await relayer.serializeTransportKeyPair({ transportKeyPair });
    * // { publicKey: "0x…", privateKey: "0x…" }
    * ```
    */
@@ -368,7 +368,7 @@ export class FhevmRelayer implements RelayerSDK {
    *
    * @example
    * ```ts
-   * const serialized = relayer.serializeSignedDecryptionPermit({ signedPermit });
+   * const serialized = await relayer.serializeSignedDecryptionPermit({ signedPermit });
    * localStorage.setItem("permit", JSON.stringify(serialized));
    * ```
    */
