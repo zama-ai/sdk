@@ -1,14 +1,15 @@
-import type { ClearValue, EncryptedValue, PublicDecryptResult } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue, DecryptPublicValuesResult } from "../relayer/types";
 import type { ZamaSDK } from "../zama-sdk";
 import type { MutationFactoryOptions } from "./factory-types";
 import { zamaQueryKeys } from "./query-keys";
 
+/** Builds TanStack Query mutation options for {@link Decryption.decryptPublicValues | publicly decrypting} encrypted values, caching each clear result. */
 export function decryptPublicValuesMutationOptions(
   sdk: ZamaSDK,
 ): MutationFactoryOptions<
   readonly ["zama.decryptPublicValues"],
   EncryptedValue[],
-  PublicDecryptResult
+  DecryptPublicValuesResult
 > {
   return {
     mutationKey: ["zama.decryptPublicValues"],

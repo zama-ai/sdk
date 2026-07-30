@@ -71,187 +71,7 @@ function findInErrorChain(
 }
 
 // ============================================================================
-// Cross-thread serialization
-// ============================================================================
-
-/**
- * A plain, structured-clone-safe snapshot of an error and its cause chain.
- *
- * The worker boundary (`postMessage`) strips prototypes, `code`/`status`, and —
- * critically — the `cause` chain, leaving only the message. Decryption errors
- * are classified on the **main thread** ({@link wrapDecryptError}), so the worker
- * only needs to faithfully hand the error across the boundary, not understand it.
- * `serializeError` is that mechanical, taxonomy-agnostic envelope: it copies the
- * scalar signal fields the classifier keys on and flattens the nested cause chain
- * into a single `cause` link. {@link deserializeError} rebuilds an `Error` whose
- * `.cause` chain mirrors the original, so the existing chain-walking detectors
- * work on it unchanged.
- */
-export interface SerializedError {
-  name: string;
-  message: string;
-  /** e.g. JSON-RPC -32005, "RELAYER_FETCH_ERROR", ethers "CALL_EXCEPTION". */
-  code?: string | number;
-  /** viem-style HTTP status. */
-  status?: number;
-  /** relayer / node-fetch-style HTTP status. */
-  statusCode?: number;
-  /** Server-driven retry delay in **seconds** (numeric prop or parsed `Retry-After`). */
-  retryAfter?: number;
-  /**
-   * ethers surfaces an HTTP status only as a string on `info.responseStatus`
-   * (e.g. `"429 Too Many Requests"`), not as a numeric `status`. It lives on a
-   * nested `info` object the flattening would otherwise skip, so it is lifted
-   * onto the envelope and rebuilt onto `error.info.responseStatus`, letting the
-   * ethers rate-limit detector classify a worker-origin 429 exactly as it would
-   * the same error on the main thread.
-   */
-  responseStatus?: string;
-  cause?: SerializedError;
-}
-
-/** Scalar signal fields carried verbatim across the boundary, in both directions. */
-const SERIALIZED_SCALAR_KEYS = ["code", "status", "statusCode", "retryAfter"] as const;
-
-/**
- * ethers reports its HTTP status only as a string on `info.responseStatus`
- * (e.g. `"429 Too Many Requests"`). Read it directly off the node — not via the
- * cause-chain flattening, which descends a single branch — so it survives even
- * when the error also carries an `error` link that would be walked first.
- */
-function responseStatusFromNode(node: Record<string, unknown>): string | undefined {
-  const info = node.info;
-  if (info !== null && typeof info === "object") {
-    const responseStatus = (info as Record<string, unknown>).responseStatus;
-    if (typeof responseStatus === "string") {
-      return responseStatus;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Copy the scalar signal fields the classifier keys on from a raw error node
- * onto the envelope, only where not already set — so a shallower node keeps
- * priority. Also lifts ethers' string `info.responseStatus` and the relayer's
- * `Retry-After` header (both destroyed by structured clone: the header lives on
- * a non-cloneable `Headers`, the status on a nested `info` the flattening skips).
- */
-function captureNodeSignals(node: Record<string, unknown>, into: SerializedError): void {
-  if (into.code === undefined && (typeof node.code === "string" || typeof node.code === "number")) {
-    into.code = node.code;
-  }
-  if (into.status === undefined && typeof node.status === "number") {
-    into.status = node.status;
-  }
-  if (into.statusCode === undefined && typeof node.statusCode === "number") {
-    into.statusCode = node.statusCode;
-  }
-  if (into.responseStatus === undefined) {
-    const responseStatus = responseStatusFromNode(node);
-    if (responseStatus !== undefined) {
-      into.responseStatus = responseStatus;
-    }
-  }
-  if (into.retryAfter === undefined) {
-    if (typeof node.retryAfter === "number") {
-      into.retryAfter = node.retryAfter;
-    } else {
-      const fromHeader = retryAfterFromHeader(node);
-      if (fromHeader !== undefined) {
-        into.retryAfter = fromHeader;
-      }
-    }
-  }
-}
-
-/** Lift any still-missing scalar signal from an already-serialized child up. */
-function hoistMissingSignals(from: SerializedError, into: SerializedError): void {
-  if (into.code === undefined && from.code !== undefined) {
-    into.code = from.code;
-  }
-  if (into.status === undefined && from.status !== undefined) {
-    into.status = from.status;
-  }
-  if (into.statusCode === undefined && from.statusCode !== undefined) {
-    into.statusCode = from.statusCode;
-  }
-  if (into.responseStatus === undefined && from.responseStatus !== undefined) {
-    into.responseStatus = from.responseStatus;
-  }
-  if (into.retryAfter === undefined && from.retryAfter !== undefined) {
-    into.retryAfter = from.retryAfter;
-  }
-}
-
-/**
- * Flatten an error (and its `cause` / `error` / `info` chain) into a
- * structured-clone-safe {@link SerializedError}. Depth-bounded to mirror
- * {@link findInErrorChain} and guard against cyclic structures.
- */
-export function serializeError(error: unknown, depth = 6): SerializedError {
-  const coerced = toError(error);
-  const node =
-    typeof error === "object" && error !== null
-      ? (error as Record<string, unknown>)
-      : (coerced as unknown as Record<string, unknown>);
-
-  const serialized: SerializedError = { name: coerced.name, message: coerced.message };
-  captureNodeSignals(node, serialized);
-
-  if (depth > 0) {
-    // Walk *every* nested link (`cause` / `error` / `info`), not just the first
-    // present one: an error commonly carries several (ethers puts the underlying
-    // fault on `error` and the HTTP status on `info`), and the signal-bearing
-    // branch is not always the first. Keep the first as the representative
-    // `.cause` for message/chain fidelity, and lift any still-missing scalar
-    // signal off the others so none is dropped.
-    for (const key of NESTED_ERROR_KEYS) {
-      const next = node[key];
-      if (next !== undefined && next !== null && typeof next === "object") {
-        const child = serializeError(next, depth - 1);
-        if (serialized.cause === undefined) {
-          serialized.cause = child;
-        }
-        hoistMissingSignals(child, serialized);
-      }
-    }
-  }
-
-  return serialized;
-}
-
-/**
- * Rebuild a real {@link Error} from a {@link SerializedError}, re-attaching the
- * scalar signal fields and reconstructing the `.cause` chain so chain-walking
- * detectors ({@link findInErrorChain}, {@link extractHttpStatus},
- * {@link isRpcRateLimitError}) operate on it exactly as on the original.
- */
-export function deserializeError(serialized: SerializedError): Error {
-  const error = new Error(serialized.message) as Error & Record<string, unknown>;
-  if (serialized.name) {
-    error.name = serialized.name;
-  }
-  for (const key of SERIALIZED_SCALAR_KEYS) {
-    const value = serialized[key];
-    if (value !== undefined) {
-      error[key] = value;
-    }
-  }
-  // Rebuild ethers' `info.responseStatus` on the same node as its `code`, so the
-  // ethers rate-limit detector (`code: "SERVER_ERROR"` + `info.responseStatus`)
-  // matches the round-tripped error exactly as it would the original.
-  if (serialized.responseStatus !== undefined) {
-    error.info = { responseStatus: serialized.responseStatus };
-  }
-  if (serialized.cause) {
-    error.cause = deserializeError(serialized.cause);
-  }
-  return error;
-}
-
-// ============================================================================
-// Classification detectors (main-thread)
+// Classification detectors
 // ============================================================================
 
 /**
@@ -299,12 +119,31 @@ function nodeIsRpcRateLimit(node: Record<string, unknown>): boolean {
 }
 
 /**
- * The relayer SDK tags its HTTP errors with `code: "RELAYER_FETCH_ERROR"`. These
- * stay the relayer's domain ({@link RelayerRequestFailedError} / SDK-236), never
- * {@link RpcRateLimitError}, even on a 429.
+ * True when a failure originates from `@fhevm/sdk`'s relayer transport. Every
+ * relayer error it throws — `RelayerResponseStatusError`, `RelayerResponseApiError`,
+ * `RelayerMaxRetryError`, `RelayerTimeoutError`, … — carries the `Relayer` `name`
+ * prefix. Such errors stay the relayer's domain ({@link RelayerRequestFailedError}
+ * / SDK-236), never {@link RpcRateLimitError}, even on a 429 (which `@fhevm/sdk`
+ * retries internally, honoring `Retry-After`, before surfacing).
  */
-function isRelayerFetchError(error: unknown): boolean {
-  return findInErrorChain(error, (node) => node.code === "RELAYER_FETCH_ERROR") !== undefined;
+export function isRelayerError(error: unknown): boolean {
+  return (
+    findInErrorChain(
+      error,
+      (node) => typeof node.name === "string" && node.name.startsWith("Relayer"),
+    ) !== undefined
+  );
+}
+
+/**
+ * True when the failure is an `@fhevm/sdk` relayer *timeout* (`RelayerTimeoutError`,
+ * thrown when a request exceeds the relayer's global deadline without a verdict).
+ * Unlike a terminal 4xx/5xx, the operation itself is safe to retry, so callers map
+ * it to a {@link RelayerRequestFailedError} with `retryable: true` — mirroring the
+ * former `WorkerTimeoutError`, which was likewise documented retryable.
+ */
+export function isRelayerTimeoutError(error: unknown): boolean {
+  return findInErrorChain(error, (node) => node.name === "RelayerTimeoutError") !== undefined;
 }
 
 /**
@@ -312,7 +151,7 @@ function isRelayerFetchError(error: unknown): boolean {
  * (HTTP 429 / JSON-RPC -32005). Relayer-originated 429s are excluded.
  */
 export function isRpcRateLimitError(error: unknown): boolean {
-  if (isRelayerFetchError(error)) {
+  if (isRelayerError(error)) {
     return false;
   }
   return findInErrorChain(error, nodeIsRpcRateLimit) !== undefined;
@@ -326,7 +165,7 @@ export function isRpcRateLimitError(error: unknown): boolean {
  * to say "rate limit" still maps to {@link RelayerRequestFailedError}.
  */
 export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
-  if (isRelayerFetchError(error)) {
+  if (isRelayerError(error)) {
     return false;
   }
   return findInErrorChain(error, nodeHasStructuredRateLimit) !== undefined;
@@ -334,8 +173,8 @@ export function hasStructuredRpcRateLimitSignal(error: unknown): boolean {
 
 /**
  * Transport-error signatures of the consumer's own RPC client (viem / ethers).
- * The worker's on-chain reads (the ACL `persistAllowed` pre-check) go through
- * that client, which already retries transport faults internally — so a failure
+ * The SDK's on-chain reads (the ACL `persistAllowed` pre-check) go through that
+ * client, which already retries transport faults internally — so a failure
  * carrying one of these shapes must NOT be retried again by the SDK on top.
  */
 function nodeHasConsumerRpcSignature(node: Record<string, unknown>): boolean {
@@ -344,7 +183,7 @@ function nodeHasConsumerRpcSignature(node: Record<string, unknown>): boolean {
   if (code === "NETWORK_ERROR" || code === "SERVER_ERROR" || code === "TIMEOUT") {
     return true;
   }
-  // viem transport error classes (the `name` survives the worker boundary).
+  // viem transport error classes, matched by `name`.
   const name = node.name;
   return (
     name === "HttpRequestError" ||
@@ -358,10 +197,10 @@ function nodeHasConsumerRpcSignature(node: Record<string, unknown>): boolean {
  * True when a failure originates from the **consumer's RPC provider** (viem /
  * ethers) rather than the relayer. Keeps the SDK's relayer retry from
  * double-retrying transport faults the integrator's client already retried.
- * A relayer HTTP error (`RELAYER_FETCH_ERROR`) is never consumer-RPC.
+ * A relayer error (`Relayer*`) is never consumer-RPC.
  */
 export function isConsumerRpcError(error: unknown): boolean {
-  if (isRelayerFetchError(error)) {
+  if (isRelayerError(error)) {
     return false;
   }
   if (hasStructuredRpcRateLimitSignal(error)) {
@@ -371,72 +210,37 @@ export function isConsumerRpcError(error: unknown): boolean {
 }
 
 /**
- * True only for transient faults attributable to the **relayer transport** — the
- * one network actor the SDK owns retries for, since viem/ethers don't model the
- * relayer. This is the single gate for {@link withRetry}.
+ * `@fhevm/sdk`'s ACL gate (`checkPersistAllowed`) throws an `AclUserDecryptionError`
+ * when the requesting actor isn't allowed: `User <a> is not authorized to decrypt
+ * handle <h>!`. Matching that phrase is what lets {@link wrapDecryptError} surface
+ * a typed NotEntitledError with the parsed handle.
  *
- * Two-tier retry model:
- * - **Relayer transport** (here): a relayer HTTP 502/503/504 — tagged
- *   `RELAYER_FETCH_ERROR` with a gateway status — or a relayer-boundary network
- *   failure (the relayer SDK uses bare `fetch`, so a transport error with no
- *   viem/ethers signature is the relayer connection itself). Retried.
- * - **Consumer RPC** ({@link isConsumerRpcError}): deferred to viem/ethers, never
- *   retried here. Timeouts are owned by viem/ethers and the worker-level
- *   operation timeout (SDK-237), so they are not auto-retried at this layer.
+ * Deliberately excludes the sibling `Dapp contract <a> is not authorized to
+ * **user** decrypt handle <h>!` — a dapp ACL misconfig, intentionally left to
+ * DecryptionFailedError. The differentiator is the inserted "user": the actor
+ * message reads "…to decrypt handle", the dapp message "…to user decrypt handle",
+ * so keying on "is not authorized to decrypt handle" matches only the former.
  *
- * Relayer back-pressure (HTTP 429) is deliberately excluded: it is surfaced to
- * the caller as a retryable {@link RelayerRequestFailedError} with `retryAfter`,
- * not silently retried.
+ * The `error.test.ts` drift guard reads the installed `@fhevm/sdk` source and
+ * fails loudly if the message is reworded.
  */
-export function isRetryableRelayerError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  if (isConsumerRpcError(error)) {
-    return false;
-  }
-  // Relayer HTTP gateway transients (502/503/504), tagged by the relayer SDK.
-  const relayerGatewayError = findInErrorChain(
-    error,
-    (n) =>
-      n.code === "RELAYER_FETCH_ERROR" &&
-      (n.status === 502 || n.status === 503 || n.status === 504),
-  );
-  if (relayerGatewayError) {
-    return true;
-  }
-  // Relayer-boundary transport failure (no consumer-RPC signature above).
-  const msg = error.message.toLowerCase();
-  return (
-    msg.includes("econnreset") ||
-    msg.includes("econnrefused") ||
-    msg.includes("socket hang up") ||
-    msg.includes("fetch failed") ||
-    msg.includes("network")
-  );
+export function isNotEntitledMessage(message: string): boolean {
+  return message.toLowerCase().includes("is not authorized to decrypt handle");
 }
 
 /**
- * The relayer SDK's ACL gate (`validateAclPermissions`) throws a message-only
- * Error when the actor isn't allowed: `User address <a> is not authorized to
- * user decrypt handle <h>!`. Matching it here, once, against the pinned
- * `@zama-fhe/relayer-sdk`, is what lets {@link wrapDecryptError} surface a typed
- * NotEntitledError (the "dapp contract … is not authorized" variant is a dapp
- * misconfig and is intentionally left to DecryptionFailedError).
- *
- * This is a deliberate bridge, not a destination: `@zama-fhe/relayer-sdk` ships
- * a typed `ACLUserDecryptionError`, but its active `userDecrypt` path still
- * throws a plain Error. TODO(SDK-239 follow-up): once the relayer surfaces the
- * typed/coded ACL error from that path, key off the code instead of the message
- * and drop this matcher. The `error.test.ts` guard reads the installed relayer
- * source and fails loudly if the message drifts before then.
+ * `@fhevm/sdk`'s `verifyTkmsPublicKey` throws `invalid TransportKeyPairKeyPair`
+ * when a stored transport key pair can't be re-derived under the current TKMS
+ * version — the signal that the persisted key pair is stale (typically after a
+ * KMS/TKMS rotation) and must be evicted and regenerated. Matching it lets the
+ * signing and decrypt paths surface a typed {@link InvalidTransportKeyPairError}
+ * and self-heal the vault entry.
  */
-export function isNotEntitledMessage(message: string): boolean {
-  const m = message.toLowerCase();
-  return m.includes("user address") && m.includes("is not authorized to user decrypt");
+export function isInvalidTransportKeyPairMessage(message: string): boolean {
+  return message.toLowerCase().includes("invalid transportkeypair");
 }
 
-/** Parse the on-chain handle out of the relayer's not-entitled message. */
+/** Parse the on-chain handle out of the not-entitled message. */
 export function parseHandleFromMessage(message: string): string | undefined {
   return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];
 }
@@ -486,7 +290,7 @@ function readRetryAfterHeader(headers: unknown): number | undefined {
 
 /**
  * A node's **relayer** `Retry-After` header (seconds), read from a wrapped fetch
- * `Response` (the relayer SDK's `cause.response.headers`). The SDK owns the
+ * `Response` (the relayer's `cause.response.headers`). The SDK owns the
  * relayer fetch, so parsing the header there is legitimate.
  *
  * The viem/chain side (`HttpRequestError.headers`) is deliberately **not** read:
@@ -504,15 +308,22 @@ function retryAfterFromHeader(node: Record<string, unknown>): number | undefined
 }
 
 /**
+ * True for a well-formed server-driven retry delay, in seconds: a finite,
+ * positive number. Shared by the chain-walking extractor below and the public
+ * {@link retryAfterSeconds} accessor (`errors/base.ts`), so a malformed value
+ * (`0`, negative, `NaN`) is rejected the same way everywhere instead of being
+ * handed unchanged to a `setTimeout` backoff.
+ */
+export function isValidRetryAfterSeconds(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
  * A single node's server-driven retry delay (seconds): a numeric `retryAfter`
  * (a non-positive synthetic value is ignored), else a `Retry-After` header.
  */
 function retryAfterFromNode(node: Record<string, unknown>): number | undefined {
-  if (
-    typeof node.retryAfter === "number" &&
-    Number.isFinite(node.retryAfter) &&
-    node.retryAfter > 0
-  ) {
+  if (isValidRetryAfterSeconds(node.retryAfter)) {
     return node.retryAfter;
   }
   return retryAfterFromHeader(node);

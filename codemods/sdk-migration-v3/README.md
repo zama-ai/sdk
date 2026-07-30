@@ -6,11 +6,11 @@ the **mechanical** breaking changes (symbol/type renames, config-key changes,
 structural removals) so the upgrade doesn't have to be done by hand.
 
 This is the **single codemod for the v3 major line**: it assumes a **3.0.x floor** and
-brings code up to the latest v3.x. Transforms **accrue per breaking minor** (currently
-**3.0 → 3.1**); each future minor with breaks adds its transforms here and bumps the
-codemod version, rather than spawning a new package. Codemods are idempotent, so running
-it from any 3.x floor is safe — already-applied steps are no-ops. (A future v4 major would
-get its own `sdk-migration-v4` package.)
+brings code up to the current v3.x API. Transforms **accrue per breaking minor**; each
+future minor with breaks adds its transforms here and bumps the codemod version, rather
+than spawning a new package. Codemods are idempotent, so running it from any 3.x floor is
+safe — already-applied steps are no-ops. (A future v4 major would get its own
+`sdk-migration-v4` package.)
 
 ## Run
 
@@ -38,17 +38,31 @@ git diff                   # review the changes
 Idempotent (re-running is a no-op); edits are not formatted (run your formatter
 afterwards); pins are never bumped.
 
-## What it does (9 changes)
+## What it does (11 changes)
 
 - **renames + config-key changes** — native `ast-grep` steps (`rules/*.yml`):
   `useReadonlyToken→useWrappedToken`, `useDelegatedUserDecrypt→useDelegatedDecrypt`,
   `useAllow/useIsAllowed→useGrantPermit/useHasPermit`, `Handle→EncryptedValue`,
-  `useDelegationStatus tokenAddress→contractAddress`.
+  `useDelegationStatus tokenAddress→contractAddress`,
+  `createConfig`/`createZamaConfig` credentials keys
+  `sessionStorage/keypairTTL/sessionTTL→permitStorage/transportKeyPairTTL/permitTTL`
+  (scoped to the call's argument via a relational `inside` guard — `sessionStorage`
+  collides with the browser's `window.sessionStorage` global, so this is
+  deliberately not a bare pattern match).
 - **structural / context-sensitive rewrites** — JSSG transforms (`scripts/*.ts`):
   import-aware `createZamaConfig→createConfig` (leaves local aliases of the new
   export untouched), query-hook config `tokenAddress→address` (any object shape),
   mutation-hook config object → positional `address`, remove the `UseZamaConfig`
-  interface.
+  interface, `ZamaSDK` flat methods → `permits`/`delegations`/`decryption`
+  namespaces (`sdk.allow→sdk.permits.grantPermit`, etc. — 13 methods; scoped by
+  tracing local `new ZamaSDK(...)` bindings, same import-provenance technique as
+  the `createZamaConfig` rewrite above; `isDelegated→isActive` additionally gets a
+  trailing comment flagging that `isActive` also checks expiry, not just presence).
+
+A config assembled via a variable or spread and passed to `createConfig(cfg)` is
+**not** rewritten by the ast-grep step above — the property isn't syntactically
+inside the call, and widening the scope to reach it would reopen the
+`sessionStorage` collision this scoping exists to avoid. See "Known limitations".
 
 ## Optional AI tail
 
@@ -75,11 +89,11 @@ finished migration.
 ## Scope
 
 Derived by diffing the api-reports (not the changelog): released stable
-`2.5.0`/`3.0.0`/`3.0.1` are API-identical, so 3.1.0 is the first release since to
-carry breaking changes. `3.1.0` is unreleased — this package is **provisional**,
-derived from the `v3.0.1 → v3.1.0-alpha.14` diff, and covers the **mechanical
-subset** deterministically (the non-mechanical tail is left to the optional AI step
-above and to manual review).
+`2.5.0`/`3.0.0`/`3.0.1` are API-identical, so the breaking changes here are the ones
+introduced later in the v3.x line. This package brings v3.0 code up to the current
+v3.x API by applying the renames listed above, covering the **mechanical subset**
+deterministically — the non-mechanical tail is left to the optional AI step above and
+to manual review.
 
 ## Layout
 
@@ -169,3 +183,19 @@ CI runs all three via `.github/workflows/codemod.yml` (`pnpm --filter
   which `codemod workflow run` never auto-triggers — so the default run is deterministic.
   It only drafts the residual changes (with `// TODO(sdk-3.1.0)` markers) when explicitly
   triggered with an LLM configured.
+- **`ZamaSDK` namespace-method rewrite only follows a local `new ZamaSDK(...)`
+  binding** (`rename-sdk-namespace-methods.ts`), same class of limitation as
+  `createToken` above: method names like `allow`/`isAllowed`/`isDelegated` aren't
+  distinctive enough to rename as bare identifiers (unlike a `useXxx` hook name),
+  so the rule only rewrites `X.method(...)` where `X` is traced, same-file, back to
+  a `new ZamaSDK(...)` call. An SDK instance obtained through a factory function, a
+  React hook, or re-assignment through an intermediate variable is not traced and
+  keeps calling the removed root methods — the typecheck (`TS2339`, the method no
+  longer exists on `ZamaSDK`) surfaces those for manual fix or the `ai` tail.
+- **Credentials config-key rewrite only covers a direct `createConfig`/
+  `createZamaConfig` object-literal argument** (`rename-credentials-config-keys.yml`).
+  A config assembled via a variable or spread is not reachable by this rule without
+  reopening the `sessionStorage`/`window.sessionStorage` collision the scoping
+  exists to prevent — the type has no index signature, so `tsc` only flags a
+  removed key on a direct literal (`TS2353`); the variable/spread case has no
+  automated signal today and relies on manual review.

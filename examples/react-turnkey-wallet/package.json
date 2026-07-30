@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3005",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -11,23 +11,23 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
-    "@turnkey/react-wallet-kit": "^2.1.1",
+    "@turnkey/react-wallet-kit": "^2.2.0",
     "@turnkey/viem": "^0.14.31",
-    "@zama-fhe/react-sdk": "3.3.0-alpha.9",
-    "@zama-fhe/sdk": "3.3.0-alpha.9",
+    "@zama-fhe/react-sdk": "3.4.0-alpha.10",
+    "@zama-fhe/sdk": "3.4.0-alpha.10",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "viem": "^2.54.3"
+    "viem": "^2.55.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^22.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.6.0",
+    "eslint": "^10.8.0",
     "eslint-config-next": "^16.2.9",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   }
 }

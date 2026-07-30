@@ -1,77 +1,54 @@
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import { DecryptionFailedError } from "../errors";
-import type { DelegatedUserDecryptParams, UserDecryptParams } from "../relayer/relayer-sdk.types";
-import type { StoredTransportKeyPairWithPermits, Permission } from "./types";
 import { checksum } from "../schemas/primitives";
+import type {
+  Permission,
+  SerializedTransportKeyPairWithPermissions,
+  SerializedPermit,
+} from "./types";
 
-export type UserDecryptPermitParams = Pick<
-  UserDecryptParams,
-  | "signedContractAddresses"
-  | "privateKey"
-  | "publicKey"
-  | "signature"
-  | "startTimestamp"
-  | "durationDays"
->;
+/**
+ * The minimal permit material the decrypt seam needs. Delegation is already
+ * encoded in the self-contained `serializedPermit`, so a delegated decrypt and
+ * a normal decrypt resolve to the same shape — there is no separate delegated
+ * variant.
+ */
+export interface ResolvedPermit {
+  privateKey: Hex;
+  publicKey: Hex;
+  serializedPermit: SerializedPermit;
+}
 
-export type DelegatedUserDecryptPermitParams = Pick<
-  DelegatedUserDecryptParams,
-  | "signedContractAddresses"
-  | "privateKey"
-  | "publicKey"
-  | "signature"
-  | "delegatorAddress"
-  | "startTimestamp"
-  | "durationDays"
->;
-
-export function resolveUserDecryptPermit(
-  credentials: StoredTransportKeyPairWithPermits,
+/**
+ * Resolve the signed permit covering `contractAddress` from previously granted
+ * credentials. Works uniformly for direct and delegated decryption: the
+ * `@fhevm/sdk` signed permit bakes the delegator (if any) into its EIP-712
+ * payload, so the decrypt call needs nothing beyond the transport key pair and
+ * the serialized permit.
+ *
+ * @throws if no stored permit covers `contractAddress`. {@link DecryptionFailedError}
+ */
+export function resolvePermit(
+  credentials: SerializedTransportKeyPairWithPermissions,
   contractAddress: Address,
-): UserDecryptPermitParams {
+): ResolvedPermit {
   const permission = findPermissionFor(credentials, contractAddress);
   if (!permission) {
     throw new DecryptionFailedError(`No permit covers contract ${contractAddress} after allow()`);
   }
-  return commonPermitParams(credentials, permission);
-}
-
-export function resolveDelegatedDecryptPermit(
-  credentials: StoredTransportKeyPairWithPermits,
-  contractAddress: Address,
-): DelegatedUserDecryptPermitParams {
-  const permission = findPermissionFor(credentials, contractAddress);
-  if (!permission) {
-    throw new DecryptionFailedError(
-      `No delegated permit covers contract ${contractAddress} after allow()`,
-    );
-  }
   return {
-    ...commonPermitParams(credentials, permission),
-    delegatorAddress: permission.delegatorAddress,
-  };
-}
-
-function commonPermitParams(
-  credentials: StoredTransportKeyPairWithPermits,
-  permission: Permission,
-) {
-  return {
-    signedContractAddresses: permission.signedContractAddresses,
     privateKey: credentials.keypair.privateKey,
     publicKey: credentials.keypair.publicKey,
-    signature: permission.signature,
-    startTimestamp: permission.startTimestamp,
-    durationDays: permission.durationDays,
+    serializedPermit: permission.serializedPermit,
   };
 }
 
 function findPermissionFor(
-  credentials: StoredTransportKeyPairWithPermits,
+  credentials: SerializedTransportKeyPairWithPermissions,
   contractAddress: Address,
 ): Permission | undefined {
   const target = checksum(contractAddress);
-  return credentials.permits.find((permission) =>
-    permission.signedContractAddresses.includes(target),
+  return credentials.permissions.find((permission) =>
+    permission.contractAddresses.includes(target),
   );
 }

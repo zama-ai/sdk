@@ -32,6 +32,7 @@ function hasObjectPrototype(o: any): boolean {
   return Object.prototype.toString.call(o) === "[object Object]";
 }
 
+/** Union of TanStack Query option keys stripped by {@link filterQueryOptions}, leaving only domain parameters. */
 export type StrippedQueryOptionKeys =
   // Keep this union aligned with @tanstack/query-core behavioral options
   // (for example QueryObserverOptions). Revisit on every upgrade to avoid

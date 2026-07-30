@@ -1,5 +1,5 @@
-export { ZamaError, ZamaErrorCode } from "./base";
-export { matchZamaError } from "./match";
+export { ZamaError, ZamaErrorCode, isRetryable, retryAfterSeconds } from "./base";
+export { matchZamaError, type ErrorForCode } from "./match";
 export { SigningRejectedError, SigningFailedError } from "./signing";
 export { EncryptionFailedError, DecryptionFailedError } from "./encryption";
 export { TransactionRevertedError } from "./transaction";
@@ -11,7 +11,6 @@ export {
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";
 export { RpcRateLimitError } from "./rpc";
-export { WorkerTimeoutError, WorkerRecycledError } from "./timeout";
 export { ChainMismatchError } from "./chain";
 export {
   SignerRequiredError,
@@ -35,6 +34,7 @@ export {
 export {
   InsufficientConfidentialBalanceError,
   InsufficientERC20BalanceError,
+  InsufficientAllowanceError,
   BalanceCheckUnavailableError,
   ERC20ReadFailedError,
   type BalanceErrorDetails,

@@ -13,6 +13,7 @@ function getDefaultStorage(): GenericStorage {
     : new MemoryStorage();
 }
 
+/** @internal */
 export function resolveStorage(
   storage: GenericStorage | undefined = getDefaultStorage(),
   permitStorage: GenericStorage | undefined = storage,
@@ -22,16 +23,18 @@ export function resolveStorage(
 
 // ── Chain relayer resolution ────────────────────────────────────────────────
 
+/** @internal */
 export interface ResolvedChainRelayer {
   chain: FheChain;
-  relayer: RelayerConfig;
+  relayerConfig: RelayerConfig;
 }
 
+/** @internal */
 export function resolveChainRelayers(
   chains: readonly FheChain[],
   relayers: Readonly<Record<number, RelayerConfig>>,
 ): Map<number, ResolvedChainRelayer> {
-  const chainMap = new Map(chains.map((c) => [c.id, c]));
+  const chainMap = new Map<number, FheChain>(chains.map((c) => [c.id, c]));
   if (chainMap.size !== chains.length) {
     const ids = chains.map((c) => c.id);
     const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
@@ -44,7 +47,7 @@ export function resolveChainRelayers(
   const result = new Map<number, ResolvedChainRelayer>();
 
   for (const id of chainMap.keys()) {
-    const chainConfig = chainMap.get(id);
+    const chain = chainMap.get(id);
     const relayerConfig = relayerMap.get(String(id));
 
     if (!relayerConfig) {
@@ -54,14 +57,14 @@ export function resolveChainRelayers(
       );
     }
 
-    if (!chainConfig) {
+    if (!chain) {
       throw new ConfigurationError(
         `Chain ${id} has a relayer configured but no entry in the chains array. ` +
           `Add the chain config to the chains array.`,
       );
     }
 
-    result.set(id, { chain: chainConfig, relayer: relayerConfig });
+    result.set(id, { chain, relayerConfig });
   }
 
   const relayerIdSet = new Set(Object.keys(relayers).map(Number));

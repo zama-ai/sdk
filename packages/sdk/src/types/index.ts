@@ -18,11 +18,14 @@ export type {
 } from "./signer";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
+export type { GenericLogger } from "./logger";
 export type { UnshieldCallbacks, ShieldCallbacks, TransferCallbacks } from "./callbacks";
 export type {
   ApprovalStrategy,
   TransferOptions,
   ShieldOptions,
   UnshieldOptions,
+  UnwrapResult,
   ShieldPath,
+  WrapOptions,
 } from "./token";

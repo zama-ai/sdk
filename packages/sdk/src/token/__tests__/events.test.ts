@@ -11,8 +11,7 @@ import { TransactionRevertedError } from "../../errors";
 import type { Address } from "viem";
 import type { GenericProvider } from "../../types";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
-
-const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
+import type { TypedValue } from "@fhevm/sdk/types";
 
 /**
  * Build a ZamaSDK with an event listener wired up, together with a fresh
@@ -30,6 +29,23 @@ function setupSdkWithEvents(opts: {
   const readonlyToken = new Token(sdk, opts.tokenAddress);
   const token = new WrappedToken(sdk, opts.wrapper ?? opts.tokenAddress);
   return { sdk, events, readonlyToken, token };
+}
+
+/** Make `waitForTransactionReceipt` return a receipt with an `UnwrapRequested`
+ * log so `unwrap` / `unwrapAll` can surface an `unwrapRequestId`. */
+function mockUnwrapReceipt(provider: GenericProvider, userAddress: Address): void {
+  vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+    logs: [
+      {
+        topics: [
+          Topics.UnwrapRequested,
+          `0x000000000000000000000000${userAddress.slice(2)}`,
+          `0x${"cd".repeat(32)}`,
+        ],
+        data: `0x${"00".repeat(32)}`,
+      },
+    ],
+  });
 }
 
 describe("ZamaSDKEvents constants", () => {
@@ -62,7 +78,7 @@ describe("ZamaSDKEvents constants", () => {
 });
 
 describe("Token.balanceOf event emissions", () => {
-  // balanceOf delegates to sdk.userDecrypt, so decrypt events come from the SDK's
+  // balanceOf delegates to sdk.decryptValues, so decrypt events come from the SDK's
   // unified pipeline. They carry `handles` and `durationMs`, but not `tokenAddress`
   // (the pipeline is token-agnostic — callers correlate by handle).
 
@@ -121,7 +137,7 @@ describe("Token.balanceOf event emissions", () => {
     expect("encryptedValues" in endEvent! && endEvent.encryptedValues).toContain(handle);
   });
 
-  test("emits DecryptError when relayer.userDecrypt fails", async ({
+  test("emits DecryptError when relayer.decryptValues fails", async ({
     createSDK,
     relayer,
     tokenAddress,
@@ -129,7 +145,7 @@ describe("Token.balanceOf event emissions", () => {
     userAddress,
     provider,
   }) => {
-    relayer.userDecrypt = vi.fn().mockRejectedValue(new Error("decrypt boom"));
+    vi.mocked(relayer.decryptValues).mockRejectedValue(new Error("decrypt boom"));
     const { readonlyToken, events } = setupSdkWithEvents({ createSDK, tokenAddress });
     vi.mocked(provider.readContract).mockResolvedValue(handle);
 
@@ -163,7 +179,6 @@ describe("Token.decryptBalanceAs event emissions", () => {
   test("emits decrypt events with timestamp (no tokenAddress — SDK-level emission)", async ({
     createSDK,
     relayer,
-    signer,
     tokenAddress,
     handle,
     delegatorAddress,
@@ -174,22 +189,9 @@ describe("Token.decryptBalanceAs event emissions", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(handle)
       .mockResolvedValue(2n ** 64n - 1n);
-    relayer.createDelegatedUserDecryptEIP712 = vi
-      .fn()
-      .mockResolvedValue({
-        domain: { name: "test", version: "1", chainId: 1, verifyingContract: "0xkms" },
-        types: { DelegatedUserDecryptRequestVerification: [] },
-        message: {
-          publicKey: TEST_PUBLIC_KEY,
-          contractAddresses: [tokenAddress],
-          delegatorAddress,
-          delegateAddress: signer.walletAccount.getSnapshot()!.address,
-          startTimestamp: 1000n,
-          durationDays: 1n,
-          extraData: "0x",
-        },
-      });
-    relayer.delegatedUserDecrypt = vi.fn().mockResolvedValue({ [handle]: 42n });
+    vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+      { type: "uint64", value: 42n } as TypedValue,
+    ]);
 
     await readonlyToken.decryptBalanceAs({ delegatorAddress });
 
@@ -198,7 +200,7 @@ describe("Token.decryptBalanceAs event emissions", () => {
     );
     expect(decryptEvents.length).toBeGreaterThan(0);
     for (const event of decryptEvents) {
-      // SDK-level delegatedUserDecrypt does not scope events to a token address
+      // SDK-level delegatedDecryptValues does not scope events to a token address
       expect(event.tokenAddress).toBeUndefined();
       expect(event.timestamp).toBeGreaterThan(0);
       expect(typeof event.timestamp).toBe("number");
@@ -260,7 +262,7 @@ describe("Token event emissions", () => {
       relayer,
       tokenAddress,
     }) => {
-      relayer.encrypt = vi.fn().mockRejectedValue(new Error("encrypt boom"));
+      vi.mocked(relayer.encryptValues).mockRejectedValue(new Error("encrypt boom"));
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
 
       await expect(
@@ -365,7 +367,13 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrap events", () => {
-    test("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+    test("emits EncryptStart, EncryptEnd, UnwrapSubmitted", async ({
+      createSDK,
+      tokenAddress,
+      userAddress,
+      provider,
+    }) => {
+      mockUnwrapReceipt(provider, userAddress);
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrap(50n);
 
@@ -377,7 +385,8 @@ describe("Token event emissions", () => {
   });
 
   describe("unwrapAll events", () => {
-    test("emits UnwrapSubmitted", async ({ createSDK, tokenAddress }) => {
+    test("emits UnwrapSubmitted", async ({ createSDK, tokenAddress, userAddress, provider }) => {
+      mockUnwrapReceipt(provider, userAddress);
       const { token, events } = setupSdkWithEvents({ createSDK, tokenAddress });
       await token.unwrapAll();
 

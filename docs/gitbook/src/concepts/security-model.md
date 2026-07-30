@@ -61,13 +61,35 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
 
-| Parameter  | Value                                                            |
-| ---------- | ---------------------------------------------------------------- |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js) |
-| Key format | Plaintext ML-KEM key pair                                        |
-| Scope      | One transport key pair per signer address (chain-independent)    |
+![Transport key pair storage](../images/credential-storage.svg)
+
+| Parameter  | Value                                                                    |
+| ---------- | ------------------------------------------------------------------------ |
+| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
+| Key format | Plaintext ML-KEM key pair                                                |
+| Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
+
+### Shared-tenant scope (B2B2C / WaaS operators)
+
+`transportKeyPairScope` is an opt-in escape hatch from the per-signer default. When configured, every signer that shares the same scope identifier reads and writes the _same_ transport key pair instead of generating one per signer address.
+
+**When it's the right tradeoff.** A separately-tenanted deployment (browser or mobile dApp, treasury wallet) gets real defense-in-depth from per-signer keys: compromising one signer's storage never exposes another user's key. A shared-tenant Wallet-as-a-Service operator holding thousands of client wallets behind one operator-controlled key store gets none of that benefit — if the store is breached, every wallet behind it is compromised together regardless of how many key pairs exist. In that case, per-signer keys are pure overhead (generation, storage rows, management) with no corresponding security gain, and `transportKeyPairScope` lets the operator collapse them into one.
+
+**When it isn't.** If signers are genuinely isolated — separate end-user devices, separate trust boundaries, separate storage backends — per-signer keys (the default) give you isolation that a shared scope would throw away. Don't configure a scope just to save storage rows if your signers don't already share one key store.
+
+**What stays isolated regardless of scope.** Permits are always per-signer: the EIP-712 signature is inherently tied to the signing wallet, so two signers in the same scope never see each other's permits, only the underlying key pair. See [Permit Model](./permit-model.md#revocation) for how revocation is split into two tiers to preserve this isolation.
+
+{% hint style="warning" %}
+Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](../guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
+{% endhint %}
+
+**Onboarding race.** `GenericStorage` has no compare-and-swap, so the very first time a scope's key pair is created, concurrent signers can race the underlying storage. This isn't just a more-likely version of the ordinary per-signer race (two tabs for the same end-user, where the loser just re-signs) — under a shared scope the racers are typically _different_ end-users behind the same operator, so the losing side can have an already-granted permit silently pruned as stale through no action of its own, and because one slot serves the whole cohort, every TTL expiry or `revokeTransportKeyPair()` call is a correlated event that can push many signers into the window at once. Pre-warm a scope's key pair once with `sdk.permits.warmTransportKeyPairScope(scopeId)` before opening concurrent traffic to it, rather than letting the first wave of real users race each other.
+
+{% hint style="info" %}
+Use `sdk.permits.warmTransportKeyPairScope(scopeId)`, not `sdk.permits.warmTransportKeyPair()`, to pre-warm a scope. The latter is gated on a connected wallet-account snapshot — a precondition inherited from its per-signer use case that doesn't apply to a scope-wide key, and it would silently no-op precisely when an operator is most likely to call it: before any end-user is connected. `warmTransportKeyPairScope()` needs no wallet account _connected_ — though, like the rest of the `credentials/` facade, it still requires a `signer` to be configured on the `ZamaSDK` instance at construction time — matching `revokeTransportKeyPair()`'s operator-level design.
+{% endhint %}
 
 ### Limitations
 
@@ -82,58 +104,43 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 ## WASM bundle integrity
 
-The `web()` relayer transport loads the TFHE WASM bundle from Zama's CDN (`cdn.zama.org`). Before execution, the SDK computes a SHA-384 digest of the fetched payload and compares it to a hash pinned in the library's source code. If the hashes do not match, initialization fails with a clear error.
+The TFHE WASM binaries ship **inside the `@fhevm/sdk` npm package** and load from your own bundle — there is no runtime CDN fetch. Integrity is guaranteed the same way as any other dependency: by your package manager's lockfile hashes and your build pipeline.
 
-![WASM Bundle Integrity Check](../images/security-wasm-integrity.svg)
+For advanced deployments that host the WASM assets on a URL instead (via the `runtime` option's `wasmAssetLoadMode` / `locateFile`), the integrity guarantee depends on the mode: `verified-blob` SHA-verifies the fetched bytes against hashes pinned in the library and fails initialization on mismatch, `precheck-direct-url` runs a precheck request before loading directly from the URL, and `trusted-direct-url` loads directly with no verification (fastest, least defensive). The `embedded-base64` mode inlines the WASM as base64 with no network fetch at all. See the [`wasmAssetLoadMode` mode table](../changelog/alpha.md) for the full list.
 
-This protects against CDN compromise or man-in-the-middle injection of modified WASM.
-
-Integrity checking is enabled by default. Disable it only in test environments:
-
-```ts
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: web({ security: { integrityCheck: false } }) },
-});
-```
-
-{% hint style="warning" %}
-Disabling integrity checks in production removes a critical defense layer. A compromised WASM bundle could exfiltrate transport private keys or manipulate encrypted values.
-{% endhint %}
+![WASM loading and integrity](../images/security-wasm-integrity.svg)
 
 ## Browser security headers
 
 ### COOP/COEP headers
 
-Multi-threaded FHE requires `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. Your server must send these headers:
+Multi-threaded FHE uses `SharedArrayBuffer`, which browsers restrict to cross-origin isolated contexts. To enable multi-threaded encryption, your server must send these headers:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without these headers, `SharedArrayBuffer` is unavailable. The SDK falls back to single-threaded WASM execution, which is slower but functional.
+Without them, `SharedArrayBuffer` is unavailable and the SDK falls back to single-threaded WASM execution — slower, but fully functional. When this happens, `@fhevm/sdk` logs a console warning naming the two headers.
 
 {% hint style="info" %}
-Single-threaded mode works without COOP/COEP headers. Only enable cross-origin isolation if you need the performance benefit of multi-threaded FHE.
+These headers are a performance setting, not a hard requirement. Encryption works without them in single-threaded mode. Only enable cross-origin isolation if you want the throughput of multi-threaded FHE.
 {% endhint %}
 
 ### Content Security Policy (CSP)
 
-The Web Worker loads and executes WASM from a CDN. Your CSP must allow:
+The SDK compiles and executes the bundled WASM in the page, and — in multi-threaded mode — spawns its worker pool from embedded source. Your CSP must allow:
 
-| Directive     | Value                  | Reason                                        |
-| ------------- | ---------------------- | --------------------------------------------- |
-| `worker-src`  | `blob:`                | Workers are created from blob URLs            |
-| `script-src`  | `'wasm-unsafe-eval'`   | Required for WASM execution inside the worker |
-| `connect-src` | `https://cdn.zama.org` | CDN fetch for the WASM bundle                 |
+| Directive     | Value                | Reason                                                     |
+| ------------- | -------------------- | ---------------------------------------------------------- |
+| `script-src`  | `'wasm-unsafe-eval'` | Required for WASM compilation and execution                |
+| `worker-src`  | `blob:`              | Multi-threaded mode creates its worker pool from blob URLs |
+| `connect-src` | your relayer URL     | Encrypt/decrypt requests go to the relayer (or your proxy) |
 
 Example CSP header:
 
 ```
-Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.com;
+Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://relayer.testnet.zama.org https://your-relayer-proxy.com;
 ```
 
 <details>
@@ -164,6 +171,12 @@ Permits can be revoked programmatically via `sdk.permits.revokePermits()` or aut
 
 After revoking permits, the transport key pair remains in storage. Use `sdk.permits.clear()` to also wipe the key pair.
 
+**With a shared `transportKeyPairScope` configured, these signer-level operations never touch the shared key pair** — `sdk.permits.clear()` for one signer only ever removes that signer's own permits, exactly like `revokePermits()`. This is deliberate: one end-user disconnecting must never invalidate every other signer sharing the scope's operator-controlled key store.
+
+Invalidating the shared key pair itself is a distinct, operator-level operation: `sdk.permits.revokeTransportKeyPair(scopeId)`. It deletes the scope's key pair; every permit in the scope embeds that key pair's public key, so they're all treated as stale on next access — no permit needs to be touched directly, and no wallet needs to be connected. Use it for suspected compromise, periodic rotation, or scope decommissioning — never as a side effect of a single signer's revoke.
+
+`revokeTransportKeyPair()` only stops the SDK from reissuing or reusing the deleted key going forward — it does not revoke permits already issued under it. A permit is a self-contained, bearer-style EIP-712 signature the relayer accepts on its own terms; nothing in this SDK (or, from the client's perspective, on the relayer/KMS side) can push-revoke one server-side. If a compromise already exfiltrated both the shared private key and a still-valid permit — realistic, since permits and the key pair share the same `storage` by default unless `permitStorage` is configured separately — that permit remains usable against the relayer directly, bypassing this SDK entirely, until its own `permitTTL` expiry. `revokeTransportKeyPair()` closes the SDK-local half of the exposure; it is not a substitute for treating any already-issued permit from a compromised store as live until it naturally expires.
+
 ## CSRF protection
 
 For browser apps, the `web()` transport supports CSRF tokens injected into all mutating HTTP requests to the relayer proxy:
@@ -185,13 +198,13 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation        | Algorithm       | Key size    | Source                        |
-| ---------------- | --------------- | ----------- | ----------------------------- |
-| CDN integrity    | SHA-384         | --          | Web Crypto API                |
-| FHE encryption   | TFHE            | Network key | WASM (`@zama-fhe/sdk (WASM)`) |
-| ZK proofs        | WASM prover     | --          | WASM (`@zama-fhe/sdk (WASM)`) |
-| Wallet signing   | ECDSA secp256k1 | 256-bit     | User wallet                   |
-| Request tracking | UUID v4         | 128-bit     | `crypto.randomUUID()`         |
+| Operation                       | Algorithm       | Key size    | Source                |
+| ------------------------------- | --------------- | ----------- | --------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API        |
+| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)   |
+| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)   |
+| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet           |
+| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()` |
 
 ## Reporting vulnerabilities
 

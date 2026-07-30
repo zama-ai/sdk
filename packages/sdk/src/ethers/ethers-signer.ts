@@ -1,4 +1,10 @@
-import { BrowserProvider, Contract, type InterfaceAbi, type Signer } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  type InterfaceAbi,
+  type Signer,
+  type TypedDataDomain,
+} from "ethers";
 import {
   getAddress,
   isHex,
@@ -13,7 +19,7 @@ import {
   WalletAccountNotReadyError,
   WalletNotConnectedError,
 } from "../errors";
-import type { EIP712TypedData } from "../relayer/relayer-sdk.types";
+import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
 import type { WalletAccount, WriteContractConfig } from "../types";
@@ -75,6 +81,11 @@ export class EthersSigner extends BaseSigner {
     }
   }
 
+  /**
+   * Return the connected wallet account, or throw {@link WalletAccountNotReadyError}
+   * while the initial async lookup is pending, or {@link WalletNotConnectedError}
+   * when no wallet is connected.
+   */
   override requireWalletAccount(operation: string): WalletAccount {
     const account = this.walletAccount.getSnapshot();
     if (!account && !this.walletAccount.isReady()) {
@@ -86,6 +97,7 @@ export class EthersSigner extends BaseSigner {
     return account;
   }
 
+  /** Re-fetch the wallet account from the provider or signer and update `walletAccount`. */
   refreshWalletAccount(): Promise<WalletAccount | undefined> {
     if (this.#eip1193) {
       return this.#refreshFromEthereum();
@@ -96,6 +108,7 @@ export class EthersSigner extends BaseSigner {
     return Promise.resolve(undefined);
   }
 
+  /** Unsubscribe from the EIP-1193 provider's wallet lifecycle events. */
   protected override onDispose(): void {
     this.#unsubscribeProvider();
   }
@@ -119,20 +132,22 @@ export class EthersSigner extends BaseSigner {
     return { address: getAddress(address), chainId: Number(network.chainId) };
   }
 
+  /** Sign EIP-712 typed data (used for decrypt authorization). */
   async signTypedData(typedData: EIP712TypedData): Promise<Hex> {
     const signer = await this.#resolveSigner();
     const { domain, types, message } = typedData;
     const { EIP712Domain: _, ...sigTypes } = types;
     const mutableSigTypes = Object.fromEntries(
-      Object.entries(sigTypes).map(([key, fields]) => [key, [...fields]]),
+      Object.entries(sigTypes).map(([name, fields]) => [name, [...fields]]),
     );
-    const sig = await signer.signTypedData(domain, mutableSigTypes, message);
+    const sig = await signer.signTypedData(domain as TypedDataDomain, mutableSigTypes, message);
     if (!isHex(sig)) {
       throw new TypeError(`Expected hex string, got: ${sig}`);
     }
     return sig;
   }
 
+  /** Send a write transaction and return the tx hash. */
   async writeContract<
     const TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, "nonpayable" | "payable">,

@@ -12,14 +12,14 @@ Common use cases:
 - **Portfolio dashboards** — a read-only service decrypts balances across wallets without holding keys.
 - **Auditors** — a third party verifies holdings without the token owner being online.
 
-This guide uses `sdk.delegations` and `token.decryptBalanceAs`. Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
+This guide uses `sdk.delegations` and `token.decryptBalanceAs` in the core SDK, or the `useDelegateDecryption` and `useDecryptBalanceAs` hooks in React. Before starting, make sure your project is set up following the [Configuration](./configuration.md) guide.
 
 ## Example
 
 A complete delegation flow — grant, then decrypt as delegate (the SDK rides out ACL propagation for you):
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { createConfig, ZamaSDK } from "@zama-fhe/sdk";
@@ -41,16 +41,33 @@ const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" }
 ```
 
 {% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useDelegateDecryption, useDecryptBalanceAs } from "@zama-fhe/react-sdk";
+
+const TOKEN = "0xConfidentialToken";
+
+// 1. Delegator grants decryption rights
+const { mutateAsync: delegate } = useDelegateDecryption(TOKEN);
+await delegate({ delegateAddress: "0xDelegate" });
+
+// 2. Delegate reads the delegator's balance — the SDK rides out ACL propagation
+const { mutateAsync: decryptAs } = useDecryptBalanceAs(TOKEN);
+const balance = await decryptAs({ delegatorAddress: "0xDelegator" });
+```
+
+{% endtab %}
 {% endtabs %}
 
 ## Steps
 
 ### 1. Grant delegation
 
-The token owner calls `sdk.delegations.delegateDecryption` to allow a delegate to decrypt their balance for a specific contract.
+The token owner grants a delegate the right to decrypt their balance for a specific contract. Each call grants delegation for a single `(contractAddress, delegateAddress)` pair and submits one on-chain transaction, returning `{ txHash, receipt }`.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 // Permanent delegation (no expiration)
@@ -68,15 +85,26 @@ await sdk.delegations.delegateDecryption({
 ```
 
 {% endtab %}
-{% endtabs %}
+{% tab title="React SDK" %}
 
-Both calls return `{ txHash, receipt }`.
+```tsx
+import { useDelegateDecryption } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: delegate } = useDelegateDecryption("0xConfidentialToken");
+
+// Permanent delegation (no expiration)
+await delegate({ delegateAddress: "0xDelegate" });
+
+// Delegation with an expiration date
+await delegate({ delegateAddress: "0xDelegate", expirationDate: new Date("2027-12-31T00:00:00Z") });
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% hint style="warning" %}
 The expiration date must be **at least 1 hour in the future**. Passing a closer date throws `DelegationExpirationTooSoonError` before the transaction is sent.
 {% endhint %}
-
-Each call grants delegation for a single `(contractAddress, delegateAddress)` pair and submits one on-chain transaction.
 
 ### 2. ACL propagation (handled for you)
 
@@ -88,55 +116,88 @@ After the delegation transaction is mined, the Zama Gateway (on Arbitrum) syncs 
 
 ### 3. Decrypt as delegate
 
-The delegate calls `token.decryptBalanceAs` to read the delegator's balance. The delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
+The delegate reads the delegator's balance. The delegate signs with their own wallet, and the relayer verifies the on-chain delegation before decrypting.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const balance = await token.decryptBalanceAs({ delegatorAddress: "0xDelegator" });
-```
 
-{% endtab %}
-{% endtabs %}
-
-When the balance holder differs from the delegator, pass `accountAddress` explicitly:
-
-```ts
-const balance = await token.decryptBalanceAs({
+// When the balance holder differs from the delegator, pass accountAddress explicitly:
+const other = await token.decryptBalanceAs({
   delegatorAddress: "0xDelegator",
   accountAddress: "0xBalanceHolder",
 });
 ```
 
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useDecryptBalanceAs } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: decryptAs, data: balance } = useDecryptBalanceAs("0xConfidentialToken");
+
+await decryptAs({ delegatorAddress: "0xDelegator" });
+
+// When the balance holder differs from the delegator, pass accountAddress explicitly:
+await decryptAs({ delegatorAddress: "0xDelegator", accountAddress: "0xBalanceHolder" });
+```
+
+{% endtab %}
+{% endtabs %}
+
 Clear values are cached in storage, keyed by `(accountAddress, token, encryptedValue)`. Every on-chain balance change produces a new encrypted value, so stale cache entries are never served.
 
-### 4. Batch decryption across tokens (optional)
+### 4. Check delegation status (optional)
 
-Decrypt balances across multiple tokens in a single call:
+Query whether a delegation is currently active between a delegator and a delegate, along with its expiry:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
+
+```ts
+const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
+  contractAddress: token.address,
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useDelegationStatus } from "@zama-fhe/react-sdk";
+
+const { data } = useDelegationStatus({
+  contractAddress: "0xConfidentialToken",
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+
+// data?.isActive, data?.expiryTimestamp
+```
+
+{% endtab %}
+{% endtabs %}
+
+### 5. Batch decryption across tokens (optional)
+
+Decrypt balances across multiple tokens in a single call. The result is a `Map<Address, bigint>`.
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { Token } from "@zama-fhe/sdk";
 
 const tokens = addresses.map((a) => sdk.createToken(a));
 
-const balances = await Token.batchDecryptBalancesAs(tokens, { delegatorAddress: "0xDelegator" });
-
-// balances is a Map<Address, bigint>
-for (const [address, balance] of balances) {
-  console.log(`${address}: ${balance}`);
-}
-```
-
-{% endtab %}
-{% endtabs %}
-
-Handle errors for individual tokens with `onError`:
-
-```ts
+// Without `onError`, a single failing token rejects the whole call and discards the
+// map. Pass `onError` for a partial result: it's called once per failed token and its
+// return value becomes that token's entry. `maxConcurrency` caps parallel decryptions.
 const balances = await Token.batchDecryptBalancesAs(tokens, {
   delegatorAddress: "0xDelegator",
   maxConcurrency: 3,
@@ -145,9 +206,40 @@ const balances = await Token.batchDecryptBalancesAs(tokens, {
     return 0n;
   },
 });
+
+for (const [address, balance] of balances) {
+  console.log(`${address}: ${balance}`);
+}
 ```
 
-### 5. Revoke delegation (optional)
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useMemo } from "react";
+import { useBatchDecryptBalancesAs, useZamaSDK } from "@zama-fhe/react-sdk";
+
+// Build Token instances with the SDK factory, not `useToken` — hooks can't be called in a loop.
+const sdk = useZamaSDK();
+const tokens = useMemo(() => addresses.map((a) => sdk.createToken(a)), [sdk, addresses]);
+
+const { mutateAsync: batchDecryptAs } = useBatchDecryptBalancesAs(tokens);
+
+try {
+  const balances = await batchDecryptAs({ delegatorAddress: "0xDelegator" });
+  // balances is a Map<Address, bigint>. Any single token failing rejects the whole call.
+} catch (err) {
+  console.error(err);
+}
+```
+
+{% endtab %}
+{% endtabs %}
+
+### 6. Revoke delegation (optional)
+
+{% tabs %}
+{% tab title="Core SDK" %}
 
 ```ts
 await sdk.delegations.revokeDelegation({
@@ -156,12 +248,26 @@ await sdk.delegations.revokeDelegation({
 });
 ```
 
-### 6. Handle errors (optional)
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useRevokeDelegation } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: revoke } = useRevokeDelegation("0xConfidentialToken");
+
+await revoke({ delegateAddress: "0xDelegate" });
+```
+
+{% endtab %}
+{% endtabs %}
+
+### 7. Handle errors (optional)
 
 Delegation operations can throw several error types. The most common:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import {
@@ -195,6 +301,23 @@ try {
   } else if (error instanceof DecryptionFailedError) {
     // delegated decryption failed
   }
+}
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { DelegationNotPropagatedError, SigningRejectedError } from "@zama-fhe/sdk";
+import { useDecryptBalanceAs } from "@zama-fhe/react-sdk";
+
+const { mutateAsync: decryptAs, error } = useDecryptBalanceAs("0xConfidentialToken");
+
+// The mutation's `error` is a ZamaError subclass — narrow it with `instanceof`:
+if (error instanceof SigningRejectedError) {
+  // user cancelled the wallet prompt — do not retry automatically
+} else if (error instanceof DelegationNotPropagatedError) {
+  // delegation still hadn't synced after the SDK's internal retry — rare; retry shortly
 }
 ```
 

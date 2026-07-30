@@ -1,6 +1,6 @@
-import { TransferForm } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
 import { CONTRACTS } from "@/constants";
+import { TransferForm } from "@zama-fhe/test-components";
+import { getAddress } from "viem";
 
 export default async function TransferPage({
   searchParams,
@@ -8,7 +8,7 @@ export default async function TransferPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const token = (params.token as Address) ?? CONTRACTS.cUSDT;
+  const token = getAddress(params.token ?? CONTRACTS.cUSDT);
 
   return (
     <div className="space-y-6">

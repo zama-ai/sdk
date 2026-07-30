@@ -25,7 +25,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint } from "../utils/assertions";
@@ -84,7 +84,9 @@ export interface BatchBalancesResult {
  * that delegate to `sdk.decryption.decryptValues` and `sdk.permits.grantPermit`.
  */
 export class Token {
+  /** The SDK instance this token operates through. */
   readonly sdk: ZamaSDK;
+  /** Checksummed address of the confidential token contract. */
   readonly address: Address;
 
   constructor(sdk: ZamaSDK, address: Address) {
@@ -897,6 +899,3 @@ export class Token {
     return sdk;
   }
 }
-
-/** @internal */
-export type DecryptedHandlesMap = Map<EncryptedValue, ClearValue>;

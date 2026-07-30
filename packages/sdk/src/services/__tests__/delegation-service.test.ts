@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import { anvil } from "../../chains";
 import { MAX_UINT64 } from "../../contracts";
 import { DelegationCooldownError, TransactionRevertedError } from "../../errors";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -9,7 +10,6 @@ describe("DelegationService", () => {
   test("reads delegation expiry from the ACL contract", async ({
     delegationService,
     provider,
-    aclAddress,
     delegatorAddress,
     delegateAddress,
   }) => {
@@ -24,7 +24,7 @@ describe("DelegationService", () => {
     ).resolves.toBe(1234n);
     expect(provider.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        address: aclAddress,
+        address: anvil.aclContractAddress,
         functionName: "getUserDecryptionDelegationExpirationDate",
         args: [delegatorAddress, delegateAddress, CONTRACT],
       }),
@@ -79,6 +79,48 @@ describe("DelegationService", () => {
         delegateAddress,
       }),
     ).resolves.toBe(false);
+  });
+
+  test("getStatus resolves activity and expiry from a single expiry read", async ({
+    delegationService,
+    provider,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(0n);
+
+    await expect(
+      delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
+    ).resolves.toEqual({ isActive: false, expiryTimestamp: 0n });
+    expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
+  });
+
+  test("getStatus skips getBlockTimestamp for a permanent delegation", async ({
+    delegationService,
+    provider,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValueOnce(MAX_UINT64);
+
+    await expect(
+      delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
+    ).resolves.toEqual({ isActive: true, expiryTimestamp: MAX_UINT64 });
+    expect(provider.getBlockTimestamp).not.toHaveBeenCalled();
+  });
+
+  test("isDelegated stays consistent with getStatus for a future expiry", async ({
+    delegationService,
+    provider,
+    delegatorAddress,
+    delegateAddress,
+  }) => {
+    vi.mocked(provider.readContract).mockResolvedValue(20n);
+    vi.mocked(provider.getBlockTimestamp).mockResolvedValue(10n);
+
+    await expect(
+      delegationService.getStatus({ contractAddress: CONTRACT, delegatorAddress, delegateAddress }),
+    ).resolves.toEqual({ isActive: true, expiryTimestamp: 20n });
   });
 
   test("finds missing and expired delegations by contract", async ({

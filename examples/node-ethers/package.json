@@ -7,11 +7,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zama-fhe/sdk": "^3.2.0",
+    "@zama-fhe/sdk": "^3.3.0",
     "ethers": "^6.17.0"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "tsx": "^4.23.0",
-    "typescript": "^6.0.3"
+    "typescript": "6.0.3"
   }
 }

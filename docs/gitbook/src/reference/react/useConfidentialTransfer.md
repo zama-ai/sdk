@@ -25,8 +25,8 @@ function SendButton({ tokenAddress }: { tokenAddress: `0x${string}` }) {
   const { mutateAsync: transfer, isPending } = useConfidentialTransfer({ address: tokenAddress });
 
   async function handleSend() {
-    const { txHash, receipt } = await transfer({ to: "0xRecipient", amount: 1000n });
-    console.log("Confirmed in block", receipt.blockNumber);
+    const { txHash } = await transfer({ to: "0xRecipient", amount: 1000n });
+    console.log("Transfer confirmed:", txHash);
   }
 
   return (
@@ -118,7 +118,7 @@ Recipient address.
 
 `bigint`
 
-Number of tokens to transfer (in the token's smallest unit). Encrypted before submission.
+Number of tokens to transfer (in the token's base units). Encrypted before submission.
 
 ### skipBalanceCheck
 

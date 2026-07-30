@@ -15,9 +15,11 @@ export function LoginState({
       title="Authenticate with Turnkey"
       body="Log in or sign up with Turnkey to initialize the wallet session used by the Zama SDK."
       action={
-        <button onClick={onLogin} disabled={isLoading} className="btn btn-primary min-w-44">
-          {isLoading ? "Loading…" : "Log in / Sign up"}
-        </button>
+        <form action={onLogin}>
+          <button type="submit" disabled={isLoading} className="btn btn-primary min-w-44">
+            {isLoading ? "Loading…" : "Log in / Sign up"}
+          </button>
+        </form>
       }
     />
   );

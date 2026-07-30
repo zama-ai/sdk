@@ -1,4 +1,4 @@
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import type { WrappedToken } from "../token/wrapped-token";
 import type { TransactionResult } from "../types";
 import type { MutationFactoryOptions } from "./factory-types";
@@ -9,6 +9,7 @@ export type FinalizeUnwrapParams = {
   unwrapRequestId: EncryptedValue;
 };
 
+/** Builds TanStack Query mutation options for {@link WrappedToken.finalizeUnwrap | finalizing} a previously requested unwrap. @see {@link FinalizeUnwrapParams} */
 export function finalizeUnwrapMutationOptions(
   token: WrappedToken,
 ): MutationFactoryOptions<

@@ -14,13 +14,11 @@ token: "token/" {
   tok: "Token\n(read + base writes)"
   wrapped: "WrappedToken\n(extends Token —\nshield/unshield)"
   creds: "Permits\n(CredentialService)"
-  cache: "BalanceCache"
 
   zama-sdk -> tok: createToken
   zama-sdk -> wrapped: createWrappedToken
   wrapped -> tok: extends
   tok -> creds: requests permits
-  tok -> cache: caches balances
 }
 
 query: "query/" {
@@ -44,16 +42,16 @@ contracts: "contracts/" {
   coordinator: "Deployment coordinator"
 }
 
-relayer: "relayer/" {
-  web: "RelayerWeb\n(browser)"
-  node: "RelayerNode\n(server)"
-  cleartext: "RelayerCleartext\n(testing)"
-  utils: "relayer-utils"
+relayer: "relayer/ + transports" {
+  fhevm: "FhevmRelayer\n(drives @fhevm/sdk)"
+  web: "web()\n(browser)"
+  node: "node()\n(server)"
+  cleartext: "cleartext()\n(testing)"
 }
 
-worker: "worker/" {
-  browser: "WorkerClient\n(Web Worker + WASM)"
-  nodepool: "NodeWorkerPool\n(worker_threads)"
+fhevmsdk: "@fhevm/sdk\n(FHE backend)" {
+  browser: "Web Worker + WASM\n(browser)"
+  nodepool: "worker_threads\n(Node.js)"
 }
 
 events: "events/" {
@@ -83,7 +81,7 @@ query -> token: "wraps SDK calls"
 token -> relayer: "encrypt/decrypt"
 token -> events: "emit events"
 contracts -> abi: "ABI constants"
-relayer -> worker: "FHE operations"
+relayer -> fhevmsdk: "FHE operations"
 signers -> relayer: "Address/Hex types"
 signers -> contracts: "BatchTransferData"
 token -> storage: "credential persistence"

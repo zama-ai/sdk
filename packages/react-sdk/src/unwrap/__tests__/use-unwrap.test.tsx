@@ -14,11 +14,18 @@ describe("useUnwrap", () => {
 
   test("cache: invalidates allowance and removes handle/balance after unwrap", async ({
     renderWithProviders,
+    provider,
+    unwrapRequestId,
+    createUnwrapRequestedLog,
     otherTokenAddress,
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
   }) => {
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [createUnwrapRequestedLog(unwrapRequestId)],
+    });
+
     const { result, queryClient } = renderWithProviders(() => useUnwrap(tokenAddress));
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
@@ -44,11 +51,18 @@ describe("useUnwrap", () => {
 
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
+    provider,
+    unwrapRequestId,
+    createUnwrapRequestedLog,
     tokenAddress,
     userAddress,
     wagmiBalanceKey,
     mutateAndExpectOnSuccess,
   }) => {
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [createUnwrapRequestedLog(unwrapRequestId)],
+    });
+
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     const allowanceKey = zamaQueryKeys.underlyingAllowance.token(tokenAddress);
     const onSuccess = vi.fn();

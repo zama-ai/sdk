@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
+import { decodeFunctionData, encodeAbiParameters, parseAbi, type Hex } from "viem";
 
 export const HOODI_CHAIN_ID_HEX = "0x88bb0"; // 560048 in hex — Hoodi chain ID
 export const WRONG_CHAIN_ID = "0x1"; // Ethereum mainnet — used for wrong-network tests
@@ -16,8 +17,8 @@ export const MOCK_CTOKEN2_ADDRESS = "0x4444444444444444444444444444444444444444"
 
 export interface WalletConfig {
   /**
-   * Accounts returned by `eth_accounts` (determines auto-connect state on page load).
-   * Set to `[]` to show the "Connect Wallet" screen on load.
+   * Accounts returned by `eth_accounts`. Wagmi reconnects only from persisted
+   * connector state, so tests use `requestAccounts` for explicit connection.
    */
   accounts: string[];
   chainId: string;
@@ -34,8 +35,7 @@ export interface RpcOptions {
    * When true, the registry mock returns 0 pairs (length = 0).
    * The UI will show "No tokens available." and all action buttons will be disabled.
    *
-   * Note: in the hoodi app, eth_call is NOT routed through window.ethereum — the hybrid
-   * provider sends all contract reads directly to the Hoodi HTTP RPC. The emptyRegistry
+   * Contract reads use wagmi's HTTP transport rather than window.ethereum. The emptyRegistry
    * flag is therefore on RpcOptions (not WalletConfig) so the RPC interceptor can handle it.
    */
   emptyRegistry?: boolean;
@@ -45,19 +45,13 @@ export interface RpcOptions {
  * Injects a stateful mock EIP-1193 provider into the page before load.
  *
  * Key design decisions:
- * - `eth_accounts` and `eth_requestAccounts` are kept separate so that the SDK
- *   can call `eth_requestAccounts` internally during initialization without
- *   affecting what `eth_accounts` returns to page.tsx's auto-detect useEffect.
+ * - `eth_accounts` and `eth_requestAccounts` are separate so tests can exercise
+ *   wagmi's explicit connect flow.
  * - `window.__emitChainChanged(chainId)` is exposed so tests can simulate a
- *   user switching networks in their wallet, triggering the `chainChanged` event
- *   that page.tsx listens for to transition between screens.
- * - `window.__emitAccountsChanged(accounts)` is exposed so tests can simulate a
- *   user switching accounts, triggering the `accountsChanged` event that
- *   providers.tsx listens for to remount ZamaProvider with the new account.
+ *   user switching networks in their wallet; wagmi consumes `chainChanged`.
  * - `eth_sign`/`personal_sign`/`eth_signTypedData_v4` return a 65-byte hex string
  *   (32 bytes r + 32 bytes s + 1 byte v = ECDSA signature).
- * - `eth_call` is NOT handled here — the hybrid provider in providers.tsx routes
- *   all contract reads (eth_call, eth_estimateGas) directly to the Hoodi HTTP RPC,
+ * - `eth_call` is NOT handled here — wagmi routes contract reads to the Hoodi RPC,
  *   bypassing window.ethereum. Registry reads and token metadata are therefore
  *   intercepted in `mockRpc`, not here.
  */
@@ -65,6 +59,10 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
   await page.addInitScript((cfg: WalletConfig) => {
     let chainId = cfg.chainId;
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
+
+    function emit(event: string, ...args: unknown[]) {
+      for (const listener of listeners[event] ?? []) listener(...args);
+    }
 
     const mockEthereum = {
       isMetaMask: true,
@@ -78,9 +76,13 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
           case "eth_requestAccounts":
             // Connect flow: returns requestAccounts if configured, otherwise accounts.
             return Promise.resolve([...(cfg.requestAccounts ?? cfg.accounts)]);
-          case "wallet_switchEthereumChain":
+          case "wallet_switchEthereumChain": {
+            const newChainId = (params as [{ chainId: string }])[0].chainId;
+            chainId = newChainId;
+            setTimeout(() => emit("chainChanged", newChainId), 0);
+            return Promise.resolve(null);
+          }
           case "wallet_addEthereumChain":
-            chainId = "0x88bb0";
             return Promise.resolve(null);
           case "eth_sendTransaction":
             return Promise.resolve("0x" + "1".repeat(64));
@@ -112,23 +114,11 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
     (window as any).ethereum = mockEthereum;
 
     // Simulate the user switching networks in their wallet.
-    // Fires the chainChanged event that page.tsx listens for to update screen state.
+    // Fires the chainChanged event consumed by wagmi's injected connector.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__emitChainChanged = (id: string) => {
       chainId = id;
-      for (const listener of listeners["chainChanged"] ?? []) {
-        listener(id);
-      }
-    };
-
-    // Simulate the user switching accounts in their wallet.
-    // Fires the accountsChanged event that providers.tsx listens for to remount ZamaProvider
-    // with a fresh EthersSigner bound to the new account.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__emitAccountsChanged = (accounts: string[]) => {
-      for (const listener of listeners["accountsChanged"] ?? []) {
-        listener(accounts);
-      }
+      emit("chainChanged", id);
     };
   }, config);
 }
@@ -137,9 +127,8 @@ async function injectMockWallet(page: Page, config: WalletConfig) {
  * Intercepts HTTP requests to the Hoodi RPC endpoint and returns minimal
  * valid JSON-RPC responses.
  *
- * In the hoodi app, the hybrid EIP-1193 provider routes all eth_call and
- * eth_estimateGas requests directly to the Hoodi HTTP RPC — bypassing
- * window.ethereum. This means registry reads (getTokenConfidentialTokenPairsLength /
+ * Wagmi's viem transport routes contract reads directly to the Hoodi RPC. This
+ * means registry reads (getTokenConfidentialTokenPairsLength /
  * getTokenConfidentialTokenPairsSlice) and token metadata (name/symbol/decimals)
  * must be handled here with ABI-encoded responses so useListPairs resolves in tests.
  *
@@ -181,6 +170,10 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
 
     /** Hoodi WrappersRegistry — lowercased for comparison with request `to` fields. */
     const REGISTRY = REGISTRY_ADDRESS.toLowerCase();
+    const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
+    const MULTICALL3_ABI = parseAbi([
+      "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) view returns ((bool success, bytes returnData)[] returnData)",
+    ]);
 
     /** Mock token pair addresses (all-digit = checksum-neutral, no case conversion needed). */
     const T1 = MOCK_TOKEN1_ADDRESS;
@@ -204,24 +197,23 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
       net_version: "560048",
     };
 
-    function resolveEthCall(req: { to?: string; data?: string }): string {
+    function resolveDirectEthCall(req: { to?: string; data?: string }): Hex {
       const to = (req.to ?? "").toLowerCase();
       const sel = (req.data ?? "").slice(0, 10).toLowerCase();
 
       if (to === REGISTRY) {
         // getTokenConfidentialTokenPairsLength() → uint256
         if (sel === "0x483cdcf4") {
-          return "0x" + abiU256(options.emptyRegistry ? 0 : 2);
+          return ("0x" + abiU256(options.emptyRegistry ? 0 : 2)) as Hex;
         }
         // getTokenConfidentialTokenPairsSlice(uint256,uint256) → tuple[]
         // Returns (address tokenAddress, address confidentialTokenAddress, bool isValid)[]
         if (sel === "0x90c60535") {
           if (options.emptyRegistry) {
             // ABI encoding of empty tuple[]: offset + length=0
-            return "0x" + abiU256(32) + abiU256(0);
+            return ("0x" + abiU256(32) + abiU256(0)) as Hex;
           }
-          return (
-            "0x" +
+          return ("0x" +
             abiU256(32) + // offset to array data
             abiU256(2) + // array length
             abiAddr(T1) +
@@ -229,8 +221,7 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
             abiBool(true) + // pair[0]
             abiAddr(T2) +
             abiAddr(CT2) +
-            abiBool(true) // pair[1]
-          );
+            abiBool(true)) as Hex; // pair[1]
         }
       }
 
@@ -238,16 +229,48 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
       // Called by the SDK on both underlying and confidential token addresses.
       const meta = TOKEN_META[to];
       if (meta) {
-        if (sel === "0x06fdde03") return abiStr(meta.name); // name()
-        if (sel === "0x95d89b41") return abiStr(meta.symbol); // symbol()
-        if (sel === "0x313ce567") return "0x" + abiU256(meta.decimals); // decimals()
+        if (sel === "0x06fdde03") return abiStr(meta.name) as Hex; // name()
+        if (sel === "0x95d89b41") return abiStr(meta.symbol) as Hex; // symbol()
+        if (sel === "0x313ce567") return ("0x" + abiU256(meta.decimals)) as Hex; // decimals()
       }
       // totalSupply() — called only on the underlying ERC-20; returns uint256
-      if (sel === "0x18160ddd") return "0x" + abiU256(0);
+      if (sel === "0x18160ddd") return ("0x" + abiU256(0)) as Hex;
 
       // All other eth_call requests (e.g. balanceOf) return empty data,
       // causing the caller to fail gracefully (query error → "—" in UI).
       return "0x";
+    }
+
+    function resolveEthCall(req: { to?: string; data?: string }): Hex {
+      const to = (req.to ?? "").toLowerCase();
+      const data = (req.data ?? "0x") as Hex;
+      if (to !== MULTICALL3 || data.slice(0, 10).toLowerCase() !== "0x82ad56cb") {
+        return resolveDirectEthCall(req);
+      }
+
+      try {
+        const { args } = decodeFunctionData({ abi: MULTICALL3_ABI, data });
+        const [calls] = args;
+        return encodeAbiParameters(
+          [
+            {
+              type: "tuple[]",
+              components: [
+                { name: "success", type: "bool" },
+                { name: "returnData", type: "bytes" },
+              ],
+            },
+          ],
+          [
+            calls.map((call) => ({
+              success: true,
+              returnData: resolveDirectEthCall({ to: call.target, data: call.callData }),
+            })),
+          ],
+        );
+      } catch {
+        return "0x";
+      }
     }
 
     function respond(req: { id?: number; method?: string; params?: unknown[] } | null) {
@@ -262,7 +285,7 @@ async function interceptRpc(page: Page, options: RpcOptions = {}) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      // ethers may send batch requests (array of JSON-RPC objects) — handle both forms.
+      // Viem may send batch requests (array of JSON-RPC objects) — handle both forms.
       body: JSON.stringify(Array.isArray(body) ? body.map(respond) : respond(body)),
     });
   });

@@ -9,18 +9,18 @@ import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
-import { ClearValues } from '@zama-fhe/relayer-sdk/web';
-import { ClearValueType } from '@zama-fhe/relayer-sdk/web';
+import { ClearValue } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
+import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
-import { DelegationStatusData } from '@zama-fhe/sdk/query';
+import { DelegationStatus } from '@zama-fhe/sdk/query';
 import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
@@ -40,11 +40,13 @@ import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
 import { UnwrapParams } from '@zama-fhe/sdk/query';
+import { UnwrapResult } from '@zama-fhe/sdk';
 import { UseMutationOptions } from '@tanstack/react-query';
 import { UseMutationResult } from '@tanstack/react-query';
 import { UseQueryOptions } from '@tanstack/react-query';
 import { UseQueryResult } from '@tanstack/react-query';
 import { UseSuspenseQueryResult } from '@tanstack/react-query';
+import { WrapParams } from '@zama-fhe/sdk/query';
 import { WrappedToken } from '@zama-fhe/sdk';
 import { ZamaConfig } from '@zama-fhe/sdk';
 import { ZamaSDK } from '@zama-fhe/sdk';
@@ -61,13 +63,13 @@ export function useClearCredentials(options?: UseMutationOptions<void>): UseMuta
 // @public
 export function useConfidentialBalance(config: UseConfidentialBalanceConfig, options?: UseConfidentialBalanceOptions): UseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalanceConfig {
     account: Address | undefined;
     address: Address;
 }
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -75,13 +77,13 @@ export interface UseConfidentialBalanceOptions extends Omit<UseQueryOptions<bigi
 // @public
 export function useConfidentialBalances(config: UseConfidentialBalancesConfig, options?: UseConfidentialBalancesOptions): UseQueryResult<BatchBalancesResult, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalancesConfig {
     account: Address | undefined;
     addresses: Address[];
 }
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<BatchBalancesResult>, "queryKey" | "queryFn" | "enabled"> {
     enabled?: boolean;
 }
@@ -89,7 +91,7 @@ export interface UseConfidentialBalancesOptions extends Omit<UseQueryOptions<Bat
 // @public
 export function useConfidentialIsOperator(config: UseConfidentialIsOperatorConfig, options?: Omit<UseQueryOptions<boolean>, "queryKey" | "queryFn">): UseQueryResult<boolean, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialIsOperatorConfig {
     address: Address | undefined;
     holder: Address | undefined;
@@ -99,7 +101,7 @@ export interface UseConfidentialIsOperatorConfig {
 // @public
 export function useConfidentialIsOperatorSuspense(config: UseConfidentialIsOperatorSuspenseConfig): UseSuspenseQueryResult<boolean, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseConfidentialIsOperatorSuspenseConfig {
     address: Address;
     holder: Address;
@@ -142,28 +144,24 @@ export function useConfidentialTransferFromAndCall(address: Address, options?: U
 export function useDecryptBalanceAs(address: Address, options?: UseMutationOptions<bigint, Error, DecryptBalanceAsParams>): UseMutationResult<bigint, Error, DecryptBalanceAsParams, unknown>;
 
 // @public
-export function useDecryptPublicValues(): UseMutationResult<Readonly<{
-clearValues: ClearValues;
-abiEncodedClearValues: `0x${string}`;
-decryptionProof: `0x${string}`;
-}>, Error, `0x${string}`[], unknown>;
+export function useDecryptPublicValues(): UseMutationResult<DecryptPublicValuesResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValueType>>, Error>;
+export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
 
 // @public
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
 
 // @public
-export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValueType>, Error, DelegatedDecryptValuesMutationParams, unknown>;
+export function useDelegatedDecryptValues(): UseMutationResult<Record<`0x${string}`, ClearValue>, Error, DelegatedDecryptValuesMutationParams, unknown>;
 
 // @public
 export function useDelegateDecryption(address: Address, options?: UseMutationOptions<TransactionResult, Error, DelegateDecryptionParams>): UseMutationResult<TransactionResult, Error, DelegateDecryptionParams, unknown>;
 
 // @public
-export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatusData>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatusData, Error>;
+export function useDelegationStatus(config: UseDelegationStatusConfig, options?: Omit<UseQueryOptions<DelegationStatus>, "queryKey" | "queryFn">): UseQueryResult<DelegationStatus, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseDelegationStatusConfig {
     contractAddress: Address | undefined;
     delegateAddress?: Address;
@@ -275,7 +273,7 @@ export function useTotalSupplySuspense(tokenAddress: Address): UseSuspenseQueryR
 // @public
 export function useUnderlyingAllowance(config: UseUnderlyingAllowanceConfig, options?: Omit<UseQueryOptions<bigint>, "queryKey" | "queryFn">): UseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseUnderlyingAllowanceConfig {
     address: Address;
     owner: Address | undefined;
@@ -284,7 +282,7 @@ export interface UseUnderlyingAllowanceConfig {
 // @public
 export function useUnderlyingAllowanceSuspense(config: UseUnderlyingAllowanceSuspenseConfig): UseSuspenseQueryResult<bigint, Error>;
 
-// @public (undocumented)
+// @public
 export interface UseUnderlyingAllowanceSuspenseConfig {
     address: Address;
     owner: Address;
@@ -297,10 +295,13 @@ export function useUnshield(address: Address, options?: UseMutationOptions<Trans
 export function useUnshieldAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnshieldAllParams | void, Address>): UseMutationResult<TransactionResult, Error, void | UnshieldAllParams, `0x${string}`>;
 
 // @public
-export function useUnwrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, UnwrapParams, Address>): UseMutationResult<TransactionResult, Error, UnwrapParams, `0x${string}`>;
+export function useUnwrap(address: Address, options?: UseMutationOptions<UnwrapResult, Error, UnwrapParams, Address>): UseMutationResult<UnwrapResult, Error, UnwrapParams, `0x${string}`>;
 
 // @public
-export function useUnwrapAll(address: Address, options?: UseMutationOptions<TransactionResult, Error, void, Address>): UseMutationResult<TransactionResult, Error, void, `0x${string}`>;
+export function useUnwrapAll(address: Address, options?: UseMutationOptions<UnwrapResult, Error, void, Address>): UseMutationResult<UnwrapResult, Error, void, `0x${string}`>;
+
+// @public
+export function useWrap(address: Address, options?: UseMutationOptions<TransactionResult, Error, WrapParams, Address>): UseMutationResult<TransactionResult, Error, WrapParams, `0x${string}`>;
 
 // @public
 export function useWrappedToken(address: Address): WrappedToken;

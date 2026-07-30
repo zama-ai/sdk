@@ -16,10 +16,19 @@ test.describe("delegation section", () => {
     await expect(page.getByText("Delegation — as delegate")).toBeVisible();
   });
 
-  test("delegation buttons are disabled when no address is entered", async ({ page }) => {
-    // Grant Access and Revoke Access require a valid delegate address — disabled when input is empty.
-    await expect(page.getByRole("button", { name: "Grant Access", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Revoke Access", exact: true })).toBeDisabled();
+  test("delegation forms use native validation when no address is entered", async ({ page }) => {
+    const grantCard = page.locator(".card", { hasText: "Grant Decryption Access" });
+    const revokeCard = page.locator(".card", { hasText: "Revoke Decryption Access" });
+    expect(
+      await grantCard
+        .getByPlaceholder("Delegate address (0x…)")
+        .evaluate((input: HTMLInputElement) => input.checkValidity()),
+    ).toBe(false);
+    expect(
+      await revokeCard
+        .getByPlaceholder("Delegate address (0x…)")
+        .evaluate((input: HTMLInputElement) => input.checkValidity()),
+    ).toBe(false);
   });
 
   test("Grant Access is enabled when a valid address is entered", async ({ page }) => {

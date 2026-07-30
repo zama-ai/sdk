@@ -1,5 +1,5 @@
 import { WrapperDiscoveryPanel } from "@zama-fhe/test-components";
-import type { Address } from "@zama-fhe/sdk";
+import { getAddress } from "viem";
 
 export default async function WrapperDiscoveryPage({
   searchParams,
@@ -7,8 +7,8 @@ export default async function WrapperDiscoveryPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const tokenAddress = params.tokenAddress as Address | undefined;
-  const erc20Address = params.erc20Address as Address | undefined;
+  const tokenAddress = params.tokenAddress ? getAddress(params.tokenAddress) : undefined;
+  const erc20Address = params.erc20Address ? getAddress(params.erc20Address) : undefined;
 
   if (!tokenAddress) {
     return (

@@ -118,20 +118,26 @@ export const wrappersRegistryAbi = [
   },
 ] as const;
 
+/** A registered plain-token / confidential-token pairing from the wrappers registry. */
 export interface TokenWrapperPair {
+  /** Address of the underlying public ERC-20 token. */
   readonly tokenAddress: Address;
+  /** Address of the paired confidential (ERC-7984) token. */
   readonly confidentialTokenAddress: Address;
+  /** Whether the pairing is currently valid (registered and not revoked). */
   readonly isValid: boolean;
 }
 
 /** Extended pair with on-chain metadata for both tokens. */
 export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
+  /** On-chain metadata of the underlying public ERC-20 token. */
   readonly underlying: {
     readonly name: string;
     readonly symbol: string;
     readonly decimals: number;
     readonly totalSupply: bigint;
   };
+  /** On-chain metadata of the confidential token. */
   readonly confidential: {
     readonly name: string;
     readonly symbol: string;
@@ -141,9 +147,13 @@ export interface TokenWrapperPairWithMetadata extends TokenWrapperPair {
 
 /** Paginated result set modelled after standard API pagination. */
 export interface PaginatedResult<T> {
+  /** Items on the current page. */
   readonly items: readonly T[];
+  /** Total number of items across all pages. */
   readonly total: number;
+  /** One-based index of the current page. */
   readonly page: number;
+  /** Maximum number of items per page. */
   readonly pageSize: number;
 }
 

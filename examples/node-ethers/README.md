@@ -132,7 +132,7 @@ on behalf of users (Account A) without holding their private key:
 | Grant               | Account A grants Account B decrypt rights via `delegateDecryption()` |
 | Decrypt as delegate | Account B reads Account A's cUSDT balance via `decryptBalanceAs()`   |
 | Revoke              | Account A revokes delegation via `revokeDelegation()`                |
-| Verify              | Confirm delegation is inactive with `isDelegated()`                  |
+| Verify              | Confirm delegation is inactive with `isActive()`                     |
 
 ---
 

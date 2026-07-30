@@ -3,7 +3,7 @@
  * Works with raw log data from any provider.
  */
 
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import { getAddress, keccak256, toBytes, type Address, type Hex } from "viem";
 import { prefixHex } from "../utils";
 import type { RawLog } from "../types/transaction";
@@ -38,6 +38,7 @@ export const Topics = {
 
 /** Decoded `ConfidentialTransfer` event — an encrypted token transfer. */
 export interface ConfidentialTransferEvent {
+  /** Event name discriminant. */
   readonly eventName: "ConfidentialTransfer";
   /** Sender address. */
   readonly from: Address;
@@ -53,6 +54,7 @@ export interface ConfidentialTransferEvent {
  * handle that lands in `ConfidentialTransfer.encryptedAmount`.
  */
 export interface WrapEvent {
+  /** Event name discriminant. */
   readonly eventName: "Wrap";
   /** Receiver of the minted confidential tokens. */
   readonly to: Address;
@@ -64,17 +66,19 @@ export interface WrapEvent {
 
 /** Decoded `UnwrapRequested` event — an unshield request submitted. */
 export interface UnwrapRequestedEvent {
+  /** Event name discriminant. */
   readonly eventName: "UnwrapRequested";
   /** Address that will receive the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
   /** FHE encrypted value for the requested unshield amount. */
   readonly encryptedAmount: EncryptedValue;
   /** Request identifier from the `UnwrapRequested` event topic. */
-  readonly unwrapRequestId?: EncryptedValue;
+  readonly unwrapRequestId: EncryptedValue;
 }
 
 /** Decoded `UnwrapFinalized` event — an unshield completed on-chain. */
 export interface UnwrapFinalizedEvent {
+  /** Event name discriminant. */
   readonly eventName: "UnwrapFinalized";
   /** Address receiving the unwrapped ERC-20 tokens. */
   readonly receiver: Address;
@@ -83,7 +87,7 @@ export interface UnwrapFinalizedEvent {
   /** Cleartext amount of underlying ERC-20 tokens returned. */
   readonly cleartextAmount: bigint;
   /** Request identifier from the `UnwrapFinalized` event topic. */
-  readonly unwrapRequestId?: EncryptedValue;
+  readonly unwrapRequestId: EncryptedValue;
 }
 
 /** Union of all decoded confidential token event types. */
@@ -328,6 +332,7 @@ export const AclTopics = {
 
 /** Decoded `DelegatedForUserDecryption` event — a delegation was created or renewed. */
 export interface DelegatedForUserDecryptionEvent {
+  /** Event name discriminant. */
   readonly eventName: "DelegatedForUserDecryption";
   /** Address of the delegator (the account granting access). */
   readonly delegator: Address;
@@ -345,6 +350,7 @@ export interface DelegatedForUserDecryptionEvent {
 
 /** Decoded `RevokedDelegationForUserDecryption` event — a delegation was revoked. */
 export interface RevokedDelegationForUserDecryptionEvent {
+  /** Event name discriminant. */
   readonly eventName: "RevokedDelegationForUserDecryption";
   /** Address of the delegator. */
   readonly delegator: Address;

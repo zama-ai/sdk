@@ -1,4 +1,4 @@
-# # @zama-fhe Codemods
+# @zama-fhe Codemods
 
 Official codemods for the `@zama-fhe` organization scope to help users adopt new features and handle breaking changes with less manual work.
 
@@ -54,7 +54,7 @@ major-line packages in order, or we add a thin orchestrator later.)
 
 - Scaffold new codemods with `npx codemod init`.
 - Use Codemod MCP when creating or refining codemods, especially when symbol definitions or cross-file references matter.
-- Validate package workflows with `npx codemod workflow validate codemods/<family>/<release>/workflow.yaml`.
+- Validate package workflows with `npx codemod workflow validate codemods/<slug>/workflow.yaml`.
 - Run package tests from the codemod directory before publishing.
 
 ## Running codemods
@@ -71,7 +71,7 @@ npx codemod <codemod-name>
 ### From source
 
 ```bash
-npx codemod workflow run -w codemods/<family>/<release>/workflow.yaml
+npx codemod workflow run -w codemods/<slug>/workflow.yaml
 ```
 
 By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.

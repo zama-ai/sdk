@@ -1,0 +1,116 @@
+name: Examples CI
+
+# Typechecks (and builds, where applicable) every app under examples/ against
+# the exact published SDK versions each example pins in its own package.json.
+# examples/* are deliberately standalone npm projects (not pnpm workspace
+# members) with committed lockfiles, so this installs each example exactly as
+# an end user would and catches breakage in the example code itself — a bad
+# import, a type error — against the SDK release it actually targets.
+on:
+  pull_request:
+    branches: [main, prerelease]
+    paths:
+      - "examples/**"
+      - ".github/workflows/examples.yml"
+
+concurrency:
+  group: examples-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - example-bnb
+          - example-hoodi
+          - example-ingen
+          - node-ethers
+          - node-viem
+          - react-ethers
+          - react-turnkey-wallet
+          - react-viem
+          - react-wagmi
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build --if-present
+
+  # Runs the Playwright e2e suite for the examples that ship one. These tests
+  # mock the RPC at the network layer and boot the app's own `npm run dev`
+  # server (on the per-app port pinned in each playwright.config.ts), so they
+  # need no chain, keys, or secrets — only the browser binary. GitHub Actions
+  # sets CI=true, which flips `reuseExistingServer` off so Playwright always
+  # starts a fresh server.
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - example-bnb
+          - example-hoodi
+          - react-ethers
+          - react-viem
+          - react-wagmi
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/${{ matrix.example }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      # On failure, Playwright drops diagnostics (error context, any traces)
+      # under test-results/. No HTML reporter is configured, so there is no
+      # playwright-report/ to upload.
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: playwright-results-${{ matrix.example }}
+          path: examples/${{ matrix.example }}/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

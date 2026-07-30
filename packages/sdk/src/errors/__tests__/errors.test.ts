@@ -2,11 +2,13 @@ import { describe, test, expect } from "../../test-fixtures";
 import {
   ZamaError,
   ZamaErrorCode,
+  isRetryable,
+  retryAfterSeconds,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  NotEntitledError,
   RelayerRequestFailedError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
+  RpcRateLimitError,
   SigningRejectedError,
   EncryptionFailedError,
   matchZamaError,
@@ -20,6 +22,7 @@ import {
   DelegationContractIsSelfError,
   AclPausedError,
   DelegationExpirationTooSoonError,
+  WalletAccountNotReadyError,
 } from "..";
 import { matchAclRevert } from "../acl-revert";
 import { wrapSigningError } from "../signing";
@@ -100,48 +103,96 @@ describe("RelayerRequestFailedError", () => {
   });
 });
 
-describe("WorkerTimeoutError", () => {
-  test("has correct code, name, and diagnostic fields", () => {
-    const err = new WorkerTimeoutError({
-      operation: "USER_DECRYPT",
-      timeout: 30,
-      elapsed: 30.004,
-      worker: "node-worker-2",
-    });
-    expect(err).toBeInstanceOf(ZamaError);
-    expect(err.code).toBe(ZamaErrorCode.OperationTimeout);
-    expect(err.name).toBe("WorkerTimeoutError");
-    expect(err.operation).toBe("USER_DECRYPT");
-    expect(err.timeout).toBe(30);
-    expect(err.elapsed).toBe(30.004);
-    expect(err.worker).toBe("node-worker-2");
-    expect(err.message).toMatch(/USER_DECRYPT timed out after 30s.*node-worker-2/);
+// --- SDK-248: uniform retryability signal ---
+
+describe("ZamaError.retryable / isRetryable", () => {
+  test("defaults to false for a terminal cause", () => {
+    const err = new NoCiphertextError("no ciphertext");
+    expect(err.retryable).toBe(false);
+    expect(isRetryable(err)).toBe(false);
   });
 
-  test("worker label is optional", () => {
-    const err = new WorkerTimeoutError({ operation: "ENCRYPT", timeout: 5, elapsed: 5.001 });
-    expect(err.worker).toBeUndefined();
-    expect(err.message).toBe("Worker operation ENCRYPT timed out after 5s");
+  test("is true for RpcRateLimitError", () => {
+    const err = new RpcRateLimitError("throttled");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationNotPropagatedError", () => {
+    const err = new DelegationNotPropagatedError("not synced");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for DelegationCooldownError — a next-block retry resolves it", () => {
+    const err = new DelegationCooldownError("cooldown");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("is true for WalletAccountNotReadyError — wallet account discovery is still resolving", () => {
+    const err = new WalletAccountNotReadyError("decrypt");
+    expect(err.retryable).toBe(true);
+    expect(isRetryable(err)).toBe(true);
+  });
+
+  test("tracks statusCode for RelayerRequestFailedError (true only on 429)", () => {
+    expect(isRetryable(new RelayerRequestFailedError("rate limited", 429))).toBe(true);
+    expect(isRetryable(new RelayerRequestFailedError("server error", 503))).toBe(false);
+  });
+
+  test("is false for a non-ZamaError, without an instanceof check by the caller", () => {
+    expect(isRetryable(new Error("plain"))).toBe(false);
+    expect(isRetryable("not an error")).toBe(false);
+    expect(isRetryable(null)).toBe(false);
+    expect(isRetryable(undefined)).toBe(false);
+  });
+
+  test("NotEntitledError stays non-retryable — an ACL denial should never be busy-looped", () => {
+    const err = new NotEntitledError({
+      encryptedValue: `0x${"12".repeat(32)}`,
+      contractAddress: `0x${"20".repeat(20)}`,
+      account: `0x${"10".repeat(20)}`,
+    });
+    expect(isRetryable(err)).toBe(false);
   });
 });
 
-describe("WorkerRecycledError", () => {
-  test("has correct code, name, and diagnostic fields", () => {
-    const err = new WorkerRecycledError({ operation: "USER_DECRYPT", worker: "node-worker-2" });
-    expect(err).toBeInstanceOf(ZamaError);
-    expect(err.code).toBe(ZamaErrorCode.WorkerRecycled);
-    expect(err.name).toBe("WorkerRecycledError");
-    expect(err.operation).toBe("USER_DECRYPT");
-    expect(err.worker).toBe("node-worker-2");
-    expect(err.message).toMatch(/USER_DECRYPT.*recycled.*node-worker-2/);
+describe("retryAfterSeconds", () => {
+  test("reads the relayer's Retry-After delay", () => {
+    const err = new RelayerRequestFailedError("rate limited", 429, { retryAfter: 300 });
+    expect(retryAfterSeconds(err)).toBe(300);
   });
 
-  test("worker label is optional", () => {
-    const err = new WorkerRecycledError({ operation: "ENCRYPT" });
-    expect(err.worker).toBeUndefined();
-    expect(err.message).toBe(
-      "Worker operation ENCRYPT was aborted because its worker was recycled after a timeout",
-    );
+  test("reads the RPC rate-limit delay", () => {
+    const err = new RpcRateLimitError("throttled", { retryAfter: 2 });
+    expect(retryAfterSeconds(err)).toBe(2);
+  });
+
+  test("is undefined for a retryable cause with no server-driven delay", () => {
+    expect(retryAfterSeconds(new DelegationNotPropagatedError("not synced"))).toBeUndefined();
+    expect(retryAfterSeconds(new DelegationCooldownError("cooldown"))).toBeUndefined();
+  });
+
+  test("is undefined for a terminal cause and for non-ZamaError values", () => {
+    expect(retryAfterSeconds(new NoCiphertextError("missing"))).toBeUndefined();
+    expect(retryAfterSeconds(new Error("plain"))).toBeUndefined();
+    expect(retryAfterSeconds(null)).toBeUndefined();
+  });
+
+  test("rejects a malformed retryAfter (0, negative, or NaN) instead of handing it to a backoff", () => {
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: 0 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: -5 })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RpcRateLimitError("throttled", { retryAfter: Number.NaN })),
+    ).toBeUndefined();
+    expect(
+      retryAfterSeconds(new RelayerRequestFailedError("rate limited", 429, { retryAfter: -1 })),
+    ).toBeUndefined();
   });
 });
 
@@ -185,6 +236,15 @@ describe("wrapSigningError", () => {
     const original = new Error("network");
     expect(() => wrapSigningError(original, "test")).toThrow(
       expect.objectContaining({ code: "SIGNING_FAILED", cause: original }),
+    );
+  });
+
+  test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
+    // verifyTkmsPublicKey throws this when a stored key pair can't be re-derived
+    // under the current TKMS version — a self-heal signal, not a signing failure.
+    const original = new Error("invalid TransportKeyPairKeyPair");
+    expect(() => wrapSigningError(original, "Credential signing failed")).toThrow(
+      expect.objectContaining({ code: ZamaErrorCode.InvalidTransportKeyPair, cause: original }),
     );
   });
 

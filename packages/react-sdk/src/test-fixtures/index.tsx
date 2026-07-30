@@ -1,4 +1,5 @@
-import { test as baseTest, expect } from "../../../sdk/src/test-fixtures";
+import type { TestAPI } from "vitest";
+import { test as baseTest, expect, type SDKTestFixtures } from "../../../sdk/src/test-fixtures";
 import { reactAddressFixtures, type ReactAddressFixtures } from "./addresses";
 import { mutationAssertions, mutationFixtures, type MutationFixtures } from "./mutations";
 import { queryClientFixtures, type QueryClientFixtures } from "./query-client";
@@ -9,12 +10,13 @@ type ReactSDKTestFixtures = ReactAddressFixtures &
   WrapperFixtures &
   MutationFixtures;
 
-export const test = baseTest.extend<ReactSDKTestFixtures>({
-  ...reactAddressFixtures,
-  ...queryClientFixtures,
-  ...wrapperFixtures,
-  ...mutationFixtures,
-});
+export const test: TestAPI<SDKTestFixtures & ReactSDKTestFixtures> =
+  baseTest.extend<ReactSDKTestFixtures>({
+    ...reactAddressFixtures,
+    ...queryClientFixtures,
+    ...wrapperFixtures,
+    ...mutationFixtures,
+  });
 
 expect.extend({ ...mutationAssertions });
 

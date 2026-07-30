@@ -122,6 +122,7 @@ interface CacheEntry<T> {
  * ```
  */
 export class WrappersRegistry {
+  /** Read-only chain access used for registry contract reads. */
   readonly provider: GenericProvider;
   readonly #addresses: Record<number, Address>;
   readonly #ttlMs: number;
@@ -237,6 +238,7 @@ export class WrappersRegistry {
   async listPairs(
     options: ListPairsOptions & { metadata: true },
   ): Promise<PaginatedResult<TokenWrapperPairWithMetadata>>;
+  /** Lists registered underlying/confidential token pairs; pass `{ metadata: true }` to include on-chain token metadata. */
   async listPairs(options?: ListPairsOptions): Promise<PaginatedResult<TokenWrapperPair>>;
   async listPairs(
     options: ListPairsOptions = {},

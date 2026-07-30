@@ -1,5 +1,89 @@
 # Changelog
 
+## [3.4.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.11...v3.4.0-alpha.12) (2026-07-29)
+
+### Bug Fixes
+
+- **sdk:** normalize ethers readContract integers to match viem ([#580](https://github.com/zama-ai/sdk/issues/580)) ([b60b86e]()), closes [#576]() [#576]()
+
+## [3.4.0-alpha.11](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.10...v3.4.0-alpha.11) (2026-07-23)
+
+### Code Refactoring
+
+- **examples:** improve example apps — viem/wagmi, React 19 form actions, a11y ([#576](https://github.com/zama-ai/sdk/issues/576)) ([14d385b]())
+
+## [3.4.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.9...v3.4.0-alpha.10) (2026-07-21)
+
+### Code Refactoring
+
+- **sdk:** API surface audit — resolve all ae-forgotten-export leaks [SDK-209] ([#539](https://github.com/zama-ai/sdk/issues/539)) ([c01102c]()), closes [#406]() [#458]()
+
+## [3.4.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.8...v3.4.0-alpha.9) (2026-07-20)
+
+### Features
+
+- **sdk:** add DelegationService.getStatus ([#572](https://github.com/zama-ai/sdk/issues/572)) ([2f91c58]())
+
+## [3.4.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.7...v3.4.0-alpha.8) (2026-07-20)
+
+### Code Refactoring
+
+- **sdk:** extract duplicated decrypt-cache invalidation in Permits ([#573](https://github.com/zama-ai/sdk/issues/573)) ([33f44cd]())
+
+## [3.4.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.6...v3.4.0-alpha.7) (2026-07-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk to 1.1.0-alpha.9 ([#566](https://github.com/zama-ai/sdk/issues/566)) ([66ca1ad]())
+
+## [3.4.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.5...v3.4.0-alpha.6) (2026-07-16)
+
+### Code Refactoring
+
+- **codemod:** rewrite renamed credentials config keys, flag silent drops [SDK-249] ([#544](https://github.com/zama-ai/sdk/issues/544)) ([c0c54ca]())
+
+## [3.4.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.4...v3.4.0-alpha.5) (2026-07-16)
+
+### Features
+
+- **sdk:** expose wrap() + useWrap for two-signature shield ([#522](https://github.com/zama-ai/sdk/issues/522)) ([5bb88a9]())
+
+## [3.4.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.3...v3.4.0-alpha.4) (2026-07-16)
+
+### Features
+
+- **credentials:** opt-in shared ML-KEM keypair scope for shared-tenant operators [SDK-142] ([#546](https://github.com/zama-ai/sdk/issues/546)) ([aee2db4]()), closes [#458]()
+
+## [3.4.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.2...v3.4.0-alpha.3) (2026-07-16)
+
+### Bug Fixes
+
+- **sdk:** unbundle unshield into request + finalize phases ([#530](https://github.com/zama-ai/sdk/issues/530)) ([b3b5835]())
+
+## [3.4.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.1...v3.4.0-alpha.2) (2026-07-15)
+
+### Features
+
+- **sdk:** uniform retryability signal across decryption error causes [SDK-248] ([#536](https://github.com/zama-ai/sdk/issues/536)) ([d3b6ea9]())
+
+## [3.4.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.2...v3.4.0-alpha.1) (2026-07-15)
+
+### Features
+
+- **sdk:** chunk decryption requests to respect the relayer's per-request bit budget ([#541](https://github.com/zama-ai/sdk/issues/541)) ([d1717a9]())
+
+## [3.3.1-alpha.2](https://github.com/zama-ai/sdk/compare/v3.3.1-alpha.1...v3.3.1-alpha.2) (2026-07-13)
+
+### Code Refactoring
+
+- **sdk:** replace @zama-fhe/relayer-sdk with @fhevm/sdk ([#458](https://github.com/zama-ai/sdk/issues/458)) ([f9b79c9]())
+
+## [3.3.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.3.1-alpha.1) (2026-07-09)
+
+### Bug Fixes
+
+- **sdk:** correct Hoodi KMSVerifier preset address ([#540](https://github.com/zama-ai/sdk/issues/540)) ([18d2422]())
+
 ## [3.3.0](https://github.com/zama-ai/sdk/compare/v3.2.0...v3.3.0) (2026-07-08)
 
 ### Features

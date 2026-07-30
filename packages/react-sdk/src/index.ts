@@ -83,6 +83,7 @@ export {
 export { useDecryptBalanceAs } from "./delegations/use-decrypt-balance-as";
 export { useBatchDecryptBalancesAs } from "./delegations/use-batch-decrypt-balances-as";
 export { useApproveUnderlying } from "./shield/use-approve-underlying";
+export { useWrap } from "./shield/use-wrap";
 export {
   useIsConfidential,
   useIsConfidentialSuspense,

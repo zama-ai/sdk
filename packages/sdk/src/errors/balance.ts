@@ -3,8 +3,11 @@ import { ZamaError, ZamaErrorCode } from "./base";
 
 /** Structured details shared by balance-related errors. */
 export interface BalanceErrorDetails {
+  /** Amount the caller requested, in the token's base units. */
   readonly requested: bigint;
+  /** Amount available at the time of the check, in the token's base units. */
   readonly available: bigint;
+  /** Address of the token contract involved. */
   readonly token: Address;
 }
 
@@ -38,6 +41,24 @@ export class InsufficientERC20BalanceError extends ZamaError {
   constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions) {
     super(ZamaErrorCode.InsufficientERC20Balance, message, options);
     this.name = "InsufficientERC20BalanceError";
+    this.requested = details.requested;
+    this.available = details.available;
+    this.token = details.token;
+  }
+}
+
+/** ERC-20 allowance granted to the wrapper is insufficient for the requested wrap amount. */
+export class InsufficientAllowanceError extends ZamaError {
+  /** The amount the caller requested. */
+  readonly requested: bigint;
+  /** The allowance available at the time of the check. */
+  readonly available: bigint;
+  /** The underlying ERC-20 token contract address. */
+  readonly token: Address;
+
+  constructor(message: string, details: BalanceErrorDetails, options?: ErrorOptions) {
+    super(ZamaErrorCode.InsufficientAllowance, message, options);
+    this.name = "InsufficientAllowanceError";
     this.requested = details.requested;
     this.available = details.available;
     this.token = details.token;

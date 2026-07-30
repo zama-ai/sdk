@@ -8,7 +8,7 @@ export function MutationStatus({ mutation }: { mutation: MutationLike }) {
     const err = mutation.error;
     const cause = (err as { cause?: Error } | null)?.cause;
     return (
-      <div className="mt-2 space-y-0.5">
+      <div className="mt-2 space-y-0.5" role="alert">
         <p className="text-sm text-red-600 dark:text-red-400 break-all">
           {err?.message ?? "Unknown error"}
         </p>
@@ -23,7 +23,7 @@ export function MutationStatus({ mutation }: { mutation: MutationLike }) {
 
   const hash = (mutation.data as { txHash?: Hex } | null)?.txHash;
   return (
-    <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+    <output className="mt-2 block text-sm text-green-600 dark:text-green-400">
       ✓ Success
       {hash && (
         <>
@@ -38,6 +38,6 @@ export function MutationStatus({ mutation }: { mutation: MutationLike }) {
           </a>
         </>
       )}
-    </p>
+    </output>
   );
 }

@@ -1,12 +1,11 @@
 import { defineConfig } from "@playwright/test";
 import type { NodeWorkerFixtures } from "./fixtures/node-test";
-import { NODE_ANVIL_PORT } from "./fixtures/constants";
+import { ANVIL_DEPLOY_TIMEOUT_MS, NODE_ANVIL_PORT } from "./fixtures/constants";
 
 const CI = !!process.env.CI;
 
 export default defineConfig<{}, NodeWorkerFixtures>({
   tsconfig: "./tsconfig.node.json",
-  globalSetup: ["./fixtures/node-global-setup.ts"],
   testDir: "./tests/node",
   testMatch: ["**/node/**", "**/*.node.spec.ts"],
   outputDir: "./test-results/node/",
@@ -22,7 +21,7 @@ export default defineConfig<{}, NodeWorkerFixtures>({
       command: `./start-anvil.sh ${NODE_ANVIL_PORT}`,
       name: "anvil-node",
       wait: { stdout: /Anvil ready on port (\d+)/ },
-      timeout: 90_000,
+      timeout: ANVIL_DEPLOY_TIMEOUT_MS,
     },
   ],
 });

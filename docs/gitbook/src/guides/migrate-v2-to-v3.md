@@ -31,7 +31,7 @@ treat this guide as the source of truth.
 Upgrade this repository from @zama-fhe/sdk and @zama-fhe/react-sdk v2.x to v3.x.
 
 SOURCE OF TRUTH — follow it exactly:
-https://docs.zama.org/protocol/sdk/migration/migrate-v2-to-v3.md
+https://docs.zama.org/protocol/sdk/alpha/migration/migrate-v2-to-v3.md
 
 Rules:
 1. Fetch and read that guide BEFORE doing anything. It is authoritative. Do NOT
@@ -39,7 +39,7 @@ Rules:
    @zama-fhe/sdk, NOT the legacy @zama-fhe/relayer-sdk (createInstance/initSDK).
    For any symbol you're unsure about, use the guide's symbol-mapping table; for
    anything it doesn't cover, fetch
-   https://raw.githubusercontent.com/zama-ai/sdk/main/llms.txt and follow its links.
+   https://raw.githubusercontent.com/zama-ai/sdk/prerelease/llms.txt and follow its links.
 2. First print a short PLAN: list every file importing @zama-fhe/sdk or
    @zama-fhe/react-sdk and which guide Steps apply to each. Then proceed.
 3. Apply the Steps IN ORDER, starting with Step 1 (configuration) — it unblocks
@@ -344,21 +344,23 @@ relayers: { [chain.id]: web() }
 
 The `getChainId` / `transports` plumbing is gone: the network endpoint, relayer
 URL and auth are configured on the `FheChain` object (`network`, `relayerUrl`,
-`auth`) and the SDK resolves the right relayer per chain via `RelayerDispatcher`.
+`auth`) and the SDK resolves the right backend per chain via `ChainRouter`.
 
 {% hint style="info" %}
 **Imported the relayer config types directly?** They followed the constructor →
 factory move: `node()` / `web()` / `cleartext()` return `NodeRelayerConfig` /
 `WebRelayerConfig` / `CleartextRelayerConfig` (all extend `RelayerConfig`). The
-relayer-sdk-level `RelayerWebConfig` / `RelayerWebSecurityConfig` are unchanged
-but now live under `@zama-fhe/sdk/web`.
+old constructor-level `RelayerWebConfig` / `RelayerWebSecurityConfig` types were
+removed with the worker-backed relayer. Put RPC URL and auth on `FheChain`, and
+pass supported client/request defaults directly to `web()` or `node()`.
 {% endhint %}
 
 {% hint style="info" %}
 **Relayer auth (`FheChain.auth`).** Still `ApiKeyHeader | ApiKeyCookie | BearerToken`.
 The **Zama-hosted relayer requires `ApiKeyHeader`** (sent as `x-api-key`; Bearer
-and cookie are rejected at the edge). Field names differ — `ApiKeyHeader` uses
-`value`, `BearerToken` uses `token`. See [Relayer API keys](./relayer-api-keys.md).
+and cookie are rejected at the edge). The `__type` discriminator is unchanged;
+`ApiKeyHeader` uses `value`, while `BearerToken` uses `token`. See
+[Relayer API keys](./relayer-api-keys.md).
 {% endhint %}
 
 ## Step 3 — Permits & delegated decryption

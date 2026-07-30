@@ -66,10 +66,10 @@ Zama SDK is designed for developers who want to integrate confidential operation
 
 ### Packages
 
-| Package                                        | Description                                                                                                                |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters, Web Worker support |
-| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                                         |
+| Package                                        | Description                                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@zama-fhe/sdk`](./packages/sdk/)             | Core SDK — confidential contract operations, FHE relayer, contract call builders, viem/ethers adapters |
+| [`@zama-fhe/react-sdk`](./packages/react-sdk/) | React hooks wrapping the core SDK via `@tanstack/react-query`, with wagmi sub-path                     |
 
 ### Main features
 
@@ -100,7 +100,7 @@ pnpm add @zama-fhe/react-sdk @tanstack/react-query
 
 ### Development
 
-**Prerequisites:** Node.js >= 22, pnpm >= 10
+**Prerequisites:** Node.js >= 22, pnpm >= 11
 
 ```bash
 pnpm install                # Install dependencies
@@ -115,8 +115,8 @@ pnpm format:check           # Formatting check
 **E2E tests:**
 
 ```bash
-pnpm e2e:test               # Run Playwright E2E tests
-pnpm e2e:test:ui            # Playwright UI mode
+pnpm e2e:test                 # Run Playwright E2E tests
+pnpm e2e:test:ui              # Playwright UI mode
 ```
 
 > **Note:** The `forge-fhevm` submodule and its soldeer dependencies are installed automatically by `pnpm install`.

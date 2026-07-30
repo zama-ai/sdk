@@ -1,6 +1,12 @@
-import { describe, expect, test, vi } from "../../test-fixtures";
+import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
 import type { Address } from "viem";
+import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
+import { createMockChain } from "../../test-fixtures/chain";
+import { createMockRelayer } from "../../test-fixtures/relayer";
+import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { InvalidTransportKeyPairError } from "../../errors/credential";
+import { ConfigurationError } from "../../errors/relayer";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -33,7 +39,7 @@ describe("CredentialService.allow", () => {
     vi.mocked(signer.signTypedData).mockClear();
     const second = await credentialService.grantPermit([A]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
-    expect(second.permits).toHaveLength(1);
+    expect(second.permissions).toHaveLength(1);
   });
 
   test("only prompts for uncovered contracts on partial coverage", async ({
@@ -73,8 +79,105 @@ describe("CredentialService.allow", () => {
   }) => {
     const result = await credentialService.grantPermit([]);
     expect(result.keypair.publicKey).toBeDefined();
-    expect(result.permits).toEqual([]);
+    expect(result.permissions).toEqual([]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService transport-key-pair self-heal", () => {
+  test("evicts the stale key pair and throws a typed error when the relayer rejects it", async ({
+    credentialService,
+    relayer,
+  }) => {
+    await credentialService.grantPermit([]); // warm: generate + store one key pair
+    // The relayer can't re-derive the stored key pair (e.g. post KMS/TKMS rotation).
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(
+      new Error("invalid TransportKeyPairKeyPair"),
+    );
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(
+      InvalidTransportKeyPairError,
+    );
+    // Eviction cleared the cache but did not itself regenerate.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    // Self-heal: the next resolution regenerates a fresh key pair and succeeds.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not evict on an unrelated signing failure", async ({ credentialService, relayer }) => {
+    await credentialService.grantPermit([]);
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(new Error("network glitch"));
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(SigningFailedError);
+    // Key pair left intact → the next grant reuses it, no regeneration.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("forwards the stored tkmsVersion when re-deriving the key pair to sign", async ({
+    credentialService,
+    relayer,
+  }) => {
+    // The generated key pair carries a TKMS version that the vault persists; the
+    // sign path must pass it back so the relayer deserializes the private key
+    // under the version it was generated with.
+    await credentialService.grantPermit([A]);
+    expect(relayer.parseTransportKeyPair).toHaveBeenCalledWith(
+      expect.objectContaining({ tkmsVersion: TEST_TKMS_VERSION }),
+    );
+  });
+});
+
+describe("CredentialService chain switching", () => {
+  test("signs permits against the active chain's relayer after switchChain", async ({
+    createCredentialService,
+  }) => {
+    // A `CredentialService` outlives chain-only switches (LifecycleService keeps
+    // credentials across them). Permits are EIP-712-signed against the *active*
+    // chain's decryption domain, so post-switch grants must route through the new
+    // chain's backend — not the one active at construction (SDK-458 regression).
+    const relayerA = createMockRelayer();
+    const relayerB = createMockRelayer();
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      relayers: { 1: relayerA, 2: relayerB },
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(relayerA.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signDecryptionPermit).not.toHaveBeenCalled();
+
+    router.switchChain(2);
+    await credentialService.grantPermit([B]);
+    expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
+  });
+
+  test("permits are keyed by the router chain, not the wallet account", async ({
+    createCredentialService,
+  }) => {
+    // The permit storage key follows the router's active chain — the same chain
+    // its EIP-712 domain is signed against — so a permit granted on one chain is
+    // invisible on another and reappears on switch-back. The mock signer's fixed
+    // account.chainId (31337) is deliberately unrelated to the router chains
+    // here, proving the key no longer derives from the wallet account.
+    const router = createMockRouter({
+      chains: [createMockChain({ id: 1 }), createMockChain({ id: 2 })],
+      activeChainId: 1,
+    });
+    const credentialService = createCredentialService({ router });
+
+    await credentialService.grantPermit([A]);
+    expect(await credentialService.hasPermit([A])).toBe(true);
+
+    router.switchChain(2);
+    expect(await credentialService.hasPermit([A])).toBe(false);
+
+    router.switchChain(1);
+    expect(await credentialService.hasPermit([A])).toBe(true);
   });
 });
 
@@ -311,5 +414,153 @@ describe("CredentialService.grantPermit widening", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("CredentialService scope (opt-in shared-tenant)", () => {
+  test("two signers in the same scope share one key pair; permits stay per-signer", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    const resultA = await serviceA.grantPermit([A]);
+    const resultB = await serviceB.grantPermit([A]);
+
+    // Same shared key pair, one generation call...
+    expect(resultB.keypair.publicKey).toBe(resultA.keypair.publicKey);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+    // ...but independently addressable permits, each signed by its own signer.
+    expect(await serviceA.hasPermit([A])).toBe(true);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+    await serviceA.revokePermits([A]);
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+  });
+
+  test("clearCredentials() (signer-level) never deletes the shared key pair", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    const before = await serviceA.grantPermit([A]);
+    await serviceB.grantPermit([A]);
+    await serviceA.clearCredentials();
+
+    // serviceA's own permit is gone, but serviceB (same scope) is untouched and the
+    // shared key pair itself survives — no second generation call.
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+    const after = await serviceA.grantPermit([]);
+    expect(after.keypair.publicKey).toBe(before.keypair.publicKey);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("revokeTransportKeyPair() invalidates every permit in the scope via the embedded public key, without touching them directly", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    await serviceA.grantPermit([A]);
+    await serviceB.grantPermit([A]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    await serviceA.revokeTransportKeyPair("tenant-1");
+
+    // No keypair exists yet post-rotation → both report false immediately.
+    expect(await serviceA.hasPermit([A])).toBe(false);
+    expect(await serviceB.hasPermit([A])).toBe(false);
+
+    // Force regeneration with a *distinct* public key (the fixture's default mock
+    // always returns the same static key pair, which would mask the mechanism under
+    // test) and confirm the old permit is filtered out as stale by its embedded
+    // (now-mismatched) public key — not because the permit itself was deleted.
+    // `generateTransportKeyPair` returns an opaque, unconstructable key-pair handle
+    // post-#458, so the distinct value is injected at `serializeTransportKeyPair` —
+    // the step that actually produces the hex the vault stores — instead.
+    vi.mocked(relayer.serializeTransportKeyPair).mockResolvedValueOnce({
+      publicKey:
+        `0x${"33".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["publicKey"],
+      privateKey:
+        `0x${"44".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["privateKey"],
+    });
+    const regenerated = await serviceB.grantPermit([]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
+    expect(regenerated.keypair.publicKey).toBe(`0x${"33".repeat(32)}`);
+    expect(await serviceB.hasPermit([A])).toBe(false);
+  });
+
+  test("revokeTransportKeyPair() throws when no scope is configured", async ({
+    credentialService,
+  }) => {
+    await expect(credentialService.revokeTransportKeyPair("tenant-1")).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("revokeTransportKeyPair() throws when scopeId doesn't match the configured scope", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1" });
+    await expect(service.revokeTransportKeyPair("tenant-2")).rejects.toThrow(ConfigurationError);
+  });
+
+  test("revokeTransportKeyPair() propagates a storage-delete failure end-to-end, doesn't swallow it", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1", storage });
+    await service.grantPermit([]); // warm the shared key pair so there's something to delete
+    vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
+
+    await expect(service.revokeTransportKeyPair("tenant-1")).rejects.toThrow("delete boom");
+  });
+
+  test("warmTransportKeyPairScope() generates the shared key pair without needing a connected wallet", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({ scope: "tenant-1", storage });
+    const serviceB = createCredentialService({ scope: "tenant-1", storage, signer: signerB });
+
+    await serviceA.warmTransportKeyPairScope("tenant-1");
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    // serviceB never warmed itself — it finds the same pre-warmed key pair.
+    const result = await serviceB.grantPermit([]);
+    expect(result.keypair.publicKey).toBeDefined();
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("warmTransportKeyPairScope() throws when no scope is configured", async ({
+    credentialService,
+  }) => {
+    await expect(credentialService.warmTransportKeyPairScope("tenant-1")).rejects.toThrow(
+      ConfigurationError,
+    );
+  });
+
+  test("warmTransportKeyPairScope() throws when scopeId doesn't match the configured scope", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ scope: "tenant-1" });
+    await expect(service.warmTransportKeyPairScope("tenant-2")).rejects.toThrow(ConfigurationError);
   });
 });

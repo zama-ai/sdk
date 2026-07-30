@@ -1,9 +1,8 @@
 import { getAddress, type Address } from "viem";
 import { z } from "zod/mini";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue } from "../relayer/types";
 import { checksummedAddress } from "../schemas/primitives";
-import type { GenericStorage } from "../types";
-import type { GenericLogger } from "../worker/worker.types";
+import type { GenericLogger, GenericStorage } from "../types";
 
 const CacheValueSchema = z.union([z.bigint(), z.boolean(), checksummedAddress]);
 const CacheIndexSchema = z.array(z.string());
@@ -13,6 +12,8 @@ const CacheIndexSchema = z.array(z.string());
  *
  * Each entry is keyed by `(requester, contractAddress, handle)` so different
  * signers cannot read each other's cached decryptions.
+ *
+ * @internal
  */
 export class CachingService {
   readonly #storage: GenericStorage;

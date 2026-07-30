@@ -1,0 +1,59 @@
+direction: down
+
+title: {
+  label: "Mutation-Triggered Balance Refresh"
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+mutation: "User calls a mutation\nshield() / confidentialTransfer() / unshield()" {
+  style.fill: "#FFF3E0"
+  style.stroke: "#E65100"
+  style.font-size: 14
+}
+
+tx-confirm: "Transaction confirmed\non-chain" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+invalidate: "SDK invalidates the balance query\n(mutation onSuccess)" {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C62828"
+  style.font-size: 14
+}
+
+refetch: "React Query refetches\nbalanceOf(owner)" {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 14
+}
+
+miss: "Reads new encryptedValue\n→ clear-value cache miss\n(key changed)" {
+  style.fill: "#E8EAF6"
+  style.stroke: "#283593"
+  style.font-size: 14
+}
+
+decrypt: "Decrypt new balance\nvia relayer KMS" {
+  style.fill: "#F3E5F5"
+  style.stroke: "#6A1B9A"
+  style.font-size: 14
+}
+
+ui: "UI updates\n(within seconds)" {
+  style.fill: "#E8F5E9"
+  style.stroke: "#388E3C"
+  style.font-size: 14
+  style.bold: true
+}
+
+mutation -> tx-confirm
+tx-confirm -> invalidate: "onSuccess"
+invalidate -> refetch: "no wait for poll interval"
+refetch -> miss
+miss -> decrypt
+decrypt -> ui

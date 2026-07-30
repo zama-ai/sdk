@@ -1,10 +1,10 @@
+import type { ParseTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
+import type { DecryptValuesReturnType } from "@fhevm/sdk/actions/decrypt";
 import { getAddress, type Address } from "viem";
+import type { ChainRouter } from "../chains/router";
 import type { CredentialService } from "../credentials/credential-service";
-import {
-  resolveDelegatedDecryptPermit,
-  resolveUserDecryptPermit,
-} from "../credentials/decrypt-permit";
-import type { StoredTransportKeyPairWithPermits } from "../credentials/types";
+import { resolvePermit } from "../credentials/decrypt-permit";
+import type { SerializedTransportKeyPairWithPermissions } from "../credentials/types";
 import {
   type DecryptErrorContext,
   DecryptionFailedError,
@@ -17,11 +17,15 @@ import {
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { EncryptedInput } from "../query/user-decrypt";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
-import type { ClearValue, EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
 import { pLimit } from "../utils/concurrency";
-import { isEncryptedValueZero } from "../utils/handles";
-import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
+import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
+import {
+  extractRetryAfter,
+  isInvalidTransportKeyPairMessage,
+  isRpcRateLimitError,
+  toError,
+} from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -52,88 +56,98 @@ interface DecryptionStrategy {
   requesterAddress: Address;
   /** The ACL actor whose entitlement is checked (signer, or delegator when delegated). */
   aclActorAddress: Address;
-  resolveCredentials: (contractAddresses: Address[]) => Promise<StoredTransportKeyPairWithPermits>;
+  resolveCredentials: (
+    contractAddresses: Address[],
+  ) => Promise<SerializedTransportKeyPairWithPermissions>;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   decryptContract: (args: {
-    credentials: StoredTransportKeyPairWithPermits;
+    credentials: SerializedTransportKeyPairWithPermissions;
     contractAddress: Address;
     encryptedValues: EncryptedValue[];
-  }) => Promise<Record<EncryptedValue, ClearValue>>;
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">;
+  }) => Promise<DecryptValuesReturnType>;
   errorMessage: string;
   delegated?: boolean;
 }
 
+/** Per-handle outcome of a batch decrypt: the decrypted value, or a per-item error. */
 export interface BatchDecryptItem {
+  /** The encrypted value (handle) being decrypted. */
   encryptedValue: EncryptedValue;
+  /** Address of the contract the handle belongs to. */
   contractAddress: Address;
+  /** Decrypted clear value; set when this item succeeded. */
   value?: ClearValue;
+  /** Error for this item; set when this item failed. */
   error?: ZamaError;
 }
 
+/** Result of a batch decrypt: one entry per requested handle, in input order. */
 export interface BatchDecryptResult {
+  /** Per-handle outcomes. */
   items: BatchDecryptItem[];
 }
 
+/** @internal */
 export class DecryptionService {
   readonly #cache: CachingService;
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
-  readonly #relayer: RelayerDispatcher;
+  readonly #router: ChainRouter;
   readonly #emitEvent: (input: ZamaSDKEventInput) => void;
 
   constructor({
     cache,
     credentialService,
     delegationService,
-    relayer,
+    router,
     emitEvent,
   }: {
     cache: CachingService;
     credentialService: CredentialService;
     delegationService: DelegationService;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     emitEvent: (input: ZamaSDKEventInput) => void;
   }) {
     this.#cache = cache;
     this.#credentialService = credentialService;
     this.#delegationService = delegationService;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#emitEvent = emitEvent;
   }
 
-  async userDecrypt(
+  async decryptValues(
     handles: EncryptedInput[],
     signerAddress: Address,
+    opts?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedSigner = getAddress(signerAddress);
-    return this.#decrypt(handles, {
-      requesterAddress: normalizedSigner,
-      aclActorAddress: normalizedSigner,
-      resolveCredentials: (contractAddresses) =>
-        this.#credentialService.grantPermit(contractAddresses),
-      decryptContract: async ({ credentials, contractAddress, encryptedValues }) => {
-        return this.#relayer.userDecrypt({
-          encryptedValues,
-          contractAddress,
-          ...resolveUserDecryptPermit(credentials, contractAddress),
-          signerAddress: normalizedSigner,
-        });
+    return this.#decrypt(
+      handles,
+      {
+        requesterAddress: normalizedSigner,
+        aclActorAddress: normalizedSigner,
+        resolveCredentials: (contractAddresses) =>
+          this.#credentialService.grantPermit(contractAddresses),
+        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
+          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
+        errorMessage: "Failed to decrypt encrypted values",
       },
-      errorMessage: "Failed to decrypt encrypted values",
-    });
+      opts,
+    );
   }
 
-  async delegatedUserDecrypt(
-    encryptedValues: EncryptedInput[],
+  async delegatedDecryptValues(
+    encryptedInputs: EncryptedInput[],
     delegatorAddress: Address,
     delegateAddress: Address,
     accountAddress: Address,
-    options?: DelegatedDecryptOptions,
+    opts?: DelegatedDecryptOptions,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    return this.#withPropagationRetry(options?.waitForPropagation ?? true, () =>
-      this.#decrypt(encryptedValues, {
+    return this.#withPropagationRetry(opts?.waitForPropagation ?? true, () =>
+      this.#decrypt(encryptedInputs, {
         requesterAddress: getAddress(accountAddress),
         aclActorAddress: normalizedDelegator,
         resolveCredentials: (contractAddresses) =>
@@ -143,19 +157,8 @@ export class DecryptionService {
             delegatorAddress: normalizedDelegator,
             delegateAddress: normalizedDelegate,
           }),
-        decryptContract: async ({
-          credentials,
-          contractAddress,
-          // oxlint-disable-next-line no-shadow
-          encryptedValues,
-        }) => {
-          return this.#relayer.delegatedUserDecrypt({
-            encryptedValues: encryptedValues,
-            contractAddress,
-            ...resolveDelegatedDecryptPermit(credentials, contractAddress),
-            delegateAddress: normalizedDelegate,
-          });
-        },
+        decryptContract: ({ credentials, contractAddress, encryptedValues, options }) =>
+          this.#decryptValues(credentials, contractAddress, encryptedValues, options),
         errorMessage: "Failed to decrypt delegated encrypted values",
         delegated: true,
       }),
@@ -224,7 +227,7 @@ export class DecryptionService {
     const normalizedAccount = getAddress(accountAddress);
 
     try {
-      const decrypted = await this.delegatedUserDecrypt(
+      const decrypted = await this.delegatedDecryptValues(
         items.map(({ encryptedValue, contractAddress }) => ({ encryptedValue, contractAddress })),
         delegatorAddress,
         delegateAddress,
@@ -264,7 +267,7 @@ export class DecryptionService {
           // The batch attempt above already rode out the propagation window for
           // the whole set; fail fast here so a still-unsynced delegation records
           // a per-item error instead of each item re-spending the full budget.
-          const decrypted = await this.delegatedUserDecrypt(
+          const decrypted = await this.delegatedDecryptValues(
             [{ encryptedValue: item.encryptedValue, contractAddress: item.contractAddress }],
             delegatorAddress,
             delegateAddress,
@@ -290,9 +293,52 @@ export class DecryptionService {
     return { items };
   }
 
+  /**
+   * Run a user (or delegated-user) decrypt for one contract: rebuild the
+   * `@fhevm/sdk` transport key pair and signed permit from the resolved permit,
+   * then decrypt. The delegation, if any, is encoded in the permit — both paths
+   * share this call. Returns the positional clear values for `encryptedValues`.
+   */
+  async #decryptValues(
+    credentials: SerializedTransportKeyPairWithPermissions,
+    contractAddress: Address,
+    encryptedValues: EncryptedValue[],
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
+  ): Promise<DecryptValuesReturnType> {
+    const permit = resolvePermit(credentials, contractAddress);
+    let transportKeyPair: ParseTransportKeyPairReturnType;
+    try {
+      transportKeyPair = await this.#router.relayer.parseTransportKeyPair({
+        publicKey: permit.publicKey,
+        privateKey: permit.privateKey,
+        tkmsVersion: credentials.keypair.tkmsVersion,
+      });
+    } catch (error) {
+      // Stale key pair the relayer can't re-derive (post KMS/TKMS rotation):
+      // evict it so the next resolveCredentials regenerates and re-signs.
+      // wrapDecryptError maps the raw message to InvalidTransportKeyPairError.
+      if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+        await this.#credentialService.evictTransportKeyPair();
+      }
+      throw error;
+    }
+    const signedPermit = await this.#router.relayer.parseSignedDecryptionPermit({
+      transportKeyPair,
+      serializedPermit: permit.serializedPermit,
+    });
+    return this.#router.relayer.decryptValues({
+      transportKeyPair,
+      signedPermit,
+      encryptedValues,
+      contractAddress,
+      options,
+    });
+  }
+
   async #decrypt(
     handles: EncryptedInput[],
     strategy: DecryptionStrategy,
+    options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<Record<EncryptedValue, ClearValue>> {
     if (handles.length === 0) {
       return {};
@@ -362,6 +408,16 @@ export class DecryptionService {
       }
     }
 
+    // Split each contract's handles to stay under the relayer's per-request
+    // cleartext-bit budget — a contract with many/wide handles becomes
+    // several relayer calls instead of one oversized, rejected call.
+    const requests: { contractAddress: Address; encryptedValues: EncryptedValue[] }[] = [];
+    for (const [contractAddress, encryptedValues] of byContract) {
+      for (const chunk of chunkHandlesByBitBudget(encryptedValues)) {
+        requests.push({ contractAddress, encryptedValues: chunk });
+      }
+    }
+
     const t0 = Date.now();
     const uncachedEncryptedValues = uncached.map((h) => h.encryptedValue);
     try {
@@ -371,16 +427,17 @@ export class DecryptionService {
       });
 
       await pLimit(
-        [...byContract.entries()].map(([contractAddress, encryptedValues]) => async () => {
+        requests.map(({ contractAddress, encryptedValues }) => async () => {
           // Classify per contract so a not-entitled / relayer failure carries the
           // exact contract + ACL actor (the request context the worker no longer
           // threads). Already-typed errors pass straight through.
-          let decrypted: Record<EncryptedValue, ClearValue>;
+          let decrypted: DecryptValuesReturnType;
           try {
             decrypted = await strategy.decryptContract({
               credentials,
               contractAddress,
               encryptedValues,
+              options,
             });
           } catch (error) {
             throw wrapDecryptError(error, strategy.errorMessage, {
@@ -390,13 +447,40 @@ export class DecryptionService {
             });
           }
 
-          for (const [encryptedValue, value] of Object.entries(decrypted)) {
-            result[encryptedValue as EncryptedValue] = value;
+          // `decryptValues` returns clear values positionally aligned with the
+          // requested `encryptedValues`; zip them back into the handle→value map.
+          for (let i = 0; i < encryptedValues.length; i++) {
+            const encryptedValue = encryptedValues[i];
+            const value = decrypted[i]?.value;
+            if (encryptedValue === undefined || value === undefined) {
+              continue;
+            }
+            result[encryptedValue] = value;
             await this.#cache.set(
               strategy.requesterAddress,
               contractAddress,
-              encryptedValue as EncryptedValue,
+              encryptedValue,
               value,
+            );
+          }
+
+          const missing = encryptedValues.filter(
+            (encryptedValue) => result[encryptedValue] === undefined,
+          );
+          if (missing.length > 0) {
+            throw new DecryptionFailedError(
+              `${strategy.errorMessage}: relayer returned no clear value for ${missing.length} of ${encryptedValues.length} handle(s) on ${contractAddress}`,
+              {
+                cause: new AggregateError(
+                  missing.map(
+                    (encryptedValue) =>
+                      new DecryptionFailedError(
+                        `No clear value for handle ${encryptedValue} on ${contractAddress}`,
+                      ),
+                  ),
+                  `${missing.length} handle(s) missing a clear value on ${contractAddress}`,
+                ),
+              },
             );
           }
         }),

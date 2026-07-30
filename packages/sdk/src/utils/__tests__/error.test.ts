@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, test, expect } from "../../test-fixtures";
 import {
   toError,
@@ -8,13 +9,12 @@ import {
   isRpcRateLimitError,
   hasStructuredRpcRateLimitSignal,
   isConsumerRpcError,
-  isRetryableRelayerError,
+  isRelayerError,
   isNotEntitledMessage,
+  isInvalidTransportKeyPairMessage,
   parseHandleFromMessage,
   extractRetryAfter,
   parseRetryAfterHeader,
-  serializeError,
-  deserializeError,
 } from "../error";
 
 describe("toError", () => {
@@ -116,11 +116,11 @@ describe("extractHttpStatus", () => {
     expect(extractHttpStatus(Object.assign(new Error("nope"), { status: 401 }))).toBe(401);
   });
 
-  test("reads cause.status (the relayer SDK shape)", () => {
-    // relayer-sdk throws `new Error(message, { cause: { code, status, ... } })`
+  test("reads cause.status (the @fhevm/sdk relayer shape)", () => {
+    // @fhevm/sdk relayer response errors expose a numeric `status` getter.
     const relayerError = Object.assign(
-      new Error("Public decrypt failed: relayer respond with HTTP code 403"),
-      { cause: { code: "RELAYER_FETCH_ERROR", status: 403 } },
+      new Error("Public decryption: Relayer returned unexpected response status: 403"),
+      { cause: { name: "RelayerResponseStatusError", status: 403 } },
     );
     expect(extractHttpStatus(relayerError)).toBe(403);
   });
@@ -178,9 +178,9 @@ describe("isRpcRateLimitError", () => {
     expect(isRpcRateLimitError(new Error("transferred 4290 wei (id 429001)"))).toBe(false);
   });
 
-  test("excludes the relayer's own rate-limit (RELAYER_FETCH_ERROR)", () => {
+  test("excludes an @fhevm/sdk relayer error (Relayer* name) even with status 429", () => {
     const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
-      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
+      cause: { name: "RelayerResponseApiError", status: 429 },
     });
     expect(isRpcRateLimitError(relayerError)).toBe(false);
   });
@@ -239,10 +239,10 @@ describe("hasStructuredRpcRateLimitSignal", () => {
     expect(hasStructuredRpcRateLimitSignal(new Error("Too Many Requests"))).toBe(false);
   });
 
-  test("excludes relayer-tagged errors even with status 429", () => {
+  test("excludes @fhevm/sdk relayer errors (Relayer* name) even with status 429", () => {
     expect(
       hasStructuredRpcRateLimitSignal(
-        Object.assign(new Error("x"), { cause: { code: "RELAYER_FETCH_ERROR", status: 429 } }),
+        Object.assign(new Error("x"), { cause: { name: "RelayerResponseApiError", status: 429 } }),
       ),
     ).toBe(false);
   });
@@ -268,9 +268,9 @@ describe("isConsumerRpcError", () => {
     expect(isConsumerRpcError(Object.assign(new Error("x"), { status: 429 }))).toBe(true);
   });
 
-  test("a relayer HTTP error is NOT consumer-RPC", () => {
-    const relayer = Object.assign(new Error("relayer respond with HTTP code 503"), {
-      cause: { code: "RELAYER_FETCH_ERROR", status: 503 },
+  test("an @fhevm/sdk relayer error (Relayer* name) is NOT consumer-RPC", () => {
+    const relayer = Object.assign(new Error("Relayer API error: internal"), {
+      cause: { name: "RelayerResponseApiError", status: 503 },
     });
     expect(isConsumerRpcError(relayer)).toBe(false);
   });
@@ -280,56 +280,34 @@ describe("isConsumerRpcError", () => {
   });
 });
 
-describe("isRetryableRelayerError", () => {
-  test("retries a relayer gateway transient (RELAYER_FETCH_ERROR 502/503/504)", () => {
-    for (const status of [502, 503, 504]) {
-      const err = Object.assign(new Error(`relayer respond with HTTP code ${status}`), {
-        cause: { code: "RELAYER_FETCH_ERROR", status },
-      });
-      expect(isRetryableRelayerError(err)).toBe(true);
+describe("isRelayerError", () => {
+  test("matches @fhevm/sdk relayer error classes by their Relayer* name", () => {
+    for (const name of [
+      "RelayerResponseStatusError",
+      "RelayerResponseApiError",
+      "RelayerMaxRetryError",
+      "RelayerTimeoutError",
+    ]) {
+      const err = new Error("boom");
+      err.name = name;
+      expect(isRelayerError(err)).toBe(true);
     }
   });
 
-  test("does NOT retry a relayer 500 (terminal) or 429 (back-pressure, surfaced)", () => {
-    const e500 = Object.assign(new Error("relayer respond with HTTP code 500"), {
-      cause: { code: "RELAYER_FETCH_ERROR", status: 500 },
+  test("matches a relayer error nested in the cause chain", () => {
+    const err = Object.assign(new Error("decrypt failed"), {
+      cause: { name: "RelayerMaxRetryError", status: undefined },
     });
-    const e429 = Object.assign(new Error("Relayer rate limit exceeded"), {
-      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
-    });
-    expect(isRetryableRelayerError(e500)).toBe(false);
-    expect(isRetryableRelayerError(e429)).toBe(false);
+    expect(isRelayerError(err)).toBe(true);
   });
 
-  test("retries a relayer-boundary network failure (no consumer-RPC signature)", () => {
-    expect(isRetryableRelayerError(new Error("fetch failed"))).toBe(true);
-    expect(isRetryableRelayerError(new Error("socket hang up"))).toBe(true);
-    expect(isRetryableRelayerError(new Error("read ECONNRESET"))).toBe(true);
-  });
-
-  test("does NOT retry a consumer-RPC transport fault (deferred to viem/ethers)", () => {
-    // ethers network error and viem TimeoutError both bubble up from the worker's
-    // ACL read — already retried by the integrator's client.
-    const ethersNet = Object.assign(new Error("fetch failed"), { code: "NETWORK_ERROR" });
-    const viemTimeout = Object.assign(new Error("The request timed out."), {
-      name: "TimeoutError",
-    });
-    expect(isRetryableRelayerError(ethersNet)).toBe(false);
-    expect(isRetryableRelayerError(viemTimeout)).toBe(false);
-  });
-
-  test("does NOT retry a bare timeout (owned by viem/ethers + the worker timeout)", () => {
-    expect(isRetryableRelayerError(new Error("Request timed out after 30000ms"))).toBe(false);
-  });
-
-  test("does NOT retry a terminal not-entitled error or a non-Error", () => {
-    expect(
-      isRetryableRelayerError(
-        new Error("User address 0x1 is not authorized to user decrypt handle 0x2"),
-      ),
-    ).toBe(false);
-    expect(isRetryableRelayerError("fetch failed")).toBe(false);
-    expect(isRetryableRelayerError(null)).toBe(false);
+  test("does NOT match consumer-RPC or plain errors", () => {
+    const viem = new Error("boom");
+    viem.name = "HttpRequestError";
+    expect(isRelayerError(viem)).toBe(false);
+    expect(isRelayerError(Object.assign(new Error("x"), { code: "NETWORK_ERROR" }))).toBe(false);
+    expect(isRelayerError(new Error("relayer respond with HTTP code 503"))).toBe(false);
+    expect(isRelayerError(null)).toBe(false);
   });
 });
 
@@ -409,169 +387,81 @@ describe("parseRetryAfterHeader", () => {
   });
 });
 
-describe("serializeError / deserializeError", () => {
-  test("round-trips message, name, and the scalar signal fields", () => {
-    const err = Object.assign(new Error("boom"), {
-      name: "WeirdError",
-      code: -32005,
-      status: 429,
-      statusCode: 503,
-      retryAfter: 2,
-    });
-    const rebuilt = deserializeError(serializeError(err)) as Error & Record<string, unknown>;
-    expect(rebuilt).toBeInstanceOf(Error);
-    expect(rebuilt.message).toBe("boom");
-    expect(rebuilt.name).toBe("WeirdError");
-    expect(rebuilt.code).toBe(-32005);
-    expect(rebuilt.status).toBe(429);
-    expect(rebuilt.statusCode).toBe(503);
-    expect(rebuilt.retryAfter).toBe(2);
-  });
-
-  test("captures a `Retry-After` header into a numeric retryAfter (seconds) so it survives the boundary", () => {
-    // The header lives on a non-cloneable `Headers`; serializeError must parse it
-    // at the source, else the relayer/consumer back-off is lost across the worker.
-    const relayer429 = Object.assign(new Error("relayer 429"), {
-      statusCode: 429,
-      cause: { response: { headers: new Headers({ "Retry-After": "300" }) } },
-    });
-    const rebuilt = deserializeError(serializeError(relayer429));
-    expect(extractRetryAfter(rebuilt)).toBe(300);
-  });
-
-  test("round-trips an ethers 429 whose status lives only in info.responseStatus", () => {
-    // The worker's relayer-sdk read (persistAllowed) goes through ethers; an
-    // edge/Cloudflare 429 surfaces as `code: "SERVER_ERROR"` + a *string*
-    // `info.responseStatus`. Structured clone drops the nested `info`, so
-    // without lifting it the round-tripped error loses the rate-limit signal and
-    // wrapDecryptError mis-classifies it as terminal DecryptionFailedError.
-    const ethers429 = Object.assign(new Error("could not coalesce error"), {
-      code: "SERVER_ERROR",
-      info: { responseStatus: "429 Too Many Requests" },
-    });
-    // Same verdict directly and after the worker round-trip (the invariant).
-    expect(isRpcRateLimitError(ethers429)).toBe(true);
-    expect(hasStructuredRpcRateLimitSignal(ethers429)).toBe(true);
-    const rebuilt = deserializeError(serializeError(ethers429));
-    expect(isRpcRateLimitError(rebuilt)).toBe(true);
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
-  });
-
-  test("does not invent a rate-limit for a non-429 ethers info.responseStatus", () => {
-    // A 503 must stay non-rate-limit after the round-trip too — parsing the
-    // status to a numeric `status` would have diverged here; preserving the
-    // string keeps direct and round-tripped classification identical.
-    const ethers503 = Object.assign(new Error("bad gateway"), {
-      code: "SERVER_ERROR",
-      info: { responseStatus: "503 Service Unavailable" },
-    });
-    const rebuilt = deserializeError(serializeError(ethers503));
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(
-      hasStructuredRpcRateLimitSignal(ethers503),
-    );
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(false);
-    expect(extractHttpStatus(rebuilt)).toBeUndefined();
-  });
-
-  test("keeps a signal carried on a later branch than the first (walks all links)", () => {
-    // ethers puts the underlying fault on `error` (walked first) and the HTTP
-    // status on `info` — dropping every branch but the first would lose the 429.
-    const err = Object.assign(new Error("server response"), {
-      code: "SERVER_ERROR",
-      error: new Error("underlying transport"),
-      info: { responseStatus: "429 Too Many Requests" },
-    });
-    const rebuilt = deserializeError(serializeError(err));
-    expect(hasStructuredRpcRateLimitSignal(rebuilt)).toBe(true);
-  });
-
-  test("preserves the cause chain so chain-walking detectors keep working", () => {
-    // ethers-style nested provider error: structured clone would drop the chain.
-    const err = Object.assign(new Error("could not coalesce error"), {
-      code: "SERVER_ERROR",
-      info: { error: { code: -32005, message: "Too Many Requests" } },
-    });
-    const rebuilt = deserializeError(serializeError(err));
-    // `info` is normalized to `cause`, but the signal is still reachable.
-    expect(isRpcRateLimitError(rebuilt)).toBe(true);
-  });
-
-  test("preserves a relayer RELAYER_FETCH_ERROR cause (stays excluded from rate-limit)", () => {
-    const relayerError = Object.assign(new Error("relayer responded with HTTP 429"), {
-      cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
-    });
-    const rebuilt = deserializeError(serializeError(relayerError));
-    expect(isRpcRateLimitError(rebuilt)).toBe(false);
-    expect(extractHttpStatus(rebuilt)).toBe(429);
-  });
-
-  test("is depth-bounded and does not throw on deep/cyclic chains", () => {
-    const cyclic = new Error("loop") as Error & { cause?: unknown };
-    cyclic.cause = cyclic;
-    expect(() => serializeError(cyclic)).not.toThrow();
-  });
-
-  test("coerces a non-Error value", () => {
-    const serialized = serializeError("plain string");
-    expect(serialized.message).toBe("plain string");
-    expect(deserializeError(serialized).message).toBe("plain string");
-  });
-});
-
 describe("isNotEntitledMessage / parseHandleFromMessage", () => {
-  // Must stay in sync with @zama-fhe/relayer-sdk's validateAclPermissions
-  // ("User address <a> is not authorized to user decrypt handle <h>!").
-  const RELAYER_NOT_ENTITLED_MSG = `User address 0x1000000000000000000000000000000000000001 is not authorized to user decrypt handle 0x${"12".repeat(32)}!`;
+  // Must stay in sync with @fhevm/sdk's AclUserDecryptionError (checkPersistAllowed):
+  // "User <a> is not authorized to decrypt handle <h>!".
+  const NOT_ENTITLED_MSG = `User 0x1000000000000000000000000000000000000001 is not authorized to decrypt handle 0x${"12".repeat(32)}!`;
 
-  test("matches the relayer's actor-not-entitled message and parses the handle", () => {
-    expect(isNotEntitledMessage(RELAYER_NOT_ENTITLED_MSG)).toBe(true);
-    expect(parseHandleFromMessage(RELAYER_NOT_ENTITLED_MSG)).toBe(`0x${"12".repeat(32)}`);
+  test("matches @fhevm/sdk's actor-not-entitled message and parses the handle", () => {
+    expect(isNotEntitledMessage(NOT_ENTITLED_MSG)).toBe(true);
+    expect(parseHandleFromMessage(NOT_ENTITLED_MSG)).toBe(`0x${"12".repeat(32)}`);
   });
 
-  test("does NOT match the 'dapp contract is not authorized' variant", () => {
-    const contractMsg = `dapp contract 0xabc is not authorized to user decrypt handle 0x${"34".repeat(32)}!`;
+  test("does NOT match the 'Dapp contract … is not authorized to user decrypt' variant", () => {
+    // Note the inserted "user": "…to user decrypt handle" (a dapp ACL misconfig),
+    // which must stay a DecryptionFailedError, not a NotEntitledError.
+    const contractMsg = `Dapp contract 0xabc is not authorized to user decrypt handle 0x${"34".repeat(32)}!`;
     expect(isNotEntitledMessage(contractMsg)).toBe(false);
   });
 
-  // Drift guard wired to the REAL dependency (not a hand-copied constant): if a
-  // @zama-fhe/relayer-sdk bump rewords its not-entitled message, the phrase
-  // isNotEntitledMessage keys on disappears here and this fails loudly — otherwise
-  // NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED (the SDK-239 bug).
-  test("the installed @zama-fhe/relayer-sdk still emits the message our matcher keys on", () => {
+  // Locate the installed @fhevm/sdk source (it ships TS) relative to its manifest,
+  // so the drift guards below read the REAL dependency, not a hand-copied constant.
+  const fhevmSdkFile = (relPath: string): string => {
     const require = createRequire(import.meta.url);
-    const source = readFileSync(require.resolve("@zama-fhe/relayer-sdk/node"), "utf8");
-    // Assert the actor lead-in and the discriminating phrase are ADJACENT (only the
-    // interpolated address between them). Two independent substring checks would
-    // stay green off the relayer's sibling "dapp contract … is not authorized to
-    // user decrypt" message even if the actor message were reworded.
-    expect(source).toMatch(/User address[^\n]{0,160}is not authorized to user decrypt handle/);
+    const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
+    return readFileSync(join(pkgDir, relPath), "utf8");
+  };
+
+  // Drift guard: if a @fhevm/sdk bump rewords AclUserDecryptionError's actor
+  // message, the phrase isNotEntitledMessage keys on disappears here and this fails
+  // loudly — otherwise NOT_ENTITLED would silently downgrade to DECRYPTION_FAILED
+  // (the SDK-239 regression class).
+  test("the installed @fhevm/sdk still emits the actor message our matcher keys on", () => {
+    const source = fhevmSdkFile("core/host-contracts/checkPersistAllowed.ts");
+    // The actor lead-in and the discriminating phrase are ADJACENT (only the
+    // interpolated `${userAddress}` between them). The sibling dapp message inserts
+    // "user" ("to user decrypt handle") and must not satisfy this.
+    expect(source).toMatch(/User \$\{[^}]+\} is not authorized to decrypt handle/);
   });
 
-  // RELAYER_FETCH_ERROR is the *sole* discriminator keeping the relayer's own 429
-  // (its message literally contains "rate limit") out of the retryable
-  // RpcRateLimitError. If a relayer bump renames it, the throttle flips to
-  // retryable and consumer retry loops amplify it — guard against that drift.
-  test("the installed @zama-fhe/relayer-sdk still tags its HTTP errors with RELAYER_FETCH_ERROR", () => {
-    const require = createRequire(import.meta.url);
-    const source = readFileSync(require.resolve("@zama-fhe/relayer-sdk/node"), "utf8");
-    expect(source).toContain("RELAYER_FETCH_ERROR");
+  // The Relayer* `name` prefix is the sole discriminator keeping @fhevm/sdk's own
+  // relayer errors (SDK-236) out of the consumer RpcRateLimitError bucket. If an
+  // upstream rename drops the prefix, a relayer 429 flips to retryable and consumer
+  // retry loops amplify it — guard against that drift.
+  test("the installed @fhevm/sdk still names its relayer response errors Relayer*", () => {
+    const source = fhevmSdkFile("core/errors/RelayerResponseApiError.ts");
+    expect(source).toContain("name: 'RelayerResponseApiError'");
+  });
+});
+
+describe("isInvalidTransportKeyPairMessage", () => {
+  // Must stay in sync with @fhevm/sdk's verifyTkmsPublicKey, which throws
+  // `invalid TransportKeyPairKeyPair` when a stored key pair can't be re-derived
+  // under the current TKMS version (typically after a KMS/TKMS rotation).
+  test("matches @fhevm/sdk's stale-key-pair message", () => {
+    expect(isInvalidTransportKeyPairMessage("invalid TransportKeyPairKeyPair")).toBe(true);
+    // Case-insensitive and tolerant of a wrapping context prefix.
+    expect(
+      isInvalidTransportKeyPairMessage(
+        "Credential signing failed: invalid TransportKeyPairKeyPair",
+      ),
+    ).toBe(true);
   });
 
-  // The drift guards above read the *Node* build, but the browser worker
-  // `importScripts` the CDN UMD bundle pinned by `RELAYER_SDK_VERSION`. Asserting
-  // the pin matches the installed npm version keeps those Node-read guards
-  // meaningful for the browser path; a CDN message reword *within* the same
-  // version still can't be caught offline — gate `RELAYER_SDK_VERSION` bumps on
-  // re-validating the matcher.
-  test("the worker's pinned CDN relayer version matches the installed npm package", () => {
+  test("does NOT match unrelated failures", () => {
+    expect(isInvalidTransportKeyPairMessage("network error")).toBe(false);
+    expect(isInvalidTransportKeyPairMessage("user rejected the request")).toBe(false);
+  });
+
+  // Drift guard: if a @fhevm/sdk bump rewords the throw, our matcher silently
+  // stops typing the error and the vault self-heal (evict + regenerate) breaks.
+  test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
     const require = createRequire(import.meta.url);
-    const installed = (require("@zama-fhe/relayer-sdk/package.json") as { version: string })
-      .version;
-    const relayerWeb = readFileSync(
-      new URL("../../relayer/relayer-web.ts", import.meta.url),
+    const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
+    const source = readFileSync(
+      join(pkgDir, "core/utils-p/decrypt/verifyTkmsPublicKey.ts"),
       "utf8",
     );
-    const pinned = /RELAYER_SDK_VERSION = "([^"]+)"/.exec(relayerWeb)?.[1];
-    expect(pinned).toBe(installed);
+    expect(source).toContain("invalid TransportKeyPairKeyPair");
   });
 });

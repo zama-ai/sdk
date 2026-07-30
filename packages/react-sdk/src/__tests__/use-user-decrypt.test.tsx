@@ -1,4 +1,4 @@
-import type { Address } from "@zama-fhe/sdk";
+import type { Address, TypedValue } from "@zama-fhe/sdk";
 import { waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
@@ -10,7 +10,10 @@ import { describe, expect, test, vi } from "../test-fixtures";
 
 describe("useDecryptValues", () => {
   test("decrypts encrypted values", async ({ relayer, tokenAddress, renderWithProviders }) => {
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xhandle1": 100n, "0xhandle2": true });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 100n } as TypedValue,
+      { type: "bool", value: true } as TypedValue,
+    ]);
 
     const { result } = renderWithProviders(() =>
       useDecryptValues(
@@ -31,9 +34,9 @@ describe("useDecryptValues", () => {
     const CONTRACT_A = "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa" as Address;
     const CONTRACT_B = "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB" as Address;
 
-    vi.mocked(relayer.userDecrypt)
-      .mockResolvedValueOnce({ "0xh1": 10n })
-      .mockResolvedValueOnce({ "0xh2": 20n });
+    vi.mocked(relayer.decryptValues)
+      .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue])
+      .mockResolvedValueOnce([{ type: "uint64", value: 20n } as TypedValue]);
 
     const { result } = renderWithProviders(() =>
       useDecryptValues(
@@ -47,7 +50,7 @@ describe("useDecryptValues", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5_000 });
 
-    expect(relayer.userDecrypt).toHaveBeenCalledTimes(2);
+    expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     expect(result.current.data).toEqual({ "0xh1": 10n, "0xh2": 20n });
   });
 
@@ -109,7 +112,9 @@ describe("useDecryptValues", () => {
     // SDK-80 row 17: when credentials are already authorized for the contract,
     // useHasPermit resolves to true and useDecryptValues fires automatically —
     // no extra signature prompt should be triggered by the decrypt itself.
-    vi.mocked(relayer.userDecrypt).mockResolvedValue({ "0xh": 42n });
+    vi.mocked(relayer.decryptValues).mockResolvedValue([
+      { type: "uint64", value: 42n } as TypedValue,
+    ]);
 
     const { result } = renderWithProviders(() => {
       const sdk = useZamaSDK();

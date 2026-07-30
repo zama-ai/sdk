@@ -1,15 +1,17 @@
+import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
+import type { TypedValue } from "@fhevm/sdk/types";
 import type { Address } from "viem";
-import { Topics } from "../../events";
 import {
   DecryptionFailedError,
   TransactionRevertedError,
   ZamaError,
   ZamaErrorCode,
 } from "../../errors";
+import { Topics } from "../../events";
+import { describe, expect, test, vi } from "../../test-fixtures";
+import type { TransactionReceipt } from "../../types/transaction";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
 import { savePendingUnshield } from "../pending-unshield";
-import type { TransactionReceipt } from "../../types/transaction";
-import { describe, expect, test, vi } from "../../test-fixtures";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 
@@ -259,16 +261,31 @@ describe("WrappedToken", () => {
   });
 
   describe("unwrap / unwrapAll", () => {
-    test("unwrap encrypts amount and sends transaction", async ({
+    test("unwrap encrypts amount, sends transaction, and returns the unwrapRequestId", async ({
       relayer,
       signer,
       userAddress,
       wrappedToken,
       wrapperAddress,
+      provider,
     }) => {
+      const unwrapRequestId = `0x${"cd".repeat(32)}` as const;
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              unwrapRequestId,
+            ],
+            data: `0x${"00".repeat(32)}`,
+          },
+        ],
+      });
+
       const result = await wrappedToken.unwrap(50n);
 
-      expect(relayer.encrypt).toHaveBeenCalledWith({
+      expect(relayer.encryptValues).toHaveBeenCalledWith({
         values: [{ value: 50n, type: "euint64" }],
         contractAddress: wrapperAddress,
         userAddress,
@@ -277,6 +294,18 @@ describe("WrappedToken", () => {
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(result.txHash).toBe("0xtxhash");
+      expect(result.unwrapRequestId).toBe(unwrapRequestId);
+    });
+
+    test("unwrap throws when the receipt has no UnwrapRequested event", async ({
+      wrappedToken,
+      provider,
+    }) => {
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
+
+      await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
     });
 
     test("unwrap throws EncryptionFailed when encrypt returns empty encrypted values", async ({
@@ -284,7 +313,10 @@ describe("WrappedToken", () => {
       wrappedToken,
       inputProof,
     }) => {
-      vi.mocked(relayer.encrypt).mockResolvedValueOnce({ encryptedValues: [], inputProof });
+      vi.mocked(relayer.encryptValues).mockResolvedValueOnce({
+        encryptedValues: [],
+        inputProof,
+      } as unknown as EncryptValuesReturnType);
 
       await expect(wrappedToken.unwrap(50n)).rejects.toMatchObject({
         code: ZamaErrorCode.EncryptionFailed,
@@ -299,17 +331,31 @@ describe("WrappedToken", () => {
       handle,
       provider,
     }) => {
+      const unwrapRequestId = `0x${"cd".repeat(32)}` as const;
       vi.mocked(provider.readContract).mockResolvedValue(handle);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [
+          {
+            topics: [
+              Topics.UnwrapRequested,
+              `0x000000000000000000000000${userAddress.slice(2)}`,
+              unwrapRequestId,
+            ],
+            data: `0x${"00".repeat(32)}`,
+          },
+        ],
+      });
 
-      await wrappedToken.unwrapAll();
+      const result = await wrappedToken.unwrapAll();
 
-      expect(relayer.encrypt).not.toHaveBeenCalled();
+      expect(relayer.encryptValues).not.toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({
           functionName: "unwrap",
           args: [userAddress, userAddress, handle],
         }),
       );
+      expect(result.unwrapRequestId).toBe(unwrapRequestId);
     });
 
     test("unwrapAll throws when balance is zero", async ({ wrappedToken, provider }) => {
@@ -320,7 +366,7 @@ describe("WrappedToken", () => {
   });
 
   describe("finalizeUnwrap", () => {
-    test("calls publicDecrypt and finalizes on-chain", async ({
+    test("calls decryptPublicValues and finalizes on-chain", async ({
       relayer,
       signer,
       wrappedToken,
@@ -328,19 +374,21 @@ describe("WrappedToken", () => {
       const unwrapRequestId = ("0x" + "ab".repeat(32)) as `0x${string}`;
       const result = await wrappedToken.finalizeUnwrap(unwrapRequestId);
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([unwrapRequestId]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [unwrapRequestId],
+      });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
       expect(result.txHash).toBe("0xtxhash");
     });
 
-    test("re-throws DecryptionFailedError from publicDecrypt as-is", async ({
+    test("re-throws DecryptionFailedError from decryptPublicValues as-is", async ({
       relayer,
       wrappedToken,
     }) => {
       const original = new DecryptionFailedError("already wrapped");
-      vi.mocked(relayer.publicDecrypt).mockRejectedValueOnce(original);
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toBe(original);
     });
@@ -382,12 +430,14 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
-      expect(relayer.encrypt).toHaveBeenCalled();
+      expect(relayer.encryptValues).toHaveBeenCalled();
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "unwrap" }),
       );
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xtxhash");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(signer.writeContract).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: "finalizeUnwrap" }),
       );
@@ -417,7 +467,9 @@ describe("WrappedToken", () => {
 
       const result = await wrappedToken.unshieldAll();
 
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(result.txHash).toBe("0xtxhash");
     });
 
@@ -428,7 +480,7 @@ describe("WrappedToken", () => {
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({ logs: [] });
 
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow(
-        "No UnwrapRequested event found in unshield receipt",
+        "No UnwrapRequested event found in unwrap receipt",
       );
     });
 
@@ -454,7 +506,9 @@ describe("WrappedToken", () => {
       const result = await wrappedToken.resumeUnshield("0xprevioustx" as `0x${string}`);
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith("0xprevioustx");
-      expect(relayer.publicDecrypt).toHaveBeenCalledWith([BURN_HANDLE]);
+      expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+        encryptedValues: [BURN_HANDLE],
+      });
       expect(result.txHash).toBe("0xtxhash");
     });
   });
@@ -491,8 +545,9 @@ describe("WrappedToken", () => {
         receiptWithUnwrapRequested(userAddress),
       );
       // Interrupt phase 2: public decryption (finalize) fails after the unwrap landed.
-      relayer.publicDecrypt = vi.fn().mockRejectedValue(new Error("finalize boom"));
-
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValue(
+        new Error("finalize boom"),
+      );
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow();
 
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
@@ -567,7 +622,9 @@ describe("WrappedToken", () => {
       provider,
     }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(handle);
-      vi.mocked(relayer.userDecrypt).mockResolvedValueOnce({ [handle]: 100n });
+      vi.mocked(relayer.decryptValues).mockResolvedValueOnce([
+        { type: "uint64", value: 100n } as TypedValue,
+      ]);
 
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
         logs: [

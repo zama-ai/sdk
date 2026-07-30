@@ -16,40 +16,49 @@ import {
 } from "../errors";
 import { matchAclRevert } from "../errors/acl-revert";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import type { RelayerDispatcher } from "../relayer/relayer-dispatcher";
+import type { ChainRouter } from "../chains/router";
 import type {
+  GenericLogger,
   GenericProvider,
   GenericSigner,
   TransactionResult,
   WriteContractConfig,
 } from "../types";
 import { submitTransaction } from "../utils/submit-transaction";
-import type { GenericLogger } from "../worker/worker.types";
 
 type AclTransactionOperation = Extract<
   TransactionOperation,
   "delegateDecryption" | "revokeDelegation"
 >;
 
+/** Delegation activity and expiry, resolved from a single expiry read. */
+export interface DelegationStatus {
+  /** Whether the delegation is currently active (exists and not expired). */
+  isActive: boolean;
+  /** Unix timestamp (seconds) when the delegation expires; `0n` if none exists. */
+  expiryTimestamp: bigint;
+}
+
+/** @internal */
 export class DelegationService {
+  readonly #router: ChainRouter;
   readonly #provider: GenericProvider;
-  readonly #relayer: RelayerDispatcher;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   readonly #logger: GenericLogger;
 
   constructor({
     provider,
-    relayer,
+    router,
     emitEvent = () => {},
     logger,
   }: {
     provider: GenericProvider;
-    relayer: RelayerDispatcher;
+    router: ChainRouter;
     logger: GenericLogger;
     emitEvent?: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
   }) {
     this.#provider = provider;
-    this.#relayer = relayer;
+    this.#router = router;
     this.#logger = logger;
     this.#emitEvent = emitEvent;
   }
@@ -90,7 +99,7 @@ export class DelegationService {
       );
     }
 
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
     const expDate = expirationDate
       ? BigInt(Math.floor(expirationDate.getTime() / 1000))
       : MAX_UINT64;
@@ -136,7 +145,7 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegate = getAddress(delegateAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
 
     let currentExpiry: bigint;
     try {
@@ -168,15 +177,28 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<boolean> {
-    const expiry = await this.getDelegationExpiry(params);
-    if (expiry === 0n) {
-      return false;
+    return (await this.getStatus(params)).isActive;
+  }
+
+  /**
+   * Resolve activity and expiry together from a single {@link getDelegationExpiry} read,
+   * instead of two separate round trips through {@link isDelegated} and
+   * {@link getDelegationExpiry}.
+   */
+  async getStatus(params: {
+    contractAddress: Address;
+    delegatorAddress: Address;
+    delegateAddress: Address;
+  }): Promise<DelegationStatus> {
+    const expiryTimestamp = await this.getDelegationExpiry(params);
+    if (expiryTimestamp === 0n) {
+      return { isActive: false, expiryTimestamp };
     }
-    if (expiry === MAX_UINT64) {
-      return true;
+    if (expiryTimestamp === MAX_UINT64) {
+      return { isActive: true, expiryTimestamp };
     }
     const now = await this.#provider.getBlockTimestamp();
-    return expiry > now;
+    return { isActive: expiryTimestamp > now, expiryTimestamp };
   }
 
   async getDelegationExpiry({
@@ -188,7 +210,7 @@ export class DelegationService {
     delegatorAddress: Address;
     delegateAddress: Address;
   }): Promise<bigint> {
-    const acl = await this.#relayer.getAclAddress();
+    const acl = this.#router.relayer.chain.aclContractAddress;
     return this.#provider.readContract(
       getDelegationExpiryContract(
         acl,
@@ -266,23 +288,21 @@ export class DelegationService {
     const normalizedContract = getAddress(contractAddress);
     const normalizedDelegator = getAddress(delegatorAddress);
     const normalizedDelegate = getAddress(delegateAddress);
-    const expiry = await this.getDelegationExpiry({
+    const { isActive, expiryTimestamp } = await this.getStatus({
       contractAddress: normalizedContract,
       delegatorAddress: normalizedDelegator,
       delegateAddress: normalizedDelegate,
     });
-    if (expiry === 0n) {
+    if (isActive) {
+      return;
+    }
+    if (expiryTimestamp === 0n) {
       throw new DelegationNotFoundError(
         `No active delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract}`,
       );
     }
-    if (expiry !== MAX_UINT64) {
-      const now = await this.#provider.getBlockTimestamp();
-      if (expiry <= now) {
-        throw new DelegationExpiredError(
-          `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
-        );
-      }
-    }
+    throw new DelegationExpiredError(
+      `Delegation from ${normalizedDelegator} to ${normalizedDelegate} for ${normalizedContract} has expired`,
+    );
   }
 }

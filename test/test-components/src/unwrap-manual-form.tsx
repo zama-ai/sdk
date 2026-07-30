@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { type Address, findUnwrapRequested, type Hex } from "@zama-fhe/sdk";
 import {
-  useUnwrap,
-  useFinalizeUnwrap,
   useConfidentialBalance,
+  useFinalizeUnwrap,
   useMetadata,
+  useUnwrap,
+  useUnwrapAll,
 } from "@zama-fhe/react-sdk";
+import type { Address } from "@zama-fhe/sdk";
 import { useAccount } from "wagmi";
 
 export function UnwrapManualForm({
@@ -17,25 +17,23 @@ export function UnwrapManualForm({
   tokenAddress: Address;
   wrapperAddress: Address;
 }) {
-  const [unwrapRequestId, setUnwrapRequestId] = useState<Hex | null>(null);
   const { address } = useAccount();
   const { data: metadata } = useMetadata(tokenAddress);
   const { data: balance } = useConfidentialBalance({ address: tokenAddress, account: address });
   const unwrap = useUnwrap(wrapperAddress);
+  const unwrapAll = useUnwrapAll(wrapperAddress);
   const finalizeUnwrap = useFinalizeUnwrap(wrapperAddress);
+
+  // Either entry point (single unwrap or unwrap-all) yields an UnwrapResult;
+  // the finalize phase consumes whichever one produced a request.
+  const unwrapResult = unwrap.data ?? unwrapAll.data;
 
   return (
     <div className="space-y-6">
       {/* Step 1: Unwrap */}
       <form
-        action={async (formData) => {
-          const result = await unwrap.mutateAsync({
-            amount: BigInt(formData.get("amount") as string),
-          });
-          const event = findUnwrapRequested(result.receipt.logs);
-          if (event?.unwrapRequestId) {
-            setUnwrapRequestId(event.unwrapRequestId);
-          }
+        action={(formData) => {
+          unwrap.mutate({ amount: BigInt(formData.get("amount") as string) });
         }}
         className="space-y-4"
         data-testid="unwrap-form"
@@ -60,14 +58,28 @@ export function UnwrapManualForm({
           data-testid="amount-input"
         />
 
-        <button
-          type="submit"
-          disabled={unwrap.isPending}
-          className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
-          data-testid="unwrap-button"
-        >
-          {unwrap.isPending ? "Unwrapping..." : "Unwrap"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={unwrap.isPending}
+            className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
+            data-testid="unwrap-button"
+          >
+            {unwrap.isPending ? "Unwrapping..." : "Unwrap"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              unwrapAll.mutate();
+            }}
+            disabled={unwrapAll.isPending}
+            className="px-4 py-2 bg-zama-surface border border-zama-border text-white font-medium rounded hover:bg-zama-border disabled:opacity-50 transition-colors"
+            data-testid="unwrap-all-button"
+          >
+            {unwrapAll.isPending ? "Unwrapping..." : "Unwrap All"}
+          </button>
+        </div>
 
         {unwrap.isSuccess && (
           <p className="text-zama-success" data-testid="unwrap-success">
@@ -75,9 +87,15 @@ export function UnwrapManualForm({
           </p>
         )}
 
-        {unwrapRequestId && (
+        {unwrapResult?.unwrapRequestId && (
           <p className="text-sm text-zama-gray" data-testid="burn-handle">
-            Unwrap request ID: {unwrapRequestId}
+            Unwrap request ID: {unwrapResult.unwrapRequestId}
+          </p>
+        )}
+
+        {unwrapAll.isSuccess && (
+          <p className="text-zama-success" data-testid="unwrap-all-success">
+            Unwrap all requested! Tx: {unwrapAll.data?.txHash}
           </p>
         )}
 
@@ -86,15 +104,21 @@ export function UnwrapManualForm({
             Error: {unwrap.error.message}
           </p>
         )}
+
+        {unwrapAll.isError && (
+          <p className="text-zama-error" data-testid="unwrap-all-error">
+            Error: {unwrapAll.error.message}
+          </p>
+        )}
       </form>
 
       {/* Step 2: Finalize */}
       <form
         action={() => {
-          if (!unwrapRequestId) {
+          if (!unwrapResult) {
             return;
           }
-          finalizeUnwrap.mutate({ unwrapRequestId });
+          finalizeUnwrap.mutate(unwrapResult);
         }}
         className="space-y-4"
         data-testid="finalize-form"
@@ -103,7 +127,7 @@ export function UnwrapManualForm({
 
         <button
           type="submit"
-          disabled={finalizeUnwrap.isPending || !unwrapRequestId}
+          disabled={finalizeUnwrap.isPending || !unwrapResult?.unwrapRequestId}
           className="px-4 py-2 bg-zama-yellow text-zama-black font-medium rounded hover:bg-zama-yellow-hover disabled:opacity-50 transition-colors"
           data-testid="finalize-button"
         >

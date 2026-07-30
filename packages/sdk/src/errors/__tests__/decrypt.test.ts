@@ -3,18 +3,17 @@ import { describe, expect, test } from "../../test-fixtures";
 import {
   DecryptionFailedError,
   DelegationNotPropagatedError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   NotEntitledError,
   RelayerRequestFailedError,
   RpcRateLimitError,
   SigningFailedError,
   SigningRejectedError,
-  WorkerTimeoutError,
-  WorkerRecycledError,
   ZamaError,
   wrapDecryptError,
 } from "../index";
-import { deserializeError, serializeError } from "../../utils/error";
+import { DECRYPT_PASSTHROUGH_ERROR_TYPES } from "../decrypt";
 
 describe("wrapDecryptError", () => {
   describe("passthrough for already-typed SDK errors", () => {
@@ -41,23 +40,6 @@ describe("wrapDecryptError", () => {
 
     test("returns the same SigningRejectedError unchanged", () => {
       const original = new SigningRejectedError("user cancelled");
-      expect(wrapDecryptError(original, "fallback")).toBe(original);
-    });
-
-    test("returns the same WorkerTimeoutError unchanged (a timeout is not a DecryptionFailedError)", () => {
-      const original = new WorkerTimeoutError({
-        operation: "USER_DECRYPT",
-        timeout: 30,
-        elapsed: 30.002,
-      });
-      expect(wrapDecryptError(original, "fallback")).toBe(original);
-    });
-
-    test("returns the same WorkerRecycledError unchanged (a recycle-abort is retryable, not terminal)", () => {
-      const original = new WorkerRecycledError({
-        operation: "USER_DECRYPT",
-        worker: "node-worker-1",
-      });
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 
@@ -178,12 +160,12 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(original, "fallback")).toBe(original);
     });
 
-    test("maps the relayer's not-entitled message to NotEntitledError, injecting ctx", () => {
-      // The relayer throws a message-only Error; the message survives the worker
-      // boundary, the handle is parsed from it, and contract/account are injected
-      // from the request context the caller (decryption-service) holds.
+    test("maps @fhevm/sdk's not-entitled message to NotEntitledError, injecting ctx", () => {
+      // @fhevm/sdk's AclUserDecryptionError carries a message-only actor denial; the
+      // handle is parsed from it, and contract/account are injected from the request
+      // context the caller (decryption-service) holds.
       const relayerError = new Error(
-        `User address 0xActor is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+        `User 0xActor is not authorized to decrypt handle 0x${"12".repeat(32)}!`,
       );
       const wrapped = wrapDecryptError(relayerError, "fallback", {
         contractAddress: "0xContract",
@@ -201,7 +183,7 @@ describe("wrapDecryptError", () => {
       // / a just-landed delegation — so it must be retryable, mirroring the
       // delegated-500 handling, rather than terminal NotEntitledError.
       const relayerError = new Error(
-        `User address 0xDelegator is not authorized to user decrypt handle 0x${"12".repeat(32)}!`,
+        `User 0xDelegator is not authorized to decrypt handle 0x${"12".repeat(32)}!`,
       );
       const wrapped = wrapDecryptError(relayerError, "fallback", {
         isDelegated: true,
@@ -213,14 +195,13 @@ describe("wrapDecryptError", () => {
       expect((wrapped as { cause?: unknown }).cause).toBe(relayerError);
     });
 
-    test("maps a rebuilt worker rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
-      // After deserializeError rebuilds the worker error, the structured signal
-      // (-32005) and retryAfter are read directly — no separate worker taxonomy.
-      const workerError = Object.assign(new Error("Too Many Requests"), {
+    test("maps a structured rate-limit (-32005 + retryAfter) to RpcRateLimitError", () => {
+      // The structured signal (-32005) and retryAfter are read directly off the error.
+      const rpcError = Object.assign(new Error("Too Many Requests"), {
         code: -32005,
         retryAfter: 2,
       });
-      const wrapped = wrapDecryptError(workerError, "fallback");
+      const wrapped = wrapDecryptError(rpcError, "fallback");
       expect(wrapped).toBeInstanceOf(RpcRateLimitError);
       expect((wrapped as RpcRateLimitError).retryAfter).toBe(2);
     });
@@ -259,22 +240,6 @@ describe("wrapDecryptError", () => {
       expect(wrapDecryptError(ethers429, "fallback")).toBeInstanceOf(RpcRateLimitError);
     });
 
-    test("keeps the ethers 429 verdict after the worker round-trip (serialize → deserialize)", () => {
-      // The real worker path: an ethers 429 raised inside the worker is serialized
-      // across `postMessage` and rebuilt on the main thread before classification.
-      // Structured clone drops the nested `info`, so unless `info.responseStatus`
-      // is lifted the rebuilt error loses the signal and collapses to terminal
-      // DecryptionFailedError — the throttle-amplification the fatal-batch flag
-      // exists to prevent. It must classify identically to the direct error.
-      const ethers429 = Object.assign(new Error("server response error (eth_call)"), {
-        code: "SERVER_ERROR",
-        error: new Error("underlying transport"),
-        info: { responseStatus: "429 Too Many Requests" },
-      });
-      const rebuilt = deserializeError(serializeError(ethers429));
-      expect(wrapDecryptError(rebuilt, "fallback")).toBeInstanceOf(RpcRateLimitError);
-    });
-
     test("maps a viem JSON-RPC `code: 429` to RpcRateLimitError", () => {
       const viem429 = Object.assign(new Error("Too Many Requests"), { code: 429 });
       expect(wrapDecryptError(viem429, "fallback")).toBeInstanceOf(RpcRateLimitError);
@@ -298,30 +263,117 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
-    test("keeps the relayer's own 429 (RELAYER_FETCH_ERROR cause) as RelayerRequestFailedError", () => {
-      // The cause chain (and its RELAYER_FETCH_ERROR tag) now survives the worker
-      // boundary via serializeError, so this is the realistic worker-origin shape.
-      const relayerError = Object.assign(new Error("Relayer rate limit exceeded"), {
-        cause: { code: "RELAYER_FETCH_ERROR", status: 429 },
-      });
+    test("keeps an @fhevm/sdk relayer 429 as RelayerRequestFailedError (not RpcRateLimit)", () => {
+      // @fhevm/sdk relayer errors are Error instances named Relayer* with a numeric
+      // `status`; the Relayer* name keeps them out of the consumer RpcRateLimitError
+      // bucket (SDK-236) even at status 429.
+      const relayerError = Object.assign(
+        new Error("User decryption: Relayer returned unexpected response status: 429"),
+        { name: "RelayerResponseStatusError", status: 429 },
+      );
       const wrapped = wrapDecryptError(relayerError, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).statusCode).toBe(429);
     });
 
     test("surfaces relayer back-pressure: a 429 with Retry-After → retryable + retryAfter (seconds)", () => {
-      // The relayer's Cloudflare 429 carries `Retry-After` on `cause.response`.
+      // A relayer error carrying an HTTP status and a `Retry-After` on
+      // `cause.response` maps to a retryable RelayerRequestFailedError.
       const relayer429 = Object.assign(new Error("Relayer rate limit exceeded"), {
+        name: "RelayerResponseStatusError",
         statusCode: 429,
-        cause: {
-          code: "RELAYER_FETCH_ERROR",
-          response: { headers: new Headers({ "Retry-After": "300" }) },
-        },
+        cause: { response: { headers: new Headers({ "Retry-After": "300" }) } },
       });
       const wrapped = wrapDecryptError(relayer429, "fallback");
       expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
       expect((wrapped as RelayerRequestFailedError).retryAfter).toBe(300);
+    });
+
+    test("keeps an @fhevm/sdk RelayerMaxRetryError (no status) as RelayerRequestFailedError", () => {
+      // After @fhevm/sdk exhausts its internal 429 back-pressure retries it throws
+      // RelayerMaxRetryError, which carries no HTTP status. It must stay in the
+      // relayer's domain rather than degrading to a generic DecryptionFailedError.
+      const maxRetry = Object.assign(
+        new Error("User decryption: Maximum polling retry limit exceeded (5 attempts)"),
+        { name: "RelayerMaxRetryError" },
+      );
+      const wrapped = wrapDecryptError(maxRetry, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
+    });
+
+    test("maps an @fhevm/sdk RelayerTimeoutError (no status) to a retryable RelayerRequestFailedError", () => {
+      // A relayer timeout carries no HTTP status but the operation is safe to
+      // retry (mirroring the former retryable WorkerTimeoutError). It must not
+      // be misclassified as terminal (retryable: false) like a 4xx/5xx.
+      const timeout = Object.assign(new Error("Relayer request timed out"), {
+        name: "RelayerTimeoutError",
+      });
+      const wrapped = wrapDecryptError(timeout, "fallback");
+      expect(wrapped).toBeInstanceOf(RelayerRequestFailedError);
+      expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
+      expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
+    });
+
+    test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
+      // verifyTkmsPublicKey throws `invalid TransportKeyPairKeyPair` when a stored
+      // key pair can't be re-derived under the current TKMS version; the decrypt
+      // path relies on this typed error to evict the vault entry and self-heal.
+      const stale = new Error("invalid TransportKeyPairKeyPair");
+      const wrapped = wrapDecryptError(stale, "fallback");
+      expect(wrapped).toBeInstanceOf(InvalidTransportKeyPairError);
+      expect(wrapped.cause).toBe(stale);
+    });
+  });
+
+  describe("passthrough set is exhaustive (SDK-248)", () => {
+    // One example per entry in DECRYPT_PASSTHROUGH_ERROR_TYPES, keyed by the
+    // class itself (not just a name/count) so both directions of drift fail
+    // loudly: a class added to the array with no example here, or an example
+    // whose class was dropped from the array, instead of silently collapsing
+    // into DecryptionFailedError.
+    type PassthroughExample = [
+      type: abstract new (...args: never[]) => ZamaError,
+      build: () => ZamaError,
+    ];
+    const passthroughExamples: PassthroughExample[] = [
+      [DecryptionFailedError, () => new DecryptionFailedError("boom")],
+      [NoCiphertextError, () => new NoCiphertextError("missing")],
+      [RelayerRequestFailedError, () => new RelayerRequestFailedError("bad", 502)],
+      [DelegationNotPropagatedError, () => new DelegationNotPropagatedError("propagating")],
+      [SigningRejectedError, () => new SigningRejectedError("user cancelled")],
+      [SigningFailedError, () => new SigningFailedError("bad signature")],
+      [
+        NotEntitledError,
+        () =>
+          new NotEntitledError({
+            encryptedValue: `0x${"12".repeat(32)}`,
+            contractAddress: `0x${"20".repeat(20)}`,
+            account: `0x${"10".repeat(20)}`,
+          }),
+      ],
+      [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
+      [InvalidTransportKeyPairError, () => new InvalidTransportKeyPairError("stale key pair")],
+    ];
+
+    test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {
+      const testedTypes = new Set(passthroughExamples.map(([Type]) => Type));
+      expect(testedTypes.size).toBe(passthroughExamples.length); // no duplicate/typo masking a missing type
+      for (const ErrorType of DECRYPT_PASSTHROUGH_ERROR_TYPES) {
+        expect(testedTypes.has(ErrorType), `${ErrorType.name} has no passthrough example`).toBe(
+          true,
+        );
+      }
+      expect(testedTypes.size).toBe(DECRYPT_PASSTHROUGH_ERROR_TYPES.length);
+    });
+
+    test("every known typed decrypt cause passes through wrapDecryptError unchanged", () => {
+      for (const [ErrorType, build] of passthroughExamples) {
+        const original = build();
+        expect(original, ErrorType.name).toBeInstanceOf(ErrorType);
+        expect(wrapDecryptError(original, "fallback"), ErrorType.name).toBe(original);
+      }
     });
   });
 });

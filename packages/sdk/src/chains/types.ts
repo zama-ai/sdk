@@ -1,5 +1,10 @@
-import type { Auth } from "@zama-fhe/relayer-sdk/bundle";
-import type { Address, EIP1193Provider, Hex } from "viem";
+import type { Address, EIP1193Provider } from "viem";
+
+/** Authentication forwarded to a chain's relayer endpoint. */
+export type FheChainAuth =
+  | { __type: "BearerToken"; token: string }
+  | { __type: "ApiKeyHeader"; header?: string; value: string }
+  | { __type: "ApiKeyCookie"; cookie?: string; value: string };
 
 /**
  * Complete chain configuration — the single source of truth for
@@ -10,14 +15,23 @@ import type { Address, EIP1193Provider, Hex } from "viem";
  * `@zama-fhe/sdk/chains`.
  */
 export interface FheChain<TId extends number = number> {
+  /** EVM chain ID of the host chain. */
   readonly id: TId;
+  /** Chain ID of the FHE gateway serving this chain. */
   readonly gatewayChainId: number;
+  /** Base URL of this chain's relayer endpoint. */
   readonly relayerUrl: string;
+  /** RPC network for host-chain reads — an EIP-1193 provider or an RPC URL. */
   readonly network: EIP1193Provider | string;
+  /** Address of the ACL (access-control list) contract. */
   readonly aclContractAddress: Address;
+  /** Address of the KMS verifier contract. */
   readonly kmsContractAddress: Address;
+  /** Address of the input verifier contract. */
   readonly inputVerifierContractAddress: Address;
+  /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
+  /** EIP-712 verifying contract address for input verification. */
   readonly verifyingContractAddressInputVerification: Address;
   /**
    * Address of the `ConfidentialTokenWrappersRegistry` contract.
@@ -35,11 +49,7 @@ export interface FheChain<TId extends number = number> {
    * Use `{ __type: "ApiKeyHeader", value: "your-key" }` for API-key auth,
    * or `{ __type: "BearerToken", token: "your-token" }` for bearer auth.
    */
-  readonly auth?: Auth;
-  /** Private key of the KMS signer used for EIP-712 verification of the decryption (cleartext mode). */
-  readonly kmsSignerPrivateKey?: Hex;
-  /** Private key of the input signer used for EIP-712 verification of the input verification (cleartext mode). */
-  readonly inputSignerPrivateKey?: Hex;
+  readonly auth?: FheChainAuth;
 }
 
 /** At least one chain is required. */

@@ -1,6 +1,5 @@
 "use client";
 
-import type { EncryptParams, EncryptResult } from "@zama-fhe/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { encryptMutationOptions } from "@zama-fhe/sdk/query";
 import { useZamaSDK } from "../provider";
@@ -22,5 +21,5 @@ import { useZamaSDK } from "../provider";
  */
 export function useEncrypt() {
   const sdk = useZamaSDK();
-  return useMutation<EncryptResult, Error, EncryptParams>(encryptMutationOptions(sdk));
+  return useMutation(encryptMutationOptions(sdk));
 }

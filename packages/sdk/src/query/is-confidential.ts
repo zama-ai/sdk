@@ -6,10 +6,13 @@ import { zamaQueryKeys } from "./query-keys";
 import { filterQueryOptions } from "./utils";
 import type { Address } from "viem";
 
+/** Configuration for {@link isConfidentialQueryOptions} and {@link isWrapperQueryOptions}. */
 export interface IsConfidentialQueryConfig {
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading whether a token address implements the confidential (ERC-7984) token interface. */
 export function isConfidentialQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address,
@@ -42,6 +45,7 @@ export function isConfidentialQueryOptions(
   };
 }
 
+/** Builds TanStack Query options for reading whether a token address is a confidential wrapper (ERC-7984 wrapper) contract. */
 export function isWrapperQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address,

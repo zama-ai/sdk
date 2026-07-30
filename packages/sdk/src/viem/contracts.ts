@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
-import type { EncryptedValue } from "../relayer/relayer-sdk.types";
+import type { EncryptedValue } from "../relayer/types";
 import {
   confidentialBalanceOfContract,
   confidentialTransferContract,
@@ -30,6 +30,7 @@ function requireAccount(client: WalletClient) {
 
 // ── Read helpers ────────────────────────────────────────────
 
+/** Reads a token's confidential (encrypted) balance handle for `userAddress` via a viem client. */
 export function readConfidentialBalanceOfContract(
   client: PublicClient,
   tokenAddress: Address,
@@ -38,10 +39,12 @@ export function readConfidentialBalanceOfContract(
   return client.readContract(confidentialBalanceOfContract(tokenAddress, userAddress));
 }
 
+/** Reads the underlying ERC-20 address wrapped by a confidential wrapper via a viem client. */
 export function readUnderlyingTokenContract(client: PublicClient, wrapperAddress: Address) {
   return client.readContract(underlyingContract(wrapperAddress));
 }
 
+/** Reads whether a token implements the given ERC-165 interface id via a viem client. */
 export function readSupportsInterfaceContract(
   client: PublicClient,
   tokenAddress: Address,
@@ -52,6 +55,7 @@ export function readSupportsInterfaceContract(
 
 // ── Write helpers ───────────────────────────────────────────
 
+/** Submits a confidential transfer of an encrypted amount to `to` via a viem wallet client. */
 export function writeConfidentialTransferContract(
   client: WalletClient,
   tokenAddress: Address,
@@ -66,6 +70,7 @@ export function writeConfidentialTransferContract(
   });
 }
 
+/** Submits an unwrap of an encrypted amount from `from` to `to` on a confidential ERC-20 via a viem wallet client. */
 export function writeUnwrapContract(
   client: WalletClient,
   encryptedErc20: Address,
@@ -81,6 +86,7 @@ export function writeUnwrapContract(
   });
 }
 
+/** Submits an unwrap of the full encrypted balance from `from` to `to` via a viem wallet client. */
 export function writeUnwrapFromBalanceContract(
   client: WalletClient,
   encryptedErc20: Address,
@@ -95,6 +101,7 @@ export function writeUnwrapFromBalanceContract(
   });
 }
 
+/** Finalizes a pending unwrap request with the decrypted amount and decryption proof via a viem wallet client. */
 export function writeFinalizeUnwrapContract(
   client: WalletClient,
   wrapper: Address,
@@ -109,6 +116,7 @@ export function writeFinalizeUnwrapContract(
   });
 }
 
+/** Authorizes `operator` on a token, until an optional expiry timestamp, via a viem wallet client. */
 export function writeSetOperatorContract(
   client: WalletClient,
   tokenAddress: Address,
@@ -122,6 +130,7 @@ export function writeSetOperatorContract(
   });
 }
 
+/** Wraps `amount` of the underlying ERC-20 into confidential tokens credited to `to` via a viem wallet client. */
 export function writeWrapContract(
   client: WalletClient,
   wrapperAddress: Address,
@@ -137,14 +146,17 @@ export function writeWrapContract(
 
 // ── Registry read helpers ──────────────────────────────────
 
+/** Reads all underlying/confidential token pairs from a wrappers registry via a viem client. */
 export function readTokenPairsContract(client: PublicClient, registry: Address) {
   return client.readContract(getTokenPairsContract(registry));
 }
 
+/** Reads the number of token pairs in a wrappers registry via a viem client. */
 export function readTokenPairsLengthContract(client: PublicClient, registry: Address) {
   return client.readContract(getTokenPairsLengthContract(registry));
 }
 
+/** Reads a slice of token pairs (`fromIndex` to `toIndex`) from a wrappers registry via a viem client. */
 export function readTokenPairsSliceContract(
   client: PublicClient,
   registry: Address,
@@ -154,10 +166,12 @@ export function readTokenPairsSliceContract(
   return client.readContract(getTokenPairsSliceContract(registry, fromIndex, toIndex));
 }
 
+/** Reads the token pair at `index` from a wrappers registry via a viem client. */
 export function readTokenPairContract(client: PublicClient, registry: Address, index: bigint) {
   return client.readContract(getTokenPairContract(registry, index));
 }
 
+/** Reads the confidential token registered for a given underlying token in a wrappers registry via a viem client. */
 export function readConfidentialTokenAddressContract(
   client: PublicClient,
   registry: Address,
@@ -166,6 +180,7 @@ export function readConfidentialTokenAddressContract(
   return client.readContract(getConfidentialTokenAddressContract(registry, tokenAddress));
 }
 
+/** Reads the underlying token registered for a given confidential token in a wrappers registry via a viem client. */
 export function readTokenAddressContract(
   client: PublicClient,
   registry: Address,
@@ -174,6 +189,7 @@ export function readTokenAddressContract(
   return client.readContract(getTokenAddressContract(registry, confidentialTokenAddress));
 }
 
+/** Reads whether a confidential token is registered and valid in a wrappers registry via a viem client. */
 export function readIsConfidentialTokenValidContract(
   client: PublicClient,
   registry: Address,

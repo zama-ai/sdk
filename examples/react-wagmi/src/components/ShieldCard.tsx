@@ -1,32 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { useShield } from "@zama-fhe/react-sdk";
-import type { Address } from "@zama-fhe/sdk";
-import { parseAmount } from "@/lib/parseAmount";
+import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface ShieldCardProps {
-  tokenAddress: Address;
-  decimals: number;
-  symbol: string;
+  token: TokenWrapperPairWithMetadata;
   disabled: boolean;
   onSuccess?: () => void;
 }
 
-export function ShieldCard({
-  tokenAddress,
-  decimals,
-  symbol,
-  disabled,
-  onSuccess,
-}: ShieldCardProps) {
-  const [amount, setAmount] = useState("");
+export function ShieldCard({ token, disabled, onSuccess }: ShieldCardProps) {
+  // Shielding takes an amount of the public underlying ERC-20, so it uses the underlying's units.
+  const decimals = token.underlying.decimals;
+  const symbol = token.underlying.symbol;
+
   const [phase, setPhase] = useState<"prepare" | "approve" | "wrap">("prepare");
 
-  const shield = useShield({ address: tokenAddress }, { onSuccess });
+  const shield = useShield({ address: token.confidentialTokenAddress }, { onSuccess });
 
-  const parsedAmount = parseAmount(amount, decimals);
   const pendingLabel =
     phase === "approve"
       ? "Shielding… (approving)"
@@ -34,55 +28,73 @@ export function ShieldCard({
         ? "Shielding… (wrapping)"
         : "Shielding…";
 
-  function handleShield() {
+  const [state, submitShield, isPending] = useActionState<
+    { error: string } | { data: NonNullable<typeof shield.data> } | null,
+    FormData
+  >(async (_, formData) => {
+    const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
+    if (parsedAmount === 0n) return { error: "Enter a valid amount." };
     setPhase("prepare");
-    shield.mutate({
-      amount: parsedAmount,
-      // Let the SDK handle ERC-20 balance checks, allowance reads, USDT-style allowance reset,
-      // approval transaction(s), shield submission, and cache invalidation.
-      approvalStrategy: "exact",
-      onApprovalSubmitted: () => setPhase("approve"),
-      onShieldSubmitted: () => setPhase("wrap"),
-    });
-  }
+    try {
+      const data = await shield.mutateAsync({
+        amount: parsedAmount,
+        // Let the SDK handle ERC-20 balance checks, allowance reads, USDT-style allowance reset,
+        // approval transaction(s), shield submission, and cache invalidation.
+        approvalStrategy: "exact",
+        onApprovalSubmitted: () => setPhase("approve"),
+        onShieldSubmitted: () => setPhase("wrap"),
+      });
+      return { data };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { error: error.message };
+    }
+  }, null);
 
   return (
-    <div className="card">
-      <div className="card-title">Shield — ERC-20 → Confidential</div>
-      <div className="input-row card-gap">
-        <input
-          className="input"
-          type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-        />
-        <span className="input-unit">{symbol}</span>
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={handleShield}
-        disabled={disabled || parsedAmount === 0n || shield.isPending}
-      >
-        {shield.isPending ? pendingLabel : "Shield"}
-      </button>
-      {shield.isError && (
-        <div className="alert alert-error card-status">{shield.error?.message}</div>
+    <section className="card" aria-labelledby="shield-title">
+      <h2 className="card-title" id="shield-title">
+        Shield — ERC-20 → Confidential
+      </h2>
+      <form action={submitShield}>
+        <label className="sr-only" htmlFor="shield-amount">
+          Amount to shield
+        </label>
+        <div className="input-row card-gap">
+          <input
+            id="shield-amount"
+            name="amount"
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min={minAmount(decimals)}
+            step="any"
+            required
+            placeholder="0.00"
+          />
+          <span className="input-unit">{symbol}</span>
+        </div>
+        <button type="submit" className="btn btn-primary btn-full" disabled={disabled || isPending}>
+          {isPending ? pendingLabel : "Shield"}
+        </button>
+      </form>
+      {state && "error" in state && (
+        <div className="alert alert-error card-status" role="alert">
+          {state.error}
+        </div>
       )}
-      {shield.isSuccess && shield.data?.txHash && (
-        <div className="alert alert-success card-status">
+      {state && "data" in state && state.data.txHash && (
+        <output className="alert alert-success card-status">
           Shielded!{" "}
           <a
-            href={`${SEPOLIA_EXPLORER_URL}/tx/${shield.data.txHash}`}
+            href={`${SEPOLIA_EXPLORER_URL}/tx/${state.data.txHash}`}
             target="_blank"
             rel="noreferrer"
           >
-            {shield.data.txHash.slice(0, 10)}…
+            {state.data.txHash.slice(0, 10)}…
           </a>
-        </div>
+        </output>
       )}
-    </div>
+    </section>
   );
 }

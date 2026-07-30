@@ -64,7 +64,7 @@ const { data: allowance } = useUnderlyingAllowance({ address: "0xWrapper", owner
 
 ## Return Type
 
-`data` is `bigint` — the current ERC-20 allowance in the token's smallest unit.
+`data` is `bigint` — the current ERC-20 allowance in the token's base units.
 
 {% include ".gitbook/includes/query-result.md" %}
 
@@ -101,4 +101,5 @@ function App() {
 ## Related
 
 - [`useShield`](./useShield.md) — shield tokens (handles approval automatically)
+- [`useApproveUnderlying`](./useApproveUnderlying.md) — the write counterpart; approve the wrapper to spend the underlying ERC-20
 - [`zamaQueryKeys.underlyingAllowance`](./query-keys.md) — cache keys for manual invalidation

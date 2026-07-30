@@ -8,15 +8,21 @@ import type { Address } from "viem";
 
 /** ERC-20 token metadata returned by {@link tokenMetadataQueryOptions}. */
 export interface TokenMetadata {
+  /** Human-readable token name. */
   name: string;
+  /** Token ticker symbol. */
   symbol: string;
+  /** Number of decimals the token uses. */
   decimals: number;
 }
 
+/** Configuration for {@link tokenMetadataQueryOptions}. */
 export interface TokenMetadataQueryConfig {
+  /** Additional TanStack Query options merged into the generated query (e.g. `staleTime`, `enabled`). */
   query?: Record<string, unknown>;
 }
 
+/** Builds TanStack Query options for reading an ERC-20 token's name, symbol, and decimals. */
 export function tokenMetadataQueryOptions(
   sdk: ZamaSDK,
   tokenAddress: Address,

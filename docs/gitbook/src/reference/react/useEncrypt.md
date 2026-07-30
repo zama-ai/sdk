@@ -66,7 +66,7 @@ import { type EncryptParams } from "@zama-fhe/sdk";
 
 `EncryptInput[]`
 
-Array of typed inputs. Each entry specifies a plaintext value and its FHE type (`ebool`, `euint64`, `eaddress`, etc.).
+Array of typed inputs. Each entry specifies a plaintext value and its encrypted FHE type — the `e`-prefixed type names (`ebool`, `euint64`, `eaddress`, etc.).
 
 ### contractAddress
 
@@ -95,16 +95,18 @@ import { type EncryptResult } from "@zama-fhe/sdk";
 
 ## Supported FHE Types
 
-| Type       | JS value type       | Range                 |
-| ---------- | ------------------- | --------------------- |
-| `ebool`    | `boolean \| bigint` | `true`/`false` or 0/1 |
-| `euint8`   | `bigint`            | 0–255                 |
-| `euint16`  | `bigint`            | 0–65535               |
-| `euint32`  | `bigint`            | 0–2³²−1               |
-| `euint64`  | `bigint`            | 0–2⁶⁴−1               |
-| `euint128` | `bigint`            | 0–2¹²⁸−1              |
-| `euint256` | `bigint`            | 0–2²⁵⁶−1              |
-| `eaddress` | `` `0x${string}` `` | Ethereum address      |
+Types use the encrypted (`e`-prefixed) FHE type names — a value tagged `euint64` is encrypted to a `euint64` ciphertext on-chain.
+
+| Type       | JS value type         | Range                     |
+| ---------- | --------------------- | ------------------------- |
+| `ebool`    | `boolean \| 0n \| 1n` | `true`/`false` or `0`/`1` |
+| `euint8`   | `bigint`              | 0–255                     |
+| `euint16`  | `bigint`              | 0–65535                   |
+| `euint32`  | `bigint`              | 0–2³²−1                   |
+| `euint64`  | `bigint`              | 0–2⁶⁴−1                   |
+| `euint128` | `bigint`              | 0–2¹²⁸−1                  |
+| `euint256` | `bigint`              | 0–2²⁵⁶−1                  |
+| `eaddress` | `` `0x${string}` ``   | Ethereum address          |
 
 ## Related
 

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { MOCK_RELAYER_PORT, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
+import { ANVIL_DEPLOY_TIMEOUT_MS, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -14,7 +14,11 @@ export default defineConfig<{}, WorkerFixtures>({
   workers: 1,
   reporter: CI ? "github" : "list",
   expect: { timeout: CI ? 20000 : 5000 },
-  use: { trace: "retain-on-failure", screenshot: "only-on-failure" },
+  use: {
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    channel: CI ? "chromium" : "chrome",
+  },
   projects: [
     {
       name: "vite",
@@ -28,20 +32,15 @@ export default defineConfig<{}, WorkerFixtures>({
   ],
   webServer: [
     {
-      command: `node fixtures/relayer-sdk-server.mjs ${MOCK_RELAYER_PORT}`,
-      port: MOCK_RELAYER_PORT,
-      reuseExistingServer: !CI,
-    },
-    {
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
       wait: { stdout: /Anvil ready on port (\d+)/ },
-      timeout: 90_000,
+      timeout: ANVIL_DEPLOY_TIMEOUT_MS,
     },
     {
       command: CI
-        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite preview`
-        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} VITE_MOCK_RELAYER_PORT=${MOCK_RELAYER_PORT} pnpm --filter @zama-fhe/test-vite dev`,
+        ? `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite preview`
+        : `VITE_ANVIL_PORT=${VITE_ANVIL_PORT} pnpm --filter @zama-fhe/test-vite dev`,
       port: VITE_PORT,
       reuseExistingServer: !CI,
     },
