@@ -14,7 +14,11 @@ export default defineConfig<{}, WorkerFixtures>({
   workers: 1,
   reporter: CI ? "github" : "list",
   expect: { timeout: CI ? 20000 : 5000 },
-  use: { trace: "retain-on-failure", screenshot: "only-on-failure" },
+  use: {
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    channel: CI ? "chromium" : "chrome",
+  },
   projects: [
     {
       name: "vite",
