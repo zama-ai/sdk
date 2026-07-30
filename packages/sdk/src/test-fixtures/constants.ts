@@ -13,6 +13,7 @@ export const VALID_INPUT_PROOF = ("0x" + "cd".repeat(64)) as Hex;
 export const TEST_PUBLIC_KEY = `0x${"11".repeat(32)}` as Hex;
 export const TEST_PRIVATE_KEY = `0x${"22".repeat(32)}` as Hex;
 export const TEST_SIGNATURE = `0x${"33".repeat(65)}` as Hex;
+export const TEST_TKMS_VERSION = "13.20.0";
 
 export const TEST_ADDR_A = ACL;
 export const TEST_ADDR_B = DELEGATE;

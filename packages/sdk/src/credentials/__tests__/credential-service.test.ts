@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
+import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
@@ -113,6 +114,19 @@ describe("CredentialService transport-key-pair self-heal", () => {
     // Key pair left intact → the next grant reuses it, no regeneration.
     await credentialService.grantPermit([B]);
     expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("forwards the stored tkmsVersion when re-deriving the key pair to sign", async ({
+    credentialService,
+    relayer,
+  }) => {
+    // The generated key pair carries a TKMS version that the vault persists; the
+    // sign path must pass it back so the relayer deserializes the private key
+    // under the version it was generated with.
+    await credentialService.grantPermit([A]);
+    expect(relayer.parseTransportKeyPair).toHaveBeenCalledWith(
+      expect.objectContaining({ tkmsVersion: TEST_TKMS_VERSION }),
+    );
   });
 });
 

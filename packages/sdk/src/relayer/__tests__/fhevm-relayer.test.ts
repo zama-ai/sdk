@@ -144,7 +144,7 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.encryptClient.init).toHaveBeenCalledOnce();
   });
 
-  test("serialization does not initialize any capability", async () => {
+  test("serialization does not touch the encryption capability", async () => {
     const relayer = new FhevmRelayer({ chain: anvil });
 
     await expect(relayer.serializeTransportKeyPair({} as never)).resolves.toBe(
@@ -153,8 +153,7 @@ describe("FhevmRelayer capability initialization", () => {
     await expect(relayer.serializeSignedDecryptionPermit({} as never)).resolves.toBe(
       "serialized-permit",
     );
-    expect(clients.baseClient.init).not.toHaveBeenCalled();
-    expect(clients.decryptClient.init).not.toHaveBeenCalled();
+
     expect(clients.encryptClient.init).not.toHaveBeenCalled();
   });
 

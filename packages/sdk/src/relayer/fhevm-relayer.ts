@@ -344,13 +344,15 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#base.signDecryptionPermit(parameters);
   };
 
-  // Permit/key-pair helpers carry no request options. Parsing initializes the
-  // capability needed to validate the restored value; serialization stays local.
+  // Permit/key-pair helpers carry no request options. Parsing explicitly
+  // initializes the capability that validates the restored value; serialization
+  // resolves the frozen context internally (via initPublicAction), which reads
+  // on-chain state.
 
   /**
    * Serializes a transport key pair to a hex `{ publicKey, privateKey }` pair for
    * storage or transport, so a decryption session can resume without regenerating
-   * keys. Reverse of {@link parseTransportKeyPair}. Purely local — no round-trip.
+   * keys. Reverse of {@link parseTransportKeyPair}.
    *
    * @example
    * ```ts
@@ -364,7 +366,7 @@ export class FhevmRelayer implements RelayerSDK {
   /**
    * Serializes a signed permit to a plain, JSON-stringifiable object (version,
    * EIP-712 payload, signature, signer) for caching or transport. Reverse of
-   * {@link parseSignedDecryptionPermit}. Purely local — no round-trip.
+   * {@link parseSignedDecryptionPermit}.
    *
    * @example
    * ```ts

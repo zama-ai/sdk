@@ -9,6 +9,7 @@ import {
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
+import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { LoggerService } from "../logger-service";
 
 import { CachingService } from "../caching-service";
@@ -61,6 +62,25 @@ describe("DecryptionService", () => {
     // Self-heal: the stale key pair was evicted, so the next resolution regenerates.
     await credentialService.grantPermit([CONTRACT_B]);
     expect(vi.mocked(relayer.generateTransportKeyPair).mock.calls.length).toBe(generateCalls + 1);
+  });
+
+  test("forwards the persisted tkmsVersion when re-deriving the key pair to decrypt", async ({
+    decryptionService,
+    credentialService,
+    relayer,
+    userAddress,
+  }) => {
+    // Warm a permit so the decrypt path re-derives the stored key pair; the TKMS
+    // version persisted at generation must ride along so the relayer deserializes
+    // the private key under the version it was generated with.
+    await credentialService.grantPermit([CONTRACT_A]);
+    vi.mocked(relayer.parseTransportKeyPair).mockClear();
+
+    await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+    expect(relayer.parseTransportKeyPair).toHaveBeenCalledWith(
+      expect.objectContaining({ tkmsVersion: TEST_TKMS_VERSION }),
+    );
   });
 
   test("decryptValues decrypts uncached handles grouped by contract and writes cache", async ({
