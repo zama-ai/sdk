@@ -80,7 +80,16 @@ function toTransactionRequest(config: TransactionRequestConfig): EthersTransacti
   };
 }
 
-async function ethersRead<T>(
+/**
+ * Performs an `eth_call` through an ethers provider and decodes the result with viem, so every
+ * ethers-backed read — the generic {@link EthersProvider.readContract} and the pre-built
+ * `readXxxContract` helpers alike — produces viem-identical shapes (small ints as `number`, named
+ * tuples as keyed objects, empty output as `undefined`). ethers is the transport only; viem owns
+ * encoding and decoding.
+ *
+ * @internal
+ */
+export async function ethersRead<T>(
   provider: EthersCallProvider,
   config: TransactionRequestConfig,
 ): Promise<T> {

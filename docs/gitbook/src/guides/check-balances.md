@@ -11,10 +11,10 @@ Confidential balances are stored on-chain as encrypted values. To display a huma
 
 ### 1. Read your own balance
 
-Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`.
+Call `balanceOf()` on a [`Token`](../reference/sdk/Token.md) instance. The SDK fetches the encrypted value from the chain, decrypts it, and returns a `bigint`. In React, `useConfidentialBalance` wraps the same call with polling and caching.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -38,6 +38,29 @@ console.log(`Confidential balance: ${balance}`);
 ```
 
 {% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useConfidentialBalance, useHasPermit } from "@zama-fhe/react-sdk";
+import { useAccount } from "wagmi";
+
+const { address } = useAccount();
+
+// Gate the read behind an existing permit so it never triggers a wallet signature on
+// render (see step 2). Flip `enabled` on from an explicit "Decrypt" action once the
+// user opts in.
+const { data: hasPermit } = useHasPermit({ contractAddresses: ["0xEncryptedERC20"] });
+const {
+  data: balance,
+  isLoading,
+  error,
+} = useConfidentialBalance(
+  { address: "0xEncryptedERC20", account: address },
+  { enabled: hasPermit },
+);
+```
+
+{% endtab %}
 {% endtabs %}
 
 ### 2. Understand the first-time wallet signature
@@ -50,10 +73,10 @@ The first `balanceOf(address)` call for a token prompts the user's wallet for an
 
 If the user rejects the signature, the SDK throws a `SigningRejectedError`. See [Handle Errors](handle-errors.md) for recovery patterns.
 
-You can pre-authorize multiple tokens with a single signature using `sdk.permits.grantPermit()`:
+You can pre-authorize multiple tokens up front with `grantPermit`. It signs in batches of up to 10 contracts — so a set of ≤10 is a single signature (larger sets prompt once per batch) — after which `balanceOf()` calls for those tokens are silent:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
@@ -61,6 +84,18 @@ await sdk.permits.grantPermit(["0xTokenA", "0xTokenB"]);
 const tokenA = sdk.createToken("0xTokenA");
 const tokenB = sdk.createToken("0xTokenB");
 // All subsequent balanceOf() calls are silent
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useGrantPermit } from "@zama-fhe/react-sdk";
+
+const { mutate: grantPermit, isPending } = useGrantPermit();
+
+// One wallet signature covers both tokens
+grantPermit(["0xTokenA", "0xTokenB"]);
 ```
 
 {% endtab %}
@@ -76,12 +111,16 @@ Decrypted balances are automatically cached in your storage backend (IndexedDB, 
 
 The cache is keyed by `token address + owner address + encrypted value`.
 
+A single `balanceOf()` call reads the on-chain encrypted value and decrypts it in one pass — the relayer is only hit when the encrypted value has changed since the last decryption:
+
+![Reading a confidential balance](../images/balance-read.svg)
+
 ### 4. Work with raw encrypted values
 
-Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption.
+Sometimes you need the encrypted value itself, for example to check whether a balance exists before attempting decryption. This is a core-SDK concern — reach for `confidentialBalanceOf` and `decryptValues` directly:
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { isEncryptedValueZero } from "@zama-fhe/sdk";
@@ -116,7 +155,7 @@ These are different situations that your UI should handle separately:
 - **Balance of `0n`** -- the account has shielded before but currently holds zero. Show "Balance: 0".
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { NoCiphertextError } from "@zama-fhe/sdk";
@@ -133,6 +172,21 @@ try {
 ```
 
 {% endtab %}
+{% tab title="React SDK" %}
+
+```tsx
+import { useConfidentialBalance } from "@zama-fhe/react-sdk";
+import { NoCiphertextError } from "@zama-fhe/sdk";
+import { useAccount } from "wagmi";
+
+const { address } = useAccount();
+const { data: balance, error } = useConfidentialBalance({ address: "0xToken", account: address });
+
+if (error instanceof NoCiphertextError) return <EmptyState label="Shield tokens to get started" />;
+// balance can still be 0n — render "Balance: 0" in that case
+```
+
+{% endtab %}
 {% endtabs %}
 
 ### 6. Batch decrypt across multiple tokens
@@ -140,7 +194,7 @@ try {
 When your app manages a portfolio of confidential tokens, use batch operations to minimize wallet prompts and parallelize decryption.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { Token } from "@zama-fhe/sdk";
@@ -162,43 +216,7 @@ for (const [address, balance] of results) {
 ```
 
 {% endtab %}
-{% endtabs %}
-
-### 7. Read token metadata
-
-Before displaying balances, you typically want the token's name, symbol, and decimals. Use the `useMetadata` hook:
-
-```tsx
-import { useMetadata } from "@zama-fhe/react-sdk";
-
-const { data: meta } = useMetadata("0xToken");
-
-// meta.name, meta.symbol, meta.decimals
-```
-
-See [useMetadata reference](../reference/react/useMetadata.md) for full options.
-
-### 8. Use the balance hooks in React
-
-The React SDK provides hooks that handle polling, caching, and React Query integration out of the box.
-
-{% tabs %}
-{% tab title="Single token" %}
-
-```tsx
-import { useConfidentialBalance } from "@zama-fhe/react-sdk";
-import { useAccount } from "wagmi";
-
-const { address } = useAccount();
-const {
-  data: balance,
-  isLoading,
-  error,
-} = useConfidentialBalance({ address: "0xToken", account: address }, { refetchInterval: 5_000 });
-```
-
-{% endtab %}
-{% tab title="Multiple tokens" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialBalances } from "@zama-fhe/react-sdk";
@@ -210,36 +228,79 @@ const { data } = useConfidentialBalances({
   account: address,
 });
 
+// data.results is Map<Address, bigint>; data.errors is Map<Address, ZamaError>
 const tokenABalance = data?.results.get("0xTokenA");
 ```
 
 {% endtab %}
 {% endtabs %}
 
-`useConfidentialBalance` calls `token.balanceOf(owner)` which reads the on-chain encrypted value and decrypts via the SDK. Cached clear values are served instantly — the relayer is only hit when the encrypted value changes. Pass `refetchInterval` to poll for updates. Clear values are persisted in storage, so page reloads show the balance instantly.
+### 7. Read token metadata
 
-### 9. Force a manual refresh
-
-Mutations automatically invalidate balance caches, but if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
+Before displaying balances, you typically want the token's name, symbol, and decimals.
 
 {% tabs %}
-{% tab title="React" %}
+{% tab title="Core SDK" %}
+
+```ts
+const [name, symbol, decimals] = await Promise.all([
+  token.name(),
+  token.symbol(),
+  token.decimals(),
+]);
+```
+
+{% endtab %}
+{% tab title="React SDK" %}
 
 ```tsx
-import { useQueryClient } from "@tanstack/react-query";
-import { zamaQueryKeys } from "@zama-fhe/sdk/query";
+import { useMetadata } from "@zama-fhe/react-sdk";
 
-const queryClient = useQueryClient();
+const { data: meta } = useMetadata("0xToken");
 
-// Invalidate all balance queries
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.all });
-
-// Invalidate one token
-queryClient.invalidateQueries({ queryKey: zamaQueryKeys.confidentialBalance.token("0xToken") });
+// meta.name, meta.symbol, meta.decimals
 ```
 
 {% endtab %}
 {% endtabs %}
+
+See the [useMetadata reference](../reference/react/useMetadata.md) for full options.
+
+### 8. (React) Poll for balance updates
+
+`useConfidentialBalance` (step 1) and `useConfidentialBalances` (step 6) integrate with React Query out of the box. Pass `refetchInterval` to either to poll on a timer:
+
+```tsx
+const { data: balance } = useConfidentialBalance(
+  { address: "0xToken", account: address },
+  { refetchInterval: 5_000 },
+);
+```
+
+Under the hood, `useConfidentialBalance` calls `token.balanceOf(owner)` — reading the on-chain encrypted value and decrypting via the SDK. Cached clear values are served instantly; the relayer is only hit when the encrypted value changes, and clear values are persisted in storage so page reloads show the balance without a spinner.
+
+### 9. (React) Force a manual refresh
+
+Mutations automatically invalidate balance caches, so the balance refreshes on its own after a shield, transfer, or unshield:
+
+![Mutation-triggered balance refresh](../images/balance-refresh.svg)
+
+But if you need manual control (for example, after an external contract interaction), use `zamaQueryKeys`:
+
+```tsx
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateBalanceQueries } from "@zama-fhe/sdk/query";
+
+const queryClient = useQueryClient();
+
+// Refresh a token's balance. `invalidateBalanceQueries` is the same helper the SDK's
+// own mutations use — it invalidates both the single-token (`confidentialBalance`) and
+// batched (`confidentialBalances`) caches, which are disjoint namespaces. Hand-composing
+// `zamaQueryKeys.confidentialBalance.*` keys only hits one and silently leaves the other stale.
+invalidateBalanceQueries(queryClient, "0xToken");
+```
+
+See the [query keys reference](../reference/react/query-keys.md#invalidatebalancequeries) for the raw key factories when you need finer targeting.
 
 ## Next steps
 

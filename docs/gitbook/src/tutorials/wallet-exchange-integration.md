@@ -52,7 +52,7 @@ Balances are stored on-chain as encrypted values. To display one, the user autho
 {% endhint %}
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 import { ZamaSDK } from "@zama-fhe/sdk";
@@ -68,7 +68,7 @@ const peer = await token.balanceOf("0xUserAddr"); // explicit holder
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useGrantPermit, useHasPermit, useConfidentialBalance } from "@zama-fhe/react-sdk";
@@ -109,14 +109,14 @@ A common pattern is to call `useGrantPermit` once when the user first connects (
 Amounts are encrypted client-side before submission. The SDK builds the input proof, registers it with the relayer, and submits the transaction.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const { txHash, receipt } = await token.confidentialTransfer("0xRecipient", 500n);
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTransfer } from "@zama-fhe/react-sdk";
@@ -152,7 +152,7 @@ In all cases, the user sees a single unified balance for the underlying asset.
 `WrappedToken.shield` wraps a standard ERC-20 into its ERC-7984 form. The SDK handles the wrapping flow internally — using `transferAndCall` for ERC-1363 underlyings (one transaction) or `approve` + `wrap` for everything else (two transactions). The encrypted balance lands in the recipient's address (defaulting to the connected wallet). See [Shielding paths](../guides/shield-tokens.md#shielding-paths) for which currently-wrapped tokens use which path.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
@@ -168,7 +168,7 @@ await wrappedToken.shield(1000n, { approvalStrategy: "skip" });
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useShield } from "@zama-fhe/react-sdk";
@@ -187,7 +187,7 @@ See [Shield tokens](../guides/shield-tokens.md) for the full options surface, in
 Unwrapping is a **two-step asynchronous process** at the contract level: an unwrap request burns the encrypted amount, then a finalize call sends the cleartext amount of underlying ERC-20 once the gateway has publicly decrypted it. `WrappedToken.unshield` does both steps in one SDK call, including waiting for the decryption proof.
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const wrappedToken = sdk.createWrappedToken(confidentialTokenAddress);
@@ -206,7 +206,7 @@ await wrappedToken.unshieldAll();
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useUnshield, useUnshieldAll } from "@zama-fhe/react-sdk";
@@ -245,7 +245,7 @@ The SDK exposes it via `sdk.registry`. See the [`WrappersRegistry` reference](..
 ### Look up a wrapper for an ERC-20
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const result = await sdk.registry.getConfidentialToken("0xUSDC");
@@ -255,7 +255,7 @@ if (result?.isValid) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useConfidentialTokenAddress } from "@zama-fhe/react-sdk";
@@ -270,14 +270,14 @@ const { data } = useConfidentialTokenAddress({ tokenAddress: "0xUSDC" });
 ### Reverse lookup (confidential → underlying)
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const result = await sdk.registry.getUnderlyingToken("0xConfidentialToken");
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useTokenAddress } from "@zama-fhe/react-sdk";
@@ -291,7 +291,7 @@ const { data } = useTokenAddress({ confidentialTokenAddress });
 ### List all registered pairs (paginated)
 
 {% tabs %}
-{% tab title="SDK" %}
+{% tab title="Core SDK" %}
 
 ```ts
 const page = await sdk.registry.listPairs({
@@ -305,7 +305,7 @@ for (const pair of page.items) {
 ```
 
 {% endtab %}
-{% tab title="React" %}
+{% tab title="React SDK" %}
 
 ```tsx
 import { useListPairs } from "@zama-fhe/react-sdk";
