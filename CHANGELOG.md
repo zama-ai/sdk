@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.4.0](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.4.0) (2026-07-30)
+
+### Features
+
+- **credentials:** opt-in shared ML-KEM keypair scope for shared-tenant operators [SDK-142] ([#546](https://github.com/zama-ai/sdk/issues/546)) ([aee2db4]()), closes [#458]()
+- **sdk:** add DelegationService.getStatus ([#572](https://github.com/zama-ai/sdk/issues/572)) ([2f91c58]())
+- **sdk:** chunk decryption requests to respect the relayer's per-request bit budget ([#541](https://github.com/zama-ai/sdk/issues/541)) ([d1717a9]())
+- **sdk:** expose wrap() + useWrap for two-signature shield ([#522](https://github.com/zama-ai/sdk/issues/522)) ([5bb88a9]())
+- **sdk:** uniform retryability signal across decryption error causes [SDK-248] ([#536](https://github.com/zama-ai/sdk/issues/536)) ([d3b6ea9]())
+
+### Bug Fixes
+
+- **sdk:** correct Hoodi KMSVerifier preset address ([#540](https://github.com/zama-ai/sdk/issues/540)) ([18d2422]())
+- **sdk:** normalize ethers readContract integers to match viem ([#580](https://github.com/zama-ai/sdk/issues/580)) ([b60b86e]()), closes [#576]() [#576]()
+- **sdk:** unbundle unshield into request + finalize phases ([#530](https://github.com/zama-ai/sdk/issues/530)) ([b3b5835]())
+
+### Code Refactoring
+
+- **codemod:** rewrite renamed credentials config keys, flag silent drops [SDK-249] ([#544](https://github.com/zama-ai/sdk/issues/544)) ([c0c54ca]())
+- **examples:** improve example apps — viem/wagmi, React 19 form actions, a11y ([#576](https://github.com/zama-ai/sdk/issues/576)) ([14d385b]())
+- **sdk:** API surface audit — resolve all ae-forgotten-export leaks [SDK-209] ([#539](https://github.com/zama-ai/sdk/issues/539)) ([c01102c]()), closes [#406]() [#458]()
+- **sdk:** extract duplicated decrypt-cache invalidation in Permits ([#573](https://github.com/zama-ai/sdk/issues/573)) ([33f44cd]())
+- **sdk:** replace @zama-fhe/relayer-sdk with @fhevm/sdk ([#458](https://github.com/zama-ai/sdk/issues/458)) ([f9b79c9]())
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk to 1.1.0-alpha.9 ([#566](https://github.com/zama-ai/sdk/issues/566)) ([66ca1ad]())
+
 ## [3.4.0-alpha.12](https://github.com/zama-ai/sdk/compare/v3.4.0-alpha.11...v3.4.0-alpha.12) (2026-07-29)
 
 ### Bug Fixes
