@@ -681,26 +681,8 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
-export function refreshPreparedMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.refreshPrepared"], RefreshPreparedParams, PreparedFor<TransactionKind>>;
-
-// @public
-export interface RefreshPreparedParams {
-    readonly options?: OfflineSigningOptions;
-    readonly preparedTx: PreparedFor<TransactionKind>;
-}
-
-// @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
-}
-
-// @public
-export function resumeMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.resume"], ResumeParams, TransactionResult>;
-
-// @public
-export interface ResumeParams {
-    readonly preparedTx: PreparedTransaction;
-    readonly txHash: Hex;
 }
 
 // @public
@@ -1433,8 +1415,8 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
-    // Warning: (ae-forgotten-export) The symbol "OfflineSigning" needs to be exported by the entry point index.d.ts
-    readonly offlineSigning: OfflineSigning;
+    // Warning: (ae-forgotten-export) The symbol "Offline" needs to be exported by the entry point index.d.ts
+    readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;

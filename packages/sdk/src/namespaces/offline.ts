@@ -22,22 +22,22 @@ import type {
  * - **Decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls. This namespace.
  *
  * This pipeline is **transaction-only**: {@link prepare} returns an
- * RLP-encoded unsigned EIP-1559 tx, finalized with {@link broadcast} (you hold
- * the signed bytes) or {@link resume} (a custodian broadcast it), yielding a
+ * RLP-encoded unsigned EIP-1559 tx, finalized with {@link broadcast} once you
+ * hold the signed bytes, yielding a
  * {@link TransactionResult}. Decryption permits are *not* transactions — they
  * are signed credentials with no broadcast step — so they are acquired through
  * `sdk.permits.grantPermit` instead, which signs with whatever signer you
  * configured (including an out-of-process custody signer whose `signTypedData`
  * resolves when the HSM/policy engine returns).
  *
- * Obtained via `sdk.offlineSigning`. "Offline" refers to where the signer's
+ * Obtained via `sdk.offline`. "Offline" refers to where the signer's
  * keys live (out-of-process: HSM, custody control plane, policy engine), not
- * to the methods themselves — {@link broadcast} and {@link refresh} are
- * RPC-bound. The SDK never takes custody of signing material; every method
+ * to the methods themselves — {@link broadcast} is RPC-bound. The SDK never
+ * takes custody of signing material; every method
  * that signs runs against the signer object you passed to `createConfig`,
  * in your process; keys stay where they are.
  */
-export class OfflineSigning {
+export class Offline {
   readonly #offlineSigningService: OfflineSigningService;
 
   /** @internal */
@@ -116,63 +116,5 @@ export class OfflineSigning {
    */
   broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.broadcast(preparedTx, signedTx);
-  }
-
-  /**
-   * Resume the SDK lifecycle for an externally-broadcast transaction: wait
-   * for its receipt, emit the matching `*Submitted` event, and sync cache
-   * state — without holding the signed bytes. Pair with {@link prepare} when
-   * the broadcast happens in a custody control plane or via
-   * `eth_sendRawTransaction` outside this process.
-   *
-   * @remarks
-   * **Trust model:** the SDK takes the caller's word that `txHash`
-   * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
-   * the broadcaster signed *this* payload rather than a different one from
-   * the same account. Callers who need a stronger guarantee can refetch the
-   * tx via the provider and compare its serialized form.
-   *
-   * **Prefer {@link broadcast} wherever the custodian can return signed
-   * bytes.** There the tx hash is `keccak256(signedTx)` — derived from the
-   * exact bytes the SDK submits — so the payload↔hash binding holds with no
-   * trust in the caller. `resume` exists for custodians that must broadcast
-   * themselves (e.g. import-and-broadcast HSM ceremonies); it trades that
-   * binding for the ability to rejoin the lifecycle from a hash alone.
-   */
-  resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    return this.#offlineSigningService.resume(preparedTx, txHash);
-  }
-
-  /**
-   * Re-stamp a prepared transaction with the current chain state — fresh
-   * nonce, fee parameters, and gas limit. Call this before {@link sign}
-   * when the gap since {@link prepare} was long enough for values to drift
-   * (custodian approval ceremonies, multi-party signing, etc.). The
-   * original `preparedTx` is left untouched (immutable).
-   *
-   * Signer-optional: works without a configured signer.
-   *
-   * @remarks
-   * **Identity is not stable across refresh** — the returned `unsignedTx`
-   * bytes (and therefore the eventual tx hash) differ from the input's.
-   * Custodian policy engines typically key an approval by their own request
-   * id (not by the payload bytes), so a refresh does not mutate a pending
-   * approval: it is a *new* submission needing its own approval, and the
-   * prior one stays pending until it expires or you explicitly cancel it.
-   * Supersede by cancel-then-resubmit — a new request does not implicitly
-   * replace the old one.
-   *
-   * **Air-gapped ceremonies:** once a payload is exported for offline signing
-   * its bytes are frozen — nonce and fees live inside what gets signed and
-   * cannot change after export, so `refresh` there means a *fresh export*,
-   * not an in-place update. For hours-to-days signing gaps, pin generous
-   * `maxFeePerGas` / `maxPriorityFeePerGas` bounds up front (via
-   * {@link OfflineSigningOptions}) rather than relying on a late refresh.
-   */
-  refresh<K extends TransactionKind>(
-    preparedTx: PreparedFor<K>,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>> {
-    return this.#offlineSigningService.refresh(preparedTx, options);
   }
 }

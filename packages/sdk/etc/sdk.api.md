@@ -11442,8 +11442,6 @@ export class Offline {
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    refresh<K extends TransactionKind>(preparedTx: PreparedFor<K>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult>;
     sign(preparedTx: PreparedTransaction): Promise<Hex>;
 }
 
@@ -19656,7 +19654,7 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
-    readonly offlineSigning: Offline;
+    readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;

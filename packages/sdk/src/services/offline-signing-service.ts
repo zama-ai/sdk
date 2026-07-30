@@ -60,9 +60,9 @@ import type { EncryptionService } from "./encryption-service";
  */
 export interface OfflineSigningServiceConfig {
   /**
-   * Optional signer. `prepare`, `broadcast`, `resume`, and `refresh` work
-   * without a signer (canonical shape for cross-process custody). `sign`
-   * requires a signer with the `signTransaction` capability.
+   * Optional signer. `prepare` and `broadcast` work without a signer
+   * (canonical shape for cross-process custody). `sign` requires a signer
+   * with the `signTransaction` capability.
    */
   readonly signer?: GenericSigner;
   readonly provider: GenericProvider;
@@ -239,7 +239,7 @@ export class OfflineSigningService {
    * a pre-submit failure (chain mismatch, RPC reject) is wrapped as
    * `TransactionRevertedError("Broadcast failed for …")`; a post-submit
    * failure (receipt wait timeout or revert) preserves `txHash` in the
-   * message so the caller can recover via {@link resume}.
+   * message so the caller can recover by re-querying that transaction.
    */
   async broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(preparedTx, "broadcast");
@@ -259,70 +259,6 @@ export class OfflineSigningService {
     return this.#awaitReceipt(preparedTx, txHash);
   }
 
-  // ── resume ─────────────────────────────────────────────────────────────
-
-  /**
-   * Resume the SDK lifecycle for an externally-broadcast transaction:
-   * re-check chain alignment, emit the matching `*Submitted` event, and wait
-   * for the receipt — without holding the signed bytes. Use when an external
-   * process submitted `preparedTx.unsignedTx` directly via
-   * `eth_sendRawTransaction` and this process needs to refresh its caches.
-   *
-   * @remarks
-   * **Trust model:** the SDK takes the caller's word that `txHash`
-   * corresponds to `preparedTx.unsignedTx`. No on-chain check confirms that
-   * the broadcaster signed *this* payload rather than a different one from
-   * the same account. Callers who need a stronger guarantee can refetch the
-   * tx via the provider and compare its serialized form.
-   *
-   * **Prefer {@link broadcast} wherever the custodian can return signed
-   * bytes.** There the tx hash is `keccak256(signedTx)` — derived from the
-   * exact bytes the SDK submits — so the payload↔hash binding holds with no
-   * trust in the caller. `resume` exists for custodians that must broadcast
-   * themselves (e.g. import-and-broadcast HSM ceremonies).
-   */
-  async resume(preparedTx: PreparedTransaction, txHash: Hex): Promise<TransactionResult> {
-    await this.#assertSameChainAsPrepared(preparedTx, "resume");
-    this.#emitSubmitted(preparedTx, txHash);
-    return this.#awaitReceipt(preparedTx, txHash);
-  }
-
-  // ── refreshPrepared ────────────────────────────────────────────────────
-
-  /**
-   * Re-stamp a {@link PreparedFor} with the current chain state — fresh
-   * nonce, fee parameters, and gas limit. Useful when the gap between
-   * `prepare` and `sign` was long enough for values to drift (custodian
-   * ceremony, multi-party approval, etc.).
-   *
-   * Signer-optional: works without a configured signer. The original
-   * `preparedTx` is left untouched (immutable); the returned value is a fresh
-   * `PreparedFor<K>` built from the original `request`.
-   *
-   * @remarks
-   * **Identity is not stable across refresh** — the returned `unsignedTx`
-   * bytes (and therefore the eventual tx hash) differ from the input's.
-   * Custodian policy engines typically key an approval by their own request
-   * id (not by the payload bytes), so a refresh does not mutate a pending
-   * approval: it is a *new* submission needing its own approval, and the
-   * prior one stays pending until it expires or you explicitly cancel it.
-   * Supersede by cancel-then-resubmit — a new request does not implicitly
-   * replace the old one.
-   *
-   * **Air-gapped ceremonies:** once a payload is exported for offline signing
-   * its bytes are frozen — nonce and fees live inside what gets signed and
-   * cannot change after export, so `refresh` there means a *fresh export*,
-   * not an in-place update. For hours-to-days signing gaps, pin generous fee
-   * bounds up front (via {@link OfflineSigningOptions}) rather than relying on
-   * a late refresh.
-   */
-  refresh<K extends TransactionKind>(
-    preparedTx: PreparedFor<K>,
-    options?: OfflineSigningOptions,
-  ): Promise<PreparedFor<K>> {
-    return this.prepare(preparedTx.request, options);
-  }
-
   // ── internals ──────────────────────────────────────────────────────────
 
   async #buildCall(
@@ -338,7 +274,7 @@ export class OfflineSigningService {
       case "ConfidentialTransfer":
         return this.#buildConfidentialTransfer(request, from);
       case "ConfidentialTransferFrom":
-        return this.#buildConfidentialTransferFrom(request, from);
+        return this.#buildConfidentialTransferFrom(request);
       case "SetOperator":
         return this.#buildSetOperator(request);
       case "Unwrap":
@@ -358,11 +294,9 @@ export class OfflineSigningService {
       case "RevokeDelegation":
         return this.#buildRevokeDelegation(request);
       default: {
-        const unhandled: never = request;
+        const unhandled: { kind: string } = request;
         throw new ConfigurationError(
-          `OfflineSigningService.prepare: unsupported transaction kind '${
-            (unhandled as { kind: string }).kind
-          }'.`,
+          `OfflineSigningService.prepare: unsupported transaction kind '${unhandled.kind}'.`,
         );
       }
     }
@@ -386,7 +320,6 @@ export class OfflineSigningService {
 
   async #buildConfidentialTransferFrom(
     request: ConfidentialTransferFromRequest,
-    _from: Address,
   ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
     const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
@@ -482,7 +415,7 @@ export class OfflineSigningService {
       ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
       : MAX_UINT64;
     return delegateForUserDecryptionContract(
-      request.aclAddress,
+      getAddress(request.aclAddress),
       getAddress(request.delegateAddress),
       getAddress(request.contractAddress),
       expDate,
@@ -493,7 +426,7 @@ export class OfflineSigningService {
     request: RevokeDelegationRequest,
   ): ReturnType<typeof revokeDelegationContract> {
     return revokeDelegationContract(
-      request.aclAddress,
+      getAddress(request.aclAddress),
       getAddress(request.delegateAddress),
       getAddress(request.contractAddress),
     );
@@ -558,7 +491,7 @@ export class OfflineSigningService {
         throw error;
       }
       throw new TransactionRevertedError(
-        `Receipt wait failed for ${prepared.kind} (txHash ${txHash}); recover via resume()`,
+        `Receipt wait failed for ${prepared.kind} (txHash ${txHash})`,
         { cause: error },
       );
     }

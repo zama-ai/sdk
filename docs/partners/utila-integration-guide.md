@@ -76,7 +76,7 @@ The six features map to the surface as follows:
 
 | #   | Utila ask                               | SDK surface                                                                        |
 | --- | --------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | Offline signing flow                    | `zama.offlineSigning.prepare / sign / broadcast / resume / refresh`                |
+| 1   | Offline signing flow                    | `zama.offline.prepare / sign / broadcast`                                          |
 | 2   | View keys in your own vault (encrypted) | `config.storage` / `config.permitStorage` implementing `GenericStorage`            |
 | 3   | Publish through your own RPC            | `publicClient` transport (viem) or `provider` (ethers)                             |
 | 4   | Explicit view-key activation            | `prepare({ kind: "DecryptionPermit" }) → registerPermit`, or `permits.grantPermit` |
@@ -92,7 +92,7 @@ Every write splits into three independently-runnable phases. `prepare` is signer
 
 ```ts
 // PHASE 1 — prepare: SDK builds an RLP-encoded, unsigned EIP-1559 (type-2) transaction.
-const prepared = await zama.offlineSigning.prepare({
+const prepared = await zama.offline.prepare({
   kind: "ConfidentialTransfer",
   from: utilaWallet,
   token: tokenAddress,
@@ -105,24 +105,28 @@ const prepared = await zama.offlineSigning.prepare({
 const signedTx = await utilaCustody.signTransaction(prepared.unsignedTx);
 
 // PHASE 3 — broadcast through your RPC, await the receipt, sync SDK caches.
-const result = await zama.offlineSigning.broadcast(prepared, signedTx);
+const result = await zama.offline.broadcast(prepared, signedTx);
 ```
 
-Two variants matter for custody:
+Two custody realities to plan around:
 
-- **Utila broadcasts it itself** (SDK never sees signed bytes): call
-  `resume(prepared, txHash)` instead of `broadcast`. It joins the receipt-wait and
-  cache-sync. See the trust caveat in §8.1.
-- **Long signing ceremonies** (nonce/fees drift before your quorum signs):
-  `refresh(prepared, options)` re-stamps nonce/fees. It returns a **new** prepared identity
-  — discard the prior one and any approval keyed to it (§8.2).
+- **Let the SDK broadcast.** Have Utila return the signed bytes and call `broadcast` — the
+  SDK then owns the tx hash (`keccak256(signedTx)`), waits for the receipt, emits the
+  matching event, and syncs its caches. If Utila must broadcast the transaction itself, the
+  SDK never joins the lifecycle for that submission: you own receipt-tracking and any cache
+  refresh yourself.
+- **Long signing ceremonies** (nonce/fees may drift before your quorum signs): the payload
+  is frozen once you export it for signing — nonce and fees live inside what gets signed and
+  cannot be re-stamped afterwards. Pin generous `nonce` / `maxFeePerGas` /
+  `maxPriorityFeePerGas` bounds up front on `prepare` (see below) rather than expecting to
+  refresh late.
 
 `prepare` accepts an options object to pin `nonce`, `maxFeePerGas`,
 `maxPriorityFeePerGas`, and `gasLimit`, skipping the RPC reads entirely — intended for
 custodians that run their own nonce manager:
 
 ```ts
-await zama.offlineSigning.prepare(request, { nonce: 42, maxFeePerGas: 30_000_000_000n });
+await zama.offline.prepare(request, { nonce: 42, maxFeePerGas: 30_000_000_000n });
 ```
 
 The full set of transaction kinds (`TransactionKind`): `ConfidentialTransfer`,
@@ -176,7 +180,7 @@ are unsuitable for custody — always pass your vault.
 ## 5. Feature 3 — Publishing transactions through your own RPC
 
 The RPC is the transport on `publicClient` (viem) or the `provider` (ethers) from §2.
-There is no separate hidden broadcaster: `offlineSigning.broadcast` calls
+There is no separate hidden broadcaster: `offline.broadcast` calls
 `provider.sendRawTransaction(signedTx)`, which is `publicClient.sendRawTransaction` → your
 RPC. Reads (`eth_call`, gas estimation, `getTransactionCount("pending")`, block/receipt
 reads) go through the same client.
@@ -201,7 +205,7 @@ Activate ahead of time. In signer-less custody, activation is itself a
 
 ```ts
 // PHASE 1 — build the EIP-712 permit envelope (no signer needed).
-const preparedPermit = await zama.offlineSigning.prepare({
+const preparedPermit = await zama.offline.prepare({
   kind: "DecryptionPermit",
   from: utilaWallet,
   contracts: [tokenAddress, otherContract], // ≤10 per permit; SDK chunks larger sets
@@ -213,7 +217,7 @@ if (preparedPermit.typedData) {
   const signature = await utilaCustody.signTypedData(preparedPermit.typedData);
 
   // PHASE 3 — persist the activated permit into your vault.
-  await zama.offlineSigning.registerPermit(preparedPermit, signature);
+  await zama.offline.registerPermit(preparedPermit, signature);
 }
 ```
 
@@ -242,9 +246,9 @@ const plan = await wrappedToken.prepareShield(1_000n, { recipient: utilaWallet }
 //   or "transferAndCall" (single tx) if the ERC-20 supports ERC-1363
 
 for (const step of plan.steps) {
-  const prepared = await zama.offlineSigning.prepare(step); // e.g. "ApproveUnderlying", then "Wrap"
+  const prepared = await zama.offline.prepare(step); // e.g. "ApproveUnderlying", then "Wrap"
   const signed = await utilaCustody.signTransaction(prepared.unsignedTx);
-  await zama.offlineSigning.broadcast(prepared, signed); // each in its own session
+  await zama.offline.broadcast(prepared, signed); // each in its own session
 }
 ```
 
@@ -260,27 +264,20 @@ Notes:
 
 ---
 
-## 8. Trust boundary — three decisions worth reviewing
+## 8. Trust boundary — decisions worth reviewing
 
 These caveats are documented in the SDK's public API
 (`packages/sdk/src/namespaces/offline-signing.ts`) and apply to any signer-less custodian.
 
-### 8.1 `resume()` trusts the supplied transaction hash
+### 8.1 Prefer the SDK-broadcast path
 
-If Utila broadcasts the signed transaction itself and calls `resume(prepared, txHash)`, the
-SDK **takes your word that `txHash` corresponds to `prepared.unsignedTx`.** No on-chain
-check confirms the broadcaster signed _this_ payload rather than a different one from the
-same `from`. Prefer the **broadcast** path (Utila returns signed bytes; the SDK broadcasts
-and therefore knows the hash) wherever your flow allows it.
+If Utila broadcasts the signed transaction itself, the SDK never sees the signed bytes and
+cannot bind a tx hash to `prepared.unsignedTx` — you own receipt-tracking and cache refresh
+for that submission. Prefer the **broadcast** path (Utila returns signed bytes; the SDK
+broadcasts and therefore knows the hash, `keccak256(signedTx)`) wherever your flow allows
+it.
 
-### 8.2 `refresh()` produces a new payload identity
-
-`refresh(prepared)` re-stamps nonce/fees, but the returned `unsignedTx` bytes — and the
-eventual tx hash — **differ from the input's**. If your policy engine keys an approval by
-the unsigned-tx payload, a refresh invalidates the pending approval. Treat a refreshed
-payload as a new submission and supersede the prior one.
-
-### 8.3 `from`-address authority is not proven (signer-less path)
+### 8.2 `from`-address authority is not proven (signer-less path)
 
 With no configured signer, `request.from` is the sole declaration of which wallet signs.
 The SDK skips the address-match assertion it would run with an in-process signer, and trusts
@@ -299,29 +296,26 @@ gets its own signing session:
 import { findUnwrapRequested } from "@zama-fhe/sdk";
 
 // PHASE 1 — request unwrap.
-const p1 = await zama.offlineSigning.prepare({
+const p1 = await zama.offline.prepare({
   kind: "Unwrap",
   from: utilaWallet,
   token: wrapper,
   to: utilaWallet,
   amount: 500n,
 });
-const r1 = await zama.offlineSigning.broadcast(
-  p1,
-  await utilaCustody.signTransaction(p1.unsignedTx),
-);
+const r1 = await zama.offline.broadcast(p1, await utilaCustody.signTransaction(p1.unsignedTx));
 
 // Read the requestId yourself from the receipt (as you wanted).
 const event = findUnwrapRequested(r1.receipt.logs); // → { unwrapRequestId, ... }
 
 // PHASE 2 — finalize, in a second signing session.
-const p2 = await zama.offlineSigning.prepare({
+const p2 = await zama.offline.prepare({
   kind: "FinalizeUnwrap",
   from: utilaWallet,
   wrapper,
   unwrapRequestIdOrAmount: event.unwrapRequestId,
 });
-await zama.offlineSigning.broadcast(p2, await utilaCustody.signTransaction(p2.unsignedTx));
+await zama.offline.broadcast(p2, await utilaCustody.signTransaction(p2.unsignedTx));
 ```
 
 ### On the "better" ask — deterministic `requestId` / signing both phases upfront

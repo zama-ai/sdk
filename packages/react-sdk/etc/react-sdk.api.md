@@ -9,7 +9,6 @@ import { ApproveUnderlyingParams } from '@zama-fhe/sdk/query';
 import { BatchBalancesResult } from '@zama-fhe/sdk';
 import { BatchDecryptAsOptions } from '@zama-fhe/sdk';
 import { BatchDecryptBalancesAsParams } from '@zama-fhe/sdk/query';
-import { BroadcastParams } from '@zama-fhe/sdk/query';
 import { ClearValue } from '@zama-fhe/sdk';
 import { ConfidentialSetOperatorParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferAndCallParams } from '@zama-fhe/sdk/query';
@@ -29,20 +28,14 @@ import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
-import { PreparedFor } from '@zama-fhe/sdk';
-import { PrepareParams } from '@zama-fhe/sdk/query';
 import { PropsWithChildren } from 'react';
-import { RefreshPreparedParams } from '@zama-fhe/sdk/query';
-import { ResumeParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
-import { SignParams } from '@zama-fhe/sdk/query';
 import { Token } from '@zama-fhe/sdk';
 import { TokenMetadata } from '@zama-fhe/sdk/query';
 import { TokenWrapperPair } from '@zama-fhe/sdk';
 import { TokenWrapperPairWithMetadata } from '@zama-fhe/sdk';
-import { TransactionKind } from '@zama-fhe/sdk';
 import { TransactionResult } from '@zama-fhe/sdk';
 import { UnshieldAllParams } from '@zama-fhe/sdk/query';
 import { UnshieldParams } from '@zama-fhe/sdk/query';
@@ -63,9 +56,6 @@ export function useApproveUnderlying(address: Address, options?: UseMutationOpti
 
 // @public
 export function useBatchDecryptBalancesAs(tokens: Token[], options?: UseMutationOptions<Map<Address, bigint>, Error, BatchDecryptBalancesAsParams>): UseMutationResult<Map<`0x${string}`, bigint>, Error, BatchDecryptAsOptions, unknown>;
-
-// @public
-export function useBroadcast<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, BroadcastParams, TContext>): UseMutationResult<TransactionResult, Error, BroadcastParams, TContext>;
 
 // @public
 export function useClearCredentials(options?: UseMutationOptions<void>): UseMutationResult<void, Error, void, unknown>;
@@ -232,15 +222,6 @@ export function usePendingUnshield(tokenAddress: Address, options?: Omit<UseQuer
 export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQueryResult<`0x${string}` | null, Error>;
 
 // @public
-export function usePrepare<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, PrepareParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, PrepareParams, TContext>;
-
-// @public
-export function useRefreshPrepared<TContext = unknown>(options?: UseMutationOptions<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>): UseMutationResult<PreparedFor<TransactionKind>, Error, RefreshPreparedParams, TContext>;
-
-// @public
-export function useResume<TContext = unknown>(options?: UseMutationOptions<TransactionResult, Error, ResumeParams, TContext>): UseMutationResult<TransactionResult, Error, ResumeParams, TContext>;
-
-// @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;
 
 // @public
@@ -257,9 +238,6 @@ export interface UseShieldConfig {
     address: Address;
     optimistic?: boolean;
 }
-
-// @public
-export function useSign<TContext = unknown>(options?: UseMutationOptions<Hex, Error, SignParams, TContext>): UseMutationResult<Hex, Error, SignParams, TContext>;
 
 // @public
 export function useToken(address: Address): Token;

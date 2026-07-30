@@ -170,7 +170,7 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
   dfns(
     "prepare → DFNS async sign (policy approval) → broadcast",
     async ({ sdk, dfnsAccount, pollDfnsSignature, env }) => {
-      const prepared = await sdk.offlineSigning.prepare({
+      const prepared = await sdk.offline.prepare({
         kind: "ConfidentialTransfer",
         from: dfnsAccount.address,
         token: env.TOKEN_ADDRESS,
@@ -189,7 +189,7 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
       const signedTx = signedData as Hex;
       expect(signedTx).toMatch(/^0x[0-9a-f]+$/i);
 
-      const result = await sdk.offlineSigning.broadcast(prepared, signedTx);
+      const result = await sdk.offline.broadcast(prepared, signedTx);
       expect(result.txHash).toMatch(/^0x[0-9a-f]{64}$/i);
       expect(result.receipt.logs).toBeInstanceOf(Array);
     },

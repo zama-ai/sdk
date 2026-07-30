@@ -2,10 +2,10 @@ import { SignerCapabilityError } from "../errors";
 import type { GenericSigner } from "../types";
 
 const WRITE_CONTRACT_HINT =
-  "Use the offline-signing path — sdk.offlineSigning.prepare({ kind, from, ... }) → signer.signTransaction(prepared.unsignedTx) → sdk.offlineSigning.broadcast(prepared, signedTx) — or configure a signer that exposes writeContract (ViemSigner, EthersSigner, WagmiSigner, or any wallet adapter that signs and broadcasts atomically).";
+  "Use the offline-signing path — sdk.offline.prepare({ kind, from, ... }) → signer.signTransaction(prepared.unsignedTx) → sdk.offline.broadcast(prepared, signedTx) — or configure a signer that exposes writeContract (ViemSigner, EthersSigner, WagmiSigner, or any wallet adapter that signs and broadcasts atomically).";
 
 const SIGN_TRANSACTION_HINT =
-  "Configure a signer that exposes signTransaction (subclass BaseSigner to wrap an HSM / custodian client, or use a viem/ethers wallet that supports raw-transaction signing), or run the offline-signing flow with signer: undefined and sign the prepared bytes out-of-process before passing them to sdk.offlineSigning.broadcast.";
+  "Configure a signer that exposes signTransaction (subclass BaseSigner to wrap an HSM / custodian client, or use a viem/ethers wallet that supports raw-transaction signing), or run the offline-signing flow with signer: undefined and sign the prepared bytes out-of-process before passing them to sdk.offline.broadcast.";
 
 /**
  * Type-narrowing assertion that the configured signer can sign + broadcast a

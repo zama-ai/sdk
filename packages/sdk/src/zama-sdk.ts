@@ -5,7 +5,7 @@ import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
-import { OfflineSigning } from "./namespaces/offline-signing";
+import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
 import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
@@ -54,7 +54,7 @@ export class ZamaSDK {
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
   /** Offline-signing pipeline (`prepare → sign → broadcast`) for HSM, policy-engine, and cross-process custody workflows. */
-  readonly offlineSigning: OfflineSigning;
+  readonly offline: Offline;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
@@ -155,7 +155,7 @@ export class ZamaSDK {
       router: config.router,
       decryptionService: this.#decryptionService,
     });
-    this.offlineSigning = new OfflineSigning(this.#offlineSigningService);
+    this.offline = new Offline(this.#offlineSigningService);
   }
 
   /**

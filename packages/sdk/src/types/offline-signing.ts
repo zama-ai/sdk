@@ -254,7 +254,7 @@ export interface PreparedTransaction {
 
 /**
  * {@link PreparedTransaction} narrowed by `kind` — return type of
- * `sdk.offlineSigning.prepare(request)` and the Token-level `prepareX` sugar methods.
+ * `sdk.offline.prepare(request)` and the Token-level `prepareX` sugar methods.
  *
  * An interface extending {@link PreparedTransaction} that pins `kind` and
  * `request` to the requested kind `K`, so every `PreparedFor<K>` remains

@@ -53,7 +53,7 @@ const config = createConfig({
 const zama = new ZamaSDK(config);
 
 // 1. PREPARE — SDK builds an RLP-encoded unsigned EIP-1559 transaction.
-const preparedTx = await zama.offlineSigning.prepare({
+const preparedTx = await zama.offline.prepare({
   kind: "ConfidentialTransfer",
   from: dfnsWalletAddress,
   token,
@@ -70,15 +70,15 @@ const { signedData } = await dfns.wallets.generateSignature({
 // …poll dfns.wallets.getSignature until status === "Signed"…
 
 // 3. BROADCAST — SDK submits, awaits the receipt, syncs its caches.
-const result = await zama.offlineSigning.broadcast(preparedTx, signedData as Hex);
+const result = await zama.offline.broadcast(preparedTx, signedData as Hex);
 ```
 
 There are **two flows**, distinguished by what `prepare` returns:
 
-| Flow                                                                              | `prepare` returns                                               | DFNS signs with       | Finalize with                                                   |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | --------------------------------------------------------------- |
-| **Transaction** (transfers, operator approvals, shield/unshield legs, delegation) | `PreparedTransaction` with `unsignedTx` (RLP, EIP-1559)         | `kind: "Transaction"` | `zama.offlineSigning.broadcast(preparedTx, signedTx)`           |
-| **Decryption permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedDecryptionPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `zama.offlineSigning.registerPermit(preparedPermit, signature)` |
+| Flow                                                                              | `prepare` returns                                               | DFNS signs with       | Finalize with                                            |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
+| **Transaction** (transfers, operator approvals, shield/unshield legs, delegation) | `PreparedTransaction` with `unsignedTx` (RLP, EIP-1559)         | `kind: "Transaction"` | `zama.offline.broadcast(preparedTx, signedTx)`           |
+| **Decryption permit** (FHE decrypt authorization — _not_ an on-chain tx)          | `PreparedDecryptionPermit` with an EIP-712 `typedData` envelope | `kind: "Eip712"`      | `zama.offline.registerPermit(preparedPermit, signature)` |
 
 The transaction kinds we support today (`TransactionKind`): `ConfidentialTransfer`,
 `ConfidentialTransferFrom`, `SetOperator`, `Unwrap`, `UnwrapAll`, `FinalizeUnwrap`,
@@ -121,7 +121,7 @@ Our working integration uses the **signed-bytes** path for transactions and the
 ## 3. Trust boundary — the two decisions we most want reviewed
 
 These two are the crux of the security review. Both are documented as caveats in the
-SDK's public API (`packages/sdk/src/namespaces/offline-signing.ts`).
+SDK's public API (`packages/sdk/src/namespaces/offline.ts`).
 
 ### 3.1 `resume()` trusts the supplied transaction hash
 
@@ -296,7 +296,7 @@ Grouped by topic; the ★ items are the ones we care most about.
 All links point to the `feature/sdk-75-deferred-signing-v2` branch, where this
 pipeline lives until it merges:
 
-- Public API + caveats: [`packages/sdk/src/namespaces/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/namespaces/offline-signing.ts)
+- Public API + caveats: [`packages/sdk/src/namespaces/offline.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/namespaces/offline.ts)
 - Request / prepared types: [`packages/sdk/src/types/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/offline-signing.ts)
 - Signer contract (for the adapter alternative): [`packages/sdk/src/types/signer.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/signer.ts)
 - Provider contract (nonce/fees/broadcast): [`packages/sdk/src/types/provider.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/provider.ts)
