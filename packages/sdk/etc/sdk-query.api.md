@@ -80,16 +80,6 @@ export interface BatchDecryptResult {
 }
 
 // @public
-export function broadcastMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.broadcast"], BroadcastParams, TransactionResult>;
-
-// @public
-export interface BroadcastParams {
-    // Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
-    readonly preparedTx: PreparedTransaction;
-    readonly signedTx: Hex;
-}
-
-// @public
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
 
 // @public
@@ -619,23 +609,6 @@ export class Permits {
 }
 
 // @public
-export function prepareMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.prepare"], PrepareParams, PrepareResult>;
-
-// @public
-export interface PrepareParams {
-    // Warning: (ae-forgotten-export) The symbol "OfflineSigningOptions" needs to be exported by the entry point index.d.ts
-    readonly options?: OfflineSigningOptions;
-    // Warning: (ae-forgotten-export) The symbol "PrepareTransactionRequest" needs to be exported by the entry point index.d.ts
-    readonly request: PrepareTransactionRequest;
-}
-
-// Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
-//
-// @public
-export type PrepareResult = PreparedFor<TransactionKind>;
-
-// @public
 export interface QueryClientLike {
     invalidateQueries(filters: QueryFilterLike): void | Promise<void>;
     removeQueries(filters: QueryFilterLike): void;
@@ -756,14 +729,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
 // @public
 export interface SignerQueryContext {
     walletAccount?: WalletAccount;
-}
-
-// @public
-export function signMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.sign"], SignParams, Hex>;
-
-// @public
-export interface SignParams {
-    readonly preparedTx: PreparedTransaction;
 }
 
 // @public
