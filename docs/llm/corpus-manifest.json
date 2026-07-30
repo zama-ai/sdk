@@ -92,7 +92,7 @@
       "source_type": "official-doc",
       "category": "changelog",
       "logical_path": "changelog/alpha",
-      "description": "Unreleased changes on the prerelease (alpha) line — not yet in a stable release. Currently the internal @fhevm/sdk backend migration and its FHE runtime/client tuning knobs.",
+      "description": "Unreleased changes on the prerelease (alpha) line — not yet in a stable release.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -105,6 +105,18 @@
       "category": "changelog",
       "logical_path": "changelog/v3",
       "description": "Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:changelog/v3-4",
+      "title": "3.4.x",
+      "source_path": "docs/gitbook/src/changelog/v3-4.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-4.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/v3-4",
+      "description": "Release notes for the 3.4.x line.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

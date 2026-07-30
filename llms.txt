@@ -126,8 +126,9 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 
 ### Changelog
 
-- [Alpha](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/alpha.md): Unreleased changes on the prerelease (alpha) line — not yet in a stable release. Currently the internal @fhevm/sdk backend migration and its FHE runtime/client tuning knobs.
+- [Alpha](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/alpha.md): Unreleased changes on the prerelease (alpha) line — not yet in a stable release.
 - [3.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3.md): Human-readable release notes for the 3.x line — what changed in each minor version of @zama-fhe/sdk and @zama-fhe/react-sdk, in plain language.
+- [3.4.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-4.md): Release notes for the 3.4.x line.
 - [3.3.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-3.md): confidentialTransferAndCall, automatic pending-unshield recovery, and typed decryption error causes.
 - [3.2.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-2.md): Configurable, silent-by-default logging; upgrade codemods; and a Wrap event decoding fix.
 - [3.1.x](https://raw.githubusercontent.com/zama-ai/sdk/main/docs/gitbook/src/changelog/v3-1.md): createConfig, transport factories, the provider/signer split, the Token/WrappedToken hierarchy, and top-level FHE primitives.
