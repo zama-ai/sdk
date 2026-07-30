@@ -1056,10 +1056,6 @@ export class WrappedToken extends Token {
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
-    // Warning: (ae-forgotten-export) The symbol "ShieldPlan" needs to be exported by the entry point index.d.ts
-    prepareShield(amount: bigint, options?: {
-        recipient?: Address;
-    }): Promise<ShieldPlan>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     underlying(): Promise<Address>;

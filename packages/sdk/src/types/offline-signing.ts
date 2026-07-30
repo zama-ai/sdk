@@ -110,9 +110,8 @@ export interface FinalizeUnwrapRequest {
  *
  * For USDT-style tokens that revert on a non-zero → non-zero approval,
  * callers must issue two `ApproveUnderlying` requests in sequence
- * (`amount: 0n` then `amount: N`). {@link WrappedToken.prepareShield} does not detect
- * this case; check existing allowance first when integrating with USDT-like
- * underlyings.
+ * (`amount: 0n` then `amount: N`); check existing allowance first when
+ * integrating with USDT-like underlyings.
  */
 export interface ApproveUnderlyingRequest {
   /** Discriminator tag. */

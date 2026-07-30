@@ -1,4 +1,4 @@
-import { type Address, getAddress, type Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import {
   allowanceContract,
   approveContract,
@@ -11,10 +11,6 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import { findUnwrapRequested } from "../events/onchain-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
-import type { EncryptedValue } from "../relayer/types";
-import type { RawLog } from "../types/transaction";
 import {
   DecryptionFailedError,
   ERC20ReadFailedError,
@@ -25,58 +21,27 @@ import {
   TransactionRevertedError,
   ZamaError,
 } from "../errors";
-import { isEncryptedValueZero } from "../utils/handles";
-import { toError } from "../utils";
-import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
-import { swallow } from "../utils/swallow";
-import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
-import { Token } from "./token";
+import { findUnwrapRequested } from "../events/onchain-events";
+import { ZamaSDKEvents } from "../events/sdk-events";
+import type { EncryptedValue } from "../relayer/types";
 import type {
-  ApproveUnderlyingRequest,
   GenericSigner,
   ShieldCallbacks,
   ShieldOptions,
   TransactionResult,
-  TransferAndCallRequest,
   UnshieldCallbacks,
   UnshieldOptions,
   UnwrapResult,
   WrapOptions,
-  WrapRequest,
 } from "../types";
-
-/**
- * Multi-step shield plan returned by {@link WrappedToken.prepareShield}. Each
- * step is a `PrepareTransactionRequest` the caller passes to
- * {@link Offline.prepare} in order. Preparing immediately before signing
- * keeps nonces fresh.
- *
- * Non-ERC-1363 underlyings need an `approve` (sometimes preceded by a
- * USDT-style zero-reset) followed by a `wrap`; the routing decision depends
- * on an on-chain `isPayable()` probe + a live `allowance()` read. The
- * discriminated tuple shape below makes (path, steps.length) inseparable at
- * the type level — `transferAndCall`-with-two-steps and similar illegal
- * combinations are unrepresentable.
- *
- * The `approveAndWrap` arm has three sub-shapes mirroring the atomic
- * `#ensureAllowance` decision tree:
- *
- * - `[Wrap]` — the user already has sufficient allowance; skip approve.
- * - `[Approve, Wrap]` — current allowance is zero; approve target, then wrap.
- * - `[Approve(0), Approve, Wrap]` — non-zero allowance below target. Reset
- *   first because USDT-style tokens revert on a non-zero → non-zero approve
- *   and the zero-reset also mitigates the ERC-20 approve race.
- */
-export type ShieldPlan =
-  | { readonly path: "transferAndCall"; readonly steps: readonly [TransferAndCallRequest] }
-  | {
-      readonly path: "approveAndWrap";
-      readonly steps:
-        | readonly [WrapRequest]
-        | readonly [ApproveUnderlyingRequest, WrapRequest]
-        | readonly [ApproveUnderlyingRequest, ApproveUnderlyingRequest, WrapRequest];
-    };
+import type { RawLog } from "../types/transaction";
+import { toError } from "../utils";
+import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
+import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { isEncryptedValueZero } from "../utils/handles";
+import { swallow } from "../utils/swallow";
+import { clearPendingUnshield, loadPendingUnshield, savePendingUnshield } from "./pending-unshield";
+import { Token } from "./token";
 
 /**
  * Confidential ERC-20 wrapper (ERC-7984 ERC20Wrapper).
@@ -330,84 +295,6 @@ export class WrappedToken extends Token {
       config: wrapContract(this.address, recipient, amount),
       onSubmitted: options?.onShieldSubmitted,
     });
-  }
-
-  /**
-   * Build an offline-signing plan for {@link shield}. Routes between the
-   * single-tx ERC-1363 `transferAndCall` path and the two-tx `approve + wrap`
-   * path the same way the atomic `shield` does. The caller runs each step in
-   * order — preparing each one immediately before signing keeps nonces fresh.
-   *
-   * Signer-optional: works without a configured signer (the canonical
-   * cross-process custody shape).
-   *
-   * @example
-   * ```ts
-   * const plan = await wrappedToken.prepareShield(1_000n);
-   * for (const step of plan.steps) {
-   *   const prepared = await sdk.offline.prepare(step);
-   *   const signed   = await externalSigner.signTransaction(prepared.unsignedTx);
-   *   await sdk.offline.broadcast(prepared, signed);
-   * }
-   * ```
-   */
-  async prepareShield(amount: bigint, options?: { recipient?: Address }): Promise<ShieldPlan> {
-    const account = await requireAlignedWalletAccount(
-      "prepareShield",
-      this.sdk.signer,
-      this.sdk.provider,
-    );
-    const userAddress = getAddress(account.address);
-    const recipient = options?.recipient ? getAddress(options.recipient) : userAddress;
-    const underlying = await this.#getUnderlying();
-    const isPayable = await this.isPayable();
-    if (isPayable) {
-      const recipientData: Hex = recipient === userAddress ? "0x" : recipient;
-      return {
-        path: "transferAndCall",
-        steps: [
-          {
-            kind: "TransferAndCall",
-            from: userAddress,
-            underlying,
-            wrapper: this.address,
-            amount,
-            recipientData,
-          },
-        ],
-      };
-    }
-    const wrapStep = {
-      kind: "Wrap",
-      from: userAddress,
-      wrapper: this.address,
-      to: recipient,
-      amount,
-    } as const;
-    const allowance = await this.sdk.provider.readContract(
-      allowanceContract(underlying, userAddress, this.address),
-    );
-    if (allowance >= amount) {
-      return { path: "approveAndWrap", steps: [wrapStep] };
-    }
-    const approveStep = {
-      kind: "ApproveUnderlying",
-      from: userAddress,
-      underlying,
-      spender: this.address,
-      amount,
-    } as const;
-    if (allowance > 0n) {
-      const resetStep = {
-        kind: "ApproveUnderlying",
-        from: userAddress,
-        underlying,
-        spender: this.address,
-        amount: 0n,
-      } as const;
-      return { path: "approveAndWrap", steps: [resetStep, approveStep, wrapStep] };
-    }
-    return { path: "approveAndWrap", steps: [approveStep, wrapStep] };
   }
 
   /**

@@ -14146,15 +14146,6 @@ export interface ShieldOptions extends ShieldCallbacks {
 export type ShieldPath = "transferAndCall" | "approveAndWrap";
 
 // @public
-export type ShieldPlan = {
-    readonly path: "transferAndCall";
-    readonly steps: readonly [TransferAndCallRequest];
-} | {
-    readonly path: "approveAndWrap";
-    readonly steps: readonly [WrapRequest] | readonly [ApproveUnderlyingRequest, WrapRequest] | readonly [ApproveUnderlyingRequest, ApproveUnderlyingRequest, WrapRequest];
-};
-
-// @public
 export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
     txHash: Hex;
@@ -19454,9 +19445,6 @@ export class WrappedToken extends Token {
     finalizeUnwrap(unwrapRequestId: EncryptedValue): Promise<TransactionResult>;
     getPendingUnshield(): Promise<Hex | null>;
     isPayable(): Promise<boolean>;
-    prepareShield(amount: bigint, options?: {
-        recipient?: Address;
-    }): Promise<ShieldPlan>;
     resumeUnshield(unwrapTxHash: Hex, callbacks?: UnshieldCallbacks): Promise<TransactionResult>;
     shield(amount: bigint, options?: ShieldOptions): Promise<TransactionResult>;
     underlying(): Promise<Address>;

@@ -538,6 +538,8 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
     requestFor: (from: Address) => PrepareTransactionRequest;
     event: ZamaSDKEventInput["type"];
     kind: string;
+    /** Extra discriminator fields the event shape requires beyond `type`/`txHash`. */
+    extra?: Record<string, unknown>;
   };
   const cases: ReadonlyArray<Expectation> = [
     {
@@ -578,11 +580,25 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
         amount: 1n,
       }),
       event: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      extra: { step: "approve" },
+    },
+    {
+      kind: "ApproveUnderlying (zero-reset)",
+      requestFor: (from) => ({
+        kind: "ApproveUnderlying",
+        from,
+        underlying: TOKEN,
+        spender: RECIPIENT,
+        amount: 0n,
+      }),
+      event: ZamaSDKEvents.ApproveUnderlyingSubmitted,
+      extra: { step: "reset" },
     },
     {
       kind: "Wrap",
       requestFor: (from) => ({ kind: "Wrap", from, wrapper: TOKEN, to: RECIPIENT, amount: 1n }),
       event: ZamaSDKEvents.ShieldSubmitted,
+      extra: { shieldPath: "approveAndWrap" },
     },
     {
       kind: "TransferAndCall",
@@ -594,6 +610,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
         amount: 1n,
       }),
       event: ZamaSDKEvents.ShieldSubmitted,
+      extra: { shieldPath: "transferAndCall" },
     },
     {
       kind: "DelegateDecryption",
@@ -619,7 +636,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
     },
   ];
 
-  for (const { kind, requestFor, event } of cases) {
+  for (const { kind, requestFor, event, extra } of cases) {
     test(`broadcast emits the ${event} event for ${kind}`, async ({
       createSDK,
       signer,
@@ -630,7 +647,7 @@ describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
       const prepared = await sdk.offline.prepare(requestFor(userAddress));
       await sdk.offline.broadcast(prepared, SIGNED);
       expect(onEvent).toHaveBeenCalledWith(
-        expect.objectContaining({ type: event, txHash: TX_HASH }),
+        expect.objectContaining({ type: event, txHash: TX_HASH, ...extra }),
       );
     });
   }

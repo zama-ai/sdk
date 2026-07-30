@@ -27,7 +27,7 @@ import {
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
-import { ZamaSDKEvents } from "../events/sdk-events";
+import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
 import { assertSignTransaction } from "../signer/capabilities";
 import type {
   ApproveUnderlyingRequest,
@@ -99,20 +99,6 @@ export interface OfflineSigningOptions {
   /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
   readonly gasLimit?: bigint;
 }
-
-const SUBMITTED_EVENT_BY_KIND: Record<TransactionKind, ZamaSDKEventInput["type"]> = {
-  ConfidentialTransfer: ZamaSDKEvents.TransferSubmitted,
-  ConfidentialTransferFrom: ZamaSDKEvents.TransferFromSubmitted,
-  SetOperator: ZamaSDKEvents.SetOperatorSubmitted,
-  Unwrap: ZamaSDKEvents.UnwrapSubmitted,
-  UnwrapAll: ZamaSDKEvents.UnwrapSubmitted,
-  FinalizeUnwrap: ZamaSDKEvents.FinalizeUnwrapSubmitted,
-  ApproveUnderlying: ZamaSDKEvents.ApproveUnderlyingSubmitted,
-  Wrap: ZamaSDKEvents.ShieldSubmitted,
-  TransferAndCall: ZamaSDKEvents.ShieldSubmitted,
-  DelegateDecryption: ZamaSDKEvents.DelegationSubmitted,
-  RevokeDelegation: ZamaSDKEvents.RevokeDelegationSubmitted,
-};
 
 const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionOperation> = {
   ConfidentialTransfer: "transfer",
@@ -498,8 +484,15 @@ export class OfflineSigningService {
   }
 
   #emitSubmitted(prepared: PreparedTransaction, txHash: Hex): void {
-    const type = SUBMITTED_EVENT_BY_KIND[prepared.kind];
-    this.#emitEvent({ type, txHash } as ZamaSDKEventInput, prepared.to);
+    const operation = this.#submittedOperation(prepared);
+    this.#emitEvent(transactionOperationMetadata[operation].submittedEvent(txHash), prepared.to);
+  }
+
+  #submittedOperation(prepared: PreparedTransaction): TransactionOperation {
+    if (prepared.request.kind === "ApproveUnderlying" && prepared.request.amount === 0n) {
+      return "approveUnderlying:reset";
+    }
+    return ERROR_OPERATION_BY_KIND[prepared.kind];
   }
 
   #emitTransactionError(prepared: PreparedTransaction, error: unknown): void {

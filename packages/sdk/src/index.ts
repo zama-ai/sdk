@@ -75,13 +75,7 @@ export type {
 export type { DelegationStatus } from "./services/delegation-service";
 export { WrappersRegistry, DefaultRegistryAddresses } from "./wrappers-registry";
 export type { WrappersRegistryConfig, ListPairsOptions } from "./wrappers-registry";
-export {
-  Token,
-  WrappedToken,
-  type BatchBalancesResult,
-  type BatchDecryptAsOptions,
-  type ShieldPlan,
-} from "./token";
+export { Token, WrappedToken, type BatchBalancesResult, type BatchDecryptAsOptions } from "./token";
 export { ZERO_ENCRYPTED_VALUE, isEncryptedValueZero } from "./utils/handles";
 export {
   MemoryStorage,

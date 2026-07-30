@@ -1,6 +1,6 @@
 ---
 title: Alpha
-description: Unreleased changes on the prerelease (alpha) line — not yet in a stable release. Currently the internal @fhevm/sdk backend migration and its FHE runtime/client tuning knobs.
+description: Unreleased changes on the prerelease (alpha) line — not yet in a stable release. Currently the internal @fhevm/sdk backend migration with its FHE runtime/client tuning knobs, and the offline-signing pipeline for institutional custody.
 ---
 
 # Alpha
@@ -83,6 +83,31 @@ web({
 ```
 
 `timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](../guides/authentication.md) for the auth methods and [Configuration](../guides/configuration.md) for the full config reference.
+
+## Offline signing (institutional custody)
+
+A new `sdk.offline.*` namespace splits a transaction into three separately-invocable phases — `prepare`, `sign`, `broadcast` — for institutional custody, HSM, and policy-engine workflows where the three cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route for signers that expose `signTransaction` instead of `writeContract`.
+
+```ts
+const prepared = await sdk.offline.prepare({
+  kind: "ConfidentialTransfer",
+  from: custodyAddress,
+  token,
+  to: recipient,
+  amount: 1_000n,
+}); // → RLP-encoded unsigned tx + { from, to, chainId }
+
+// Sign out-of-process (HSM, custody API, policy engine), then broadcast the
+// returned signed bytes:
+await sdk.offline.broadcast(prepared, signedTx);
+```
+
+- **Signer.** `GenericSigner.writeContract` is now optional; a new optional `signTransaction(unsignedTx)` covers the deferred path. Wrap a custodian's API client by extending `BaseSigner` — keys never enter the SDK.
+- **Provider.** `GenericProvider` gains `sendRawTransaction(signedTx)` and `prepareTransaction({ from, call })` (builds the RLP-encoded EIP-1559 unsigned tx), wired in the viem, ethers, and wagmi adapters.
+
+{% hint style="info" %}
+**Transactions only, for now.** The offline path covers write operations (transfer, set-operator, unwrap, the shield legs, delegation, …). Producing a decryption [permit](../concepts/permit-model.md) through a decompose-and-sign pipeline is not yet available — the permit build-and-sign is still bundled in the backend. For custody decryption today, route the permit envelope through a `BaseSigner` whose async `signTypedData` awaits your custody / policy engine, then call `sdk.permits.grantPermit(contracts)`.
+{% endhint %}
 
 ## Bug fixes
 
