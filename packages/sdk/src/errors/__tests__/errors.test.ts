@@ -239,6 +239,15 @@ describe("wrapSigningError", () => {
     );
   });
 
+  test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
+    // verifyTkmsPublicKey throws this when a stored key pair can't be re-derived
+    // under the current TKMS version — a self-heal signal, not a signing failure.
+    const original = new Error("invalid TransportKeyPairKeyPair");
+    expect(() => wrapSigningError(original, "Credential signing failed")).toThrow(
+      expect.objectContaining({ code: ZamaErrorCode.InvalidTransportKeyPair, cause: original }),
+    );
+  });
+
   test("includes original message in SigningRejectedError message", () => {
     const original = Object.assign(new Error("user denied"), { code: 4001 });
     expect(() => wrapSigningError(original, "ctx")).toThrow("ctx: user denied");

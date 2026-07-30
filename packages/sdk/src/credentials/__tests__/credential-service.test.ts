@@ -4,6 +4,7 @@ import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/cha
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -82,6 +83,39 @@ describe("CredentialService.allow", () => {
   });
 });
 
+describe("CredentialService transport-key-pair self-heal", () => {
+  test("evicts the stale key pair and throws a typed error when the relayer rejects it", async ({
+    credentialService,
+    relayer,
+  }) => {
+    await credentialService.grantPermit([]); // warm: generate + store one key pair
+    // The relayer can't re-derive the stored key pair (e.g. post KMS/TKMS rotation).
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(
+      new Error("invalid TransportKeyPairKeyPair"),
+    );
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(
+      InvalidTransportKeyPairError,
+    );
+    // Eviction cleared the cache but did not itself regenerate.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    // Self-heal: the next resolution regenerates a fresh key pair and succeeds.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not evict on an unrelated signing failure", async ({ credentialService, relayer }) => {
+    await credentialService.grantPermit([]);
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(new Error("network glitch"));
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(SigningFailedError);
+    // Key pair left intact → the next grant reuses it, no regeneration.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+});
+
 describe("CredentialService chain switching", () => {
   test("signs permits against the active chain's relayer after switchChain", async ({
     createCredentialService,
@@ -100,12 +134,12 @@ describe("CredentialService chain switching", () => {
     const credentialService = createCredentialService({ router });
 
     await credentialService.grantPermit([A]);
-    expect(relayerA.signLegacyDecryptionPermit).toHaveBeenCalledOnce();
-    expect(relayerB.signLegacyDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayerA.signDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signDecryptionPermit).not.toHaveBeenCalled();
 
     router.switchChain(2);
     await credentialService.grantPermit([B]);
-    expect(relayerB.signLegacyDecryptionPermit).toHaveBeenCalledOnce();
+    expect(relayerB.signDecryptionPermit).toHaveBeenCalledOnce();
   });
 
   test("permits are keyed by the router chain, not the wallet account", async ({

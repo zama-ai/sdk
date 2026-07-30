@@ -9,9 +9,9 @@ import {
   createFhevmCleartextEncryptClient,
 } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
-import { toFhevmAuth } from "../chains/to-fhevm-auth";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
+import { ConfigurationError } from "../errors";
 import type {
   FhevmBaseClient,
   FhevmClient,
@@ -110,7 +110,7 @@ export class FhevmRelayer implements RelayerSDK {
   }
 
   #initEncrypt = (): Promise<void> => {
-    this.#encryptInitPromise ??= this.#encrypt
+    this.#encryptInitPromise ??= this.#base
       .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
       .then(() => this.#encrypt.init());
     return this.#encryptInitPromise;
@@ -231,7 +231,7 @@ export class FhevmRelayer implements RelayerSDK {
    * to the ephemeral transport key pair, gated by the signed permit, and this
    * returns the typed clear value. Build the key pair with
    * {@link generateTransportKeyPair} and the permit with
-   * {@link signLegacyDecryptionPermit}.
+   * {@link signDecryptionPermit}.
    *
    * @example
    * ```ts
@@ -328,7 +328,7 @@ export class FhevmRelayer implements RelayerSDK {
    *
    * @example
    * ```ts
-   * const signedPermit = await relayer.signLegacyDecryptionPermit({
+   * const signedPermit = await relayer.signDecryptionPermit({
    *   transportKeyPair,
    *   contractAddresses: ["0xToken…"],
    *   startTimestamp: Math.floor(Date.now() / 1000),
@@ -339,9 +339,9 @@ export class FhevmRelayer implements RelayerSDK {
    * });
    * ```
    */
-  signLegacyDecryptionPermit: FhevmClient["signLegacyDecryptionPermit"] = async (parameters) => {
+  signDecryptionPermit: FhevmClient["signDecryptionPermit"] = async (parameters) => {
     await this.#base.init();
-    return this.#base.signLegacyDecryptionPermit(parameters);
+    return this.#base.signDecryptionPermit(parameters);
   };
 
   // Permit/key-pair helpers carry no request options. Parsing initializes the
@@ -417,7 +417,7 @@ export class FhevmRelayer implements RelayerSDK {
    * Generates a fresh ephemeral transport key pair for a user-decrypt session.
    * The relayer re-encrypts decrypted values to this pair's public key, so only
    * the holder of the private key can read them; bind it to a permit via
-   * {@link signLegacyDecryptionPermit}.
+   * {@link signDecryptionPermit}.
    *
    * @example
    * ```ts
@@ -428,4 +428,26 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#decrypt.init();
     return this.#decrypt.generateTransportKeyPair();
   };
+}
+
+/**
+ * Translates the SDK's public {@link FheChain.auth} shape (discriminated by
+ * `__type`) into the `type`-discriminated `auth` that `@fhevm/sdk` expects.
+ *
+ * @throws if the auth discriminator is not one of the supported kinds.
+ */
+function toFhevmAuth(
+  auth: NonNullable<FheChain["auth"]>,
+): NonNullable<FhevmRelayerOptions["auth"]> {
+  const type = auth["__type"];
+  switch (type) {
+    case "ApiKeyHeader":
+      return { type, value: auth.value, header: auth.header };
+    case "ApiKeyCookie":
+      return { type, value: auth.value, cookie: auth.cookie };
+    case "BearerToken":
+      return { type, token: auth.token };
+    default:
+      throw new ConfigurationError(`Unknown auth type: ${String(type)}`);
+  }
 }

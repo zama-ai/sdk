@@ -183,7 +183,7 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: ^0.13.2
+        specifier: 0.13.2
         version: 0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'

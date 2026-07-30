@@ -644,7 +644,7 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signLegacyDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
 }
 
@@ -677,6 +677,7 @@ export function revokePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
+    tkmsVersion?: string;
 }
 
 // @public

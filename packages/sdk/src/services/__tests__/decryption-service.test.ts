@@ -1,6 +1,11 @@
 import { getAddress, type Address } from "viem";
 import { MAX_UINT64 } from "../../contracts";
-import { DelegationNotPropagatedError, NotEntitledError, RpcRateLimitError } from "../../errors";
+import {
+  DelegationNotPropagatedError,
+  InvalidTransportKeyPairError,
+  NotEntitledError,
+  RpcRateLimitError,
+} from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
 import { describe, expect, test, vi } from "../../test-fixtures";
@@ -29,8 +34,33 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[ZERO_ENCRYPTED_VALUE, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n });
-    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
+  });
+
+  test("evicts the transport key pair and surfaces a typed error when the relayer rejects it", async ({
+    decryptionService,
+    credentialService,
+    relayer,
+    userAddress,
+  }) => {
+    // Pre-cache a permit so grantPermit resolves without re-signing — the first
+    // parseTransportKeyPair of the flow then happens inside the decrypt path.
+    await credentialService.grantPermit([CONTRACT_A]);
+    const generateCalls = vi.mocked(relayer.generateTransportKeyPair).mock.calls.length;
+
+    // The relayer can no longer re-derive the stored key pair (post KMS/TKMS rotation).
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(
+      new Error("invalid TransportKeyPairKeyPair"),
+    );
+
+    await expect(
+      decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+    ).rejects.toBeInstanceOf(InvalidTransportKeyPairError);
+
+    // Self-heal: the stale key pair was evicted, so the next resolution regenerates.
+    await credentialService.grantPermit([CONTRACT_B]);
+    expect(vi.mocked(relayer.generateTransportKeyPair).mock.calls.length).toBe(generateCalls + 1);
   });
 
   test("decryptValues decrypts uncached handles grouped by contract and writes cache", async ({
@@ -143,7 +173,7 @@ describe("DecryptionService", () => {
     await expect(
       decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 42n });
-    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 
@@ -166,7 +196,7 @@ describe("DecryptionService", () => {
       ),
     ).resolves.toEqual({ [ZERO_ENCRYPTED_VALUE]: 0n, [HANDLE_B]: 20n });
 
-    expect(relayer.signLegacyDecryptionPermit).toHaveBeenCalledWith(
+    expect(relayer.signDecryptionPermit).toHaveBeenCalledWith(
       expect.objectContaining({ contractAddresses: [CONTRACT_A, CONTRACT_B] }),
     );
     expect(relayer.decryptValues).toHaveBeenCalledWith(
@@ -215,7 +245,7 @@ describe("DecryptionService", () => {
         userAddress,
       ),
     ).rejects.toMatchObject({ code: "DELEGATION_NOT_FOUND" });
-    expect(relayer.signLegacyDecryptionPermit).not.toHaveBeenCalled();
+    expect(relayer.signDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.decryptValues).not.toHaveBeenCalled();
   });
 

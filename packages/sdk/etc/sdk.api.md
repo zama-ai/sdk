@@ -12591,7 +12591,7 @@ export class RelayerRequestFailedError extends ZamaError {
 }
 
 // @public
-export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signLegacyDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
+export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
 }
 
@@ -12869,6 +12869,7 @@ export interface SerializedPermitEip712 {
 export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
+    tkmsVersion?: string;
 }
 
 // @public

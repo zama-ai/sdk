@@ -10,7 +10,7 @@ const clients = vi.hoisted(() => {
       checkSignaturesArgs: { handlesList: [], abiEncodedCleartexts: "0x", decryptionProof: "0x" },
     })),
     fetchFheEncryptionKeyBytes: vi.fn(async () => new Uint8Array()),
-    signLegacyDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
+    signDecryptionPermit: vi.fn(async () => ({ signature: "0x" })),
     serializeTransportKeyPair: vi.fn(async () => "serialized-keypair"),
     serializeSignedDecryptionPermit: vi.fn(async () => "serialized-permit"),
     parseTransportKeyPair: vi.fn(async () => ({ publicKey: "0x" })),
@@ -75,7 +75,7 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.baseClient.init).toHaveBeenCalledOnce();
     expect(clients.decryptClient.init).not.toHaveBeenCalled();
     expect(clients.encryptClient.init).not.toHaveBeenCalled();
-    expect(clients.encryptClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
   });
 
   test("private decrypt initializes only the decrypt client", async () => {
@@ -85,7 +85,7 @@ describe("FhevmRelayer capability initialization", () => {
     expect(clients.decryptClient.init).toHaveBeenCalledOnce();
     expect(clients.baseClient.init).not.toHaveBeenCalled();
     expect(clients.encryptClient.init).not.toHaveBeenCalled();
-    expect(clients.encryptClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
   });
 
   test("transport key parsing initializes only the decrypt client", async () => {
@@ -94,7 +94,7 @@ describe("FhevmRelayer capability initialization", () => {
 
     expect(clients.decryptClient.init).toHaveBeenCalledOnce();
     expect(clients.decryptClient.parseTransportKeyPair).toHaveBeenCalledOnce();
-    expect(clients.encryptClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -116,7 +116,7 @@ describe("FhevmRelayer capability initialization", () => {
       const relayer = new FhevmRelayer({ chain: { ...anvil, auth } });
       await relayer.encryptValues(encryptArgs);
 
-      expect(clients.encryptClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
+      expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledWith({
         options: { auth: expected },
       });
       expect(clients.encryptClient.init).toHaveBeenCalledOnce();
@@ -129,8 +129,7 @@ describe("FhevmRelayer capability initialization", () => {
     const relayer = new FhevmRelayer({ chain: anvil });
     await relayer.encryptValues(encryptArgs);
 
-    const [prefetchOrder] =
-      clients.encryptClient.fetchFheEncryptionKeyBytes.mock.invocationCallOrder;
+    const [prefetchOrder] = clients.baseClient.fetchFheEncryptionKeyBytes.mock.invocationCallOrder;
     const [initOrder] = clients.encryptClient.init.mock.invocationCallOrder;
     expect(prefetchOrder).toBeLessThan(initOrder as number);
   });
@@ -141,7 +140,7 @@ describe("FhevmRelayer capability initialization", () => {
 
     // The compound prefetch-then-init is memoized on the relayer, so two
     // concurrent encrypt calls warm the encryption capability exactly once.
-    expect(clients.encryptClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledOnce();
+    expect(clients.baseClient.fetchFheEncryptionKeyBytes).toHaveBeenCalledOnce();
     expect(clients.encryptClient.init).toHaveBeenCalledOnce();
   });
 
@@ -264,12 +263,12 @@ describe("FhevmRelayer request options", () => {
     }
   });
 
-  test("signLegacyDecryptionPermit forwards parameters without request options", async () => {
+  test("signDecryptionPermit forwards parameters without request options", async () => {
     const relayer = new FhevmRelayer({ chain: anvil, options: { timeout: 5_000 } });
     const params = { verifyingContract: CONTRACT } as never;
-    await relayer.signLegacyDecryptionPermit(params);
+    await relayer.signDecryptionPermit(params);
 
-    expect(clients.baseClient.signLegacyDecryptionPermit).toHaveBeenCalledWith(params);
+    expect(clients.baseClient.signDecryptionPermit).toHaveBeenCalledWith(params);
   });
 });
 
