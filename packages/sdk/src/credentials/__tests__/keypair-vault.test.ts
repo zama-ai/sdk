@@ -84,6 +84,58 @@ describe("TransportKeyPairVault", () => {
     );
   });
 
+  test("persists and round-trips the generator's tkmsVersion", async () => {
+    const vault = new TransportKeyPairVault({
+      generator: async () => ({
+        publicKey: PUBLIC_KEY as unknown as SerializeTransportKeyPairReturnType["publicKey"],
+        privateKey: PRIVATE_KEY as unknown as SerializeTransportKeyPairReturnType["privateKey"],
+        tkmsVersion: "v1",
+      }),
+      storage: new MemoryStorage(),
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+    });
+
+    const created = await vault.getOrCreate(USER);
+    expect(created.tkmsVersion).toBe("v1");
+    // Survives the schema round-trip on read (the field must not be stripped).
+    expect((await vault.readStored(USER))?.tkmsVersion).toBe("v1");
+  });
+
+  test("stores no tkmsVersion when the generator omits it", async ({ vault }) => {
+    const created = await vault.getOrCreate(USER);
+    expect(created.tkmsVersion).toBeUndefined();
+    expect(await vault.readStored(USER)).not.toHaveProperty("tkmsVersion");
+  });
+
+  test("evict() forces regeneration on the next getOrCreate", async ({ vault }) => {
+    const before = await vault.getOrCreate(USER);
+    await vault.evict(USER);
+    expect(await vault.readStored(USER)).toBeNull();
+
+    const after = await vault.getOrCreate(USER);
+    expect(after).not.toEqual(before);
+  });
+
+  test("evict() is scope-aware and drops the shared key regardless of address", async () => {
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage: new MemoryStorage(),
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-a",
+    });
+    const before = await vault.getOrCreate(USER);
+
+    // Unlike clear() (per-signer), evict() targets the scope identity — so a
+    // different signer address still removes the shared key the whole scope reads.
+    await vault.evict(OTHER);
+    expect(await vault.readStored(USER)).toBeNull();
+
+    const after = await vault.getOrCreate(USER);
+    expect(after).not.toEqual(before);
+  });
+
   test("treats malformed stored data as a cache miss and regenerates", async () => {
     const storage = new MemoryStorage();
     const vault = new TransportKeyPairVault({

@@ -1,6 +1,6 @@
 import type { ZamaError } from "./base";
 import { DecryptionFailedError } from "./encryption";
-import { NoCiphertextError } from "./credential";
+import { InvalidTransportKeyPairError, NoCiphertextError } from "./credential";
 import { RelayerRequestFailedError } from "./relayer";
 import { DelegationNotPropagatedError } from "./delegation";
 import { NotEntitledError } from "./entitlement";
@@ -10,6 +10,7 @@ import {
   extractHttpStatus,
   extractRetryAfter,
   hasStructuredRpcRateLimitSignal,
+  isInvalidTransportKeyPairMessage,
   isNotEntitledMessage,
   isRelayerError,
   isRelayerTimeoutError,
@@ -52,6 +53,7 @@ export const DECRYPT_PASSTHROUGH_ERROR_TYPES = [
   SigningFailedError,
   NotEntitledError,
   RpcRateLimitError,
+  InvalidTransportKeyPairError,
 ] as const;
 
 /**
@@ -75,6 +77,12 @@ export function wrapDecryptError(
   }
 
   const message = error instanceof Error ? error.message : fallbackMessage;
+
+  // Stale transport key pair the relayer can't re-derive (post KMS/TKMS rotation).
+  // Typed so the decrypt path can evict the vault entry and regenerate on retry.
+  if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+    return new InvalidTransportKeyPairError(error.message, { cause: error });
+  }
 
   // Actor not entitled (ACL). The relayer throws a message-only Error; the handle
   // is parseable from it and the contract/account come from the request context

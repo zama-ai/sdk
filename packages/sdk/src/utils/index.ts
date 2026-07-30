@@ -3,6 +3,7 @@ export {
   isContractCallError,
   isRpcRateLimitError,
   isNotEntitledMessage,
+  isInvalidTransportKeyPairMessage,
   parseHandleFromMessage,
   extractRetryAfter,
   extractHttpStatus,

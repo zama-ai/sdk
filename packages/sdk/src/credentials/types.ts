@@ -12,6 +12,13 @@ export interface SerializedTransportKeyPair {
   publicKey: Hex;
   /** ML-KEM private key, hex-encoded (plaintext — treat as sensitive). */
   privateKey: Hex;
+  /**
+   * The TKMS version the key pair was generated under, passed back to
+   * `parseTransportKeyPair` so the private key deserializes under the right
+   * version after a KMS/TKMS rotation. Optional — key pairs serialized before
+   * this tag existed carry none.
+   */
+  tkmsVersion?: string;
 }
 
 /**
@@ -27,6 +34,8 @@ export interface StoredTransportKeyPair {
   privateKey: Hex;
   createdAt: number;
   expiresAt: number;
+  /** TKMS version the key pair was generated under; see {@link SerializedTransportKeyPair.tkmsVersion}. */
+  tkmsVersion?: string;
 }
 
 /** EIP-712 typed-data payload carried by a {@link SerializedPermit}. */

@@ -11,6 +11,7 @@ import {
 import { createPublicClient, custom, http } from "viem";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
+import { ConfigurationError } from "../errors";
 import type {
   FhevmBaseClient,
   FhevmClient,
@@ -20,7 +21,6 @@ import type {
   RelayerSDK,
   RelayerOptions,
 } from "./types";
-import { ConfigurationError } from "../errors";
 
 /** Construction config for {@link FhevmRelayer}. */
 export interface FhevmRelayerConfig {
@@ -78,13 +78,13 @@ export class FhevmRelayer implements RelayerSDK {
     this.#chain = config.chain;
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
+    const auth = this.#chain.auth ? toFhevmAuth(this.#chain.auth) : undefined;
+    const transport =
+      typeof this.#chain.network === "string"
+        ? http(this.#chain.network)
+        : custom(this.#chain.network);
     const params = {
-      publicClient: createPublicClient({
-        transport:
-          typeof this.#chain.network === "string"
-            ? http(this.#chain.network)
-            : custom(this.#chain.network),
-      }),
+      publicClient: createPublicClient({ transport }),
       chain: toFhevmChain(this.#chain),
       options: { batchRpcCalls, moduleVersions, fheEncryptionKey },
     };
@@ -98,7 +98,7 @@ export class FhevmRelayer implements RelayerSDK {
       this.#encrypt = createFhevmEncryptClient(params);
     }
     this.#defaultOptions = {
-      ...(this.#chain.auth !== undefined && { auth: toFhevmAuth(this.#chain.auth) }),
+      ...(auth !== undefined && { auth }),
       ...(timeout !== undefined && { timeout }),
       ...(debug !== undefined && { debug }),
     };
@@ -110,7 +110,7 @@ export class FhevmRelayer implements RelayerSDK {
   }
 
   #initEncrypt = (): Promise<void> => {
-    this.#encryptInitPromise ??= this.#encrypt
+    this.#encryptInitPromise ??= this.#base
       .fetchFheEncryptionKeyBytes({ options: this.#defaultOptions })
       .then(() => this.#encrypt.init());
     return this.#encryptInitPromise;
@@ -344,17 +344,19 @@ export class FhevmRelayer implements RelayerSDK {
     return this.#base.signDecryptionPermit(parameters);
   };
 
-  // Permit/key-pair helpers carry no request options. Parsing initializes the
-  // capability needed to validate the restored value; serialization stays local.
+  // Permit/key-pair helpers carry no request options. Parsing explicitly
+  // initializes the capability that validates the restored value; serialization
+  // resolves the frozen context internally (via initPublicAction), which reads
+  // on-chain state.
 
   /**
    * Serializes a transport key pair to a hex `{ publicKey, privateKey }` pair for
    * storage or transport, so a decryption session can resume without regenerating
-   * keys. Reverse of {@link parseTransportKeyPair}. Purely local — no round-trip.
+   * keys. Reverse of {@link parseTransportKeyPair}.
    *
    * @example
    * ```ts
-   * const stored = relayer.serializeTransportKeyPair({ transportKeyPair });
+   * const stored = await relayer.serializeTransportKeyPair({ transportKeyPair });
    * // { publicKey: "0x…", privateKey: "0x…" }
    * ```
    */
@@ -364,11 +366,11 @@ export class FhevmRelayer implements RelayerSDK {
   /**
    * Serializes a signed permit to a plain, JSON-stringifiable object (version,
    * EIP-712 payload, signature, signer) for caching or transport. Reverse of
-   * {@link parseSignedDecryptionPermit}. Purely local — no round-trip.
+   * {@link parseSignedDecryptionPermit}.
    *
    * @example
    * ```ts
-   * const serialized = relayer.serializeSignedDecryptionPermit({ signedPermit });
+   * const serialized = await relayer.serializeSignedDecryptionPermit({ signedPermit });
    * localStorage.setItem("permit", JSON.stringify(serialized));
    * ```
    */
@@ -430,6 +432,12 @@ export class FhevmRelayer implements RelayerSDK {
   };
 }
 
+/**
+ * Translates the SDK's public {@link FheChain.auth} shape (discriminated by
+ * `__type`) into the `type`-discriminated `auth` that `@fhevm/sdk` expects.
+ *
+ * @throws if the auth discriminator is not one of the supported kinds.
+ */
 function toFhevmAuth(
   auth: NonNullable<FheChain["auth"]>,
 ): NonNullable<FhevmRelayerOptions["auth"]> {

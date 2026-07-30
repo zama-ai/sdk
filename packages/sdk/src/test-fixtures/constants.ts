@@ -16,6 +16,7 @@ export const TEST_SIGNATURE = `0x${"33".repeat(65)}` as Hex;
 export const TEST_UNSIGNED_TX = "0xdeadbeef" as Hex;
 export const TEST_SIGNED_TX = "0xfeedface" as Hex;
 export const TEST_TX_HASH = `0x${"ab".repeat(32)}` as Hex;
+export const TEST_TKMS_VERSION = "13.20.0";
 
 export const TEST_ADDR_A = ACL;
 export const TEST_ADDR_B = DELEGATE;

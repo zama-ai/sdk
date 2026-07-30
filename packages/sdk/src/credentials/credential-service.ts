@@ -7,6 +7,7 @@ import { wrapSigningError } from "../errors/signing";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
+import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { TransportKeyPairVault } from "./keypair-vault";
 import { PermissionStore } from "./permission-store";
@@ -362,10 +363,7 @@ export class CredentialService {
     const isDelegated = scope.delegatorAddress !== scope.signerAddress;
     const relayer = this.#router.relayer;
     try {
-      const transportKeyPair = await relayer.parseTransportKeyPair({
-        publicKey: keypair.publicKey,
-        privateKey: keypair.privateKey,
-      });
+      const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
       const permitInput = {
         transportKeyPair,
         contractAddresses: chunk,
@@ -382,7 +380,7 @@ export class CredentialService {
         : await relayer.signDecryptionPermit(permitInput);
 
       const serializedPermit = SerializedPermitSchema.parse(
-        relayer.serializeSignedDecryptionPermit({ signedPermit }),
+        await relayer.serializeSignedDecryptionPermit({ signedPermit }),
       );
 
       return {
@@ -396,7 +394,28 @@ export class CredentialService {
       if (error instanceof ZamaError) {
         throw error;
       }
+      // A key pair the relayer can't re-derive (post KMS/TKMS rotation) is
+      // unusable: evict it so the next grantPermit regenerates a valid one, then
+      // surface the typed InvalidTransportKeyPairError via wrapSigningError.
+      if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+        await this.#vault.evict(scope.signerAddress);
+      }
       throw wrapSigningError(error, "Credential signing failed");
     }
+  }
+
+  /**
+   * Evict the current signer's transport key pair so the next credential
+   * resolution regenerates it — the self-heal hook the decrypt path calls when
+   * the relayer rejects the stored key pair as invalid (see
+   * {@link InvalidTransportKeyPairError}). No-op when no wallet is connected;
+   * best-effort, never throws.
+   */
+  async evictTransportKeyPair(): Promise<void> {
+    const account = this.#signer?.walletAccount.getSnapshot();
+    if (!account) {
+      return;
+    }
+    await this.#vault.evict(checksum(account.address));
   }
 }

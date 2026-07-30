@@ -228,6 +228,18 @@ export function isNotEntitledMessage(message: string): boolean {
   return message.toLowerCase().includes("is not authorized to decrypt handle");
 }
 
+/**
+ * `@fhevm/sdk`'s `verifyTkmsPublicKey` throws `invalid TransportKeyPairKeyPair`
+ * when a stored transport key pair can't be re-derived under the current TKMS
+ * version — the signal that the persisted key pair is stale (typically after a
+ * KMS/TKMS rotation) and must be evicted and regenerated. Matching it lets the
+ * signing and decrypt paths surface a typed {@link InvalidTransportKeyPairError}
+ * and self-heal the vault entry.
+ */
+export function isInvalidTransportKeyPairMessage(message: string): boolean {
+  return message.toLowerCase().includes("invalid transportkeypair");
+}
+
 /** Parse the on-chain handle out of the not-entitled message. */
 export function parseHandleFromMessage(message: string): string | undefined {
   return /handle (0x[0-9a-fA-F]{64})/.exec(message)?.[1];

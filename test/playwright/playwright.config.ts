@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
-import { NEXTJS_ANVIL_PORT, NEXTJS_PORT, VITE_ANVIL_PORT, VITE_PORT } from "./fixtures/constants";
+import {
+  ANVIL_DEPLOY_TIMEOUT_MS,
+  NEXTJS_ANVIL_PORT,
+  NEXTJS_PORT,
+  VITE_ANVIL_PORT,
+  VITE_PORT,
+} from "./fixtures/constants";
 import type { WorkerFixtures } from "./fixtures/test";
 
 const CI = !!process.env.CI;
@@ -47,7 +53,7 @@ export default defineConfig<{}, WorkerFixtures>({
       command: `./start-anvil.sh ${NEXTJS_ANVIL_PORT}`,
       name: "anvil-nextjs",
       wait: { stdout: /Anvil ready on port (\d+)/ },
-      timeout: 90_000,
+      timeout: ANVIL_DEPLOY_TIMEOUT_MS,
     },
     {
       command: CI
@@ -60,7 +66,7 @@ export default defineConfig<{}, WorkerFixtures>({
       command: `./start-anvil.sh ${VITE_ANVIL_PORT}`,
       name: "anvil-vite",
       wait: { stdout: /Anvil ready on port (\d+)/ },
-      timeout: 90_000,
+      timeout: ANVIL_DEPLOY_TIMEOUT_MS,
     },
     {
       command: CI

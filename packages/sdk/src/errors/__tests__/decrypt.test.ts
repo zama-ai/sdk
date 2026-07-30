@@ -3,6 +3,7 @@ import { describe, expect, test } from "../../test-fixtures";
 import {
   DecryptionFailedError,
   DelegationNotPropagatedError,
+  InvalidTransportKeyPairError,
   NoCiphertextError,
   NotEntitledError,
   RelayerRequestFailedError,
@@ -314,6 +315,16 @@ describe("wrapDecryptError", () => {
       expect((wrapped as RelayerRequestFailedError).statusCode).toBeUndefined();
       expect((wrapped as RelayerRequestFailedError).retryable).toBe(true);
     });
+
+    test("maps @fhevm/sdk's stale-key-pair error to InvalidTransportKeyPairError", () => {
+      // verifyTkmsPublicKey throws `invalid TransportKeyPairKeyPair` when a stored
+      // key pair can't be re-derived under the current TKMS version; the decrypt
+      // path relies on this typed error to evict the vault entry and self-heal.
+      const stale = new Error("invalid TransportKeyPairKeyPair");
+      const wrapped = wrapDecryptError(stale, "fallback");
+      expect(wrapped).toBeInstanceOf(InvalidTransportKeyPairError);
+      expect(wrapped.cause).toBe(stale);
+    });
   });
 
   describe("passthrough set is exhaustive (SDK-248)", () => {
@@ -343,6 +354,7 @@ describe("wrapDecryptError", () => {
           }),
       ],
       [RpcRateLimitError, () => new RpcRateLimitError("throttled")],
+      [InvalidTransportKeyPairError, () => new InvalidTransportKeyPairError("stale key pair")],
     ];
 
     test("every entry in DECRYPT_PASSTHROUGH_ERROR_TYPES has a passthrough example", () => {

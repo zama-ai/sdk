@@ -714,6 +714,7 @@ export function revokePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptio
 export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
+    tkmsVersion?: string;
 }
 
 // @public

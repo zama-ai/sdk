@@ -30,10 +30,12 @@ runs:
           contracts/cache
           contracts/dependencies
           contracts/lib/forge-fhevm/out
+          contracts/lib/forge-fhevm/cache
           contracts/lib/forge-fhevm/dependencies
           contracts/lib/fhevm/sdk/js-sdk/contracts/out
+          contracts/lib/fhevm/sdk/js-sdk/contracts/cache
           contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
-        key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
+        key: forge-build-v2-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
 
     - name: Install Soldeer dependencies
       if: steps.forge-build-cache.outputs.cache-hit != 'true'
@@ -69,7 +71,9 @@ runs:
           contracts/cache
           contracts/dependencies
           contracts/lib/forge-fhevm/out
+          contracts/lib/forge-fhevm/cache
           contracts/lib/forge-fhevm/dependencies
           contracts/lib/fhevm/sdk/js-sdk/contracts/out
+          contracts/lib/fhevm/sdk/js-sdk/contracts/cache
           contracts/lib/fhevm/sdk/js-sdk/contracts/dependencies
-        key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}
+        key: forge-build-v2-${{ runner.os }}-${{ hashFiles('contracts/src/**/*.sol', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/lib/forge-fhevm/src/**/*.sol', 'contracts/lib/forge-fhevm/foundry.toml', 'contracts/lib/forge-fhevm/soldeer.lock', 'contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml', 'contracts/lib/fhevm/sdk/js-sdk/contracts/soldeer.lock') }}

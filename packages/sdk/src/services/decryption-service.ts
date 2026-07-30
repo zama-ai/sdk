@@ -1,3 +1,4 @@
+import type { ParseTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import type { DecryptValuesReturnType } from "@fhevm/sdk/actions/decrypt";
 import { getAddress, type Address } from "viem";
 import type { ChainRouter } from "../chains/router";
@@ -19,7 +20,12 @@ import type { EncryptedInput } from "../query/user-decrypt";
 import type { ClearValue, EncryptedValue, FhevmRelayerOptions } from "../relayer/types";
 import { pLimit } from "../utils/concurrency";
 import { chunkHandlesByBitBudget, isEncryptedValueZero } from "../utils/handles";
-import { extractRetryAfter, isRpcRateLimitError, toError } from "../utils";
+import {
+  extractRetryAfter,
+  isInvalidTransportKeyPairMessage,
+  isRpcRateLimitError,
+  toError,
+} from "../utils";
 import type { CachingService } from "./caching-service";
 import type { DelegationService } from "./delegation-service";
 
@@ -300,10 +306,22 @@ export class DecryptionService {
     options?: Pick<FhevmRelayerOptions, "signal" | "timeout">,
   ): Promise<DecryptValuesReturnType> {
     const permit = resolvePermit(credentials, contractAddress);
-    const transportKeyPair = await this.#router.relayer.parseTransportKeyPair({
-      publicKey: permit.publicKey,
-      privateKey: permit.privateKey,
-    });
+    let transportKeyPair: ParseTransportKeyPairReturnType;
+    try {
+      transportKeyPair = await this.#router.relayer.parseTransportKeyPair({
+        publicKey: permit.publicKey,
+        privateKey: permit.privateKey,
+        tkmsVersion: credentials.keypair.tkmsVersion,
+      });
+    } catch (error) {
+      // Stale key pair the relayer can't re-derive (post KMS/TKMS rotation):
+      // evict it so the next resolveCredentials regenerates and re-signs.
+      // wrapDecryptError maps the raw message to InvalidTransportKeyPairError.
+      if (error instanceof Error && isInvalidTransportKeyPairMessage(error.message)) {
+        await this.#credentialService.evictTransportKeyPair();
+      }
+      throw error;
+    }
     const signedPermit = await this.#router.relayer.parseSignedDecryptionPermit({
       transportKeyPair,
       serializedPermit: permit.serializedPermit,

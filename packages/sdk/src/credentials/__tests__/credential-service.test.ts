@@ -3,7 +3,9 @@ import type { Address } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
+import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
+import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
@@ -79,6 +81,52 @@ describe("CredentialService.allow", () => {
     expect(result.keypair.publicKey).toBeDefined();
     expect(result.permissions).toEqual([]);
     expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+});
+
+describe("CredentialService transport-key-pair self-heal", () => {
+  test("evicts the stale key pair and throws a typed error when the relayer rejects it", async ({
+    credentialService,
+    relayer,
+  }) => {
+    await credentialService.grantPermit([]); // warm: generate + store one key pair
+    // The relayer can't re-derive the stored key pair (e.g. post KMS/TKMS rotation).
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(
+      new Error("invalid TransportKeyPairKeyPair"),
+    );
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(
+      InvalidTransportKeyPairError,
+    );
+    // Eviction cleared the cache but did not itself regenerate.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+
+    // Self-heal: the next resolution regenerates a fresh key pair and succeeds.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not evict on an unrelated signing failure", async ({ credentialService, relayer }) => {
+    await credentialService.grantPermit([]);
+    vi.mocked(relayer.parseTransportKeyPair).mockRejectedValueOnce(new Error("network glitch"));
+
+    await expect(credentialService.grantPermit([A])).rejects.toBeInstanceOf(SigningFailedError);
+    // Key pair left intact → the next grant reuses it, no regeneration.
+    await credentialService.grantPermit([B]);
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("forwards the stored tkmsVersion when re-deriving the key pair to sign", async ({
+    credentialService,
+    relayer,
+  }) => {
+    // The generated key pair carries a TKMS version that the vault persists; the
+    // sign path must pass it back so the relayer deserializes the private key
+    // under the version it was generated with.
+    await credentialService.grantPermit([A]);
+    expect(relayer.parseTransportKeyPair).toHaveBeenCalledWith(
+      expect.objectContaining({ tkmsVersion: TEST_TKMS_VERSION }),
+    );
   });
 });
 
@@ -444,7 +492,7 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     // `generateTransportKeyPair` returns an opaque, unconstructable key-pair handle
     // post-#458, so the distinct value is injected at `serializeTransportKeyPair` —
     // the step that actually produces the hex the vault stores — instead.
-    vi.mocked(relayer.serializeTransportKeyPair).mockReturnValueOnce({
+    vi.mocked(relayer.serializeTransportKeyPair).mockResolvedValueOnce({
       publicKey:
         `0x${"33".repeat(32)}` as unknown as SerializeTransportKeyPairReturnType["publicKey"],
       privateKey:
