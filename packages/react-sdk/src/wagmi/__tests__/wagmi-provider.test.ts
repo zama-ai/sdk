@@ -107,6 +107,12 @@ describe("WagmiProvider.prepareTransaction", () => {
     expect(mockEstimateGas).toHaveBeenCalledWith(
       expect.objectContaining({ account: FROM, to: TO, value: 0n }),
     );
+    // Nonce must be read from the "pending" block tag (not the default
+    // "latest") so parallel custodian queues don't collide on a stale count —
+    // matching the viem/ethers adapters and the GenericProvider contract.
+    expect(mockGetTxCount).toHaveBeenCalledWith(
+      expect.objectContaining({ address: FROM, blockTag: "pending" }),
+    );
   });
 
   test("throws ConfigurationError when no public client is configured", async () => {

@@ -9,6 +9,7 @@ import {
   vi,
 } from "../../test-fixtures";
 import { ZamaSDKEvents, type ZamaSDKEventInput } from "../../events/sdk-events";
+import { MAX_UINT48 } from "../../contracts/constants";
 import type { GenericProvider } from "../../types/provider";
 import type { PrepareTransactionRequest } from "../../types";
 
@@ -170,6 +171,54 @@ describe("OfflineSigningService — other transaction kinds", () => {
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ call: expect.objectContaining({ functionName: "setOperator" }) }),
+    );
+  });
+
+  test("SetOperator with omitted `until` bakes the permanent (uint48 max) sentinel", async ({
+    createSDK,
+    signer,
+    provider,
+    userAddress,
+  }) => {
+    // Offline payloads are frozen at prepare time, so "omit for permanent" must
+    // resolve to uint48 max — not the atomic path's relative now + 1h default,
+    // which would silently expire mid-ceremony.
+    const sdk = createSDK({ signer });
+    await sdk.offline.prepare({
+      kind: "SetOperator",
+      from: userAddress,
+      token: TOKEN,
+      operator: RECIPIENT,
+    });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({
+          functionName: "setOperator",
+          args: [RECIPIENT, MAX_UINT48],
+        }),
+      }),
+    );
+  });
+
+  test("SetOperator passes an explicit `until` through unchanged", async ({
+    createSDK,
+    signer,
+    provider,
+    userAddress,
+  }) => {
+    const sdk = createSDK({ signer });
+    const until = 1_900_000_000;
+    await sdk.offline.prepare({
+      kind: "SetOperator",
+      from: userAddress,
+      token: TOKEN,
+      operator: RECIPIENT,
+      until,
+    });
+    expect(provider.prepareTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        call: expect.objectContaining({ functionName: "setOperator", args: [RECIPIENT, until] }),
+      }),
     );
   });
 

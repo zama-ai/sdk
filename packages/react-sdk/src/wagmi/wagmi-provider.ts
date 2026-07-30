@@ -134,7 +134,7 @@ export class WagmiProvider implements GenericProvider {
     const noncePromise =
       args.nonce !== undefined
         ? Promise.resolve(args.nonce)
-        : publicClient.getTransactionCount({ address: from });
+        : publicClient.getTransactionCount({ address: from, blockTag: "pending" });
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)

@@ -7,6 +7,7 @@ import {
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
+  MAX_UINT48,
   MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
@@ -39,10 +40,10 @@ import type {
   GenericSigner,
   PreparedFor,
   PreparedTransaction,
+  PrepareTransactionRequest,
   RevokeDelegationRequest,
   SetOperatorRequest,
   TransactionKind,
-  PrepareTransactionRequest,
   TransactionResult,
   TransferAndCallRequest,
   UnwrapAllRequest,
@@ -190,11 +191,11 @@ export class OfflineSigningService {
    * Sign a prepared transaction with the configured signer and return
    * RLP-encoded signed bytes. Pair with {@link broadcast}.
    *
-   * @throws {@link SignerCapabilityError} when the configured signer has no
-   *   `signTransaction` capability (online-only wallets).
-   * @throws {@link SigningFailedError} when the signer rejects the signing
-   *   request (HTTP error, policy denial, timeout). Already-typed
-   *   {@link ZamaError} causes are re-thrown unchanged.
+   * @throws if the configured signer has no `signTransaction` capability
+   *   (online-only wallets). {@link SignerCapabilityError}
+   * @throws if the signer rejects the signing request (HTTP error, policy
+   *   denial, timeout). Already-typed {@link ZamaError} causes are re-thrown
+   *   unchanged. {@link SigningFailedError}
    */
   async sign(preparedTx: PreparedTransaction): Promise<Hex> {
     const signer = this.#requireSigner(`sign(${preparedTx.kind})`);
@@ -328,7 +329,15 @@ export class OfflineSigningService {
   }
 
   #buildSetOperator(request: SetOperatorRequest): ReturnType<typeof setOperatorContract> {
-    return setOperatorContract(request.token, getAddress(request.operator), request.until);
+    // Offline payloads are frozen at prepare time, so an omitted `until` must
+    // mean "permanent" (uint48 max) — never a relative default like the atomic
+    // path's now + 1h, which would silently expire mid-ceremony. Mirrors the
+    // MAX_UINT64 sentinel `#buildDelegateDecryption` uses for the same reason.
+    return setOperatorContract(
+      request.token,
+      getAddress(request.operator),
+      request.until ?? MAX_UINT48,
+    );
   }
 
   async #buildUnwrap(
