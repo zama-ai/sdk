@@ -267,7 +267,7 @@ Notes:
 ## 8. Trust boundary — decisions worth reviewing
 
 These caveats are documented in the SDK's public API
-(`packages/sdk/src/namespaces/offline-signing.ts`) and apply to any signer-less custodian.
+(`packages/sdk/src/namespaces/offline.ts`) and apply to any signer-less custodian.
 
 ### 8.1 Prefer the SDK-broadcast path
 
@@ -358,7 +358,7 @@ in place of DFNS's) differs.
 All links point to the `feature/sdk-75-deferred-signing-v2` branch, where this pipeline
 lives until it merges:
 
-- Public API + caveats: [`packages/sdk/src/namespaces/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/namespaces/offline-signing.ts)
+- Public API + caveats: [`packages/sdk/src/namespaces/offline.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/namespaces/offline.ts)
 - Request / prepared types: [`packages/sdk/src/types/offline-signing.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/offline-signing.ts)
 - Storage contract (your vault): [`packages/sdk/src/types/storage.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/storage.ts)
 - Provider contract (RPC / nonce / fees / broadcast): [`packages/sdk/src/types/provider.ts`](https://github.com/zama-ai/token-sdk/blob/feature/sdk-75-deferred-signing-v2/packages/sdk/src/types/provider.ts)
