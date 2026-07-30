@@ -41,6 +41,7 @@ export const StoredTransportKeyPairSchema = z.object({
   privateKey: hex,
   createdAt: unixSeconds,
   expiresAt: positiveSeconds,
+  tkmsVersion: z.optional(z.string()),
 });
 
 export const Eip712Schema = z.object({

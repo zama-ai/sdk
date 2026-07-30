@@ -12869,6 +12869,7 @@ export interface SerializedPermitEip712 {
 export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
+    tkmsVersion?: string;
 }
 
 // @public

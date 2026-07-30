@@ -141,6 +141,11 @@ export class TransportKeyPairVault {
         createdAt,
         expiresAt: createdAt + this.#ttl,
       };
+      // Persist the TKMS version so a later parse deserializes the private key
+      // under the version it was generated with, surviving a KMS/TKMS rotation.
+      if (fresh.tkmsVersion) {
+        stored.tkmsVersion = fresh.tkmsVersion;
+      }
       // If a rotation bumped this key's epoch while `#generator()` was in flight, this
       // generation started before the rotation and must not persist — doing so would
       // silently resurrect the key the rotation just deleted (see `clearScope`). The
@@ -180,6 +185,23 @@ export class TransportKeyPairVault {
   async clear(signerAddress: ChecksummedAddress): Promise<void> {
     const key = transportKeyPairStorageKey(signerAddress);
     await swallow("delete transport key pair entry", () => this.#storage.delete(key), this.#logger);
+  }
+
+  /**
+   * Delete the stored key pair for this identity so the next {@link getOrCreate}
+   * regenerates it. Unlike {@link clear}, this is **scope-aware** — it targets the
+   * shared scope key when a scope is configured, else the per-signer key.
+   *
+   * The self-heal primitive for a key pair the relayer rejects as invalid (e.g. a
+   * TKMS-version mismatch after a KMS rotation, which surfaces as
+   * `invalid TransportKeyPairKeyPair`): the stored bytes can no longer be parsed,
+   * so dropping and regenerating them is the only recovery. Best-effort — a
+   * storage failure is logged and swallowed, so a wedged entry is retried on the
+   * next call rather than hard-failing the current one.
+   */
+  async evict(signerAddress: ChecksummedAddress): Promise<void> {
+    const key = this.#identityKey(signerAddress);
+    await swallow("evict transport key pair entry", () => this.#storage.delete(key), this.#logger);
   }
 
   /**

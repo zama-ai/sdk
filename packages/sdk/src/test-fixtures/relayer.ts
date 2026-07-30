@@ -6,6 +6,7 @@ import type { FixturesOf } from "./types";
 import {
   TEST_PRIVATE_KEY,
   TEST_PUBLIC_KEY,
+  TEST_TKMS_VERSION,
   TOKEN,
   VALID_ENCRYPTED_VALUE,
   VALID_INPUT_PROOF,
@@ -17,11 +18,19 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     chain: anvil,
     generateTransportKeyPair: vi
       .fn()
-      .mockResolvedValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
+      .mockResolvedValue({
+        publicKey: TEST_PUBLIC_KEY,
+        privateKey: TEST_PRIVATE_KEY,
+        tkmsVersion: TEST_TKMS_VERSION,
+      }),
     parseTransportKeyPair: vi.fn().mockImplementation((kp: unknown) => kp),
     serializeTransportKeyPair: vi
       .fn()
-      .mockReturnValue({ publicKey: TEST_PUBLIC_KEY, privateKey: TEST_PRIVATE_KEY }),
+      .mockResolvedValue({
+        publicKey: TEST_PUBLIC_KEY,
+        privateKey: TEST_PRIVATE_KEY,
+        tkmsVersion: TEST_TKMS_VERSION,
+      }),
     // Route through the passed signer so `signer.signTypedData` call-count and
     // rejection assertions stay observable through the new permit-signing flow.
     signDecryptionPermit: vi
@@ -61,7 +70,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
     serializeSignedDecryptionPermit: vi
       .fn()
       .mockImplementation(
-        (params: {
+        async (params: {
           signedPermit: {
             version: number;
             eip712: unknown;

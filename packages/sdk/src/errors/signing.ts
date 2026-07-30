@@ -1,4 +1,6 @@
+import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { ZamaError, ZamaErrorCode } from "./base";
+import { InvalidTransportKeyPairError } from "./credential";
 
 /** User rejected the wallet signature prompt. */
 export class SigningRejectedError extends ZamaError {
@@ -30,6 +32,12 @@ export function wrapSigningError(error: unknown, context: string): never {
   const fullMessage = `${context}: ${originalMsg}`;
   if (hasCode4001 || hasRejectionMessage) {
     throw new SigningRejectedError(fullMessage, { cause: error });
+  }
+  // A stale transport key pair the relayer can't re-derive (post-rotation) is
+  // not a signing failure per se — surface it as the typed, self-heal signal so
+  // the caller can evict the vault entry and regenerate.
+  if (isInvalidTransportKeyPairMessage(originalMsg)) {
+    throw new InvalidTransportKeyPairError(fullMessage, { cause: error });
   }
   throw new SigningFailedError(fullMessage, { cause: error });
 }

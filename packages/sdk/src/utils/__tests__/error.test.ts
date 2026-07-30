@@ -11,6 +11,7 @@ import {
   isConsumerRpcError,
   isRelayerError,
   isNotEntitledMessage,
+  isInvalidTransportKeyPairMessage,
   parseHandleFromMessage,
   extractRetryAfter,
   parseRetryAfterHeader,
@@ -430,5 +431,37 @@ describe("isNotEntitledMessage / parseHandleFromMessage", () => {
   test("the installed @fhevm/sdk still names its relayer response errors Relayer*", () => {
     const source = fhevmSdkFile("core/errors/RelayerResponseApiError.ts");
     expect(source).toContain("name: 'RelayerResponseApiError'");
+  });
+});
+
+describe("isInvalidTransportKeyPairMessage", () => {
+  // Must stay in sync with @fhevm/sdk's verifyTkmsPublicKey, which throws
+  // `invalid TransportKeyPairKeyPair` when a stored key pair can't be re-derived
+  // under the current TKMS version (typically after a KMS/TKMS rotation).
+  test("matches @fhevm/sdk's stale-key-pair message", () => {
+    expect(isInvalidTransportKeyPairMessage("invalid TransportKeyPairKeyPair")).toBe(true);
+    // Case-insensitive and tolerant of a wrapping context prefix.
+    expect(
+      isInvalidTransportKeyPairMessage(
+        "Credential signing failed: invalid TransportKeyPairKeyPair",
+      ),
+    ).toBe(true);
+  });
+
+  test("does NOT match unrelated failures", () => {
+    expect(isInvalidTransportKeyPairMessage("network error")).toBe(false);
+    expect(isInvalidTransportKeyPairMessage("user rejected the request")).toBe(false);
+  });
+
+  // Drift guard: if a @fhevm/sdk bump rewords the throw, our matcher silently
+  // stops typing the error and the vault self-heal (evict + regenerate) breaks.
+  test("the installed @fhevm/sdk still throws the message our matcher keys on", () => {
+    const require = createRequire(import.meta.url);
+    const pkgDir = dirname(require.resolve("@fhevm/sdk/package.json"));
+    const source = readFileSync(
+      join(pkgDir, "core/utils-p/decrypt/verifyTkmsPublicKey.ts"),
+      "utf8",
+    );
+    expect(source).toContain("invalid TransportKeyPairKeyPair");
   });
 });
