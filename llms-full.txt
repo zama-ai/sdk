@@ -19812,11 +19812,11 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
 
 ## Running e2e tests
 
@@ -19896,12 +19896,14 @@ const config = createConfig({
 `web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 
@@ -20186,11 +20188,11 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
 
 ## Running e2e tests
 
@@ -20278,12 +20280,14 @@ one instance is safe — the SDK namespaces the keys internally.
 The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 
@@ -20659,7 +20663,7 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 
 | Variable                               | Required | Description                                                                                         |
 | -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                          | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`.         |
+| `RELAYER_URL`                          | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.                  |
 | `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
 | `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
 | `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
@@ -20937,7 +20941,8 @@ transaction(s), shield transaction, and cache invalidation.
 ## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
+Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
+testnet relayer if unset).
 `NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
 limiting with a private node.
 
