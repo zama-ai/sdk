@@ -251,7 +251,8 @@ transaction(s), shield transaction, and cache invalidation.
 ## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
+Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
+testnet relayer if unset).
 `NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
 limiting with a private node.
 

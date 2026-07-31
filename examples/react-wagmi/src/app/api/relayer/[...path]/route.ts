@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 
 // Default to the public Sepolia testnet relayer — no API key required.
 // For production or private deployments, set RELAYER_URL and RELAYER_API_KEY in .env.local.
-const RELAYER_URL = process.env.RELAYER_URL ?? "https://relayer.testnet.zama.org/v2";
+// Bare relayer host, no /v2 suffix.
+const RELAYER_URL = process.env.RELAYER_URL ?? "https://relayer.testnet.zama.org";
 const RELAYER_API_KEY = process.env.RELAYER_API_KEY;
 
 const HOP_BY_HOP = new Set([
@@ -50,7 +51,7 @@ async function proxy(req: NextRequest, path: string[]) {
   for (const segment of path) {
     // Reject segments that fail the character allowlist or are dot-only (`.`, `..`).
     // Dot-only segments would resolve to parent directories via URL normalization,
-    // allowing a request like /api/relayer/../v1/admin to escape the /v2 base path.
+    // allowing a request like /api/relayer/../admin to escape the base path.
     if (!SAFE_SEGMENT.test(segment) || segment === "." || segment === "..") {
       return new Response(JSON.stringify({ error: "Invalid path" }), {
         status: 400,
