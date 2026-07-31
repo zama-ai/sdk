@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.0...v3.4.1-alpha.1) (2026-07-31)
+
+### Bug Fixes
+
+- **examples:** use bare relayer host in proxy default ([#601](https://github.com/zama-ai/sdk/issues/601)) ([081bb9c]())
+
 ## [3.4.0](https://github.com/zama-ai/sdk/compare/v3.3.0...v3.4.0) (2026-07-30)
 
 ### Features
