@@ -1,6 +1,7 @@
 export {
   mainnet,
   sepolia,
+  polygonAmoy,
   hoodi,
   ingenTestnet,
   bscTestnet,
