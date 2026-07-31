@@ -113,6 +113,14 @@ export class Offline {
   /**
    * Submit a previously-signed transaction, await its receipt, emit the
    * matching `*Submitted` event, and return the {@link TransactionResult}.
+   *
+   * Re-checks that the provider's current chain still matches the one the
+   * transaction was prepared for before sending.
+   *
+   * @throws if the provider's chain no longer matches the prepared
+   *   transaction's bound chain. {@link PreparedChainMismatchError}
+   * @throws if the transaction reverts, or the RPC rejects the signed bytes
+   *   before submission. {@link TransactionRevertedError}
    */
   broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     return this.#offlineSigningService.broadcast(preparedTx, signedTx);

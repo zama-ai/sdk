@@ -179,6 +179,7 @@ export {
   RpcRateLimitError,
   ConfigurationError,
   ChainMismatchError,
+  PreparedChainMismatchError,
   SignerRequiredError,
   SignerNotConfiguredError,
   WalletNotConnectedError,

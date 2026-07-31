@@ -556,7 +556,7 @@ describe("OfflineSigningService — chain alignment", () => {
     provider,
     userAddress,
   }) => {
-    const { ChainMismatchError } = await import("../../errors");
+    const { PreparedChainMismatchError } = await import("../../errors");
     const sdk = createSDK({ signer });
     // Prepare on chain 31337 …
     const prepared = await sdk.offline.prepare({
@@ -569,7 +569,7 @@ describe("OfflineSigningService — chain alignment", () => {
     vi.mocked(provider.getChainId).mockResolvedValueOnce(1);
 
     await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toBeInstanceOf(
-      ChainMismatchError,
+      PreparedChainMismatchError,
     );
     // Must fail BEFORE sending.
     expect(provider.sendRawTransaction).not.toHaveBeenCalled();

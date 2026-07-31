@@ -20,6 +20,7 @@ import {
   ChainMismatchError,
   ConfigurationError,
   EncryptionFailedError,
+  PreparedChainMismatchError,
   SignerAddressMismatchError,
   SignerNotConfiguredError,
   SigningFailedError,
@@ -218,15 +219,14 @@ export class OfflineSigningService {
    * matching `*Submitted` event, and return the {@link TransactionResult}.
    *
    * Re-checks chain alignment between `preparedTx.chainId` and the configured
-   * provider before sending — the gap between prepare and broadcast is the
-   * whole point of offline signing, and the user may have switched chains
-   * meanwhile.
+   * provider before sending; a mismatch throws
+   * {@link PreparedChainMismatchError} before any bytes leave the process.
    *
-   * Errors are reported in two distinct shapes so subscribers can recover:
-   * a pre-submit failure (chain mismatch, RPC reject) is wrapped as
-   * `TransactionRevertedError("Broadcast failed for …")`; a post-submit
-   * failure (receipt wait timeout or revert) preserves `txHash` in the
-   * message so the caller can recover by re-querying that transaction.
+   * Post-chain-check errors are reported in two distinct shapes so subscribers
+   * can recover: a pre-submit RPC reject is wrapped as
+   * `TransactionRevertedError("Broadcast failed for …")`; a post-submit failure
+   * (receipt wait timeout or revert) preserves `txHash` in the message so the
+   * caller can recover by re-querying that transaction.
    */
   async broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult> {
     await this.#assertSameChainAsPrepared(preparedTx, "broadcast");
@@ -468,9 +468,9 @@ export class OfflineSigningService {
   ): Promise<void> {
     const providerChainId = await this.#provider.getChainId();
     if (prepared.chainId !== providerChainId) {
-      throw new ChainMismatchError({
+      throw new PreparedChainMismatchError({
         operation: `${operation}(${prepared.kind})`,
-        signerChainId: prepared.chainId,
+        preparedChainId: prepared.chainId,
         providerChainId,
       });
     }

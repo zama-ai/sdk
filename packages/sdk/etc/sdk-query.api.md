@@ -1163,6 +1163,7 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
     readonly ChainMismatch: "CHAIN_MISMATCH";
+    readonly PreparedChainMismatch: "PREPARED_CHAIN_MISMATCH";
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";

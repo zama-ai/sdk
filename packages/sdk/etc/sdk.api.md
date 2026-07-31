@@ -5852,6 +5852,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
+    [ZamaErrorCode.PreparedChainMismatch]: PreparedChainMismatchError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
     [ZamaErrorCode.SignerAddressMismatch]: SignerAddressMismatchError;
@@ -11500,6 +11501,18 @@ export const polygonAmoy: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
 };
+
+// @public
+export class PreparedChainMismatchError extends ZamaError {
+    constructor(input: {
+        operation: string;
+        preparedChainId: number;
+        providerChainId: number;
+    }, options?: ErrorOptions);
+    readonly operation: string;
+    readonly preparedChainId: number;
+    readonly providerChainId: number;
+}
 
 // @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
@@ -19636,6 +19649,7 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
     readonly ChainMismatch: "CHAIN_MISMATCH";
+    readonly PreparedChainMismatch: "PREPARED_CHAIN_MISMATCH";
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";

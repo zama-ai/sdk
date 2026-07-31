@@ -74,8 +74,8 @@ export interface UnwrapRequest {
 }
 
 /**
- * First-phase unshield-all variant: uses the on-chain confidential balance
- * handle as input, skipping the encrypted-amount path.
+ * First-phase unshield-all variant: uses the on-chain confidential balance's
+ * encrypted value as input, skipping the encrypted-amount path.
  */
 export interface UnwrapAllRequest {
   /** Discriminator tag. */
@@ -89,8 +89,8 @@ export interface UnwrapAllRequest {
 }
 
 /**
- * Second-phase unshield. Public-decrypts the request handle during `prepare`
- * to obtain the clear value + proof, then builds the unsigned
+ * Second-phase unshield. Public-decrypts `unwrapRequestIdOrAmount` during
+ * `prepare` to obtain the clear value + proof, then builds the unsigned
  * `wrapper.finalizeUnwrap(handle, clear, proof)` tx.
  */
 export interface FinalizeUnwrapRequest {
@@ -100,7 +100,7 @@ export interface FinalizeUnwrapRequest {
   readonly from: Address;
   /** Wrapper (confidential token) contract address. */
   readonly wrapper: Address;
-  /** From the `UnwrapRequested` event log (`unwrapRequestId` on upgraded wrappers, the encrypted amount handle on legacy ones). */
+  /** From the `UnwrapRequested` event log (`unwrapRequestId` on upgraded wrappers, the encrypted amount on legacy ones). */
   readonly unwrapRequestIdOrAmount: EncryptedValue;
 }
 
@@ -224,9 +224,8 @@ export type PrepareTransactionRequest =
  * minimal context (from, to, chainId) callers need to forward across a
  * process boundary or feed back into {@link Offline.broadcast}.
  *
- * Non-generic so any `PreparedX` is assignable to the wide form. Use
- * {@link PreparedFor} for kind-specific narrowing (e.g. on Token-level
- * `prepareX` return types).
+ * Non-generic so any `PreparedFor<K>` is assignable to the wide form. Use
+ * {@link PreparedFor} for kind-specific narrowing.
  *
  * The `unsignedTx` + `from` / `to` / `chainId` fields are JSON-safe and
  * cover everything `broadcast` needs. The `request`
@@ -251,8 +250,8 @@ export interface PreparedTransaction {
 }
 
 /**
- * {@link PreparedTransaction} narrowed by `kind` — return type of
- * `sdk.offline.prepare(request)` and the Token-level `prepareX` sugar methods.
+ * {@link PreparedTransaction} narrowed by `kind` — the return type of
+ * `sdk.offline.prepare(request)`.
  *
  * An interface extending {@link PreparedTransaction} that pins `kind` and
  * `request` to the requested kind `K`, so every `PreparedFor<K>` remains
