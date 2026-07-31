@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.1...v3.5.0-alpha.2) (2026-07-31)
+
+### Features
+
+- **examples:** add example-polygon-amoy app ([#603](https://github.com/zama-ai/sdk/issues/603)) ([be7fbac]())
+
 ## [3.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.1-alpha.1...v3.5.0-alpha.1) (2026-07-31)
 
 ### Features
