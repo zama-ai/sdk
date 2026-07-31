@@ -33,6 +33,22 @@ export const sepolia = {
 } as const satisfies FheChain;
 
 /**
+ * Polygon Amoy testnet network configuration (chainId 80002).
+ */
+export const polygonAmoy = {
+  id: 80002,
+  gatewayChainId: 10901,
+  relayerUrl: "https://relayer.testnet.zama.org",
+  network: "https://polygon-amoy-bor-rpc.publicnode.com",
+  aclContractAddress: "0xD99Cb9Fc3c42c87f2A4A12e8Fd60318d6bDdf985",
+  kmsContractAddress: "0xCD1D89E311bce4C8DEa9a0857a0c9A4E153D4041",
+  inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631",
+  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
+  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
+  registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94",
+} as const satisfies FheChain;
+
+/**
  * Hoodi testnet configuration (chainId 560048).
  *
  * Hoodi does not have full FHE infrastructure — use with `cleartext()` transport.
@@ -120,6 +136,7 @@ export const anvil = hardhat;
 export const chains: Record<number, FheChain> = {
   [mainnet.id]: mainnet,
   [sepolia.id]: sepolia,
+  [polygonAmoy.id]: polygonAmoy,
   [hoodi.id]: hoodi,
   [ingenTestnet.id]: ingenTestnet,
   [bscTestnet.id]: bscTestnet,

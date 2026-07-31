@@ -57,12 +57,14 @@ const config = createConfig({
 `web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 

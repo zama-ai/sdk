@@ -47,6 +47,7 @@ export type { GenericLogger } from "./types/logger";
 export {
   mainnet,
   sepolia,
+  polygonAmoy,
   hoodi,
   ingenTestnet,
   bscTestnet,

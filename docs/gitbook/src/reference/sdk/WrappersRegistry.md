@@ -254,7 +254,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress` from `@zama-fhe/sdk/chains`). This export will be removed in the next major version.
 {% endhint %}
 
-Exported map of built-in registry addresses for known chains. Includes Mainnet (`1`), Sepolia (`11155111`), and Hoodi (`560048`). Addresses are EIP-55 checksummed.
+Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Sepolia (`11155111`), Polygon Amoy (`80002`), Hoodi (`560048`), InGen Testnet (`364301`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { sepolia } from "@zama-fhe/sdk/chains";

@@ -1438,36 +1438,36 @@ migration.
 
 ### `@zama-fhe/sdk` (core)
 
-| 2.x                                                                                       | 3.x                                                                                                              | Step                      |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                           | [1 · Config][s1]          |
-| `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                              | [1 · Config][s1]          |
-| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
-| `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                     | [1 · Config][s1]          |
-| `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                             | [1 · Config][s1]          |
-| `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                            | [1 · Config][s1]          |
-| `new RelayerWeb(...)`                                                                     | `web()` from `@zama-fhe/sdk/web`                                                                                 | [2 · Relayer][s2]         |
-| `new RelayerNode(...)`                                                                    | `node()` from `@zama-fhe/sdk/node`                                                                               | [2 · Relayer][s2]         |
-| `CredentialsManager` / `DelegatedCredentialsManager`                                      | `Permits` / `Delegations` / `Decryption`                                                                         | [3 · Permits][s3]         |
-| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, `StoredKeypair`     | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                         | [3 · Permits][s3]         |
-| `token.approve(spender[, expiry])`                                                        | `token.setOperator(operator[, expiry])`                                                                          | [4 · Operators][s4]       |
-| `token.isApproved(spender[, owner])`                                                      | `token.isOperator(holder, spender)`                                                                              | [4 · Operators][s4]       |
-| `token.balanceOf()` (self default)                                                        | `token.balanceOf(owner)` — owner address now required                                                            | [4 · Operators][s4]       |
-| `EncryptResult.handles` (bytes)                                                           | `EncryptResult.encryptedValues` (hex; `inputProof` is now hex too)                                               | [5 · Encrypt/decrypt][s5] |
-| `extractEncryptedHandles(...)`                                                            | **removed** — read `result.encryptedValues`                                                                      | [5 · Encrypt/decrypt][s5] |
-| `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                            | [5 · Encrypt/decrypt][s5] |
-| `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                | [5 · Encrypt/decrypt][s5] |
-| `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`               | [5 · Encrypt/decrypt][s5] |
-| `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                | [5 · Encrypt/decrypt][s5] |
-| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                      | [5 · Encrypt/decrypt][s5] |
-| relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                               | [5 · Encrypt/decrypt][s5] |
-| `KeypairExpiredError` / `InvalidKeypairError`                                             | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                  | [5 · Encrypt/decrypt][s5] |
-| `sdk.createReadonlyToken(addr)`; `sdk.createToken(addr, wrapper?)`                        | `sdk.createToken(addr)` (read/transfer); `sdk.createWrappedToken(addr)` (wrap/shield/unshield)                   | [6 · Tokens][s6]          |
-| `ReadonlyToken`                                                                           | `Token` (read/transfer) / `WrappedToken` (wrap)                                                                  | [6 · Tokens][s6]          |
-| `decodeUnwrappedFinalized`, `UnwrappedFinalizedEvent`                                     | `decodeUnwrapFinalized`, `UnwrapFinalizedEvent`                                                                  | [6 · Tokens][s6]          |
-| `decodeUnwrappedStarted`, `UnwrappedStartedEvent`                                         | **removed**                                                                                                      | [6 · Tokens][s6]          |
-| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`                     | **removed** (activity feed dropped)                                                                              | [7 · Removed][s7]         |
-| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`                              | **removed**                                                                                                      | [7 · Removed][s7]         |
+| 2.x                                                                                       | 3.x                                                                                                                             | Step                      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `ZamaSDKConfig`                                                                           | `ZamaConfig` (+ `ZamaConfigViem`/`ZamaConfigEthers`/`ZamaConfigWagmi`)                                                          | [1 · Config][s1]          |
+| `new ZamaSDK({ relayer, signer, storage })`                                               | `new ZamaSDK(createConfig({ chains, …client, relayers, storage }))`                                                             | [1 · Config][s1]          |
+| `SepoliaConfig` / `MainnetConfig` / `HardhatConfig` (from `@zama-fhe/sdk`)                | `sepolia` / `mainnet` / `hardhat` (+ `polygonAmoy`, `hoodi`, `anvil`, `ingenTestnet`, `bscTestnet`) from `@zama-fhe/sdk/chains` | [1 · Config][s1]          |
+| `<chainConfig>.chainId`                                                                   | `<chain>.id`                                                                                                                    | [1 · Config][s1]          |
+| `ViemSigner` / `EthersSigner` (constructed)                                               | pass `publicClient`/`walletClient` (or ethers `provider`/`signer`) to `createConfig`                                            | [1 · Config][s1]          |
+| `keypairTTL` (config option)                                                              | `transportKeyPairTTL`                                                                                                           | [1 · Config][s1]          |
+| `new RelayerWeb(...)`                                                                     | `web()` from `@zama-fhe/sdk/web`                                                                                                | [2 · Relayer][s2]         |
+| `new RelayerNode(...)`                                                                    | `node()` from `@zama-fhe/sdk/node`                                                                                              | [2 · Relayer][s2]         |
+| `CredentialsManager` / `DelegatedCredentialsManager`                                      | `Permits` / `Delegations` / `Decryption`                                                                                        | [3 · Permits][s3]         |
+| `CredentialsManagerConfig`, `Credentials*Event`, `StoredCredentials`, `StoredKeypair`     | `Permission`, `StoredTransportKeyPair` (+ permit events)                                                                        | [3 · Permits][s3]         |
+| `token.approve(spender[, expiry])`                                                        | `token.setOperator(operator[, expiry])`                                                                                         | [4 · Operators][s4]       |
+| `token.isApproved(spender[, owner])`                                                      | `token.isOperator(holder, spender)`                                                                                             | [4 · Operators][s4]       |
+| `token.balanceOf()` (self default)                                                        | `token.balanceOf(owner)` — owner address now required                                                                           | [4 · Operators][s4]       |
+| `EncryptResult.handles` (bytes)                                                           | `EncryptResult.encryptedValues` (hex; `inputProof` is now hex too)                                                              | [5 · Encrypt/decrypt][s5] |
+| `extractEncryptedHandles(...)`                                                            | **removed** — read `result.encryptedValues`                                                                                     | [5 · Encrypt/decrypt][s5] |
+| `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                                           | [5 · Encrypt/decrypt][s5] |
+| `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                               | [5 · Encrypt/decrypt][s5] |
+| `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`                              | [5 · Encrypt/decrypt][s5] |
+| `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                               | [5 · Encrypt/decrypt][s5] |
+| `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                                     | [5 · Encrypt/decrypt][s5] |
+| relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                                              | [5 · Encrypt/decrypt][s5] |
+| `KeypairExpiredError` / `InvalidKeypairError`                                             | `TransportKeyPairExpiredError` / `InvalidTransportKeyPairError`                                                                 | [5 · Encrypt/decrypt][s5] |
+| `sdk.createReadonlyToken(addr)`; `sdk.createToken(addr, wrapper?)`                        | `sdk.createToken(addr)` (read/transfer); `sdk.createWrappedToken(addr)` (wrap/shield/unshield)                                  | [6 · Tokens][s6]          |
+| `ReadonlyToken`                                                                           | `Token` (read/transfer) / `WrappedToken` (wrap)                                                                                 | [6 · Tokens][s6]          |
+| `decodeUnwrappedFinalized`, `UnwrappedFinalizedEvent`                                     | `decodeUnwrapFinalized`, `UnwrapFinalizedEvent`                                                                                 | [6 · Tokens][s6]          |
+| `decodeUnwrappedStarted`, `UnwrappedStartedEvent`                                         | **removed**                                                                                                                     | [6 · Tokens][s6]          |
+| `parseActivityFeed`, `ActivityItem`, `ActivityAmount`, `ActivityType`                     | **removed** (activity feed dropped)                                                                                             | [7 · Removed][s7]         |
+| `totalSupplyContract`, `matchAclRevert`, `sortByBlockNumber`                              | **removed**                                                                                                                     | [7 · Removed][s7]         |
 
 ### `@zama-fhe/react-sdk` (hooks)
 
@@ -2111,6 +2111,65 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 > **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 
 
+## Offline signing (institutional custody)
+
+A new `sdk.offline.*` namespace splits a transaction into three separately-invocable phases — `prepare`, `sign`, `broadcast` — for institutional custody, HSM, and policy-engine workflows where the three cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route for signers that expose `signTransaction` instead of `writeContract`.
+
+```ts
+const prepared = await sdk.offline.prepare({
+  kind: "ConfidentialTransfer",
+  from: custodyAddress,
+  token,
+  to: recipient,
+  amount: 1_000n,
+}); // → RLP-encoded unsigned tx + { from, to, chainId }
+
+// Sign out-of-process (HSM, custody API, policy engine), then broadcast the
+// returned signed bytes:
+await sdk.offline.broadcast(prepared, signedTx);
+```
+
+- **Signer.** `GenericSigner.writeContract` is now optional; a new optional `signTransaction(unsignedTx)` covers the deferred path. Wrap a custodian's API client by extending `BaseSigner` — keys never enter the SDK.
+- **Provider.** `GenericProvider` gains `sendRawTransaction(signedTx)` and `prepareTransaction({ from, call })` (builds the RLP-encoded EIP-1559 unsigned tx), wired in the viem, ethers, and wagmi adapters.
+
+
+> [!INFO]
+> **Transactions only, for now.** The offline path covers write operations (transfer, set-operator, unwrap, the shield legs, delegation, …). Producing a decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) through a decompose-and-sign pipeline is not yet available — the permit build-and-sign is still bundled in the backend. For custody decryption today, route the permit envelope through a `BaseSigner` whose async `signTypedData` awaits your custody / policy engine, then call `sdk.permits.grantPermit(contracts)`.
+
+## 3.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md
+- logical_path: changelog/v3
+
+# 3.x
+
+Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
+
+## Versions
+
+- [**3.4.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-4.md) — Release notes for the 3.4.x line.
+- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
+- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
+- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
+- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
+
+## 3.4.x
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/changelog/v3-4.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-4.md
+- logical_path: changelog/v3-4
+
+# 3.4.x
+
+This page covers the `3.4.x` line.
+
+## 3.4.0
+
+_Released 2026-07-30._
+
 The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk` `1.x`. The high-level surface is unchanged — `createConfig`, `Token` / `WrappedToken`, `sdk.encrypt`, `sdk.decryption.*`, and the React hooks all behave exactly as before, so **`Token` and hooks apps need no changes**. What the new backend adds is a richer set of FHE runtime and per-chain tuning knobs on `createConfig`, documented below.
 
 
@@ -2118,7 +2177,7 @@ The SDK's internal FHE backend moved from `@zama-fhe/relayer-sdk` to `@fhevm/sdk
 > **Expect a wallet signature after upgrading.** The new backend persists the full signed [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) (the EIP-712 payload and its signature) where earlier versions stored only the raw signature, and the two formats are not interchangeable. Permits cached by an earlier version fail validation on read and are discarded rather than migrated, so the first decryption on each chain after upgrading prompts the user to sign a permit once more. Subsequent decrypts reuse the stored permit silently.
 
 
-## FHE runtime and client tuning
+### FHE runtime and client tuning
 
 `createConfig` accepts a process-wide `runtime` object — the `@fhevm/sdk` runtime config. It configures the FHE engine itself (applied once per process): how the WASM assets load, threading, module versions, and a fallback relayer `auth`.
 
@@ -2188,57 +2247,13 @@ web({
 
 `timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods and [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the full config reference.
 
-## Offline signing (institutional custody)
-
-A new `sdk.offline.*` namespace splits a transaction into three separately-invocable phases — `prepare`, `sign`, `broadcast` — for institutional custody, HSM, and policy-engine workflows where the three cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route for signers that expose `signTransaction` instead of `writeContract`.
-
-```ts
-const prepared = await sdk.offline.prepare({
-  kind: "ConfidentialTransfer",
-  from: custodyAddress,
-  token,
-  to: recipient,
-  amount: 1_000n,
-}); // → RLP-encoded unsigned tx + { from, to, chainId }
-
-// Sign out-of-process (HSM, custody API, policy engine), then broadcast the
-// returned signed bytes:
-await sdk.offline.broadcast(prepared, signedTx);
-```
-
-- **Signer.** `GenericSigner.writeContract` is now optional; a new optional `signTransaction(unsignedTx)` covers the deferred path. Wrap a custodian's API client by extending `BaseSigner` — keys never enter the SDK.
-- **Provider.** `GenericProvider` gains `sendRawTransaction(signedTx)` and `prepareTransaction({ from, call })` (builds the RLP-encoded EIP-1559 unsigned tx), wired in the viem, ethers, and wagmi adapters.
-
-
-> [!INFO]
-> **Transactions only, for now.** The offline path covers write operations (transfer, set-operator, unwrap, the shield legs, delegation, …). Producing a decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) through a decompose-and-sign pipeline is not yet available — the permit build-and-sign is still bundled in the backend. For custody decryption today, route the permit envelope through a `BaseSigner` whose async `signTypedData` awaits your custody / policy engine, then call `sdk.permits.grantPermit(contracts)`.
-
-
-## Bug fixes
+### Bug fixes
 
 - **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
 
 
 > [!INFO]
 > Only code that constructs low-level relayer objects directly should review its usage against the new backend before upgrading. Staying on `createConfig` + `Token` / `WrappedToken` + the React hooks keeps you fully insulated.
-
-## 3.x
-
-- source_type: official-doc
-- source_path: docs/gitbook/src/changelog/v3.md
-- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3.md
-- logical_path: changelog/v3
-
-# 3.x
-
-Plain-language release notes for the `3.x` line — the current, actively-maintained release line. Here's what changed in each minor version, and why it matters. This complements the auto-generated [`CHANGELOG.md`](https://github.com/zama-ai/sdk/blob/main/CHANGELOG.md) (the full commit-level list) and the [migration guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/migrate-v2-to-v3.md) (for moving across a major version).
-
-## Versions
-
-- [**3.3.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md) — `confidentialTransferAndCall`, automatic pending-unshield recovery, and typed decryption errors.
-- [**3.2.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-2.md) — configurable, silent-by-default logging; upgrade codemods; and a `Wrap` event decoding fix.
-- [**3.1.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-1.md) — `createConfig`, transport factories, the provider/signer split, the `Token` / `WrappedToken` hierarchy, and top-level FHE primitives.
-- [**3.0.x**](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-0.md) — the first stable v3 line: the high-level clear-text-in, clear-text-out SDK, plus upgraded wrapper and registry contract support.
 
 ## 3.3.x
 
@@ -2502,7 +2517,7 @@ relayers: {
 }
 ```
 
-Each transport factory also takes an optional `options` argument for per-chain tuning — in `3.1.0` this parameter was renamed from `relayer` to `options`. Its fields depend on the FHE backend; the internal backend migration and its current tuning options are documented under [FHE runtime and client tuning](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/alpha.md#fhe-runtime-and-client-tuning).
+Each transport factory also takes an optional `options` argument for per-chain tuning — in `3.1.0` this parameter was renamed from `relayer` to `options`. Its fields depend on the FHE backend; the internal backend migration and its current tuning options are documented under [FHE runtime and client tuning](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-4.md#fhe-runtime-and-client-tuning).
 
 See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#2-pick-a-relayer) for the full list.
 
@@ -2798,6 +2813,7 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | -------------- | ---------- | ----------------------- |
 | `mainnet`      | `1`        | Ethereum Mainnet        |
 | `sepolia`      | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
 | `hoodi`        | `560048`   | Hoodi Testnet           |
 | `ingenTestnet` | `364301`   | InGen Testnet           |
 | `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
@@ -2807,7 +2823,7 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 
 
 > [!INFO]
-> The Sepolia testnet relayer needs **no API key** — presets like `sepolia` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md).
+> The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md).
 
 
 ### 2. Pick a relayer
@@ -7692,7 +7708,7 @@ if (await registry.isConfidentialTokenValid("0xcUSDC")) {
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress` from `@zama-fhe/sdk/chains`). This export will be removed in the next major version.
 
 
-Exported map of built-in registry addresses for known chains. Includes Mainnet (`1`), Sepolia (`11155111`), and Hoodi (`560048`). Addresses are EIP-55 checksummed.
+Exported map of built-in registry addresses for every built-in chain with a deployed registry. Includes Mainnet (`1`), Sepolia (`11155111`), Polygon Amoy (`80002`), Hoodi (`560048`), InGen Testnet (`364301`), and BNB Smart Chain Testnet (`97`). Addresses are EIP-55 checksummed.
 
 ```ts
 import { sepolia } from "@zama-fhe/sdk/chains";
@@ -9979,38 +9995,41 @@ See [Event Decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/do
 Import pre-configured chain objects from `@zama-fhe/sdk/chains`. Each chain includes contract addresses, relayer URLs, chain IDs, and an `id` alias for use in relayer config keys.
 
 ```ts
-import { sepolia, mainnet, hoodi, hardhat } from "@zama-fhe/sdk/chains";
+import { sepolia, mainnet, polygonAmoy, hoodi, hardhat } from "@zama-fhe/sdk/chains";
 ```
 
 ### Available chains
 
-| Chain     | Chain ID   | Network            |
-| --------- | ---------- | ------------------ |
-| `mainnet` | `1`        | Ethereum Mainnet   |
-| `sepolia` | `11155111` | Sepolia Testnet    |
-| `hoodi`   | `560048`   | Hoodi Testnet      |
-| `hardhat` | `31337`    | Local Hardhat node |
+| Chain          | Chain ID   | Network                 |
+| -------------- | ---------- | ----------------------- |
+| `mainnet`      | `1`        | Ethereum Mainnet        |
+| `sepolia`      | `11155111` | Sepolia Testnet         |
+| `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
+| `hoodi`        | `560048`   | Hoodi Testnet           |
+| `ingenTestnet` | `364301`   | InGen Testnet           |
+| `bscTestnet`   | `97`       | BNB Smart Chain Testnet |
+| `hardhat`      | `31337`    | Local Hardhat node      |
 
 ### What each chain includes
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                        | Description                                                                                                                               |
-| ------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                        | `number`                    | Chain identifier                                                                                                                          |
-| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                   |
-| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                 |
-| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                     |
-| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                      |
-| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                      |
-| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                           |
-| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                         |
-| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                         |
-| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                  |
-| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                        |
-| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer; leave unset on the Sepolia testnet relayer, which needs no key. |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                          |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                        |
+| Field                                       | Type                        | Description                                                                                                                                                           |
+| ------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                    | Chain identifier                                                                                                                                                      |
+| `gatewayChainId`                            | `number`                    | Chain ID of the gateway                                                                                                                                               |
+| `relayerUrl`                                | `string`                    | Default relayer endpoint for this network                                                                                                                             |
+| `network`                                   | `EIP1193Provider \| string` | Default RPC URL or EIP-1193 provider for this network                                                                                                                 |
+| `aclContractAddress`                        | `Address`                   | ACL contract address                                                                                                                                                  |
+| `kmsContractAddress`                        | `Address`                   | KMS contract address                                                                                                                                                  |
+| `inputVerifierContractAddress`              | `Address`                   | Input verifier contract address                                                                                                                                       |
+| `verifyingContractAddressDecryption`        | `Address`                   | EIP-712 verifying contract for decrypt operations                                                                                                                     |
+| `verifyingContractAddressInputVerification` | `Address`                   | EIP-712 verifying contract for encrypt operations                                                                                                                     |
+| `registryAddress`                           | `Address \| undefined`      | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat)                                                              |
+| `executorAddress`                           | `Address \| undefined`      | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                    |
+| `auth`                                      | `Auth \| undefined`         | Relayer authentication. Required for the Zama-hosted **mainnet** relayer; leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key. |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`          | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                      |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`          | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                    |
 
 ### Usage with `createConfig`
 
@@ -10114,7 +10133,7 @@ import { sepolia, mainnet } from "@zama-fhe/sdk/chains";
 > **Deprecated.** Read `registryAddress` from the chain presets instead (e.g. `sepolia.registryAddress`). This export will be removed in the next major version.
 
 
-A convenience export of built-in registry addresses for known chains (Mainnet, Sepolia, Hoodi) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
+A convenience export of built-in registry addresses for every built-in chain with a deployed registry (Mainnet, Sepolia, Polygon Amoy, Hoodi, InGen Testnet, BNB Smart Chain Testnet) as a `Record<number, Address>` map. Used internally by the [WrappersRegistry](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappersRegistry.md) class.
 
 ```ts
 // Deprecated
@@ -19820,11 +19839,11 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
 
 ## Running e2e tests
 
@@ -19904,12 +19923,14 @@ const config = createConfig({
 `web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 
@@ -20194,11 +20215,11 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`. |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
 
 ## Running e2e tests
 
@@ -20286,12 +20307,14 @@ one instance is safe — the SDK namespaces the keys internally.
 The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 
@@ -20667,7 +20690,7 @@ If your wallet is on the wrong network, the app shows a message and offers a **S
 
 | Variable                               | Required | Description                                                                                         |
 | -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                          | No       | Relayer base URL incl. API version path. Defaults to `https://relayer.testnet.zama.org/v2`.         |
+| `RELAYER_URL`                          | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.                  |
 | `RELAYER_API_KEY`                      | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.                 |
 | `NEXT_PUBLIC_SEPOLIA_RPC_URL`          | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                                   |
 | `NEXT_PUBLIC_VAULT_ADDRESS`            | No       | `ConfidentialVault` demo address (`confidentialTransferAndCall`). Defaults to a Sepolia deployment. |
@@ -20945,7 +20968,8 @@ transaction(s), shield transaction, and cache invalidation.
 ## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[...path]/route.ts` keeps `RELAYER_API_KEY` server-side.
-Set `RELAYER_URL` in `.env.local` (defaults to the public Sepolia testnet relayer if unset).
+Set `RELAYER_URL` in `.env.local` (bare host, no `/v2` suffix; defaults to the public Sepolia
+testnet relayer if unset).
 `NEXT_PUBLIC_SEPOLIA_RPC_URL` overrides the default publicnode RPC — useful to avoid rate
 limiting with a private node.
 
@@ -21280,7 +21304,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - `WrappedToken` extends `Token` with ERC-7984 ERC-20 wrapper operations: shield, unshield, allowance, and unwrap orchestration.
 - Adapter-specific `createConfig` helpers are available from `@zama-fhe/sdk/viem` and `@zama-fhe/sdk/ethers`.
 - Relayer factories are split by runtime: browser `web()` comes from `@zama-fhe/sdk/web`, Node.js `node()` comes from `@zama-fhe/sdk/node`, and local `cleartext()` comes from `@zama-fhe/sdk`.
-- Chain presets such as `sepolia`, `mainnet`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
+- Chain presets such as `sepolia`, `mainnet`, `polygonAmoy`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
 
 ## Documentation
 
