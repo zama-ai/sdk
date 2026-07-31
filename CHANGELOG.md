@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.1-alpha.1...v3.5.0-alpha.1) (2026-07-31)
+
+### Features
+
+- **sdk:** add Polygon Amoy (80002) chain preset ([#602](https://github.com/zama-ai/sdk/issues/602)) ([bf6157b]())
+
 ## [3.4.1-alpha.1](https://github.com/zama-ai/sdk/compare/v3.4.0...v3.4.1-alpha.1) (2026-07-31)
 
 ### Bug Fixes
