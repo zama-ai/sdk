@@ -40,6 +40,7 @@ export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-
 export {
   mainnet,
   sepolia,
+  polygonAmoy,
   hoodi,
   ingenTestnet,
   bscTestnet,

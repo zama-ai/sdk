@@ -65,7 +65,7 @@ Browser apps should proxy relayer requests through their backend so the relayer 
 - `WrappedToken` extends `Token` with ERC-7984 ERC-20 wrapper operations: shield, unshield, allowance, and unwrap orchestration.
 - Adapter-specific `createConfig` helpers are available from `@zama-fhe/sdk/viem` and `@zama-fhe/sdk/ethers`.
 - Relayer factories are split by runtime: browser `web()` comes from `@zama-fhe/sdk/web`, Node.js `node()` comes from `@zama-fhe/sdk/node`, and local `cleartext()` comes from `@zama-fhe/sdk`.
-- Chain presets such as `sepolia`, `mainnet`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
+- Chain presets such as `sepolia`, `mainnet`, `polygonAmoy`, `hoodi`, `hardhat`, and `anvil` are available from `@zama-fhe/sdk/chains`.
 
 ## Documentation
 
