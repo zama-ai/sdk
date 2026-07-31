@@ -1,0 +1,27 @@
+{
+  "name": "polygon-amoy-example",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3006",
+    "build": "next build",
+    "start": "next start -p 3006",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.0",
+    "@zama-fhe/react-sdk": "3.4.0-alpha.12",
+    "@zama-fhe/sdk": "3.4.0-alpha.12",
+    "next": "^16.2.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.55.0",
+    "wagmi": "^3.7.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "typescript": "6.0.3"
+  }
+}
