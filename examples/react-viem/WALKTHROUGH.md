@@ -65,12 +65,14 @@ one instance is safe — the SDK namespaces the keys internally.
 The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/keyurl
+Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
                    ↓
-Next.js API route → RELAYER_URL/keyurl  (+ x-api-key header if set)
+Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
                  https://relayer.testnet.zama.org/v2/keyurl
 ```
+
+The `v2/` prefix comes from the SDK, not from the proxy.
 
 The proxy defaults to the public Sepolia testnet relayer. No `RELAYER_URL` or `RELAYER_API_KEY` is required for testnet.
 
