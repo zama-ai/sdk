@@ -31,11 +31,11 @@ If your wallet is on the wrong network, the app shows a message — switch to Se
 
 ## Environment variables
 
-| Variable                      | Required | Description                                                                                 |
-| ----------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.          |
-| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet.         |
-| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                           |
+| Variable                      | Required | Description                                                                         |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `RELAYER_URL`                 | No       | Relayer base URL, no `/v2` suffix. Defaults to `https://relayer.testnet.zama.org`.  |
+| `RELAYER_API_KEY`             | No       | API key added as `x-api-key` header by the proxy. Not required for Sepolia testnet. |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | No       | Sepolia RPC override. Defaults to the public PublicNode endpoint.                   |
 
 ## Running e2e tests
 
