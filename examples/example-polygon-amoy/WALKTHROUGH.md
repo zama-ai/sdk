@@ -113,7 +113,7 @@ page.tsx: useShield / useConfidentialTransfer / useUnshield / useConfidentialBal
 @zama-fhe/react-sdk/wagmi  ← createConfig({ wagmiConfig, chains, relayers })
   ├─ reads → viem HTTP transport(AMOY_RPC_URL)
   ├─ writes + EIP-712 signing → active wagmi injected connection
-  └─ web() → the inline Polygon Amoy FheChain config
+  └─ web() → the polygonAmoy preset (proxy relayerUrl override)
        └─ FHE encryption in a browser worker (local)
        └─ decryption via /api/relayer → relayer.testnet.zama.org
 ```
@@ -342,7 +342,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { indexedDBStorage } from "@zama-fhe/sdk";
-import { type FheChain } from "@zama-fhe/sdk/chains";
+import { polygonAmoy as fhePolygonAmoy, type FheChain } from "@zama-fhe/sdk/chains";
 import { web } from "@zama-fhe/sdk/web";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { polygonAmoy } from "wagmi/chains";
@@ -354,19 +354,11 @@ const wagmiConfig = createConfig({
   transports: { [polygonAmoy.id]: http(AMOY_RPC_URL) },
 });
 
-// Inline FheChain literal: no published SDK release exports a Polygon Amoy preset yet.
 // relayerUrl points at the local proxy so RELAYER_API_KEY stays server-side.
 const zamaPolygonAmoy = {
-  id: 80002,
-  gatewayChainId: 10901,
+  ...fhePolygonAmoy,
   relayerUrl: "http://localhost:3006/api/relayer",
   network: AMOY_RPC_URL,
-  aclContractAddress: "0xD99Cb9Fc3c42c87f2A4A12e8Fd60318d6bDdf985",
-  kmsContractAddress: "0xCD1D89E311bce4C8DEa9a0857a0c9A4E153D4041",
-  inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631",
-  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
-  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94",
 } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
@@ -382,18 +374,6 @@ const zamaConfig = createZamaConfig({
     <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
   </QueryClientProvider>
 </WagmiProvider>;
-```
-
-Once a published release ships a `polygonAmoy` preset, replace the literal with a spread of the preset:
-
-```ts
-import { polygonAmoy as fhePolygonAmoy } from "@zama-fhe/sdk/chains";
-
-const zamaPolygonAmoy = {
-  ...fhePolygonAmoy,
-  relayerUrl: "http://localhost:3006/api/relayer",
-  network: AMOY_RPC_URL,
-} as const satisfies FheChain;
 ```
 
 ### Relayer proxy route

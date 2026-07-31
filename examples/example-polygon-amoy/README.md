@@ -185,23 +185,5 @@ UI, and the delegation section. They mock `window.ethereum` and the Polygon Amoy
 RPC, and abort every `/api/relayer` request, so no wallet, chain, or relayer is
 needed.
 
-## Upgrading
-
-`src/providers.tsx` declares the Polygon Amoy FHE deployment as an inline
-`as const satisfies FheChain` literal. Examples are standalone npm projects
-pinned to a published `@zama-fhe/sdk` version, and no published version exports a
-Polygon Amoy chain preset yet. Once a release ships one, replace the literal
-with:
-
-```ts
-import { polygonAmoy } from "@zama-fhe/sdk/chains";
-
-const zamaPolygonAmoy = {
-  ...polygonAmoy,
-  relayerUrl: "http://localhost:3006/api/relayer",
-  network: AMOY_RPC_URL,
-} as const satisfies FheChain;
-```
-
 For a detailed partner-facing guide including prerequisites, step-by-step flow,
 and troubleshooting, see [WALKTHROUGH.md](./WALKTHROUGH.md).

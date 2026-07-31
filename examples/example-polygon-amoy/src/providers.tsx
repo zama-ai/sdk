@@ -8,7 +8,7 @@ import { injected } from "wagmi/connectors/injected";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { indexedDBStorage } from "@zama-fhe/sdk";
-import { type FheChain } from "@zama-fhe/sdk/chains";
+import { polygonAmoy as fhePolygonAmoy, type FheChain } from "@zama-fhe/sdk/chains";
 import { web } from "@zama-fhe/sdk/web";
 import { AMOY_RPC_URL } from "@/lib/config";
 
@@ -20,26 +20,11 @@ const wagmiConfig = createConfig({
   transports: { [polygonAmoy.id]: http(AMOY_RPC_URL) },
 });
 
-// Polygon Amoy FHE deployment, declared inline.
-//
-// TODO: replace this literal with `import { polygonAmoy } from "@zama-fhe/sdk/chains"`
-// once a published SDK release ships the preset. Examples pin a published version,
-// and no released version exports a Polygon Amoy `FheChain` yet.
-//
-// relayerUrl points at the local Next.js proxy (src/app/api/relayer/[...path]/route.ts)
-// so any RELAYER_API_KEY stays server-side. The proxy forwards to the shared public
-// testnet relayer, which serves both Sepolia and Polygon Amoy.
+// Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
 const zamaPolygonAmoy = {
-  id: 80002,
-  gatewayChainId: 10901,
+  ...fhePolygonAmoy,
   relayerUrl: "http://localhost:3006/api/relayer",
   network: AMOY_RPC_URL,
-  aclContractAddress: "0xD99Cb9Fc3c42c87f2A4A12e8Fd60318d6bDdf985",
-  kmsContractAddress: "0xCD1D89E311bce4C8DEa9a0857a0c9A4E153D4041",
-  inputVerifierContractAddress: "0x6e5A7D8b0c645467Cba7e62D6624917085118631",
-  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
-  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
-  registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94",
 } as const satisfies FheChain;
 
 const zamaConfig = createZamaConfig({
