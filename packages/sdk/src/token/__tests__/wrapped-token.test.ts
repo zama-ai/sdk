@@ -199,7 +199,7 @@ describe("WrappedToken", () => {
         .mockResolvedValueOnce(UNDERLYING)
         .mockResolvedValueOnce(false) // supportsInterface (ERC-1363)
         .mockResolvedValueOnce(1000n); // ERC-20 balanceOf
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(wrappedToken.shield(100n, { approvalStrategy: "skip" })).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
@@ -250,7 +250,7 @@ describe("WrappedToken", () => {
     test("wraps error in TransactionReverted", async ({ signer, wrappedToken, provider }) => {
       vi.mocked(provider.readContract).mockResolvedValueOnce(UNDERLYING).mockResolvedValueOnce(0n);
       const rootCause = new Error("approve failed");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(rootCause);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
 
       const thrown = await wrappedToken.approveUnderlying().catch((error) => error);
 
@@ -397,7 +397,7 @@ describe("WrappedToken", () => {
       signer,
       wrappedToken,
     }) => {
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(wrappedToken.finalizeUnwrap("0xburn" as Address)).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
@@ -540,7 +540,7 @@ describe("WrappedToken", () => {
       wrappedToken,
       provider,
     }) => {
-      vi.mocked(signer.writeContract!).mockResolvedValue(UNWRAP_TX);
+      vi.mocked(signer.writeContract).mockResolvedValue(UNWRAP_TX);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue(
         receiptWithUnwrapRequested(userAddress),
       );
@@ -563,7 +563,7 @@ describe("WrappedToken", () => {
     }) => {
       // Seed a stale pending entry to prove the success path clears it.
       await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
-      vi.mocked(signer.writeContract!).mockResolvedValue(UNWRAP_TX);
+      vi.mocked(signer.writeContract).mockResolvedValue(UNWRAP_TX);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue(
         receiptWithUnwrapRequested(userAddress),
       );
@@ -701,14 +701,14 @@ describe("WrappedToken", () => {
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(0n);
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(original);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.shield(100n)).rejects.toBe(original);
     });
 
     test("unwrap re-throws ZamaError from writeContract", async ({ signer, wrappedToken }) => {
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(original);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(wrappedToken.unwrap(50n)).rejects.toBe(original);
     });

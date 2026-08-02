@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import type { Address } from "viem";
 import type { GenericSigner } from "../types";
 import type { AddressFixtures } from "./addresses";
-import { TEST_SIGNATURE, TEST_SIGNED_TX, USER } from "./constants";
+import { TEST_SIGNATURE, USER } from "./constants";
 import type { FixturesOf } from "./types";
 
 /**
@@ -29,7 +29,6 @@ export function createMockSigner(
     walletAccount: store,
     requireWalletAccount: vi.fn().mockReturnValue(walletAccount),
     signTypedData: vi.fn().mockResolvedValue(TEST_SIGNATURE),
-    signTransaction: vi.fn().mockResolvedValue(TEST_SIGNED_TX),
     writeContract: vi.fn().mockResolvedValue("0xtxhash"),
     ...overrides,
   };

@@ -2,7 +2,6 @@ import type { Hex } from "viem";
 import { TransactionRevertedError, ZamaError } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
-import { assertWriteContract } from "../signer/capabilities";
 import type {
   GenericLogger,
   GenericProvider,
@@ -35,7 +34,6 @@ export async function submitTransaction(params: {
 }): Promise<TransactionResult> {
   const { operation, signer, provider, config, emit, onSubmitted, logger } = params;
   const metadata = transactionOperationMetadata[operation];
-  assertWriteContract(signer, operation);
 
   try {
     const txHash = await signer.writeContract(config);

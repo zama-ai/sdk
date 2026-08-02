@@ -184,8 +184,6 @@ export {
   SignerNotConfiguredError,
   WalletNotConnectedError,
   WalletAccountNotReadyError,
-  SignerCapabilityError,
-  SignerAddressMismatchError,
   DelegationSelfNotAllowedError,
   DelegationCooldownError,
   DelegationNotFoundError,
@@ -206,7 +204,6 @@ export {
   type ErrorForCode,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
-export { ensureHexSignature } from "./signer/util";
 export type { OfflineSigningOptions } from "./services/offline-signing-service";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 

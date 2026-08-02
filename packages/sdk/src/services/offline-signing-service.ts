@@ -17,20 +17,15 @@ import {
   wrapContract,
 } from "../contracts";
 import {
-  ChainMismatchError,
   ConfigurationError,
   EncryptionFailedError,
   PreparedChainMismatchError,
-  SignerAddressMismatchError,
-  SignerNotConfiguredError,
-  SigningFailedError,
   TransactionRevertedError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
 import type { TransactionOperation, ZamaSDKEventInput } from "../events/sdk-events";
 import { transactionOperationMetadata, ZamaSDKEvents } from "../events/sdk-events";
-import { assertSignTransaction } from "../signer/capabilities";
 import type {
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
@@ -63,8 +58,8 @@ import type { EncryptionService } from "./encryption-service";
 export interface OfflineSigningServiceConfig {
   /**
    * Optional signer. `prepare` and `broadcast` work without a signer
-   * (canonical shape for cross-process custody). `sign` requires a signer
-   * with the `signTransaction` capability.
+   * (canonical shape for cross-process custody). When configured, `prepare`
+   * asserts the signer's connected wallet matches `request.from`.
    */
   readonly signer?: GenericSigner;
   readonly provider: GenericProvider;
@@ -117,27 +112,26 @@ const ERROR_OPERATION_BY_KIND: Record<TransactionKind, TransactionOperation> = {
 };
 
 /**
- * Offline-signing pipeline. Separates `prepare`, `sign`, and `broadcast`
- * for institutional custody and policy-engine workflows where the three
- * phases cannot run synchronously in a single Promise.
+ * Offline-signing pipeline. Separates `prepare` and `broadcast` for
+ * institutional custody and policy-engine workflows where signing runs
+ * out-of-process and cannot happen synchronously in a single Promise.
  *
  * Atomic call sites ({@link Token.confidentialTransfer}, etc.) keep their
- * `signer.writeContract` path; this service is the parallel route for
- * signers that expose `signTransaction` instead.
+ * `signer.writeContract` path; this service is the parallel route where the
+ * caller signs `prepared.unsignedTx` externally (HSM, custody API, policy
+ * engine) and feeds the signed bytes back through {@link broadcast}.
  *
  * Owned by {@link ZamaSDK}.
  *
  * @internal
  */
 export class OfflineSigningService {
-  readonly #signer: GenericSigner | undefined;
   readonly #provider: GenericProvider;
   readonly #router: ChainRouter;
   readonly #encryption: EncryptionService;
   readonly #emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 
   constructor(config: OfflineSigningServiceConfig) {
-    this.#signer = config.signer;
     this.#provider = config.provider;
     this.#router = config.router;
     this.#encryption = config.encryption;
@@ -148,24 +142,19 @@ export class OfflineSigningService {
 
   /**
    * Build the offline-signing payload for the given transaction request:
-   * an RLP-encoded unsigned transaction the caller signs externally (via
-   * {@link sign}, an HSM, or any out-of-process signer) and feeds back through
+   * an RLP-encoded unsigned transaction the caller signs externally (an HSM,
+   * custody API, or any out-of-process signer) and feeds back through
    * {@link broadcast}.
    *
    * Decryption permits are not transactions — acquire them via
    * `sdk.permits.grantPermit`, which signs with the configured signer
    * (including an out-of-process custody signer).
-   *
-   * Signer-optional: when a signer IS configured, its connected wallet
-   * address must equal `request.from` or {@link SignerAddressMismatchError}
-   * is thrown.
    */
   async prepare<K extends TransactionKind>(
     request: Extract<PrepareTransactionRequest, { kind: K }>,
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
     const from = getAddress(request.from);
-    await this.#assertMatchesConfiguredSigner(from, `prepare(${request.kind})`);
     const call = await this.#buildCall(request, from);
     const unsignedTx = await this.#provider.prepareTransaction({
       from,
@@ -184,32 +173,6 @@ export class OfflineSigningService {
       to: call.address,
       chainId,
     } as PreparedFor<K>;
-  }
-
-  // ── sign ────────────────────────────────────────────────────────────────
-
-  /**
-   * Sign a prepared transaction with the configured signer and return
-   * RLP-encoded signed bytes. Pair with {@link broadcast}.
-   *
-   * @throws if the configured signer has no `signTransaction` capability
-   *   (online-only wallets). {@link SignerCapabilityError}
-   * @throws if the signer rejects the signing request (HTTP error, policy
-   *   denial, timeout). Already-typed {@link ZamaError} causes are re-thrown
-   *   unchanged. {@link SigningFailedError}
-   */
-  async sign(preparedTx: PreparedTransaction): Promise<Hex> {
-    const signer = this.#requireSigner(`sign(${preparedTx.kind})`);
-    assertSignTransaction(signer, `sign(${preparedTx.kind})`);
-    try {
-      return await signer.signTransaction(preparedTx.unsignedTx);
-    } catch (error) {
-      this.#emitTransactionError(preparedTx, error);
-      if (error instanceof ZamaError) {
-        throw error;
-      }
-      throw new SigningFailedError(`Sign failed for ${preparedTx.kind}`, { cause: error });
-    }
   }
 
   // ── broadcast ───────────────────────────────────────────────────────────
@@ -425,41 +388,6 @@ export class OfflineSigningService {
       getAddress(request.delegateAddress),
       getAddress(request.contractAddress),
     );
-  }
-
-  /**
-   * If a signer is configured, fail when its connected wallet address does
-   * not match the requested `from`, or when its chain disagrees with the
-   * provider's chain. Cross-process flows (no signer configured) skip this
-   * check entirely — `request.from` is the source of truth and the caller
-   * is responsible for routing the prepared tx to the right chain.
-   */
-  async #assertMatchesConfiguredSigner(from: Address, operation: string): Promise<void> {
-    if (!this.#signer) {
-      return;
-    }
-    const snapshot = this.#signer.walletAccount.getSnapshot();
-    if (!snapshot) {
-      return;
-    }
-    if (getAddress(snapshot.address) !== getAddress(from)) {
-      throw new SignerAddressMismatchError({
-        operation,
-        requested: getAddress(from),
-        configured: getAddress(snapshot.address),
-      });
-    }
-    const providerChainId = await this.#provider.getChainId();
-    if (snapshot.chainId !== providerChainId) {
-      throw new ChainMismatchError({ operation, signerChainId: snapshot.chainId, providerChainId });
-    }
-  }
-
-  #requireSigner(operation: string): GenericSigner {
-    if (!this.#signer) {
-      throw new SignerNotConfiguredError(operation);
-    }
-    return this.#signer;
   }
 
   async #assertSameChainAsPrepared(

@@ -25,7 +25,7 @@ describe("useConfidentialTransferFromAndCall", () => {
     transferFromAddress,
     userAddress,
   }) => {
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useConfidentialTransferFromAndCall(tokenAddress),
@@ -58,7 +58,7 @@ describe("useConfidentialTransferFromAndCall", () => {
     userAddress,
     mutateAndExpectOnSuccess,
   }) => {
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
     const onSuccess = vi.fn();

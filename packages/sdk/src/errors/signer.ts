@@ -1,4 +1,3 @@
-import type { Address } from "viem";
 import { ZamaError, ZamaErrorCode } from "./base";
 
 /**
@@ -67,75 +66,6 @@ export class WalletAccountNotReadyError extends SignerRequiredError {
       options,
     );
     this.name = "WalletAccountNotReadyError";
-  }
-}
-
-/**
- * Capabilities a {@link GenericSigner} may declare. `writeContract` covers
- * atomic broadcast-from-wallet flows; `signTransaction` covers the offline-signing
- * custodian path where the SDK builds an unsigned tx, the signer returns
- * signed bytes, and the SDK broadcasts via `provider.sendRawTransaction`.
- */
-export type SignerCapability = "writeContract" | "signTransaction";
-
-/**
- * Thrown when an operation needs a signer capability that the configured
- * signer does not expose — e.g. calling an atomic write op on a signer that
- * has `signTransaction` but no `writeContract`. Distinct from
- * {@link SignerNotConfiguredError}: a signer *is* configured but cannot
- * perform the requested operation.
- */
-export class SignerCapabilityError extends SignerRequiredError {
-  /** The signer capability that was required but not implemented. */
-  readonly capability: SignerCapability;
-
-  constructor(
-    operation: string,
-    capability: SignerCapability,
-    hint?: string,
-    options?: ErrorOptions,
-  ) {
-    super(
-      ZamaErrorCode.SignerMissingCapability,
-      operation,
-      `Cannot ${operation}: the configured signer does not implement ${capability}.${
-        hint ? ` ${hint}` : ""
-      }`,
-      options,
-    );
-    this.name = "SignerCapabilityError";
-    this.capability = capability;
-  }
-}
-
-/**
- * Thrown when a `prepare(...)` call passes a `request.from` address that
- * disagrees with the configured signer's connected wallet address. The SDK
- * uses `request.from` as the source of truth (so `prepare` works without a
- * signer for cross-process custody); when a signer IS configured, the SDK
- * raises this error to catch wiring mistakes.
- */
-export class SignerAddressMismatchError extends ZamaError {
-  /** The operation that triggered the mismatch. */
-  readonly operation: string;
-  /** The `request.from` address the caller passed. */
-  readonly requested: Address;
-  /** The connected wallet address of the configured signer. */
-  readonly configured: Address;
-
-  constructor(
-    params: { requested: Address; configured: Address; operation: string },
-    options?: ErrorOptions,
-  ) {
-    super(
-      ZamaErrorCode.SignerAddressMismatch,
-      `Signer address mismatch in ${params.operation}: request.from is ${params.requested} but configured signer's wallet is ${params.configured}`,
-      options,
-    );
-    this.name = "SignerAddressMismatchError";
-    this.operation = params.operation;
-    this.requested = params.requested;
-    this.configured = params.configured;
   }
 }
 

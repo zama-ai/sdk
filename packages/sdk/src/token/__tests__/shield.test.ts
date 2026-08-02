@@ -97,7 +97,7 @@ describe("WrappedToken.shield", () => {
 
     const callOrder: string[] = [];
 
-    vi.mocked(signer.writeContract!).mockImplementation(async (config) => {
+    vi.mocked(signer.writeContract).mockImplementation(async (config) => {
       callOrder.push(`write:${(config as { functionName: string }).functionName}`);
       return "0xtxhash";
     });
@@ -230,7 +230,7 @@ describe("WrappedToken.shield", () => {
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(1000n);
 
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("transferAndCall reverted"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("transferAndCall reverted"));
 
       await expect(token.shield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
@@ -250,9 +250,7 @@ describe("WrappedToken.shield", () => {
 
       // Plain Error, not a ContractFunctionRevertedError — represents a user
       // rejection or RPC failure where falling back would be hostile UX.
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(
-        new Error("User rejected the request"),
-      );
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("User rejected the request"));
 
       await expect(token.shield(100n)).rejects.toMatchObject({
         code: ZamaErrorCode.TransactionReverted,
@@ -270,7 +268,7 @@ describe("WrappedToken.shield", () => {
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(1000n);
 
-      vi.mocked(signer.writeContract!).mockResolvedValueOnce("0xtxhash");
+      vi.mocked(signer.writeContract).mockResolvedValueOnce("0xtxhash");
       vi.mocked(provider.waitForTransactionReceipt).mockRejectedValueOnce(
         new Error("network dropped"),
       );
@@ -294,7 +292,7 @@ describe("WrappedToken.shield", () => {
 
       await token.shield(100n);
 
-      const callArgs = vi.mocked(signer.writeContract!).mock.calls[0]![0] as unknown as {
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
         args: readonly unknown[];
       };
       expect(callArgs.args[2]).toBe("0x");
@@ -315,7 +313,7 @@ describe("WrappedToken.shield", () => {
 
       await token.shield(100n, { to: OTHER_RECIPIENT });
 
-      const callArgs = vi.mocked(signer.writeContract!).mock.calls[0]![0] as unknown as {
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
         args: readonly unknown[];
       };
       expect(callArgs.args[2]).toBe(getAddress(OTHER_RECIPIENT));
@@ -336,7 +334,7 @@ describe("WrappedToken.shield", () => {
       // via getAddress() collapses to the self-shield branch.
       await token.shield(100n, { to: userAddress.toLowerCase() as Address });
 
-      const callArgs = vi.mocked(signer.writeContract!).mock.calls[0]![0] as unknown as {
+      const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
         args: readonly unknown[];
       };
       expect(callArgs.args[2]).toBe("0x");

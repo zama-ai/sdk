@@ -42,11 +42,11 @@ export interface GenericProvider {
   /**
    * Broadcast a previously-signed transaction and return its hash.
    *
-   * Used by the SDK's offline-signing path: a custodian / HSM / policy
-   * engine returns signed bytes via
-   * {@link GenericSigner.signTransaction}, and the SDK submits them through
-   * this method. Atomic signers (`writeContract`) do not exercise this
-   * path — their wallet broadcasts directly.
+   * Used by the SDK's offline-signing path: the caller signs the prepared
+   * unsigned transaction out-of-process (a custodian / HSM / policy engine
+   * returns signed bytes), and the SDK submits them through this method.
+   * Atomic signers (`writeContract`) do not exercise this path — their wallet
+   * broadcasts directly.
    *
    * Custom adapters delegate to the underlying client's raw-send method:
    * `publicClient.sendRawTransaction({ serializedTransaction })` (viem),
@@ -57,8 +57,9 @@ export interface GenericProvider {
    * Build a fully-populated, RLP-encoded unsigned transaction from a
    * write-contract config and the originating wallet address. The provider
    * resolves chain ID, nonce, gas limit, and EIP-1559 fee parameters from
-   * chain state and returns bytes ready to be passed to
-   * {@link GenericSigner.signTransaction}.
+   * chain state and returns bytes ready to be signed out-of-process (an HSM,
+   * custody API, or policy engine) and broadcast via
+   * {@link GenericProvider.sendRawTransaction}.
    *
    * Optional overrides (`nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`,
    * `gasLimit`) let callers pin values at prepare time — used by the

@@ -272,7 +272,7 @@ describe("DelegationService", () => {
   }) => {
     vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
     const rootCause = new Error("AlreadyDelegatedOrRevokedInSameBlock");
-    vi.mocked(signer.writeContract!).mockRejectedValue(rootCause);
+    vi.mocked(signer.writeContract).mockRejectedValue(rootCause);
 
     const thrown = await delegationService
       .revokeDelegation(signer, {

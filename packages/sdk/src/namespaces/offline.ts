@@ -12,14 +12,14 @@ import type {
 } from "../types";
 
 /**
- * Namespace for the offline-signing pipeline — `prepare → sign → broadcast`
- * decomposed for institutional custody, HSM ceremonies, and policy-engine
- * workflows where the three steps cannot run synchronously in a single
- * Promise.
+ * Namespace for the offline-signing pipeline — `prepare → [external sign] →
+ * broadcast` decomposed for institutional custody, HSM ceremonies, and
+ * policy-engine workflows where signing runs out-of-process and cannot happen
+ * synchronously in a single Promise.
  *
  * Two surfaces, picked by where the signer's keys live:
  * - **In-process atomic** ({@link Token} methods like `Token.confidentialTransfer`) — *not* on this client; lives on `Token` for online-signer call sites where prepare/sign/broadcast can run synchronously.
- * - **Decomposed** ({@link prepare} / {@link sign} / {@link broadcast}) — caller slots their own custody steps between SDK calls. This namespace.
+ * - **Decomposed** ({@link prepare} / {@link broadcast}) — caller signs `prepared.unsignedTx` externally and slots their own custody steps between SDK calls. This namespace.
  *
  * This pipeline is **transaction-only**: {@link prepare} returns an
  * RLP-encoded unsigned EIP-1559 tx, finalized with {@link broadcast} once you
@@ -47,8 +47,8 @@ export class Offline {
 
   /**
    * Build an RLP-encoded unsigned transaction for the given request. The
-   * caller signs it externally — via {@link sign}, an HSM ceremony, an
-   * out-of-process custodian — and feeds the result back into
+   * caller signs it externally — via an HSM ceremony, an out-of-process
+   * custodian, or any signer holding the key — and feeds the result back into
    * {@link broadcast}.
    *
    * Signer-optional: works without a configured signer (canonical shape for
@@ -66,8 +66,6 @@ export class Offline {
    * account you don't control. Verifying control of `from` up front is still
    * the application's responsibility.
    *
-   * @throws if a signer IS configured and its connected wallet address differs
-   *   from `request.from`. {@link SignerAddressMismatchError}
    * @throws if a signer IS configured and its chain disagrees with the
    *   provider's chain. {@link ChainMismatchError}
    */
@@ -76,38 +74,6 @@ export class Offline {
     options?: OfflineSigningOptions,
   ): Promise<PreparedFor<K>> {
     return this.#offlineSigningService.prepare(request, options);
-  }
-
-  /**
-   * **In-process convenience** that delegates to
-   * `this.signer.signTransaction(preparedTx.unsignedTx)` with capability checks
-   * and event/error integration. The SDK never takes custody of signing
-   * material — this method runs in your process, against the signer object
-   * you passed to `createConfig`; keys stay where they are.
-   *
-   * Many flows skip this method:
-   *
-   * - **Cross-process custody** (institutional custodians, policy engines,
-   *   m-of-n approval workflows): configure with `signer: undefined`, sign
-   *   in your back-end signer service, pass bytes to {@link broadcast}.
-   *   `sign()` throws {@link SignerNotConfiguredError} here — by design.
-   * - **Permit-only signers** (KMS configurations that can `signTypedData`
-   *   but not full transactions): for tx-signing, arrange an out-of-process
-   *   pipeline bypassing this method. `sign()` throws
-   *   {@link SignerCapabilityError} here. (Permits are signed via
-   *   `sdk.permits.grantPermit`, which needs only `signTypedData`.)
-   *
-   * Both cases naturally route to `prepare → external sign → broadcast`
-   * — this method is the convenience for the third case where the configured
-   * signer holds the key and can sign in-process.
-   *
-   * @throws if no signer configured. {@link SignerNotConfiguredError}
-   * @throws if signer lacks `signTransaction`. {@link SignerCapabilityError}
-   * @throws if signer rejected (HSM denial, policy refusal, timeout, …).
-   *   {@link SigningFailedError}
-   */
-  sign(preparedTx: PreparedTransaction): Promise<Hex> {
-    return this.#offlineSigningService.sign(preparedTx);
   }
 
   /**

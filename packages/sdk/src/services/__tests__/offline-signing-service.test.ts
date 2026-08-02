@@ -56,24 +56,6 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(prepared.chainId).toBe(31337);
   });
 
-  test("sign delegates to signer.signTransaction with the prepared bytes", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    const signed = await sdk.offline.sign(prepared);
-    expect(signed).toBe(SIGNED);
-    expect(signer.signTransaction).toHaveBeenCalledWith(UNSIGNED);
-  });
-
   test("broadcast submits signed bytes + emits TransferSubmitted + awaits receipt", async ({
     createSDK,
     signer,
@@ -103,7 +85,7 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     );
   });
 
-  test("prepare → sign → broadcast chains across the three calls", async ({
+  test("prepare → external sign → broadcast chains across the calls", async ({
     createSDK,
     signer,
     provider,
@@ -117,10 +99,8 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
       to: RECIPIENT,
       amount: 1n,
     });
-    const signed = await sdk.offline.sign(prepared);
-    const result = await sdk.offline.broadcast(prepared, signed);
+    const result = await sdk.offline.broadcast(prepared, SIGNED);
     expect(provider.prepareTransaction).toHaveBeenCalledOnce();
-    expect(signer.signTransaction).toHaveBeenCalledOnce();
     expect(provider.sendRawTransaction).toHaveBeenCalledWith(SIGNED);
     expect(result.txHash).toBe(TX_HASH);
   });
@@ -502,30 +482,6 @@ describe("OfflineSigningService — broadcast error paths", () => {
     vi.mocked(provider.sendRawTransaction).mockRejectedValueOnce(typed);
 
     await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toBe(typed);
-  });
-
-  test("sign() wraps signer rejection in SigningFailedError + emits TransactionError", async ({
-    createSDK,
-    signer,
-    userAddress,
-  }) => {
-    const { SigningFailedError } = await import("../../errors");
-    const onEvent = vi.fn();
-    vi.mocked(signer.signTransaction!).mockRejectedValueOnce(new Error("HSM denied"));
-    const sdk = createSDK({ signer, onEvent });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    const err = await sdk.offline.sign(prepared).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(SigningFailedError);
-    expect((err as Error).message).toContain("Sign failed for ConfidentialTransfer");
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
-    );
   });
 });
 
@@ -996,39 +952,5 @@ describe("OfflineSigningService — signer-optional surface (cross-process custo
     const result = await sdk.offline.broadcast(prepared, externalSigned);
     expect(provider.sendRawTransaction).toHaveBeenCalledWith(externalSigned);
     expect(result.txHash).toBe(TX_HASH);
-  });
-
-  test("signer-absent SDK: sign throws SignerNotConfiguredError", async ({
-    createSDK,
-    userAddress,
-  }) => {
-    const { SignerNotConfiguredError } = await import("../../errors");
-    const sdk = createSDK({ signer: undefined });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    await expect(sdk.offline.sign(prepared)).rejects.toBeInstanceOf(SignerNotConfiguredError);
-  });
-
-  test("signer-address-mismatch: configured signer != request.from", async ({
-    createSDK,
-    signer,
-  }) => {
-    const { SignerAddressMismatchError } = await import("../../errors");
-    const sdk = createSDK({ signer });
-    const otherAddress = "0x9999999999999999999999999999999999999999" as Address;
-    await expect(
-      sdk.offline.prepare({
-        kind: "ConfidentialTransfer",
-        from: otherAddress,
-        token: TOKEN,
-        to: RECIPIENT,
-        amount: 1n,
-      }),
-    ).rejects.toBeInstanceOf(SignerAddressMismatchError);
   });
 });

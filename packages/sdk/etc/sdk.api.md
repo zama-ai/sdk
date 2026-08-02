@@ -5811,9 +5811,6 @@ export interface EncryptStartEvent extends BaseEvent {
 }
 
 // @public
-export function ensureHexSignature(value: unknown, method: string): Hex;
-
-// @public
 export const ERC1363_INTERFACE_ID: "0xb0202a11";
 
 // @public
@@ -5855,8 +5852,6 @@ export interface ErrorForCode {
     [ZamaErrorCode.PreparedChainMismatch]: PreparedChainMismatchError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
-    [ZamaErrorCode.SignerAddressMismatch]: SignerAddressMismatchError;
-    [ZamaErrorCode.SignerMissingCapability]: SignerCapabilityError;
     [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
     [ZamaErrorCode.SigningFailed]: SigningFailedError;
     [ZamaErrorCode.SigningRejected]: SigningRejectedError;
@@ -7107,10 +7102,9 @@ export interface GenericSigner {
     dispose?(): void;
     refreshWalletAccount?(): Promise<WalletAccount | undefined>;
     requireWalletAccount(operation: string): WalletAccount;
-    signTransaction?(unsignedTx: Hex): Promise<Hex>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     readonly walletAccount: WalletAccountStore;
-    writeContract?<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
@@ -11443,7 +11437,6 @@ export class Offline {
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
-    sign(preparedTx: PreparedTransaction): Promise<Hex>;
 }
 
 // @public
@@ -14178,25 +14171,6 @@ export interface ShieldSubmittedEvent extends BaseEvent {
     shieldPath: ShieldPath;
     txHash: Hex;
     type: typeof ZamaSDKEvents.ShieldSubmitted;
-}
-
-// @public
-export class SignerAddressMismatchError extends ZamaError {
-    constructor(params: {
-        requested: Address;
-        configured: Address;
-        operation: string;
-    }, options?: ErrorOptions);
-    readonly configured: Address;
-    readonly operation: string;
-    readonly requested: Address;
-}
-
-// @public
-export class SignerCapabilityError extends SignerRequiredError {
-    constructor(operation: string, capability: SignerCapability, hint?: string, options?: ErrorOptions);
-    // Warning: (ae-forgotten-export) The symbol "SignerCapability" needs to be exported by the entry point index.d.ts
-    readonly capability: SignerCapability;
 }
 
 // @public
@@ -19653,8 +19627,6 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
-    readonly SignerMissingCapability: "SIGNER_MISSING_CAPABILITY";
-    readonly SignerAddressMismatch: "SIGNER_ADDRESS_MISMATCH";
 };
 
 // @public

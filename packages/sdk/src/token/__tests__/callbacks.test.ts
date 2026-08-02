@@ -166,7 +166,7 @@ describe("Unshield callbacks (P4)", () => {
     provider,
   }) => {
     mockReceiptWithUnwrapRequested(provider, userAddress);
-    vi.mocked(signer.writeContract!)
+    vi.mocked(signer.writeContract)
       .mockResolvedValueOnce("0xunwraphash") // unwrap succeeds
       .mockRejectedValueOnce(new Error("finalize failed")); // finalize fails
 

@@ -470,10 +470,9 @@ export interface GenericSigner {
     dispose?(): void;
     refreshWalletAccount?(): Promise<WalletAccount | undefined>;
     requireWalletAccount(operation: string): WalletAccount;
-    signTransaction?(unsignedTx: Hex): Promise<Hex>;
     signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     readonly walletAccount: WalletAccountStore;
-    writeContract?<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
+    writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
@@ -1167,8 +1166,6 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
-    readonly SignerMissingCapability: "SIGNER_MISSING_CAPABILITY";
-    readonly SignerAddressMismatch: "SIGNER_ADDRESS_MISMATCH";
 };
 
 // @public

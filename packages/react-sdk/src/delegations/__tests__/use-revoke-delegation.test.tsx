@@ -17,7 +17,7 @@ describe("useRevokeDelegation", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result } = renderWithProviders(() => useRevokeDelegation(tokenAddress), {});
 
@@ -40,7 +40,7 @@ describe("useRevokeDelegation", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const onSuccess = vi.fn();
 
@@ -61,7 +61,7 @@ describe("useRevokeDelegation", () => {
     recipientAddress,
     tokenAddress,
   }) => {
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const delegationKey = zamaQueryKeys.delegationStatus.all;
     let cacheWasValidDuringOnSuccess = false;

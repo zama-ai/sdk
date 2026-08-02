@@ -169,7 +169,7 @@ describe("Token", () => {
 
     test("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(original);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -182,7 +182,7 @@ describe("Token", () => {
       signer,
       token,
     }) => {
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
         token.confidentialTransfer("0x8b8b8b8b8B8B8b8B8B8b8b8b8b8B8B8B8B8b8B8b" as Address, 100n, {
@@ -219,7 +219,7 @@ describe("Token", () => {
       signer,
       token,
     }) => {
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
         token.confidentialTransferFrom(
@@ -285,7 +285,7 @@ describe("Token", () => {
       signer,
       token,
     }) => {
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
         token.confidentialTransferAndCall(RECIPIENT, 100n, DATA, { skipBalanceCheck: true }),
@@ -344,7 +344,7 @@ describe("Token", () => {
       signer,
       token,
     }) => {
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(new Error("tx failed"));
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(new Error("tx failed"));
 
       await expect(
         token.confidentialTransferFromAndCall(FROM, TO, 200n, DATA),
@@ -375,7 +375,7 @@ describe("Token", () => {
 
     test("wraps error in TransactionReverted", async ({ signer, token }) => {
       const rootCause = new Error("tx failed");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(rootCause);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(rootCause);
 
       const thrown = await token
         .setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address)
@@ -388,7 +388,7 @@ describe("Token", () => {
 
     test("re-throws ZamaError from writeContract as-is", async ({ signer, token }) => {
       const original = new ZamaError(ZamaErrorCode.TransactionReverted, "already wrapped");
-      vi.mocked(signer.writeContract!).mockRejectedValueOnce(original);
+      vi.mocked(signer.writeContract).mockRejectedValueOnce(original);
 
       await expect(
         token.setOperator("0x3C3C3C3C3c3C3c3C3C3C3C3C3c3c3c3c3c3c3c3C" as Address),

@@ -80,10 +80,6 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
-  /** Signer lacks a capability required by the requested operation. */
-  SignerMissingCapability: "SIGNER_MISSING_CAPABILITY",
-  /** A configured signer's wallet address does not match `request.from`. */
-  SignerAddressMismatch: "SIGNER_ADDRESS_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -134,8 +130,6 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.ChainMismatch]: false,
   [ZamaErrorCode.PreparedChainMismatch]: false,
   [ZamaErrorCode.SignerNotConfigured]: false,
-  [ZamaErrorCode.SignerMissingCapability]: false,
-  [ZamaErrorCode.SignerAddressMismatch]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
 };

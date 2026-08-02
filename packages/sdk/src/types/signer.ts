@@ -56,21 +56,15 @@ export interface WalletAccountStore {
 }
 
 /**
- * Framework-agnostic signer. Always exposes wallet-account observability,
- * `requireWalletAccount`, and `signTypedData`. Tx-signing is offered through
- * two optional capabilities — `writeContract` (atomic sign+broadcast in one
- * wallet round-trip; browser wallets, embedded wallets, server-side EOAs)
- * and `signTransaction` (return signed bytes for the SDK to broadcast via
- * {@link GenericProvider.sendRawTransaction}; HSM-backed or in-process
- * air-gap signers). A signer may expose either, both (hybrid), or neither
- * (typed-data-only).
+ * Framework-agnostic signer. Exposes wallet-account observability,
+ * `requireWalletAccount`, `signTypedData` (decrypt-permit authorization), and
+ * `writeContract` (atomic sign-and-broadcast in one wallet round-trip; browser
+ * wallets, embedded wallets, server-side EOAs).
  *
- * The SDK gates capability mismatches at runtime via
- * {@link SignerCapabilityError}: atomic write methods throw when
- * `writeContract` is absent, and the offline `sign` path throws when
- * `signTransaction` is absent. Implementers extend {@link BaseSigner} for
- * the wallet-account / dispose boilerplate, or implement this interface
- * directly with {@link createWalletAccountStore}.
+ * The offline-signing pipeline (`sdk.offline.prepare` → external sign →
+ * `broadcast`) needs no signer at all — it builds an unsigned transaction the
+ * caller signs out-of-process — so a configured `GenericSigner` is only needed
+ * for the atomic `writeContract` path and for `signTypedData`.
  */
 export interface GenericSigner {
   /** Observable wallet account readiness state. */
@@ -87,16 +81,14 @@ export interface GenericSigner {
   refreshWalletAccount?(): Promise<WalletAccount | undefined>;
   /** Sign EIP-712 typed data (used for decrypt authorization). */
   signTypedData(typedData: EIP712TypedData): Promise<Hex>;
-  /** Atomic sign-and-broadcast in one wallet round-trip. */
-  writeContract?<
+  /** Send a write transaction and return the tx hash. */
+  writeContract<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(
     config: WriteContractConfig<TAbi, TFunctionName, TArgs>,
   ): Promise<Hex>;
-  /** Return signed bytes for an SDK-built unsigned transaction. */
-  signTransaction?(unsignedTx: Hex): Promise<Hex>;
   /** Release adapter-owned wallet watchers or provider event listeners. */
   dispose?(): void;
 }

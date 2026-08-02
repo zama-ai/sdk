@@ -2113,7 +2113,7 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 
 ## Offline signing (institutional custody)
 
-A new `sdk.offline.*` namespace splits a transaction into three separately-invocable phases — `prepare`, `sign`, `broadcast` — for institutional custody, HSM, and policy-engine workflows where the three cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route for signers that expose `signTransaction` instead of `writeContract`.
+A new `sdk.offline.*` namespace splits a transaction into two separately-invocable phases — `prepare` and `broadcast`, with signing done out-of-process in between — for institutional custody, HSM, and policy-engine workflows where the phases cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route where the caller signs the prepared unsigned tx externally instead of going through `writeContract`.
 
 ```ts
 const prepared = await sdk.offline.prepare({
@@ -2129,7 +2129,7 @@ const prepared = await sdk.offline.prepare({
 await sdk.offline.broadcast(prepared, signedTx);
 ```
 
-- **Signer.** `GenericSigner.writeContract` is now optional; a new optional `signTransaction(unsignedTx)` covers the deferred path. Wrap a custodian's API client by extending `BaseSigner` — keys never enter the SDK.
+- **Signer.** `GenericSigner.writeContract` is now optional; `prepare` and `broadcast` work with no configured signer at all, so the initiator process never needs custody of signing material. The prepared unsigned tx is signed out-of-process (HSM, custody API, policy engine) and the signed bytes handed to `broadcast`.
 - **Provider.** `GenericProvider` gains `sendRawTransaction(signedTx)` and `prepareTransaction({ from, call })` (builds the RLP-encoded EIP-1559 unsigned tx), wired in the viem, ethers, and wagmi adapters.
 
 

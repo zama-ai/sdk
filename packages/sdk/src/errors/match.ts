@@ -30,8 +30,6 @@ import type { ConfigurationError, RelayerRequestFailedError } from "./relayer";
 import type { NotEntitledError } from "./entitlement";
 import type { RpcRateLimitError } from "./rpc";
 import type {
-  SignerAddressMismatchError,
-  SignerCapabilityError,
   SignerNotConfiguredError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,
@@ -105,10 +103,6 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedChainMismatch]: PreparedChainMismatchError;
   /** Thrown for {@link ZamaErrorCode.SignerNotConfigured}. */
   [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
-  /** Thrown for {@link ZamaErrorCode.SignerMissingCapability}. */
-  [ZamaErrorCode.SignerMissingCapability]: SignerCapabilityError;
-  /** Thrown for {@link ZamaErrorCode.SignerAddressMismatch}. */
-  [ZamaErrorCode.SignerAddressMismatch]: SignerAddressMismatchError;
   /** Thrown for {@link ZamaErrorCode.WalletNotConnected}. */
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
   /** Thrown for {@link ZamaErrorCode.WalletAccountNotReady}. */

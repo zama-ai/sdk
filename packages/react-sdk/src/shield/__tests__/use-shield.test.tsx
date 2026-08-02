@@ -122,7 +122,7 @@ describe("useShield", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
       .mockResolvedValueOnce(5000n);
-    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("shield failed"));
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-raw" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -204,7 +204,7 @@ describe("useShield", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
       .mockResolvedValueOnce(5000n);
-    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("shield failed"));
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const expectedContext = { requestId: "shield-error-optimistic" } as const;
     const onMutate = vi.fn().mockReturnValue(expectedContext);
@@ -265,7 +265,7 @@ describe("useShield optimistic updates", () => {
       .mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
-    vi.mocked(signer.writeContract!).mockReturnValue(
+    vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
         resolveWrap = resolve as (value: string) => void;
       }),
@@ -312,7 +312,7 @@ describe("useShield optimistic updates", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
       .mockResolvedValueOnce(5000n);
-    vi.mocked(signer.writeContract!).mockRejectedValue(new Error("shield failed"));
+    vi.mocked(signer.writeContract).mockRejectedValue(new Error("shield failed"));
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ address: tokenAddress, optimistic: true }),
@@ -355,7 +355,7 @@ describe("useShield optimistic updates", () => {
       .mockResolvedValueOnce(5000n);
 
     let resolveWrap: (value: string) => void;
-    vi.mocked(signer.writeContract!).mockReturnValue(
+    vi.mocked(signer.writeContract).mockReturnValue(
       new Promise((resolve) => {
         resolveWrap = resolve as (value: string) => void;
       }),
@@ -388,7 +388,7 @@ describe("useShield optimistic updates", () => {
     vi.mocked(provider.readContract)
       .mockResolvedValueOnce(underlyingAddress)
       .mockResolvedValueOnce(5000n);
-    vi.mocked(signer.writeContract!).mockResolvedValue("0xtxhash");
+    vi.mocked(signer.writeContract).mockResolvedValue("0xtxhash");
 
     const { result, queryClient } = renderWithProviders(() =>
       useShield({ address: tokenAddress, optimistic: true }),

@@ -31,7 +31,6 @@ import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/ali
 import { assertBigint } from "../utils/assertions";
 import { pLimit } from "../utils/concurrency";
 import { isEncryptedValueZero } from "../utils/handles";
-import { assertWriteContract } from "../signer/capabilities";
 import { submitTransaction as submitSdkTransaction } from "../utils/submit-transaction";
 import { swallow } from "../utils/swallow";
 import type {
@@ -521,8 +520,7 @@ export class Token {
     amount: bigint,
     options?: TransferOptions,
   ): Promise<TransactionResult> {
-    const signer = this.#requireSigner("confidentialTransfer");
-    assertWriteContract(signer, "confidentialTransfer");
+    this.#requireSigner("confidentialTransfer");
     const account = await requireAlignedWalletAccount(
       "confidentialTransfer",
       this.sdk.signer,

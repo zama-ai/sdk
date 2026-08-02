@@ -57,7 +57,7 @@ describe("WrappedToken.wrap", () => {
 
     await token.wrap(100n, { to: OTHER_RECIPIENT });
 
-    const callArgs = vi.mocked(signer.writeContract!).mock.calls[0]![0] as unknown as {
+    const callArgs = vi.mocked(signer.writeContract).mock.calls[0]![0] as unknown as {
       args: readonly unknown[];
     };
     expect(callArgs.args[0]).toBe(OTHER_RECIPIENT);
