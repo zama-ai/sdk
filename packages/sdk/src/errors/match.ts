@@ -1,6 +1,6 @@
 import { ZamaError } from "./base";
 import type { ZamaErrorCode } from "./base";
-import type { ChainMismatchError, PreparedChainMismatchError } from "./chain";
+import type { ChainMismatchError } from "./chain";
 import type {
   NoCiphertextError,
   TransportKeyPairExpiredError,
@@ -99,8 +99,6 @@ export interface ErrorForCode {
   [ZamaErrorCode.DelegationNotPropagated]: DelegationNotPropagatedError;
   /** Thrown for {@link ZamaErrorCode.ChainMismatch}. */
   [ZamaErrorCode.ChainMismatch]: ChainMismatchError;
-  /** Thrown for {@link ZamaErrorCode.PreparedChainMismatch}. */
-  [ZamaErrorCode.PreparedChainMismatch]: PreparedChainMismatchError;
   /** Thrown for {@link ZamaErrorCode.SignerNotConfigured}. */
   [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
   /** Thrown for {@link ZamaErrorCode.WalletNotConnected}. */

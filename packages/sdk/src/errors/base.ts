@@ -72,8 +72,6 @@ export const ZamaErrorCode = {
   DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED",
   /** Signer and provider are connected to different chains. */
   ChainMismatch: "CHAIN_MISMATCH",
-  /** A prepared offline transaction is bound to a different chain than the provider is now on. */
-  PreparedChainMismatch: "PREPARED_CHAIN_MISMATCH",
   /** Operation requires a signer but none is configured. */
   SignerNotConfigured: "SIGNER_NOT_CONFIGURED",
   /** Operation requires a connected wallet account. */
@@ -128,7 +126,6 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.DelegationExpirationTooSoon]: false,
   [ZamaErrorCode.DelegationNotPropagated]: true,
   [ZamaErrorCode.ChainMismatch]: false,
-  [ZamaErrorCode.PreparedChainMismatch]: false,
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving

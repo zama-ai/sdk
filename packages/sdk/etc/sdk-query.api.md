@@ -454,14 +454,13 @@ export interface GenericProvider {
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
-        call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
+        gasLimit?: bigint;
         maxFeePerGas?: bigint;
         maxPriorityFeePerGas?: bigint;
-        gasLimit?: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    sendRawTransaction(signedTx: Hex): Promise<Hex>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
@@ -1162,7 +1161,6 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
     readonly ChainMismatch: "CHAIN_MISMATCH";
-    readonly PreparedChainMismatch: "PREPARED_CHAIN_MISMATCH";
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";

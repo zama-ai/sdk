@@ -44,7 +44,6 @@ const viemTest = base.extend<ViemFixtures>({
           readContract: vi.fn().mockResolvedValue("0xresult"),
           waitForTransactionReceipt: vi.fn().mockResolvedValue({ logs: [] }),
           getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000n }),
-          sendRawTransaction: vi.fn().mockResolvedValue(TX_HASH),
         }) as unknown as PublicClient,
     );
   },
@@ -306,21 +305,6 @@ describe("ViemProvider", () => {
     });
   });
 
-  describe("sendRawTransaction", () => {
-    vit(
-      "delegates to publicClient.sendRawTransaction with serializedTransaction",
-      async ({ publicClient }) => {
-        const viemProvider = new ViemProvider({ publicClient });
-        const signed = "0xdeadbeef" as Hex;
-        const hash = await viemProvider.sendRawTransaction(signed);
-        expect(hash).toBe(TX_HASH);
-        expect(publicClient.sendRawTransaction).toHaveBeenCalledWith({
-          serializedTransaction: signed,
-        });
-      },
-    );
-  });
-
   describe("prepareTransaction", () => {
     const balanceOfAbi = [
       {
@@ -352,7 +336,7 @@ describe("ViemProvider", () => {
 
         await provider.prepareTransaction({
           from: userAddress,
-          call: {
+          calldata: {
             address: tokenAddress,
             abi: balanceOfAbi,
             functionName: "balanceOf",
@@ -375,7 +359,7 @@ describe("ViemProvider", () => {
 
         await provider.prepareTransaction({
           from: userAddress,
-          call: {
+          calldata: {
             address: tokenAddress,
             abi: balanceOfAbi,
             functionName: "balanceOf",

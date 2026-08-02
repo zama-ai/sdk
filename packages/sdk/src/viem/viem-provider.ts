@@ -73,11 +73,6 @@ export class ViemProvider implements GenericProvider {
     return block.timestamp;
   }
 
-  /** Broadcast a previously-signed transaction and return its hash. */
-  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
-    return this.#publicClient.sendRawTransaction({ serializedTransaction: signedTx });
-  }
-
   /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
   async prepareTransaction<
     const TAbi extends ContractAbi,
@@ -85,17 +80,17 @@ export class ViemProvider implements GenericProvider {
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(args: {
     from: Address;
-    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
     nonce?: number;
+    gasLimit?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFeePerGas?: bigint;
-    gasLimit?: bigint;
   }): Promise<Hex> {
-    const { from, call } = args;
+    const { from, calldata } = args;
     const data = encodeFunctionData({
-      abi: call.abi as Abi,
-      functionName: call.functionName as string,
-      args: call.args as readonly unknown[],
+      abi: calldata.abi as Abi,
+      functionName: calldata.functionName as string,
+      args: calldata.args as readonly unknown[],
     });
     // Wrap the estimateGas leg so a pre-flight revert (the most common
     // prepareTransaction failure) surfaces as a typed error with the
@@ -111,12 +106,12 @@ export class ViemProvider implements GenericProvider {
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)
-        : (call.gas ??
+        : (calldata.gas ??
           this.#publicClient
-            .estimateGas({ account: from, to: call.address, data, value: call.value ?? 0n })
+            .estimateGas({ account: from, to: calldata.address, data, value: calldata.value ?? 0n })
             .catch((error: unknown) => {
               throw new TransactionRevertedError(
-                `ViemProvider.prepareTransaction: gas estimation reverted for ${call.functionName} on ${call.address}`,
+                `ViemProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName} on ${calldata.address}`,
                 { cause: error },
               );
             }));
@@ -137,9 +132,9 @@ export class ViemProvider implements GenericProvider {
       type: "eip1559",
       chainId,
       nonce,
-      to: call.address,
+      to: calldata.address,
       data,
-      value: call.value ?? 0n,
+      value: calldata.value ?? 0n,
       gas,
       maxFeePerGas: args.maxFeePerGas ?? fees.maxFeePerGas,
       maxPriorityFeePerGas: args.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas,

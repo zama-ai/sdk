@@ -1,25 +1,13 @@
-import type { Address, Hex } from "viem";
-import {
-  describe,
-  expect,
-  TEST_SIGNED_TX,
-  TEST_TX_HASH,
-  TEST_UNSIGNED_TX,
-  test,
-  vi,
-} from "../../test-fixtures";
-import { ZamaSDKEvents, type ZamaSDKEventInput } from "../../events/sdk-events";
+import { getAddress, type Address, type Hex } from "viem";
+import { describe, expect, TEST_UNSIGNED_TX, test, vi } from "../../test-fixtures";
 import { MAX_UINT48 } from "../../contracts/constants";
 import type { GenericProvider } from "../../types/provider";
-import type { PrepareTransactionRequest } from "../../types";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
 const UNSIGNED = TEST_UNSIGNED_TX;
-const SIGNED = TEST_SIGNED_TX;
-const TX_HASH = TEST_TX_HASH;
 
-describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
+describe("OfflineSigningService — ConfidentialTransfer prepare", () => {
   test("prepare encrypts amount + asks the provider for an unsigned tx", async ({
     createSDK,
     signer,
@@ -46,63 +34,12 @@ describe("OfflineSigningService — ConfidentialTransfer round-trip", () => {
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         from: userAddress,
-        call: expect.objectContaining({ address: TOKEN, functionName: "confidentialTransfer" }),
+        calldata: expect.objectContaining({ address: TOKEN, functionName: "confidentialTransfer" }),
       }),
     );
     expect(prepared.kind).toBe("ConfidentialTransfer");
+    expect(prepared.from).toBe(getAddress(userAddress));
     expect(prepared.unsignedTx).toBe(UNSIGNED);
-    expect(prepared.from).toBe(userAddress);
-    expect(prepared.to).toBe(TOKEN);
-    expect(prepared.chainId).toBe(31337);
-  });
-
-  test("broadcast submits signed bytes + emits TransferSubmitted + awaits receipt", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const onEvent = vi.fn();
-    const sdk = createSDK({ signer, onEvent });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    const result = await sdk.offline.broadcast(prepared, SIGNED);
-    expect(provider.sendRawTransaction).toHaveBeenCalledWith(SIGNED);
-    expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith(TX_HASH);
-    expect(result.txHash).toBe(TX_HASH);
-    expect(result.receipt).toEqual({ logs: [] });
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: ZamaSDKEvents.TransferSubmitted,
-        txHash: TX_HASH,
-        tokenAddress: TOKEN,
-      }),
-    );
-  });
-
-  test("prepare → external sign → broadcast chains across the calls", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    const result = await sdk.offline.broadcast(prepared, SIGNED);
-    expect(provider.prepareTransaction).toHaveBeenCalledOnce();
-    expect(provider.sendRawTransaction).toHaveBeenCalledWith(SIGNED);
-    expect(result.txHash).toBe(TX_HASH);
   });
 });
 
@@ -129,7 +66,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({ functionName: "confidentialTransferFrom" }),
+        calldata: expect.objectContaining({ functionName: "confidentialTransferFrom" }),
       }),
     );
   });
@@ -150,7 +87,9 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ call: expect.objectContaining({ functionName: "setOperator" }) }),
+      expect.objectContaining({
+        calldata: expect.objectContaining({ functionName: "setOperator" }),
+      }),
     );
   });
 
@@ -172,7 +111,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({
+        calldata: expect.objectContaining({
           functionName: "setOperator",
           args: [RECIPIENT, MAX_UINT48],
         }),
@@ -197,7 +136,10 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({ functionName: "setOperator", args: [RECIPIENT, until] }),
+        calldata: expect.objectContaining({
+          functionName: "setOperator",
+          args: [RECIPIENT, until],
+        }),
       }),
     );
   });
@@ -219,7 +161,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encryptValues).toHaveBeenCalledOnce();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
+      expect.objectContaining({ calldata: expect.objectContaining({ functionName: "unwrap" }) }),
     );
   });
 
@@ -242,7 +184,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.readContract).toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ call: expect.objectContaining({ functionName: "unwrap" }) }),
+      expect.objectContaining({ calldata: expect.objectContaining({ functionName: "unwrap" }) }),
     );
   });
 
@@ -274,7 +216,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({
+        calldata: expect.objectContaining({
           functionName: "finalizeUnwrap",
           // Strict-order args: position matters on calldata.
           args: [handle, 42n, "0xproof"],
@@ -300,7 +242,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ call: expect.objectContaining({ functionName: "approve" }) }),
+      expect.objectContaining({ calldata: expect.objectContaining({ functionName: "approve" }) }),
     );
   });
 
@@ -314,7 +256,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
       amount: 10n,
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ call: expect.objectContaining({ functionName: "wrap" }) }),
+      expect.objectContaining({ calldata: expect.objectContaining({ functionName: "wrap" }) }),
     );
   });
 
@@ -334,7 +276,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({ functionName: "transferAndCall" }),
+        calldata: expect.objectContaining({ functionName: "transferAndCall" }),
       }),
     );
   });
@@ -355,7 +297,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({ functionName: "delegateForUserDecryption" }),
+        calldata: expect.objectContaining({ functionName: "delegateForUserDecryption" }),
       }),
     );
   });
@@ -376,286 +318,10 @@ describe("OfflineSigningService — other transaction kinds", () => {
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
-        call: expect.objectContaining({ functionName: "revokeDelegationForUserDecryption" }),
+        calldata: expect.objectContaining({ functionName: "revokeDelegationForUserDecryption" }),
       }),
     );
   });
-
-  test("submitted-event dispatches the right kind", async ({ createSDK, signer, userAddress }) => {
-    const onEvent = vi.fn();
-    const sdk = createSDK({ signer, onEvent });
-    const prepared = await sdk.offline.prepare({
-      kind: "SetOperator",
-      from: userAddress,
-      token: TOKEN,
-      operator: RECIPIENT,
-    });
-    await sdk.offline.broadcast(prepared, SIGNED);
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: ZamaSDKEvents.SetOperatorSubmitted, txHash: TX_HASH }),
-    );
-  });
-});
-
-// ─── New coverage: broadcast error paths, chain re-check, exhaustive submitted events ───
-
-describe("OfflineSigningService — broadcast error paths", () => {
-  test("pre-submit send error → TransactionError event + TransactionRevertedError(Broadcast failed)", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const onEvent = vi.fn();
-    const sdk = createSDK({ signer, onEvent });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    vi.mocked(provider.sendRawTransaction).mockRejectedValueOnce(new Error("RPC dropped"));
-
-    await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toThrow(
-      "Broadcast failed for ConfidentialTransfer",
-    );
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
-    );
-    // Submitted event must NOT have fired — the send failed.
-    const submittedCall = vi
-      .mocked(onEvent)
-      .mock.calls.find(
-        ([event]) => (event as { type: string }).type === ZamaSDKEvents.TransferSubmitted,
-      );
-    expect(submittedCall).toBeUndefined();
-  });
-
-  test("post-submit receipt error → Submitted fired, throw preserves txHash", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const onEvent = vi.fn();
-    const sdk = createSDK({ signer, onEvent });
-    const prepared = await sdk.offline.prepare({
-      kind: "ConfidentialTransfer",
-      from: userAddress,
-      token: TOKEN,
-      to: RECIPIENT,
-      amount: 1n,
-    });
-    vi.mocked(provider.waitForTransactionReceipt).mockRejectedValueOnce(
-      new Error("receipt timeout"),
-    );
-
-    await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toThrow(
-      `Receipt wait failed for ConfidentialTransfer (txHash ${TX_HASH})`,
-    );
-    // Submitted MUST have been emitted with the real txHash — the caller can
-    // recover by re-querying that transaction.
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: ZamaSDKEvents.TransferSubmitted, txHash: TX_HASH }),
-    );
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: ZamaSDKEvents.TransactionError, operation: "transfer" }),
-    );
-  });
-
-  test("ZamaError causes are re-thrown unchanged (no double wrap)", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const { TransactionRevertedError } = await import("../../errors");
-    const sdk = createSDK({ signer });
-    const prepared = await sdk.offline.prepare({
-      kind: "SetOperator",
-      from: userAddress,
-      token: TOKEN,
-      operator: RECIPIENT,
-    });
-    const typed = new TransactionRevertedError("already typed");
-    vi.mocked(provider.sendRawTransaction).mockRejectedValueOnce(typed);
-
-    await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toBe(typed);
-  });
-});
-
-describe("OfflineSigningService — chain alignment", () => {
-  test("prepare() throws ChainMismatchError when signer and provider disagree", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const { ChainMismatchError } = await import("../../errors");
-    const sdk = createSDK({ signer });
-    vi.mocked(provider.getChainId).mockResolvedValueOnce(1); // signer is on 31337
-
-    await expect(
-      sdk.offline.prepare({
-        kind: "SetOperator",
-        from: userAddress,
-        token: TOKEN,
-        operator: RECIPIENT,
-      }),
-    ).rejects.toBeInstanceOf(ChainMismatchError);
-  });
-
-  test("broadcast() re-checks chain — fails on mismatch even with a stale prepared tx", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    const { PreparedChainMismatchError } = await import("../../errors");
-    const sdk = createSDK({ signer });
-    // Prepare on chain 31337 …
-    const prepared = await sdk.offline.prepare({
-      kind: "SetOperator",
-      from: userAddress,
-      token: TOKEN,
-      operator: RECIPIENT,
-    });
-    // … then the user switches networks before broadcasting.
-    vi.mocked(provider.getChainId).mockResolvedValueOnce(1);
-
-    await expect(sdk.offline.broadcast(prepared, SIGNED)).rejects.toBeInstanceOf(
-      PreparedChainMismatchError,
-    );
-    // Must fail BEFORE sending.
-    expect(provider.sendRawTransaction).not.toHaveBeenCalled();
-  });
-});
-
-describe("OfflineSigningService — exhaustive submitted-event mapping", () => {
-  // Skip kinds that need extra mocks (Unwrap, UnwrapAll, FinalizeUnwrap) — those
-  // are exercised in their own builder tests above. Cases here cover the
-  // remaining entries of SUBMITTED_EVENT_BY_KIND with `as const` requests so
-  // the discriminator is narrowed properly.
-  const OWNER = "0x1111111111111111111111111111111111111111" as Address;
-  const ANY_DELEGATE = "0x1111111111111111111111111111111111111111" as Address;
-  type Expectation = {
-    requestFor: (from: Address) => PrepareTransactionRequest;
-    event: ZamaSDKEventInput["type"];
-    kind: string;
-    /** Extra discriminator fields the event shape requires beyond `type`/`txHash`. */
-    extra?: Record<string, unknown>;
-  };
-  const cases: ReadonlyArray<Expectation> = [
-    {
-      kind: "ConfidentialTransfer",
-      requestFor: (from) => ({
-        kind: "ConfidentialTransfer",
-        from,
-        token: TOKEN,
-        to: RECIPIENT,
-        amount: 1n,
-      }),
-      event: ZamaSDKEvents.TransferSubmitted,
-    },
-    {
-      kind: "ConfidentialTransferFrom",
-      requestFor: (from) => ({
-        kind: "ConfidentialTransferFrom",
-        from,
-        token: TOKEN,
-        owner: OWNER,
-        to: RECIPIENT,
-        amount: 1n,
-      }),
-      event: ZamaSDKEvents.TransferFromSubmitted,
-    },
-    {
-      kind: "SetOperator",
-      requestFor: (from) => ({ kind: "SetOperator", from, token: TOKEN, operator: RECIPIENT }),
-      event: ZamaSDKEvents.SetOperatorSubmitted,
-    },
-    {
-      kind: "ApproveUnderlying",
-      requestFor: (from) => ({
-        kind: "ApproveUnderlying",
-        from,
-        underlying: TOKEN,
-        spender: RECIPIENT,
-        amount: 1n,
-      }),
-      event: ZamaSDKEvents.ApproveUnderlyingSubmitted,
-      extra: { step: "approve" },
-    },
-    {
-      kind: "ApproveUnderlying (zero-reset)",
-      requestFor: (from) => ({
-        kind: "ApproveUnderlying",
-        from,
-        underlying: TOKEN,
-        spender: RECIPIENT,
-        amount: 0n,
-      }),
-      event: ZamaSDKEvents.ApproveUnderlyingSubmitted,
-      extra: { step: "reset" },
-    },
-    {
-      kind: "Wrap",
-      requestFor: (from) => ({ kind: "Wrap", from, wrapper: TOKEN, to: RECIPIENT, amount: 1n }),
-      event: ZamaSDKEvents.ShieldSubmitted,
-      extra: { shieldPath: "approveAndWrap" },
-    },
-    {
-      kind: "TransferAndCall",
-      requestFor: (from) => ({
-        kind: "TransferAndCall",
-        from,
-        underlying: TOKEN,
-        wrapper: RECIPIENT,
-        amount: 1n,
-      }),
-      event: ZamaSDKEvents.ShieldSubmitted,
-      extra: { shieldPath: "transferAndCall" },
-    },
-    {
-      kind: "DelegateDecryption",
-      requestFor: (from) => ({
-        kind: "DelegateDecryption",
-        from,
-        aclAddress: TOKEN,
-        contractAddress: RECIPIENT,
-        delegateAddress: ANY_DELEGATE,
-      }),
-      event: ZamaSDKEvents.DelegationSubmitted,
-    },
-    {
-      kind: "RevokeDelegation",
-      requestFor: (from) => ({
-        kind: "RevokeDelegation",
-        from,
-        aclAddress: TOKEN,
-        contractAddress: RECIPIENT,
-        delegateAddress: ANY_DELEGATE,
-      }),
-      event: ZamaSDKEvents.RevokeDelegationSubmitted,
-    },
-  ];
-
-  for (const { kind, requestFor, event, extra } of cases) {
-    test(`broadcast emits the ${event} event for ${kind}`, async ({
-      createSDK,
-      signer,
-      userAddress,
-    }) => {
-      const onEvent = vi.fn();
-      const sdk = createSDK({ signer, onEvent });
-      const prepared = await sdk.offline.prepare(requestFor(userAddress));
-      await sdk.offline.broadcast(prepared, SIGNED);
-      expect(onEvent).toHaveBeenCalledWith(
-        expect.objectContaining({ type: event, txHash: TX_HASH, ...extra }),
-      );
-    });
-  }
 });
 
 describe("OfflineSigningService — encryption invariants", () => {
@@ -727,7 +393,7 @@ describe("OfflineSigningService — calldata arg assertions", () => {
   type Call = { args: readonly unknown[] };
   const lastCall = (provider: GenericProvider): Call => {
     const calls = vi.mocked(provider.prepareTransaction).mock.calls;
-    return (calls[calls.length - 1] as [{ call: Call }])[0].call;
+    return (calls[calls.length - 1] as [{ calldata: Call }])[0].calldata;
   };
 
   test("ConfidentialTransfer args are [recipient, handle, inputProof] in order", async ({
@@ -926,15 +592,14 @@ describe("OfflineSigningService — prepare option overrides", () => {
 });
 
 describe("OfflineSigningService — signer-optional surface (cross-process custody)", () => {
-  test("signer-absent SDK: prepare → external sign-stub → broadcast round-trip", async ({
+  test("signer-absent SDK can prepare an unsigned tx", async ({
     createSDK,
     provider,
     userAddress,
   }) => {
-    // No signer configured at SDK construction time — canonical cross-process
-    // shape (web initiator process). `prepare` and `broadcast` work without
-    // probing a signer; the back-end signer service returns signed bytes via
-    // its own channel.
+    // No signer configured at construction time — canonical cross-process shape.
+    // `prepare` builds the unsigned tx without probing a signer; the back-end
+    // custodian signs and self-publishes the bytes via its own channel.
     const sdk = createSDK({ signer: undefined });
 
     const prepared = await sdk.offline.prepare({
@@ -945,12 +610,8 @@ describe("OfflineSigningService — signer-optional surface (cross-process custo
       amount: 1n,
     });
 
-    // External sign stub — production code path would hand `prepared.unsignedTx`
-    // to a back-end custodian service and receive signed bytes back.
-    const externalSigned = SIGNED;
-
-    const result = await sdk.offline.broadcast(prepared, externalSigned);
-    expect(provider.sendRawTransaction).toHaveBeenCalledWith(externalSigned);
-    expect(result.txHash).toBe(TX_HASH);
+    expect(prepared.from).toBe(getAddress(userAddress));
+    expect(prepared.unsignedTx).toBe(UNSIGNED);
+    expect(provider.prepareTransaction).toHaveBeenCalled();
   });
 });

@@ -93,27 +93,17 @@ export class WagmiProvider implements GenericProvider {
     return block.timestamp;
   }
 
-  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
-    const publicClient = getPublicClient(this.#config);
-    if (!publicClient) {
-      throw new ConfigurationError(
-        "WagmiProvider.sendRawTransaction: no public client configured for the active chain.",
-      );
-    }
-    return publicClient.sendRawTransaction({ serializedTransaction: signedTx });
-  }
-
   async prepareTransaction<
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(args: {
     from: Address;
-    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
     nonce?: number;
+    gasLimit?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFeePerGas?: bigint;
-    gasLimit?: bigint;
   }): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
@@ -121,11 +111,11 @@ export class WagmiProvider implements GenericProvider {
         "WagmiProvider.prepareTransaction: no public client configured for the active chain.",
       );
     }
-    const { from, call } = args;
+    const { from, calldata } = args;
     const data = encodeFunctionData({
-      abi: call.abi as Abi,
-      functionName: call.functionName as string,
-      args: call.args as readonly unknown[],
+      abi: calldata.abi as Abi,
+      functionName: calldata.functionName as string,
+      args: calldata.args as readonly unknown[],
     });
     // Wrap estimateGas — pre-flight revert is the high-value failure mode.
     // Skip the network round-trips entirely when the caller supplied
@@ -138,12 +128,12 @@ export class WagmiProvider implements GenericProvider {
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)
-        : (call.gas ??
+        : (calldata.gas ??
           publicClient
-            .estimateGas({ account: from, to: call.address, data, value: call.value ?? 0n })
+            .estimateGas({ account: from, to: calldata.address, data, value: calldata.value ?? 0n })
             .catch((error: unknown) => {
               throw new TransactionRevertedError(
-                `WagmiProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+                `WagmiProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName as string} on ${calldata.address}`,
                 { cause: error },
               );
             }));
@@ -164,9 +154,9 @@ export class WagmiProvider implements GenericProvider {
       type: "eip1559",
       chainId,
       nonce,
-      to: call.address,
+      to: calldata.address,
       data,
-      value: call.value ?? 0n,
+      value: calldata.value ?? 0n,
       gas,
       maxFeePerGas: args.maxFeePerGas ?? fees.maxFeePerGas,
       maxPriorityFeePerGas: args.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas,

@@ -60,11 +60,6 @@ export interface WalletAccountStore {
  * `requireWalletAccount`, `signTypedData` (decrypt-permit authorization), and
  * `writeContract` (atomic sign-and-broadcast in one wallet round-trip; browser
  * wallets, embedded wallets, server-side EOAs).
- *
- * The offline-signing pipeline (`sdk.offline.prepare` → external sign →
- * `broadcast`) needs no signer at all — it builds an unsigned transaction the
- * caller signs out-of-process — so a configured `GenericSigner` is only needed
- * for the atomic `writeContract` path and for `signTypedData`.
  */
 export interface GenericSigner {
   /** Observable wallet account readiness state. */

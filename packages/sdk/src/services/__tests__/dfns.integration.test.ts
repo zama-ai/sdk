@@ -3,19 +3,18 @@ import { DfnsApiClient } from "@dfns/sdk";
 import { AsymmetricKeySigner } from "@dfns/sdk-keysigner";
 import type { Provider } from "ethers";
 import { JsonRpcProvider } from "ethers";
-import { getAddress, type Hex } from "viem";
+import { getAddress, isHash, type Hex } from "viem";
 import * as z from "zod/mini";
 import { sepolia } from "../../chains";
 import { createConfig } from "../../config/create";
 import { EthersProvider } from "../../ethers/ethers-provider";
 import { node } from "../../node";
+import { evmAddress } from "../../schemas/primitives";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { describe, expect, test } from "../../test-fixtures";
 import type { WalletAccount } from "../../types";
-import { ZamaSDK } from "../../zama-sdk";
 import { assertNonNullable } from "../../utils";
-import { evmAddress } from "../../schemas/primitives";
-import type { GenerateSignatureResponse, GetSignatureResponse } from "@dfns/sdk/generated/wallets";
+import { ZamaSDK } from "../../zama-sdk";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -65,13 +64,8 @@ type Env = NonNullable<typeof env>;
 const POLL_INTERVAL_MS = 5_000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
-type GenerateSignatureBody = NonNullable<
-  Parameters<DfnsApiClient["wallets"]["generateSignature"]>[0]
->["body"];
-
-interface PolledSignature {
-  signedData?: string;
-  signatureEncoded?: string;
+interface BroadcastResult {
+  txHash: string;
 }
 
 interface DfnsFixtures {
@@ -80,7 +74,7 @@ interface DfnsFixtures {
   ethProvider: JsonRpcProvider;
   dfnsClient: DfnsApiClient;
   dfnsAccount: WalletAccount;
-  pollDfnsSignature: (body: GenerateSignatureBody) => Promise<PolledSignature>;
+  signAndBroadcast: (unsignedTx: Hex) => Promise<BroadcastResult>;
 }
 
 const dfns = test.extend<DfnsFixtures>({
@@ -127,49 +121,60 @@ const dfns = test.extend<DfnsFixtures>({
     await use(sdk);
     sdk.terminate();
   },
-  pollDfnsSignature: async ({ env, dfnsClient }, use) => {
+  signAndBroadcast: async ({ env, dfnsClient }, use) => {
     const walletId = env.DFNS_WALLET_ID;
     const dashboardBase = (env.DFNS_DASHBOARD_URL ?? "https://app.dfns.io").replace(/\/$/, "");
 
-    await use(async (body) => {
+    await use(async (unsignedTx) => {
       const deadline = Date.now() + POLL_TIMEOUT_MS;
-      // Structural snapshot — sidesteps the GenerateSignatureResponse vs
-      // GetSignatureResponse nominal mismatch (only the former has walletId).
-      // oxlint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-      let snap: GenerateSignatureResponse | GetSignatureResponse =
-        await dfnsClient.wallets.generateSignature({ walletId, body });
+      // DFNS signs (behind policy approval) AND publishes to the network in a
+      // single call — hand it the SDK's unsigned tx and it self-broadcasts via
+      // its own infra. This is the cross-process custody contract: the SDK
+      // never holds key material and never touches the network to send.
+      // Structural union — `snap` is the broadcast response first, then the
+      // getTransaction snapshots; both carry id/status/txHash/reason.
+      let snap = await dfnsClient.wallets.broadcastTransaction({
+        walletId,
+        body: { kind: "Transaction", transaction: unsignedTx },
+      });
 
-      if (snap.status !== "Signed") {
+      const isBroadcast = (s: typeof snap) =>
+        s.status === "Broadcasted" || s.status === "Confirmed";
+
+      if (!isBroadcast(snap)) {
         console.log(
-          `\n[DFNS] Signature ${snap.id} is "${snap.status}". Approve in dashboard:\n` +
-            `  ${dashboardBase}/wallets/${walletId}/signatures/${snap.id}\n`,
+          `\n[DFNS] Transaction ${snap.id} is "${snap.status}". Approve in dashboard:\n` +
+            `  ${dashboardBase}/wallets/${walletId}/transactions/${snap.id}\n`,
         );
       }
 
-      while (snap.status !== "Signed") {
+      while (!isBroadcast(snap)) {
         if (snap.status === "Failed" || snap.status === "Rejected") {
           throw new Error(
-            `DFNS signature ${snap.id} ended as ${snap.status}: ${snap.reason ?? "no reason"}`,
+            `DFNS transaction ${snap.id} ended as ${snap.status}: ${snap.reason ?? "no reason"}`,
           );
         }
         if (Date.now() > deadline) {
           throw new Error(
-            `DFNS signature ${snap.id} did not resolve within ${POLL_TIMEOUT_MS}ms (status=${snap.status})`,
+            `DFNS transaction ${snap.id} did not broadcast within ${POLL_TIMEOUT_MS}ms (status=${snap.status})`,
           );
         }
         await sleep(POLL_INTERVAL_MS);
-        snap = await dfnsClient.wallets.getSignature({ walletId, signatureId: snap.id });
+        snap = await dfnsClient.wallets.getTransaction({ walletId, transactionId: snap.id });
       }
 
-      return { signedData: snap.signedData, signatureEncoded: snap.signature?.encoded };
+      if (!snap.txHash) {
+        throw new Error(`DFNS transaction ${snap.id} is ${snap.status} but returned no txHash`);
+      }
+      return { txHash: snap.txHash };
     });
   },
 });
 
 describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", () => {
   dfns(
-    "prepare → DFNS async sign (policy approval) → broadcast",
-    async ({ sdk, dfnsAccount, pollDfnsSignature, env }) => {
+    "prepare → DFNS signs (policy approval) and broadcasts, yielding an on-chain tx hash",
+    async ({ sdk, dfnsAccount, signAndBroadcast, env }) => {
       const prepared = await sdk.offline.prepare({
         kind: "ConfidentialTransfer",
         from: dfnsAccount.address,
@@ -179,19 +184,10 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
       });
       expect(prepared.unsignedTx).toMatch(/^0x[0-9a-f]+$/i);
 
-      const { signedData } = await pollDfnsSignature({
-        kind: "Transaction",
-        transaction: prepared.unsignedTx,
-      });
-      if (!signedData) {
-        throw new Error("DFNS returned no signedData for Transaction signing");
-      }
-      const signedTx = signedData as Hex;
-      expect(signedTx).toMatch(/^0x[0-9a-f]+$/i);
-
-      const result = await sdk.offline.broadcast(prepared, signedTx);
-      expect(result.txHash).toMatch(/^0x[0-9a-f]{64}$/i);
-      expect(result.receipt.logs).toBeInstanceOf(Array);
+      // The custodian owns signing AND broadcast — the SDK's job ended at
+      // `prepare`. A real tx hash back proves the full cross-process round-trip.
+      const { txHash } = await signAndBroadcast(prepared.unsignedTx);
+      expect(isHash(txHash)).toBe(true);
     },
     POLL_TIMEOUT_MS + 60_000,
   );

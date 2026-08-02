@@ -40,26 +40,11 @@ export interface GenericProvider {
   /** Return the latest block timestamp in seconds. */
   getBlockTimestamp(): Promise<bigint>;
   /**
-   * Broadcast a previously-signed transaction and return its hash.
-   *
-   * Used by the SDK's offline-signing path: the caller signs the prepared
-   * unsigned transaction out-of-process (a custodian / HSM / policy engine
-   * returns signed bytes), and the SDK submits them through this method.
-   * Atomic signers (`writeContract`) do not exercise this path — their wallet
-   * broadcasts directly.
-   *
-   * Custom adapters delegate to the underlying client's raw-send method:
-   * `publicClient.sendRawTransaction({ serializedTransaction })` (viem),
-   * `provider.broadcastTransaction(signedTx)` (ethers v6).
-   */
-  sendRawTransaction(signedTx: Hex): Promise<Hex>;
-  /**
    * Build a fully-populated, RLP-encoded unsigned transaction from a
    * write-contract config and the originating wallet address. The provider
    * resolves chain ID, nonce, gas limit, and EIP-1559 fee parameters from
    * chain state and returns bytes ready to be signed out-of-process (an HSM,
-   * custody API, or policy engine) and broadcast via
-   * {@link GenericProvider.sendRawTransaction}.
+   * custody API, or policy engine)
    *
    * Optional overrides (`nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`,
    * `gasLimit`) let callers pin values at prepare time — used by the
@@ -86,10 +71,10 @@ export interface GenericProvider {
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(args: {
     from: Address;
-    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
     nonce?: number;
+    gasLimit?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFeePerGas?: bigint;
-    gasLimit?: bigint;
   }): Promise<Hex>;
 }

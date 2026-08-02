@@ -130,14 +130,13 @@ export class EthersProvider implements GenericProvider {
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
-        call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
+        gasLimit?: bigint;
         maxFeePerGas?: bigint;
         maxPriorityFeePerGas?: bigint;
-        gasLimit?: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
-    sendRawTransaction(signedTx: Hex): Promise<Hex>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
@@ -236,14 +235,13 @@ export interface GenericProvider {
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
-        call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
+        gasLimit?: bigint;
         maxFeePerGas?: bigint;
         maxPriorityFeePerGas?: bigint;
-        gasLimit?: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    sendRawTransaction(signedTx: Hex): Promise<Hex>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 

@@ -193,9 +193,10 @@ export interface RevokeDelegationRequest {
 // ─── Discriminator unions ───────────────────────────────────────────────
 
 /**
- * Kinds of write operations that follow the prepare → sign → broadcast
- * pipeline (yields a {@link TransactionResult}). Decryption permits are not
- * transactions and are acquired via `sdk.permits.grantPermit` instead.
+ * Kinds of write operations that go through the offline `prepare` pipeline —
+ * the caller signs and broadcasts the prepared unsigned tx out-of-process.
+ * Decryption permits are not transactions and are acquired via
+ * `sdk.permits.grantPermit` instead.
  *
  * Single-tx kinds. Multi-step flows (shield over a non-1363 underlying,
  * the request → finalize unshield round-trip) are composed at the Token
@@ -220,46 +221,43 @@ export type PrepareTransactionRequest =
 // ─── Prepared payloads ──────────────────────────────────────────────────
 
 /**
- * RLP-encoded unsigned transaction plus the originating request and the
- * minimal context (from, to, chainId) callers need to forward across a
- * process boundary or feed back into {@link Offline.broadcast}.
+ * Self-contained offline-signing handoff: the RLP-encoded unsigned
+ * transaction plus the two fields a custodian cannot recover from it.
  *
  * Non-generic so any `PreparedFor<K>` is assignable to the wide form. Use
  * {@link PreparedFor} for kind-specific narrowing.
  *
- * The `unsignedTx` + `from` / `to` / `chainId` fields are JSON-safe and
- * cover everything `broadcast` needs. The `request`
- * field is preserved for diagnostics and includes the original caller input
- * — several kinds carry `bigint` fields (`amount`, …), so callers shipping
- * a {@link PreparedTransaction} across a process boundary should strip or
- * stringify `request` before `JSON.stringify`.
+ * Everything else a custodian needs — `chainId`, `nonce`, `to`, `value`,
+ * calldata, and the gas/fee bounds — is encoded in `unsignedTx` (an EIP-1559
+ * unsigned payload) and recovered by RLP-decoding it. The two fields carried
+ * alongside are the ones the bytes don't yield:
+ *
+ * - `from` is not present in an *unsigned* EIP-1559 tx (it is only derivable
+ *   from the signature of a *signed* one), yet a custodian needs it to pick
+ *   the signing key/wallet.
+ * - `kind` classifies the resulting receipt's event on the broadcast side.
+ *
+ * All three fields are JSON-safe, so a {@link PreparedTransaction} can be
+ * `JSON.stringify`'d and shipped across a process boundary as-is.
  */
 export interface PreparedTransaction {
   /** The kind of the originating request. */
   readonly kind: TransactionKind;
-  /** The originating request, preserved for diagnostics. */
-  readonly request: PrepareTransactionRequest;
+  /** Tx-sender wallet address — the key/wallet the custodian signs with. */
+  readonly from: Address;
   /** RLP-encoded unsigned transaction, ready to sign. */
   readonly unsignedTx: Hex;
-  /** Originating wallet address. */
-  readonly from: Address;
-  /** Target contract address. */
-  readonly to: Address;
-  /** Chain ID the transaction is bound to. */
-  readonly chainId: number;
 }
 
 /**
  * {@link PreparedTransaction} narrowed by `kind` — the return type of
  * `sdk.offline.prepare(request)`.
  *
- * An interface extending {@link PreparedTransaction} that pins `kind` and
- * `request` to the requested kind `K`, so every `PreparedFor<K>` remains
- * assignable to the wide {@link PreparedTransaction}.
+ * An interface extending {@link PreparedTransaction} that pins `kind` to the
+ * requested kind `K`, so every `PreparedFor<K>` remains assignable to the
+ * wide {@link PreparedTransaction}.
  */
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
   /** The request kind, pinned to `K`. */
   readonly kind: K;
-  /** The originating request, narrowed to the `K` variant. */
-  readonly request: Extract<PrepareTransactionRequest, { kind: K }>;
 }

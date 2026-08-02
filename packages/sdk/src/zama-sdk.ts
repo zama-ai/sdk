@@ -53,7 +53,7 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
-  /** Offline-signing pipeline (`prepare → sign → broadcast`) for HSM, policy-engine, and cross-process custody workflows. */
+  /** Offline-signing pipeline: `prepare` builds an unsigned tx the caller signs and broadcasts out-of-process — for HSM, policy-engine, and cross-process custody workflows. */
   readonly offline: Offline;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
@@ -130,7 +130,6 @@ export class ZamaSDK {
       logger: this.#logger,
     });
     this.#offlineSigningService = new OfflineSigningService({
-      signer: config.signer,
       provider: this.provider,
       router: config.router,
       encryption: this.#encryptionService,

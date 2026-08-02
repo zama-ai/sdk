@@ -1,6 +1,5 @@
 /**
  * Coverage for the offline-signing methods on {@link WagmiProvider}:
- * - `sendRawTransaction` happy path + `ConfigurationError` when no public client
  * - `prepareTransaction` happy path + `ConfigurationError` when no public client
  *
  * The `wagmi/actions` module is hoist-mocked because wagmi reads its config
@@ -10,31 +9,22 @@ import { describe, expect, test, vi } from "vitest";
 import { ConfigurationError, type Address, type Hex } from "@zama-fhe/sdk";
 import type { Config } from "wagmi";
 
-const SIGNED = "0xfeedface" as Hex;
-const TX_HASH = `0x${"ab".repeat(32)}` as Hex;
 const UNSIGNED = "0xdeadbeef" as Hex;
 const FROM = "0x1111111111111111111111111111111111111111" as Address;
 const TO = "0x2222222222222222222222222222222222222222" as Address;
 
-const {
-  mockGetPublicClient,
-  mockSendRawTx,
-  mockGetChainId,
-  mockGetTxCount,
-  mockEstimateGas,
-  mockEstimateFees,
-} = vi.hoisted(() => ({
-  mockGetPublicClient: vi.fn(),
-  mockSendRawTx: vi.fn(),
-  mockGetChainId: vi.fn(),
-  mockGetTxCount: vi.fn(),
-  mockEstimateGas: vi.fn(),
-  mockEstimateFees: vi.fn(),
-}));
+const { mockGetPublicClient, mockGetChainId, mockGetTxCount, mockEstimateGas, mockEstimateFees } =
+  vi.hoisted(() => ({
+    mockGetPublicClient: vi.fn(),
+    mockSendRawTx: vi.fn(),
+    mockGetChainId: vi.fn(),
+    mockGetTxCount: vi.fn(),
+    mockEstimateGas: vi.fn(),
+    mockEstimateFees: vi.fn(),
+  }));
 
 function makePublicClient() {
   return {
-    sendRawTransaction: mockSendRawTx,
     getChainId: mockGetChainId,
     getTransactionCount: mockGetTxCount,
     estimateGas: mockEstimateGas,
@@ -56,23 +46,6 @@ import { WagmiProvider } from "../wagmi-provider";
 const CONFIG = {} as unknown as Config;
 const provider = new WagmiProvider({ config: CONFIG });
 
-describe("WagmiProvider.sendRawTransaction", () => {
-  test("delegates to the active chain's public client", async () => {
-    mockGetPublicClient.mockReturnValue(makePublicClient());
-    mockSendRawTx.mockResolvedValueOnce(TX_HASH);
-    const result = await provider.sendRawTransaction(SIGNED);
-    expect(result).toBe(TX_HASH);
-    expect(mockSendRawTx).toHaveBeenCalledWith({ serializedTransaction: SIGNED });
-  });
-
-  test("throws ConfigurationError when no public client is configured", async () => {
-    mockGetPublicClient.mockReturnValue(undefined);
-    const err = await provider.sendRawTransaction(SIGNED).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(ConfigurationError);
-    expect((err as Error).message).toContain("no public client configured");
-  });
-});
-
 describe("WagmiProvider.prepareTransaction", () => {
   test("returns an EIP-1559 serialised unsigned tx from the active public client", async () => {
     mockGetPublicClient.mockReturnValue(makePublicClient());
@@ -83,7 +56,7 @@ describe("WagmiProvider.prepareTransaction", () => {
 
     const out = await provider.prepareTransaction({
       from: FROM,
-      call: {
+      calldata: {
         address: TO,
         abi: [
           {
@@ -120,7 +93,7 @@ describe("WagmiProvider.prepareTransaction", () => {
     const err = await provider
       .prepareTransaction({
         from: FROM,
-        call: {
+        calldata: {
           address: TO,
           abi: [
             {

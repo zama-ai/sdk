@@ -566,7 +566,7 @@ export const bscTestnet: {
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
-    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly network: "https://bsc-testnet.bnbchain.org";
     readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
     readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
     readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
@@ -5849,7 +5849,6 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
-    [ZamaErrorCode.PreparedChainMismatch]: PreparedChainMismatchError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
     [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
@@ -7086,14 +7085,13 @@ export interface GenericProvider {
     getChainId(): Promise<number>;
     prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
         from: Address;
-        call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
+        gasLimit?: bigint;
         maxFeePerGas?: bigint;
         maxPriorityFeePerGas?: bigint;
-        gasLimit?: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
-    sendRawTransaction(signedTx: Hex): Promise<Hex>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
 
@@ -11433,7 +11431,6 @@ export class NotEntitledError extends ZamaError {
 
 // @public
 export class Offline {
-    broadcast(preparedTx: PreparedTransaction, signedTx: Hex): Promise<TransactionResult>;
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
@@ -11496,32 +11493,14 @@ export const polygonAmoy: {
 };
 
 // @public
-export class PreparedChainMismatchError extends ZamaError {
-    constructor(input: {
-        operation: string;
-        preparedChainId: number;
-        providerChainId: number;
-    }, options?: ErrorOptions);
-    readonly operation: string;
-    readonly preparedChainId: number;
-    readonly providerChainId: number;
-}
-
-// @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
     readonly kind: K;
-    readonly request: Extract<PrepareTransactionRequest, {
-        kind: K;
-    }>;
 }
 
 // @public
 export interface PreparedTransaction {
-    readonly chainId: number;
     readonly from: Address;
     readonly kind: TransactionKind;
-    readonly request: PrepareTransactionRequest;
-    readonly to: Address;
     readonly unsignedTx: Hex;
 }
 
@@ -19623,7 +19602,6 @@ export const ZamaErrorCode: {
     readonly DelegationExpirationTooSoon: "DELEGATION_EXPIRATION_TOO_SOON";
     readonly DelegationNotPropagated: "DELEGATION_NOT_PROPAGATED";
     readonly ChainMismatch: "CHAIN_MISMATCH";
-    readonly PreparedChainMismatch: "PREPARED_CHAIN_MISMATCH";
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";

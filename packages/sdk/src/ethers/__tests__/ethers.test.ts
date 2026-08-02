@@ -532,20 +532,6 @@ describe("EthersProvider", () => {
     });
   });
 
-  describe("sendRawTransaction", () => {
-    test("delegates to provider.broadcastTransaction and returns the hash", async () => {
-      const mockProvider = {
-        broadcastTransaction: vi.fn().mockResolvedValue({ hash: "0xtxhash" }),
-      };
-      const ethersProvider = new EthersProvider({ provider: mockProvider as never });
-
-      const hash = await ethersProvider.sendRawTransaction("0xdeadbeef" as Hex);
-
-      expect(mockProvider.broadcastTransaction).toHaveBeenCalledWith("0xdeadbeef");
-      expect(hash).toBe("0xtxhash");
-    });
-  });
-
   describe("prepareTransaction", () => {
     const balanceOfAbi = [
       {
@@ -576,7 +562,7 @@ describe("EthersProvider", () => {
 
       await provider.prepareTransaction({
         from: userAddress,
-        call: {
+        calldata: {
           address: tokenAddress,
           abi: balanceOfAbi,
           functionName: "balanceOf",
@@ -596,7 +582,7 @@ describe("EthersProvider", () => {
 
       await provider.prepareTransaction({
         from: userAddress,
-        call: {
+        calldata: {
           address: tokenAddress,
           abi: balanceOfAbi,
           functionName: "balanceOf",

@@ -125,12 +125,6 @@ export class EthersProvider implements GenericProvider {
     };
   }
 
-  /** Broadcast a previously-signed transaction and return its hash. */
-  async sendRawTransaction(signedTx: Hex): Promise<Hex> {
-    const response = await this.#readProvider.broadcastTransaction(signedTx);
-    return response.hash as Hex;
-  }
-
   /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
   async prepareTransaction<
     const TAbi extends ContractAbi,
@@ -138,14 +132,14 @@ export class EthersProvider implements GenericProvider {
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
   >(args: {
     from: Address;
-    call: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
     nonce?: number;
+    gasLimit?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFeePerGas?: bigint;
-    gasLimit?: bigint;
   }): Promise<Hex> {
-    const { from, call } = args;
-    const iface = new ethers.Interface(call.abi as unknown as ethers.InterfaceAbi);
+    const { from, calldata } = args;
+    const iface = new ethers.Interface(calldata.abi as unknown as ethers.InterfaceAbi);
     // Resolve overloaded ABI entries by name + arity. ethers'
     // `getFunction(key, values)` allows for an "overrides" object as the
     // last arg, so a 2-arg fragment still matches a 3-value call and
@@ -153,22 +147,22 @@ export class EthersProvider implements GenericProvider {
     // `confidentialTransfer(address,bytes32,bytes)` aren't disambiguated.
     const candidates: ethers.FunctionFragment[] = [];
     iface.forEachFunction((frag) => {
-      if (frag.name === call.functionName) {
+      if (frag.name === calldata.functionName) {
         candidates.push(frag);
       }
     });
-    const argLength = (call.args as readonly unknown[]).length;
+    const argLength = (calldata.args as readonly unknown[]).length;
     const fragment =
       candidates.length === 1
         ? candidates[0]
         : candidates.find((frag) => frag.inputs.length === argLength);
     if (!fragment) {
-      throw new Error(`Function ${call.functionName}(${argLength} args) not found in ABI`);
+      throw new Error(`Function ${calldata.functionName}(${argLength} args) not found in ABI`);
     }
-    const data = iface.encodeFunctionData(fragment, call.args as readonly unknown[]);
+    const data = iface.encodeFunctionData(fragment, calldata.args as readonly unknown[]);
     assertHex(data, "data");
 
-    const value = call.value ?? 0n;
+    const value = calldata.value ?? 0n;
     // Wrap estimateGas — pre-flight revert is the high-value failure mode.
     // Skip the network round-trips entirely when the caller supplied
     // overrides — useful for custodians with their own nonce/fee managers.
@@ -180,12 +174,12 @@ export class EthersProvider implements GenericProvider {
     const gasPromise =
       args.gasLimit !== undefined
         ? Promise.resolve(args.gasLimit)
-        : (call.gas ??
+        : (calldata.gas ??
           this.#readProvider
-            .estimateGas({ from, to: call.address, data, value })
+            .estimateGas({ from, to: calldata.address, data, value })
             .catch((error: unknown) => {
               throw new TransactionRevertedError(
-                `EthersProvider.prepareTransaction: gas estimation reverted for ${call.functionName as string} on ${call.address}`,
+                `EthersProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName as string} on ${calldata.address}`,
                 { cause: error },
               );
             }));
@@ -196,7 +190,7 @@ export class EthersProvider implements GenericProvider {
             maxPriorityFeePerGas: args.maxPriorityFeePerGas,
           })
         : this.#readProvider.getFeeData();
-    const [network, nonce, gas, feeData] = await Promise.all([
+    const [network, nonce, gasLimit, feeData] = await Promise.all([
       networkPromise,
       noncePromise,
       gasPromise,
@@ -214,10 +208,10 @@ export class EthersProvider implements GenericProvider {
       type: 2,
       chainId: Number(network.chainId),
       nonce,
-      to: call.address,
+      to: calldata.address,
       data,
       value,
-      gasLimit: gas,
+      gasLimit,
       maxFeePerGas,
       maxPriorityFeePerGas,
     });

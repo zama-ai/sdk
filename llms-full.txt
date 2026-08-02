@@ -2113,7 +2113,7 @@ Stuck on the migration, or spotted a step or rename this guide is missing? **Ope
 
 ## Offline signing (institutional custody)
 
-A new `sdk.offline.*` namespace splits a transaction into two separately-invocable phases — `prepare` and `broadcast`, with signing done out-of-process in between — for institutional custody, HSM, and policy-engine workflows where the phases cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route where the caller signs the prepared unsigned tx externally instead of going through `writeContract`.
+A new `sdk.offline.prepare` builds an unsigned transaction that the caller signs **and** broadcasts out-of-process — for institutional custody, HSM ceremonies, and policy-engine workflows where signing cannot run synchronously in a single `Promise`. Online-signer call sites are unchanged: `Token.confidentialTransfer` and friends keep their atomic path. This is a parallel route where the SDK hands off an RLP-encoded unsigned tx and steps out; the caller signs it externally instead of going through `writeContract`, and publishes the signed bytes through its own channel.
 
 ```ts
 const prepared = await sdk.offline.prepare({
@@ -2122,15 +2122,17 @@ const prepared = await sdk.offline.prepare({
   token,
   to: recipient,
   amount: 1_000n,
-}); // → RLP-encoded unsigned tx + { from, to, chainId }
+}); // → { kind, from, unsignedTx } — a JSON-safe handoff
 
-// Sign out-of-process (HSM, custody API, policy engine), then broadcast the
-// returned signed bytes:
-await sdk.offline.broadcast(prepared, signedTx);
+// Ship `prepared` across the process boundary (it JSON.stringify's as-is),
+// then sign and broadcast out-of-process (HSM, custody API, policy engine):
+const signedTx = await custody.sign(prepared.unsignedTx);
+await custody.broadcast(signedTx);
 ```
 
-- **Signer.** `GenericSigner.writeContract` is now optional; `prepare` and `broadcast` work with no configured signer at all, so the initiator process never needs custody of signing material. The prepared unsigned tx is signed out-of-process (HSM, custody API, policy engine) and the signed bytes handed to `broadcast`.
-- **Provider.** `GenericProvider` gains `sendRawTransaction(signedTx)` and `prepareTransaction({ from, call })` (builds the RLP-encoded EIP-1559 unsigned tx), wired in the viem, ethers, and wagmi adapters.
+- **Handoff.** `prepare` returns `{ kind, from, unsignedTx }` — the RLP-encoded unsigned tx plus the two fields the bytes don't yield. `chainId`, `nonce`, `to`, `value`, calldata, and the gas/fee bounds are all recoverable by RLP-decoding `unsignedTx`; `from` is carried because an _unsigned_ EIP-1559 tx has no sender field (the on-chain sender is whichever key signs the bytes), and `kind` classifies the resulting receipt's event. All three are JSON-safe, so the whole handoff crosses a process boundary as-is.
+- **Signer.** `GenericSigner.writeContract` is now optional; `prepare` works with no configured signer at all, so the initiator process never needs custody of signing material.
+- **Provider.** `GenericProvider` gains `prepareTransaction({ from, calldata })`, which resolves chain ID, nonce (`pending` block tag), gas limit, and EIP-1559 fees from chain state and returns the RLP-encoded unsigned tx. Optional `nonce`/`gasLimit`/`maxFeePerGas`/`maxPriorityFeePerGas` overrides let a custodian pin its own nonce and fee values. Wired in the viem, ethers, and wagmi adapters.
 
 
 > [!INFO]
