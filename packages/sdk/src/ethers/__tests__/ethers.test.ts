@@ -11,7 +11,7 @@ import { Wallet } from "ethers";
 import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
-import { ConfigurationError, WalletNotConnectedError } from "../../errors";
+import { WalletNotConnectedError } from "../../errors";
 import type { EIP712TypedData } from "../../relayer/types";
 
 // ── Mock ethers ──────────────────────────────────────────────
@@ -632,25 +632,6 @@ describe("EthersProvider", () => {
       expect(decoded.data).toBe(
         encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
       );
-    });
-
-    test("rejects a partial fee pair (only maxFeePerGas)", async ({
-      tokenAddress,
-      userAddress,
-    }) => {
-      const provider = new EthersProvider({ provider: buildProvider() as never });
-      await expect(
-        provider.prepareTransaction({
-          from: userAddress,
-          calldata: {
-            address: tokenAddress,
-            abi: balanceOfAbi,
-            functionName: "balanceOf",
-            args: [userAddress],
-          },
-          maxFeePerGas: 500n,
-        }),
-      ).rejects.toBeInstanceOf(ConfigurationError);
     });
   });
 });

@@ -97,14 +97,25 @@ export class WagmiProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: {
-    from: Address;
-    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-    nonce?: number;
-    gasLimit?: bigint;
-    maxFeePerGas?: bigint;
-    maxPriorityFeePerGas?: bigint;
-  }): Promise<Hex> {
+  >(
+    args:
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas?: never;
+          maxPriorityFeePerGas?: never;
+        }
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas: bigint;
+          maxPriorityFeePerGas: bigint;
+        },
+  ): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
       throw new ConfigurationError(
@@ -112,14 +123,6 @@ export class WagmiProvider implements GenericProvider {
       );
     }
     const { from, calldata } = args;
-    // maxFeePerGas / maxPriorityFeePerGas must be pinned together or not at
-    // all: pinning only the cap and estimating the tip can yield a tip above
-    // the cap, which fails serialization (viem `TipAboveFeeCapError`).
-    if ((args.maxFeePerGas === undefined) !== (args.maxPriorityFeePerGas === undefined)) {
-      throw new ConfigurationError(
-        "WagmiProvider.prepareTransaction: maxFeePerGas and maxPriorityFeePerGas must be provided together or both omitted.",
-      );
-    }
     const data = encodeFunctionData({
       abi: calldata.abi as Abi,
       functionName: calldata.functionName as string,

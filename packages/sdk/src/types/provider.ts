@@ -70,12 +70,23 @@ export interface GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: {
-    from: Address;
-    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-    nonce?: number;
-    gasLimit?: bigint;
-    maxFeePerGas?: bigint;
-    maxPriorityFeePerGas?: bigint;
-  }): Promise<Hex>;
+  >(
+    args:
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas?: never;
+          maxPriorityFeePerGas?: never;
+        }
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas: bigint;
+          maxPriorityFeePerGas: bigint;
+        },
+  ): Promise<Hex>;
 }

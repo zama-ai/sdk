@@ -22,7 +22,7 @@ import {
 import type { EIP712TypedData } from "../relayer/types";
 import { BaseSigner } from "../signer/base-signer";
 import { eip1193Subscribe } from "../signer/eip1193-subscribe";
-import type { GenericSigner, WalletAccount, WriteContractConfig } from "../types";
+import type { WalletAccount, WriteContractConfig } from "../types";
 import { swallow } from "../utils";
 
 /**
@@ -50,7 +50,7 @@ export type EthersSignerConfig = { ethereum: EIP1193Provider } | { signer: Signe
  *
  * @param config - {@link EthersSignerConfig}
  */
-export class EthersSigner extends BaseSigner implements GenericSigner {
+export class EthersSigner extends BaseSigner {
   readonly #browserProvider?: BrowserProvider;
   readonly #directSigner?: Signer;
   readonly #eip1193?: EIP1193Provider;

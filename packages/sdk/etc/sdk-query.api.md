@@ -457,8 +457,15 @@ export interface GenericProvider {
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
         gasLimit?: bigint;
-        maxFeePerGas?: bigint;
-        maxPriorityFeePerGas?: bigint;
+        maxFeePerGas?: never;
+        maxPriorityFeePerGas?: never;
+    } | {
+        from: Address;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        gasLimit?: bigint;
+        maxFeePerGas: bigint;
+        maxPriorityFeePerGas: bigint;
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
@@ -585,12 +592,16 @@ export class Offline {
 }
 
 // @public
-export interface OfflineOptions {
-    readonly gasLimit?: bigint;
-    readonly maxFeePerGas?: bigint;
-    readonly maxPriorityFeePerGas?: bigint;
+export type OfflineOptions = {
     readonly nonce?: number;
-}
+    readonly gasLimit?: bigint;
+} & ({
+    readonly maxFeePerGas?: never;
+    readonly maxPriorityFeePerGas?: never;
+} | {
+    readonly maxFeePerGas: bigint;
+    readonly maxPriorityFeePerGas: bigint;
+});
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;

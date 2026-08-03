@@ -2,7 +2,6 @@
 import { encodeFunctionData, getAddress, parseTransaction } from "viem";
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
 import type { EIP712TypedData } from "../../relayer/types";
-import { ConfigurationError } from "../../errors";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 
 import {
@@ -406,22 +405,9 @@ describe("ViemProvider", () => {
         );
       },
     );
-
-    vit("rejects a partial fee pair (only maxFeePerGas)", async ({ tokenAddress, userAddress }) => {
-      const provider = new ViemProvider({ publicClient: buildPublicClient() });
-      await expect(
-        provider.prepareTransaction({
-          from: userAddress,
-          calldata: {
-            address: tokenAddress,
-            abi: balanceOfAbi,
-            functionName: "balanceOf",
-            args: [userAddress],
-          },
-          maxFeePerGas: 500n,
-        }),
-      ).rejects.toBeInstanceOf(ConfigurationError);
-    });
+    // Note: a partial fee pair (only one of maxFeePerGas/maxPriorityFeePerGas)
+    // is now a compile error — GenericProvider.prepareTransaction's arg type
+    // makes the two all-or-nothing — so there's no runtime case to test here.
   });
 });
 

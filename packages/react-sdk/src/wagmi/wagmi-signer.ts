@@ -3,11 +3,10 @@ import {
   type ContractAbi,
   type EIP712TypedData,
   type Hex,
-  type GenericSigner,
   type WalletAccount,
   type WriteContractArgs,
-  type WriteFunctionName,
   type WriteContractConfig,
+  type WriteFunctionName,
 } from "@zama-fhe/sdk";
 import { getAddress } from "viem";
 import type { Config } from "wagmi";
@@ -51,7 +50,7 @@ export interface WagmiSignerConfig {
  *
  * @param signerConfig - {@link WagmiSignerConfig} with wagmi config
  */
-export class WagmiSigner extends BaseSigner implements GenericSigner {
+export class WagmiSigner extends BaseSigner {
   readonly #config: Config;
   readonly #unsubscribeConnection: () => void;
 

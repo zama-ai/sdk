@@ -130,23 +130,26 @@ export class EthersProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(args: {
-    from: Address;
-    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-    nonce?: number;
-    gasLimit?: bigint;
-    maxFeePerGas?: bigint;
-    maxPriorityFeePerGas?: bigint;
-  }): Promise<Hex> {
+  >(
+    args:
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas?: never;
+          maxPriorityFeePerGas?: never;
+        }
+      | {
+          from: Address;
+          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+          nonce?: number;
+          gasLimit?: bigint;
+          maxFeePerGas: bigint;
+          maxPriorityFeePerGas: bigint;
+        },
+  ): Promise<Hex> {
     const { from, calldata } = args;
-    // maxFeePerGas / maxPriorityFeePerGas must be pinned together or not at
-    // all: pinning only the cap and estimating the tip can yield a tip above
-    // the cap, which fails serialization.
-    if ((args.maxFeePerGas === undefined) !== (args.maxPriorityFeePerGas === undefined)) {
-      throw new ConfigurationError(
-        "EthersProvider.prepareTransaction: maxFeePerGas and maxPriorityFeePerGas must be provided together or both omitted.",
-      );
-    }
     const iface = new ethers.Interface(calldata.abi as unknown as ethers.InterfaceAbi);
     // Resolve overloaded ABI entries by name + arity. ethers'
     // `getFunction(key, values)` allows for an "overrides" object as the

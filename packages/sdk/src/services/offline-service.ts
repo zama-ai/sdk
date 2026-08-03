@@ -64,7 +64,7 @@ export interface OfflineServiceConfig {
  * slow multi-party approval) the signed payload is frozen once exported, so
  * pin generous fee bounds up front rather than expecting to re-stamp later.
  */
-export interface OfflineOptions {
+export type OfflineOptions = {
   /**
    * Override the nonce. Otherwise the provider reads the account's
    * `"pending"` transaction count.
@@ -76,20 +76,25 @@ export interface OfflineOptions {
    * the nonces yourself here.
    */
   readonly nonce?: number;
-  /**
-   * Override `maxFeePerGas`. Otherwise the provider estimates it.
-   *
-   * `maxFeePerGas` and `maxPriorityFeePerGas` must be supplied together or
-   * not at all — the provider rejects a partial pair rather than mixing a
-   * pinned cap with an estimated tip (which can exceed the cap and fail
-   * serialization).
-   */
-  readonly maxFeePerGas?: bigint;
-  /** Override `maxPriorityFeePerGas`. Must accompany {@link OfflineOptions.maxFeePerGas}. */
-  readonly maxPriorityFeePerGas?: bigint;
   /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
   readonly gasLimit?: bigint;
-}
+} & (
+  | {
+      /**
+       * `maxFeePerGas` and `maxPriorityFeePerGas` must be supplied together or
+       * not at all — pinning a cap while the tip is estimated can produce a tip
+       * above the cap and fail serialization. Omit both to estimate both.
+       */
+      readonly maxFeePerGas?: never;
+      readonly maxPriorityFeePerGas?: never;
+    }
+  | {
+      /** Override `maxFeePerGas`. Must accompany `maxPriorityFeePerGas`. */
+      readonly maxFeePerGas: bigint;
+      /** Override `maxPriorityFeePerGas`. Must accompany `maxFeePerGas`. */
+      readonly maxPriorityFeePerGas: bigint;
+    }
+);
 
 /**
  * Offline-signing pipeline. Builds an RLP-encoded unsigned transaction that
@@ -149,14 +154,18 @@ export class OfflineService {
 
     const from = getAddress(request.from);
     const calldata = await this.#buildCalldata(request, from);
-    const unsignedTx = await this.#provider.prepareTransaction({
-      from,
-      calldata,
-      nonce: options?.nonce,
-      maxFeePerGas: options?.maxFeePerGas,
-      maxPriorityFeePerGas: options?.maxPriorityFeePerGas,
-      gasLimit: options?.gasLimit,
-    });
+    // The fee pair is all-or-nothing (OfflineOptions enforces it), so pass
+    // both or neither — never a partial pair the provider would reject.
+    const base = { from, calldata, nonce: options?.nonce, gasLimit: options?.gasLimit };
+    const unsignedTx = await this.#provider.prepareTransaction(
+      options?.maxFeePerGas !== undefined
+        ? {
+            ...base,
+            maxFeePerGas: options.maxFeePerGas,
+            maxPriorityFeePerGas: options.maxPriorityFeePerGas,
+          }
+        : base,
+    );
     return { kind: request.kind, from, unsignedTx } satisfies PreparedFor<K>;
   }
 
