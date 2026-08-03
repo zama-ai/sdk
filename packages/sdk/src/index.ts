@@ -203,7 +203,7 @@ export {
   type ErrorForCode,
 } from "./errors";
 export { BaseSigner } from "./signer/base-signer";
-export type { OfflineSigningOptions } from "./services/offline-signing-service";
+export type { OfflineOptions } from "./services/offline-service";
 export { createWalletAccountStore, MutableWalletAccountStore } from "./signer/wallet-account-store";
 
 // Event decoders and types

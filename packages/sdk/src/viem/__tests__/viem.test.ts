@@ -1,6 +1,8 @@
 /* eslint-disable no-empty-pattern */
+import { encodeFunctionData, getAddress, parseTransaction } from "viem";
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
 import type { EIP712TypedData } from "../../relayer/types";
+import { ConfigurationError } from "../../errors";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
 
 import {
@@ -371,6 +373,55 @@ describe("ViemProvider", () => {
         expect(publicClient.getTransactionCount).not.toHaveBeenCalled();
       },
     );
+
+    vit(
+      "serializes an EIP-1559 tx whose decoded fields match chain state + overrides",
+      async ({ tokenAddress, userAddress }) => {
+        const publicClient = buildPublicClient();
+        const provider = new ViemProvider({ publicClient });
+
+        const unsignedTx = await provider.prepareTransaction({
+          from: userAddress,
+          calldata: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+          maxFeePerGas: 500n,
+          maxPriorityFeePerGas: 2n,
+        });
+
+        const decoded = parseTransaction(unsignedTx);
+        expect(decoded.type).toBe("eip1559");
+        expect(decoded.chainId).toBe(1); // from getChainId
+        expect(decoded.nonce).toBe(7); // from getTransactionCount
+        expect(getAddress(decoded.to!)).toBe(getAddress(tokenAddress));
+        expect(decoded.value ?? 0n).toBe(0n);
+        expect(decoded.gas).toBe(21000n); // from estimateGas
+        expect(decoded.maxFeePerGas).toBe(500n); // pinned override wins over estimate
+        expect(decoded.maxPriorityFeePerGas).toBe(2n);
+        expect(decoded.data).toBe(
+          encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
+        );
+      },
+    );
+
+    vit("rejects a partial fee pair (only maxFeePerGas)", async ({ tokenAddress, userAddress }) => {
+      const provider = new ViemProvider({ publicClient: buildPublicClient() });
+      await expect(
+        provider.prepareTransaction({
+          from: userAddress,
+          calldata: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+          maxFeePerGas: 500n,
+        }),
+      ).rejects.toBeInstanceOf(ConfigurationError);
+    });
   });
 });
 

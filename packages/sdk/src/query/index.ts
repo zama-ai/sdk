@@ -188,7 +188,8 @@ export type {
   ListPairsOptions,
 } from "../wrappers-registry";
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
-export type { Permits, Delegations, Decryption } from "../namespaces";
+export type { Permits, Delegations, Decryption, Offline } from "../namespaces";
+export type { OfflineOptions } from "../services/offline-service";
 export type {
   DelegatedDecryptOptions,
   BatchDecryptResult,

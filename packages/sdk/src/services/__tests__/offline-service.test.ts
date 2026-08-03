@@ -1,13 +1,15 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { describe, expect, TEST_UNSIGNED_TX, test, vi } from "../../test-fixtures";
-import { MAX_UINT48 } from "../../contracts/constants";
 import type { GenericProvider } from "../../types/provider";
+
+/** A raw 20-byte address payload — the only recipientData length the wrapper accepts verbatim. */
+const RECIPIENT_DATA_20 = "0x00000000000000000000000000000000000000ff" as Hex;
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
 const UNSIGNED = TEST_UNSIGNED_TX;
 
-describe("OfflineSigningService — ConfidentialTransfer prepare", () => {
+describe("OfflineService — ConfidentialTransfer prepare", () => {
   test("prepare encrypts amount + asks the provider for an unsigned tx", async ({
     createSDK,
     signer,
@@ -43,14 +45,18 @@ describe("OfflineSigningService — ConfidentialTransfer prepare", () => {
   });
 });
 
-describe("OfflineSigningService — other transaction kinds", () => {
-  test("ConfidentialTransferFrom encrypts amount under `owner` and builds calldata", async ({
+describe("OfflineService — other transaction kinds", () => {
+  test("ConfidentialTransferFrom encrypts under the tx-sender (`from`), not the `owner`", async ({
     createSDK,
     signer,
     provider,
     relayer,
     userAddress,
   }) => {
+    // The input proof binds to msg.sender (fhevm `verifyInput`), which for a
+    // transferFrom is the operator == the `from` wallet that signs — not the
+    // `owner` being debited. Encrypting under `owner` would produce a proof the
+    // on-chain call rejects.
     const sdk = createSDK({ signer });
     const owner = "0x1111111111111111111111111111111111111111" as Address;
     await sdk.offline.prepare({
@@ -62,7 +68,11 @@ describe("OfflineSigningService — other transaction kinds", () => {
       amount: 5n,
     });
     expect(relayer.encryptValues).toHaveBeenCalledWith(
-      expect.objectContaining({ userAddress: owner, contractAddress: TOKEN }),
+      expect.objectContaining({ userAddress: getAddress(userAddress), contractAddress: TOKEN }),
+    );
+    // and NOT under the owner
+    expect(relayer.encryptValues).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userAddress: owner }),
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -84,37 +94,12 @@ describe("OfflineSigningService — other transaction kinds", () => {
       from: userAddress,
       token: TOKEN,
       operator: RECIPIENT,
+      until: 1_900_000_000,
     });
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         calldata: expect.objectContaining({ functionName: "setOperator" }),
-      }),
-    );
-  });
-
-  test("SetOperator with omitted `until` bakes the permanent (uint48 max) sentinel", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
-    // Offline payloads are frozen at prepare time, so "omit for permanent" must
-    // resolve to uint48 max — not the atomic path's relative now + 1h default,
-    // which would silently expire mid-ceremony.
-    const sdk = createSDK({ signer });
-    await sdk.offline.prepare({
-      kind: "SetOperator",
-      from: userAddress,
-      token: TOKEN,
-      operator: RECIPIENT,
-    });
-    expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        calldata: expect.objectContaining({
-          functionName: "setOperator",
-          args: [RECIPIENT, MAX_UINT48],
-        }),
       }),
     );
   });
@@ -324,7 +309,7 @@ describe("OfflineSigningService — other transaction kinds", () => {
   });
 });
 
-describe("OfflineSigningService — encryption invariants", () => {
+describe("OfflineService — encryption invariants", () => {
   const empty = { encryptedValues: [], inputProof: "0x040506" } as never;
 
   test("ConfidentialTransfer throws EncryptionFailedError on empty handles", async ({
@@ -389,7 +374,7 @@ describe("OfflineSigningService — encryption invariants", () => {
   });
 });
 
-describe("OfflineSigningService — calldata arg assertions", () => {
+describe("OfflineService — calldata arg assertions", () => {
   type Call = { args: readonly unknown[] };
   const lastCall = (provider: GenericProvider): Call => {
     const calls = vi.mocked(provider.prepareTransaction).mock.calls;
@@ -498,12 +483,12 @@ describe("OfflineSigningService — calldata arg assertions", () => {
       underlying: TOKEN,
       wrapper: RECIPIENT,
       amount: 100n,
-      recipientData: "0xdead" as Hex,
+      recipientData: RECIPIENT_DATA_20,
     });
     const call = lastCall(provider);
     expect(call.args[0]).toBe(RECIPIENT);
     expect(call.args[1]).toBe(100n);
-    expect(call.args[2]).toBe("0xdead");
+    expect(call.args[2]).toBe(RECIPIENT_DATA_20);
   });
 
   test("DelegateDecryption args are [delegate, contract, expirationTimestamp]", async ({
@@ -546,7 +531,7 @@ describe("OfflineSigningService — calldata arg assertions", () => {
   });
 });
 
-describe("OfflineSigningService — prepare option overrides", () => {
+describe("OfflineService — prepare option overrides", () => {
   test("threads options.nonce through to provider.prepareTransaction", async ({
     createSDK,
     signer,
@@ -555,7 +540,13 @@ describe("OfflineSigningService — prepare option overrides", () => {
   }) => {
     const sdk = createSDK({ signer });
     await sdk.offline.prepare(
-      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
+      {
+        kind: "SetOperator",
+        from: userAddress,
+        token: TOKEN,
+        operator: RECIPIENT,
+        until: 1_900_000_000,
+      },
       { nonce: 42 },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -571,7 +562,13 @@ describe("OfflineSigningService — prepare option overrides", () => {
   }) => {
     const sdk = createSDK({ signer });
     await sdk.offline.prepare(
-      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
+      {
+        kind: "SetOperator",
+        from: userAddress,
+        token: TOKEN,
+        operator: RECIPIENT,
+        until: 1_900_000_000,
+      },
       { maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -582,7 +579,13 @@ describe("OfflineSigningService — prepare option overrides", () => {
   test("threads options.gasLimit through", async ({ createSDK, signer, provider, userAddress }) => {
     const sdk = createSDK({ signer });
     await sdk.offline.prepare(
-      { kind: "SetOperator", from: userAddress, token: TOKEN, operator: RECIPIENT },
+      {
+        kind: "SetOperator",
+        from: userAddress,
+        token: TOKEN,
+        operator: RECIPIENT,
+        until: 1_900_000_000,
+      },
       { gasLimit: 250_000n },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
@@ -591,7 +594,7 @@ describe("OfflineSigningService — prepare option overrides", () => {
   });
 });
 
-describe("OfflineSigningService — signer-optional surface (cross-process custody)", () => {
+describe("OfflineService — signer-optional surface (cross-process custody)", () => {
   test("signer-absent SDK can prepare an unsigned tx", async ({
     createSDK,
     provider,
@@ -613,5 +616,79 @@ describe("OfflineSigningService — signer-optional surface (cross-process custo
     expect(prepared.from).toBe(getAddress(userAddress));
     expect(prepared.unsignedTx).toBe(UNSIGNED);
     expect(provider.prepareTransaction).toHaveBeenCalled();
+  });
+});
+
+describe("OfflineService — TransferAndCall recipientData validation", () => {
+  // `test.for` (not `test.each`) forwards the fixture context as the 2nd arg.
+  const ACCEPTED: readonly [string, Hex | undefined][] = [
+    ["undefined (self-shield)", undefined],
+    ["0x (self-shield)", "0x"],
+    ["a raw 20-byte address", RECIPIENT_DATA_20],
+  ];
+  test.for(ACCEPTED)(
+    "accepts %s",
+    async ([, recipientData], { createSDK, signer, provider, userAddress }) => {
+      const sdk = createSDK({ signer });
+      await sdk.offline.prepare({
+        kind: "TransferAndCall",
+        from: userAddress,
+        underlying: TOKEN,
+        wrapper: RECIPIENT,
+        amount: 1n,
+        recipientData,
+      });
+      expect(provider.prepareTransaction).toHaveBeenCalled();
+    },
+  );
+
+  const REJECTED: readonly [string, Hex][] = [
+    ["a 32-byte ABI-encoded address", `0x${"00".repeat(12)}${"ff".repeat(20)}`],
+    ["a short non-empty value", "0xdead"],
+  ];
+  test.for(REJECTED)(
+    "rejects %s so the wrapper cannot truncate it to a garbage address",
+    async ([, recipientData], { createSDK, signer, provider, userAddress }) => {
+      const { ConfigurationError } = await import("../../errors");
+      const sdk = createSDK({ signer });
+      await expect(
+        sdk.offline.prepare({
+          kind: "TransferAndCall",
+          from: userAddress,
+          underlying: TOKEN,
+          wrapper: RECIPIENT,
+          amount: 1n,
+          recipientData,
+        }),
+      ).rejects.toBeInstanceOf(ConfigurationError);
+      expect(provider.prepareTransaction).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("OfflineService — chain-alignment guard", () => {
+  test("throws when the provider is on a different chain than the SDK", async ({
+    createSDK,
+    signer,
+    provider,
+    relayer,
+    userAddress,
+  }) => {
+    const { ConfigurationError } = await import("../../errors");
+    // SDK/router is configured for chain 31337 (fixture); point the provider elsewhere.
+    vi.mocked(provider.getChainId).mockResolvedValue(1);
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "ConfidentialTransfer",
+        from: userAddress,
+        token: TOKEN,
+        to: RECIPIENT,
+        amount: 1n,
+      }),
+    ).rejects.toBeInstanceOf(ConfigurationError);
+    // Guard runs before any encryption or tx building.
+    expect(relayer.encryptValues).not.toHaveBeenCalled();
+    expect(provider.prepareTransaction).not.toHaveBeenCalled();
   });
 });

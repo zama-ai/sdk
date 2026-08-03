@@ -60,10 +60,11 @@ export interface GenericProvider {
    * `Contract.populateTransaction` + `Transaction.unsignedSerialized`
    * pipeline (ethers v6).
    *
-   * Nonce reads use the `"pending"` block tag so parallel custodian queues
-   * with multiple in-flight approvals against the same wallet don't collide
-   * on a stale `"latest"` count. Pass `nonce` to bypass the read entirely
-   * (e.g. when the custodian assigns nonces itself).
+   * Nonce reads use the `"pending"` block tag so that once an earlier tx has
+   * been broadcast, the next prepare picks up the incremented count instead of
+   * a stale `"latest"`. Note `"pending"` does **not** disambiguate several
+   * payloads prepared *before* any of them is broadcast — they all read the
+   * same count; pass an explicit `nonce` to assign them yourself in that case.
    */
   prepareTransaction<
     const TAbi extends ContractAbi,

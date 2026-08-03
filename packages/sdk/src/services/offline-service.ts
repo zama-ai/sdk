@@ -1,4 +1,4 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, isHex, size, type Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
@@ -7,7 +7,6 @@ import {
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
-  MAX_UINT48,
   MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
@@ -39,11 +38,11 @@ import { assertBigint } from "../utils/assertions";
 import type { EncryptionService } from "./encryption-service";
 
 /**
- * Configuration for {@link OfflineSigningService}.
+ * Configuration for {@link OfflineService}.
  *
  * @internal
  */
-export interface OfflineSigningServiceConfig {
+export interface OfflineServiceConfig {
   readonly provider: GenericProvider;
   readonly router: ChainRouter;
   readonly encryption: EncryptionService;
@@ -51,8 +50,7 @@ export interface OfflineSigningServiceConfig {
 }
 
 /**
- * Optional behaviour overrides shared by every {@link OfflineSigningService}
- * method.
+ * Optional behaviour overrides shared by every {@link OfflineService} method.
  *
  * `nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`, and `gasLimit` flow
  * through to {@link GenericProvider.prepareTransaction} so custodians with
@@ -66,39 +64,54 @@ export interface OfflineSigningServiceConfig {
  * slow multi-party approval) the signed payload is frozen once exported, so
  * pin generous fee bounds up front rather than expecting to re-stamp later.
  */
-export interface OfflineSigningOptions {
-  /** Optional {@link AbortSignal} to cancel the in-flight chain reads. */
-  readonly signal?: AbortSignal;
-  /** Override the nonce. Otherwise the provider reads `getTransactionCount("pending")`. */
+export interface OfflineOptions {
+  /**
+   * Override the nonce. Otherwise the provider reads the account's
+   * `"pending"` transaction count.
+   *
+   * The `"pending"` tag only diverges from `"latest"` once an earlier tx has
+   * been broadcast — it does **not** disambiguate several offline payloads
+   * prepared before any of them is broadcast (they all read the same count).
+   * When queuing multiple in-flight preparations against one wallet, assign
+   * the nonces yourself here.
+   */
   readonly nonce?: number;
-  /** Override `maxFeePerGas`. Otherwise the provider reads `estimateFeesPerGas`. */
+  /**
+   * Override `maxFeePerGas`. Otherwise the provider estimates it.
+   *
+   * `maxFeePerGas` and `maxPriorityFeePerGas` must be supplied together or
+   * not at all — the provider rejects a partial pair rather than mixing a
+   * pinned cap with an estimated tip (which can exceed the cap and fail
+   * serialization).
+   */
   readonly maxFeePerGas?: bigint;
-  /** Override `maxPriorityFeePerGas`. Otherwise the provider reads `estimateFeesPerGas`. */
+  /** Override `maxPriorityFeePerGas`. Must accompany {@link OfflineOptions.maxFeePerGas}. */
   readonly maxPriorityFeePerGas?: bigint;
   /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
   readonly gasLimit?: bigint;
 }
 
 /**
- * Offline-signing pipeline. Separates `prepare` and `broadcast` for
- * institutional custody and policy-engine workflows where signing runs
- * out-of-process and cannot happen synchronously in a single Promise.
+ * Offline-signing pipeline. Builds an RLP-encoded unsigned transaction that
+ * the caller signs **and** publishes out-of-process — for institutional
+ * custody, HSM ceremonies, and policy-engine workflows where signing cannot
+ * happen synchronously in a single Promise.
  *
  * Atomic call sites ({@link Token.confidentialTransfer}, etc.) keep their
  * `signer.writeContract` path; this service is the parallel route where the
  * caller signs `prepared.unsignedTx` externally (HSM, custody API, policy
- * engine) and feeds the signed bytes back through {@link broadcast}.
+ * engine) and publishes the signed bytes through its own channel.
  *
  * Owned by {@link ZamaSDK}.
  *
  * @internal
  */
-export class OfflineSigningService {
+export class OfflineService {
   readonly #provider: GenericProvider;
   readonly #router: ChainRouter;
   readonly #encryption: EncryptionService;
 
-  constructor(config: OfflineSigningServiceConfig) {
+  constructor(config: OfflineServiceConfig) {
     this.#provider = config.provider;
     this.#router = config.router;
     this.#encryption = config.encryption;
@@ -109,8 +122,8 @@ export class OfflineSigningService {
   /**
    * Build the offline-signing payload for the given transaction request:
    * an RLP-encoded unsigned transaction the caller signs externally (an HSM,
-   * custody API, or any out-of-process signer) and feeds back through
-   * {@link broadcast}.
+   * custody API, or any out-of-process signer) and publishes through its own
+   * channel.
    *
    * Decryption permits are not transactions — acquire them via
    * `sdk.permits.grantPermit`, which signs with the configured signer
@@ -118,8 +131,22 @@ export class OfflineSigningService {
    */
   async prepare<K extends TransactionKind>(
     request: Extract<PrepareTransactionRequest, { kind: K }>,
-    options?: OfflineSigningOptions,
+    options?: OfflineOptions,
   ): Promise<PreparedFor<K>> {
+    // The prepared tx's contract addresses and encrypted inputs are bound to
+    // the SDK's configured chain; if the provider is on a different chain it
+    // would bake that chain's id into a tx carrying wrong-chain addresses.
+    // No signer here (offline is signer-less), so guard router vs provider
+    // directly rather than through requireChainAlignment.
+    const providerChainId = await this.#provider.getChainId();
+    const expectedChainId = this.#router.chain.id;
+    if (providerChainId !== expectedChainId) {
+      throw new ConfigurationError(
+        `Offline.prepare: provider is on chain ${providerChainId} but the SDK is configured for chain ${expectedChainId}. ` +
+          `The prepared transaction's contract addresses and encrypted inputs are bound to chain ${expectedChainId} — point the provider at the same chain.`,
+      );
+    }
+
     const from = getAddress(request.from);
     const calldata = await this.#buildCalldata(request, from);
     const unsignedTx = await this.#provider.prepareTransaction({
@@ -148,7 +175,7 @@ export class OfflineSigningService {
       case "ConfidentialTransfer":
         return this.#buildConfidentialTransfer(request, from);
       case "ConfidentialTransferFrom":
-        return this.#buildConfidentialTransferFrom(request);
+        return this.#buildConfidentialTransferFrom(request, from);
       case "SetOperator":
         return this.#buildSetOperator(request);
       case "Unwrap":
@@ -170,7 +197,7 @@ export class OfflineSigningService {
       default: {
         const unhandled: { kind: string } = request;
         throw new ConfigurationError(
-          `OfflineSigningService.prepare: unsupported transaction kind '${unhandled.kind}'.`,
+          `OfflineService.prepare: unsupported transaction kind '${unhandled.kind}'.`,
         );
       }
     }
@@ -194,11 +221,15 @@ export class OfflineSigningService {
 
   async #buildConfidentialTransferFrom(
     request: ConfidentialTransferFromRequest,
+    from: Address,
   ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
+    // The encrypted input's proof binds to the tx sender (fhevm verifies it
+    // against `msg.sender`), which for `transferFrom` is the operator == the
+    // `from` wallet that signs and broadcasts — not the `owner` being debited.
     const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
-      userAddress: getAddress(request.owner),
+      userAddress: from,
     });
     const handle = encryptedValues[0];
     if (!handle) {
@@ -216,15 +247,12 @@ export class OfflineSigningService {
   }
 
   #buildSetOperator(request: SetOperatorRequest): ReturnType<typeof setOperatorContract> {
-    // Offline payloads are frozen at prepare time, so an omitted `until` must
-    // mean "permanent" (uint48 max) — never a relative default like the atomic
-    // path's now + 1h, which would silently expire mid-ceremony. Mirrors the
-    // MAX_UINT64 sentinel `#buildDelegateDecryption` uses for the same reason.
-    return setOperatorContract(
-      request.token,
-      getAddress(request.operator),
-      request.until ?? MAX_UINT48,
-    );
+    // `until` is a required field on the offline request: the atomic path's
+    // relative default (now + 1h) would silently expire mid-ceremony once the
+    // payload is frozen, and defaulting to a far-future sentinel would grant a
+    // de-facto permanent operator — both are unacceptable for a frozen offline
+    // payload, so the caller must state the expiry explicitly.
+    return setOperatorContract(request.token, getAddress(request.operator), request.until);
   }
 
   async #buildUnwrap(
@@ -282,11 +310,28 @@ export class OfflineSigningService {
   #buildTransferAndCall(
     request: TransferAndCallRequest,
   ): ReturnType<typeof transferAndCallContract> {
+    // The wrapper's receiver hook does `to = data.length < 20 ? from :
+    // address(bytes20(data))`, so a value that isn't empty and isn't exactly
+    // 20 bytes (e.g. a 32-byte ABI-encoded address) is truncated to its first
+    // 20 bytes — minting the shielded funds to a garbage address. Reject
+    // anything other than an omitted value, `0x` (self-shield), or a raw
+    // 20-byte address rather than let the funds go astray.
+    const { recipientData } = request;
+    if (recipientData !== undefined && recipientData !== "0x") {
+      if (!isHex(recipientData) || size(recipientData) !== 20) {
+        throw new ConfigurationError(
+          `TransferAndCall.recipientData must be a raw 20-byte address, "0x", or omitted (self-shield to the sender). ` +
+            `Got ${isHex(recipientData) ? `${size(recipientData)} bytes` : "a non-hex value"}. ` +
+            `The wrapper truncates any non-20-byte payload to its first 20 bytes, which would mint to a garbage address — ` +
+            `pass the recipient as 20 raw bytes (not a 32-byte ABI-encoded value).`,
+        );
+      }
+    }
     return transferAndCallContract(
       request.underlying,
       request.wrapper,
       request.amount,
-      request.recipientData,
+      recipientData,
     );
   }
 

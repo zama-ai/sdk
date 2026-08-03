@@ -110,11 +110,10 @@ const dfns = test.extend<DfnsFixtures>({
     await use({ address: getAddress(wallet.address), chainId: Number(network.chainId) });
   },
   sdk: async ({ ethProvider }, use) => {
-    const provider = new EthersProvider({ provider: ethProvider as unknown as Provider });
     const config = createConfig({
       chains: [sepolia] as const,
       relayers: { [sepolia.id]: node() },
-      provider,
+      provider: new EthersProvider({ provider: ethProvider as unknown as Provider }),
       storage: new MemoryStorage(),
     });
     const sdk = new ZamaSDK(config);
@@ -173,8 +172,8 @@ const dfns = test.extend<DfnsFixtures>({
 
 describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", () => {
   dfns(
-    "prepare → DFNS signs (policy approval) and broadcasts, yielding an on-chain tx hash",
-    async ({ sdk, dfnsAccount, signAndBroadcast, env }) => {
+    "prepare → DFNS signs (policy approval) and broadcasts, yielding a mined, successful tx",
+    async ({ sdk, dfnsAccount, signAndBroadcast, ethProvider, env }) => {
       const prepared = await sdk.offline.prepare({
         kind: "ConfidentialTransfer",
         from: dfnsAccount.address,
@@ -185,9 +184,17 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
       expect(prepared.unsignedTx).toMatch(/^0x[0-9a-f]+$/i);
 
       // The custodian owns signing AND broadcast — the SDK's job ended at
-      // `prepare`. A real tx hash back proves the full cross-process round-trip.
+      // `prepare`. A real tx hash back proves the cross-process round-trip.
       const { txHash } = await signAndBroadcast(prepared.unsignedTx);
       expect(isHash(txHash)).toBe(true);
+
+      // A broadcast hash alone doesn't prove success — the tx can still revert
+      // on-chain (status 0). Wait on the raw ethers provider for the receipt and
+      // assert it succeeded. (The SDK's GenericProvider receipt carries only
+      // `logs`, not `status`, so we go to the underlying provider here.)
+      const receipt = await ethProvider.waitForTransaction(txHash, 1, POLL_TIMEOUT_MS);
+      assertNonNullable(receipt, `receipt for ${txHash}`);
+      expect(receipt.status).toBe(1);
     },
     POLL_TIMEOUT_MS + 60_000,
   );

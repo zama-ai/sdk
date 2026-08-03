@@ -13,7 +13,7 @@ import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
-import { OfflineSigningService } from "./services/offline-signing-service";
+import { OfflineService } from "./services/offline-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type {
@@ -65,7 +65,7 @@ export class ZamaSDK {
   readonly #decryptionService: DecryptionService | undefined;
   readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
-  readonly #offlineSigningService: OfflineSigningService;
+  readonly #offlineService: OfflineService;
 
   constructor(config: ZamaConfig) {
     this.#router = config.router;
@@ -129,7 +129,7 @@ export class ZamaSDK {
       credentialService: this.#credentialService,
       logger: this.#logger,
     });
-    this.#offlineSigningService = new OfflineSigningService({
+    this.#offlineService = new OfflineService({
       provider: this.provider,
       router: config.router,
       encryption: this.#encryptionService,
@@ -154,7 +154,7 @@ export class ZamaSDK {
       router: config.router,
       decryptionService: this.#decryptionService,
     });
-    this.offline = new Offline(this.#offlineSigningService);
+    this.offline = new Offline(this.#offlineService);
   }
 
   /**

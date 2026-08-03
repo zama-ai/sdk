@@ -88,6 +88,32 @@ describe("WagmiProvider.prepareTransaction", () => {
     );
   });
 
+  test("throws ConfigurationError on a partial fee pair (only maxFeePerGas)", async () => {
+    mockGetPublicClient.mockReturnValue(makePublicClient());
+    const err = await provider
+      .prepareTransaction({
+        from: FROM,
+        calldata: {
+          address: TO,
+          abi: [
+            {
+              type: "function",
+              name: "noop",
+              inputs: [],
+              outputs: [],
+              stateMutability: "nonpayable",
+            },
+          ] as const,
+          functionName: "noop",
+          args: [],
+        },
+        maxFeePerGas: 500n,
+      })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ConfigurationError);
+    expect((err as Error).message).toContain("must be provided together");
+  });
+
   test("throws ConfigurationError when no public client is configured", async () => {
     mockGetPublicClient.mockReturnValue(undefined);
     const err = await provider

@@ -41,7 +41,17 @@ export interface ConfidentialTransferFromRequest {
   readonly amount: bigint;
 }
 
-/** Approve/revoke an operator. `until` is a unix timestamp; omit for permanent. */
+/**
+ * Approve/revoke an operator. `until` is a required unix timestamp (seconds)
+ * the approval expires at.
+ *
+ * Unlike the atomic {@link Token.setOperator} path — which defaults an omitted
+ * `until` to a short relative window — the offline payload is frozen at prepare
+ * time and signed later, so a relative default would silently expire mid-
+ * ceremony and a far-future default would grant a de-facto permanent operator.
+ * The caller must state the expiry explicitly; set a far-future timestamp for
+ * an effectively permanent grant.
+ */
 export interface SetOperatorRequest {
   /** Discriminator tag. */
   readonly kind: "SetOperator";
@@ -51,8 +61,8 @@ export interface SetOperatorRequest {
   readonly token: Address;
   /** Operator address to approve or revoke. */
   readonly operator: Address;
-  /** Unix timestamp the approval expires at; omit for permanent (uint48 max). */
-  readonly until?: number;
+  /** Unix timestamp (seconds) the approval expires at. Required — no implicit default. */
+  readonly until: number;
 }
 
 /**

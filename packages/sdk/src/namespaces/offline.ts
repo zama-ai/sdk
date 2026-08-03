@@ -1,7 +1,4 @@
-import type {
-  OfflineSigningOptions,
-  OfflineSigningService,
-} from "../services/offline-signing-service";
+import type { OfflineOptions, OfflineService } from "../services/offline-service";
 import type { PreparedFor, PrepareTransactionRequest, TransactionKind } from "../types";
 
 /**
@@ -11,11 +8,11 @@ import type { PreparedFor, PrepareTransactionRequest, TransactionKind } from "..
  * cannot happen synchronously in a single Promise.
  */
 export class Offline {
-  readonly #offlineSigningService: OfflineSigningService;
+  readonly #offlineService: OfflineService;
 
   /** @internal */
-  constructor(offlineSigningService: OfflineSigningService) {
-    this.#offlineSigningService = offlineSigningService;
+  constructor(offlineService: OfflineService) {
+    this.#offlineService = offlineService;
   }
 
   /**
@@ -40,8 +37,8 @@ export class Offline {
    */
   prepare<K extends TransactionKind>(
     request: Extract<PrepareTransactionRequest, { kind: K }>,
-    options?: OfflineSigningOptions,
+    options?: OfflineOptions,
   ): Promise<PreparedFor<K>> {
-    return this.#offlineSigningService.prepare(request, options);
+    return this.#offlineService.prepare(request, options);
   }
 }

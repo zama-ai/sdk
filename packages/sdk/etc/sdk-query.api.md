@@ -575,6 +575,24 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
+export class Offline {
+    // Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "PrepareTransactionRequest" needs to be exported by the entry point index.d.ts
+    // Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
+    prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
+        kind: K;
+    }>, options?: OfflineOptions): Promise<PreparedFor<K>>;
+}
+
+// @public
+export interface OfflineOptions {
+    readonly gasLimit?: bigint;
+    readonly maxFeePerGas?: bigint;
+    readonly maxPriorityFeePerGas?: bigint;
+    readonly nonce?: number;
+}
+
+// @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
@@ -1373,7 +1391,6 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
-    // Warning: (ae-forgotten-export) The symbol "Offline" needs to be exported by the entry point index.d.ts
     readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;

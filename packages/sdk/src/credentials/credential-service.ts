@@ -277,7 +277,8 @@ export class CredentialService {
    * @throws if the underlying storage delete fails.
    */
   async revokeTransportKeyPair(scopeId: string): Promise<void> {
-    this.#requireSigner("revokeTransportKeyPair");
+    // Storage-only, operator-level action: deletes the shared key pair from
+    // local storage and requires no connected wallet — so no signer guard.
     if (this.#scope === undefined) {
       throw new ConfigurationError(
         "revokeTransportKeyPair() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to revoke.",
@@ -317,7 +318,8 @@ export class CredentialService {
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
-    this.#requireSigner("warmTransportKeyPairScope");
+    // Storage-only, operator-level action (pre-warm counterpart of
+    // revokeTransportKeyPair): no connected wallet, so no signer guard.
     if (this.#scope === undefined) {
       throw new ConfigurationError(
         "warmTransportKeyPairScope() requires a transportKeyPairScope to be configured on this SDK instance — there is no shared key pair to warm.",

@@ -1,10 +1,17 @@
 import type { Address, Hex } from "viem";
-import { decodeFunctionResult, encodeAbiParameters, encodeFunctionResult } from "viem";
+import {
+  decodeFunctionResult,
+  encodeAbiParameters,
+  encodeFunctionData,
+  encodeFunctionResult,
+  getAddress,
+  parseTransaction,
+} from "viem";
 import { Wallet } from "ethers";
 import type * as ethersModule from "ethers";
 import { vi } from "vitest";
 import { test, describe, expect } from "../../test-fixtures";
-import { WalletNotConnectedError } from "../../errors";
+import { ConfigurationError, WalletNotConnectedError } from "../../errors";
 import type { EIP712TypedData } from "../../relayer/types";
 
 // ── Mock ethers ──────────────────────────────────────────────
@@ -592,6 +599,58 @@ describe("EthersProvider", () => {
       });
 
       expect(mockProvider.getTransactionCount).not.toHaveBeenCalled();
+    });
+
+    test("serializes an EIP-1559 tx whose decoded fields match chain state + overrides", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      const unsignedTx = await provider.prepareTransaction({
+        from: userAddress,
+        calldata: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+        },
+        maxFeePerGas: 500n,
+        maxPriorityFeePerGas: 2n,
+      });
+
+      const decoded = parseTransaction(unsignedTx);
+      expect(decoded.type).toBe("eip1559");
+      expect(decoded.chainId).toBe(1); // from getNetwork
+      expect(decoded.nonce).toBe(7); // from getTransactionCount
+      expect(getAddress(decoded.to!)).toBe(getAddress(tokenAddress));
+      expect(decoded.value ?? 0n).toBe(0n);
+      expect(decoded.gas).toBe(21000n); // from estimateGas
+      expect(decoded.maxFeePerGas).toBe(500n); // pinned override wins over estimate
+      expect(decoded.maxPriorityFeePerGas).toBe(2n);
+      expect(decoded.data).toBe(
+        encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
+      );
+    });
+
+    test("rejects a partial fee pair (only maxFeePerGas)", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const provider = new EthersProvider({ provider: buildProvider() as never });
+      await expect(
+        provider.prepareTransaction({
+          from: userAddress,
+          calldata: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+          maxFeePerGas: 500n,
+        }),
+      ).rejects.toBeInstanceOf(ConfigurationError);
     });
   });
 });

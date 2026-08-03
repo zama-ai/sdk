@@ -11433,16 +11433,15 @@ export class NotEntitledError extends ZamaError {
 export class Offline {
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
-    }>, options?: OfflineSigningOptions): Promise<PreparedFor<K>>;
+    }>, options?: OfflineOptions): Promise<PreparedFor<K>>;
 }
 
 // @public
-export interface OfflineSigningOptions {
+export interface OfflineOptions {
     readonly gasLimit?: bigint;
     readonly maxFeePerGas?: bigint;
     readonly maxPriorityFeePerGas?: bigint;
     readonly nonce?: number;
-    readonly signal?: AbortSignal;
 }
 
 // @public
@@ -14121,7 +14120,7 @@ export interface SetOperatorRequest {
     readonly kind: "SetOperator";
     readonly operator: Address;
     readonly token: Address;
-    readonly until?: number;
+    readonly until: number;
 }
 
 // @public
