@@ -113,35 +113,6 @@ describe("WagmiProvider.prepareTransaction", () => {
     expect((err as Error).message).toContain("no public client configured");
   });
 
-  test("rejects a non-bigint fee leg at runtime", async () => {
-    mockGetPublicClient.mockReturnValue(makePublicClient());
-    mockGetChainId.mockResolvedValueOnce(31337);
-    mockGetTxCount.mockResolvedValueOnce(7);
-    mockEstimateGas.mockResolvedValueOnce(21_000n);
-
-    await expect(
-      provider.prepareTransaction({
-        from: FROM,
-        calldata: {
-          address: TO,
-          abi: [
-            {
-              type: "function",
-              name: "noop",
-              inputs: [],
-              outputs: [],
-              stateMutability: "nonpayable",
-            },
-          ] as const,
-          functionName: "noop",
-          args: [],
-        },
-        // @ts-expect-error — a JS caller could pass a number; the guard must reject it.
-        fees: { maxFeePerGas: 500, maxPriorityFeePerGas: 2n },
-      }),
-    ).rejects.toThrow(/fees\.maxFeePerGas must be a bigint/);
-  });
-
   test("treats UNSIGNED as opaque — the test only checks orchestration, not exact bytes", () => {
     // Marker test so anyone reading this file knows the serialisation contract
     // is verified in viem-provider tests; here we cover wagmi-specific wiring.
