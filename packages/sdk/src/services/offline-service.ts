@@ -15,7 +15,12 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import { ConfigurationError, EncryptionFailedError, wrapDecryptError } from "../errors";
+import {
+  ConfigurationError,
+  DelegationExpirationTooSoonError,
+  EncryptionFailedError,
+  wrapDecryptError,
+} from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type {
   ApproveUnderlyingRequest,
@@ -339,6 +344,15 @@ export class OfflineService {
   #buildDelegateDecryption(
     request: DelegateDecryptionRequest,
   ): ReturnType<typeof delegateForUserDecryptionContract> {
+    // Mirror the atomic delegateDecryption guard: an expiry under 1h out lands
+    // already-expired (or nearly so). It's stricter still for the offline path
+    // — the payload is signed and broadcast later, eating into that margin —
+    // but keep parity with the atomic check rather than inventing a new bound.
+    if (request.expirationDate && request.expirationDate.getTime() < Date.now() + 3600_000) {
+      throw new DelegationExpirationTooSoonError(
+        "Expiration date must be at least 1 hour in the future",
+      );
+    }
     const expDate = request.expirationDate
       ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
       : MAX_UINT64;

@@ -516,7 +516,8 @@ describe("OfflineService — calldata arg assertions", () => {
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
-    const expirationDate = new Date(1_700_000_000_000);
+    // Far-future so it clears the ≥1h-from-now guard; timestamp is in seconds.
+    const expirationDate = new Date(2_000_000_000_000);
     await sdk.offline.prepare({
       kind: "DelegateDecryption",
       from: userAddress,
@@ -528,7 +529,25 @@ describe("OfflineService — calldata arg assertions", () => {
     const call = lastCall(provider);
     expect(call.args[0]).toBe(userAddress);
     expect(call.args[1]).toBe(RECIPIENT);
-    expect(call.args[2]).toBe(1_700_000_000n);
+    expect(call.args[2]).toBe(2_000_000_000n);
+  });
+
+  test("DelegateDecryption rejects an expiration under 1h in the future", async ({
+    createSDK,
+    signer,
+    userAddress,
+  }) => {
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "DelegateDecryption",
+        from: userAddress,
+        aclAddress: TOKEN,
+        contractAddress: RECIPIENT,
+        delegateAddress: userAddress,
+        expirationDate: new Date(Date.now() + 60_000),
+      }),
+    ).rejects.toThrow(/at least 1 hour in the future/);
   });
 
   test("RevokeDelegation args are [delegate, contract]", async ({
