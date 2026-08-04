@@ -7,6 +7,7 @@ const RECIPIENT_DATA_20 = "0x00000000000000000000000000000000000000ff" as Hex;
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
+const DELEGATE = "0x4444444444444444444444444444444444444444" as Address;
 const UNSIGNED = TEST_UNSIGNED_TX;
 
 describe("OfflineService — ConfidentialTransfer prepare", () => {
@@ -147,22 +148,25 @@ describe("OfflineService — other transaction kinds", () => {
     ).rejects.toThrow(/until/);
   });
 
-  test("SetOperator rejects an `until` under 1h in the future", async ({
+  test("SetOperator accepts a past `until` to revoke an operator", async ({
     createSDK,
     signer,
+    provider,
     userAddress,
   }) => {
     const sdk = createSDK({ signer });
+    // Revoking is `0 < until < now`; there is no minimum-duration floor on
+    // `until` (that would make revocation impossible).
     await expect(
       sdk.offline.prepare({
         kind: "SetOperator",
         from: userAddress,
         token: TOKEN,
         operator: RECIPIENT,
-        // 10 minutes out — a frozen payload signed later risks landing expired.
-        until: Math.floor(Date.now() / 1000) + 600,
+        until: Math.floor(Date.now() / 1000) - 600,
       }),
-    ).rejects.toThrow(/at least 1 hour in the future/);
+    ).resolves.toMatchObject({ kind: "SetOperator" });
+    expect(provider.prepareTransaction).toHaveBeenCalled();
   });
 
   test("Unwrap encrypts amount and builds the wrapper.unwrap call", async ({
@@ -314,7 +318,7 @@ describe("OfflineService — other transaction kinds", () => {
       from: userAddress,
       aclAddress: TOKEN,
       contractAddress: RECIPIENT,
-      delegateAddress: userAddress,
+      delegateAddress: DELEGATE,
     });
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -541,11 +545,11 @@ describe("OfflineService — calldata arg assertions", () => {
       from: userAddress,
       aclAddress: TOKEN,
       contractAddress: RECIPIENT,
-      delegateAddress: userAddress,
+      delegateAddress: DELEGATE,
       expirationDate,
     });
     const call = lastCall(provider);
-    expect(call.args[0]).toBe(userAddress);
+    expect(call.args[0]).toBe(DELEGATE);
     expect(call.args[1]).toBe(RECIPIENT);
     expect(call.args[2]).toBe(2_000_000_000n);
   });
@@ -562,10 +566,46 @@ describe("OfflineService — calldata arg assertions", () => {
         from: userAddress,
         aclAddress: TOKEN,
         contractAddress: RECIPIENT,
-        delegateAddress: userAddress,
+        delegateAddress: DELEGATE,
         expirationDate: new Date(Date.now() + 60_000),
       }),
     ).rejects.toThrow(/at least 1 hour in the future/);
+  });
+
+  test("DelegateDecryption rejects delegating to yourself (delegate === from)", async ({
+    createSDK,
+    signer,
+    userAddress,
+  }) => {
+    const { DelegationSelfNotAllowedError } = await import("../../errors");
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "DelegateDecryption",
+        from: userAddress,
+        aclAddress: TOKEN,
+        contractAddress: RECIPIENT,
+        delegateAddress: userAddress,
+      }),
+    ).rejects.toBeInstanceOf(DelegationSelfNotAllowedError);
+  });
+
+  test("DelegateDecryption rejects a delegate equal to the contract", async ({
+    createSDK,
+    signer,
+    userAddress,
+  }) => {
+    const { DelegationDelegateEqualsContractError } = await import("../../errors");
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "DelegateDecryption",
+        from: userAddress,
+        aclAddress: TOKEN,
+        contractAddress: RECIPIENT,
+        delegateAddress: RECIPIENT,
+      }),
+    ).rejects.toBeInstanceOf(DelegationDelegateEqualsContractError);
   });
 
   test("RevokeDelegation args are [delegate, contract]", async ({

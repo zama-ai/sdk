@@ -14,7 +14,14 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import { ConfigurationError, EncryptionFailedError, wrapDecryptError } from "../errors";
+import {
+  ConfigurationError,
+  DelegationDelegateEqualsContractError,
+  DelegationExpirationTooSoonError,
+  DelegationSelfNotAllowedError,
+  EncryptionFailedError,
+  wrapDecryptError,
+} from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import {
   approveUnderlyingRequest,
@@ -296,10 +303,30 @@ export class OfflineService {
   #buildDelegateDecryption(
     request: DelegateDecryptionRequest,
   ): ReturnType<typeof delegateForUserDecryptionContract> {
-    // The schema transforms `expirationDate` (an optional `Date`) into the
-    // on-chain uint64 expiry — seconds since epoch, or MAX_UINT64 when omitted —
-    // so `parsed.expirationDate` is already the bigint the contract call wants.
+    // Expiry ≥1h out: an expiry under 1h lands already-expired (or nearly so),
+    // and the offline payload is signed/broadcast later, eating into that
+    // margin further. Checked against the pre-parse `Date` (the schema
+    // transforms it into the on-chain uint64 below).
+    if (request.expirationDate && request.expirationDate.getTime() < Date.now() + 3_600_000) {
+      throw new DelegationExpirationTooSoonError(
+        "Expiration date must be at least 1 hour in the future",
+      );
+    }
+    // `parseSchema` checksums the addresses and turns `expirationDate` (an
+    // optional `Date`) into the on-chain uint64 expiry — seconds since epoch,
+    // or MAX_UINT64 when omitted — so `parsed.expirationDate` is already the
+    // bigint the contract call wants.
     const parsed = parseSchema(delegateDecryptionRequest, request);
+    if (parsed.delegateAddress === parsed.from) {
+      throw new DelegationSelfNotAllowedError(
+        "Cannot delegate to yourself (delegate === msg.sender).",
+      );
+    }
+    if (parsed.delegateAddress === parsed.contractAddress) {
+      throw new DelegationDelegateEqualsContractError(
+        `Delegate address cannot be the same as the contract address (${parsed.contractAddress}).`,
+      );
+    }
     return delegateForUserDecryptionContract(
       parsed.aclAddress,
       parsed.delegateAddress,
