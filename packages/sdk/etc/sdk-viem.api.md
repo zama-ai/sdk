@@ -35,7 +35,7 @@ export interface BaseEvent {
 }
 
 // @public
-export abstract class BaseSigner implements Disposable {
+export abstract class BaseSigner implements GenericSigner, Disposable {
     [Symbol.dispose](): void;
     constructor(initial?: WalletAccount);
     dispose(): void;
@@ -43,6 +43,7 @@ export abstract class BaseSigner implements Disposable {
     requireWalletAccount(operation: string): WalletAccount;
     abstract signTypedData(typedData: EIP712TypedData): Promise<Hex>;
     readonly walletAccount: MutableWalletAccountStore;
+    abstract writeContract<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(config: WriteContractConfig<TAbi, TFunctionName, TArgs>): Promise<Hex>;
 }
 
 // @public
