@@ -21,12 +21,6 @@ export function assertString(value: unknown, context: string): asserts value is 
   }
 }
 
-export function assertNumber(value: unknown, context: string): asserts value is number {
-  if (typeof value !== "number") {
-    throw new TypeError(`${context} must be a number, got ${typeof value}`);
-  }
-}
-
 export function assertArray(value: unknown, context: string): asserts value is unknown[] {
   if (!Array.isArray(value)) {
     throw new TypeError(`${context} must be an array, got ${typeof value}`);
