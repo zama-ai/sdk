@@ -79,11 +79,17 @@ export type OfflineOptions = {
   /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
   readonly gasLimit?: bigint;
   /**
-   * Override the EIP-1559 fee bounds. Both legs live in one object so they can
-   * only be pinned together — pinning a cap while the tip is estimated can
-   * produce a tip above the cap and fail serialization. Omit to estimate both.
+   * Override the EIP-1559 fee bounds. `maxFeePerGas` and `maxPriorityFeePerGas`
+   * live in one object so they can only be supplied together — pinning a cap
+   * while the tip is estimated can produce a tip above the cap and fail
+   * serialization. Omit `fees` entirely to estimate both.
    */
-  readonly fees?: { readonly maxFeePerGas: bigint; readonly maxPriorityFeePerGas: bigint };
+  readonly fees?: {
+    /** Override `maxFeePerGas` (the total fee cap). */
+    readonly maxFeePerGas: bigint;
+    /** Override `maxPriorityFeePerGas` (the tip). */
+    readonly maxPriorityFeePerGas: bigint;
+  };
 };
 
 /**
