@@ -317,14 +317,30 @@ describe("ViemProvider", () => {
       },
     ] as const;
 
+    // Chain-state values the mocked client reports, asserted against below so
+    // the test proves each field flows through the serializer rather than
+    // matching a re-typed literal. The pinned overrides are deliberately
+    // distinct from the estimates so "override wins over estimate" is visible.
+    const CHAIN_ID = 1;
+    const NONCE = 7;
+    const GAS = 21_000n;
+    const ESTIMATED_MAX_FEE = 100n;
+    const ESTIMATED_MAX_PRIORITY = 1n;
+    const OVERRIDE_MAX_FEE = 500n;
+    const OVERRIDE_MAX_PRIORITY = 2n;
+    const TX_VALUE = 123n;
+
     function buildPublicClient(overrides: Partial<PublicClient> = {}): PublicClient {
       return {
-        getChainId: vi.fn().mockResolvedValue(1),
-        getTransactionCount: vi.fn().mockResolvedValue(7),
-        estimateGas: vi.fn().mockResolvedValue(21000n),
+        getChainId: vi.fn().mockResolvedValue(CHAIN_ID),
+        getTransactionCount: vi.fn().mockResolvedValue(NONCE),
+        estimateGas: vi.fn().mockResolvedValue(GAS),
         estimateFeesPerGas: vi
           .fn()
-          .mockResolvedValue({ maxFeePerGas: 100n, maxPriorityFeePerGas: 1n }),
+          .mockResolvedValue({
+            maxFeePerGas: ESTIMATED_MAX_FEE,
+            maxPriorityFeePerGas: ESTIMATED_MAX_PRIORITY,
+          }),
         ...overrides,
       } as unknown as PublicClient;
     }
@@ -386,28 +402,28 @@ describe("ViemProvider", () => {
             abi: balanceOfAbi,
             functionName: "balanceOf",
             args: [userAddress],
+            value: TX_VALUE,
           },
-          maxFeePerGas: 500n,
-          maxPriorityFeePerGas: 2n,
+          fees: { maxFeePerGas: OVERRIDE_MAX_FEE, maxPriorityFeePerGas: OVERRIDE_MAX_PRIORITY },
         });
 
         const decoded = parseTransaction(unsignedTx);
         expect(decoded.type).toBe("eip1559");
-        expect(decoded.chainId).toBe(1); // from getChainId
-        expect(decoded.nonce).toBe(7); // from getTransactionCount
+        expect(decoded.chainId).toBe(CHAIN_ID); // from getChainId
+        expect(decoded.nonce).toBe(NONCE); // from getTransactionCount
         expect(getAddress(decoded.to!)).toBe(getAddress(tokenAddress));
-        expect(decoded.value ?? 0n).toBe(0n);
-        expect(decoded.gas).toBe(21000n); // from estimateGas
-        expect(decoded.maxFeePerGas).toBe(500n); // pinned override wins over estimate
-        expect(decoded.maxPriorityFeePerGas).toBe(2n);
+        expect(decoded.value).toBe(TX_VALUE); // from calldata.value
+        expect(decoded.gas).toBe(GAS); // from estimateGas
+        expect(decoded.maxFeePerGas).toBe(OVERRIDE_MAX_FEE); // pinned override wins over estimate
+        expect(decoded.maxPriorityFeePerGas).toBe(OVERRIDE_MAX_PRIORITY);
         expect(decoded.data).toBe(
           encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
         );
       },
     );
-    // Note: a partial fee pair (only one of maxFeePerGas/maxPriorityFeePerGas)
-    // is now a compile error — GenericProvider.prepareTransaction's arg type
-    // makes the two all-or-nothing — so there's no runtime case to test here.
+    // Note: a partial fee pair is unrepresentable — both legs live in the one
+    // `fees` object on GenericProvider.prepareTransaction, so you pass both or
+    // neither. There's no runtime case to test here.
   });
 });
 

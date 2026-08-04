@@ -52,10 +52,10 @@ export interface OfflineServiceConfig {
 /**
  * Optional behaviour overrides shared by every {@link OfflineService} method.
  *
- * `nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`, and `gasLimit` flow
- * through to {@link GenericProvider.prepareTransaction} so custodians with
- * their own nonce/fee managers can pin values at prepare time. Omitted
- * fields fall back to the provider's default (live chain state).
+ * `nonce`, `gasLimit`, and `fees` flow through to
+ * {@link GenericProvider.prepareTransaction} so custodians with their own
+ * nonce/fee managers can pin values at prepare time. Omitted fields fall back
+ * to the provider's default (live chain state).
  *
  * The nonce and fees are part of the RLP that gets signed, so a custodian
  * that signs the bytes you hand it (rather than assembling the tx itself)
@@ -78,23 +78,13 @@ export type OfflineOptions = {
   readonly nonce?: number;
   /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
   readonly gasLimit?: bigint;
-} & (
-  | {
-      /**
-       * `maxFeePerGas` and `maxPriorityFeePerGas` must be supplied together or
-       * not at all — pinning a cap while the tip is estimated can produce a tip
-       * above the cap and fail serialization. Omit both to estimate both.
-       */
-      readonly maxFeePerGas?: never;
-      readonly maxPriorityFeePerGas?: never;
-    }
-  | {
-      /** Override `maxFeePerGas`. Must accompany `maxPriorityFeePerGas`. */
-      readonly maxFeePerGas: bigint;
-      /** Override `maxPriorityFeePerGas`. Must accompany `maxFeePerGas`. */
-      readonly maxPriorityFeePerGas: bigint;
-    }
-);
+  /**
+   * Override the EIP-1559 fee bounds. Both legs live in one object so they can
+   * only be pinned together — pinning a cap while the tip is estimated can
+   * produce a tip above the cap and fail serialization. Omit to estimate both.
+   */
+  readonly fees?: { readonly maxFeePerGas: bigint; readonly maxPriorityFeePerGas: bigint };
+};
 
 /**
  * Offline-signing pipeline. Builds an RLP-encoded unsigned transaction that
@@ -154,18 +144,13 @@ export class OfflineService {
 
     const from = getAddress(request.from);
     const calldata = await this.#buildCalldata(request, from);
-    // The fee pair is all-or-nothing (OfflineOptions enforces it), so pass
-    // both or neither — never a partial pair the provider would reject.
-    const base = { from, calldata, nonce: options?.nonce, gasLimit: options?.gasLimit };
-    const unsignedTx = await this.#provider.prepareTransaction(
-      options?.maxFeePerGas !== undefined
-        ? {
-            ...base,
-            maxFeePerGas: options.maxFeePerGas,
-            maxPriorityFeePerGas: options.maxPriorityFeePerGas,
-          }
-        : base,
-    );
+    const unsignedTx = await this.#provider.prepareTransaction({
+      from,
+      calldata,
+      nonce: options?.nonce,
+      gasLimit: options?.gasLimit,
+      fees: options?.fees,
+    });
     return { kind: request.kind, from, unsignedTx } satisfies PreparedFor<K>;
   }
 

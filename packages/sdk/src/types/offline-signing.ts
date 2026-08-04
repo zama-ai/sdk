@@ -61,7 +61,7 @@ export interface SetOperatorRequest {
   readonly token: Address;
   /** Operator address to approve or revoke. */
   readonly operator: Address;
-  /** Unix timestamp (seconds) the approval expires at. Required — no implicit default. */
+  /** Unix timestamp (seconds) the approval expires at. */
   readonly until: number;
 }
 

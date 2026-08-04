@@ -457,15 +457,10 @@ export interface GenericProvider {
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
         gasLimit?: bigint;
-        maxFeePerGas?: never;
-        maxPriorityFeePerGas?: never;
-    } | {
-        from: Address;
-        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-        nonce?: number;
-        gasLimit?: bigint;
-        maxFeePerGas: bigint;
-        maxPriorityFeePerGas: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
@@ -583,9 +578,6 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 
 // @public
 export class Offline {
-    // Warning: (ae-forgotten-export) The symbol "TransactionKind" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "PrepareTransactionRequest" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "PreparedFor" needs to be exported by the entry point index.d.ts
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: OfflineOptions): Promise<PreparedFor<K>>;
@@ -595,13 +587,11 @@ export class Offline {
 export type OfflineOptions = {
     readonly nonce?: number;
     readonly gasLimit?: bigint;
-} & ({
-    readonly maxFeePerGas?: never;
-    readonly maxPriorityFeePerGas?: never;
-} | {
-    readonly maxFeePerGas: bigint;
-    readonly maxPriorityFeePerGas: bigint;
-});
+    readonly fees?: {
+        readonly maxFeePerGas: bigint;
+        readonly maxPriorityFeePerGas: bigint;
+    };
+};
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
@@ -634,6 +624,28 @@ export class Permits {
     warmTransportKeyPair(): Promise<void>;
     warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
+
+// Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
+//
+// @public
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+    readonly kind: K;
+}
+
+// Warning: (ae-forgotten-export) The symbol "ConfidentialTransferRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ConfidentialTransferFromRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "SetOperatorRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "UnwrapRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "UnwrapAllRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "FinalizeUnwrapRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "ApproveUnderlyingRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "WrapRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TransferAndCallRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "DelegateDecryptionRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "RevokeDelegationRequest" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
 
 // @public
 export interface QueryClientLike {
@@ -869,6 +881,9 @@ export interface TransactionErrorEvent extends BaseEvent {
     operation: TransactionOperation;
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
 export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";

@@ -133,15 +133,10 @@ export class EthersProvider implements GenericProvider {
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
         gasLimit?: bigint;
-        maxFeePerGas?: never;
-        maxPriorityFeePerGas?: never;
-    } | {
-        from: Address;
-        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-        nonce?: number;
-        gasLimit?: bigint;
-        maxFeePerGas: bigint;
-        maxPriorityFeePerGas: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
     }): Promise<Hex>;
     readContract<const TAbi extends Abi | readonly unknown[], TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">, const TArgs extends ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
@@ -245,15 +240,10 @@ export interface GenericProvider {
         calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
         nonce?: number;
         gasLimit?: bigint;
-        maxFeePerGas?: never;
-        maxPriorityFeePerGas?: never;
-    } | {
-        from: Address;
-        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-        nonce?: number;
-        gasLimit?: bigint;
-        maxFeePerGas: bigint;
-        maxPriorityFeePerGas: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
     }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;

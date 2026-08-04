@@ -46,10 +46,12 @@ export interface GenericProvider {
    * chain state and returns bytes ready to be signed out-of-process (an HSM,
    * custody API, or policy engine)
    *
-   * Optional overrides (`nonce`, `maxFeePerGas`, `maxPriorityFeePerGas`,
-   * `gasLimit`) let callers pin values at prepare time — used by the
-   * offline-signing pipeline when a custodian supplies its own nonce/fee
-   * manager. Implementers may ignore unknown optional args without breaking.
+   * Optional overrides (`nonce`, `gasLimit`, `fees`) let callers pin values at
+   * prepare time — used by the offline-signing pipeline when a custodian
+   * supplies its own nonce/fee manager. `fees` carries both EIP-1559 legs as
+   * one object so they can only be pinned together — pinning a cap while the
+   * tip is estimated could produce a tip above the cap and fail serialization.
+   * Implementers may ignore unknown optional args without breaking.
    *
    * Used exclusively by the offline-signing pipeline. Atomic signers go
    * through {@link GenericSigner.writeContract} and never invoke this.
@@ -70,23 +72,11 @@ export interface GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(
-    args:
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas?: never;
-          maxPriorityFeePerGas?: never;
-        }
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas: bigint;
-          maxPriorityFeePerGas: bigint;
-        },
-  ): Promise<Hex>;
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex>;
 }

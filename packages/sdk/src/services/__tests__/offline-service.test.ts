@@ -554,12 +554,7 @@ describe("OfflineService — prepare option overrides", () => {
     );
   });
 
-  test("threads options.maxFeePerGas + maxPriorityFeePerGas through", async ({
-    createSDK,
-    signer,
-    provider,
-    userAddress,
-  }) => {
+  test("threads options.fees through", async ({ createSDK, signer, provider, userAddress }) => {
     const sdk = createSDK({ signer });
     await sdk.offline.prepare(
       {
@@ -569,10 +564,10 @@ describe("OfflineService — prepare option overrides", () => {
         operator: RECIPIENT,
         until: 1_900_000_000,
       },
-      { maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n },
+      { fees: { maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n } },
     );
     expect(provider.prepareTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n }),
+      expect.objectContaining({ fees: { maxFeePerGas: 1_000_000_000n, maxPriorityFeePerGas: 1n } }),
     );
   });
 

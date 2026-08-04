@@ -130,25 +130,13 @@ export class EthersProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(
-    args:
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas?: never;
-          maxPriorityFeePerGas?: never;
-        }
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas: bigint;
-          maxPriorityFeePerGas: bigint;
-        },
-  ): Promise<Hex> {
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex> {
     const { from, calldata } = args;
     const iface = new ethers.Interface(calldata.abi as unknown as ethers.InterfaceAbi);
     // Resolve overloaded ABI entries by name + arity. ethers'
@@ -194,21 +182,15 @@ export class EthersProvider implements GenericProvider {
                 { cause: error },
               );
             }));
-    const feeDataPromise =
-      args.maxFeePerGas !== undefined && args.maxPriorityFeePerGas !== undefined
-        ? Promise.resolve({
-            maxFeePerGas: args.maxFeePerGas,
-            maxPriorityFeePerGas: args.maxPriorityFeePerGas,
-          })
-        : this.#readProvider.getFeeData();
+    const feeDataPromise = args.fees ?? this.#readProvider.getFeeData();
     const [network, nonce, gasLimit, feeData] = await Promise.all([
       networkPromise,
       noncePromise,
       gasPromise,
       feeDataPromise,
     ]);
-    const maxFeePerGas = args.maxFeePerGas ?? feeData.maxFeePerGas;
-    const maxPriorityFeePerGas = args.maxPriorityFeePerGas ?? feeData.maxPriorityFeePerGas;
+    const maxFeePerGas = feeData.maxFeePerGas;
+    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
     if (maxFeePerGas === null || maxPriorityFeePerGas === null) {
       throw new ConfigurationError(
         "EthersProvider.prepareTransaction: EIP-1559 fee data unavailable (provider returned null maxFeePerGas). " +

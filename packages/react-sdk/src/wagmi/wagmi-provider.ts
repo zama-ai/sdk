@@ -97,25 +97,13 @@ export class WagmiProvider implements GenericProvider {
     const TAbi extends ContractAbi,
     TFunctionName extends WriteFunctionName<TAbi>,
     const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
-  >(
-    args:
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas?: never;
-          maxPriorityFeePerGas?: never;
-        }
-      | {
-          from: Address;
-          calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
-          nonce?: number;
-          gasLimit?: bigint;
-          maxFeePerGas: bigint;
-          maxPriorityFeePerGas: bigint;
-        },
-  ): Promise<Hex> {
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex> {
     const publicClient = getPublicClient(this.#config);
     if (!publicClient) {
       throw new ConfigurationError(
@@ -148,13 +136,7 @@ export class WagmiProvider implements GenericProvider {
                 { cause: error },
               );
             }));
-    const feesPromise =
-      args.maxFeePerGas !== undefined && args.maxPriorityFeePerGas !== undefined
-        ? Promise.resolve({
-            maxFeePerGas: args.maxFeePerGas,
-            maxPriorityFeePerGas: args.maxPriorityFeePerGas,
-          })
-        : publicClient.estimateFeesPerGas();
+    const feesPromise = args.fees ?? publicClient.estimateFeesPerGas();
     const [chainId, nonce, gas, fees] = await Promise.all([
       chainIdPromise,
       noncePromise,
@@ -169,8 +151,8 @@ export class WagmiProvider implements GenericProvider {
       data,
       value: calldata.value ?? 0n,
       gas,
-      maxFeePerGas: args.maxFeePerGas ?? fees.maxFeePerGas,
-      maxPriorityFeePerGas: args.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas,
+      maxFeePerGas: fees.maxFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
     });
   }
 }
