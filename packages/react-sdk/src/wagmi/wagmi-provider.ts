@@ -13,6 +13,7 @@ import type {
   WriteFunctionName,
 } from "@zama-fhe/sdk";
 import { ConfigurationError, TransactionRevertedError } from "@zama-fhe/sdk";
+import { assertBigint } from "@zama-fhe/sdk/utils/assertions";
 import { encodeFunctionData, serializeTransaction, type Abi } from "viem";
 import type { Config } from "wagmi";
 import {
@@ -136,6 +137,10 @@ export class WagmiProvider implements GenericProvider {
                 { cause: error },
               );
             }));
+    if (args.fees) {
+      assertBigint(args.fees.maxFeePerGas, "fees.maxFeePerGas");
+      assertBigint(args.fees.maxPriorityFeePerGas, "fees.maxPriorityFeePerGas");
+    }
     const feesPromise = args.fees ?? publicClient.estimateFeesPerGas();
     const [chainId, nonce, gas, fees] = await Promise.all([
       chainIdPromise,

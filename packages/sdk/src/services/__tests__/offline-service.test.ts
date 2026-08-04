@@ -129,6 +129,24 @@ describe("OfflineService — other transaction kinds", () => {
     );
   });
 
+  test("SetOperator rejects a missing/non-number `until` at runtime", async ({
+    createSDK,
+    signer,
+    userAddress,
+  }) => {
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "SetOperator",
+        from: userAddress,
+        token: TOKEN,
+        operator: RECIPIENT,
+        // @ts-expect-error — a JS caller could omit the required `until`; the guard must reject it.
+        until: undefined,
+      }),
+    ).rejects.toThrow(/request\.until must be a number/);
+  });
+
   test("Unwrap encrypts amount and builds the wrapper.unwrap call", async ({
     createSDK,
     signer,

@@ -18,7 +18,7 @@ import type {
   WriteContractConfig,
   WriteFunctionName,
 } from "../types";
-import { assertHex } from "../utils/assertions";
+import { assertBigint, assertHex } from "../utils/assertions";
 import { ethersRead } from "./contracts";
 
 /**
@@ -182,6 +182,10 @@ export class EthersProvider implements GenericProvider {
                 { cause: error },
               );
             }));
+    if (args.fees) {
+      assertBigint(args.fees.maxFeePerGas, "fees.maxFeePerGas");
+      assertBigint(args.fees.maxPriorityFeePerGas, "fees.maxPriorityFeePerGas");
+    }
     const feeDataPromise = args.fees ?? this.#readProvider.getFeeData();
     const [network, nonce, gasLimit, feeData] = await Promise.all([
       networkPromise,

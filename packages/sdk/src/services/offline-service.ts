@@ -34,7 +34,7 @@ import type {
   UnwrapRequest,
   WrapRequest,
 } from "../types";
-import { assertBigint } from "../utils/assertions";
+import { assertBigint, assertNumber } from "../utils/assertions";
 import type { EncryptionService } from "./encryption-service";
 
 /**
@@ -246,6 +246,7 @@ export class OfflineService {
     // payload is frozen, and defaulting to a far-future sentinel would grant a
     // de-facto permanent operator — both are unacceptable for a frozen offline
     // payload, so the caller must state the expiry explicitly.
+    assertNumber(request.until, "request.until");
     return setOperatorContract(request.token, getAddress(request.operator), request.until);
   }
 

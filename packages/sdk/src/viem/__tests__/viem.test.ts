@@ -421,9 +421,27 @@ describe("ViemProvider", () => {
         );
       },
     );
-    // Note: a partial fee pair is unrepresentable — both legs live in the one
-    // `fees` object on GenericProvider.prepareTransaction, so you pass both or
-    // neither. There's no runtime case to test here.
+    // A partial fee pair is unrepresentable — both legs live in the one `fees`
+    // object, so a caller passes both or neither. The one runtime case a JS
+    // caller can still get wrong is a non-bigint leg, which the guard rejects.
+    vit("rejects a non-bigint fee leg at runtime", async ({ tokenAddress, userAddress }) => {
+      const publicClient = buildPublicClient();
+      const provider = new ViemProvider({ publicClient });
+
+      await expect(
+        provider.prepareTransaction({
+          from: userAddress,
+          calldata: {
+            address: tokenAddress,
+            abi: balanceOfAbi,
+            functionName: "balanceOf",
+            args: [userAddress],
+          },
+          // @ts-expect-error — a JS caller could pass a number; the guard must reject it.
+          fees: { maxFeePerGas: 500, maxPriorityFeePerGas: OVERRIDE_MAX_PRIORITY },
+        }),
+      ).rejects.toThrow(/fees\.maxFeePerGas must be a bigint/);
+    });
   });
 });
 
