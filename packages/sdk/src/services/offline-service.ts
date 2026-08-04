@@ -1,4 +1,4 @@
-import { getAddress, isHex, size, type Address } from "viem";
+import { getAddress, type Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
@@ -7,7 +7,6 @@ import {
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
-  MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
   transferAndCallContract,
@@ -15,12 +14,7 @@ import {
   unwrapFromBalanceContract,
   wrapContract,
 } from "../contracts";
-import {
-  ConfigurationError,
-  DelegationExpirationTooSoonError,
-  EncryptionFailedError,
-  wrapDecryptError,
-} from "../errors";
+import { ConfigurationError, EncryptionFailedError, wrapDecryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
 import type {
   ApproveUnderlyingRequest,
@@ -39,7 +33,22 @@ import type {
   UnwrapRequest,
   WrapRequest,
 } from "../types";
-import { assertBigint, assertNumber } from "../utils/assertions";
+import {
+  approveUnderlyingRequest,
+  confidentialTransferFromRequest,
+  confidentialTransferRequest,
+  delegateDecryptionRequest,
+  finalizeUnwrapRequest,
+  offlineOptions,
+  revokeDelegationRequest,
+  setOperatorRequest,
+  transferAndCallRequest,
+  unwrapAllRequest,
+  unwrapRequest,
+  wrapRequest,
+} from "../schemas/offline";
+import { assertBigint } from "../utils/assertions";
+import { parseSchema } from "../validation";
 import type { EncryptionService } from "./encryption-service";
 
 /**
@@ -139,6 +148,10 @@ export class OfflineService {
     request: Extract<PrepareTransactionRequest, { kind: K }>,
     options?: OfflineOptions,
   ): Promise<PreparedFor<K>> {
+    if (options) {
+      options = parseSchema(offlineOptions, options);
+    }
+
     // The prepared tx's contract addresses and encrypted inputs are bound to
     // the SDK's configured chain; if the provider is on a different chain it
     // would bake that chain's id into a tx carrying wrong-chain addresses.
@@ -153,8 +166,8 @@ export class OfflineService {
       );
     }
 
+    const calldata = await this.#buildCalldata(request);
     const from = getAddress(request.from);
-    const calldata = await this.#buildCalldata(request, from);
     const unsignedTx = await this.#provider.prepareTransaction({
       from,
       calldata,
@@ -162,14 +175,13 @@ export class OfflineService {
       gasLimit: options?.gasLimit,
       fees: options?.fees,
     });
-    return { kind: request.kind, from, unsignedTx } satisfies PreparedFor<K>;
+    return { kind: request.kind, unsignedTx, from } satisfies PreparedFor<K>;
   }
 
   // ── internals ──────────────────────────────────────────────────────────
 
   async #buildCalldata(
     request: PrepareTransactionRequest,
-    from: Address,
   ): Promise<{
     readonly address: Address;
     readonly abi: readonly unknown[];
@@ -178,15 +190,15 @@ export class OfflineService {
   }> {
     switch (request.kind) {
       case "ConfidentialTransfer":
-        return this.#buildConfidentialTransfer(request, from);
+        return this.#buildConfidentialTransfer(request);
       case "ConfidentialTransferFrom":
-        return this.#buildConfidentialTransferFrom(request, from);
+        return this.#buildConfidentialTransferFrom(request);
       case "SetOperator":
         return this.#buildSetOperator(request);
       case "Unwrap":
-        return this.#buildUnwrap(request, from);
+        return this.#buildUnwrap(request);
       case "UnwrapAll":
-        return this.#buildUnwrapAll(request, from);
+        return this.#buildUnwrapAll(request);
       case "FinalizeUnwrap":
         return this.#buildFinalizeUnwrap(request);
       case "ApproveUnderlying":
@@ -210,12 +222,12 @@ export class OfflineService {
 
   async #buildConfidentialTransfer(
     request: ConfidentialTransferRequest,
-    from: Address,
   ): Promise<ReturnType<typeof confidentialTransferContract>> {
+    request = parseSchema(confidentialTransferRequest, request);
     const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
-      userAddress: from,
+      userAddress: request.from,
     });
     const handle = encryptedValues[0];
     if (!handle) {
@@ -226,15 +238,15 @@ export class OfflineService {
 
   async #buildConfidentialTransferFrom(
     request: ConfidentialTransferFromRequest,
-    from: Address,
   ): Promise<ReturnType<typeof confidentialTransferFromContract>> {
+    request = parseSchema(confidentialTransferFromRequest, request);
     // The encrypted input's proof binds to the tx sender (fhevm verifies it
     // against `msg.sender`), which for `transferFrom` is the operator == the
     // `from` wallet that signs and broadcasts — not the `owner` being debited.
     const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
-      userAddress: from,
+      userAddress: request.from,
     });
     const handle = encryptedValues[0];
     if (!handle) {
@@ -244,52 +256,46 @@ export class OfflineService {
     }
     return confidentialTransferFromContract(
       request.token,
-      getAddress(request.owner),
-      getAddress(request.to),
+      request.owner,
+      request.to,
       handle,
       inputProof,
     );
   }
 
   #buildSetOperator(request: SetOperatorRequest): ReturnType<typeof setOperatorContract> {
-    // `until` is a required field on the offline request: the atomic path's
-    // relative default (now + 1h) would silently expire mid-ceremony once the
-    // payload is frozen, and defaulting to a far-future sentinel would grant a
-    // de-facto permanent operator — both are unacceptable for a frozen offline
-    // payload, so the caller must state the expiry explicitly.
-    assertNumber(request.until, "request.until");
-    return setOperatorContract(request.token, getAddress(request.operator), request.until);
+    request = parseSchema(setOperatorRequest, request);
+    return setOperatorContract(request.token, request.operator, request.until);
   }
 
-  async #buildUnwrap(
-    request: UnwrapRequest,
-    from: Address,
-  ): Promise<ReturnType<typeof unwrapContract>> {
+  async #buildUnwrap(request: UnwrapRequest): Promise<ReturnType<typeof unwrapContract>> {
+    request = parseSchema(unwrapRequest, request);
     const { encryptedValues, inputProof } = await this.#encryption.encryptValues({
       values: [{ value: request.amount, type: "euint64" }],
       contractAddress: request.token,
-      userAddress: from,
+      userAddress: request.from,
     });
     const handle = encryptedValues[0];
     if (!handle) {
       throw new EncryptionFailedError("Encryption returned no handles for Unwrap");
     }
-    return unwrapContract(request.token, from, getAddress(request.to), handle, inputProof);
+    return unwrapContract(request.token, request.from, request.to, handle, inputProof);
   }
 
   async #buildUnwrapAll(
     request: UnwrapAllRequest,
-    from: Address,
   ): Promise<ReturnType<typeof unwrapFromBalanceContract>> {
+    request = parseSchema(unwrapAllRequest, request);
     const balanceHandle = await this.#provider.readContract(
-      confidentialBalanceOfContract(request.token, from),
+      confidentialBalanceOfContract(request.token, request.from),
     );
-    return unwrapFromBalanceContract(request.token, from, getAddress(request.to), balanceHandle);
+    return unwrapFromBalanceContract(request.token, request.from, request.to, balanceHandle);
   }
 
   async #buildFinalizeUnwrap(
     request: FinalizeUnwrapRequest,
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
+    request = parseSchema(finalizeUnwrapRequest, request);
     const decrypted = await this.#router.relayer
       .decryptPublicValuesWithSignatures({ encryptedValues: [request.unwrapRequestIdOrAmount] })
       .catch((error: unknown) => {
@@ -306,71 +312,50 @@ export class OfflineService {
   }
 
   #buildApproveUnderlying(request: ApproveUnderlyingRequest): ReturnType<typeof approveContract> {
+    request = parseSchema(approveUnderlyingRequest, request);
     return approveContract(request.underlying, request.spender, request.amount);
   }
 
   #buildWrap(request: WrapRequest): ReturnType<typeof wrapContract> {
-    return wrapContract(request.wrapper, getAddress(request.to), request.amount);
+    request = parseSchema(wrapRequest, request);
+    return wrapContract(request.wrapper, request.to, request.amount);
   }
 
   #buildTransferAndCall(
     request: TransferAndCallRequest,
   ): ReturnType<typeof transferAndCallContract> {
-    // The wrapper's receiver hook does `to = data.length < 20 ? from :
-    // address(bytes20(data))`, so a value that isn't empty and isn't exactly
-    // 20 bytes (e.g. a 32-byte ABI-encoded address) is truncated to its first
-    // 20 bytes — minting the shielded funds to a garbage address. Reject
-    // anything other than an omitted value, `0x` (self-shield), or a raw
-    // 20-byte address rather than let the funds go astray.
-    const { recipientData } = request;
-    if (recipientData !== undefined && recipientData !== "0x") {
-      if (!isHex(recipientData) || size(recipientData) !== 20) {
-        throw new ConfigurationError(
-          `TransferAndCall.recipientData must be a raw 20-byte address, "0x", or omitted (self-shield to the sender). ` +
-            `Got ${isHex(recipientData) ? `${size(recipientData)} bytes` : "a non-hex value"}. ` +
-            `The wrapper truncates any non-20-byte payload to its first 20 bytes, which would mint to a garbage address — ` +
-            `pass the recipient as 20 raw bytes (not a 32-byte ABI-encoded value).`,
-        );
-      }
-    }
+    request = parseSchema(transferAndCallRequest, request);
     return transferAndCallContract(
       request.underlying,
       request.wrapper,
       request.amount,
-      recipientData,
+      request.recipientData,
     );
   }
 
   #buildDelegateDecryption(
     request: DelegateDecryptionRequest,
   ): ReturnType<typeof delegateForUserDecryptionContract> {
-    // Mirror the atomic delegateDecryption guard: an expiry under 1h out lands
-    // already-expired (or nearly so). It's stricter still for the offline path
-    // — the payload is signed and broadcast later, eating into that margin —
-    // but keep parity with the atomic check rather than inventing a new bound.
-    if (request.expirationDate && request.expirationDate.getTime() < Date.now() + 3600_000) {
-      throw new DelegationExpirationTooSoonError(
-        "Expiration date must be at least 1 hour in the future",
-      );
-    }
-    const expDate = request.expirationDate
-      ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
-      : MAX_UINT64;
+    // The schema transforms `expirationDate` (an optional `Date`) into the
+    // on-chain uint64 expiry — seconds since epoch, or MAX_UINT64 when omitted —
+    // so `parsed.expirationDate` is already the bigint the contract call wants.
+    const parsed = parseSchema(delegateDecryptionRequest, request);
     return delegateForUserDecryptionContract(
-      getAddress(request.aclAddress),
-      getAddress(request.delegateAddress),
-      getAddress(request.contractAddress),
-      expDate,
+      parsed.aclAddress,
+      parsed.delegateAddress,
+      parsed.contractAddress,
+      parsed.expirationDate,
     );
   }
 
   #buildRevokeDelegation(
     request: RevokeDelegationRequest,
   ): ReturnType<typeof revokeDelegationContract> {
+    request = parseSchema(revokeDelegationRequest, request);
     return revokeDelegationContract(
-      getAddress(request.aclAddress),
-      getAddress(request.delegateAddress),
-      getAddress(request.contractAddress),
+      request.aclAddress,
+      request.delegateAddress,
+      request.contractAddress,
     );
   }
 }

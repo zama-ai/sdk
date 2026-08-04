@@ -141,10 +141,28 @@ describe("OfflineService — other transaction kinds", () => {
         from: userAddress,
         token: TOKEN,
         operator: RECIPIENT,
-        // @ts-expect-error — a JS caller could omit the required `until`; the guard must reject it.
+        // @ts-expect-error — a JS caller could omit the required `until`; the schema must reject it.
         until: undefined,
       }),
-    ).rejects.toThrow(/request\.until must be a number/);
+    ).rejects.toThrow(/until/);
+  });
+
+  test("SetOperator rejects an `until` under 1h in the future", async ({
+    createSDK,
+    signer,
+    userAddress,
+  }) => {
+    const sdk = createSDK({ signer });
+    await expect(
+      sdk.offline.prepare({
+        kind: "SetOperator",
+        from: userAddress,
+        token: TOKEN,
+        operator: RECIPIENT,
+        // 10 minutes out — a frozen payload signed later risks landing expired.
+        until: Math.floor(Date.now() / 1000) + 600,
+      }),
+    ).rejects.toThrow(/at least 1 hour in the future/);
   });
 
   test("Unwrap encrypts amount and builds the wrapper.unwrap call", async ({
@@ -452,11 +470,11 @@ describe("OfflineService — calldata arg assertions", () => {
       from: userAddress,
       token: TOKEN,
       operator: RECIPIENT,
-      until: 1_700_000_000,
+      until: 1_900_000_000,
     });
     const call = lastCall(provider);
     expect(call.args[0]).toBe(RECIPIENT);
-    expect(call.args[1]).toBe(1_700_000_000);
+    expect(call.args[1]).toBe(1_900_000_000);
   });
 
   test("ApproveUnderlying args are [spender, amount]", async ({

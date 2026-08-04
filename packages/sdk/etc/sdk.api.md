@@ -20,6 +20,7 @@ import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { Signer } from 'ethers';
 import { TypedValue } from '@fhevm/sdk/types';
 import { WalletClient } from 'viem';
+import { z } from 'zod/mini';
 
 // @public
 export const ACL_TOPICS: readonly [`0x${string}`, `0x${string}`];
@@ -342,14 +343,10 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
     readonly args: readonly [`0x${string}`, bigint];
 };
 
+// Warning: (ae-forgotten-export) The symbol "approveUnderlyingRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ApproveUnderlyingRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "ApproveUnderlying";
-    readonly spender: Address;
-    readonly underlying: Address;
-}
+export type ApproveUnderlyingRequest = z.infer<typeof approveUnderlyingRequest>;
 
 // @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
@@ -5170,24 +5167,15 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`, `0x${string}`];
 };
 
+// Warning: (ae-forgotten-export) The symbol "confidentialTransferFromRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ConfidentialTransferFromRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "ConfidentialTransferFrom";
-    readonly owner: Address;
-    readonly to: Address;
-    readonly token: Address;
-}
+export type ConfidentialTransferFromRequest = z.infer<typeof confidentialTransferFromRequest>;
 
+// Warning: (ae-forgotten-export) The symbol "confidentialTransferRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface ConfidentialTransferRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "ConfidentialTransfer";
-    readonly to: Address;
-    readonly token: Address;
-}
+export type ConfidentialTransferRequest = z.infer<typeof confidentialTransferRequest>;
 
 // @public
 export class ConfigurationError extends ZamaError {
@@ -5441,15 +5429,10 @@ export interface DelegatedDecryptOptions {
     waitForPropagation?: boolean;
 }
 
+// Warning: (ae-forgotten-export) The symbol "delegateDecryptionRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface DelegateDecryptionRequest {
-    readonly aclAddress: Address;
-    readonly contractAddress: Address;
-    readonly delegateAddress: Address;
-    readonly expirationDate?: Date;
-    readonly from: Address;
-    readonly kind: "DelegateDecryption";
-}
+export type DelegateDecryptionRequest = z.input<typeof delegateDecryptionRequest>;
 
 // @public
 export interface DelegatedForUserDecryptionEvent {
@@ -7046,13 +7029,10 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Encryp
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
 };
 
+// Warning: (ae-forgotten-export) The symbol "finalizeUnwrapRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface FinalizeUnwrapRequest {
-    readonly from: Address;
-    readonly kind: "FinalizeUnwrap";
-    readonly unwrapRequestIdOrAmount: EncryptedValue;
-    readonly wrapper: Address;
-}
+export type FinalizeUnwrapRequest = z.infer<typeof finalizeUnwrapRequest>;
 
 // @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
@@ -11508,8 +11488,10 @@ export interface PreparedTransaction {
     readonly unsignedTx: Hex;
 }
 
+// Warning: (ae-forgotten-export) The symbol "prepareTransactionRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
+export type PrepareTransactionRequest = z.input<typeof prepareTransactionRequest>;
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -12920,14 +12902,10 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
     readonly args: readonly [`0x${string}`, `0x${string}`];
 };
 
+// Warning: (ae-forgotten-export) The symbol "revokeDelegationRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface RevokeDelegationRequest {
-    readonly aclAddress: Address;
-    readonly contractAddress: Address;
-    readonly delegateAddress: Address;
-    readonly from: Address;
-    readonly kind: "RevokeDelegation";
-}
+export type RevokeDelegationRequest = z.infer<typeof revokeDelegationRequest>;
 
 // @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
@@ -14119,14 +14097,10 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
     readonly args: readonly [`0x${string}`, number];
 };
 
+// Warning: (ae-forgotten-export) The symbol "setOperatorRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface SetOperatorRequest {
-    readonly from: Address;
-    readonly kind: "SetOperator";
-    readonly operator: Address;
-    readonly token: Address;
-    readonly until: number;
-}
+export type SetOperatorRequest = z.infer<typeof setOperatorRequest>;
 
 // @public
 export interface SetOperatorSubmittedEvent extends BaseEvent {
@@ -14719,15 +14693,10 @@ export function transferAndCallContract(tokenAddress: Address, to: Address, amou
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
 };
 
+// Warning: (ae-forgotten-export) The symbol "transferAndCallRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface TransferAndCallRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "TransferAndCall";
-    readonly recipientData?: Hex;
-    readonly underlying: Address;
-    readonly wrapper: Address;
-}
+export type TransferAndCallRequest = z.infer<typeof transferAndCallRequest>;
 
 // @public
 export interface TransferCallbacks {
@@ -15924,13 +15893,10 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
 }
 
+// Warning: (ae-forgotten-export) The symbol "unwrapAllRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface UnwrapAllRequest {
-    readonly from: Address;
-    readonly kind: "UnwrapAll";
-    readonly to: Address;
-    readonly token: Address;
-}
+export type UnwrapAllRequest = z.infer<typeof unwrapAllRequest>;
 
 // @public
 export function unwrapContract(encryptedErc20: Address, from: Address, to: Address, encryptedAmount: EncryptedValue, inputProof: Hex): {
@@ -18213,14 +18179,10 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
     readonly args: readonly [`0x${string}`, `0x${string}`, `0x${string}`];
 };
 
+// Warning: (ae-forgotten-export) The symbol "unwrapRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface UnwrapRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "Unwrap";
-    readonly to: Address;
-    readonly token: Address;
-}
+export type UnwrapRequest = z.infer<typeof unwrapRequest>;
 
 // @public
 export interface UnwrapRequestedEvent {
@@ -19476,14 +19438,10 @@ export interface WrappersRegistryConfig {
     registryTTL?: number;
 }
 
+// Warning: (ae-forgotten-export) The symbol "wrapRequest" needs to be exported by the entry point index.d.ts
+//
 // @public
-export interface WrapRequest {
-    readonly amount: bigint;
-    readonly from: Address;
-    readonly kind: "Wrap";
-    readonly to: Address;
-    readonly wrapper: Address;
-}
+export type WrapRequest = z.infer<typeof wrapRequest>;
 
 // @public
 export interface WrapSubmittedEvent extends BaseEvent {

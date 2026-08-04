@@ -19,6 +19,7 @@ import { QueryObserverOptions } from '@tanstack/query-core';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { skipToken } from '@tanstack/query-core';
 import { TypedValue } from '@fhevm/sdk/types';
+import { z } from 'zod/mini';
 
 // @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
@@ -632,20 +633,10 @@ export interface PreparedFor<K extends TransactionKind> extends PreparedTransact
     readonly kind: K;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ConfidentialTransferRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ConfidentialTransferFromRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "SetOperatorRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "UnwrapRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "UnwrapAllRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "FinalizeUnwrapRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ApproveUnderlyingRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "WrapRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "TransferAndCallRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "DelegateDecryptionRequest" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "RevokeDelegationRequest" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "prepareTransactionRequest" needs to be exported by the entry point index.d.ts
 //
 // @public
-export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
+export type PrepareTransactionRequest = z.input<typeof prepareTransactionRequest>;
 
 // @public
 export interface QueryClientLike {
