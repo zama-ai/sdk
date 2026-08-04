@@ -189,8 +189,12 @@ export type {
 } from "../wrappers-registry";
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
 export type { Permits, Delegations, Decryption, Offline } from "../namespaces";
-export type { OfflineOptions } from "../services/offline-service";
-export type { PrepareTransactionRequest, PreparedFor, TransactionKind } from "../types";
+export type {
+  PrepareOptions,
+  PrepareTransactionRequest,
+  PreparedFor,
+  TransactionKind,
+} from "../types";
 export type {
   DelegatedDecryptOptions,
   BatchDecryptResult,

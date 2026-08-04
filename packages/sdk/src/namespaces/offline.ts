@@ -1,5 +1,10 @@
-import type { OfflineOptions, OfflineService } from "../services/offline-service";
-import type { PreparedFor, PrepareTransactionRequest, TransactionKind } from "../types";
+import type { OfflineService } from "../services/offline-service";
+import type {
+  PreparedFor,
+  PrepareOptions,
+  PrepareTransactionRequest,
+  TransactionKind,
+} from "../types";
 
 /**
  * Namespace for the offline-signing pipeline —
@@ -37,7 +42,7 @@ export class Offline {
    */
   prepare<K extends TransactionKind>(
     request: Extract<PrepareTransactionRequest, { kind: K }>,
-    options?: OfflineOptions,
+    options?: PrepareOptions,
   ): Promise<PreparedFor<K>> {
     return this.#offlineService.prepare(request, options);
   }

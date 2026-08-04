@@ -8,6 +8,7 @@ export type {
   DelegateDecryptionRequest,
   FinalizeUnwrapRequest,
   PrepareTransactionRequest,
+  PrepareOptions,
   RevokeDelegationRequest,
   SetOperatorRequest,
   TransactionKind,

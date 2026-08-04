@@ -581,18 +581,8 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 export class Offline {
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
-    }>, options?: OfflineOptions): Promise<PreparedFor<K>>;
+    }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
 }
-
-// @public
-export type OfflineOptions = {
-    readonly nonce?: number;
-    readonly gasLimit?: bigint;
-    readonly fees?: {
-        readonly maxFeePerGas: bigint;
-        readonly maxPriorityFeePerGas: bigint;
-    };
-};
 
 // @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
@@ -632,6 +622,11 @@ export class Permits {
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
     readonly kind: K;
 }
+
+// Warning: (ae-forgotten-export) The symbol "prepareOptions" needs to be exported by the entry point index.d.ts
+//
+// @public
+export type PrepareOptions = z.infer<typeof prepareOptions>;
 
 // Warning: (ae-forgotten-export) The symbol "prepareTransactionRequest" needs to be exported by the entry point index.d.ts
 //

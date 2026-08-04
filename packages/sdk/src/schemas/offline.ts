@@ -1,7 +1,7 @@
 import { size } from "viem";
 import { z } from "zod/mini";
 import { MAX_UINT64 } from "../contracts/constants";
-import { evmAddress, hex, unixSeconds } from "./primitives";
+import { checksummedAddress, evmAddress, hex, unixSeconds } from "./primitives";
 
 /** One hour in seconds — the minimum lead time a frozen `SetOperator` grant must clear. */
 const ONE_HOUR_SECONDS = 3600;
@@ -202,10 +202,40 @@ export const fees = z.object({ maxFeePerGas: z.bigint(), maxPriorityFeePerGas: z
  * Per-call override schema for {@link OfflineService} methods. All fields are
  * optional; omitted ones fall back to the provider's live chain-state defaults.
  */
-export const offlineOptions = z.object({
+export const prepareOptions = z.object({
   nonce: z.optional(z.int().check(z.nonnegative())),
   gasLimit: z.optional(z.bigint()),
   fees: z.optional(fees),
+});
+
+/**
+ * {@link WriteContractConfig} schema. `abi` and `args` are validated only as
+ * arrays — their element shapes are the ABI-typed `TAbi`/`TFunctionName`
+ * generics the runtime can't check — so this guards the structural envelope
+ * (address, function name, the two arrays, optional `value`/`gas`) a provider's
+ * tx-builder consumes.
+ */
+export const writeContractConfig = z.object({
+  address: evmAddress,
+  abi: z.array(z.unknown()),
+  functionName: z.string(),
+  args: z.array(z.unknown()),
+  value: z.optional(z.bigint()),
+  gas: z.optional(z.bigint()),
+});
+
+/**
+ * Schema for the argument object of {@link GenericProvider.prepareTransaction}:
+ * the originating `from` wallet, the write-contract `calldata`, and the
+ * optional chain-state overrides. Extends {@link prepareOptions} so the
+ * `nonce`/`gasLimit`/`fees` legs stay in lockstep with the per-call overrides.
+ *
+ * `from` is EIP-55 checksummed on parse (the custodian keys off it), so the
+ * validated output can flow straight into the prepared handoff.
+ */
+export const prepareTransactionParams = z.extend(prepareOptions, {
+  from: checksummedAddress,
+  calldata: writeContractConfig,
 });
 
 //MARK: Inferred types
@@ -313,5 +343,23 @@ export type PrepareTransactionRequest = z.input<typeof prepareTransactionRequest
  */
 export type TransactionKind = PrepareTransactionRequest["kind"];
 
-/** Inferred shape of {@link fees}. */
-export type Fees = z.infer<typeof fees>;
+/**
+ * Inferred shape of {@link writeContractConfig} — the non-generic form of
+ * {@link WriteContractConfig} (`abi`/`args` widen to `unknown[]`).
+ */
+export type WriteContractConfigInput = z.infer<typeof writeContractConfig>;
+
+/**
+ * Per-call chain-state overrides accepted by {@link OfflineService} methods —
+ * the inferred shape of {@link prepareOptions}. Every field (`nonce`,
+ * `gasLimit`, `fees`) is optional; omitted ones fall back to the provider's
+ * live chain-state defaults.
+ */
+export type PrepareOptions = z.infer<typeof prepareOptions>;
+
+/**
+ * Inferred shape of {@link prepareTransactionParams} — the runtime-validatable
+ * form of {@link GenericProvider.prepareTransaction}'s argument, with the
+ * `TAbi`/`TFunctionName` generics erased.
+ */
+export type PrepareTransactionParams = z.infer<typeof prepareTransactionParams>;

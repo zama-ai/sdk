@@ -1,4 +1,4 @@
-import { getAddress, type Address } from "viem";
+import type { Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import {
   approveContract,
@@ -16,6 +16,21 @@ import {
 } from "../contracts";
 import { ConfigurationError, EncryptionFailedError, wrapDecryptError } from "../errors";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
+import {
+  approveUnderlyingRequest,
+  confidentialTransferFromRequest,
+  confidentialTransferRequest,
+  delegateDecryptionRequest,
+  finalizeUnwrapRequest,
+  prepareOptions,
+  prepareTransactionParams,
+  revokeDelegationRequest,
+  setOperatorRequest,
+  transferAndCallRequest,
+  unwrapAllRequest,
+  unwrapRequest,
+  wrapRequest,
+} from "../schemas/offline";
 import type {
   ApproveUnderlyingRequest,
   ConfidentialTransferFromRequest,
@@ -24,6 +39,7 @@ import type {
   FinalizeUnwrapRequest,
   GenericProvider,
   PreparedFor,
+  PrepareOptions,
   PrepareTransactionRequest,
   RevokeDelegationRequest,
   SetOperatorRequest,
@@ -33,20 +49,6 @@ import type {
   UnwrapRequest,
   WrapRequest,
 } from "../types";
-import {
-  approveUnderlyingRequest,
-  confidentialTransferFromRequest,
-  confidentialTransferRequest,
-  delegateDecryptionRequest,
-  finalizeUnwrapRequest,
-  offlineOptions,
-  revokeDelegationRequest,
-  setOperatorRequest,
-  transferAndCallRequest,
-  unwrapAllRequest,
-  unwrapRequest,
-  wrapRequest,
-} from "../schemas/offline";
 import { assertBigint } from "../utils/assertions";
 import { parseSchema } from "../validation";
 import type { EncryptionService } from "./encryption-service";
@@ -62,49 +64,6 @@ export interface OfflineServiceConfig {
   readonly encryption: EncryptionService;
   readonly emitEvent: (input: ZamaSDKEventInput, tokenAddress?: Address) => void;
 }
-
-/**
- * Optional behaviour overrides shared by every {@link OfflineService} method.
- *
- * `nonce`, `gasLimit`, and `fees` flow through to
- * {@link GenericProvider.prepareTransaction} so custodians with their own
- * nonce/fee managers can pin values at prepare time. Omitted fields fall back
- * to the provider's default (live chain state).
- *
- * The nonce and fees are part of the RLP that gets signed, so a custodian
- * that signs the bytes you hand it (rather than assembling the tx itself)
- * cannot fill or change them afterwards — own the `nonce` here when signing
- * through such a path. For long-latency ceremonies (air-gapped HSM signing,
- * slow multi-party approval) the signed payload is frozen once exported, so
- * pin generous fee bounds up front rather than expecting to re-stamp later.
- */
-export type OfflineOptions = {
-  /**
-   * Override the nonce. Otherwise the provider reads the account's
-   * `"pending"` transaction count.
-   *
-   * The `"pending"` tag only diverges from `"latest"` once an earlier tx has
-   * been broadcast — it does **not** disambiguate several offline payloads
-   * prepared before any of them is broadcast (they all read the same count).
-   * When queuing multiple in-flight preparations against one wallet, assign
-   * the nonces yourself here.
-   */
-  readonly nonce?: number;
-  /** Override the gas limit. Otherwise the provider calls `estimateGas`. */
-  readonly gasLimit?: bigint;
-  /**
-   * Override the EIP-1559 fee bounds. `maxFeePerGas` and `maxPriorityFeePerGas`
-   * live in one object so they can only be supplied together — pinning a cap
-   * while the tip is estimated can produce a tip above the cap and fail
-   * serialization. Omit `fees` entirely to estimate both.
-   */
-  readonly fees?: {
-    /** Override `maxFeePerGas` (the total fee cap). */
-    readonly maxFeePerGas: bigint;
-    /** Override `maxPriorityFeePerGas` (the tip). */
-    readonly maxPriorityFeePerGas: bigint;
-  };
-};
 
 /**
  * Offline-signing pipeline. Builds an RLP-encoded unsigned transaction that
@@ -146,10 +105,10 @@ export class OfflineService {
    */
   async prepare<K extends TransactionKind>(
     request: Extract<PrepareTransactionRequest, { kind: K }>,
-    options?: OfflineOptions,
+    options?: PrepareOptions,
   ): Promise<PreparedFor<K>> {
     if (options) {
-      options = parseSchema(offlineOptions, options);
+      options = parseSchema(prepareOptions, options);
     }
 
     // The prepared tx's contract addresses and encrypted inputs are bound to
@@ -167,15 +126,16 @@ export class OfflineService {
     }
 
     const calldata = await this.#buildCalldata(request);
-    const from = getAddress(request.from);
-    const unsignedTx = await this.#provider.prepareTransaction({
-      from,
+    const params = {
       calldata,
+      from: request.from,
       nonce: options?.nonce,
       gasLimit: options?.gasLimit,
       fees: options?.fees,
-    });
-    return { kind: request.kind, unsignedTx, from } satisfies PreparedFor<K>;
+    };
+    const parsed = parseSchema(prepareTransactionParams, params);
+    const unsignedTx = await this.#provider.prepareTransaction(parsed);
+    return { kind: request.kind, unsignedTx, from: parsed.from } satisfies PreparedFor<K>;
   }
 
   // ── internals ──────────────────────────────────────────────────────────
