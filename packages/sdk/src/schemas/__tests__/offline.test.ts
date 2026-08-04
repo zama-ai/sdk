@@ -73,6 +73,19 @@ describe("prepareTransactionParams schema", () => {
     ).toBe(false);
   });
 
+  test("rejects a non-bigint fee leg (a JS caller could slip in a number)", () => {
+    expect(
+      z.safeParse(prepareTransactionParams, {
+        from: FROM,
+        calldata,
+        fees: { maxFeePerGas: 500, maxPriorityFeePerGas: 1n } as unknown as {
+          maxFeePerGas: bigint;
+          maxPriorityFeePerGas: bigint;
+        },
+      }).success,
+    ).toBe(false);
+  });
+
   test("rejects a malformed calldata envelope", () => {
     const unsignedTx = "0xdeadbeef" as Hex;
     expect(

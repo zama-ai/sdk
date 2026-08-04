@@ -19,7 +19,6 @@ import type {
   WriteContractConfig,
   WriteFunctionName,
 } from "../types";
-import { assertBigint } from "../utils/assertions";
 
 /** Configuration for {@link ViemProvider}. */
 export interface ViemProviderConfig {
@@ -115,10 +114,6 @@ export class ViemProvider implements GenericProvider {
                 { cause: error },
               );
             }));
-    if (args.fees) {
-      assertBigint(args.fees.maxFeePerGas, "fees.maxFeePerGas");
-      assertBigint(args.fees.maxPriorityFeePerGas, "fees.maxPriorityFeePerGas");
-    }
     const feesPromise = args.fees ?? this.#publicClient.estimateFeesPerGas();
     const [chainId, nonce, gas, fees] = await Promise.all([
       chainIdPromise,

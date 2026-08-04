@@ -651,25 +651,6 @@ describe("EthersProvider", () => {
         encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
       );
     });
-
-    test("rejects a non-bigint fee leg at runtime", async ({ tokenAddress, userAddress }) => {
-      const mockProvider = buildProvider();
-      const provider = new EthersProvider({ provider: mockProvider as never });
-
-      await expect(
-        provider.prepareTransaction({
-          from: userAddress,
-          calldata: {
-            address: tokenAddress,
-            abi: balanceOfAbi,
-            functionName: "balanceOf",
-            args: [userAddress],
-          },
-          // @ts-expect-error — a JS caller could pass a number; the guard must reject it.
-          fees: { maxFeePerGas: 500, maxPriorityFeePerGas: OVERRIDE_MAX_PRIORITY },
-        }),
-      ).rejects.toThrow(/fees\.maxFeePerGas must be a bigint/);
-    });
   });
 });
 
