@@ -27,6 +27,7 @@ export type {
   RevokeDelegationRequest,
   SetOperatorRequest,
   TransactionKind,
+  PrepareFees,
   PrepareOptions,
   PrepareTransactionRequest,
   TransferAndCallRequest,

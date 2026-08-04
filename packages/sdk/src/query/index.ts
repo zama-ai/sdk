@@ -190,10 +190,23 @@ export type {
 export type { PaginatedResult, TokenWrapperPair, TokenWrapperPairWithMetadata } from "../contracts";
 export type { Permits, Delegations, Decryption, Offline } from "../namespaces";
 export type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
+  ConfidentialTransferRequest,
+  DelegateDecryptionRequest,
+  FinalizeUnwrapRequest,
+  PrepareFees,
   PrepareOptions,
   PrepareTransactionRequest,
   PreparedFor,
+  PreparedTransaction,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
   TransactionKind,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
 } from "../types";
 export type {
   DelegatedDecryptOptions,

@@ -19,7 +19,6 @@ import { QueryObserverOptions } from '@tanstack/query-core';
 import { setFhevmRuntimeConfig } from '@fhevm/sdk/viem';
 import { skipToken } from '@tanstack/query-core';
 import { TypedValue } from '@fhevm/sdk/types';
-import { z } from 'zod/mini';
 
 // @public
 export type ApprovalStrategy = "max" | "exact" | "skip";
@@ -30,6 +29,15 @@ export function approveUnderlyingMutationOptions(token: WrappedToken): MutationF
 // @public
 export interface ApproveUnderlyingParams {
     amount?: bigint;
+}
+
+// @public
+export interface ApproveUnderlyingRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ApproveUnderlying";
+    spender: Address;
+    underlying: Address;
 }
 
 // @public
@@ -174,12 +182,31 @@ export interface ConfidentialTransferFromParams {
 }
 
 // @public
+export interface ConfidentialTransferFromRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransferFrom";
+    owner: Address;
+    to: Address;
+    token: Address;
+}
+
+// @public
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
 export interface ConfidentialTransferParams extends TransferOptions {
     amount: bigint;
     to: Address;
+}
+
+// @public
+export interface ConfidentialTransferRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransfer";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -272,6 +299,16 @@ export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress:
 export interface DelegateDecryptionParams {
     delegateAddress: Address;
     expirationDate?: Date;
+}
+
+// @public
+export interface DelegateDecryptionRequest {
+    aclAddress: Address;
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+    from: Address;
+    kind: "DelegateDecryption";
 }
 
 // @public
@@ -434,6 +471,14 @@ export function finalizeUnwrapMutationOptions(token: WrappedToken): MutationFact
 export type FinalizeUnwrapParams = {
     unwrapRequestId: EncryptedValue;
 };
+
+// @public
+export interface FinalizeUnwrapRequest {
+    from: Address;
+    kind: "FinalizeUnwrap";
+    unwrapRequestIdOrAmount: Hex;
+    wrapper: Address;
+}
 
 // @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
@@ -616,22 +661,33 @@ export class Permits {
     warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "PreparedTransaction" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
     readonly kind: K;
 }
 
-// Warning: (ae-forgotten-export) The symbol "prepareOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type PrepareOptions = z.infer<typeof prepareOptions>;
+export interface PreparedTransaction {
+    readonly from: Address;
+    readonly kind: TransactionKind;
+    readonly unsignedTx: Hex;
+}
 
-// Warning: (ae-forgotten-export) The symbol "prepareTransactionRequest" needs to be exported by the entry point index.d.ts
-//
 // @public
-export type PrepareTransactionRequest = z.input<typeof prepareTransactionRequest>;
+export interface PrepareFees {
+    maxFeePerGas: bigint;
+    maxPriorityFeePerGas: bigint;
+}
+
+// @public
+export interface PrepareOptions {
+    fees?: PrepareFees;
+    gasLimit?: bigint;
+    nonce?: number;
+}
+
+// @public
+export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
 
 // @public
 export interface QueryClientLike {
@@ -700,6 +756,15 @@ export interface RevokeDelegationParams {
 }
 
 // @public
+export interface RevokeDelegationRequest {
+    aclAddress: Address;
+    contractAddress: Address;
+    delegateAddress: Address;
+    from: Address;
+    kind: "RevokeDelegation";
+}
+
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
@@ -713,6 +778,15 @@ export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
     tkmsVersion?: string;
+}
+
+// @public
+export interface SetOperatorRequest {
+    from: Address;
+    kind: "SetOperator";
+    operator: Address;
+    token: Address;
+    until: number;
 }
 
 // @public
@@ -886,6 +960,16 @@ export interface TransactionResult {
 }
 
 // @public
+export interface TransferAndCallRequest {
+    amount: bigint;
+    from: Address;
+    kind: "TransferAndCall";
+    recipientData?: Hex;
+    underlying: Address;
+    wrapper: Address;
+}
+
+// @public
 export interface TransferCallbacks {
     onEncryptComplete?: () => void;
     onTransferSubmitted?: (txHash: Hex) => void;
@@ -964,6 +1048,14 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, UnwrapResult>;
 
 // @public
+export interface UnwrapAllRequest {
+    from: Address;
+    kind: "UnwrapAll";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export interface UnwrapFinalizedEvent {
     readonly cleartextAmount: bigint;
     readonly encryptedAmount: EncryptedValue;
@@ -978,6 +1070,15 @@ export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptio
 // @public
 export interface UnwrapParams {
     amount: bigint;
+}
+
+// @public
+export interface UnwrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Unwrap";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -1111,6 +1212,15 @@ export interface WrappersRegistryConfig {
 export interface WrappersRegistryQueryConfig {
     query?: Record<string, unknown>;
     registryAddress: Address | undefined;
+}
+
+// @public
+export interface WrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Wrap";
+    to: Address;
+    wrapper: Address;
 }
 
 // @public

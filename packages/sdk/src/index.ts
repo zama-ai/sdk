@@ -169,6 +169,7 @@ export type {
   GenericStorage,
   PreparedFor,
   PreparedTransaction,
+  PrepareFees,
   PrepareOptions,
   PrepareTransactionRequest,
   ReadContractArgs,
