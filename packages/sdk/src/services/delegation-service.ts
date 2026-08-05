@@ -124,7 +124,7 @@ export class DelegationService {
     return this.#submitAclTransaction({
       operation: "delegateDecryption",
       signer,
-      contractAddress,
+      contractAddress: normalizedContract,
       config: delegateForUserDecryptionContract(
         acl,
         normalizedDelegate,
@@ -167,7 +167,7 @@ export class DelegationService {
     return this.#submitAclTransaction({
       operation: "revokeDelegation",
       signer,
-      contractAddress,
+      contractAddress: normalizedContract,
       config: revokeDelegationContract(acl, normalizedDelegate, normalizedContract),
     });
   }

@@ -16,6 +16,25 @@ export type {
   WalletAccountListener,
   WalletAccountStore,
 } from "./signer";
+export type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
+  ConfidentialTransferRequest,
+  DelegateDecryptionRequest,
+  FinalizeUnwrapRequest,
+  PreparedFor,
+  PreparedTransaction,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
+  TransactionKind,
+  PrepareFees,
+  PrepareOptions,
+  PrepareTransactionRequest,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
+} from "./offline-signing";
 export type { GenericProvider } from "./provider";
 export type { GenericStorage } from "./storage";
 export type { GenericLogger } from "./logger";

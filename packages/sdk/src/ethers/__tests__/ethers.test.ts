@@ -1,5 +1,12 @@
 import type { Address, Hex } from "viem";
-import { decodeFunctionResult, encodeAbiParameters, encodeFunctionResult } from "viem";
+import {
+  decodeFunctionResult,
+  encodeAbiParameters,
+  encodeFunctionData,
+  encodeFunctionResult,
+  getAddress,
+  parseTransaction,
+} from "viem";
 import { Wallet } from "ethers";
 import type * as ethersModule from "ethers";
 import { vi } from "vitest";
@@ -496,7 +503,7 @@ describe("EthersProvider", () => {
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       await expect(ethersProvider.waitForTransactionReceipt("0xhash" as Hex)).rejects.toThrow(
-        "Transaction receipt not found",
+        "no receipt found for tx",
       );
     });
 
@@ -527,7 +534,121 @@ describe("EthersProvider", () => {
       const ethersProvider = new EthersProvider({ provider: mockProvider as never });
 
       await expect(ethersProvider.getBlockTimestamp()).rejects.toThrow(
-        "Failed to fetch latest block",
+        "failed to fetch latest block",
+      );
+    });
+  });
+
+  describe("prepareTransaction", () => {
+    const balanceOfAbi = [
+      {
+        type: "function",
+        name: "balanceOf",
+        inputs: [{ name: "owner", type: "address" }],
+        outputs: [{ type: "uint256" }],
+        stateMutability: "view",
+      },
+    ] as const;
+
+    // Chain-state values the mocked provider reports, asserted against below so
+    // the test proves each field flows through the serializer rather than
+    // matching a re-typed literal. The pinned overrides are deliberately
+    // distinct from the estimates so "override wins over estimate" is visible.
+    const CHAIN_ID = 1;
+    const NONCE = 7;
+    const GAS = 21_000n;
+    const ESTIMATED_MAX_FEE = 100n;
+    const ESTIMATED_MAX_PRIORITY = 1n;
+    const OVERRIDE_MAX_FEE = 500n;
+    const OVERRIDE_MAX_PRIORITY = 2n;
+    const TX_VALUE = 123n;
+
+    function buildProvider(overrides: Record<string, unknown> = {}) {
+      return {
+        getNetwork: vi.fn().mockResolvedValue({ chainId: BigInt(CHAIN_ID) }),
+        getTransactionCount: vi.fn().mockResolvedValue(NONCE),
+        estimateGas: vi.fn().mockResolvedValue(GAS),
+        getFeeData: vi
+          .fn()
+          .mockResolvedValue({
+            maxFeePerGas: ESTIMATED_MAX_FEE,
+            maxPriorityFeePerGas: ESTIMATED_MAX_PRIORITY,
+          }),
+        ...overrides,
+      };
+    }
+
+    test("reads the nonce with the pending block tag for queue-aware sequencing", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      await provider.prepareTransaction({
+        from: userAddress,
+        calldata: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+        },
+      });
+
+      expect(mockProvider.getTransactionCount).toHaveBeenCalledWith(userAddress, "pending");
+    });
+
+    test("skips getTransactionCount entirely when caller pins the nonce", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      await provider.prepareTransaction({
+        from: userAddress,
+        calldata: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+        },
+        nonce: 42,
+      });
+
+      expect(mockProvider.getTransactionCount).not.toHaveBeenCalled();
+    });
+
+    test("serializes an EIP-1559 tx whose decoded fields match chain state + overrides", async ({
+      tokenAddress,
+      userAddress,
+    }) => {
+      const mockProvider = buildProvider();
+      const provider = new EthersProvider({ provider: mockProvider as never });
+
+      const unsignedTx = await provider.prepareTransaction({
+        from: userAddress,
+        calldata: {
+          address: tokenAddress,
+          abi: balanceOfAbi,
+          functionName: "balanceOf",
+          args: [userAddress],
+          value: TX_VALUE,
+        },
+        fees: { maxFeePerGas: OVERRIDE_MAX_FEE, maxPriorityFeePerGas: OVERRIDE_MAX_PRIORITY },
+      });
+
+      const decoded = parseTransaction(unsignedTx);
+      expect(decoded.type).toBe("eip1559");
+      expect(decoded.chainId).toBe(CHAIN_ID); // from getNetwork
+      expect(decoded.nonce).toBe(NONCE); // from getTransactionCount
+      expect(getAddress(decoded.to!)).toBe(getAddress(tokenAddress));
+      expect(decoded.value).toBe(TX_VALUE); // from calldata.value
+      expect(decoded.gas).toBe(GAS); // from estimateGas
+      expect(decoded.maxFeePerGas).toBe(OVERRIDE_MAX_FEE); // pinned override wins over estimate
+      expect(decoded.maxPriorityFeePerGas).toBe(OVERRIDE_MAX_PRIORITY);
+      expect(decoded.data).toBe(
+        encodeFunctionData({ abi: balanceOfAbi, functionName: "balanceOf", args: [userAddress] }),
       );
     });
   });

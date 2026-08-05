@@ -196,9 +196,8 @@ export class Permits {
   }
 
   /**
-   * Revoke the shared transport key pair for `transportKeyPairScope` (operator-level
-   * action — no wallet account needs to be connected, but a signer must still be
-   * configured on this SDK instance at construction time).
+   * Revoke the shared transport key pair for `transportKeyPairScope`. Storage-only,
+   * operator-level action: no wallet account or signer needs to be connected.
    *
    * Deletes the shared key pair; every permit in the scope embeds its public key, so
    * they're all treated as stale on next access. Signer-level {@link clear} never does
@@ -216,7 +215,6 @@ export class Permits {
    *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against revoking the wrong scope by mistake.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    * @throws if the underlying storage delete fails.
    */
@@ -226,16 +224,15 @@ export class Permits {
   }
 
   /**
-   * Warm the shared transport key pair for `transportKeyPairScope` (operator-level —
-   * no wallet account needs to be connected, but a signer must still be configured on
-   * this SDK instance at construction time) — the pre-warm counterpart to
-   * {@link revokeTransportKeyPair}. Prefer this over {@link warmTransportKeyPair} for a
-   * scoped key pair: unlike that method, this never silently no-ops for lack of a
-   * connected wallet, because a scope-wide key was never tied to one in the first place.
+   * Warm the shared transport key pair for `transportKeyPairScope` — the pre-warm
+   * counterpart to {@link revokeTransportKeyPair}. Storage-only, operator-level action:
+   * no wallet account or signer needs to be connected. Prefer this over
+   * {@link warmTransportKeyPair} for a scoped key pair: unlike that method, this never
+   * silently no-ops for lack of a connected wallet, because a scope-wide key was never
+   * tied to one in the first place.
    *
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against warming the wrong scope by mistake.
-   * @throws if no signer is configured. {@link SignerNotConfiguredError}
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {

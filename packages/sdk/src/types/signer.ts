@@ -31,7 +31,7 @@ export type WalletAccountListener = (change: WalletAccountChange) => void;
  *
  * Direct subscriptions observe raw signer adapter transitions. For SDK-
  * coordinated cleanup and React query invalidation, subscribe through
- * `ZamaSDK.onWalletAccountChange` so credential/cache cleanup runs first.
+ * {@link ZamaSDK.onWalletAccountChange} so credential/cache cleanup runs first.
  */
 export interface WalletAccountStore {
   /** Synchronous, non-prompting snapshot of the currently connected wallet account. */
@@ -56,11 +56,10 @@ export interface WalletAccountStore {
 }
 
 /**
- * Framework-agnostic signer interface — wallet authority only.
- *
- * Public chain reads have moved to {@link GenericProvider}. A signer is only
- * required for operations that involve a user-controlled wallet
- * (`requireWalletAccount`, `signTypedData`, `writeContract`).
+ * Framework-agnostic signer. Exposes wallet-account observability,
+ * `requireWalletAccount`, `signTypedData` (decrypt-permit authorization), and
+ * `writeContract` (atomic sign-and-broadcast in one wallet round-trip; browser
+ * wallets, embedded wallets, server-side EOAs).
  */
 export interface GenericSigner {
   /** Observable wallet account readiness state. */

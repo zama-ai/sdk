@@ -11,7 +11,7 @@ import {
 } from "../credentials/schemas";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
-import { parseConfiguration } from "../validation";
+import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
@@ -55,22 +55,16 @@ export function buildZamaConfig(
     signer,
     storage,
     permitStorage,
-    transportKeyPairTTL: parseConfiguration(
+    transportKeyPairTTL: parseSchema(
       TransportKeyPairTTLSchema,
       params.transportKeyPairTTL ?? DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
     ),
-    permitTTL: parseConfiguration(
-      PermitTTLSchema,
-      params.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS,
-    ),
+    permitTTL: parseSchema(PermitTTLSchema, params.permitTTL ?? DEFAULT_PERMIT_DURATION_DAYS),
     transportKeyPairScope:
       params.transportKeyPairScope === undefined
         ? undefined
-        : parseConfiguration(TransportKeyPairScopeSchema, params.transportKeyPairScope),
-    registryTTL: parseConfiguration(
-      RegistryTTLSchema,
-      params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS,
-    ),
+        : parseSchema(TransportKeyPairScopeSchema, params.transportKeyPairScope),
+    registryTTL: parseSchema(RegistryTTLSchema, params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS),
     logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;

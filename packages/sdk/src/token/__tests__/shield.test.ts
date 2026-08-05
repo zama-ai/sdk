@@ -515,7 +515,7 @@ describe("WrappedToken.shield", () => {
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(1000n);
 
-      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(
+      vi.mocked(sdk.signer!.writeContract!).mockRejectedValueOnce(
         new Error("transferAndCall reverted"),
       );
 
@@ -549,7 +549,7 @@ describe("WrappedToken.shield", () => {
         .mockResolvedValueOnce(1000n)
         .mockResolvedValueOnce(1000n);
 
-      vi.mocked(sdk.signer!.writeContract).mockRejectedValueOnce(new Error("wrap reverted"));
+      vi.mocked(sdk.signer!.writeContract!).mockRejectedValueOnce(new Error("wrap reverted"));
 
       await expect(token.shield(100n)).rejects.toThrow();
 

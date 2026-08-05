@@ -43,7 +43,7 @@ export const bscTestnet: {
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
-    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly network: "https://bsc-testnet.bnbchain.org";
     readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
     readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
     readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";

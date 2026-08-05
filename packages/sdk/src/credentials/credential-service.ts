@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
 import { ConfigurationError } from "../errors/relayer";
+import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { checksum } from "../schemas/primitives";
@@ -26,7 +27,16 @@ export const DEFAULT_PERMIT_DURATION_DAYS = 30;
 /** Configuration for {@link CredentialService}. TTLs are pre-validated by the caller. */
 export interface CredentialServiceConfig {
   router: ChainRouter;
-  signer: GenericSigner;
+  /**
+   * Optional signer. Required for {@link CredentialService.grantPermit},
+   * {@link CredentialService.revokePermits}, and
+   * {@link CredentialService.clearCredentials} — each throws
+   * {@link SignerNotConfiguredError} without one. Omitted for signer-less
+   * usage (public decryption / encryption, or construction before a wallet
+   * connects). Deferred/custody signing is served by passing an
+   * out-of-process signer here, not by a separate signer-less code path.
+   */
+  signer?: GenericSigner;
   /** Transport key pair lifetime in seconds. Pre-validated. */
   transportKeyPairTTL: number;
   /** Permit lifetime in days. Pre-validated. */
@@ -50,7 +60,7 @@ export interface CredentialServiceConfig {
 /**
  * Single facade coordinating the keypair vault and the permission store.
  *
- * `CredentialService` is the only credentials object held by `ZamaSDK`. It accepts identity
+ * `CredentialService` is the only credentials object held by {@link ZamaSDK}. It accepts identity
  * transitions via `handleWalletAccountChange`.
  *
  * Two distinct revocation tiers exist and must not be conflated: {@link clearCredentials}
@@ -66,7 +76,7 @@ export class CredentialService {
   readonly #vault: TransportKeyPairVault;
   readonly #store: PermissionStore;
   readonly #router: ChainRouter;
-  readonly #signer: GenericSigner;
+  readonly #signer: GenericSigner | undefined;
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
   readonly #scope: string | undefined;
@@ -94,6 +104,13 @@ export class CredentialService {
     this.#scope = config.scope;
   }
 
+  #requireSigner(operation: string): GenericSigner {
+    if (!this.#signer) {
+      throw new SignerNotConfiguredError(operation);
+    }
+    return this.#signer;
+  }
+
   /**
    * Resolve a keypair and permissions covering `contracts`, minimizing wallet
    * prompts by reusing or widening existing permits where possible. Empty
@@ -107,7 +124,8 @@ export class CredentialService {
     contracts: readonly Address[],
     delegator?: Address,
   ): Promise<SerializedTransportKeyPairWithPermissions> {
-    const account = this.#signer.requireWalletAccount("grantPermit");
+    const signer = this.#requireSigner("grantPermit");
+    const account = signer.requireWalletAccount("grantPermit");
     const signerAddress = checksum(account.address);
     const requested = normalizeAddresses(contracts);
     const keypair = await this.#vault.getOrCreate(signerAddress);
@@ -169,7 +187,7 @@ export class CredentialService {
     if (contracts.length === 0) {
       return true;
     }
-    const account = this.#signer.walletAccount.getSnapshot();
+    const account = this.#signer?.walletAccount.getSnapshot();
     if (!account) {
       return false;
     }
@@ -198,7 +216,8 @@ export class CredentialService {
    * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async revokePermits(contracts?: readonly Address[]): Promise<void> {
-    const account = this.#signer.requireWalletAccount("revokePermits");
+    const signer = this.#requireSigner("revokePermits");
+    const account = signer.requireWalletAccount("revokePermits");
     const signerAddress = checksum(account.address);
     if (contracts === undefined) {
       await this.#store.clearAllForSigner(signerAddress);
@@ -227,7 +246,8 @@ export class CredentialService {
    * @throws if reading the signer address fails. {@link SigningFailedError}
    */
   async clearCredentials(): Promise<void> {
-    const account = this.#signer.requireWalletAccount("clearCredentials");
+    const signer = this.#requireSigner("clearCredentials");
+    const account = signer.requireWalletAccount("clearCredentials");
     const signerAddress = checksum(account.address);
     await this.#vault.clear(signerAddress);
     await this.#store.clearAllForSigner(signerAddress);
@@ -314,7 +334,7 @@ export class CredentialService {
    *
    * Address change clears persisted credentials for the previous account.
    * Chain-only changes keep credentials intact because permits are chain-scoped
-   * already and stale decrypt plaintext is cleared by `ZamaSDK`.
+   * already and stale decrypt plaintext is cleared by {@link ZamaSDK}.
    */
   async handleWalletAccountChange(
     prev?: { address: Address },
@@ -348,7 +368,7 @@ export class CredentialService {
         startTimestamp,
         durationSeconds: this.#permitTTL * SECONDS_PER_DAY,
         signerAddress: scope.signerAddress,
-        signer: this.#signer,
+        signer: this.#requireSigner("signPermit"),
       };
       const signedPermit = isDelegated
         ? await relayer.signDecryptionPermit({
@@ -390,7 +410,7 @@ export class CredentialService {
    * best-effort, never throws.
    */
   async evictTransportKeyPair(): Promise<void> {
-    const account = this.#signer.walletAccount.getSnapshot();
+    const account = this.#signer?.walletAccount.getSnapshot();
     if (!account) {
       return;
     }

@@ -343,6 +343,15 @@ export function approveContract(tokenAddress: Address, spender: Address, value: 
 };
 
 // @public
+export interface ApproveUnderlyingRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ApproveUnderlying";
+    spender: Address;
+    underlying: Address;
+}
+
+// @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     step: "reset" | "approve";
     txHash: Hex;
@@ -558,7 +567,7 @@ export const bscTestnet: {
     readonly id: 97;
     readonly gatewayChainId: 10901;
     readonly relayerUrl: "";
-    readonly network: "https://bsc-testnet-rpc.publicnode.com";
+    readonly network: "https://bsc-testnet.bnbchain.org";
     readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
     readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
     readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
@@ -5162,6 +5171,25 @@ export function confidentialTransferFromContract(encryptedErc20: Address, from: 
 };
 
 // @public
+export interface ConfidentialTransferFromRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransferFrom";
+    owner: Address;
+    to: Address;
+    token: Address;
+}
+
+// @public
+export interface ConfidentialTransferRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransfer";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export class ConfigurationError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
@@ -5411,6 +5439,15 @@ export const DefaultRegistryAddresses: Record<number, Address>;
 // @public
 export interface DelegatedDecryptOptions {
     waitForPropagation?: boolean;
+}
+
+// @public
+export interface DelegateDecryptionRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+    from: Address;
+    kind: "DelegateDecryption";
 }
 
 // @public
@@ -7009,6 +7046,14 @@ export function finalizeUnwrapContract(wrapper: Address, unwrapRequestId: Encryp
 };
 
 // @public
+export interface FinalizeUnwrapRequest {
+    from: Address;
+    kind: "FinalizeUnwrap";
+    unwrapRequestIdOrAmount: Hex;
+    wrapper: Address;
+}
+
+// @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
@@ -7038,6 +7083,16 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(): Promise<bigint>;
     getChainId(): Promise<number>;
+    prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
+        from: Address;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        gasLimit?: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
+    }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
@@ -11377,6 +11432,13 @@ export class NotEntitledError extends ZamaError {
 }
 
 // @public
+export class Offline {
+    prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
+        kind: K;
+    }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
+}
+
+// @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
@@ -11422,6 +11484,34 @@ export const polygonAmoy: {
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0xF486c3D4F4562760A43883e72E8D6f6Cf2EFdA94";
 };
+
+// @public
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+    readonly kind: K;
+}
+
+// @public
+export interface PreparedTransaction {
+    readonly from: Address;
+    readonly kind: TransactionKind;
+    readonly unsignedTx: Hex;
+}
+
+// @public
+export interface PrepareFees {
+    maxFeePerGas: bigint;
+    maxPriorityFeePerGas: bigint;
+}
+
+// @public
+export interface PrepareOptions {
+    fees?: PrepareFees;
+    gasLimit?: bigint;
+    nonce?: number;
+}
+
+// @public
+export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
 
 // @public
 export function rateContract(tokenAddress: Address): {
@@ -12833,6 +12923,14 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
 };
 
 // @public
+export interface RevokeDelegationRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    from: Address;
+    kind: "RevokeDelegation";
+}
+
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
@@ -14023,6 +14121,15 @@ export function setOperatorContract(tokenAddress: Address, operator: Address, un
 };
 
 // @public
+export interface SetOperatorRequest {
+    from: Address;
+    kind: "SetOperator";
+    operator: Address;
+    token: Address;
+    until: number;
+}
+
+// @public
 export interface SetOperatorSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.SetOperatorSubmitted;
@@ -14300,6 +14407,9 @@ export interface TransactionErrorEvent extends BaseEvent {
     operation: TransactionOperation;
     type: typeof ZamaSDKEvents.TransactionError;
 }
+
+// @public
+export type TransactionKind = PrepareTransactionRequest["kind"];
 
 // @public
 export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
@@ -14609,6 +14719,16 @@ export function transferAndCallContract(tokenAddress: Address, to: Address, amou
     readonly functionName: "transferAndCall";
     readonly args: readonly [`0x${string}`, bigint, `0x${string}`];
 };
+
+// @public
+export interface TransferAndCallRequest {
+    amount: bigint;
+    from: Address;
+    kind: "TransferAndCall";
+    recipientData?: Hex;
+    underlying: Address;
+    wrapper: Address;
+}
 
 // @public
 export interface TransferCallbacks {
@@ -15803,6 +15923,14 @@ export interface UnshieldPhase2StartedEvent extends BaseEvent {
 export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.UnshieldPhase2Submitted;
+}
+
+// @public
+export interface UnwrapAllRequest {
+    from: Address;
+    kind: "UnwrapAll";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -18087,6 +18215,15 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
+export interface UnwrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Unwrap";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export interface UnwrapRequestedEvent {
     readonly encryptedAmount: EncryptedValue;
     readonly eventName: "UnwrapRequested";
@@ -19341,6 +19478,15 @@ export interface WrappersRegistryConfig {
 }
 
 // @public
+export interface WrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Wrap";
+    to: Address;
+    wrapper: Address;
+}
+
+// @public
 export interface WrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.WrapSubmitted;
@@ -19480,6 +19626,7 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
+    readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;

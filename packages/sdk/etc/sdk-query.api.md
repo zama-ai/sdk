@@ -32,6 +32,15 @@ export interface ApproveUnderlyingParams {
 }
 
 // @public
+export interface ApproveUnderlyingRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ApproveUnderlying";
+    spender: Address;
+    underlying: Address;
+}
+
+// @public
 export interface ApproveUnderlyingSubmittedEvent extends BaseEvent {
     step: "reset" | "approve";
     txHash: Hex;
@@ -173,12 +182,31 @@ export interface ConfidentialTransferFromParams {
 }
 
 // @public
+export interface ConfidentialTransferFromRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransferFrom";
+    owner: Address;
+    to: Address;
+    token: Address;
+}
+
+// @public
 export function confidentialTransferMutationOptions(token: Token): MutationFactoryOptions<readonly ["zama.confidentialTransfer", Address], ConfidentialTransferParams, TransactionResult>;
 
 // @public
 export interface ConfidentialTransferParams extends TransferOptions {
     amount: bigint;
     to: Address;
+}
+
+// @public
+export interface ConfidentialTransferRequest {
+    amount: bigint;
+    from: Address;
+    kind: "ConfidentialTransfer";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -271,6 +299,15 @@ export function delegateDecryptionMutationOptions(sdk: ZamaSDK, contractAddress:
 export interface DelegateDecryptionParams {
     delegateAddress: Address;
     expirationDate?: Date;
+}
+
+// @public
+export interface DelegateDecryptionRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    expirationDate?: Date;
+    from: Address;
+    kind: "DelegateDecryption";
 }
 
 // @public
@@ -435,6 +472,14 @@ export type FinalizeUnwrapParams = {
 };
 
 // @public
+export interface FinalizeUnwrapRequest {
+    from: Address;
+    kind: "FinalizeUnwrap";
+    unwrapRequestIdOrAmount: Hex;
+    wrapper: Address;
+}
+
+// @public
 export interface FinalizeUnwrapSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.FinalizeUnwrapSubmitted;
@@ -452,6 +497,16 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(): Promise<bigint>;
     getChainId(): Promise<number>;
+    prepareTransaction<const TAbi extends ContractAbi, TFunctionName extends WriteFunctionName<TAbi>, const TArgs extends WriteContractArgs<TAbi, TFunctionName>>(args: {
+        from: Address;
+        calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+        nonce?: number;
+        gasLimit?: bigint;
+        fees?: {
+            maxFeePerGas: bigint;
+            maxPriorityFeePerGas: bigint;
+        };
+    }): Promise<Hex>;
     readContract<const TAbi extends ContractAbi, TFunctionName extends ReadFunctionName<TAbi>, const TArgs extends ReadContractArgs<TAbi, TFunctionName>>(config: ReadContractConfig<TAbi, TFunctionName, TArgs>): Promise<ReadContractReturnType<TAbi, TFunctionName, TArgs>>;
     waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
 }
@@ -567,6 +622,13 @@ export interface MutationFactoryOptions<TMutationKey extends readonly unknown[],
 }
 
 // @public
+export class Offline {
+    prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
+        kind: K;
+    }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
+}
+
+// @public
 export type OnChainEvent = ConfidentialTransferEvent | WrapEvent | UnwrapRequestedEvent | UnwrapFinalizedEvent;
 
 // @public
@@ -597,6 +659,34 @@ export class Permits {
     warmTransportKeyPair(): Promise<void>;
     warmTransportKeyPairScope(scopeId: string): Promise<void>;
 }
+
+// @public
+export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
+    readonly kind: K;
+}
+
+// @public
+export interface PreparedTransaction {
+    readonly from: Address;
+    readonly kind: TransactionKind;
+    readonly unsignedTx: Hex;
+}
+
+// @public
+export interface PrepareFees {
+    maxFeePerGas: bigint;
+    maxPriorityFeePerGas: bigint;
+}
+
+// @public
+export interface PrepareOptions {
+    fees?: PrepareFees;
+    gasLimit?: bigint;
+    nonce?: number;
+}
+
+// @public
+export type PrepareTransactionRequest = ConfidentialTransferRequest | ConfidentialTransferFromRequest | SetOperatorRequest | UnwrapRequest | UnwrapAllRequest | FinalizeUnwrapRequest | ApproveUnderlyingRequest | WrapRequest | TransferAndCallRequest | DelegateDecryptionRequest | RevokeDelegationRequest;
 
 // @public
 export interface QueryClientLike {
@@ -665,6 +755,14 @@ export interface RevokeDelegationParams {
 }
 
 // @public
+export interface RevokeDelegationRequest {
+    contractAddress: Address;
+    delegateAddress: Address;
+    from: Address;
+    kind: "RevokeDelegation";
+}
+
+// @public
 export interface RevokeDelegationSubmittedEvent extends BaseEvent {
     txHash: Hex;
     type: typeof ZamaSDKEvents.RevokeDelegationSubmitted;
@@ -678,6 +776,15 @@ export interface SerializedTransportKeyPair {
     privateKey: Hex;
     publicKey: Hex;
     tkmsVersion?: string;
+}
+
+// @public
+export interface SetOperatorRequest {
+    from: Address;
+    kind: "SetOperator";
+    operator: Address;
+    token: Address;
+    until: number;
 }
 
 // @public
@@ -834,6 +941,9 @@ export interface TransactionErrorEvent extends BaseEvent {
 }
 
 // @public
+export type TransactionKind = PrepareTransactionRequest["kind"];
+
+// @public
 export type TransactionOperation = "approveUnderlying" | "approveUnderlying:reset" | "delegateDecryption" | "finalizeUnwrap" | "revokeDelegation" | "setOperator" | "shield:transferAndCall" | "shield:approveAndWrap" | "wrap" | "transfer" | "transferAndCall" | "transferFrom" | "transferFromAndCall" | "unwrap" | "unwrapAll";
 
 // @public
@@ -845,6 +955,16 @@ export interface TransactionReceipt {
 export interface TransactionResult {
     receipt: TransactionReceipt;
     txHash: Hex;
+}
+
+// @public
+export interface TransferAndCallRequest {
+    amount: bigint;
+    from: Address;
+    kind: "TransferAndCall";
+    recipientData?: Hex;
+    underlying: Address;
+    wrapper: Address;
 }
 
 // @public
@@ -926,6 +1046,14 @@ export interface UnshieldPhase2SubmittedEvent extends BaseEvent {
 export function unwrapAllMutationOptions(token: WrappedToken): MutationFactoryOptions<readonly ["zama.unwrapAll", Address], void, UnwrapResult>;
 
 // @public
+export interface UnwrapAllRequest {
+    from: Address;
+    kind: "UnwrapAll";
+    to: Address;
+    token: Address;
+}
+
+// @public
 export interface UnwrapFinalizedEvent {
     readonly cleartextAmount: bigint;
     readonly encryptedAmount: EncryptedValue;
@@ -940,6 +1068,15 @@ export function unwrapMutationOptions(token: WrappedToken): MutationFactoryOptio
 // @public
 export interface UnwrapParams {
     amount: bigint;
+}
+
+// @public
+export interface UnwrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Unwrap";
+    to: Address;
+    token: Address;
 }
 
 // @public
@@ -1073,6 +1210,15 @@ export interface WrappersRegistryConfig {
 export interface WrappersRegistryQueryConfig {
     query?: Record<string, unknown>;
     registryAddress: Address | undefined;
+}
+
+// @public
+export interface WrapRequest {
+    amount: bigint;
+    from: Address;
+    kind: "Wrap";
+    to: Address;
+    wrapper: Address;
 }
 
 // @public
@@ -1365,6 +1511,7 @@ export class ZamaSDK {
     readonly delegations: Delegations;
     dispose(): void;
     encrypt(params: EncryptParams, options?: Pick<FhevmRelayerOptions, "signal" | "timeout">): Promise<EncryptResult>;
+    readonly offline: Offline;
     readonly permits: Permits;
     readonly provider: GenericProvider;
     readonly registry: WrappersRegistry;

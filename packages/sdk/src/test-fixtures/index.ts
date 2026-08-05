@@ -62,4 +62,13 @@ export type {
   TokenFixtures,
 } from "./token";
 
+export {
+  TEST_SIGNATURE,
+  TEST_SIGNED_TX,
+  TEST_TX_HASH,
+  TEST_UNSIGNED_TX,
+  TEST_PUBLIC_KEY,
+  TEST_PRIVATE_KEY,
+} from "./constants";
+
 export { afterEach, beforeEach, describe, expect, vi, type Mock } from "vitest";

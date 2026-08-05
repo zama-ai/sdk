@@ -98,7 +98,7 @@ export const bscTestnet = {
   id: 97,
   gatewayChainId: 10901,
   relayerUrl: "",
-  network: "https://bsc-testnet-rpc.publicnode.com",
+  network: "https://bsc-testnet.bnbchain.org",
   aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
   kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
   inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",

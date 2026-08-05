@@ -5,6 +5,7 @@ import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
+import { Offline } from "./namespaces/offline";
 import { Permits } from "./namespaces/permits";
 import type { EncryptParams, FhevmRelayerOptions, RelayerSDK } from "./relayer/types";
 import { CachingService } from "./services/caching-service";
@@ -12,6 +13,7 @@ import { DecryptionService } from "./services/decryption-service";
 import { DelegationService } from "./services/delegation-service";
 import { EncryptionService } from "./services/encryption-service";
 import { LifecycleService } from "./services/lifecycle-service";
+import { OfflineService } from "./services/offline-service";
 import { Token } from "./token/token";
 import { WrappedToken } from "./token/wrapped-token";
 import type {
@@ -26,10 +28,11 @@ import { WrappersRegistry } from "./wrappers-registry";
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
  *
- * Exposes domain namespaces for permits, delegations, decryption, and tokens,
- * plus an unchanged registry, a top-level `encrypt`, and lifecycle methods. Internal
- * `*Service` classes do the work; the namespace classes own SDK-level guards
- * (chain alignment, signer requirement, event emission).
+ * Exposes domain namespaces for permits, delegations, decryption, offline
+ * signing, and tokens, plus an unchanged registry, a top-level `encrypt`, and
+ * lifecycle methods. Internal `*Service` classes do the work; the namespace
+ * classes own SDK-level guards (chain alignment, signer requirement, event
+ * emission).
  */
 export class ZamaSDK {
   readonly #router: ChainRouter;
@@ -50,6 +53,8 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
+  /** Offline-signing pipeline: `prepare` builds an unsigned tx the caller signs and broadcasts out-of-process — for HSM, policy-engine, and cross-process custody workflows. */
+  readonly offline: Offline;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
   readonly #onEvent: ZamaSDKEventListener;
@@ -58,8 +63,9 @@ export class ZamaSDK {
   readonly #lifecycleService: LifecycleService;
   readonly #encryptionService: EncryptionService;
   readonly #decryptionService: DecryptionService | undefined;
-  readonly #credentialService: CredentialService | undefined;
+  readonly #credentialService: CredentialService;
   readonly #delegationService: DelegationService;
+  readonly #offlineService: OfflineService;
 
   constructor(config: ZamaConfig) {
     this.#router = config.router;
@@ -90,17 +96,20 @@ export class ZamaSDK {
     this.#registryAddresses = registryAddresses;
     this.#registryTTL = config.registryTTL;
 
+    // CredentialService is always constructed (with optional signer) so
+    // public-decrypt / encryption flows and pre-wallet-connect construction
+    // work; permit-signing methods require a signer and throw without one.
+    this.#credentialService = new CredentialService({
+      router: config.router,
+      signer: config.signer,
+      transportKeyPairTTL: config.transportKeyPairTTL,
+      permitTTL: config.permitTTL,
+      scope: config.transportKeyPairScope,
+      storage: this.storage,
+      permitStorage: config.permitStorage,
+      logger: this.#logger,
+    });
     if (config.signer) {
-      this.#credentialService = new CredentialService({
-        router: config.router,
-        signer: config.signer,
-        transportKeyPairTTL: config.transportKeyPairTTL,
-        permitTTL: config.permitTTL,
-        scope: config.transportKeyPairScope,
-        storage: this.storage,
-        permitStorage: config.permitStorage,
-        logger: this.#logger,
-      });
       this.#decryptionService = new DecryptionService({
         cache: this.#cachingService,
         credentialService: this.#credentialService,
@@ -119,6 +128,12 @@ export class ZamaSDK {
       cachingService: this.#cachingService,
       credentialService: this.#credentialService,
       logger: this.#logger,
+    });
+    this.#offlineService = new OfflineService({
+      provider: this.provider,
+      router: config.router,
+      encryption: this.#encryptionService,
+      emitEvent: (input, tokenAddress) => this.emitEvent(input, tokenAddress),
     });
 
     this.permits = new Permits({
@@ -139,6 +154,7 @@ export class ZamaSDK {
       router: config.router,
       decryptionService: this.#decryptionService,
     });
+    this.offline = new Offline(this.#offlineService);
   }
 
   /**

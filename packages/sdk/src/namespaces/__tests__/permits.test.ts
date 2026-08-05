@@ -182,22 +182,18 @@ describe("Permits", () => {
   });
 
   describe("scope (opt-in shared-tenant)", () => {
-    test("revokeTransportKeyPair throws SignerNotConfiguredError when no signer is configured", async ({
+    test("revokeTransportKeyPair works with no signer configured (storage-only, operator-level)", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      await expect(sdk.permits.revokeTransportKeyPair("tenant-1")).resolves.toBeUndefined();
     });
 
-    test("warmTransportKeyPairScope throws SignerNotConfiguredError when no signer is configured", async ({
+    test("warmTransportKeyPairScope works with no signer configured (storage-only, operator-level)", async ({
       createSDK,
     }) => {
       const sdk = createSDK({ signer: undefined, transportKeyPairScope: "tenant-1" });
-      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).rejects.toBeInstanceOf(
-        SignerNotConfiguredError,
-      );
+      await expect(sdk.permits.warmTransportKeyPairScope("tenant-1")).resolves.toBeUndefined();
     });
 
     test("revokeTransportKeyPair throws ConfigurationError when no scope is configured", async ({

@@ -1,3 +1,5 @@
+import { isHex, type Hex } from "viem";
+
 export function assertNonNullable<T>(value: T, context: string): asserts value is NonNullable<T> {
   if (value === null || value === undefined) {
     throw new TypeError(`${context} must not be null or undefined`);
@@ -35,6 +37,12 @@ export function assertFunction(value: unknown, context: string): asserts value i
 export function assertBigint(value: unknown, context: string): asserts value is bigint {
   if (typeof value !== "bigint") {
     throw new TypeError(`${context} must be a bigint, got ${typeof value}`);
+  }
+}
+
+export function assertHex(value: unknown, context: string): asserts value is Hex {
+  if (!isHex(value)) {
+    throw new TypeError(`${context} must be a 0x-prefixed hex string, got ${typeof value}`);
   }
 }
 

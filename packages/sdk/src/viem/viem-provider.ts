@@ -1,12 +1,24 @@
-import type {
-  Abi,
-  ContractFunctionArgs,
-  ContractFunctionName,
-  ContractFunctionReturnType,
-  Hex,
-  PublicClient,
+import {
+  encodeFunctionData,
+  serializeTransaction,
+  type Abi,
+  type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
+  type ContractFunctionReturnType,
+  type Hex,
+  type PublicClient,
 } from "viem";
-import type { GenericProvider, ReadContractConfig, TransactionReceipt } from "../types";
+import { TransactionRevertedError } from "../errors";
+import type {
+  ContractAbi,
+  GenericProvider,
+  ReadContractConfig,
+  TransactionReceipt,
+  WriteContractArgs,
+  WriteContractConfig,
+  WriteFunctionName,
+} from "../types";
 
 /** Configuration for {@link ViemProvider}. */
 export interface ViemProviderConfig {
@@ -59,5 +71,66 @@ export class ViemProvider implements GenericProvider {
   async getBlockTimestamp(): Promise<bigint> {
     const block = await this.#publicClient.getBlock();
     return block.timestamp;
+  }
+
+  /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
+  async prepareTransaction<
+    const TAbi extends ContractAbi,
+    TFunctionName extends WriteFunctionName<TAbi>,
+    const TArgs extends WriteContractArgs<TAbi, TFunctionName>,
+  >(args: {
+    from: Address;
+    calldata: WriteContractConfig<TAbi, TFunctionName, TArgs>;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex> {
+    const { from, calldata } = args;
+    const data = encodeFunctionData({
+      abi: calldata.abi as Abi,
+      functionName: calldata.functionName as string,
+      args: calldata.args as readonly unknown[],
+    });
+    // Wrap the estimateGas leg so a pre-flight revert (the most common
+    // prepareTransaction failure) surfaces as a typed error with the
+    // function name + cause. Other legs propagate as-is — failures there
+    // (chainId, nonce, fee data) are rare and usually self-explanatory.
+    // Skip the network round-trips entirely when the caller supplied
+    // overrides — useful for custodians with their own nonce/fee managers.
+    const chainIdPromise = this.#publicClient.getChainId();
+    const noncePromise =
+      args.nonce !== undefined
+        ? Promise.resolve(args.nonce)
+        : this.#publicClient.getTransactionCount({ address: from, blockTag: "pending" });
+    const gasPromise =
+      args.gasLimit !== undefined
+        ? Promise.resolve(args.gasLimit)
+        : (calldata.gas ??
+          this.#publicClient
+            .estimateGas({ account: from, to: calldata.address, data, value: calldata.value ?? 0n })
+            .catch((error: unknown) => {
+              throw new TransactionRevertedError(
+                `ViemProvider.prepareTransaction: gas estimation reverted for ${calldata.functionName} on ${calldata.address}`,
+                { cause: error },
+              );
+            }));
+    const feesPromise = args.fees ?? this.#publicClient.estimateFeesPerGas();
+    const [chainId, nonce, gas, fees] = await Promise.all([
+      chainIdPromise,
+      noncePromise,
+      gasPromise,
+      feesPromise,
+    ]);
+    return serializeTransaction({
+      type: "eip1559",
+      chainId,
+      nonce,
+      to: calldata.address,
+      data,
+      value: calldata.value ?? 0n,
+      gas,
+      maxFeePerGas: fees.maxFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    });
   }
 }
