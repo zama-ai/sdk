@@ -1,6 +1,21 @@
 import { size } from "viem";
 import { z } from "zod/mini";
-import { MAX_UINT64 } from "../contracts/constants";
+import type {
+  ApproveUnderlyingRequest,
+  ConfidentialTransferFromRequest,
+  ConfidentialTransferRequest,
+  DelegateDecryptionRequest,
+  FinalizeUnwrapRequest,
+  PrepareOptions,
+  PrepareTransactionRequest,
+  RevokeDelegationRequest,
+  SetOperatorRequest,
+  TransferAndCallRequest,
+  UnwrapAllRequest,
+  UnwrapRequest,
+  WrapRequest,
+  WriteContractConfig,
+} from "../types";
 import { checksummedAddress, hex, unixSeconds } from "./primitives";
 
 /**
@@ -13,7 +28,7 @@ export const confidentialTransferRequest = z.object({
   token: checksummedAddress,
   to: checksummedAddress,
   amount: z.bigint(),
-});
+}) satisfies z.ZodMiniType<ConfidentialTransferRequest>;
 
 /**
  * {@link ConfidentialTransferFromRequest} schema.
@@ -26,7 +41,7 @@ export const confidentialTransferFromRequest = z.object({
   owner: checksummedAddress,
   to: checksummedAddress,
   amount: z.bigint(),
-});
+}) satisfies z.ZodMiniType<ConfidentialTransferFromRequest>;
 
 /**
  * {@link SetOperatorRequest} schema. `until` is a required unix timestamp
@@ -39,7 +54,7 @@ export const setOperatorRequest = z.object({
   token: checksummedAddress,
   operator: checksummedAddress,
   until: unixSeconds,
-});
+}) satisfies z.ZodMiniType<SetOperatorRequest>;
 
 /**
  * {@link UnwrapRequest} schema.
@@ -51,7 +66,7 @@ export const unwrapRequest = z.object({
   token: checksummedAddress,
   to: checksummedAddress,
   amount: z.bigint(),
-});
+}) satisfies z.ZodMiniType<UnwrapRequest>;
 
 /**
  * {@link UnwrapAllRequest} schema.
@@ -62,7 +77,7 @@ export const unwrapAllRequest = z.object({
   from: checksummedAddress,
   token: checksummedAddress,
   to: checksummedAddress,
-});
+}) satisfies z.ZodMiniType<UnwrapAllRequest>;
 
 /**
  * {@link FinalizeUnwrapRequest} schema.
@@ -73,7 +88,7 @@ export const finalizeUnwrapRequest = z.object({
   from: checksummedAddress,
   wrapper: checksummedAddress,
   unwrapRequestIdOrAmount: hex,
-});
+}) satisfies z.ZodMiniType<FinalizeUnwrapRequest>;
 
 /**
  * {@link ApproveUnderlyingRequest} schema.
@@ -85,7 +100,7 @@ export const approveUnderlyingRequest = z.object({
   underlying: checksummedAddress,
   spender: checksummedAddress,
   amount: z.bigint(),
-});
+}) satisfies z.ZodMiniType<ApproveUnderlyingRequest>;
 
 /**
  * {@link WrapRequest} schema.
@@ -97,7 +112,7 @@ export const wrapRequest = z.object({
   wrapper: checksummedAddress,
   to: checksummedAddress,
   amount: z.bigint(),
-});
+}) satisfies z.ZodMiniType<WrapRequest>;
 
 /**
  * `TransferAndCall` recipient payload: `0x` (self-shield to the sender) or a
@@ -126,7 +141,7 @@ export const transferAndCallRequest = z.object({
   wrapper: checksummedAddress,
   amount: z.bigint(),
   recipientData: z.optional(recipientData),
-});
+}) satisfies z.ZodMiniType<TransferAndCallRequest>;
 
 /**
  * {@link DelegateDecryptionRequest} schema. Input takes an optional
@@ -139,26 +154,14 @@ export const transferAndCallRequest = z.object({
  * errors this schema can't).
  * @internal
  */
-export const delegateDecryptionRequest = z.pipe(
-  z.object({
-    kind: z.literal("DelegateDecryption"),
-    from: checksummedAddress,
-    aclAddress: checksummedAddress,
-    contractAddress: checksummedAddress,
-    delegateAddress: checksummedAddress,
-    expirationDate: z.optional(z.date()),
-  }),
-  z.transform((request) => ({
-    kind: request.kind,
-    from: request.from,
-    aclAddress: request.aclAddress,
-    contractAddress: request.contractAddress,
-    delegateAddress: request.delegateAddress,
-    expirationDate: request.expirationDate
-      ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
-      : MAX_UINT64,
-  })),
-);
+export const delegateDecryptionRequest = z.object({
+  kind: z.literal("DelegateDecryption"),
+  from: checksummedAddress,
+  aclAddress: checksummedAddress,
+  contractAddress: checksummedAddress,
+  delegateAddress: checksummedAddress,
+  expirationDate: z.optional(z.date()),
+}) satisfies z.ZodMiniType<DelegateDecryptionRequest>;
 
 /**
  * {@link RevokeDelegationRequest} schema.
@@ -170,7 +173,7 @@ export const revokeDelegationRequest = z.object({
   aclAddress: checksummedAddress,
   contractAddress: checksummedAddress,
   delegateAddress: checksummedAddress,
-});
+}) satisfies z.ZodMiniType<RevokeDelegationRequest>;
 
 /**
  * Discriminated union (on `kind`) of every offline `prepare` request. Backs
@@ -190,7 +193,7 @@ export const prepareTransactionRequest = z.discriminatedUnion("kind", [
   transferAndCallRequest,
   delegateDecryptionRequest,
   revokeDelegationRequest,
-]);
+]) satisfies z.ZodMiniType<PrepareTransactionRequest>;
 
 /**
  * {@link PrepareFees} schema. `maxFeePerGas` and `maxPriorityFeePerGas` live in
@@ -211,7 +214,7 @@ export const prepareOptions = z.object({
   nonce: z.optional(z.int().check(z.nonnegative())),
   gasLimit: z.optional(z.bigint()),
   fees: z.optional(fees),
-});
+}) satisfies z.ZodMiniType<PrepareOptions>;
 
 /**
  * `WriteContractConfig` schema. `abi` and `args` are validated only as
@@ -228,7 +231,7 @@ export const writeContractConfig = z.object({
   args: z.array(z.unknown()),
   value: z.optional(z.bigint()),
   gas: z.optional(z.bigint()),
-});
+}) satisfies z.ZodMiniType<WriteContractConfig>;
 
 /**
  * Schema for the argument object of `GenericProvider.prepareTransaction`:

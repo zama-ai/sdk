@@ -7,6 +7,7 @@ import {
   confidentialTransferFromContract,
   delegateForUserDecryptionContract,
   finalizeUnwrapContract,
+  MAX_UINT64,
   revokeDelegationContract,
   setOperatorContract,
   transferAndCallContract,
@@ -327,11 +328,14 @@ export class OfflineService {
         `Delegate address cannot be the same as the contract address (${parsed.contractAddress}).`,
       );
     }
+    const expirationDate = parsed.expirationDate
+      ? BigInt(Math.floor(parsed.expirationDate.getTime() / 1000))
+      : MAX_UINT64;
     return delegateForUserDecryptionContract(
       parsed.aclAddress,
       parsed.delegateAddress,
       parsed.contractAddress,
-      parsed.expirationDate,
+      expirationDate,
     );
   }
 
