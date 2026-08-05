@@ -559,6 +559,7 @@ describe("OfflineService — calldata arg assertions", () => {
     signer,
     userAddress,
   }) => {
+    const { DelegationExpirationTooSoonError } = await import("../../errors");
     const sdk = createSDK({ signer });
     await expect(
       sdk.offline.prepare({
@@ -569,7 +570,7 @@ describe("OfflineService — calldata arg assertions", () => {
         delegateAddress: DELEGATE,
         expirationDate: new Date(Date.now() + 60_000),
       }),
-    ).rejects.toThrow(/at least 1 hour in the future/);
+    ).rejects.toBeInstanceOf(DelegationExpirationTooSoonError);
   });
 
   test("DelegateDecryption rejects delegating to yourself (delegate === from)", async ({
