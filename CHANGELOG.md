@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.3...v3.5.0-alpha.4) (2026-08-05)
+
+### Bug Fixes
+
+- **sdk:** bind confidentialTransferFrom input proof to the tx sender ([#611](https://github.com/zama-ai/sdk/issues/611)) ([d51c627]())
+
 ## [3.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.2...v3.5.0-alpha.3) (2026-08-05)
 
 ### Features
