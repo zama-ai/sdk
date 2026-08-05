@@ -578,7 +578,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     this.#requireSigner("confidentialTransferFrom");
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "confidentialTransferFrom",
       this.sdk.signer,
       this.sdk.provider,
@@ -586,10 +586,11 @@ export class Token {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
+    // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
-      userAddress: normalizedFrom,
+      userAddress: getAddress(account.address),
     });
     void swallow(
       "transferFrom: onEncryptComplete",
@@ -722,7 +723,7 @@ export class Token {
     callbacks?: TransferCallbacks,
   ): Promise<TransactionResult> {
     this.#requireSigner("confidentialTransferFromAndCall");
-    await requireAlignedWalletAccount(
+    const account = await requireAlignedWalletAccount(
       "confidentialTransferFromAndCall",
       this.sdk.signer,
       this.sdk.provider,
@@ -730,10 +731,11 @@ export class Token {
     const normalizedFrom = getAddress(from);
     const normalizedTo = getAddress(to);
 
+    // The input proof is verified against msg.sender, so it binds to the caller, not `from`.
     const { encryptedValues, inputProof } = await this.sdk.encrypt({
       values: [{ value: amount, type: "euint64" }],
       contractAddress: this.address,
-      userAddress: normalizedFrom,
+      userAddress: getAddress(account.address),
     });
     void swallow(
       "transferFromAndCall: onEncryptComplete",
