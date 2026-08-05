@@ -303,7 +303,6 @@ export interface DelegateDecryptionParams {
 
 // @public
 export interface DelegateDecryptionRequest {
-    aclAddress: Address;
     contractAddress: Address;
     delegateAddress: Address;
     expirationDate?: Date;
@@ -757,7 +756,6 @@ export interface RevokeDelegationParams {
 
 // @public
 export interface RevokeDelegationRequest {
-    aclAddress: Address;
     contractAddress: Address;
     delegateAddress: Address;
     from: Address;

@@ -328,7 +328,7 @@ export class OfflineService {
       ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
       : MAX_UINT64;
     return delegateForUserDecryptionContract(
-      request.aclAddress,
+      this.#router.chain.aclContractAddress,
       request.delegateAddress,
       request.contractAddress,
       expirationDate,
@@ -340,7 +340,7 @@ export class OfflineService {
   ): ReturnType<typeof revokeDelegationContract> {
     request = parseSchema(revokeDelegationRequest, request);
     return revokeDelegationContract(
-      request.aclAddress,
+      this.#router.chain.aclContractAddress,
       request.delegateAddress,
       request.contractAddress,
     );

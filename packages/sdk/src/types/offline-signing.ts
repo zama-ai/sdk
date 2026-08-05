@@ -183,8 +183,6 @@ export interface DelegateDecryptionRequest {
   kind: "DelegateDecryption";
   /** Delegator/tx-sender wallet — signs and broadcasts the prepared tx. */
   from: Address;
-  /** ACL contract address. */
-  aclAddress: Address;
   /** Contract the delegation grants decrypt access to. */
   contractAddress: Address;
   /** Address being granted delegated decryption. */
@@ -199,8 +197,6 @@ export interface RevokeDelegationRequest {
   kind: "RevokeDelegation";
   /** Delegator/tx-sender wallet — signs and broadcasts the prepared tx. */
   from: Address;
-  /** ACL contract address. */
-  aclAddress: Address;
   /** Contract whose delegation is being revoked. */
   contractAddress: Address;
   /** Address whose delegated decryption is revoked. */

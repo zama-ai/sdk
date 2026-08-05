@@ -5443,7 +5443,6 @@ export interface DelegatedDecryptOptions {
 
 // @public
 export interface DelegateDecryptionRequest {
-    aclAddress: Address;
     contractAddress: Address;
     delegateAddress: Address;
     expirationDate?: Date;
@@ -12925,7 +12924,6 @@ export function revokeDelegationContract(aclAddress: Address, delegateAddress: A
 
 // @public
 export interface RevokeDelegationRequest {
-    aclAddress: Address;
     contractAddress: Address;
     delegateAddress: Address;
     from: Address;

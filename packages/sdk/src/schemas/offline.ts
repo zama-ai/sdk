@@ -157,7 +157,6 @@ export const transferAndCallRequest = z.object({
 export const delegateDecryptionRequest = z.object({
   kind: z.literal("DelegateDecryption"),
   from: checksummedAddress,
-  aclAddress: checksummedAddress,
   contractAddress: checksummedAddress,
   delegateAddress: checksummedAddress,
   expirationDate: z.optional(z.date()),
@@ -170,7 +169,6 @@ export const delegateDecryptionRequest = z.object({
 export const revokeDelegationRequest = z.object({
   kind: z.literal("RevokeDelegation"),
   from: checksummedAddress,
-  aclAddress: checksummedAddress,
   contractAddress: checksummedAddress,
   delegateAddress: checksummedAddress,
 }) satisfies z.ZodMiniType<RevokeDelegationRequest>;

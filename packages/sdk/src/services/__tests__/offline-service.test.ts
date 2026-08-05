@@ -316,7 +316,6 @@ describe("OfflineService — other transaction kinds", () => {
     await sdk.offline.prepare({
       kind: "DelegateDecryption",
       from: userAddress,
-      aclAddress: TOKEN,
       contractAddress: RECIPIENT,
       delegateAddress: DELEGATE,
     });
@@ -337,7 +336,6 @@ describe("OfflineService — other transaction kinds", () => {
     await sdk.offline.prepare({
       kind: "RevokeDelegation",
       from: userAddress,
-      aclAddress: TOKEN,
       contractAddress: RECIPIENT,
       delegateAddress: userAddress,
     });
@@ -543,7 +541,6 @@ describe("OfflineService — calldata arg assertions", () => {
     await sdk.offline.prepare({
       kind: "DelegateDecryption",
       from: userAddress,
-      aclAddress: TOKEN,
       contractAddress: RECIPIENT,
       delegateAddress: DELEGATE,
       expirationDate,
@@ -565,7 +562,6 @@ describe("OfflineService — calldata arg assertions", () => {
       sdk.offline.prepare({
         kind: "DelegateDecryption",
         from: userAddress,
-        aclAddress: TOKEN,
         contractAddress: RECIPIENT,
         delegateAddress: DELEGATE,
         expirationDate: new Date(Date.now() + 60_000),
@@ -584,7 +580,6 @@ describe("OfflineService — calldata arg assertions", () => {
       sdk.offline.prepare({
         kind: "DelegateDecryption",
         from: userAddress,
-        aclAddress: TOKEN,
         contractAddress: RECIPIENT,
         delegateAddress: userAddress,
       }),
@@ -602,7 +597,6 @@ describe("OfflineService — calldata arg assertions", () => {
       sdk.offline.prepare({
         kind: "DelegateDecryption",
         from: userAddress,
-        aclAddress: TOKEN,
         contractAddress: RECIPIENT,
         delegateAddress: RECIPIENT,
       }),
@@ -619,7 +613,6 @@ describe("OfflineService — calldata arg assertions", () => {
     await sdk.offline.prepare({
       kind: "RevokeDelegation",
       from: userAddress,
-      aclAddress: TOKEN,
       contractAddress: RECIPIENT,
       delegateAddress: userAddress,
     });
