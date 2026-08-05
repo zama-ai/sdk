@@ -304,6 +304,7 @@ export class OfflineService {
   #buildDelegateDecryption(
     request: DelegateDecryptionRequest,
   ): ReturnType<typeof delegateForUserDecryptionContract> {
+    request = parseSchema(delegateDecryptionRequest, request);
     // Expiry ≥1h out: an expiry under 1h lands already-expired (or nearly so),
     // and the offline payload is signed/broadcast later, eating into that
     // margin further. Checked against the pre-parse `Date` (the schema
@@ -313,28 +314,23 @@ export class OfflineService {
         "Expiration date must be at least 1 hour in the future",
       );
     }
-    // `parseSchema` checksums the addresses and turns `expirationDate` (an
-    // optional `Date`) into the on-chain uint64 expiry — seconds since epoch,
-    // or MAX_UINT64 when omitted — so `parsed.expirationDate` is already the
-    // bigint the contract call wants.
-    const parsed = parseSchema(delegateDecryptionRequest, request);
-    if (parsed.delegateAddress === parsed.from) {
+    if (request.delegateAddress === request.from) {
       throw new DelegationSelfNotAllowedError(
         "Cannot delegate to yourself (delegate === msg.sender).",
       );
     }
-    if (parsed.delegateAddress === parsed.contractAddress) {
+    if (request.delegateAddress === request.contractAddress) {
       throw new DelegationDelegateEqualsContractError(
-        `Delegate address cannot be the same as the contract address (${parsed.contractAddress}).`,
+        `Delegate address cannot be the same as the contract address (${request.contractAddress}).`,
       );
     }
-    const expirationDate = parsed.expirationDate
-      ? BigInt(Math.floor(parsed.expirationDate.getTime() / 1000))
+    const expirationDate = request.expirationDate
+      ? BigInt(Math.floor(request.expirationDate.getTime() / 1000))
       : MAX_UINT64;
     return delegateForUserDecryptionContract(
-      parsed.aclAddress,
-      parsed.delegateAddress,
-      parsed.contractAddress,
+      request.aclAddress,
+      request.delegateAddress,
+      request.contractAddress,
       expirationDate,
     );
   }
