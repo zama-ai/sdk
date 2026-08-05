@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.3](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.2...v3.5.0-alpha.3) (2026-08-05)
+
+### Features
+
+- **sdk:** offline signing `prepare` for out-of-process custody (SDK-75) ([#345](https://github.com/zama-ai/sdk/issues/345)) ([66b8b40]()), closes [#7]()
+
 ## [3.5.0-alpha.2](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.1...v3.5.0-alpha.2) (2026-07-31)
 
 ### Features
