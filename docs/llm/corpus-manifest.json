@@ -637,6 +637,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:reference/sdk/Offline",
+      "title": "Offline",
+      "source_path": "docs/gitbook/src/reference/sdk/Offline.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md",
+      "source_type": "official-doc",
+      "category": "reference-sdk",
+      "logical_path": "reference/sdk/Offline",
+      "description": "Build unsigned transactions for out-of-process signing - the offline counterpart of the atomic Token methods.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:reference/sdk/network-presets",
       "title": "Network presets",
       "source_path": "docs/gitbook/src/reference/sdk/network-presets.md",

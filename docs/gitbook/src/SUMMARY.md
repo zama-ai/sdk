@@ -67,6 +67,7 @@
   - [Contract builders](reference/sdk/contract-builders.md)
   - [Event decoders](reference/sdk/event-decoders.md)
   - [Delegations](reference/sdk/delegation.md)
+  - [Offline](reference/sdk/Offline.md)
   - [Network presets](reference/sdk/network-presets.md)
 - [React reference](reference/react/README.md)
   - [ZamaProvider](reference/react/ZamaProvider.md)

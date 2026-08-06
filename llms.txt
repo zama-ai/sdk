@@ -65,6 +65,7 @@ Use this file for discovery. Follow the links to fetch the smallest source that 
 - [Contract call builders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/contract-builders.md): Low-level builders that return raw contract call configs for viem, ethers, or custom execution layers.
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md): Decode on-chain logs into typed event objects.
 - [Delegations](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/delegation.md): On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.
+- [Offline](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md): Build unsigned transactions for out-of-process signing - the offline counterpart of the atomic Token methods.
 - [Network presets](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/network-presets.md): Pre-configured chain objects and legacy network configs for supported networks.
 
 ### React Reference

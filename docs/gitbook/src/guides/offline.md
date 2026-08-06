@@ -148,6 +148,7 @@ Policy approval can take hours or days. The prepared payload tolerates that:
 
 ## Next steps
 
+- [Offline reference](../reference/sdk/Offline.md) -- full `prepare` signature, request kinds, and options
 - [Shield tokens](./shield-tokens.md) -- the atomic shield flow and routing table
 - [Unshield tokens](./unshield-tokens.md) -- the atomic two-phase unshield
 - [Node.js backend](./node-js-backend.md) -- server-side setup and custom signers
