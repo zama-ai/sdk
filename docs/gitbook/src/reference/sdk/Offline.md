@@ -24,7 +24,12 @@ const prepared = await sdk.offline.prepare(request, options);
 
 ### prepare
 
-`(request: PrepareTransactionRequest, options?: PrepareOptions) => Promise<PreparedFor<K>>`
+```ts
+prepare<K extends TransactionKind>(
+  request: Extract<PrepareTransactionRequest, { kind: K }>,
+  options?: PrepareOptions,
+): Promise<PreparedFor<K>>
+```
 
 Builds the unsigned transaction for `request` without signing or broadcasting. The return type narrows to the request's `kind`.
 

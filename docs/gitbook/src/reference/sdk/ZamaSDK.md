@@ -207,12 +207,8 @@ Pre-authorize contract addresses for decryption. Signs permits only for contract
 ```ts
 // Sign once for three tokens, then decrypt individually
 await sdk.permits.grantPermit([cUSDT, cDAI, cWETH]);
-const a = await sdk.decryption.decryptValues([
-  { encryptedValue: h1, contractAddress: cUSDT },
-]);
-const b = await sdk.decryption.decryptValues([
-  { encryptedValue: h2, contractAddress: cDAI },
-]);
+const a = await sdk.decryption.decryptValues([{ encryptedValue: h1, contractAddress: cUSDT }]);
+const b = await sdk.decryption.decryptValues([{ encryptedValue: h2, contractAddress: cDAI }]);
 ```
 
 ### permits.hasPermit
@@ -298,30 +294,22 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-window.addEventListener(
-  ZamaSDKEvents.DecryptEnd,
-  (e: CustomEvent<DecryptEndEvent>) => {
-    const { durationMs, encryptedValues, result } = e.detail;
-    console.log(
-      `Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`,
-    );
-    // result is Record<EncryptedValue, ClearValue> — look up a specific value
-    for (const v of encryptedValues) {
-      console.log(`${v} → ${result[v]}`);
-    }
-  },
-);
+window.addEventListener(ZamaSDKEvents.DecryptEnd, (e: CustomEvent<DecryptEndEvent>) => {
+  const { durationMs, encryptedValues, result } = e.detail;
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
+  }
+});
 
-window.addEventListener(
-  ZamaSDKEvents.DecryptError,
-  (e: CustomEvent<DecryptErrorEvent>) => {
-    const { error, durationMs, encryptedValues } = e.detail;
-    console.error(
-      `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
-      error,
-    );
-  },
-);
+window.addEventListener(ZamaSDKEvents.DecryptError, (e: CustomEvent<DecryptErrorEvent>) => {
+  const { error, durationMs, encryptedValues } = e.detail;
+  console.error(
+    `Decryption failed after ${durationMs}ms for ${encryptedValues.length} value(s):`,
+    error,
+  );
+});
 ```
 
 {% endtab %}
@@ -348,18 +336,13 @@ const config = createConfig({
 });
 const sdk = new ZamaSDK(config);
 
-emitter.on(
-  ZamaSDKEvents.DecryptEnd,
-  ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
-    console.log(
-      `Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`,
-    );
-    // result is Record<EncryptedValue, ClearValue> — look up a specific value
-    for (const v of encryptedValues) {
-      console.log(`${v} → ${result[v]}`);
-    }
-  },
-);
+emitter.on(ZamaSDKEvents.DecryptEnd, ({ durationMs, encryptedValues, result }: DecryptEndEvent) => {
+  console.log(`Decrypted ${encryptedValues.length} value(s) in ${durationMs}ms`);
+  // result is Record<EncryptedValue, ClearValue> — look up a specific value
+  for (const v of encryptedValues) {
+    console.log(`${v} → ${result[v]}`);
+  }
+});
 
 emitter.on(
   ZamaSDKEvents.DecryptError,
@@ -426,7 +409,7 @@ See the [Delegations reference](./delegation.md) for the full API and propagatio
 
 ### offline.prepare
 
-`(request: PrepareTransactionRequest, options?: PrepareOptions) => Promise<PreparedFor<K>>`
+`sdk.offline.prepare(request, options?)`
 
 Builds an unsigned transaction that the caller signs and broadcasts out-of-process (institutional custody, HSMs). Works without a configured signer.
 

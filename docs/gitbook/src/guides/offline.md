@@ -5,7 +5,7 @@ description: How to build unsigned transactions that are signed and broadcast ou
 
 # Offline signing
 
-`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds key material.
+`sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key.
 
 {% hint style="info" %}
 **Prefer the atomic API when you can.** If your signer can complete a signature inside one `Promise` (even a slow one that polls a custody API), implement a custom [`BaseSigner`](./node-js-backend.md#8-optional-use-a-custom-signer) and keep the one-call `Token` methods. Reach for `prepare` only when signing genuinely leaves the process.
@@ -60,20 +60,22 @@ await sdk.offline.prepare(request, {
 
 ### 3. Sign and broadcast out-of-process
 
-The custodian signs the exact bytes after policy approval. Custody platforms typically accept the unsigned payload directly and broadcast in the same call:
+The custody platform signs the prepared transaction after policy approval, preserving its nonce, gas limit, fees, and calldata. Custody platforms typically accept the unsigned payload directly and broadcast in the same call:
 
 ```ts
 const txHash = await custody.signAndBroadcast(prepared.unsignedTx);
 ```
 
-Sign-only setups return the signed bytes instead, and you broadcast them yourself:
+Some platforms also support signing without broadcasting. When that API accepts serialized transactions, it returns the serialized signed transaction for you to broadcast:
 
 ```ts
 const signedTx = await custody.sign(prepared.unsignedTx);
-const txHash = await publicClient.sendRawTransaction({
-  serializedTransaction: signedTx,
-});
+const txHash = await publicClient.sendRawTransaction({ serializedTransaction: signedTx });
 ```
+
+{% hint style="warning" %}
+**Raw-signature APIs need an extra assembly step.** A raw HSM typically signs the EIP-1559 transaction digest and returns signature components, not a serialized transaction. Use your Ethereum library to compute the signing digest and insert the signature into the transaction envelope before broadcasting; do not treat the raw signature as signed transaction bytes.
+{% endhint %}
 
 Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider.
 
@@ -102,10 +104,7 @@ Each `prepare` call produces one transaction. The `kind` selects what it builds:
 {% endhint %}
 
 ```ts
-const nonce = await publicClient.getTransactionCount({
-  address: from,
-  blockTag: "pending",
-});
+const nonce = await publicClient.getTransactionCount({ address: from, blockTag: "pending" });
 
 const approve = await sdk.offline.prepare(
   { kind: "ApproveUnderlying", from, underlying, spender: wrapper, amount },
@@ -145,10 +144,12 @@ Neither phase needs an EIP-712 signature on top of the transaction: `Unwrap` enc
 
 ## Approval delays
 
-Policy approval can take hours or days. The prepared payload tolerates that:
+Policy approval can take hours or days. The cryptographic proofs tolerate that, but the transaction still depends on chain state:
 
 - The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry, and retries are safe: a dropped broadcast can be resubmitted, and a duplicate `FinalizeUnwrap` reverts instead of paying twice.
-- The fee caps are the one thing that ages. A `maxFeePerGas` estimated now can sit below base fee hours later; pass generous `fees` at `prepare` time (only base fee plus tip is charged, headroom is free).
+- The nonce can become stale if another transaction from the same wallet is mined first. Reserve or otherwise coordinate nonces across concurrent workflows, and re-prepare if the nonce is consumed.
+- Contract state can change while approval is pending, and explicit timestamps such as `SetOperator.until` or a delegation expiry keep advancing. Re-prepare when the transaction's assumptions no longer hold.
+- The fee cap can fall below the base fee. Add suitable headroom to `maxFeePerGas`; only the base fee plus priority tip is charged, so unused cap headroom costs nothing. Keep `maxPriorityFeePerGas` at an appropriate tip because raising it can increase the amount paid.
 
 {% hint style="info" %}
 **Transactions only, for now.** Producing a decryption [permit](../concepts/permit-model.md) offline is not yet available. In the meantime, route permits through a `BaseSigner` whose `signTypedData` awaits your custody API, then call `sdk.permits.grantPermit(contracts)`.
