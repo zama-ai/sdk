@@ -38,6 +38,7 @@
 - [Decrypt values from event logs](guides/decrypt-from-event-logs.md)
 - [Handle errors](guides/handle-errors.md)
 - [Node.js backend](guides/node-js-backend.md)
+- [Offline signing](guides/offline.md)
 - [Web extensions](guides/web-extensions.md)
 - [Local development](guides/local-development.md)
 - [Next.js SSR](guides/nextjs-ssr.md)

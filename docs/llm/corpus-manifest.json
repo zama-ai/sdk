@@ -325,6 +325,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/offline",
+      "title": "Offline signing",
+      "source_path": "docs/gitbook/src/guides/offline.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/offline",
+      "description": "How to build unsigned transactions that are signed and broadcast out-of-process by a custody platform, HSM, or policy engine.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/web-extensions",
       "title": "Web extensions",
       "source_path": "docs/gitbook/src/guides/web-extensions.md",
