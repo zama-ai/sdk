@@ -5049,7 +5049,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 
 
 > [!INFO]
-> **Prefer the atomic API when you can.** If your signer can complete a signature inside one `Promise` (even a slow one that polls a custody API), implement a custom [`BaseSigner`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md#8-optional-use-a-custom-signer) and keep the one-call `Token` methods. Reach for `prepare` only when signing genuinely leaves the process.
+> **Prefer the atomic API when you can.** If your signer can complete a signature inside one `Promise` (even a slow one that polls a custody API), implement a custom [`BaseSigner`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericSigner.md#implementing-a-custom-signer) and keep the one-call `Token` methods. Reach for `prepare` only when signing genuinely leaves the process.
 
 
 ## Steps
@@ -5087,7 +5087,7 @@ const prepared = await sdk.offline.prepare({
 // { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
-For a transfer, the amount is encrypted locally and the attested input proof is already inside the calldata. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
+For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
 
 Nonce, gas, and fees are read from chain state; override them per call when you need control:
 
@@ -5139,7 +5139,7 @@ Each `prepare` call produces one transaction. The `kind` selects what it builds:
 
 `WrappedToken.shield()` and `WrappedToken.unshield()` need a live signer, so offline workflows compose their underlying steps with `prepare`: `TransferAndCall` or `ApproveUnderlying` then `Wrap` for shielding, and `Unwrap` then `FinalizeUnwrap` for unshielding. Offline workflows are one of the few places where composing below the `Token` API is correct.
 
-**Shield** mirrors the [shielding paths](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths): one `TransferAndCall` for ERC-1363 underlyings, otherwise `ApproveUnderlying` then `Wrap`.
+**Shield** mirrors the [shielding paths](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths): one `TransferAndCall` for ERC-1363 underlyings, otherwise `ApproveUnderlying` then `Wrap`. Check which path applies with `await wrappedToken.isPayable()`; this provider-only read does not require a signer.
 
 
 > [!WARNING]
@@ -5174,6 +5174,7 @@ const unwrap = await sdk.offline.prepare({
 // sign, broadcast, fetch the receipt, then:
 const event = findUnwrapRequested(receipt.logs);
 if (!event) throw new Error("No UnwrapRequested event in receipt");
+// Persist event.unwrapRequestId now; offline unshield state is not tracked for you.
 
 const finalize = await sdk.offline.prepare({
   kind: "FinalizeUnwrap",
@@ -5189,7 +5190,7 @@ Neither phase requires a separate wallet signature: both perform the required re
 
 Policy approval can take hours or days. The cryptographic proofs tolerate that, but the transaction still depends on chain state:
 
-- The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry, and retries are safe: a dropped broadcast can be resubmitted, and a duplicate `FinalizeUnwrap` reverts instead of paying twice.
+- The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry. Only rebroadcasting the same signed bytes is safe without further checks. A duplicate `FinalizeUnwrap` reverts instead of paying twice, but re-preparing any other kind (including `Unwrap`) with a fresh nonce creates a new transaction; confirm the original never landed first.
 - The nonce can become stale if another transaction from the same wallet is mined first. Reserve or otherwise coordinate nonces across concurrent workflows, and re-prepare if the nonce is consumed.
 - Contract state can change while approval is pending, and explicit timestamps such as `SetOperator.until` or a delegation expiry keep advancing. Re-prepare when the transaction's assumptions no longer hold.
 - The fee cap can fall below the base fee. Add suitable headroom to `maxFeePerGas`; only the base fee plus priority tip is charged, so unused cap headroom costs nothing. Keep `maxPriorityFeePerGas` at an appropriate tip because raising it can increase the amount paid.
@@ -8057,7 +8058,7 @@ const config = createConfig({
 
 # GenericProvider
 
-Interface that all provider adapters must implement for read-only chain access. You only need this if you are building a custom provider -- otherwise use [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ViemProvider.md), [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/EthersProvider.md), or the wagmi `createConfig` which builds one internally.
+Interface that all provider adapters must implement for chain reads and unsigned transaction preparation. You only need this if you are building a custom provider -- otherwise use [ViemProvider](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ViemProvider.md), [EthersProvider](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/EthersProvider.md), or the wagmi `createConfig` which builds one internally.
 
 ## Import
 
@@ -8073,6 +8074,13 @@ interface GenericProvider {
   readContract(config: ReadContractConfig): Promise<unknown>;
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   getBlockTimestamp(): Promise<bigint>;
+  prepareTransaction(args: {
+    from: Address;
+    calldata: WriteContractConfig;
+    nonce?: number;
+    gasLimit?: bigint;
+    fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+  }): Promise<Hex>;
 }
 ```
 
@@ -8112,6 +8120,9 @@ class MyProvider implements GenericProvider {
   async getBlockTimestamp() {
     /* ... */
   }
+  async prepareTransaction(args) {
+    /* ... */
+  }
 }
 ```
 
@@ -8148,6 +8159,20 @@ getBlockTimestamp(): Promise<bigint>
 ```
 
 Return the timestamp of the latest block.
+
+### prepareTransaction
+
+```ts
+prepareTransaction(args: {
+  from: Address;
+  calldata: WriteContractConfig;
+  nonce?: number;
+  gasLimit?: bigint;
+  fees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
+}): Promise<Hex>
+```
+
+Build a fully populated, RLP-encoded unsigned EIP-1559 transaction without signing or broadcasting it. The provider reads the chain ID and fills any omitted nonce, gas limit, or fee values from chain state.
 
 ## Related
 
@@ -10210,8 +10235,9 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 - `ConfigurationError` - invalid request, or the provider's chain differs from the configured chain
 - `EncryptionFailedError` - encryption produced no result (encrypting kinds)
-- `DecryptionFailedError` - public decryption failed (`FinalizeUnwrap`)
+- `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
+- `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
 
 ## Request kinds
 
@@ -10231,7 +10257,7 @@ Amounts are cleartext; encryption happens during `prepare`. `ConfidentialTransfe
 - `{ kind: "ApproveUnderlying"; from; underlying; spender; amount: bigint }`
 - `{ kind: "Wrap"; from; wrapper; to; amount: bigint }`
 
-`TransferAndCall` is the single-transaction shield for ERC-1363 underlyings; `recipientData` is the recipient as 20 raw bytes, or omitted to self-shield. `ApproveUnderlying` + `Wrap` is the two-transaction path; USDT-style underlyings need an `amount: 0n` reset first when a non-zero allowance exists.
+`TransferAndCall` is the single-transaction shield for ERC-1363 underlyings; `recipientData` is the recipient as 20 raw bytes (not ABI-encoded), or `"0x"`/omitted to self-shield. `ApproveUnderlying` + `Wrap` is the two-transaction path; on this path, some underlyings such as USDT require an `amount: 0n` reset first when a non-zero allowance exists.
 
 ### Unshield
 

@@ -8,7 +8,7 @@ description: How to build unsigned transactions that are signed and broadcast ou
 `sdk.offline.prepare` builds a fully populated unsigned transaction and hands it to you. Signing and broadcasting happen out-of-process: an institutional custody platform, an HSM ceremony, a policy engine with human approval. The preparing process never holds the wallet private key.
 
 {% hint style="info" %}
-**Prefer the atomic API when you can.** If your signer can complete a signature inside one `Promise` (even a slow one that polls a custody API), implement a custom [`BaseSigner`](./node-js-backend.md#8-optional-use-a-custom-signer) and keep the one-call `Token` methods. Reach for `prepare` only when signing genuinely leaves the process.
+**Prefer the atomic API when you can.** If your signer can complete a signature inside one `Promise` (even a slow one that polls a custody API), implement a custom [`BaseSigner`](../reference/sdk/GenericSigner.md#implementing-a-custom-signer) and keep the one-call `Token` methods. Reach for `prepare` only when signing genuinely leaves the process.
 {% endhint %}
 
 ## Steps
@@ -46,7 +46,7 @@ const prepared = await sdk.offline.prepare({
 // { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
-For a transfer, the amount is encrypted locally and the attested input proof is already inside the calldata. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
+For a transfer, the amount is encrypted during `prepare`, including the required relayer interactions, and the calldata is ready to sign. `from` must match the address of the key that eventually signs: encrypted inputs are bound to that sender, so a mismatch reverts on-chain. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
 
 Nonce, gas, and fees are read from chain state; override them per call when you need control:
 
@@ -97,7 +97,7 @@ Each `prepare` call produces one transaction. The `kind` selects what it builds:
 
 `WrappedToken.shield()` and `WrappedToken.unshield()` need a live signer, so offline workflows compose their underlying steps with `prepare`: `TransferAndCall` or `ApproveUnderlying` then `Wrap` for shielding, and `Unwrap` then `FinalizeUnwrap` for unshielding. Offline workflows are one of the few places where composing below the `Token` API is correct.
 
-**Shield** mirrors the [shielding paths](./shield-tokens.md#shielding-paths): one `TransferAndCall` for ERC-1363 underlyings, otherwise `ApproveUnderlying` then `Wrap`.
+**Shield** mirrors the [shielding paths](./shield-tokens.md#shielding-paths): one `TransferAndCall` for ERC-1363 underlyings, otherwise `ApproveUnderlying` then `Wrap`. Check which path applies with `await wrappedToken.isPayable()`; this provider-only read does not require a signer.
 
 {% hint style="warning" %}
 **Dependent transactions must pin `nonce` and `gasLimit`.** Prepared before the first transaction mines, the second one hits two defaults that break: gas estimation reverts (the allowance does not exist yet) and the nonce read returns the same value twice. Pin both, or confirm each transaction before preparing the next. On the two-transaction path, some underlyings such as USDT require resetting a non-zero allowance first with an `ApproveUnderlying` of `0n` (a third pinned-nonce transaction).
@@ -131,6 +131,7 @@ const unwrap = await sdk.offline.prepare({
 // sign, broadcast, fetch the receipt, then:
 const event = findUnwrapRequested(receipt.logs);
 if (!event) throw new Error("No UnwrapRequested event in receipt");
+// Persist event.unwrapRequestId now; offline unshield state is not tracked for you.
 
 const finalize = await sdk.offline.prepare({
   kind: "FinalizeUnwrap",
@@ -146,7 +147,7 @@ Neither phase requires a separate wallet signature: both perform the required re
 
 Policy approval can take hours or days. The cryptographic proofs tolerate that, but the transaction still depends on chain state:
 
-- The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry, and retries are safe: a dropped broadcast can be resubmitted, and a duplicate `FinalizeUnwrap` reverts instead of paying twice.
+- The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry. Only rebroadcasting the same signed bytes is safe without further checks. A duplicate `FinalizeUnwrap` reverts instead of paying twice, but re-preparing any other kind (including `Unwrap`) with a fresh nonce creates a new transaction; confirm the original never landed first.
 - The nonce can become stale if another transaction from the same wallet is mined first. Reserve or otherwise coordinate nonces across concurrent workflows, and re-prepare if the nonce is consumed.
 - Contract state can change while approval is pending, and explicit timestamps such as `SetOperator.until` or a delegation expiry keep advancing. Re-prepare when the transaction's assumptions no longer hold.
 - The fee cap can fall below the base fee. Add suitable headroom to `maxFeePerGas`; only the base fee plus priority tip is charged, so unused cap headroom costs nothing. Keep `maxPriorityFeePerGas` at an appropriate tip because raising it can increase the amount paid.

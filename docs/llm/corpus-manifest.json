@@ -512,7 +512,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/GenericProvider",
-      "description": "Interface that all provider adapters must implement for read-only chain access.",
+      "description": "Interface that all provider adapters must implement for chain reads and unsigned transaction preparation.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },

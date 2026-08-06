@@ -55,8 +55,9 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 - `ConfigurationError` - invalid request, or the provider's chain differs from the configured chain
 - `EncryptionFailedError` - encryption produced no result (encrypting kinds)
-- `DecryptionFailedError` - public decryption failed (`FinalizeUnwrap`)
+- `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
+- `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
 
 ## Request kinds
 
@@ -76,7 +77,7 @@ Amounts are cleartext; encryption happens during `prepare`. `ConfidentialTransfe
 - `{ kind: "ApproveUnderlying"; from; underlying; spender; amount: bigint }`
 - `{ kind: "Wrap"; from; wrapper; to; amount: bigint }`
 
-`TransferAndCall` is the single-transaction shield for ERC-1363 underlyings; `recipientData` is the recipient as 20 raw bytes, or omitted to self-shield. `ApproveUnderlying` + `Wrap` is the two-transaction path; USDT-style underlyings need an `amount: 0n` reset first when a non-zero allowance exists.
+`TransferAndCall` is the single-transaction shield for ERC-1363 underlyings; `recipientData` is the recipient as 20 raw bytes (not ABI-encoded), or `"0x"`/omitted to self-shield. `ApproveUnderlying` + `Wrap` is the two-transaction path; on this path, some underlyings such as USDT require an `amount: 0n` reset first when a non-zero allowance exists.
 
 ### Unshield
 
