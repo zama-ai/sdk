@@ -5087,7 +5087,7 @@ const prepared = await sdk.offline.prepare({
 // { kind: "ConfidentialTransfer", from: "0xCustodyWallet", unsignedTx: "0x02..." }
 ```
 
-Everything FHE happens here: for a transfer, the amount is encrypted via the relayer and the proof is already inside the calldata. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
+For a transfer, the amount is encrypted locally and the attested input proof is already inside the calldata. The result is JSON-safe and crosses a process boundary as-is. `unsignedTx` carries the whole EIP-1559 transaction (chain id, nonce, calldata, gas and fee caps); `from` travels alongside because an unsigned transaction has no sender field and the custodian needs it to pick the signing key.
 
 Nonce, gas, and fees are read from chain state; override them per call when you need control:
 
@@ -5101,16 +5101,14 @@ await sdk.offline.prepare(request, {
 
 ### 3. Sign and broadcast out-of-process
 
-The custodian signs the exact bytes and publishes them through its own channel. Custody platforms typically accept the payload directly; with DFNS, for example:
+The custodian signs the exact bytes and publishes them through its own channel. Custody platforms typically accept the unsigned payload directly:
 
 ```ts
-await dfns.wallets.broadcastTransaction({
-  walletId,
-  body: { kind: "Transaction", transaction: prepared.unsignedTx },
-});
+const signedTx = await custody.sign(prepared.unsignedTx);
+await custody.broadcast(signedTx);
 ```
 
-Then watch the chain yourself: poll the platform for the transaction hash and fetch the receipt through your own provider.
+Then watch the chain yourself: fetch the receipt for the resulting transaction hash through your own provider.
 
 ## Request kinds
 
@@ -5177,24 +5175,22 @@ const finalize = await sdk.offline.prepare({
 });
 ```
 
-Neither phase needs an EIP-712 signature on top of the transaction: the encryption (`Unwrap`) and the public decryption (`FinalizeUnwrap`) happen inside `prepare` via the relayer.
+Neither phase needs an EIP-712 signature on top of the transaction: `Unwrap` encrypts the amount locally and `FinalizeUnwrap` runs the public decryption through the relayer, both during `prepare`.
 
 ## Approval delays
 
 Policy approval can take hours or days. The prepared payload tolerates that:
 
-- The FHE proofs embedded in the calldata have no on-chain expiry, and retries are safe: a dropped broadcast can be resubmitted, and a duplicate `FinalizeUnwrap` reverts instead of paying twice.
+- The input proof (`Unwrap`) and the public decryption proof (`FinalizeUnwrap`) embedded in the calldata have no on-chain expiry, and retries are safe: a dropped broadcast can be resubmitted, and a duplicate `FinalizeUnwrap` reverts instead of paying twice.
 - The fee caps are the one thing that ages. A `maxFeePerGas` estimated now can sit below base fee hours later; pass generous `fees` at `prepare` time (only base fee plus tip is charged, headroom is free).
-- Do not hold prepared transactions across an announced protocol upgrade or signer-set rotation; re-prepare instead.
 
 
 > [!INFO]
-> **Transactions only.** Decryption [permits](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) are EIP-712 signatures, not transactions, and have no `prepare` form. For custody-held keys, route them through a `BaseSigner` whose `signTypedData` awaits your custody API, then call `sdk.permits.grantPermit(contracts)`.
+> **Transactions only, for now.** Producing a decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) offline is not yet available. In the meantime, route permits through a `BaseSigner` whose `signTypedData` awaits your custody API, then call `sdk.permits.grantPermit(contracts)`.
 
 
 ## Next steps
 
-- The `examples/node-custody` app in the repository runs this guide end to end against DFNS on Sepolia, including state persistence across approval delays.
 - [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md) -- the atomic shield flow and routing table
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md) -- the atomic two-phase unshield
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) -- server-side setup and custom signers
