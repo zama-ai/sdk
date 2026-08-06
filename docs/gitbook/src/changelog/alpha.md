@@ -9,7 +9,7 @@ description: Unreleased changes on the prerelease (alpha) line — not yet in a 
 **Unreleased.** The changes on this page are on the prerelease (`alpha`) line and are **not yet available in a stable release**. They ship with the next stable release, at which point this page is retitled to that version and folded into the version list above. Treat everything here as a preview — details may still change before release.
 {% endhint %}
 
-## Offline signing (institutional custody)
+## Offline signing
 
 A new `sdk.offline.prepare` builds an unsigned transaction that the caller signs and broadcasts out-of-process: institutional custody, HSM ceremonies, policy engines with human approval. The signer is now optional in the SDK config, so the preparing process never holds the wallet private key. Atomic call sites are unchanged; `Token.confidentialTransfer` and friends keep their online path.
 

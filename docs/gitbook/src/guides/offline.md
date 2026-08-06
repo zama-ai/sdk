@@ -77,7 +77,7 @@ const txHash = await publicClient.sendRawTransaction({ serializedTransaction: si
 **Raw-signature APIs need an extra assembly step.** A raw HSM typically signs the EIP-1559 transaction digest and returns signature components, not a serialized transaction. Use your Ethereum library to compute the signing digest and insert the signature into the transaction envelope before broadcasting; do not treat the raw signature as signed transaction bytes.
 {% endhint %}
 
-Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider.
+Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider, and wait for enough confirmations for your risk policy before acting on it. A receipt returned at first inclusion can still be invalidated by a reorganization, for example after you use it to prepare `FinalizeUnwrap`.
 
 ## Request kinds
 
@@ -95,12 +95,12 @@ Each `prepare` call produces one transaction. The `kind` selects what it builds:
 
 ## Multi-transaction flows
 
-`WrappedToken.shield()` and `WrappedToken.unshield()` need a live signer, so offline flows compose the same steps from `prepare` primitives. Offline flows are one of the few places where composing below the `Token` API is correct.
+`WrappedToken.shield()` and `WrappedToken.unshield()` need a live signer, so offline workflows compose their underlying steps with `prepare`: `TransferAndCall` or `ApproveUnderlying` then `Wrap` for shielding, and `Unwrap` then `FinalizeUnwrap` for unshielding. Offline workflows are one of the few places where composing below the `Token` API is correct.
 
 **Shield** mirrors the [shielding paths](./shield-tokens.md#shielding-paths): one `TransferAndCall` for ERC-1363 underlyings, otherwise `ApproveUnderlying` then `Wrap`.
 
 {% hint style="warning" %}
-**Dependent transactions must pin `nonce` and `gasLimit`.** Prepared before the first transaction mines, the second one hits two defaults that break: gas estimation reverts (the allowance does not exist yet) and the nonce read returns the same value twice. Pin both, or confirm each transaction before preparing the next. Against USDT-style underlyings with a non-zero allowance, reset it with a first `ApproveUnderlying` of `0n` (a third pinned-nonce transaction).
+**Dependent transactions must pin `nonce` and `gasLimit`.** Prepared before the first transaction mines, the second one hits two defaults that break: gas estimation reverts (the allowance does not exist yet) and the nonce read returns the same value twice. Pin both, or confirm each transaction before preparing the next. On the two-transaction path, some underlyings such as USDT require resetting a non-zero allowance first with an `ApproveUnderlying` of `0n` (a third pinned-nonce transaction).
 {% endhint %}
 
 ```ts
@@ -140,7 +140,7 @@ const finalize = await sdk.offline.prepare({
 });
 ```
 
-Neither phase needs an EIP-712 signature on top of the transaction: `Unwrap` encrypts the amount locally and `FinalizeUnwrap` runs the public decryption through the relayer, both during `prepare`.
+Neither phase requires a separate wallet signature: both perform the required relayer interactions during `prepare`.
 
 ## Approval delays
 
