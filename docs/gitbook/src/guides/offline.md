@@ -60,14 +60,22 @@ await sdk.offline.prepare(request, {
 
 ### 3. Sign and broadcast out-of-process
 
-The custodian signs the exact bytes and publishes them through its own channel. Custody platforms typically accept the unsigned payload directly:
+The custodian signs the exact bytes after policy approval. Custody platforms typically accept the unsigned payload directly and broadcast in the same call:
+
+```ts
+const txHash = await custody.signAndBroadcast(prepared.unsignedTx);
+```
+
+Sign-only setups return the signed bytes instead, and you broadcast them yourself:
 
 ```ts
 const signedTx = await custody.sign(prepared.unsignedTx);
-await custody.broadcast(signedTx);
+const txHash = await publicClient.sendRawTransaction({
+  serializedTransaction: signedTx,
+});
 ```
 
-Then watch the chain yourself: fetch the receipt for the resulting transaction hash through your own provider.
+Either way, watch the chain yourself: fetch the receipt for the transaction hash through your own provider.
 
 ## Request kinds
 
