@@ -566,7 +566,7 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
 });
 
 describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
-  const SECRET = "correct-horse-battery-staple";
+  const SECRET = "correct-horse-battery-staple-and-then-some";
 
   test("grantPermit and hasPermit work transparently end-to-end when configured", async ({
     createCredentialService,
@@ -648,7 +648,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     // caller (including the React useHasPermit() hook) relies on never rejecting.
     const correctlyConfigured = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: "correct-horse-battery-staple",
+      derivationSecret: "correct-horse-battery-staple-and-then-some",
       storage,
     });
     await correctlyConfigured.grantPermit([A]);
@@ -656,7 +656,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     const signerB = createMockSigner(DELEGATOR);
     const misconfigured = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: "a-different-secret",
+      derivationSecret: "a-different-secret-and-then-some-more",
       storage,
       signer: signerB,
     });
@@ -672,7 +672,9 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     // expected failure mode of this feature) — a genuine backing-storage exception
     // (a broken GenericStorage adapter, IndexedDB quota, etc.) is unrelated to
     // derivationSecret entirely and must not be silently downgraded to "no permit".
-    const service = createCredentialService({ derivationSecret: "correct-horse-battery-staple" });
+    const service = createCredentialService({
+      derivationSecret: "correct-horse-battery-staple-and-then-some",
+    });
     await service.grantPermit([A]);
 
     const storageError = new Error("storage backend is unavailable");

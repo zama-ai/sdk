@@ -3,7 +3,7 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { KeyWrappingError } from "../../errors/credential";
-import { transportKeyPairScopeStorageKey } from "../storage-keys";
+import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "../storage-keys";
 import { checksum } from "../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
@@ -627,6 +627,88 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // vaultB reads under a *different* signer address, same scope: must still unwrap.
     const read = await vaultB.readStored(OTHER);
     expect(read).toEqual(created);
+  });
+
+  test("clearScope() racing an in-flight getOrCreate() does not resurrect the rotated key when wrapping is on", async () => {
+    // Same TOCTOU window as the unwrapped case, but the wrapped persist path runs the
+    // extra wrap round trip after the generator — the epoch check must still gate the
+    // write that lands behind clearScope()'s delete.
+    const storage = new MemoryStorage();
+    let releaseGenerator!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseGenerator = resolve;
+    });
+    const generator = vi.fn().mockImplementation(async () => {
+      await gate;
+      return {
+        publicKey: PUBLIC_KEY,
+        privateKey: PRIVATE_KEY,
+      } as unknown as SerializeTransportKeyPairReturnType;
+    });
+    const vault = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+      derivationSecret: SECRET_A,
+    });
+
+    const inFlight = vault.getOrCreate(USER);
+    await vault.clearScope();
+
+    releaseGenerator();
+    await inFlight;
+
+    expect(await storage.get(transportKeyPairScopeStorageKey("tenant-1"))).toBeNull();
+    expect(await vault.readStored(USER)).toBeNull();
+  });
+
+  test("round-trips tkmsVersion through a wrapped entry, where it also participates in the AAD", async () => {
+    const storage = new MemoryStorage();
+    const wrappedVault = (logger = makeLogger()) =>
+      new TransportKeyPairVault({
+        generator: async () => ({
+          publicKey: PUBLIC_KEY as unknown as SerializeTransportKeyPairReturnType["publicKey"],
+          privateKey: PRIVATE_KEY as unknown as SerializeTransportKeyPairReturnType["privateKey"],
+          tkmsVersion: "v1",
+        }),
+        storage,
+        ttl: TTL_SECONDS,
+        logger,
+        derivationSecret: SECRET_A,
+      });
+
+    const created = await wrappedVault().getOrCreate(USER);
+    expect(created.tkmsVersion).toBe("v1");
+
+    // A second instance decrypting successfully proves it reconstructed the exact AAD,
+    // tkmsVersion included — a dropped or altered field would fail authentication.
+    expect(await wrappedVault().readStored(USER)).toEqual(created);
+
+    const persisted = (await storage.get(transportKeyPairStorageKey(USER))) as Record<
+      string,
+      unknown
+    >;
+    expect(persisted.tkmsVersion).toBe("v1");
+    expect(persisted.wrappedPrivateKey).toBeDefined();
+    expect(persisted.privateKey).toBeUndefined();
+  });
+
+  test("stores no tkmsVersion in a wrapped entry when the generator omits it", async () => {
+    const storage = new MemoryStorage();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: SECRET_A,
+    });
+
+    const created = await vault.getOrCreate(USER);
+    expect(created.tkmsVersion).toBeUndefined();
+    expect(await storage.get(transportKeyPairStorageKey(USER))).not.toHaveProperty("tkmsVersion");
+    expect(await vault.readStored(USER)).not.toHaveProperty("tkmsVersion");
   });
 
   test("logs the unwrap-failure reason directly, unconditionally (not just when storage.delete() itself fails)", async () => {

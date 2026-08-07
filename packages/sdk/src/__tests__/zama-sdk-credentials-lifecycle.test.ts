@@ -1,6 +1,8 @@
 import type { Address } from "viem";
 import { test as baseTest, describe, expect, vi } from "../test-fixtures";
+import { createConfig } from "../config/create";
 import { MemoryStorage } from "../storage/memory-storage";
+import { ZamaSDK } from "../zama-sdk";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
@@ -196,6 +198,40 @@ describe("ZamaSDK credentials lifecycle", () => {
       // Likewise the keypair must not have been regenerated; SDK B's relayer
       // mock is independent so a regeneration would appear here.
       expect(relayerB.generateTransportKeyPair).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("derivationSecret plumbing", () => {
+    test("a derivationSecret set on createConfig reaches the vault: the persisted key pair is wrapped", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      // Goes through createConfig (the public entrypoint, where the 32-byte floor is
+      // enforced) rather than the createSDK fixture, which hand-assembles a config and
+      // would not catch the option being dropped between the two.
+      const storage = new MemoryStorage();
+      const setSpy = vi.spyOn(storage, "set");
+      const config = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+        derivationSecret: "correct-horse-battery-staple-and-then-some",
+      });
+      const sdk = new ZamaSDK(config);
+
+      await sdk.permits.grantPermit([CONTRACT_A]);
+
+      const keypairWrite = setSpy.mock.calls.find(
+        ([, value]) => !Array.isArray(value) && typeof value === "object" && value !== null,
+      );
+      expect(keypairWrite).toBeDefined();
+      const keypair = keypairWrite![1] as Record<string, unknown>;
+      expect(keypair.wrappedPrivateKey).toBeDefined();
+      expect(keypair.privateKey).toBeUndefined();
     });
   });
 });

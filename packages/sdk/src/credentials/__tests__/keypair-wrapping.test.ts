@@ -95,6 +95,47 @@ describe("keypair-wrapping", () => {
     ).rejects.toThrow();
   });
 
+  test("tampering with a sibling metadata field (createdAt) rejects", async () => {
+    const wrapped = await wrapPrivateKey(PRIVATE_KEY, SECRET_A, IDENTITY_A, METADATA);
+    const error = await unwrapPrivateKey(wrapped, SECRET_A, IDENTITY_A, {
+      ...METADATA,
+      createdAt: METADATA.createdAt - 1,
+    }).catch((e: unknown) => e);
+    expect(isUnwrapAuthFailure(error)).toBe(true);
+  });
+
+  test("dropping tkmsVersion at unwrap time rejects — absent is not interchangeable with any value", async () => {
+    const wrapped = await wrapPrivateKey(PRIVATE_KEY, SECRET_A, IDENTITY_A, {
+      ...METADATA,
+      tkmsVersion: "v1",
+    });
+    const error = await unwrapPrivateKey(wrapped, SECRET_A, IDENTITY_A, METADATA).catch(
+      (e: unknown) => e,
+    );
+    expect(isUnwrapAuthFailure(error)).toBe(true);
+  });
+
+  test("adding a tkmsVersion at unwrap time to an entry wrapped without one rejects", async () => {
+    const wrapped = await wrapPrivateKey(PRIVATE_KEY, SECRET_A, IDENTITY_A, METADATA);
+    const error = await unwrapPrivateKey(wrapped, SECRET_A, IDENTITY_A, {
+      ...METADATA,
+      tkmsVersion: "v1",
+    }).catch((e: unknown) => e);
+    expect(isUnwrapAuthFailure(error)).toBe(true);
+  });
+
+  test("swapping tkmsVersion for a different value rejects — a KMS rotation can't be forged onto an old entry", async () => {
+    const wrapped = await wrapPrivateKey(PRIVATE_KEY, SECRET_A, IDENTITY_A, {
+      ...METADATA,
+      tkmsVersion: "v1",
+    });
+    const error = await unwrapPrivateKey(wrapped, SECRET_A, IDENTITY_A, {
+      ...METADATA,
+      tkmsVersion: "v2",
+    }).catch((e: unknown) => e);
+    expect(isUnwrapAuthFailure(error)).toBe(true);
+  });
+
   test("same secret, same identity, two different signers' calls derive the same wrapping key", async () => {
     // This is exactly the SDK-142 composition requirement: two signers sharing a
     // transportKeyPairScope (same `identity`) and the same derivationSecret must be
