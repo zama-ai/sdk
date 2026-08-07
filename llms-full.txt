@@ -2239,6 +2239,71 @@ web({
 
 `timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods and [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the full config reference.
 
+### Share one transport key pair across signers (B2B2C / WaaS)
+
+**Wallet-as-a-Service and B2B2C operators can now collapse per-signer transport key pairs into a single shared one.** By default the SDK generates one ML-KEM transport key pair per signer address — the right isolation boundary when signers sit on separate devices behind separate trust boundaries. An operator holding thousands of client wallets behind one operator-controlled key store gets no isolation from that split (a breach of the store exposes every wallet regardless), so the per-signer key pairs are pure overhead. Set `transportKeyPairScope` on `createConfig` to an opaque, non-empty identifier — a tenant ID, typically — and every signer configured with that scope reads and creates the _same_ key pair:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+
+const sdk = new ZamaSDK(config);
+
+// Create the scope's key pair once, before opening concurrent traffic to it.
+await sdk.permits.warmTransportKeyPairScope("tenant-123");
+```
+
+Sharing only works if every signer in the scope reads and writes the **same** storage instance — the Node `asyncLocalStorage` default isolates a fresh store per request, which would silently regenerate and discard the "shared" key pair on every request. Two operator-level calls manage the scope's lifecycle, and neither needs a connected wallet: `sdk.permits.warmTransportKeyPairScope(scopeId)` creates the key pair up front so a first wave of end-users doesn't race each other to create it (prefer it over `warmTransportKeyPair()`, which is gated on a connected wallet account and silently no-ops without one), and `sdk.permits.revokeTransportKeyPair(scopeId)` deletes it for operator-level rotation. Both require `scopeId` to match the configured scope and throw `ConfigurationError` otherwise. Permits stay per-signer whatever the scope, and the signer-level `sdk.permits.clear()` / `revokePermits()` never touch the shared key pair — one end-user disconnecting must never invalidate the whole cohort.
+
+**There is no breaking change** — the scope is opt-in and purely additive. Omitting `transportKeyPairScope` resolves it to `undefined` and preserves the existing one-key-pair-per-signer behavior exactly. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the setup, [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when the tradeoff is the right one, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into signer-level and operator-level tiers.
+
+### Delegation status in one call
+
+**Check whether a delegation is live and when it expires in a single call.** `sdk.delegations.getStatus()` returns `{ isActive, expiryTimestamp }` together, so code that renders a delegation panel no longer has to call `isActive()` and `getExpiry()` separately and reconcile the two results. It costs one ACL read instead of two, and like both of those methods it is signer-independent — a read-only status check works without a connected wallet. This is an addition: `isActive()` and `getExpiry()` are unchanged and still supported.
+
+```ts
+const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
+  contractAddress: "0xConfidentialToken",
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+```
+
+`expiryTimestamp` is the raw ACL value and has three states: `0n` means no delegation exists, `2n ** 64n - 1n` (`uint64` max) means the delegation is permanent, and any other value is a UTC Unix timestamp in seconds. `getStatus()` folds those cases into `isActive` for you, and only reads the chain's block timestamp to compare when the expiry is a real date.
+
+The result shape is exported as the `DelegationStatus` type from `@zama-fhe/sdk`. In React, the existing [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegationStatus.md) hook already returns this data and needs no changes — it is now typed with `DelegationStatus`, which replaces the previous `DelegationStatusData` name on the `@zama-fhe/sdk/query` subpath. That rename is type-only, so update the import if you referenced it directly. See [Check delegation status](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md#4-check-delegation-status-optional) for the full flow.
+
+### Automatic chunking for large decrypt batches
+
+**Decrypting many encrypted values in one call now works no matter how large the batch.** The KMS gateway caps each decryption request at 2048 cleartext bits — around 32 `euint64` values, but as few as 8 if they are `euint256` — and a batch whose values summed past that cap was rejected outright. Anyone batching heavily (a server-side indexer decrypting amounts pulled from event logs, a dashboard resolving a page of balances) had to guess a safe batch size against an undocumented limit, and any guess broke as soon as a batch mixed widths, because the cost of a value depends on its FHE type: `ebool` costs 2 bits, `eaddress` 160, `euint256` 256.
+
+The SDK now sizes the requests for you. `sdk.decryption.decryptValues` still groups encrypted values by contract, then splits each group into sub-requests whose cumulative bit cost stays under the budget, so an oversized batch becomes several relayer calls instead of one rejected one. `delegatedDecryptValues`, `delegatedBatchDecryptValues`, `Token.batchDecryptBalancesAs`, and the React hooks over them (`useDecryptValues`, `useBatchDecryptBalancesAs`) share the same code path and get the same behaviour. There is nothing to configure and nothing to change: no new option, no new constant to import, and identical call signatures, results, and caching. Public decryption (`decryptPublicValues`) and the low-level `sdk.relayer.*` methods bypass this path and still send exactly the values you hand them.
+
+### Two-signature shield with `wrap()`
+
+**`WrappedToken.wrap()` lets you drive the two-transaction shield path as two separately-triggered calls**, so your UI can render distinct "approve" and "shield" steps — or approve well ahead of the wrap — instead of firing both wallet prompts from inside a single `shield()`. It pairs with the existing `approveUnderlying()`: the first signature grants the wrapper an allowance on the underlying ERC-20, the second wraps that amount into confidential tokens. In React the same split is available as [`useWrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md) alongside [`useApproveUnderlying`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md), and a successful wrap invalidates the confidential balance and underlying allowance caches for you.
+
+This is purely additive — **`shield()` is unchanged** and remains the recommended surface. On a non-ERC-1363 underlying it was always sending these same two transactions; what's new is being able to trigger each one yourself without losing the SDK's checks. `wrap()` reads your ERC-20 balance and the allowance granted to the wrapper before submitting (public reads, no signing) and throws `InsufficientERC20BalanceError` or the new `InsufficientAllowanceError` (code `INSUFFICIENT_ALLOWANCE`) instead of letting the transaction revert on-chain. `WrapOptions` accepts `to` to mint the confidential balance to a different recipient and `onWrapSubmitted` to observe the transaction hash; the call resolves to the usual `{ txHash, receipt }`.
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+
+> [!WARNING]
+> **`wrap()` is an escape hatch, not a replacement for `shield()`.** It only ever sends the wrapper's `wrap` call — never `transferAndCall` — so recreating `shield()` from `approveUnderlying()` + `wrap()` by hand gives up automatic [ERC-1363 routing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths) and `approvalStrategy` handling, and costs an extra transaction on underlyings that do support ERC-1363. Reach for it only when you genuinely need the two signatures as independently-triggered steps. See [Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch) for the full flow.
+
+
 ### Bug fixes
 
 - **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
