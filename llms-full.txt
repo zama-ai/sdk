@@ -2239,9 +2239,111 @@ web({
 
 `timeout` and `debug` set request defaults for every relayer round-trip on that chain, and a per-call value overrides them. See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the auth methods and [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the full config reference.
 
+### Share one transport key pair across signers (B2B2C / WaaS)
+
+**Wallet-as-a-Service and B2B2C operators can now collapse per-signer transport key pairs into a single shared one.** By default the SDK generates one ML-KEM transport key pair per signer address — the right isolation boundary when signers sit on separate devices behind separate trust boundaries. An operator holding thousands of client wallets behind one operator-controlled key store gets no isolation from that split (a breach of the store exposes every wallet regardless), so the per-signer key pairs are pure overhead. Set `transportKeyPairScope` on `createConfig` to an opaque, non-empty identifier — a tenant ID, typically — and every signer configured with that scope reads and creates the _same_ key pair:
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: web() },
+  transportKeyPairScope: "tenant-123", // opaque identifier, e.g. your tenant ID
+  storage: myPersistentStorage, // must be shared across every signer in this scope
+});
+
+const sdk = new ZamaSDK(config);
+
+// Create the scope's key pair once, before opening concurrent traffic to it.
+await sdk.permits.warmTransportKeyPairScope("tenant-123");
+```
+
+
+> [!WARNING]
+> **Sharing only works if every signer in the scope reads and writes the same storage instance.** `asyncLocalStorage` — the storage recommended for [Node.js servers](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend) — isolates a fresh, empty store per request by design, which defeats a shared scope entirely: each request would regenerate the "shared" key pair and discard it immediately after. Use one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares the scope instead.
+
+
+Two operator-level calls manage the scope's lifecycle, and neither needs a connected wallet: `sdk.permits.warmTransportKeyPairScope(scopeId)` creates the key pair up front so a first wave of end-users doesn't race each other to create it (prefer it over `warmTransportKeyPair()`, which is gated on a connected wallet account and silently no-ops without one), and `sdk.permits.revokeTransportKeyPair(scopeId)` deletes it for operator-level rotation. Both require `scopeId` to match the configured scope and throw `ConfigurationError` otherwise. Permits stay per-signer whatever the scope, and the signer-level `sdk.permits.clear()` / `revokePermits()` never touch the shared key pair — one end-user disconnecting must never invalidate the whole cohort.
+
+**There is no breaking change** — the scope is opt-in and purely additive. Omitting `transportKeyPairScope` resolves it to `undefined` and preserves the existing one-key-pair-per-signer behavior exactly. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the setup, [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when the tradeoff is the right one, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into signer-level and operator-level tiers.
+
+### Delegation status in one call
+
+**Check whether a delegation is live and when it expires in a single call.** `sdk.delegations.getStatus()` returns `{ isActive, expiryTimestamp }` together, so code that renders a delegation panel no longer has to call `isActive()` and `getExpiry()` separately and reconcile the two results. It costs one ACL read instead of two, and like both of those methods it is signer-independent — a read-only status check works without a connected wallet. This is an addition: `isActive()` and `getExpiry()` are unchanged and still supported.
+
+```ts
+const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
+  contractAddress: "0xConfidentialToken",
+  delegatorAddress: "0xDelegator",
+  delegateAddress: "0xDelegate",
+});
+```
+
+`expiryTimestamp` is the raw ACL value and has three states: `0n` means no delegation exists, `2n ** 64n - 1n` (`uint64` max) means the delegation is permanent, and any other value is a UTC Unix timestamp in seconds. `getStatus()` folds those cases into `isActive` for you, and only reads the chain's block timestamp to compare when the expiry is a real date.
+
+The result shape is exported as the `DelegationStatus` type from `@zama-fhe/sdk`. In React, the existing [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegationStatus.md) hook already returns this data and needs no changes.
+
+
+> [!WARNING]
+> **`DelegationStatusData` was renamed to `DelegationStatus`** on the `@zama-fhe/sdk/query` subpath, with no compatibility alias kept. The rename is type-only — update the import if you referenced the old name directly.
+
+
+See [Check delegation status](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md#4-check-delegation-status-optional) for the full flow.
+
+### Automatic chunking for large decrypt batches
+
+**Decrypting many encrypted values in one call now works no matter how large the batch.** The KMS gateway caps each decryption request at 2048 cleartext bits — around 32 `euint64` values, but as few as 8 if they are `euint256` — and a batch whose values summed past that cap was rejected outright. Anyone batching heavily (a server-side indexer decrypting amounts pulled from event logs, a dashboard resolving a page of balances) had to guess a safe batch size against an undocumented limit, and any guess broke as soon as a batch mixed widths, because the cost of a value depends on its FHE type: `ebool` costs 2 bits, `eaddress` 160, `euint256` 256.
+
+The SDK now sizes the requests for you. `sdk.decryption.decryptValues` still groups encrypted values by contract, then splits each group into sub-requests whose cumulative bit cost stays under the budget, so an oversized batch becomes several relayer calls instead of one rejected one. `delegatedDecryptValues`, `delegatedBatchDecryptValues`, `Token.batchDecryptBalancesAs`, and the React hooks over them (`useDecryptValues`, `useBatchDecryptBalancesAs`) share the same code path and get the same behaviour. There is nothing to configure and nothing to change: no new option, no new constant to import, and identical call signatures, results, and caching. Public decryption (`decryptPublicValues`) and the low-level `sdk.relayer.*` methods bypass this path and still send exactly the values you hand them.
+
+### Two-signature shield with `wrap()`
+
+**`WrappedToken.wrap()` lets you drive the two-transaction shield path as two separately-triggered calls**, so your UI can render distinct "approve" and "shield" steps — or approve well ahead of the wrap — instead of firing both wallet prompts from inside a single `shield()`. It pairs with the existing `approveUnderlying()`: the first signature grants the wrapper an allowance on the underlying ERC-20, the second wraps that amount into confidential tokens. In React the same split is available as [`useWrap`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useWrap.md) alongside [`useApproveUnderlying`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useApproveUnderlying.md), and a successful wrap invalidates the confidential balance and underlying allowance caches for you.
+
+This is purely additive — **`shield()` is unchanged** and remains the recommended surface. On a non-ERC-1363 underlying it was always sending these same two transactions; what's new is being able to trigger each one yourself without losing the SDK's checks. `wrap()` reads your ERC-20 balance and the allowance granted to the wrapper before submitting (public reads, no signing) and throws `InsufficientERC20BalanceError` or the new `InsufficientAllowanceError` (code `INSUFFICIENT_ALLOWANCE`) instead of letting the transaction revert on-chain. `WrapOptions` accepts `to` to mint the confidential balance to a different recipient and `onWrapSubmitted` to observe the transaction hash; the call resolves to the usual `{ txHash, receipt }`.
+
+```ts
+// 1. Approve the wrapper to spend the underlying ERC-20 (first signature).
+await wrappedToken.approveUnderlying(1000n);
+
+// 2. Wrap the approved amount into confidential tokens (second signature).
+const { txHash } = await wrappedToken.wrap(1000n);
+```
+
+
+> [!WARNING]
+> **`wrap()` is an escape hatch, not a replacement for `shield()`.** It only ever sends the wrapper's `wrap` call — never `transferAndCall` — so recreating `shield()` from `approveUnderlying()` + `wrap()` by hand gives up automatic [ERC-1363 routing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths) and `approvalStrategy` handling, and costs an extra transaction on underlyings that do support ERC-1363. Reach for it only when you genuinely need the two signatures as independently-triggered steps. See [Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch) for the full flow.
+
+
+### Uniform retryability signal across error causes
+
+**Every retryable `ZamaError` now exposes that fact the same way**, so you don't have to hardcode which error codes are worth retrying. `3.3.0` introduced [typed decryption error causes](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md#typed-decryption-error-causes) with a per-error "Retry?" note in the docs; that note is now a real, compiler-checked field. `ZamaError` carries a `readonly retryable: boolean`, defaulted per `ZamaErrorCode` from an exhaustiveness-checked map — a new transient cause can't be added without declaring its retryability, so it can't silently default to the wrong signal.
+
+Two functions read that signal instead of `instanceof`-checking each subclass yourself:
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+try {
+  await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
+} catch (error) {
+  if (isRetryable(error)) {
+    const delaySeconds = retryAfterSeconds(error) ?? 2; // backoff when the server gives no hint
+    // schedule a retry after delaySeconds
+  } else {
+    throw error; // terminal — surface it
+  }
+}
+```
+
+Five causes are transient today — `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError` — but the point of `isRetryable()` is that you never need to enumerate them yourself. `retryAfterSeconds()` unifies the `retryAfter` field that previously lived only on `RelayerRequestFailedError` and `RpcRateLimitError`; it's `undefined` when the error isn't retryable, or is retryable but carries no server-suggested delay. This is additive — `matchZamaError` and the error hierarchy from `3.3.0` are unchanged. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide.
+
 ### Bug fixes
 
 - **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
+- **Correct `ethers`-backed integer types to match `viem`.** `EthersProvider.readContract` now narrows small Solidity integers the same way `ViemProvider` already did, so reads like `Token.decimals()` — typed `Promise<number>` — return a real `number` under `ethers` instead of a `bigint` slipping through.
+- **`WrappedToken.unwrap()` / `unwrapAll()` now return `UnwrapResult`.** The escape-hatch unshield methods (and `useUnwrap` / `useUnwrapAll`) return the decoded `unwrapRequestId` alongside the transaction result, so you can pass it straight to `finalizeUnwrap()` without re-decoding the `UnwrapRequested` event yourself. `WrappedToken.unshield` / `useUnshield` already handled this internally and are unaffected.
 
 
 > [!INFO]
@@ -4514,7 +4616,7 @@ const cleartext = await sdk.decryption.decryptValues(
 const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
 
-`decryptValues` accepts many inputs at once, groups them by contract address, and issues one decryption request per contract — so decrypting a page of transfers costs one round-trip per token, not one per transfer. Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
+`decryptValues` accepts many inputs at once and groups them by contract address — so decrypting a page of transfers costs one round-trip per token, not one per transfer. A group only splits into more than one relayer request if its values would otherwise exceed the relayer's per-request size budget (see [Automatic chunking for large decrypt batches](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-4.md#automatic-chunking-for-large-decrypt-batches)). Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
 
 
 > [!INFO]
@@ -7164,6 +7266,42 @@ Wipe the transport key pair **and** cascade-delete every permit for the current 
 ```ts
 await sdk.permits.clear();
 ```
+
+### permits.warmTransportKeyPair
+
+`() => Promise<void>`
+
+Best-effort transport key pair prefetch for the connected signer — an optional latency optimization. Decrypt and permit flows remain correct without it, since they lazily create the transport key pair when needed. Silently no-ops when no signer is configured or no wallet account is connected yet.
+
+```ts
+await sdk.permits.warmTransportKeyPair();
+```
+
+Not for pre-warming a shared `transportKeyPairScope` — this method's wallet-account precondition doesn't apply to a scope-wide key, and would silently no-op exactly when an operator is most likely calling it (no end-user connected yet). Use [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope) instead.
+
+### permits.warmTransportKeyPairScope
+
+`(scopeId: string) => Promise<void>`
+
+Pre-warm the shared transport key pair for a [`transportKeyPairScope`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators). Storage-only, operator-level action — no wallet account or signer needs to be connected, unlike `permits.warmTransportKeyPair()`.
+
+```ts
+await sdk.permits.warmTransportKeyPairScope("tenant-123");
+```
+
+`scopeId` must match the configured `transportKeyPairScope`, guarding against warming the wrong scope by mistake; throws `ConfigurationError` otherwise.
+
+### permits.revokeTransportKeyPair
+
+`(scopeId: string) => Promise<void>`
+
+Revoke the shared transport key pair for a `transportKeyPairScope` — the operator-level counterpart to [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope), for use on suspected key compromise. Deletes the shared key pair; every permit in the scope embeds its public key, so they're all treated as stale on next access.
+
+```ts
+await sdk.permits.revokeTransportKeyPair("tenant-123");
+```
+
+This does not revoke any permit already issued under the key — a permit is a self-contained, bearer-style EIP-712 signature the relayer accepts independently of this call, and one exfiltrated alongside the key remains usable until its own `permitTTL` expiry regardless of this call. `scopeId` must match the configured scope; throws `ConfigurationError` otherwise. Signer-level [`permits.clear`](#permits-clear) never touches the shared key pair — it only ever wipes the calling signer's own permits.
 
 ### delegations
 
@@ -18347,7 +18485,7 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 
 > [!WARNING]
-> Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` (the typical Node.js server default — see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend)) isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
+> Sharing only works if every signer in the scope reads and writes the **same** storage instance. `asyncLocalStorage` — the storage recommended for [Node.js servers](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#6-optional-choose-a-storage-backend) — isolates a fresh, empty store per request by design, which defeats sharing entirely: each request would regenerate the "shared" key pair and lose it immediately after. WaaS operators need one persistent `GenericStorage` (e.g. a database- or Redis-backed adapter) wired into every `ZamaSDK` instance that shares a scope.
 
 
 **Onboarding race.** `GenericStorage` has no compare-and-swap, so the very first time a scope's key pair is created, concurrent signers can race the underlying storage. This isn't just a more-likely version of the ordinary per-signer race (two tabs for the same end-user, where the loser just re-signs) — under a shared scope the racers are typically _different_ end-users behind the same operator, so the losing side can have an already-granted permit silently pruned as stale through no action of its own, and because one slot serves the whole cohort, every TTL expiry or `revokeTransportKeyPair()` call is a correlated event that can push many signers into the window at once. Pre-warm a scope's key pair once with `sdk.permits.warmTransportKeyPairScope(scopeId)` before opening concurrent traffic to it, rather than letting the first wave of real users race each other.
