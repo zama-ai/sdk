@@ -289,7 +289,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Without a `transportKeyPairScope`, this self-heals on the next call — a mismatched secret is treated as a cache miss and regenerates. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `derivationSecret`.
+**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws, it's treated as a cache miss and regenerates silently, so a `KeyWrappingError` here means something else is wrong in the environment — check `crypto.subtle` availability. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `derivationSecret`, including that none is missing it.
 
 ### RelayerRequestFailedError
 

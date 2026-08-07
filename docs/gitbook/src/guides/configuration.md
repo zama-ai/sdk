@@ -393,7 +393,7 @@ const config = createConfig({
 
 Permits stay per-signer regardless of scope. See [Security Model](../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](../concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
 
-### 9. (Optional) Wrap the transport key pair at rest (headless environments)
+### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
 By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `derivationSecret` from your own environment instead:
 

@@ -79,10 +79,10 @@ The gap in the default model above is **headless contexts** — CLI tools, agent
 
 ```
 wrappingKey = HKDF-SHA256(ikm: derivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
-ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt)
+ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
 ```
 
-The salt is the same identity used for storage keying (see [Shared-tenant scope](#shared-tenant-scope-b2b2c-waas-operators) below) — the configured `transportKeyPairScope` if set, else the signer address — so a scope's signers derive one shared wrapping key, not one each. It is prefixed by kind (`scope:` / `signer:`) so a scope named after an address never collides with that signer's own key. Only the private key half is wrapped; the public key and timestamps stay in plaintext alongside the ciphertext, but bound to it as AES-GCM additional authenticated data, so a storage-level attacker can't tamper with them (e.g. mismatching the public key, or extending `expiresAt`) without also failing decryption. Every permit stays in plaintext, unauthenticated by this scheme — permits are already public data (an EIP-712 signature and a list of contract addresses).
+The salt is the same identity used for storage keying (see [Shared-tenant scope](#shared-tenant-scope-b2b2c-waas-operators) below) — the configured `transportKeyPairScope` if set, else the signer address — so a scope's signers derive one shared wrapping key, not one each. It is prefixed by kind (`scope:` / `signer:`) so a scope named after an address never collides with that signer's own key. Only the private key half is wrapped; the public key, timestamps, and TKMS version stay in plaintext alongside the ciphertext, but bound to it as AES-GCM additional authenticated data (`tkmsVersion` encoded as `null` when absent), so a storage-level attacker can't tamper with them (e.g. mismatching the public key, or extending `expiresAt`) without also failing decryption. Every permit stays in plaintext, unauthenticated by this scheme — permits are already public data (an EIP-712 signature and a list of contract addresses).
 
 | Storage mode                            | Config             | Storage needed? | Secure storage needed?    |
 | --------------------------------------- | ------------------ | --------------- | ------------------------- |
