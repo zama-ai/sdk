@@ -99,26 +99,7 @@ describe("createConfig validation", () => {
     expect(config.transportKeyPairScope).toBeUndefined();
   });
 
-  test("rejects a derivationSecret below the 256-bit entropy floor", ({ relayer, provider }) => {
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        derivationSecret: "short",
-      }),
-    ).toThrow(/derivationSecret must be a string or Uint8Array of at least 32 bytes/);
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        derivationSecret: new Uint8Array(16),
-      }),
-    ).toThrow(/derivationSecret must be a string or Uint8Array of at least 32 bytes/);
-  });
-
-  test("rejects a derivationSecret one byte below the floor (31 bytes)", ({
+  test("rejects a transportKeyPairDerivationSecret below the 256-bit entropy floor", ({
     relayer,
     provider,
   }) => {
@@ -127,20 +108,50 @@ describe("createConfig validation", () => {
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        derivationSecret: new Uint8Array(31),
+        transportKeyPairDerivationSecret: "short",
       }),
-    ).toThrow(/derivationSecret must be a string or Uint8Array of at least 32 bytes/);
+    ).toThrow(
+      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+    );
     expect(() =>
       createConfig({
         chains: [hardhat],
         relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
         provider,
-        derivationSecret: "a".repeat(31),
+        transportKeyPairDerivationSecret: new Uint8Array(16),
       }),
-    ).toThrow(/derivationSecret must be a string or Uint8Array of at least 32 bytes/);
+    ).toThrow(
+      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+    );
   });
 
-  test("accepts a derivationSecret exactly at the 256-bit floor (32 bytes)", ({
+  test("rejects a transportKeyPairDerivationSecret one byte below the floor (31 bytes)", ({
+    relayer,
+    provider,
+  }) => {
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairDerivationSecret: new Uint8Array(31),
+      }),
+    ).toThrow(
+      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+    );
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairDerivationSecret: "a".repeat(31),
+      }),
+    ).toThrow(
+      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+    );
+  });
+
+  test("accepts a transportKeyPairDerivationSecret exactly at the 256-bit floor (32 bytes)", ({
     relayer,
     provider,
   }) => {
@@ -148,10 +159,10 @@ describe("createConfig validation", () => {
       chains: [hardhat],
       relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
       provider,
-      derivationSecret: new Uint8Array(32),
+      transportKeyPairDerivationSecret: new Uint8Array(32),
     });
 
-    expect(config.derivationSecret).toEqual(new Uint8Array(32));
+    expect(config.transportKeyPairDerivationSecret).toEqual(new Uint8Array(32));
   });
 
   test("wraps a supplied logger into a LoggerService on the resolved config", ({

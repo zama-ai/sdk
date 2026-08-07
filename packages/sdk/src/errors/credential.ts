@@ -25,7 +25,7 @@ export class NoCiphertextError extends ZamaError {
 }
 
 /**
- * Wrapping or unwrapping the transport private key with `derivationSecret` failed —
+ * Wrapping or unwrapping the transport private key with `transportKeyPairDerivationSecret` failed —
  * a scoped entry unwrapped under a mismatched secret (see the `scope` docs for
  * why that fails loudly instead of self-healing), or the underlying WebCrypto operation
  * itself failed (e.g. `crypto.subtle` unavailable in this environment).

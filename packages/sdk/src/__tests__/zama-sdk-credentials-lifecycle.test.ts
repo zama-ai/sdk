@@ -201,8 +201,8 @@ describe("ZamaSDK credentials lifecycle", () => {
     });
   });
 
-  describe("derivationSecret plumbing", () => {
-    test("a derivationSecret set on createConfig reaches the vault: the persisted key pair is wrapped", async ({
+  describe("transportKeyPairDerivationSecret plumbing", () => {
+    test("a transportKeyPairDerivationSecret set on createConfig reaches the vault: the persisted key pair is wrapped", async ({
       chain,
       relayer,
       provider,
@@ -219,7 +219,7 @@ describe("ZamaSDK credentials lifecycle", () => {
         provider,
         signer,
         storage,
-        derivationSecret: "correct-horse-battery-staple-and-then-some",
+        transportKeyPairDerivationSecret: "correct-horse-battery-staple-and-then-some",
       });
       const sdk = new ZamaSDK(config);
 

@@ -13,10 +13,10 @@ const permitTTLError = "permitTTL must be a positive integer number of days";
 const transportKeyPairScopeError = "transportKeyPairScope must be a non-empty string";
 /** 256 bits — matches the AES-256 wrapping key this secret feeds through HKDF, so the derived key
  * is never weaker than the cipher it protects. A length check can't verify actual entropy, so this
- * is a floor, not a guarantee: callers must still source derivationSecret from a CSPRNG or secrets
- * manager, never a human-memorable passphrase (HKDF does no key-stretching). */
+ * is a floor, not a guarantee: callers must still source transportKeyPairDerivationSecret from a
+ * CSPRNG or secrets manager, never a human-memorable passphrase (HKDF does no key-stretching). */
 export const MIN_DERIVATION_SECRET_LENGTH_BYTES = 32;
-const derivationSecretError = `derivationSecret must be a string or Uint8Array of at least ${MIN_DERIVATION_SECRET_LENGTH_BYTES} bytes (256 bits) of real entropy — source it from a CSPRNG or secrets manager, not a human-memorable passphrase`;
+const derivationSecretError = `transportKeyPairDerivationSecret must be a string or Uint8Array of at least ${MIN_DERIVATION_SECRET_LENGTH_BYTES} bytes (256 bits) of real entropy — source it from a CSPRNG or secrets manager, not a human-memorable passphrase`;
 
 /** AES-GCM nonce size this SDK always generates — see `keypair-wrapping.ts`. */
 const GCM_IV_LENGTH_BYTES = 12;
@@ -73,7 +73,7 @@ export const StoredTransportKeyPairSchema = z.object({
 });
 
 /**
- * On-disk shape when `derivationSecret` is configured — distinct from
+ * On-disk shape when `transportKeyPairDerivationSecret` is configured — distinct from
  * {@link StoredTransportKeyPairSchema}, which is the in-memory/plaintext shape every
  * caller outside {@link TransportKeyPairVault} still sees. `publicKey` is never
  * sensitive and stays unwrapped; only the private key half is encrypted.
@@ -82,9 +82,9 @@ export const WrappedPrivateKeyEntrySchema = z.object({
   publicKey: hex,
   // Length-checked, not just shape-checked: a truncated or bit-flipped ciphertext/IV
   // (e.g. from a buggy custom GenericStorage adapter) would otherwise reach
-  // crypto.subtle.decrypt and fail with the same generic OperationError a genuine
-  // wrong-derivationSecret case does — catching it here, pre-decrypt, avoids that
-  // ambiguity for the cases that structurally can't be a real ciphertext at all.
+  // crypto.subtle.decrypt and fail with the same generic OperationError a genuine wrong-secret
+  // case does — catching it here, pre-decrypt, avoids that ambiguity for the cases that
+  // structurally can't be a real ciphertext at all.
   // Even hex length checked first: an odd digit count is a fractional byte count that
   // would clear the minimum (33 digits reads as 16.5 bytes), and viem's toBytes then
   // left-pads it into a plausible-looking ciphertext that only fails at decrypt time.

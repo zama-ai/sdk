@@ -115,8 +115,8 @@ export class TransportKeyPairVault {
           // clobber a peer's valid, wrapped one and re-prompt the whole cohort.
           const message =
             `Transport key pair for scope "${this.#scope}" is wrapped, but this instance ` +
-            "has no derivationSecret configured. Every instance sharing this scope must use " +
-            "the same derivationSecret; once they do, call permits.revokeTransportKeyPair() " +
+            "has no transportKeyPairDerivationSecret configured. Every instance sharing this scope must use " +
+            "the same transportKeyPairDerivationSecret; once they do, call permits.revokeTransportKeyPair() " +
             "to rotate the entry.";
           this.#logger.error(message, { key });
           throw new KeyWrappingError(message, { cause: parsed.error });
@@ -138,8 +138,8 @@ export class TransportKeyPairVault {
         // clobber a peer's entry and re-prompt every signer in the cohort.
         const message = StoredTransportKeyPairSchema.safeParse(raw).success
           ? `Transport key pair for scope "${this.#scope}" is stored unwrapped, but this ` +
-            "instance is configured with a derivationSecret. A peer instance sharing this " +
-            "scope is running without the secret: configure the same derivationSecret " +
+            "instance is configured with a transportKeyPairDerivationSecret. A peer instance sharing this " +
+            "scope is running without the secret: configure the same transportKeyPairDerivationSecret " +
             "everywhere, then call permits.revokeTransportKeyPair() to migrate the scope " +
             "to a wrapped entry."
           : `Transport key pair for scope "${this.#scope}" is not a recognized wrapped or ` +
@@ -197,14 +197,16 @@ export class TransportKeyPairVault {
         // resource the whole cohort shares.
         const message =
           `Transport key pair for scope "${this.#scope}" failed to unwrap. ` +
-          "This usually means another instance created it with a different derivationSecret " +
+          "This usually means another instance created it with a different " +
+          "transportKeyPairDerivationSecret " +
           "— every instance sharing this scope must use the same secret. It can also mean " +
           "the stored entry is corrupted.";
         this.#logger.error(message, { key });
         throw new KeyWrappingError(message, { cause: error });
       }
       // Unscoped: only this signer is affected, so self-heal exactly like a malformed entry.
-      const reason = "transport key pair entry failed to unwrap (wrong derivationSecret?)";
+      const reason =
+        "transport key pair entry failed to unwrap (wrong transportKeyPairDerivationSecret?)";
       this.#logger.warn(reason, { key });
       await this.#discard(key, reason);
       return null;

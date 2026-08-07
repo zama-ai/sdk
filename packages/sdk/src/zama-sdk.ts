@@ -105,7 +105,7 @@ export class ZamaSDK {
       transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
       scope: config.transportKeyPairScope,
-      derivationSecret: config.derivationSecret,
+      derivationSecret: config.transportKeyPairDerivationSecret,
       storage: this.storage,
       permitStorage: config.permitStorage,
       logger: this.#logger,

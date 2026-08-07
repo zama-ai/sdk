@@ -65,10 +65,10 @@ export function buildZamaConfig(
       params.transportKeyPairScope === undefined
         ? undefined
         : parseSchema(TransportKeyPairScopeSchema, params.transportKeyPairScope),
-    derivationSecret:
-      params.derivationSecret === undefined
+    transportKeyPairDerivationSecret:
+      params.transportKeyPairDerivationSecret === undefined
         ? undefined
-        : parseSchema(DerivationSecretSchema, params.derivationSecret),
+        : parseSchema(DerivationSecretSchema, params.transportKeyPairDerivationSecret),
     registryTTL: parseSchema(RegistryTTLSchema, params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS),
     logger,
     onEvent: params.onEvent,

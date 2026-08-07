@@ -75,7 +75,7 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * this value is self-healing: the next
    * `grantPermit()` regenerates the per-signer key pair transparently, not a crash.
    */
-  derivationSecret?: string | Uint8Array;
+  transportKeyPairDerivationSecret?: string | Uint8Array;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -127,7 +127,7 @@ export type ZamaConfig = {
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
   readonly transportKeyPairScope: string | undefined;
-  readonly derivationSecret: string | Uint8Array | undefined;
+  readonly transportKeyPairDerivationSecret: string | Uint8Array | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
   /**

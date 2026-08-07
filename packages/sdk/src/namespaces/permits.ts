@@ -61,7 +61,7 @@ export class Permits {
    * next prompt).
    *
    * @param contracts - Contract addresses to authorize.
-   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
   async grantPermit(contracts: Address[]): Promise<void> {
@@ -79,7 +79,7 @@ export class Permits {
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to authorize.
-   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
   async grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void> {
@@ -94,7 +94,7 @@ export class Permits {
   /**
    * Pure store lookup: is there a permit covering `contracts`?
    * No wallet prompt, no transport key pair generation. Returns `false` when no signer
-   * is configured, or when `derivationSecret` is configured and the stored keypair
+   * is configured, or when `transportKeyPairDerivationSecret` is configured and the stored keypair
    * fails to unwrap — see {@link CredentialService.hasPermit}. Does not swallow other
    * errors (e.g. a failing storage backend), which propagate normally.
    */
@@ -138,7 +138,7 @@ export class Permits {
    * no-op precisely when an operator is most likely to be calling it (no end-user
    * connected yet). Use {@link warmTransportKeyPairScope} instead.
    *
-   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPair(): Promise<void> {
@@ -244,7 +244,7 @@ export class Permits {
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against warming the wrong scope by mistake.
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
-   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   * @throws if `transportKeyPairDerivationSecret` is configured and the keypair fails to wrap or
    *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {

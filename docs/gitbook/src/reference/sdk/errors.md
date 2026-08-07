@@ -88,7 +88,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
-| `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | `derivationSecret` wrapping/unwrapping of the transport private key failed                                                        |
+| `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | `transportKeyPairDerivationSecret` wrapping/unwrapping of the transport private key failed                                        |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -281,15 +281,16 @@ try {
 
 **Code:** `KEY_WRAPPING_FAILED`
 
-Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](../../concepts/permit-model.md)) when `derivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `derivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (e.g. `crypto.subtle` unavailable).
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](../../concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (e.g. `crypto.subtle` unavailable).
 
 ```ts
 matchZamaError(error, {
-  KEY_WRAPPING_FAILED: () => showError("Credential storage misconfigured — check derivationSecret"),
+  KEY_WRAPPING_FAILED: () =>
+    showError("Credential storage misconfigured — check transportKeyPairDerivationSecret"),
 });
 ```
 
-**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws, it's treated as a cache miss and regenerates silently, so a `KeyWrappingError` here means something else is wrong in the environment — check `crypto.subtle` availability. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `derivationSecret`, including that none is missing it.
+**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws, it's treated as a cache miss and regenerates silently, so a `KeyWrappingError` here means something else is wrong in the environment — check `crypto.subtle` availability. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, including that none is missing it.
 
 ### RelayerRequestFailedError
 

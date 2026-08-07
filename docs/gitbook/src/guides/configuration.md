@@ -395,18 +395,18 @@ Permits stay per-signer regardless of scope. See [Security Model](../concepts/se
 
 ### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
-By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `derivationSecret` from your own environment instead:
+By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `transportKeyPairDerivationSecret` from your own environment instead:
 
 ```ts
 const config = createConfig({
   chains: [sepolia],
   wagmiConfig,
   relayers: { [sepolia.id]: web() },
-  derivationSecret: process.env.ZAMA_DERIVATION_SECRET!, // string | Uint8Array
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET!, // string | Uint8Array
 });
 ```
 
-The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-derivationsecret) for the exact mechanism (HKDF-SHA256 → AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
+The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 → AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
 
 ## Shared relayer options
 
