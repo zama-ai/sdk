@@ -151,6 +151,31 @@ describe("createConfig validation", () => {
     );
   });
 
+  test("rejects a wrong-typed transportKeyPairDerivationSecret with the option-naming guidance, not a generic union error", ({
+    relayer,
+    provider,
+  }) => {
+    const rejected = [123, null, { secret: "a".repeat(32) }];
+
+    for (const value of rejected) {
+      const build = () =>
+        createConfig({
+          chains: [hardhat],
+          relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+          provider,
+          transportKeyPairDerivationSecret: value as unknown as string,
+        });
+
+      expect(build).toThrow(ConfigurationError);
+      // The union's own default message ("invalid input") names nothing actionable, so the
+      // crafted per-member error must survive to the top-level failure.
+      expect(build).toThrow(
+        /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+      );
+      expect(build).toThrow(/source it from a CSPRNG or secrets manager/);
+    }
+  });
+
   test("accepts a transportKeyPairDerivationSecret exactly at the 256-bit floor (32 bytes)", ({
     relayer,
     provider,

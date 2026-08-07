@@ -595,15 +595,80 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       logger: makeLogger(),
       derivationSecret: SECRET_A,
     });
+    const unwrappedLogger = makeLogger();
     const unwrapped = new TransportKeyPairVault({
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
-      logger: makeLogger(),
+      logger: unwrappedLogger,
     });
 
     await wrapped.getOrCreate(USER);
     expect(await unwrapped.readStored(USER)).toBeNull();
+    // Losing at-rest wrapping on the regenerated entry is a downgrade, so the discard
+    // is never silent even though it self-heals.
+    expect(unwrappedLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("no transportKeyPairDerivationSecret is configured"),
+      expect.objectContaining({ key: expect.any(String) }),
+    );
+  });
+
+  test("regenerates a wrapped entry after the TTL elapses", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const storage = new MemoryStorage();
+      const vault = new TransportKeyPairVault({
+        generator: makeGenerator(),
+        storage,
+        ttl: TTL_SECONDS,
+        logger: makeLogger(),
+        derivationSecret: SECRET_A,
+      });
+
+      const before = await vault.getOrCreate(USER);
+
+      vi.advanceTimersByTime((TTL_SECONDS + 1) * 1000);
+      // expiresAt is authenticated as AAD, so an expired wrapped entry still unwraps
+      // cleanly — only the TTL check keeps it from being served past its lifetime.
+      expect(await vault.readStored(USER)).toBeNull();
+      expect(await storage.get(transportKeyPairStorageKey(USER))).toBeNull();
+
+      const after = await vault.getOrCreate(USER);
+      expect(after.publicKey).not.toBe(before.publicKey);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a wrapped entry transplanted onto another signer's storage key cannot be unwrapped", async () => {
+    // The wrapping key is derived with the signer identity as HKDF salt, so lifting one
+    // signer's ciphertext into another's slot must not hand the second signer a working
+    // key pair — even though both entries are wrapped under the same secret.
+    const storage = new MemoryStorage();
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      derivationSecret: SECRET_A,
+    });
+
+    const forUser = await vault.getOrCreate(USER);
+    const rawForUser = await storage.get(transportKeyPairStorageKey(USER));
+    await storage.set(transportKeyPairStorageKey(OTHER), rawForUser);
+
+    expect(await vault.readStored(OTHER)).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("failed to unwrap"),
+      expect.objectContaining({ key: expect.any(String) }),
+    );
+
+    const forOther = await vault.getOrCreate(OTHER);
+    expect(forOther.publicKey).not.toBe(forUser.publicKey);
+    // USER's own entry is untouched by the transplant and still reads back.
+    expect(await vault.readStored(USER)).toEqual(forUser);
   });
 
   test("composes with scope: two different signers, same scope and secret, derive the same wrapping key", async () => {
@@ -908,8 +973,23 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       return { ...raw, iv: "0xaabb" }; // 2 bytes, not the required 12 — structurally invalid
     });
 
-    await expect(vault.readStored(USER)).rejects.toThrow(/scope "tenant-1"/);
-    expect(logger.error).toHaveBeenCalled();
+    // An entry matching neither shape gets the corruption/version-mismatch diagnostic, not
+    // the "a peer is running without the secret" one — the operator actions differ.
+    const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining("not a recognized wrapped or plaintext entry shape"),
+    });
+    expect(error).toMatchObject({
+      message: expect.stringContaining(
+        "corrupted, or instances sharing this scope are running mismatched wrapping-scheme versions",
+      ),
+    });
+    expect((error as Error).message).not.toContain("running without the secret");
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("not a recognized wrapped or plaintext entry shape"),
+      expect.objectContaining({ key: expect.any(String) }),
+    );
     // The corrupted entry must never be deleted — a failed read must not clobber it.
     expect(deleteSpy).not.toHaveBeenCalled();
 
@@ -946,7 +1026,19 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     const error: unknown = await wrapped.getOrCreate(OTHER).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(KeyWrappingError);
     expect(error).toMatchObject({ message: expect.stringContaining('scope "tenant-1"') });
-    expect(wrappedLogger.error).toHaveBeenCalled();
+    // A recognizably plaintext entry pins the diagnosis on a peer running without the
+    // secret, with the concrete fix — not the generic corruption/version-mismatch text.
+    expect(error).toMatchObject({
+      message: expect.stringContaining("A peer instance sharing this scope is running without"),
+    });
+    expect(error).toMatchObject({
+      message: expect.stringContaining("permits.revokeTransportKeyPair()"),
+    });
+    expect((error as Error).message).not.toContain("not a recognized");
+    expect(wrappedLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining("is stored unwrapped"),
+      expect.objectContaining({ key: expect.any(String) }),
+    );
     expect(generator).toHaveBeenCalledTimes(1);
     expect(await storage.get(transportKeyPairScopeStorageKey("tenant-1"))).toEqual(rawBefore);
     expect(await unwrapped.readStored(USER)).toEqual(plaintextEntry);
@@ -982,6 +1074,28 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(generator).toHaveBeenCalledTimes(1);
     expect(await storage.get(transportKeyPairScopeStorageKey("tenant-1"))).toEqual(rawBefore);
     expect(await wrapped.readStored(USER)).toEqual(created);
+  });
+
+  test("a scoped, genuinely malformed entry still self-heals when no derivationSecret is configured", async () => {
+    // The loud scoped failure is reserved for entries that are *recognizably wrapped* — an
+    // entry that is neither wrapped nor plaintext carries no peer's key pair to protect, so
+    // discarding it must stay the ordinary self-heal instead of wedging the whole scope.
+    const storage = new MemoryStorage();
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      scope: "tenant-1",
+    });
+    await storage.set(transportKeyPairScopeStorageKey("tenant-1"), { publicKey: PUBLIC_KEY });
+
+    await expect(vault.readStored(USER)).resolves.toBeNull();
+    expect(logger.error).not.toHaveBeenCalled();
+
+    const regenerated = await vault.getOrCreate(USER);
+    expect(await vault.readStored(USER)).toEqual(regenerated);
   });
 
   test("a scope named after a signer address derives a different wrapping key than that signer", async () => {
