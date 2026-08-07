@@ -14,6 +14,7 @@ import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
+import { setResolvedDerivationSecret } from "./private-state";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
@@ -63,7 +64,9 @@ export function buildZamaConfig(
 
   const router = new ChainRouter(params.chains, params.relayers);
 
-  return {
+  const derivationSecret = normalizeDerivationSecret(params.transportKeyPairDerivationSecret);
+
+  const config = {
     chains: params.chains,
     router,
     provider,
@@ -79,11 +82,14 @@ export function buildZamaConfig(
       params.transportKeyPairScope === undefined
         ? undefined
         : parseSchema(TransportKeyPairScopeSchema, params.transportKeyPairScope),
-    transportKeyPairDerivationSecret: normalizeDerivationSecret(
-      params.transportKeyPairDerivationSecret,
-    ),
     registryTTL: parseSchema(RegistryTTLSchema, params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS),
     logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
+
+  if (derivationSecret !== undefined) {
+    setResolvedDerivationSecret(config, derivationSecret);
+  }
+
+  return config;
 }

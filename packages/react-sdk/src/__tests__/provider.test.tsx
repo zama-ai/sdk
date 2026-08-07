@@ -166,9 +166,8 @@ describe("ZamaProvider & useZamaSDK", () => {
       expect.objectContaining({ transportKeyPairTTL: 604800 }),
     );
 
-    // onEvent is stabilized via ref — verify it delegates correctly
-    const wrappedOnEvent = tokenSDKConstructorArgs[0]!.onEvent!;
-    wrappedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
+    const forwardedOnEvent = tokenSDKConstructorArgs[0]!.onEvent!;
+    forwardedOnEvent({ type: "credentials:loading", timestamp: 1, contractAddresses: [] } as never);
     expect(onEvent).toHaveBeenCalledTimes(1);
   });
 });

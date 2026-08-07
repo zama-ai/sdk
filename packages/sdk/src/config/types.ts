@@ -62,8 +62,9 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * contexts only (CLI tools, bare-metal agents, local dev), never a browser bundle,
    * and requires a secure context for WebCrypto. Must be at least 32 bytes of real
    * entropy from a CSPRNG or secrets manager, not a passphrase. Omit for the default:
-   * plaintext, security delegated to the storage backend. See the Security Model docs
-   * for the mechanism, scoping, and migration.
+   * plaintext, security delegated to the storage backend. Held internally by the SDK and
+   * never readable back off the resolved config. See the Security Model docs for the
+   * mechanism, scoping, and migration.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
@@ -117,7 +118,6 @@ export type ZamaConfig = {
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
   readonly transportKeyPairScope: string | undefined;
-  readonly transportKeyPairDerivationSecret: string | Uint8Array | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
   /**

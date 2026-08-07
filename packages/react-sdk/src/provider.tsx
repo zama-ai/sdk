@@ -3,14 +3,7 @@
 import { ZamaSDK, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
 import { invalidateWalletLifecycleQueries } from "@zama-fhe/sdk/query";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  createContext,
-  type PropsWithChildren,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { createContext, type PropsWithChildren, useContext, useEffect, useMemo } from "react";
 
 /** Props for {@link ZamaProvider}. */
 export interface ZamaProviderProps extends PropsWithChildren {
@@ -33,14 +26,9 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
-  // Stabilize onEvent so an inline arrow doesn't recreate the SDK every render.
-  const onEventRef = useRef(config.onEvent);
-
-  useEffect(() => {
-    onEventRef.current = config.onEvent;
-  });
-
-  const sdk = useMemo(() => new ZamaSDK({ ...config, onEvent: onEventRef.current }), [config]);
+  // Passed by identity, never spread into a copy: parts of a resolved config are held off
+  // the object itself (the at-rest wrapping secret), and a copy silently loses them.
+  const sdk = useMemo(() => new ZamaSDK(config), [config]);
 
   // Transport-key-pair warming touches @fhevm/sdk's browser-only runtime (WASM,
   // and worker threads it may spawn internally), which is undefined during SSR.

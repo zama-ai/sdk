@@ -1253,7 +1253,6 @@ export type ZamaConfig = {
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly transportKeyPairScope: string | undefined;
-    readonly transportKeyPairDerivationSecret: string | Uint8Array | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;

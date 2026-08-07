@@ -180,14 +180,39 @@ describe("createConfig validation", () => {
     relayer,
     provider,
   }) => {
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairDerivationSecret: new Uint8Array(32),
+      }),
+    ).not.toThrow();
+  });
+
+  test("never exposes the transportKeyPairDerivationSecret on the resolved config", ({
+    relayer,
+    provider,
+  }) => {
+    const secret = new Uint8Array(32).fill(7);
     const config = createConfig({
       chains: [hardhat],
       relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
       provider,
-      transportKeyPairDerivationSecret: new Uint8Array(32),
+      transportKeyPairDerivationSecret: secret,
     });
 
-    expect(config.transportKeyPairDerivationSecret).toEqual(new Uint8Array(32));
+    // No property at all: not enumerable, not hidden behind a non-enumerable descriptor, not
+    // a redacted placeholder. Anything else would travel into provider props and devtools.
+    expect(Object.keys(config)).not.toContain("transportKeyPairDerivationSecret");
+    expect(Object.getOwnPropertyNames(config)).not.toContain("transportKeyPairDerivationSecret");
+    expect("transportKeyPairDerivationSecret" in config).toBe(false);
+    expect(Object.values(config)).not.toContain(secret);
+    expect(
+      JSON.stringify(config, (_key, value: unknown) =>
+        value instanceof Uint8Array ? Array.from(value) : value,
+      ),
+    ).not.toContain("transportKeyPairDerivationSecret");
   });
 
   test("wraps a supplied logger into a LoggerService on the resolved config", ({
