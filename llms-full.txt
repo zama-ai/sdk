@@ -2304,9 +2304,34 @@ const { txHash } = await wrappedToken.wrap(1000n);
 > **`wrap()` is an escape hatch, not a replacement for `shield()`.** It only ever sends the wrapper's `wrap` call — never `transferAndCall` — so recreating `shield()` from `approveUnderlying()` + `wrap()` by hand gives up automatic [ERC-1363 routing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#shielding-paths) and `approvalStrategy` handling, and costs an extra transaction on underlyings that do support ERC-1363. Reach for it only when you genuinely need the two signatures as independently-triggered steps. See [Manual approve + wrap](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md#manual-approve-wrap-escape-hatch) for the full flow.
 
 
+### Uniform retryability signal across error causes
+
+**Every retryable `ZamaError` now exposes that fact the same way**, so you don't have to hardcode which error codes are worth retrying. `3.3.0` introduced [typed decryption error causes](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-3.md#typed-decryption-error-causes) with a per-error "Retry?" note in the docs; that note is now a real, compiler-checked field. `ZamaError` carries a `readonly retryable: boolean`, defaulted per `ZamaErrorCode` from an exhaustiveness-checked map — a new transient cause can't be added without declaring its retryability, so it can't silently default to the wrong signal.
+
+Two functions read that signal instead of `instanceof`-checking each subclass yourself:
+
+```ts
+import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
+
+try {
+  await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
+} catch (error) {
+  if (isRetryable(error)) {
+    const delaySeconds = retryAfterSeconds(error) ?? 2; // backoff when the server gives no hint
+    // schedule a retry after delaySeconds
+  } else {
+    throw error; // terminal — surface it
+  }
+}
+```
+
+Five causes are transient today — `RpcRateLimitError`, `RelayerRequestFailedError` (only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, and `WalletAccountNotReadyError` — but the point of `isRetryable()` is that you never need to enumerate them yourself. `retryAfterSeconds()` unifies the `retryAfter` field that previously lived only on `RelayerRequestFailedError` and `RpcRateLimitError`; it's `undefined` when the error isn't retryable, or is retryable but carries no server-suggested delay. This is additive — `matchZamaError` and the error hierarchy from `3.3.0` are unchanged. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide.
+
 ### Bug fixes
 
 - **Correct Hoodi `KMSVerifier` preset address.** The [Hoodi testnet](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#1-pick-your-chains) preset shipped a stale `KMSVerifier` address; it now points at the deployed contract, so decryption on Hoodi works with the built-in preset.
+- **Correct `ethers`-backed integer types to match `viem`.** `EthersProvider.readContract` now narrows small Solidity integers the same way `ViemProvider` already did, so reads like `Token.decimals()` — typed `Promise<number>` — return a real `number` under `ethers` instead of a `bigint` slipping through.
+- **`WrappedToken.unwrap()` / `unwrapAll()` now return `UnwrapResult`.** The escape-hatch unshield methods (and `useUnwrap` / `useUnwrapAll`) return the decoded `unwrapRequestId` alongside the transaction result, so you can pass it straight to `finalizeUnwrap()` without re-decoding the `UnwrapRequested` event yourself. `WrappedToken.unshield` / `useUnshield` already handled this internally and are unaffected.
 
 
 > [!INFO]
