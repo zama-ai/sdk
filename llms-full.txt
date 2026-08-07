@@ -2259,7 +2259,12 @@ const sdk = new ZamaSDK(config);
 await sdk.permits.warmTransportKeyPairScope("tenant-123");
 ```
 
-Sharing only works if every signer in the scope reads and writes the **same** storage instance — the Node `asyncLocalStorage` default isolates a fresh store per request, which would silently regenerate and discard the "shared" key pair on every request. Two operator-level calls manage the scope's lifecycle, and neither needs a connected wallet: `sdk.permits.warmTransportKeyPairScope(scopeId)` creates the key pair up front so a first wave of end-users doesn't race each other to create it (prefer it over `warmTransportKeyPair()`, which is gated on a connected wallet account and silently no-ops without one), and `sdk.permits.revokeTransportKeyPair(scopeId)` deletes it for operator-level rotation. Both require `scopeId` to match the configured scope and throw `ConfigurationError` otherwise. Permits stay per-signer whatever the scope, and the signer-level `sdk.permits.clear()` / `revokePermits()` never touch the shared key pair — one end-user disconnecting must never invalidate the whole cohort.
+
+> [!WARNING]
+> **Sharing only works if every signer in the scope reads and writes the same storage instance.** The Node `asyncLocalStorage` default isolates a fresh store per request, which would silently regenerate and discard the "shared" key pair on every request.
+
+
+Two operator-level calls manage the scope's lifecycle, and neither needs a connected wallet: `sdk.permits.warmTransportKeyPairScope(scopeId)` creates the key pair up front so a first wave of end-users doesn't race each other to create it (prefer it over `warmTransportKeyPair()`, which is gated on a connected wallet account and silently no-ops without one), and `sdk.permits.revokeTransportKeyPair(scopeId)` deletes it for operator-level rotation. Both require `scopeId` to match the configured scope and throw `ConfigurationError` otherwise. Permits stay per-signer whatever the scope, and the signer-level `sdk.permits.clear()` / `revokePermits()` never touch the shared key pair — one end-user disconnecting must never invalidate the whole cohort.
 
 **There is no breaking change** — the scope is opt-in and purely additive. Omitting `transportKeyPairScope` resolves it to `undefined` and preserves the existing one-key-pair-per-signer behavior exactly. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the setup, [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for when the tradeoff is the right one, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into signer-level and operator-level tiers.
 
@@ -2277,7 +2282,14 @@ const { isActive, expiryTimestamp } = await sdk.delegations.getStatus({
 
 `expiryTimestamp` is the raw ACL value and has three states: `0n` means no delegation exists, `2n ** 64n - 1n` (`uint64` max) means the delegation is permanent, and any other value is a UTC Unix timestamp in seconds. `getStatus()` folds those cases into `isActive` for you, and only reads the chain's block timestamp to compare when the expiry is a real date.
 
-The result shape is exported as the `DelegationStatus` type from `@zama-fhe/sdk`. In React, the existing [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegationStatus.md) hook already returns this data and needs no changes — it is now typed with `DelegationStatus`, which replaces the previous `DelegationStatusData` name on the `@zama-fhe/sdk/query` subpath. That rename is type-only, so update the import if you referenced it directly. See [Check delegation status](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md#4-check-delegation-status-optional) for the full flow.
+The result shape is exported as the `DelegationStatus` type from `@zama-fhe/sdk`. In React, the existing [`useDelegationStatus`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useDelegationStatus.md) hook already returns this data and needs no changes.
+
+
+> [!WARNING]
+> **`DelegationStatusData` was renamed to `DelegationStatus`** on the `@zama-fhe/sdk/query` subpath, with no compatibility alias kept. The rename is type-only — update the import if you referenced the old name directly.
+
+
+See [Check delegation status](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/delegated-decryption.md#4-check-delegation-status-optional) for the full flow.
 
 ### Automatic chunking for large decrypt batches
 
