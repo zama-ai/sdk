@@ -52,16 +52,21 @@ export const TransportKeyPairScopeSchema = z
   .string({ error: transportKeyPairScopeError })
   .check(z.minLength(1, transportKeyPairScopeError));
 
-export const DerivationSecretSchema = z.union([
-  z.string().check(z.minLength(MIN_DERIVATION_SECRET_LENGTH_BYTES, derivationSecretError)),
-  z
-    .instanceof(Uint8Array)
-    .check(
-      z.refine((v) => v.byteLength >= MIN_DERIVATION_SECRET_LENGTH_BYTES, {
-        error: derivationSecretError,
-      }),
-    ),
-]);
+export const DerivationSecretSchema = z.union(
+  [
+    z
+      .string({ error: derivationSecretError })
+      .check(z.minLength(MIN_DERIVATION_SECRET_LENGTH_BYTES, derivationSecretError)),
+    z
+      .instanceof(Uint8Array, { error: derivationSecretError })
+      .check(
+        z.refine((v) => v.byteLength >= MIN_DERIVATION_SECRET_LENGTH_BYTES, {
+          error: derivationSecretError,
+        }),
+      ),
+  ],
+  { error: derivationSecretError },
+);
 
 /** @internal */
 export const StoredTransportKeyPairSchema = z.object({

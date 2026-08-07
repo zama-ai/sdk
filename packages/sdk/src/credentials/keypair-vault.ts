@@ -110,16 +110,27 @@ export class TransportKeyPairVault {
     if (this.#derivationSecret === undefined) {
       const parsed = StoredTransportKeyPairSchema.safeParse(raw);
       if (!parsed.success) {
-        if (this.#scope !== undefined && WrappedPrivateKeyEntrySchema.safeParse(raw).success) {
-          // Discarding a scope's shared entry because this instance can't read it would
-          // clobber a peer's valid, wrapped one and re-prompt the whole cohort.
-          const message =
-            `Transport key pair for scope "${this.#scope}" is wrapped, but this instance ` +
-            "has no transportKeyPairDerivationSecret configured. Every instance sharing this scope must use " +
-            "the same transportKeyPairDerivationSecret; once they do, call permits.revokeTransportKeyPair() " +
-            "to rotate the entry.";
-          this.#logger.error(message, { key });
-          throw new KeyWrappingError(message, { cause: parsed.error });
+        if (WrappedPrivateKeyEntrySchema.safeParse(raw).success) {
+          if (this.#scope !== undefined) {
+            // Discarding a scope's shared entry because this instance can't read it would
+            // clobber a peer's valid, wrapped one and re-prompt the whole cohort.
+            const message =
+              `Transport key pair for scope "${this.#scope}" is wrapped, but this instance ` +
+              "has no transportKeyPairDerivationSecret configured. Every instance sharing this scope must use " +
+              "the same transportKeyPairDerivationSecret; once they do, call permits.revokeTransportKeyPair() " +
+              "to rotate the entry.";
+            this.#logger.error(message, { key });
+            throw new KeyWrappingError(message, { cause: parsed.error });
+          }
+          // Unscoped: only this signer is affected, so self-heal like any other unreadable
+          // entry. Warned unconditionally because the regenerated entry is plaintext, which
+          // silently drops the at-rest protection the discarded one had.
+          const reason =
+            "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
+            "configured; discarding the entry, at-rest wrapping is no longer active";
+          this.#logger.warn(reason, { key });
+          await this.#discard(key, reason);
+          return null;
         }
         await this.#discard(key, "malformed transport key pair entry");
         return null;
@@ -214,7 +225,8 @@ export class TransportKeyPairVault {
   }
 
   async #discard(key: string, reason: string): Promise<void> {
-    await swallow(reason, () => this.#storage.delete(key), this.#logger);
+    this.#logger.debug("discarding transport key pair entry", { key, reason });
+    await swallow("delete transport key pair entry", () => this.#storage.delete(key), this.#logger);
   }
 
   /**

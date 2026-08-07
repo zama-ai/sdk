@@ -18,6 +18,20 @@ import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
 /**
+ * Copies a `Uint8Array` secret so a caller zeroizing its buffer after `createConfig`
+ * cannot corrupt later wraps. Strings are immutable and need no copy.
+ */
+function normalizeDerivationSecret(
+  secret: string | Uint8Array | undefined,
+): string | Uint8Array | undefined {
+  if (secret === undefined) {
+    return undefined;
+  }
+  const parsed = parseSchema(DerivationSecretSchema, secret);
+  return typeof parsed === "string" ? parsed : new Uint8Array(parsed);
+}
+
+/**
  * @internal Shared config builder — not part of the public API.
  *
  * Applies defaults, validates TTLs, and resolves storage so the
@@ -65,10 +79,9 @@ export function buildZamaConfig(
       params.transportKeyPairScope === undefined
         ? undefined
         : parseSchema(TransportKeyPairScopeSchema, params.transportKeyPairScope),
-    transportKeyPairDerivationSecret:
-      params.transportKeyPairDerivationSecret === undefined
-        ? undefined
-        : parseSchema(DerivationSecretSchema, params.transportKeyPairDerivationSecret),
+    transportKeyPairDerivationSecret: normalizeDerivationSecret(
+      params.transportKeyPairDerivationSecret,
+    ),
     registryTTL: parseSchema(RegistryTTLSchema, params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS),
     logger,
     onEvent: params.onEvent,
