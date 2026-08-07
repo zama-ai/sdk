@@ -3,6 +3,7 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { KeyWrappingError } from "../../errors/credential";
+import { WRAPPING_VERSION } from "../keypair-wrapping";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "../storage-keys";
 import { checksum } from "../utils";
 
@@ -530,6 +531,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(persisted.wrappedPrivateKey).toBeDefined();
     expect(persisted.wrappedPrivateKey).not.toBe(PRIVATE_KEY);
     expect(persisted.iv).toBeDefined();
+    expect(persisted.wrappingVersion).toBe(WRAPPING_VERSION);
   });
 
   test("wrong secret is treated as a cache miss and regenerates — not a crash", async () => {
@@ -996,6 +998,58 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     // A second read hits the same corrupted entry again — proving it survived, not that
     // it was silently discarded-and-regenerated behind the scenes.
     await expect(vault.readStored(USER)).rejects.toThrow(/scope "tenant-1"/);
+  });
+
+  test("an entry written under an unrecognized wrappingVersion is a cache miss and regenerates", async () => {
+    const storage = new MemoryStorage();
+    const generator = makeGenerator();
+    const vault = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: SECRET_A,
+    });
+
+    const created = await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementationOnce(async (key: string) => {
+      const raw = (await realGet(key)) as Record<string, unknown>;
+      return { ...raw, wrappingVersion: WRAPPING_VERSION + 1 };
+    });
+
+    const regenerated = await vault.getOrCreate(USER);
+    expect(regenerated).not.toEqual(created);
+    expect(generator).toHaveBeenCalledTimes(2);
+  });
+
+  test("a scoped entry with a missing wrappingVersion gets the corruption/version-mismatch diagnostic, not a clobbering regeneration", async () => {
+    const storage = new MemoryStorage();
+    const deleteSpy = vi.spyOn(storage, "delete");
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      scope: "tenant-1",
+      derivationSecret: SECRET_A,
+    });
+    await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
+      const { wrappingVersion: _dropped, ...raw } = (await realGet(key)) as Record<string, unknown>;
+      return raw;
+    });
+
+    const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining(
+        "corrupted, or instances sharing this scope are running mismatched wrapping-scheme versions",
+      ),
+    });
+    expect(deleteSpy).not.toHaveBeenCalled();
   });
 
   test("a scoped plaintext entry read by a secret-configured instance fails loudly instead of self-healing", async () => {

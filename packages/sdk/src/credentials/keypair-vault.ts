@@ -4,7 +4,12 @@ import { KeyWrappingError } from "../errors/credential";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
-import { isUnwrapAuthFailure, unwrapPrivateKey, wrapPrivateKey } from "./keypair-wrapping";
+import {
+  isUnwrapAuthFailure,
+  unwrapPrivateKey,
+  wrapPrivateKey,
+  WRAPPING_VERSION,
+} from "./keypair-wrapping";
 import {
   StoredTransportKeyPairSchema,
   WrappedPrivateKeyEntrySchema,
@@ -312,6 +317,7 @@ export class TransportKeyPairVault {
           throw new KeyWrappingError(message, { cause: error });
         }
         const wrapped: WrappedPrivateKeyEntry = {
+          wrappingVersion: WRAPPING_VERSION,
           publicKey: fresh.publicKey,
           wrappedPrivateKey,
           iv,

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "../../test-fixtures";
+import { WRAPPING_VERSION } from "../keypair-wrapping";
 import { WrappedPrivateKeyEntrySchema } from "../schemas";
 
 const entry = (wrappedPrivateKey: string) => ({
+  wrappingVersion: WRAPPING_VERSION,
   publicKey: `0x${"aa".repeat(32)}`,
   wrappedPrivateKey,
   iv: `0x${"bb".repeat(12)}`,
@@ -29,5 +31,22 @@ describe("WrappedPrivateKeyEntrySchema", () => {
     expect(WrappedPrivateKeyEntrySchema.safeParse(entry(`0x${"cc".repeat(16)}d`)).success).toBe(
       false,
     );
+  });
+
+  test("rejects an entry with a missing or unknown wrappingVersion", () => {
+    const valid = entry(`0x${"cc".repeat(16)}`);
+    const { wrappingVersion: _dropped, ...versionless } = valid;
+
+    expect(WrappedPrivateKeyEntrySchema.safeParse(versionless).success).toBe(false);
+    expect(
+      WrappedPrivateKeyEntrySchema.safeParse({ ...valid, wrappingVersion: WRAPPING_VERSION + 1 })
+        .success,
+    ).toBe(false);
+    expect(
+      WrappedPrivateKeyEntrySchema.safeParse({
+        ...valid,
+        wrappingVersion: String(WRAPPING_VERSION),
+      }).success,
+    ).toBe(false);
   });
 });

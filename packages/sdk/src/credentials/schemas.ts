@@ -6,6 +6,7 @@ import {
   positiveSeconds,
   unixSeconds,
 } from "../schemas/primitives";
+import { WRAPPING_VERSION } from "./keypair-wrapping";
 import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
 const transportKeyPairTTLError = "transportKeyPairTTL must be a positive integer number of seconds";
@@ -17,6 +18,8 @@ const transportKeyPairScopeError = "transportKeyPairScope must be a non-empty st
  * CSPRNG or secrets manager, never a human-memorable passphrase (HKDF does no key-stretching). */
 export const MIN_DERIVATION_SECRET_LENGTH_BYTES = 32;
 const derivationSecretError = `transportKeyPairDerivationSecret must be a string or Uint8Array of at least ${MIN_DERIVATION_SECRET_LENGTH_BYTES} bytes (256 bits) of real entropy — source it from a CSPRNG or secrets manager, not a human-memorable passphrase`;
+
+const wrappingVersionError = `wrappingVersion must be ${WRAPPING_VERSION}, the only wrapping scheme this SDK can read`;
 
 /** AES-GCM nonce size this SDK always generates — see `keypair-wrapping.ts`. */
 const GCM_IV_LENGTH_BYTES = 12;
@@ -84,6 +87,10 @@ export const StoredTransportKeyPairSchema = z.object({
  * sensitive and stays unwrapped; only the private key half is encrypted.
  */
 export const WrappedPrivateKeyEntrySchema = z.object({
+  // An entry from an unknown (or version-less) scheme fails here rather than reaching
+  // crypto.subtle.decrypt, so it takes the unrecognized-entry path instead of surfacing as
+  // an authentication failure indistinguishable from corruption.
+  wrappingVersion: z.literal(WRAPPING_VERSION, { error: wrappingVersionError }),
   publicKey: hex,
   // Length-checked, not just shape-checked: a truncated or bit-flipped ciphertext/IV
   // (e.g. from a buggy custom GenericStorage adapter) would otherwise reach

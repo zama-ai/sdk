@@ -1,11 +1,18 @@
 import { toBytes, toHex, type Hex } from "viem";
 
 /**
+ * Wrapping-scheme version, persisted with every wrapped entry so a future scheme is
+ * detectable on disk instead of reading as corruption. Shared with the HKDF `info` tag
+ * below so the stored number and the derived key can never disagree on the version.
+ */
+export const WRAPPING_VERSION = 1;
+
+/**
  * Domain-separation tag for the HKDF `info` parameter. Versioned so a future
  * change to the wrapping scheme can run alongside this one without silently
  * reusing (and confusing) derived keys from an earlier version.
  */
-const WRAPPING_INFO = "zama-sdk-keypair-wrapping-v1";
+const WRAPPING_INFO = `zama-sdk-keypair-wrapping-v${WRAPPING_VERSION}`;
 const AES_KEY_LENGTH_BITS = 256;
 /** AES-GCM recommended nonce size. Generated fresh per wrap — never reused. */
 const GCM_IV_LENGTH_BYTES = 12;
