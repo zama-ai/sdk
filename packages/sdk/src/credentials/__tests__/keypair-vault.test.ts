@@ -3,6 +3,7 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { KeyWrappingError } from "../../errors/credential";
+import { transportKeyPairScopeStorageKey } from "../storage-keys";
 import { checksum } from "../utils";
 
 const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
@@ -835,11 +836,9 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     await expect(vault.readStored(USER)).rejects.toThrow(/scope "tenant-1"/);
   });
 
-  test("a scoped vault still self-heals on a genuine plaintext-mode-transition entry, distinct from the corrupted case above", async () => {
-    // Turning on derivationSecret for a scope that was previously running unwrapped
-    // leaves a legitimate StoredTransportKeyPairSchema-shaped (plaintext) entry behind.
-    // That must still be treated as a routine cache miss and regenerated wrapped — only
-    // an entry matching *neither* known shape (the corrupted case above) should fail loudly.
+  test("a scoped plaintext entry read by a secret-configured instance fails loudly instead of self-healing", async () => {
+    // A plaintext entry on a scope that this instance wraps means a peer is running
+    // without the secret — regenerating wrapped would clobber the peer's entry.
     const storage = new MemoryStorage();
     const generator = makeGenerator();
     const unwrapped = new TransportKeyPairVault({
@@ -849,6 +848,31 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       logger: makeLogger(),
       scope: "tenant-1",
     });
+    const wrappedLogger = makeLogger();
+    const wrapped = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: wrappedLogger,
+      scope: "tenant-1",
+      derivationSecret: SECRET_A,
+    });
+
+    const plaintextEntry = await unwrapped.getOrCreate(USER);
+    const rawBefore = await storage.get(transportKeyPairScopeStorageKey("tenant-1"));
+
+    const error: unknown = await wrapped.getOrCreate(OTHER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({ message: expect.stringContaining('scope "tenant-1"') });
+    expect(wrappedLogger.error).toHaveBeenCalled();
+    expect(generator).toHaveBeenCalledTimes(1);
+    expect(await storage.get(transportKeyPairScopeStorageKey("tenant-1"))).toEqual(rawBefore);
+    expect(await unwrapped.readStored(USER)).toEqual(plaintextEntry);
+  });
+
+  test("a scoped wrapped entry read by an instance with no derivationSecret fails loudly instead of self-healing", async () => {
+    const storage = new MemoryStorage();
+    const generator = makeGenerator();
     const wrapped = new TransportKeyPairVault({
       generator,
       storage,
@@ -857,12 +881,25 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       scope: "tenant-1",
       derivationSecret: SECRET_A,
     });
+    const unwrappedLogger = makeLogger();
+    const unwrapped = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: unwrappedLogger,
+      scope: "tenant-1",
+    });
 
-    const plaintextEntry = await unwrapped.getOrCreate(USER);
-    const regenerated = await wrapped.getOrCreate(USER);
+    const created = await wrapped.getOrCreate(USER);
+    const rawBefore = await storage.get(transportKeyPairScopeStorageKey("tenant-1"));
 
-    expect(regenerated).not.toEqual(plaintextEntry);
-    expect(generator).toHaveBeenCalledTimes(2);
+    const error: unknown = await unwrapped.getOrCreate(OTHER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({ message: expect.stringContaining('scope "tenant-1"') });
+    expect(unwrappedLogger.error).toHaveBeenCalled();
+    expect(generator).toHaveBeenCalledTimes(1);
+    expect(await storage.get(transportKeyPairScopeStorageKey("tenant-1"))).toEqual(rawBefore);
+    expect(await wrapped.readStored(USER)).toEqual(created);
   });
 
   test("never leaks the derivationSecret value into any log line, on any path (leak regression)", async () => {

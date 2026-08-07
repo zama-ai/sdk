@@ -108,6 +108,17 @@ export class TransportKeyPairVault {
     if (this.#derivationSecret === undefined) {
       const parsed = StoredTransportKeyPairSchema.safeParse(raw);
       if (!parsed.success) {
+        if (this.#scope !== undefined && WrappedPrivateKeyEntrySchema.safeParse(raw).success) {
+          // Discarding a scope's shared entry because this instance can't read it would
+          // clobber a peer's valid, wrapped one and re-prompt the whole cohort.
+          const message =
+            `Transport key pair for scope "${this.#scope}" is wrapped, but this instance ` +
+            "has no derivationSecret configured. Every instance sharing this scope must use " +
+            "the same derivationSecret; once they do, call permits.revokeTransportKeyPair() " +
+            "to rotate the entry.";
+          this.#logger.error(message, { key });
+          throw new KeyWrappingError(message, { cause: parsed.error });
+        }
         await this.#discard(key, "malformed transport key pair entry");
         return null;
       }
@@ -120,23 +131,23 @@ export class TransportKeyPairVault {
 
     const parsed = WrappedPrivateKeyEntrySchema.safeParse(raw);
     if (!parsed.success) {
-      if (this.#scope !== undefined && !StoredTransportKeyPairSchema.safeParse(raw).success) {
-        // Matches neither the wrapped shape nor the legitimate plaintext-mode-transition
-        // shape (the case handled below) — most likely a truncated/bit-flipped entry, or
-        // a future wrapping-scheme version mismatch across the scope's instances, not a
-        // routine transition. Discarding and regenerating here would silently clobber the
-        // scope's shared entry via a different path than the OperationError branch below,
-        // which this exists to be equally strict about — fail loudly instead.
-        const message =
-          `Transport key pair for scope "${this.#scope}" is not a recognized wrapped or ` +
-          "plaintext entry shape. This usually means the stored entry is corrupted, or " +
-          "instances sharing this scope are running mismatched wrapping-scheme versions.";
+      if (this.#scope !== undefined) {
+        // A scope's shared entry is never discarded to self-heal: regenerating would
+        // clobber a peer's entry and re-prompt every signer in the cohort.
+        const message = StoredTransportKeyPairSchema.safeParse(raw).success
+          ? `Transport key pair for scope "${this.#scope}" is stored unwrapped, but this ` +
+            "instance is configured with a derivationSecret. A peer instance sharing this " +
+            "scope is running without the secret: configure the same derivationSecret " +
+            "everywhere, then call permits.revokeTransportKeyPair() to migrate the scope " +
+            "to a wrapped entry."
+          : `Transport key pair for scope "${this.#scope}" is not a recognized wrapped or ` +
+            "plaintext entry shape. This usually means the stored entry is corrupted, or " +
+            "instances sharing this scope are running mismatched wrapping-scheme versions.";
         this.#logger.error(message, { key, error: parsed.error });
         throw new KeyWrappingError(message, { cause: parsed.error });
       }
-      // Also catches the legitimate case of a plaintext entry left over from before
-      // derivationSecret was configured — the shapes don't match, so it's discarded
-      // and regenerated wrapped, same as any other cache miss.
+      // Unscoped: also covers a plaintext entry left over from before derivationSecret
+      // was configured, regenerated wrapped like any other cache miss.
       const reason = "malformed or unwrapped transport key pair entry";
       this.#logger.warn(reason, { key });
       await this.#discard(key, reason);
@@ -268,26 +279,8 @@ export class TransportKeyPairVault {
         stored.tkmsVersion = fresh.tkmsVersion;
       }
 
-      // If a rotation bumped this key's epoch while `#generator()` (and, when
-      // derivationSecret is configured, the wrap below) were in flight, this
-      // generation started before the rotation and must not persist — doing so would
-      // silently resurrect the key the rotation just deleted (see `clearScope`). The
-      // freshly generated key pair is still returned to whichever caller triggered this
-      // round trip so their in-flight request succeeds; the next access regenerates and
-      // persists properly against the new epoch.
-      if (this.#derivationSecret === undefined) {
-        if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
-          if (options?.strict) {
-            await this.#storage.set(key, stored);
-          } else {
-            await swallow(
-              "persist transport key pair",
-              () => this.#storage.set(key, stored),
-              this.#logger,
-            );
-          }
-        }
-      } else {
+      let entry: StoredTransportKeyPair | WrappedPrivateKeyEntry = stored;
+      if (this.#derivationSecret !== undefined) {
         let wrappedPrivateKey: Hex;
         let iv: Hex;
         try {
@@ -302,26 +295,35 @@ export class TransportKeyPairVault {
           this.#logger.error(message, { key, error });
           throw new KeyWrappingError(message, { cause: error });
         }
-        if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
-          const wrapped: WrappedPrivateKeyEntry = {
-            publicKey: fresh.publicKey,
-            wrappedPrivateKey,
-            iv,
-            createdAt,
-            expiresAt,
-          };
-          if (stored.tkmsVersion) {
-            wrapped.tkmsVersion = stored.tkmsVersion;
-          }
-          if (options?.strict) {
-            await this.#storage.set(key, wrapped);
-          } else {
-            await swallow(
-              "persist transport key pair",
-              () => this.#storage.set(key, wrapped),
-              this.#logger,
-            );
-          }
+        const wrapped: WrappedPrivateKeyEntry = {
+          publicKey: fresh.publicKey,
+          wrappedPrivateKey,
+          iv,
+          createdAt,
+          expiresAt,
+        };
+        if (stored.tkmsVersion) {
+          wrapped.tkmsVersion = stored.tkmsVersion;
+        }
+        entry = wrapped;
+      }
+
+      // If a rotation bumped this key's epoch while `#generator()` (and, when
+      // derivationSecret is configured, the wrap above) were in flight, this
+      // generation started before the rotation and must not persist — doing so would
+      // silently resurrect the key the rotation just deleted (see `clearScope`). The
+      // freshly generated key pair is still returned to whichever caller triggered this
+      // round trip so their in-flight request succeeds; the next access regenerates and
+      // persists properly against the new epoch.
+      if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
+        if (strict) {
+          await this.#storage.set(key, entry);
+        } else {
+          await swallow(
+            "persist transport key pair",
+            () => this.#storage.set(key, entry),
+            this.#logger,
+          );
         }
       }
       return stored;

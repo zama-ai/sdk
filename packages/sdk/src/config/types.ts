@@ -67,9 +67,12 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * default: plaintext, security delegated to the storage backend. Composes with
    * `transportKeyPairScope`: when both are set, the derivation binds to the scope, so
    * every signer in the scope produces the same wrapping key — but every instance
-   * sharing that scope must then use the *same* secret, since a mismatch throws
-   * instead of silently regenerating (regenerating would clobber the scope's shared
-   * entry). Without a scope, changing this value is self-healing: the next
+   * sharing that scope must then use the *same* secret. Any mismatch (wrong secret,
+   * or the secret set on some instances and not others) throws instead of silently
+   * regenerating, which would clobber the scope's shared entry; migrate a live scope
+   * by configuring the secret everywhere, then calling
+   * `sdk.permits.revokeTransportKeyPair(scopeId)` once. Without a scope, changing
+   * this value is self-healing: the next
    * `grantPermit()` regenerates the per-signer key pair transparently, not a crash.
    */
   derivationSecret?: string | Uint8Array;
