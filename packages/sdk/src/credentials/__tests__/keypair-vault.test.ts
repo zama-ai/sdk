@@ -631,7 +631,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
 
   test("clearScope() racing an in-flight getOrCreate() does not resurrect the rotated key when wrapping is on", async () => {
     // Same TOCTOU window as the unwrapped case, but the wrapped persist path runs the
-    // extra wrap round trip after the generator — the epoch check must still gate the
+    // extra wrap round trip after the generator; the epoch check must still gate the
     // write that lands behind clearScope()'s delete.
     const storage = new MemoryStorage();
     let releaseGenerator!: () => void;
@@ -683,7 +683,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(created.tkmsVersion).toBe("v1");
 
     // A second instance decrypting successfully proves it reconstructed the exact AAD,
-    // tkmsVersion included — a dropped or altered field would fail authentication.
+    // tkmsVersion included: a dropped or altered field would fail authentication.
     expect(await wrappedVault().readStored(USER)).toEqual(created);
 
     const persisted = (await storage.get(transportKeyPairStorageKey(USER))) as Record<
@@ -920,7 +920,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
 
   test("a scoped plaintext entry read by a secret-configured instance fails loudly instead of self-healing", async () => {
     // A plaintext entry on a scope that this instance wraps means a peer is running
-    // without the secret — regenerating wrapped would clobber the peer's entry.
+    // without the secret; regenerating wrapped would clobber the peer's entry.
     const storage = new MemoryStorage();
     const generator = makeGenerator();
     const unwrapped = new TransportKeyPairVault({
