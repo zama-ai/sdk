@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import type { ChainRouter } from "./chains/router";
-import { resolvedDerivationSecret } from "./config/private-state";
+import { resolvedDerivationSecretHolder } from "./config/private-state";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
@@ -106,7 +106,7 @@ export class ZamaSDK {
       transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
       scope: config.transportKeyPairScope,
-      derivationSecret: resolvedDerivationSecret(config),
+      derivationSecret: resolvedDerivationSecretHolder(config),
       storage: this.storage,
       permitStorage: config.permitStorage,
       logger: this.#logger,

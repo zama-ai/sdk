@@ -3,7 +3,7 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { KeyWrappingError } from "../../errors/credential";
-import { WRAPPING_VERSION } from "../keypair-wrapping";
+import { DerivationSecretHolder, WRAPPING_VERSION } from "../keypair-wrapping";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "../storage-keys";
 import { checksum } from "../utils";
 
@@ -12,6 +12,8 @@ const OTHER = checksum("0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C");
 const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
 const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
 const TTL_SECONDS = 86400;
+
+const holder = (secret: string | Uint8Array) => new DerivationSecretHolder(secret);
 
 const makeLogger = () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() });
 
@@ -479,14 +481,14 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const vaultB = new TransportKeyPairVault({
       generator: makeGenerator(),
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const created = await vaultA.getOrCreate(USER);
@@ -520,7 +522,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     await vault.getOrCreate(USER);
@@ -545,14 +547,14 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const vaultB = new TransportKeyPairVault({
       generator,
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_B,
+      derivationSecret: holder(SECRET_B),
     });
 
     const created = await vaultA.getOrCreate(USER);
@@ -577,7 +579,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const plaintextEntry = await unwrapped.getOrCreate(USER);
@@ -595,7 +597,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const unwrappedLogger = makeLogger();
     const unwrapped = new TransportKeyPairVault({
@@ -625,7 +627,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
         storage,
         ttl: TTL_SECONDS,
         logger: makeLogger(),
-        derivationSecret: SECRET_A,
+        derivationSecret: holder(SECRET_A),
       });
 
       const before = await vault.getOrCreate(USER);
@@ -654,7 +656,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger,
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const forUser = await vault.getOrCreate(USER);
@@ -683,7 +685,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
         ttl: TTL_SECONDS,
         logger: makeLogger(),
         scope: "tenant-1",
-        derivationSecret: SECRET_A,
+        derivationSecret: holder(SECRET_A),
       });
 
     const vaultA = scopedAndWrapped();
@@ -718,7 +720,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: makeLogger(),
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const inFlight = vault.getOrCreate(USER);
@@ -743,7 +745,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
         storage,
         ttl: TTL_SECONDS,
         logger,
-        derivationSecret: SECRET_A,
+        derivationSecret: holder(SECRET_A),
       });
 
     const created = await wrappedVault().getOrCreate(USER);
@@ -769,7 +771,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const created = await vault.getOrCreate(USER);
@@ -786,7 +788,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const loggerB = makeLogger();
     const vaultB = new TransportKeyPairVault({
@@ -794,7 +796,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: loggerB,
-      derivationSecret: SECRET_B,
+      derivationSecret: holder(SECRET_B),
     });
 
     await vaultA.getOrCreate(USER);
@@ -815,7 +817,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: makeLogger(),
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const misconfiguredLogger = makeLogger();
     const misconfigured = new TransportKeyPairVault({
@@ -824,7 +826,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: misconfiguredLogger,
       scope: "tenant-1",
-      derivationSecret: SECRET_B,
+      derivationSecret: holder(SECRET_B),
     });
 
     const created = await correctlyConfigured.getOrCreate(USER);
@@ -847,14 +849,14 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const vaultB = new TransportKeyPairVault({
       generator,
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_B,
+      derivationSecret: holder(SECRET_B),
     });
 
     await vaultA.getOrCreate(USER);
@@ -872,7 +874,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger,
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     await vault.getOrCreate(USER);
 
@@ -910,7 +912,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const encryptSpy = vi
@@ -935,7 +937,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const created = await vault.getOrCreate(USER);
     const realGet = storage.get.bind(storage);
@@ -966,7 +968,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger,
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     await vault.getOrCreate(USER);
     const realGet = storage.get.bind(storage);
@@ -1008,7 +1010,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const created = await vault.getOrCreate(USER);
@@ -1033,7 +1035,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger,
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     await vault.getOrCreate(USER);
     const realGet = storage.get.bind(storage);
@@ -1071,7 +1073,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: wrappedLogger,
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     const plaintextEntry = await unwrapped.getOrCreate(USER);
@@ -1107,7 +1109,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: makeLogger(),
       scope: "tenant-1",
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const unwrappedLogger = makeLogger();
     const unwrapped = new TransportKeyPairVault({
@@ -1161,7 +1163,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage,
       ttl: TTL_SECONDS,
       logger: makeLogger(),
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
     const scopedAsAddress = new TransportKeyPairVault({
       generator: makeGenerator(),
@@ -1169,7 +1171,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: makeLogger(),
       scope: USER,
-      derivationSecret: SECRET_A,
+      derivationSecret: holder(SECRET_A),
     });
 
     await perSigner.getOrCreate(USER);
@@ -1198,7 +1200,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage: unscopedStorage,
       ttl: TTL_SECONDS,
       logger: creatorLog,
-      derivationSecret: SENTINEL_A,
+      derivationSecret: holder(SENTINEL_A),
     }).getOrCreate(USER);
     const wrongSecretLog = makeLogger();
     await new TransportKeyPairVault({
@@ -1206,7 +1208,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage: unscopedStorage,
       ttl: TTL_SECONDS,
       logger: wrongSecretLog,
-      derivationSecret: SENTINEL_B,
+      derivationSecret: holder(SENTINEL_B),
     }).readStored(USER);
     expect(wrongSecretLog.warn).toHaveBeenCalled();
 
@@ -1220,7 +1222,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: scopedCreatorLog,
       scope: "tenant-1",
-      derivationSecret: SENTINEL_A,
+      derivationSecret: holder(SENTINEL_A),
     }).getOrCreate(USER);
     const scopedMisconfigLog = makeLogger();
     await new TransportKeyPairVault({
@@ -1229,7 +1231,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       ttl: TTL_SECONDS,
       logger: scopedMisconfigLog,
       scope: "tenant-1",
-      derivationSecret: SENTINEL_B,
+      derivationSecret: holder(SENTINEL_B),
     })
       .getOrCreate(OTHER)
       .catch(() => {});
@@ -1243,7 +1245,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage: cryptoFailStorage,
       ttl: TTL_SECONDS,
       logger: cryptoFailLog,
-      derivationSecret: SENTINEL_A,
+      derivationSecret: holder(SENTINEL_A),
     });
     await cryptoFailVault.getOrCreate(USER);
     const decryptSpy = vi
@@ -1263,7 +1265,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       storage: new MemoryStorage(),
       ttl: TTL_SECONDS,
       logger: wrapFailLog,
-      derivationSecret: SENTINEL_A,
+      derivationSecret: holder(SENTINEL_A),
     })
       .getOrCreate(USER)
       .catch(() => {});
@@ -1280,5 +1282,48 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     ]);
     expect(logged).not.toContain(SENTINEL_A);
     expect(logged).not.toContain(SENTINEL_B);
+  });
+
+  test("imports the HKDF base key once for the whole vault lifetime, still deriving per operation", async () => {
+    const storage = new MemoryStorage();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: holder(SECRET_A),
+    });
+
+    const importSpy = vi.spyOn(crypto.subtle, "importKey");
+    const deriveSpy = vi.spyOn(crypto.subtle, "deriveKey");
+
+    const created = await vault.getOrCreate(USER);
+    expect(await vault.readStored(USER)).toEqual(created);
+    expect(await vault.readStored(USER)).toEqual(created);
+
+    expect(importSpy).toHaveBeenCalledOnce();
+    expect(deriveSpy).toHaveBeenCalledTimes(3);
+
+    importSpy.mockRestore();
+    deriveSpy.mockRestore();
+  });
+
+  test("the SDK's own Uint8Array secret is zeroized after the first wrap, and later operations still succeed", async () => {
+    const storage = new MemoryStorage();
+    const sdkOwnedCopy = new Uint8Array(32).fill(7);
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: holder(sdkOwnedCopy),
+    });
+
+    const created = await vault.getOrCreate(USER);
+    expect(Array.from(sdkOwnedCopy).every((byte) => byte === 0)).toBe(true);
+
+    expect(await vault.readStored(USER)).toEqual(created);
+    const forOther = await vault.getOrCreate(OTHER);
+    expect(await vault.readStored(OTHER)).toEqual(forOther);
   });
 });

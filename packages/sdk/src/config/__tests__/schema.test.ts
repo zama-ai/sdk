@@ -3,6 +3,7 @@ import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
+import { resolvedDerivationSecretHolder } from "../private-state";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
 
@@ -213,6 +214,30 @@ describe("createConfig validation", () => {
         value instanceof Uint8Array ? Array.from(value) : value,
       ),
     ).not.toContain("transportKeyPairDerivationSecret");
+  });
+
+  test("never mutates the caller's own secret buffer, and imports the HKDF base key once per config", async ({
+    relayer,
+    provider,
+  }) => {
+    const callerSecret = new Uint8Array(32).fill(7);
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      transportKeyPairDerivationSecret: callerSecret,
+    });
+
+    const secretHolder = resolvedDerivationSecretHolder(config);
+    expect(secretHolder).toBeDefined();
+
+    const importSpy = vi.spyOn(crypto.subtle, "importKey");
+    const first = await secretHolder!.baseKey();
+    expect(await secretHolder!.baseKey()).toBe(first);
+    expect(importSpy).toHaveBeenCalledOnce();
+    importSpy.mockRestore();
+
+    expect(Array.from(callerSecret).every((byte) => byte === 7)).toBe(true);
   });
 
   test("wraps a supplied logger into a LoggerService on the resolved config", ({

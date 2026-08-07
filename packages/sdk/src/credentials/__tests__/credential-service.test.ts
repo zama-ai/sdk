@@ -7,6 +7,7 @@ import { TEST_TKMS_VERSION } from "../../test-fixtures/constants";
 import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
+import { DerivationSecretHolder } from "../keypair-wrapping";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -565,13 +566,15 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
   });
 });
 
+const holder = (secret: string | Uint8Array) => new DerivationSecretHolder(secret);
+
 describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
   const SECRET = "correct-horse-battery-staple-and-then-some";
 
   test("grantPermit and hasPermit work transparently end-to-end when configured", async ({
     createCredentialService,
   }) => {
-    const service = createCredentialService({ derivationSecret: SECRET });
+    const service = createCredentialService({ derivationSecret: holder(SECRET) });
     await service.grantPermit([A]);
     expect(await service.hasPermit([A])).toBe(true);
   });
@@ -581,7 +584,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     storage,
   }) => {
     const setSpy = vi.spyOn(storage, "set");
-    const service = createCredentialService({ derivationSecret: SECRET, storage });
+    const service = createCredentialService({ derivationSecret: holder(SECRET), storage });
 
     await service.grantPermit([A]);
 
@@ -613,12 +616,12 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     const signerB = createMockSigner(DELEGATOR);
     const serviceA = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: SECRET,
+      derivationSecret: holder(SECRET),
       storage,
     });
     const serviceB = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: SECRET,
+      derivationSecret: holder(SECRET),
       storage,
       signer: signerB,
     });
@@ -648,7 +651,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     // caller (including the React useHasPermit() hook) relies on never rejecting.
     const correctlyConfigured = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: "correct-horse-battery-staple-and-then-some",
+      derivationSecret: holder("correct-horse-battery-staple-and-then-some"),
       storage,
     });
     await correctlyConfigured.grantPermit([A]);
@@ -656,7 +659,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     const signerB = createMockSigner(DELEGATOR);
     const misconfigured = createCredentialService({
       scope: "tenant-1",
-      derivationSecret: "a-different-secret-and-then-some-more",
+      derivationSecret: holder("a-different-secret-and-then-some-more"),
       storage,
       signer: signerB,
     });
@@ -673,7 +676,7 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     // (a broken GenericStorage adapter, IndexedDB quota, etc.) is unrelated to
     // derivationSecret entirely and must not be silently downgraded to "no permit".
     const service = createCredentialService({
-      derivationSecret: "correct-horse-battery-staple-and-then-some",
+      derivationSecret: holder("correct-horse-battery-staple-and-then-some"),
     });
     await service.grantPermit([A]);
 

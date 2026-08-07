@@ -11,6 +11,7 @@ import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { TransportKeyPairVault } from "./keypair-vault";
+import type { DerivationSecretHolder } from "./keypair-wrapping";
 import { PermissionStore } from "./permission-store";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { SerializedPermitSchema } from "./schemas";
@@ -61,7 +62,7 @@ export interface CredentialServiceConfig {
    * contexts with no secure storage backend to delegate to. See
    * {@link TransportKeyPairVault}.
    */
-  derivationSecret?: string | Uint8Array;
+  derivationSecret?: DerivationSecretHolder;
 }
 
 /**

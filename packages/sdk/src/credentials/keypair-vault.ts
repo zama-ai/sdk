@@ -9,6 +9,7 @@ import {
   unwrapPrivateKey,
   wrapPrivateKey,
   WRAPPING_VERSION,
+  type DerivationSecretHolder,
 } from "./keypair-wrapping";
 import {
   StoredTransportKeyPairSchema,
@@ -39,7 +40,7 @@ interface TransportKeyPairVaultConfig {
    * `storage.get()` — transparently, at this vault's storage boundary only. Undefined
    * preserves the default: plaintext, security delegated to the storage backend.
    */
-  derivationSecret?: string | Uint8Array;
+  derivationSecret?: DerivationSecretHolder;
 }
 
 function scopeIdentity(scope: string): string {
@@ -66,7 +67,7 @@ export class TransportKeyPairVault {
   readonly #ttl: number;
   readonly #logger: GenericLogger;
   readonly #scope: string | undefined;
-  readonly #derivationSecret: string | Uint8Array | undefined;
+  readonly #derivationSecret: DerivationSecretHolder | undefined;
   readonly #pending = new Map<string, Promise<StoredTransportKeyPair>>();
   /**
    * Per-key generation counter, bumped by {@link clearScope}. Lets a generation that

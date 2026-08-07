@@ -4,6 +4,7 @@ import {
   DEFAULT_PERMIT_DURATION_DAYS,
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
 } from "../credentials/credential-service";
+import { DerivationSecretHolder } from "../credentials/keypair-wrapping";
 import {
   DerivationSecretSchema,
   PermitTTLSchema,
@@ -14,22 +15,22 @@ import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
-import { setResolvedDerivationSecret } from "./private-state";
+import { setResolvedDerivationSecretHolder } from "./private-state";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
 /**
- * Copies a `Uint8Array` secret so a caller zeroizing its buffer after `createConfig`
- * cannot corrupt later wraps. Strings are immutable and need no copy.
+ * Copies a `Uint8Array` secret so the holder only ever zeroizes the SDK's own buffer, and
+ * a caller zeroizing theirs cannot corrupt later wraps. Strings are immutable, so no copy.
  */
-function normalizeDerivationSecret(
+function derivationSecretHolder(
   secret: string | Uint8Array | undefined,
-): string | Uint8Array | undefined {
+): DerivationSecretHolder | undefined {
   if (secret === undefined) {
     return undefined;
   }
   const parsed = parseSchema(DerivationSecretSchema, secret);
-  return typeof parsed === "string" ? parsed : new Uint8Array(parsed);
+  return new DerivationSecretHolder(typeof parsed === "string" ? parsed : new Uint8Array(parsed));
 }
 
 /**
@@ -64,7 +65,7 @@ export function buildZamaConfig(
 
   const router = new ChainRouter(params.chains, params.relayers);
 
-  const derivationSecret = normalizeDerivationSecret(params.transportKeyPairDerivationSecret);
+  const secretHolder = derivationSecretHolder(params.transportKeyPairDerivationSecret);
 
   const config = {
     chains: params.chains,
@@ -87,8 +88,8 @@ export function buildZamaConfig(
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
 
-  if (derivationSecret !== undefined) {
-    setResolvedDerivationSecret(config, derivationSecret);
+  if (secretHolder !== undefined) {
+    setResolvedDerivationSecretHolder(config, secretHolder);
   }
 
   return config;

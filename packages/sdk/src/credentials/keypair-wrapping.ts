@@ -64,8 +64,55 @@ function ikmBytes(secret: string | Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 /**
- * Derive a non-extractable AES-256-GCM key from `derivationSecret`, bound to `identity`
- * (the same signer-address-or-scope identity used for storage keying — see
+ * Owns the SDK's copy of a derivation secret and hands out the memoized, non-extractable
+ * HKDF base key derived from it. Takes ownership of a `Uint8Array` secret: it is zeroized
+ * once the import succeeds, which shortens the raw secret's lifetime and keeps it out of
+ * accidental readback paths. It does not prevent exfiltration, since the returned key
+ * stays usable for deriving.
+ */
+export class DerivationSecretHolder {
+  #secret: string | Uint8Array | undefined;
+  #baseKey: Promise<CryptoKey> | undefined;
+
+  constructor(secret: string | Uint8Array) {
+    this.#secret = secret;
+  }
+
+  async baseKey(): Promise<CryptoKey> {
+    if (this.#baseKey === undefined) {
+      const pending = this.#importBaseKey();
+      // Memoized before the catch so concurrent callers share one import; a failed import
+      // is evicted so the still-retained secret can serve a retry.
+      this.#baseKey = pending;
+      pending.catch(() => {
+        if (this.#baseKey === pending) {
+          this.#baseKey = undefined;
+        }
+      });
+    }
+    return this.#baseKey;
+  }
+
+  async #importBaseKey(): Promise<CryptoKey> {
+    const secret = this.#secret;
+    if (secret === undefined) {
+      throw new TypeError("Derivation secret was consumed without a base key being memoized.");
+    }
+    const ikm = ikmBytes(secret);
+    const key = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveKey"]);
+    ikm.fill(0);
+    if (secret instanceof Uint8Array) {
+      secret.fill(0);
+    }
+    // Strings can't be zeroized, so dropping the reference is all that's available.
+    this.#secret = undefined;
+    return key;
+  }
+}
+
+/**
+ * Derive a non-extractable AES-256-GCM key from the derivation secret's base key, bound
+ * to `identity` (the same signer-address-or-scope identity used for storage keying — see
  * {@link TransportKeyPairVault} — not the storage key string itself, so a future rename
  * of storage-key formatting can never silently change already-wrapped keys).
  *
@@ -73,12 +120,10 @@ function ikmBytes(secret: string | Uint8Array): Uint8Array<ArrayBuffer> {
  * by any caller, this module included.
  */
 async function deriveWrappingKey(
-  derivationSecret: string | Uint8Array,
+  derivationSecret: DerivationSecretHolder,
   identity: string,
 ): Promise<CryptoKey> {
-  const ikmKey = await crypto.subtle.importKey("raw", ikmBytes(derivationSecret), "HKDF", false, [
-    "deriveKey",
-  ]);
+  const ikmKey = await derivationSecret.baseKey();
   return crypto.subtle.deriveKey(
     {
       name: "HKDF",
@@ -96,7 +141,7 @@ async function deriveWrappingKey(
 /** Wrap a private key for at-rest storage. Generates a fresh random IV every call. */
 export async function wrapPrivateKey(
   privateKey: Hex,
-  derivationSecret: string | Uint8Array,
+  derivationSecret: DerivationSecretHolder,
   identity: string,
   metadata: WrappedPrivateKeyMetadata,
 ): Promise<WrappedPrivateKey> {
@@ -123,7 +168,7 @@ export async function wrapPrivateKey(
  */
 export async function unwrapPrivateKey(
   wrapped: WrappedPrivateKey,
-  derivationSecret: string | Uint8Array,
+  derivationSecret: DerivationSecretHolder,
   identity: string,
   metadata: WrappedPrivateKeyMetadata,
 ): Promise<Hex> {
