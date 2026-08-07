@@ -281,7 +281,7 @@ try {
 
 **Code:** `KEY_WRAPPING_FAILED`
 
-Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](../../concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (e.g. `crypto.subtle` unavailable).
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](../../concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (`crypto.subtle` unavailable — a non-secure context such as plain `http://` on a LAN IP, or React Native without a polyfill).
 
 ```ts
 matchZamaError(error, {

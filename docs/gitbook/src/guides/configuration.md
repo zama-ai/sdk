@@ -398,13 +398,36 @@ Permits stay per-signer regardless of scope. See [Security Model](../concepts/se
 By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `transportKeyPairDerivationSecret` from your own environment instead:
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const derivationSecret = process.env.ZAMA_DERIVATION_SECRET;
+if (!derivationSecret) {
+  throw new Error("ZAMA_DERIVATION_SECRET is not set — refusing to store the key pair unwrapped");
+}
+
 const config = createConfig({
   chains: [sepolia],
-  wagmiConfig,
-  relayers: { [sepolia.id]: web() },
-  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET!, // string | Uint8Array
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
+  transportKeyPairDerivationSecret: derivationSecret, // string | Uint8Array
 });
+
+const sdk = new ZamaSDK(config);
 ```
+
+Validate the value explicitly rather than asserting it with `!`: an unset env var reaches `createConfig` as `undefined`, which silently disables wrapping and persists the private key in plaintext.
+
+{% hint style="danger" %}
+**Headless environments only.** Never put `transportKeyPairDerivationSecret` in a browser bundle. Bundlers inline `process.env` values at build time, so the secret ships to every visitor — and a secret every client already holds protects nothing. Browser apps should rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
+{% endhint %}
+
+{% hint style="warning" %}
+Wrapping uses WebCrypto `crypto.subtle`, which is unavailable in non-secure contexts (plain `http://` on a LAN IP) and in React Native without a polyfill. Where it is missing, wrapping fails with [`KeyWrappingError`](../reference/sdk/errors.md#keywrappingerror).
+{% endhint %}
 
 The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 → AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
 

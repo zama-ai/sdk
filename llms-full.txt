@@ -2155,6 +2155,24 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
+## Transport key pair wrapped at rest
+
+A new `transportKeyPairDerivationSecret` config option encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to — CLI tools, bare-metal agents, local dev — and must never be shipped in a browser bundle. Omit it and nothing changes: storage stays plaintext, as before.
+
+```ts
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
+  transportKeyPairDerivationSecret: derivationSecret, // 32+ bytes of real entropy
+});
+```
+
+Wrapping failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`). `hasPermit` and `hasDelegationPermit` never throw it — they return `false`, so a permit check stays a safe read.
+
+See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) for the setup and [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, entropy requirement, and rotation behavior.
+
 ## 3.x
 
 - source_type: official-doc
@@ -3302,13 +3320,38 @@ Permits stay per-signer regardless of scope. See [Security Model](https://raw.gi
 By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `transportKeyPairDerivationSecret` from your own environment instead:
 
 ```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const derivationSecret = process.env.ZAMA_DERIVATION_SECRET;
+if (!derivationSecret) {
+  throw new Error("ZAMA_DERIVATION_SECRET is not set — refusing to store the key pair unwrapped");
+}
+
 const config = createConfig({
   chains: [sepolia],
-  wagmiConfig,
-  relayers: { [sepolia.id]: web() },
-  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET!, // string | Uint8Array
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
+  transportKeyPairDerivationSecret: derivationSecret, // string | Uint8Array
 });
+
+const sdk = new ZamaSDK(config);
 ```
+
+Validate the value explicitly rather than asserting it with `!`: an unset env var reaches `createConfig` as `undefined`, which silently disables wrapping and persists the private key in plaintext.
+
+
+> [!DANGER]
+> **Headless environments only.** Never put `transportKeyPairDerivationSecret` in a browser bundle. Bundlers inline `process.env` values at build time, so the secret ships to every visitor — and a secret every client already holds protects nothing. Browser apps should rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
+
+
+
+> [!WARNING]
+> Wrapping uses WebCrypto `crypto.subtle`, which is unavailable in non-secure contexts (plain `http://` on a LAN IP) and in React Native without a polyfill. Where it is missing, wrapping fails with [`KeyWrappingError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#keywrappingerror).
+
 
 The SDK never manages or stores this value. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 → AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
 
@@ -9298,7 +9341,7 @@ try {
 
 **Code:** `KEY_WRAPPING_FAILED`
 
-Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (e.g. `crypto.subtle` unavailable).
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (`crypto.subtle` unavailable — a non-secure context such as plain `http://` on a LAN IP, or React Native without a polyfill).
 
 ```ts
 matchZamaError(error, {
@@ -18538,7 +18581,7 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 The gap in the default model above is **headless contexts** — CLI tools, agentic operators on bare metal, local dev environments — where no platform keystore exists and no operator KMS sits in front of storage. There's nothing to delegate security to.
 
-`transportKeyPairDerivationSecret` (`string | Uint8Array`) closes that gap by wrapping the private key half before every write and unwrapping it after every read, transparently, inside the credential store. The SDK never manages or stores this value — it comes from your environment (an env var from a secrets manager, a mounted file, a KMS-unwrapped blob) and exists only for the lifetime of your process. It must carry real entropy: the SDK rejects anything under 256 bits (matching the AES-256 key it feeds), but a length check can't verify actual randomness, so source it from a CSPRNG or secrets manager, never a human-memorable passphrase — HKDF does no key-stretching, so the secret's raw entropy is the only thing standing between a storage-reading attacker and the private key.
+`transportKeyPairDerivationSecret` (`string | Uint8Array`) closes that gap by wrapping the private key half before every write and unwrapping it after every read, transparently, inside the credential store. The SDK never manages or stores this value — it comes from your environment (an env var from a secrets manager, a mounted file, a KMS-unwrapped blob) and exists only for the lifetime of your process. It must carry real entropy. The SDK enforces a minimum length — 32 bytes for a `Uint8Array`, 32 characters for a string — but length is not entropy: an encoded string (hex, base64) carries fewer bits than it has characters, so a 32-character hex secret is only 128 bits. Supply either 32 random bytes as a `Uint8Array`, or a string holding at least 256 bits of actual entropy (`openssl rand -hex 32`). Source it from a CSPRNG or secrets manager, never a human-memorable passphrase — HKDF does no key-stretching, so the secret's raw entropy is the only thing standing between a storage-reading attacker and the private key.
 
 ```
 wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
