@@ -4604,7 +4604,7 @@ const cleartext = await sdk.decryption.decryptValues(
 const amount = cleartext[transfers[0].encryptedAmount]; // 500n
 ```
 
-`decryptValues` accepts many inputs at once, groups them by contract address, and issues one decryption request per contract — so decrypting a page of transfers costs one round-trip per token, not one per transfer. Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
+`decryptValues` accepts many inputs at once and groups them by contract address — so decrypting a page of transfers costs one round-trip per token, not one per transfer. A group only splits into more than one relayer request if its values would otherwise exceed the relayer's per-request size budget (see [Automatic chunking for large decrypt batches](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/changelog/v3-4.md#automatic-chunking-for-large-decrypt-batches)). Results are cached per signer and contract, so re-decrypting an encrypted value you have already seen returns instantly without hitting the relayer.
 
 
 > [!INFO]
@@ -7254,6 +7254,42 @@ Wipe the transport key pair **and** cascade-delete every permit for the current 
 ```ts
 await sdk.permits.clear();
 ```
+
+### permits.warmTransportKeyPair
+
+`() => Promise<void>`
+
+Best-effort transport key pair prefetch for the connected signer — an optional latency optimization. Decrypt and permit flows remain correct without it, since they lazily create the transport key pair when needed. Silently no-ops when no signer is configured or no wallet account is connected yet.
+
+```ts
+await sdk.permits.warmTransportKeyPair();
+```
+
+Not for pre-warming a shared `transportKeyPairScope` — this method's wallet-account precondition doesn't apply to a scope-wide key, and would silently no-op exactly when an operator is most likely calling it (no end-user connected yet). Use [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope) instead.
+
+### permits.warmTransportKeyPairScope
+
+`(scopeId: string) => Promise<void>`
+
+Pre-warm the shared transport key pair for a [`transportKeyPairScope`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators). Storage-only, operator-level action — no wallet account or signer needs to be connected, unlike `permits.warmTransportKeyPair()`.
+
+```ts
+await sdk.permits.warmTransportKeyPairScope("tenant-123");
+```
+
+`scopeId` must match the configured `transportKeyPairScope`, guarding against warming the wrong scope by mistake; throws `ConfigurationError` otherwise.
+
+### permits.revokeTransportKeyPair
+
+`(scopeId: string) => Promise<void>`
+
+Revoke the shared transport key pair for a `transportKeyPairScope` — the operator-level counterpart to [`permits.warmTransportKeyPairScope`](#permits-warmtransportkeypairscope), for use on suspected key compromise. Deletes the shared key pair; every permit in the scope embeds its public key, so they're all treated as stale on next access.
+
+```ts
+await sdk.permits.revokeTransportKeyPair("tenant-123");
+```
+
+This does not revoke any permit already issued under the key — a permit is a self-contained, bearer-style EIP-712 signature the relayer accepts independently of this call, and one exfiltrated alongside the key remains usable until its own `permitTTL` expiry regardless of this call. `scopeId` must match the configured scope; throws `ConfigurationError` otherwise. Signer-level [`permits.clear`](#permits-clear) never touches the shared key pair — it only ever wipes the calling signer's own permits.
 
 ### delegations
 
