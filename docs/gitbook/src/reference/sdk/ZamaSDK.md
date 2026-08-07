@@ -407,6 +407,14 @@ await sdk.permits.clear();
 
 See the [Delegations reference](./delegation.md) for the full API and propagation notes.
 
+### offline.prepare
+
+`sdk.offline.prepare(request, options?)`
+
+Builds an unsigned transaction that the caller signs and broadcasts out-of-process (institutional custody, HSMs). Works without a configured signer.
+
+See the [Offline reference](./Offline.md) for the request kinds and options, and the [Offline signing guide](../../guides/offline.md) for the workflow.
+
 ### dispose
 
 `() => void`

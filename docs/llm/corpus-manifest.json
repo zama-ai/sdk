@@ -325,6 +325,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:guides/offline",
+      "title": "Offline signing",
+      "source_path": "docs/gitbook/src/guides/offline.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md",
+      "source_type": "official-doc",
+      "category": "guides",
+      "logical_path": "guides/offline",
+      "description": "How to build unsigned transactions that are signed and broadcast out-of-process by a custody platform, HSM, or policy engine.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/web-extensions",
       "title": "Web extensions",
       "source_path": "docs/gitbook/src/guides/web-extensions.md",
@@ -500,7 +512,7 @@
       "source_type": "official-doc",
       "category": "reference-sdk",
       "logical_path": "reference/sdk/GenericProvider",
-      "description": "Interface that all provider adapters must implement for read-only chain access.",
+      "description": "Interface that all provider adapters must implement for chain reads and unsigned transaction preparation.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
@@ -621,6 +633,18 @@
       "category": "reference-sdk",
       "logical_path": "reference/sdk/delegation",
       "description": "On-chain delegation management — grant, revoke, and query decryption delegation rights via the ACL contract.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
+      "id": "doc:reference/sdk/Offline",
+      "title": "Offline",
+      "source_path": "docs/gitbook/src/reference/sdk/Offline.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md",
+      "source_type": "official-doc",
+      "category": "reference-sdk",
+      "logical_path": "reference/sdk/Offline",
+      "description": "Build unsigned transactions for out-of-process signing - the offline counterpart of the atomic Token methods.",
       "include_in_llms_txt": true,
       "include_in_llms_full": true
     },
