@@ -37,6 +37,10 @@ interface TransportKeyPairVaultConfig {
   derivationSecret?: string | Uint8Array;
 }
 
+function scopeIdentity(scope: string): string {
+  return `scope:${scope}`;
+}
+
 /**
  * Identity-scoped, chain-independent vault for ML-KEM transport key pairs.
  *
@@ -77,15 +81,13 @@ export class TransportKeyPairVault {
   }
 
   /**
-   * Raw identity used to bind a wrapped key to its owner (the HKDF salt) — the scope
-   * when configured, else the signer address. Deliberately *not* the storage key string
-   * (see {@link identityKeyFor}): the storage key's prefix is an implementation detail
-   * of `storage-keys.ts` that could change in a future refactor, and a wrapping salt
-   * must never depend on that or every already-wrapped key would silently stop
-   * decrypting the day someone renames a prefix.
+   * Identity a wrapped key is bound to (the HKDF salt). Prefixed by kind so a scope
+   * named after a checksummed address can never derive the same wrapping key as that
+   * signer. Deliberately not the storage key string: that prefix is a storage-layer
+   * detail, and renaming it must never stop already-wrapped keys from decrypting.
    */
   #identity(signerAddress: ChecksummedAddress): string {
-    return this.#scope ?? signerAddress;
+    return this.#scope !== undefined ? scopeIdentity(this.#scope) : `signer:${signerAddress}`;
   }
 
   /** Storage key for reads/creates: the shared scope key when configured, else the per-signer key. */
@@ -418,8 +420,10 @@ export class TransportKeyPairVault {
     if (this.#scope === undefined) {
       return;
     }
-    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#scope), this.#scope, {
-      strict: true,
-    });
+    await this.#getOrCreateByKey(
+      transportKeyPairScopeStorageKey(this.#scope),
+      scopeIdentity(this.#scope),
+      { strict: true },
+    );
   }
 }

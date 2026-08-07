@@ -23,7 +23,7 @@ const GCM_IV_LENGTH_BYTES = 12;
 /** AES-GCM authentication tag size; any valid ciphertext is at least this long. */
 const GCM_TAG_LENGTH_BYTES = 16;
 const ivLengthError = `iv must be a ${GCM_IV_LENGTH_BYTES}-byte hex string`;
-const wrappedPrivateKeyLengthError = `wrappedPrivateKey must be at least ${GCM_TAG_LENGTH_BYTES} bytes (the AES-GCM authentication tag)`;
+const wrappedPrivateKeyLengthError = `wrappedPrivateKey must be a whole number of bytes and at least ${GCM_TAG_LENGTH_BYTES} bytes (the AES-GCM authentication tag)`;
 
 function hexByteLength(v: string): number {
   return (v.length - 2) / 2;
@@ -85,8 +85,11 @@ export const WrappedPrivateKeyEntrySchema = z.object({
   // crypto.subtle.decrypt and fail with the same generic OperationError a genuine
   // wrong-derivationSecret case does — catching it here, pre-decrypt, avoids that
   // ambiguity for the cases that structurally can't be a real ciphertext at all.
+  // Even hex length checked first: an odd digit count is a fractional byte count that
+  // would clear the minimum (33 digits reads as 16.5 bytes), and viem's toBytes then
+  // left-pads it into a plausible-looking ciphertext that only fails at decrypt time.
   wrappedPrivateKey: hex.check(
-    z.refine((v) => hexByteLength(v) >= GCM_TAG_LENGTH_BYTES, {
+    z.refine((v) => v.length % 2 === 0 && hexByteLength(v) >= GCM_TAG_LENGTH_BYTES, {
       error: wrappedPrivateKeyLengthError,
     }),
   ),

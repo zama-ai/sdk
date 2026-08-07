@@ -984,6 +984,33 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(await wrapped.readStored(USER)).toEqual(created);
   });
 
+  test("a scope named after a signer address derives a different wrapping key than that signer", async () => {
+    // The HKDF salt is namespaced by identity kind, so a scope string that happens to equal
+    // a checksummed signer address can never unwrap that signer's per-signer entry.
+    const storage = new MemoryStorage();
+    const perSigner = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: SECRET_A,
+    });
+    const scopedAsAddress = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: USER,
+      derivationSecret: SECRET_A,
+    });
+
+    await perSigner.getOrCreate(USER);
+    const signerEntry = await storage.get(transportKeyPairStorageKey(USER));
+    await storage.set(transportKeyPairScopeStorageKey(USER), signerEntry);
+
+    await expect(scopedAsAddress.readStored(USER)).rejects.toThrow(KeyWrappingError);
+  });
+
   test("never leaks the derivationSecret value into any log line, on any path (leak regression)", async () => {
     // The secret lives only as a private field inside this vault — the one component that
     // both holds it and writes log lines. It's absent from every log payload today (each
