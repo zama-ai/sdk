@@ -6,6 +6,7 @@ import { createConfig } from "../create";
 import { resolvedDerivationSecretHolder } from "../private-state";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
+import { ZamaSDK } from "../../zama-sdk";
 
 function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
   return { type: "test", createRelayer: vi.fn(() => relayer) };
@@ -323,5 +324,59 @@ describe("createConfig validation", () => {
     });
     expect(config.logger).toBeInstanceOf(LoggerService);
     expect(() => config.logger.debug("noop")).not.toThrow();
+  });
+
+  test("stays quiet when a second createConfig call carries no runtime options", ({
+    relayer,
+    provider,
+  }) => {
+    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      logger: sink,
+    });
+    createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      logger: sink,
+      signer: undefined,
+    });
+
+    expect(sink.warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("config identity guard", () => {
+  test("accepts the exact object returned by createConfig", ({ relayer, provider }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    });
+
+    expect(() => new ZamaSDK(config)).not.toThrow();
+  });
+
+  test("rejects a copied config with the remedy, so the wrapping secret cannot be silently dropped", ({
+    relayer,
+    provider,
+    signer,
+  }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
+    });
+
+    const build = () => new ZamaSDK({ ...config, signer });
+
+    expect(build).toThrow(ConfigurationError);
+    expect(build).toThrow(/exact object returned by createConfig/);
+    expect(build).toThrow(/Call createConfig again for each SDK instance/);
   });
 });

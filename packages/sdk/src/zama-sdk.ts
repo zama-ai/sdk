@@ -1,8 +1,9 @@
 import type { Address } from "viem";
 import type { ChainRouter } from "./chains/router";
-import { resolvedDerivationSecretHolder } from "./config/private-state";
+import { isResolvedConfig, resolvedDerivationSecretHolder } from "./config/private-state";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
+import { ConfigurationError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
@@ -69,6 +70,11 @@ export class ZamaSDK {
   readonly #offlineService: OfflineService;
 
   constructor(config: ZamaConfig) {
+    if (!isResolvedConfig(config)) {
+      throw new ConfigurationError(
+        "ZamaSDK requires the exact object returned by createConfig. Resolved configs cannot be copied (spread, rest, or pick) because parts of them are held off the object itself, such as the at-rest wrapping secret. Call createConfig again for each SDK instance, for example once per signer.",
+      );
+    }
     this.#router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;

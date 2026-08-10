@@ -26,8 +26,6 @@ const ZamaSDKContext = createContext<ZamaSDK | null>(null);
 export function ZamaProvider({ children, config }: ZamaProviderProps) {
   const queryClient = useQueryClient();
 
-  // Passed by identity, never spread into a copy: parts of a resolved config are held off
-  // the object itself (the at-rest wrapping secret), and a copy silently loses them.
   const sdk = useMemo(() => new ZamaSDK(config), [config]);
 
   // Transport-key-pair warming touches @fhevm/sdk's browser-only runtime (WASM,

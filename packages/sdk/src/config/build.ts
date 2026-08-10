@@ -16,7 +16,7 @@ import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
-import { setResolvedDerivationSecretHolder } from "./private-state";
+import { registerResolvedConfig, setResolvedDerivationSecretHolder } from "./private-state";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
 
@@ -66,7 +66,14 @@ export function buildZamaConfig(
   const logger = new LoggerService(params.logger);
 
   if (hasFhevmRuntimeConfig()) {
-    logger.warn("runtime configuration is already set and cannot be changed.");
+    // One config per signer is a supported pattern, so a second call is only worth warning about
+    // when it carries runtime options that the already-locked runtime config will ignore.
+    const message = "runtime configuration is already set and cannot be changed.";
+    if (params.runtime === undefined) {
+      logger.debug(message);
+    } else {
+      logger.warn(message);
+    }
   } else {
     setFhevmRuntimeConfig({
       wasmAssetLoadMode: "auto",
@@ -106,6 +113,8 @@ export function buildZamaConfig(
     logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
+
+  registerResolvedConfig(config);
 
   if (secretHolder !== undefined) {
     setResolvedDerivationSecretHolder(config, secretHolder);

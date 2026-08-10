@@ -1,5 +1,6 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { FheChain } from "../chains/types";
+import { registerResolvedConfig } from "../config/private-state";
 import type { ZamaConfig } from "../config/types";
 import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/types";
@@ -40,7 +41,7 @@ function buildSDK(
   // ZamaConfig shape; tests override the backend by passing their own `router`.
   const { router: routerOverride, ...restOverrides } = overrides ?? {};
   const router = routerOverride ?? createMockRouter({ relayer, chains: [chain] });
-  return new ZamaSDK({
+  const config = {
     chains: [chain],
     router,
     provider,
@@ -55,7 +56,11 @@ function buildSDK(
     // it); the silent default mirrors a consumer who configured no logger.
     logger: new LoggerService(),
     ...restOverrides,
-  } as unknown as ZamaConfig);
+  } as unknown as ZamaConfig;
+  // The fixture builds the resolved shape directly, so it registers itself the way
+  // buildZamaConfig does to satisfy the SDK's config-identity guard.
+  registerResolvedConfig(config);
+  return new ZamaSDK(config);
 }
 
 type SdkDeps = ChainFixtures &
