@@ -590,7 +590,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(generator).toHaveBeenCalledTimes(2);
   });
 
-  test("a pre-existing wrapped entry is a cache miss once derivationSecret is turned off — regenerates plaintext", async () => {
+  test("a pre-existing wrapped entry read with derivationSecret turned off fails loudly instead of regenerating plaintext", async () => {
     const storage = new MemoryStorage();
     const wrapped = new TransportKeyPairVault({
       generator: makeGenerator(),
@@ -607,14 +607,20 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       logger: unwrappedLogger,
     });
 
-    await wrapped.getOrCreate(USER);
-    expect(await unwrapped.readStored(USER)).toBeNull();
-    // Losing at-rest wrapping on the regenerated entry is a downgrade, so the discard
-    // is never silent even though it self-heals.
-    expect(unwrappedLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("no transportKeyPairDerivationSecret is configured"),
+    const created = await wrapped.getOrCreate(USER);
+    const persisted = await storage.get(transportKeyPairStorageKey(USER));
+
+    await expect(unwrapped.readStored(USER)).rejects.toThrow(KeyWrappingError);
+    // Regenerating would drop at-rest wrapping for this signer with no signal, so the
+    // diagnostic hands the operator the deliberate-downgrade route instead.
+    await expect(unwrapped.getOrCreate(USER)).rejects.toThrow(/permits\.clearCredentials\(\)/);
+    expect(unwrappedLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining("no transportKeyPairDerivationSecret configured"),
       expect.objectContaining({ key: expect.any(String) }),
     );
+    // The entry survives, so restoring the secret restores access to the same key pair.
+    expect(await storage.get(transportKeyPairStorageKey(USER))).toEqual(persisted);
+    expect(await wrapped.readStored(USER)).toEqual(created);
   });
 
   test("regenerates a wrapped entry after the TTL elapses", async () => {

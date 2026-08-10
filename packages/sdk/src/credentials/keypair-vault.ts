@@ -75,11 +75,23 @@ function scopedFailureMessage(reason: RecoveryReason, scope: string): string {
   return messages[reason];
 }
 
+/**
+ * Operator-facing diagnostic for a per-signer entry this instance can't read at all: a
+ * missing secret is a deployment mistake far more often than an intentional downgrade,
+ * and self-healing would drop at-rest wrapping without anyone noticing.
+ */
+const UNSCOPED_WRAPPED_WITHOUT_SECRET_MESSAGE =
+  "Transport key pair for this signer is wrapped, but this instance has no " +
+  "transportKeyPairDerivationSecret configured. Configure the same " +
+  "transportKeyPairDerivationSecret the entry was written with. To downgrade to plaintext " +
+  "at rest on purpose, discard the stored entry first by calling " +
+  "permits.clearCredentials(), then run without the secret.";
+
 /** Discard reason for a per-signer entry, which self-heals instead of failing loudly. */
-const UNSCOPED_FAILURE_REASONS: Record<RecoveryReason, string> = {
-  "wrapped-without-secret":
-    "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
-    "configured; discarding the entry, at-rest wrapping is no longer active",
+const UNSCOPED_FAILURE_REASONS: Record<
+  Exclude<RecoveryReason, "wrapped-without-secret">,
+  string
+> = {
   "unwrapped-under-secret":
     "unwrapped transport key pair entry found while a transportKeyPairDerivationSecret is configured",
   "unwrap-failed":
@@ -223,11 +235,16 @@ export class TransportKeyPairVault {
    * scope's entry is shared, and AES-GCM can't distinguish a peer's valid entry wrapped
    * under a different secret from genuine corruption, so discarding it risks clobbering a
    * key pair the whole cohort is using: scoped vaults fail loudly and leave it in place,
-   * unscoped ones self-heal since only this signer is affected.
+   * unscoped ones self-heal since only this signer is affected. The one unscoped case that
+   * also fails loudly is a wrapped entry with no secret configured, where self-healing
+   * would turn a missing secret into a silent plaintext downgrade.
    */
   async #recover(key: string, reason: RecoveryReason, cause?: unknown): Promise<null> {
     if (this.#scope !== undefined) {
       throw this.#failLoudly(key, scopedFailureMessage(reason, this.#scope), cause);
+    }
+    if (reason === "wrapped-without-secret") {
+      throw this.#failLoudly(key, UNSCOPED_WRAPPED_WITHOUT_SECRET_MESSAGE, cause);
     }
     const discardReason = UNSCOPED_FAILURE_REASONS[reason];
     // Warned, not just discarded: a regenerated entry can silently lose the at-rest
@@ -270,6 +287,9 @@ export class TransportKeyPairVault {
    * @throws if the stored entry was written under a wrapping scheme this build cannot
    *   read, in any configuration: it is preserved rather than regenerated over.
    *   {@link KeyWrappingError}
+   * @throws if the stored entry is wrapped and no `derivationSecret` is configured, in
+   *   any configuration: regenerating would downgrade this signer to plaintext at rest
+   *   without a signal. {@link KeyWrappingError}
    * @throws if `derivationSecret` is configured together with `scope` and the stored
    *   entry can't be served (fails to unwrap, or is stored in an unexpected shape),
    *   since silently regenerating would overwrite a scope's shared entry that may simply
