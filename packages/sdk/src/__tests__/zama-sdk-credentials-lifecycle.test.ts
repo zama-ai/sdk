@@ -245,7 +245,7 @@ describe("ZamaSDK credentials lifecycle", () => {
     }) => {
       // Credential resolution happens before the emit-wrapped section of every operation
       // that calls it, so a failure here must never surface as, or be folded into, an
-      // event payload — not the secret, and not the resolved config it was read from.
+      // event payload: not the secret, and not the resolved config it was read from.
       const storage = new MemoryStorage();
       const scope = "tenant-events";
       const writerConfig = createConfig({

@@ -292,7 +292,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws, it's treated as a cache miss and regenerates silently, so a `KeyWrappingError` here means something else is wrong in the environment — check `crypto.subtle` availability. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, including that none is missing it.
+**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws: it's treated as a cache miss and regenerates silently. A `KeyWrappingError` without a scope means a wrapped entry was read with no `transportKeyPairDerivationSecret` configured at all (restore the secret, or call `sdk.permits.clearCredentials()` to downgrade to plaintext deliberately), the entry was written by a wrapping scheme version this build doesn't recognize, or `crypto.subtle` is unavailable in the environment. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, including that none is missing it.
 
 ### RelayerRequestFailedError
 
