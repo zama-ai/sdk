@@ -11,6 +11,7 @@ import {
   TransportKeyPairScopeSchema,
   TransportKeyPairTTLSchema,
 } from "../credentials/schemas";
+import { ConfigurationError } from "../errors";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
@@ -34,6 +35,22 @@ function derivationSecretHolder(
 }
 
 /**
+ * Omitting the option means cleartext-at-rest by choice; passing it as `undefined` means the
+ * caller asked for wrapping and the value went missing, so it must fail instead of downgrading.
+ */
+function assertDerivationSecretNotUnset(params: ZamaConfigBase): void {
+  if (
+    !Object.hasOwn(params, "transportKeyPairDerivationSecret") ||
+    params.transportKeyPairDerivationSecret !== undefined
+  ) {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_TRANSPORT_KEY_PAIR_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
+  );
+}
+
+/**
  * @internal Shared config builder — not part of the public API.
  *
  * Applies defaults, validates TTLs, and resolves storage so the
@@ -44,6 +61,8 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
+  assertDerivationSecretNotUnset(params);
+
   const logger = new LoggerService(params.logger);
 
   if (hasFhevmRuntimeConfig()) {

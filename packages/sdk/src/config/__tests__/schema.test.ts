@@ -177,6 +177,61 @@ describe("createConfig validation", () => {
     }
   });
 
+  test("rejects a transportKeyPairDerivationSecret passed as undefined, naming the unset env var", ({
+    relayer,
+    provider,
+  }) => {
+    const build = () =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairDerivationSecret: process.env.MISSING_SECRET_ENV_VAR,
+      });
+
+    expect(build).toThrow(ConfigurationError);
+    expect(build).toThrow(/transportKeyPairDerivationSecret was passed as undefined/);
+    expect(build).toThrow(/environment variable/);
+  });
+
+  test("keeps an omitted transportKeyPairDerivationSecret meaning cleartext by default", ({
+    relayer,
+    provider,
+  }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    });
+
+    expect(resolvedDerivationSecretHolder(config)).toBeUndefined();
+  });
+
+  test("writes nothing to storage when the undefined-secret rejection fires", ({
+    relayer,
+    provider,
+  }) => {
+    const storage = {
+      get: vi.fn(async () => null),
+      set: vi.fn(async () => {}),
+      delete: vi.fn(async () => {}),
+    };
+
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        storage,
+        transportKeyPairDerivationSecret: undefined,
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(storage.set).not.toHaveBeenCalled();
+    expect(storage.get).not.toHaveBeenCalled();
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
   test("accepts a transportKeyPairDerivationSecret exactly at the 256-bit floor (32 bytes)", ({
     relayer,
     provider,
