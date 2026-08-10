@@ -1,21 +1,14 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import type { Hex } from "viem";
 import { KeyWrappingError } from "../errors/credential";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
 import {
-  isUnwrapAuthFailure,
-  unwrapPrivateKey,
-  wrapPrivateKey,
-  WRAPPING_VERSION,
-  type DerivationSecretHolder,
-} from "./keypair-wrapping";
-import {
-  StoredTransportKeyPairSchema,
-  WrappedPrivateKeyEntrySchema,
-  type WrappedPrivateKeyEntry,
-} from "./schemas";
+  classifyPersistedEntry,
+  encodeWrappedEntry,
+  type PersistedTransportKeyPair,
+} from "./keypair-entry-codec";
+import { isUnwrapAuthFailure, type DerivationSecretHolder } from "./keypair-wrapping";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "./storage-keys";
 import type { StoredTransportKeyPair } from "./types";
 import { nowSeconds } from "./utils";
@@ -47,6 +40,23 @@ function scopeIdentity(scope: string): string {
   return `scope:${scope}`;
 }
 
+function unsupportedVersionMessage(version: unknown, scope: string | undefined): string {
+  const label =
+    typeof version === "number"
+      ? `wrappingVersion ${version}`
+      : "no wrappingVersion this build recognizes";
+  const target = scope !== undefined ? `for scope "${scope}"` : "for this signer";
+  const remedy =
+    scope !== undefined
+      ? "run a build that supports it everywhere, or call permits.revokeTransportKeyPair() to rotate the scope"
+      : "run a build that supports it, or call permits.clearCredentials() to discard the entry deliberately";
+  return (
+    `Transport key pair ${target} was written under a wrapping scheme this SDK build cannot ` +
+    `read (${label}). The entry is preserved instead of regenerated, since an instance that ` +
+    `understands the scheme may still be using it: ${remedy}.`
+  );
+}
+
 /**
  * Identity-scoped, chain-independent vault for ML-KEM transport key pairs.
  *
@@ -56,10 +66,10 @@ function scopeIdentity(scope: string): string {
  * targets the per-signer key regardless of scope — an individual signer's teardown must
  * never delete a scope's shared key pair. Only {@link clearScope} can do that.
  *
- * When `derivationSecret` is configured, the private key half is wrapped at rest — see
- * {@link keypair-wrapping}. This is invisible to every method here and to every caller
- * outside this class: `getOrCreate`/`readStored` always return the plaintext
- * {@link StoredTransportKeyPair} shape regardless of how it's actually stored on disk.
+ * When `derivationSecret` is configured, the private key half is wrapped at rest. That is
+ * invisible to every method here and to every caller outside this class: `getOrCreate`/
+ * `readStored` always return the plaintext {@link StoredTransportKeyPair} shape regardless
+ * of how the entry is actually stored on disk.
  */
 export class TransportKeyPairVault {
   readonly #generator: () => Promise<SerializeTransportKeyPairReturnType>;
@@ -113,82 +123,88 @@ export class TransportKeyPairVault {
       return null;
     }
 
-    if (this.#derivationSecret === undefined) {
-      const parsed = StoredTransportKeyPairSchema.safeParse(raw);
-      if (!parsed.success) {
-        if (WrappedPrivateKeyEntrySchema.safeParse(raw).success) {
-          if (this.#scope !== undefined) {
-            // Discarding a scope's shared entry because this instance can't read it would
-            // clobber a peer's valid, wrapped one and re-prompt the whole cohort.
-            const message =
-              `Transport key pair for scope "${this.#scope}" is wrapped, but this instance ` +
-              "has no transportKeyPairDerivationSecret configured. Every instance sharing this scope must use " +
-              "the same transportKeyPairDerivationSecret; once they do, call permits.revokeTransportKeyPair() " +
-              "to rotate the entry.";
-            this.#logger.error(message, { key });
-            throw new KeyWrappingError(message, { cause: parsed.error });
-          }
-          // Unscoped: only this signer is affected, so self-heal like any other unreadable
-          // entry. Warned unconditionally because the regenerated entry is plaintext, which
-          // silently drops the at-rest protection the discarded one had.
-          const reason =
-            "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
-            "configured; discarding the entry, at-rest wrapping is no longer active";
-          this.#logger.warn(reason, { key });
-          await this.#discard(key, reason);
-          return null;
-        }
-        await this.#discard(key, "malformed transport key pair entry");
-        return null;
-      }
-      if (nowSeconds() >= parsed.data.expiresAt) {
-        await this.#discard(key, "expired transport key pair entry");
-        return null;
-      }
-      return parsed.data;
+    const entry = classifyPersistedEntry(raw);
+    if (entry.kind === "unsupported-version") {
+      // Preserved for every configuration, scoped or not: only a build that knows the
+      // scheme can read this ciphertext, and regenerating would destroy it for good.
+      const message = unsupportedVersionMessage(entry.version, this.#scope);
+      this.#logger.error(message, { key });
+      throw new KeyWrappingError(message);
     }
 
-    const parsed = WrappedPrivateKeyEntrySchema.safeParse(raw);
-    if (!parsed.success) {
-      if (this.#scope !== undefined) {
-        // A scope's shared entry is never discarded to self-heal: regenerating would
-        // clobber a peer's entry and re-prompt every signer in the cohort.
-        const message = StoredTransportKeyPairSchema.safeParse(raw).success
-          ? `Transport key pair for scope "${this.#scope}" is stored unwrapped, but this ` +
-            "instance is configured with a transportKeyPairDerivationSecret. A peer instance sharing this " +
-            "scope is running without the secret: configure the same transportKeyPairDerivationSecret " +
-            "everywhere, then call permits.revokeTransportKeyPair() to migrate the scope " +
-            "to a wrapped entry."
-          : `Transport key pair for scope "${this.#scope}" is not a recognized wrapped or ` +
-            "plaintext entry shape. This usually means the stored entry is corrupted, or " +
-            "instances sharing this scope are running mismatched wrapping-scheme versions.";
-        this.#logger.error(message, { key, error: parsed.error });
-        throw new KeyWrappingError(message, { cause: parsed.error });
+    if (entry.kind === "unrecognized") {
+      // Neither shape holds a key pair any instance could read, so there is nothing to
+      // protect by keeping it, scope or no scope.
+      await this.#discard(key, "malformed transport key pair entry");
+      return null;
+    }
+
+    if (this.#derivationSecret === undefined) {
+      if (entry.kind === "plaintext") {
+        if (nowSeconds() >= entry.keyPair.expiresAt) {
+          await this.#discard(key, "expired transport key pair entry");
+          return null;
+        }
+        return entry.keyPair;
       }
-      // Unscoped: also covers a plaintext entry left over from before derivationSecret
-      // was configured, regenerated wrapped like any other cache miss.
-      const reason = "malformed or unwrapped transport key pair entry";
+      if (this.#scope !== undefined) {
+        // Discarding a scope's shared entry because this instance can't read it would
+        // clobber a peer's valid, wrapped one and re-prompt the whole cohort. A corrupt
+        // entry is treated the same: without the secret it is indistinguishable from one
+        // a peer can still read.
+        const message =
+          `Transport key pair for scope "${this.#scope}" is wrapped, but this instance has no ` +
+          "transportKeyPairDerivationSecret configured. Every instance sharing this scope must " +
+          "use the same transportKeyPairDerivationSecret; once they do, call " +
+          "permits.revokeTransportKeyPair() to rotate the entry.";
+        this.#logger.error(message, { key });
+        throw new KeyWrappingError(message);
+      }
+      // Unscoped: only this signer is affected, so self-heal like any other unreadable
+      // entry. Warned unconditionally because the regenerated entry is plaintext, which
+      // silently drops the at-rest protection the discarded one had.
+      const reason =
+        "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
+        "configured; discarding the entry, at-rest wrapping is no longer active";
       this.#logger.warn(reason, { key });
       await this.#discard(key, reason);
       return null;
     }
-    const { publicKey, wrappedPrivateKey, iv, createdAt, expiresAt, tkmsVersion } = parsed.data;
-    if (nowSeconds() >= expiresAt) {
+
+    if (entry.kind !== "wrapped") {
+      if (this.#scope !== undefined) {
+        // A scope's shared entry is never discarded to self-heal: regenerating would
+        // clobber a peer's entry and re-prompt every signer in the cohort.
+        const message =
+          entry.kind === "plaintext"
+            ? `Transport key pair for scope "${this.#scope}" is stored unwrapped, but this ` +
+              "instance is configured with a transportKeyPairDerivationSecret. A peer instance " +
+              "sharing this scope is running without the secret: configure the same " +
+              "transportKeyPairDerivationSecret everywhere, then call " +
+              "permits.revokeTransportKeyPair() to migrate the scope to a wrapped entry."
+            : `Transport key pair for scope "${this.#scope}" is wrapped but structurally ` +
+              "invalid: the stored iv or ciphertext is not a shape this wrapping scheme can " +
+              "produce. This usually means the stored entry is corrupted, or instances sharing " +
+              "this scope are running mismatched wrapping-scheme versions.";
+        this.#logger.error(message, { key });
+        throw new KeyWrappingError(message);
+      }
+      const reason =
+        entry.kind === "plaintext"
+          ? "unwrapped transport key pair entry found while a transportKeyPairDerivationSecret is configured"
+          : "structurally invalid wrapped transport key pair entry";
+      this.#logger.warn(reason, { key });
+      await this.#discard(key, reason);
+      return null;
+    }
+
+    if (nowSeconds() >= entry.expiresAt) {
       await this.#discard(key, "expired transport key pair entry");
       return null;
     }
+
     try {
-      const privateKey = await unwrapPrivateKey(
-        { wrappedPrivateKey, iv },
-        this.#derivationSecret,
-        identity,
-        { publicKey, createdAt, expiresAt, tkmsVersion },
-      );
-      const entry: StoredTransportKeyPair = { publicKey, privateKey, createdAt, expiresAt };
-      if (tkmsVersion) {
-        entry.tkmsVersion = tkmsVersion;
-      }
-      return entry;
+      return await entry.decode(this.#derivationSecret, identity);
     } catch (error) {
       if (!isUnwrapAuthFailure(error)) {
         // Not a routine wrong-secret/tampered-entry failure — e.g. crypto.subtle
@@ -205,19 +221,16 @@ export class TransportKeyPairVault {
         // broken — the likeliest cause is another instance sharing this scope having
         // wrapped it under a different derivationSecret (inconsistent secret
         // propagation during a rollout), but AES-GCM's generic "OperationError" can't
-        // actually distinguish that from genuine storage corruption (a truncated or
-        // bit-flipped iv/ciphertext — see WrappedPrivateKeyEntrySchema's length checks
-        // for the cases that *are* catchable pre-decrypt). Discarding and regenerating
-        // here would clobber that instance's possibly valid entry and force every
-        // signer in the scope to re-authenticate, repeatedly, for as long as both
+        // actually distinguish that from genuine storage corruption. Discarding and
+        // regenerating here would clobber that instance's possibly valid entry and force
+        // every signer in the scope to re-authenticate, repeatedly, for as long as both
         // configurations stay live. Fail loudly instead of silently corrupting a
         // resource the whole cohort shares.
         const message =
-          `Transport key pair for scope "${this.#scope}" failed to unwrap. ` +
-          "This usually means another instance created it with a different " +
-          "transportKeyPairDerivationSecret " +
-          "— every instance sharing this scope must use the same secret. It can also mean " +
-          "the stored entry is corrupted.";
+          `Transport key pair for scope "${this.#scope}" failed to unwrap. This usually means ` +
+          "another instance created it with a different transportKeyPairDerivationSecret: " +
+          "every instance sharing this scope must use the same secret. It can also mean the " +
+          "stored entry is corrupted.";
         this.#logger.error(message, { key });
         throw new KeyWrappingError(message, { cause: error });
       }
@@ -245,11 +258,14 @@ export class TransportKeyPairVault {
    * Pre-warm a scope once via {@link warmScope} before opening concurrent traffic to
    * avoid hitting this with a whole cohort at once.
    *
+   * @throws if the stored entry was written under a wrapping scheme this build cannot
+   *   read, in any configuration: it is preserved rather than regenerated over.
+   *   {@link KeyWrappingError}
    * @throws if `derivationSecret` is configured together with `scope` and the stored
-   *   entry fails to unwrap — deliberately not self-healed, since silently regenerating
-   *   would overwrite a scope's shared entry that may simply be wrapped under a
-   *   different (but valid) `derivationSecret` by another instance. See `#readByKey`
-   *   for the equivalent unscoped, self-healing case. {@link KeyWrappingError}
+   *   entry can't be served (fails to unwrap, or is stored in an unexpected shape),
+   *   since silently regenerating would overwrite a scope's shared entry that may simply
+   *   be wrapped under a different (but valid) `derivationSecret` by another instance.
+   *   The unscoped equivalent self-heals. {@link KeyWrappingError}
    * @throws if wrapping the freshly generated private key fails (e.g. `crypto.subtle`
    *   unavailable in this environment). {@link KeyWrappingError}
    */
@@ -301,34 +317,15 @@ export class TransportKeyPairVault {
         stored.tkmsVersion = fresh.tkmsVersion;
       }
 
-      let entry: StoredTransportKeyPair | WrappedPrivateKeyEntry = stored;
+      let entry: PersistedTransportKeyPair = stored;
       if (this.#derivationSecret !== undefined) {
-        let wrappedPrivateKey: Hex;
-        let iv: Hex;
         try {
-          ({ wrappedPrivateKey, iv } = await wrapPrivateKey(
-            fresh.privateKey,
-            this.#derivationSecret,
-            identity,
-            { publicKey: fresh.publicKey, createdAt, expiresAt, tkmsVersion: stored.tkmsVersion },
-          ));
+          entry = await encodeWrappedEntry(stored, this.#derivationSecret, identity);
         } catch (error) {
           const message = "Failed to wrap the transport private key for at-rest storage.";
           this.#logger.error(message, { key, error });
           throw new KeyWrappingError(message, { cause: error });
         }
-        const wrapped: WrappedPrivateKeyEntry = {
-          wrappingVersion: WRAPPING_VERSION,
-          publicKey: fresh.publicKey,
-          wrappedPrivateKey,
-          iv,
-          createdAt,
-          expiresAt,
-        };
-        if (stored.tkmsVersion) {
-          wrapped.tkmsVersion = stored.tkmsVersion;
-        }
-        entry = wrapped;
       }
 
       // If a rotation bumped this key's epoch while `#generator()` (and, when

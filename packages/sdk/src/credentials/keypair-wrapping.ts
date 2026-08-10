@@ -1,21 +1,22 @@
 import { toBytes, toHex, type Hex } from "viem";
 
 /**
- * Wrapping-scheme version, persisted with every wrapped entry so a future scheme is
- * detectable on disk instead of reading as corruption. Shared with the HKDF `info` tag
- * below so the stored number and the derived key can never disagree on the version.
+ * Parameters of wrapping scheme v1, in one place so the crypto path and the on-disk
+ * format can never disagree about them. The `info` tag is versioned so a future scheme
+ * can run alongside this one without silently reusing (and confusing) its derived keys,
+ * and `version` is persisted with every entry so a future scheme is detectable on disk
+ * instead of reading as corruption.
  */
-export const WRAPPING_VERSION = 1;
+export const WRAPPING_SCHEME_V1 = {
+  version: 1,
+  info: "zama-sdk-keypair-wrapping-v1",
+  /** AES-GCM recommended nonce size. Generated fresh per wrap, never reused. */
+  ivLengthBytes: 12,
+  /** AES-GCM authentication tag size; any valid ciphertext is at least this long. */
+  tagLengthBytes: 16,
+} as const;
 
-/**
- * Domain-separation tag for the HKDF `info` parameter. Versioned so a future
- * change to the wrapping scheme can run alongside this one without silently
- * reusing (and confusing) derived keys from an earlier version.
- */
-const WRAPPING_INFO = `zama-sdk-keypair-wrapping-v${WRAPPING_VERSION}`;
 const AES_KEY_LENGTH_BITS = 256;
-/** AES-GCM recommended nonce size. Generated fresh per wrap — never reused. */
-const GCM_IV_LENGTH_BYTES = 12;
 
 /** On-disk shape of a wrapped private key. Public key and timestamps are stored alongside, unwrapped. */
 export interface WrappedPrivateKey {
@@ -129,7 +130,7 @@ async function deriveWrappingKey(
       name: "HKDF",
       hash: "SHA-256",
       salt: new TextEncoder().encode(identity),
-      info: new TextEncoder().encode(WRAPPING_INFO),
+      info: new TextEncoder().encode(WRAPPING_SCHEME_V1.info),
     },
     ikmKey,
     { name: "AES-GCM", length: AES_KEY_LENGTH_BITS },
@@ -146,7 +147,7 @@ export async function wrapPrivateKey(
   metadata: WrappedPrivateKeyMetadata,
 ): Promise<WrappedPrivateKey> {
   const key = await deriveWrappingKey(derivationSecret, identity);
-  const iv = crypto.getRandomValues(new Uint8Array(GCM_IV_LENGTH_BYTES));
+  const iv = crypto.getRandomValues(new Uint8Array(WRAPPING_SCHEME_V1.ivLengthBytes));
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: metadataAad(metadata) },
     key,

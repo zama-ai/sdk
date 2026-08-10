@@ -3,7 +3,7 @@ import { MemoryStorage } from "../../storage/memory-storage";
 import { TransportKeyPairVault } from "../keypair-vault";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { KeyWrappingError } from "../../errors/credential";
-import { DerivationSecretHolder, WRAPPING_VERSION } from "../keypair-wrapping";
+import { DerivationSecretHolder, WRAPPING_SCHEME_V1 } from "../keypair-wrapping";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "../storage-keys";
 import { checksum } from "../utils";
 
@@ -533,7 +533,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     expect(persisted.wrappedPrivateKey).toBeDefined();
     expect(persisted.wrappedPrivateKey).not.toBe(PRIVATE_KEY);
     expect(persisted.iv).toBeDefined();
-    expect(persisted.wrappingVersion).toBe(WRAPPING_VERSION);
+    expect(persisted.wrappingVersion).toBe(WRAPPING_SCHEME_V1.version);
   });
 
   test("wrong secret is treated as a cache miss and regenerates — not a crash", async () => {
@@ -977,12 +977,12 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       return { ...raw, iv: "0xaabb" }; // 2 bytes, not the required 12 — structurally invalid
     });
 
-    // An entry matching neither shape gets the corruption/version-mismatch diagnostic, not
-    // the "a peer is running without the secret" one — the operator actions differ.
+    // A structurally invalid entry gets the corruption/version-mismatch diagnostic, not
+    // the "a peer is running without the secret" one: the operator actions differ.
     const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(KeyWrappingError);
     expect(error).toMatchObject({
-      message: expect.stringContaining("not a recognized wrapped or plaintext entry shape"),
+      message: expect.stringContaining("wrapped but structurally invalid"),
     });
     expect(error).toMatchObject({
       message: expect.stringContaining(
@@ -991,7 +991,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     });
     expect((error as Error).message).not.toContain("running without the secret");
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("not a recognized wrapped or plaintext entry shape"),
+      expect.stringContaining("wrapped but structurally invalid"),
       expect.objectContaining({ key: expect.any(String) }),
     );
     // The corrupted entry must never be deleted — a failed read must not clobber it.
@@ -1002,30 +1002,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     await expect(vault.readStored(USER)).rejects.toThrow(/scope "tenant-1"/);
   });
 
-  test("an entry written under an unrecognized wrappingVersion is a cache miss and regenerates", async () => {
-    const storage = new MemoryStorage();
-    const generator = makeGenerator();
-    const vault = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      derivationSecret: holder(SECRET_A),
-    });
-
-    const created = await vault.getOrCreate(USER);
-    const realGet = storage.get.bind(storage);
-    vi.spyOn(storage, "get").mockImplementationOnce(async (key: string) => {
-      const raw = (await realGet(key)) as Record<string, unknown>;
-      return { ...raw, wrappingVersion: WRAPPING_VERSION + 1 };
-    });
-
-    const regenerated = await vault.getOrCreate(USER);
-    expect(regenerated).not.toEqual(created);
-    expect(generator).toHaveBeenCalledTimes(2);
-  });
-
-  test("a scoped entry with a missing wrappingVersion gets the corruption/version-mismatch diagnostic, not a clobbering regeneration", async () => {
+  test("a scoped entry with a corrupted ciphertext is never clobbered either", async () => {
     const storage = new MemoryStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
@@ -1040,6 +1017,135 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     await vault.getOrCreate(USER);
     const realGet = storage.get.bind(storage);
     vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
+      const raw = (await realGet(key)) as Record<string, unknown>;
+      // Truncated below the AES-GCM authentication tag: structurally impossible ciphertext.
+      return { ...raw, wrappedPrivateKey: `0x${"cc".repeat(8)}` };
+    });
+
+    const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining("wrapped but structurally invalid"),
+    });
+    expect(logger.error).toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  test("a scoped entry that is recognizably wrapped but corrupted fails loudly when no derivationSecret is configured", async () => {
+    // The loud no-secret failure keys off the wrapped envelope, not a clean schema parse:
+    // a corrupted entry still belongs to a peer that may be able to read it.
+    const storage = new MemoryStorage();
+    const deleteSpy = vi.spyOn(storage, "delete");
+    const logger = makeLogger();
+    const wrapped = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+      derivationSecret: holder(SECRET_A),
+    });
+    const unwrapped = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      scope: "tenant-1",
+    });
+
+    await wrapped.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
+      const raw = (await realGet(key)) as Record<string, unknown>;
+      return { ...raw, iv: "0xaabb" }; // 2 bytes, not the required 12
+    });
+
+    const error: unknown = await unwrapped.readStored(OTHER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining("no transportKeyPairDerivationSecret configured"),
+    });
+    expect(logger.error).toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  test("an unscoped entry written under an unrecognized wrappingVersion is preserved, not regenerated over", async () => {
+    // Only a build that knows the scheme can read the ciphertext, so even the unscoped
+    // vault fails closed rather than self-healing: regenerating would destroy it for good.
+    const storage = new MemoryStorage();
+    const deleteSpy = vi.spyOn(storage, "delete");
+    const generator = makeGenerator();
+    const vault = new TransportKeyPairVault({
+      generator,
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      derivationSecret: holder(SECRET_A),
+    });
+
+    await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    const rawBefore = await realGet(transportKeyPairStorageKey(USER));
+    vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
+      const raw = (await realGet(key)) as Record<string, unknown>;
+      return { ...raw, wrappingVersion: WRAPPING_SCHEME_V1.version + 1 };
+    });
+
+    const error: unknown = await vault.getOrCreate(USER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining(`wrappingVersion ${WRAPPING_SCHEME_V1.version + 1}`),
+    });
+    expect(generator).toHaveBeenCalledOnce();
+    expect(deleteSpy).not.toHaveBeenCalled();
+
+    vi.mocked(storage.get).mockImplementation(realGet);
+    expect(await storage.get(transportKeyPairStorageKey(USER))).toEqual(rawBefore);
+  });
+
+  test("a scoped entry written under an unrecognized wrappingVersion is preserved and names the scope", async () => {
+    const storage = new MemoryStorage();
+    const deleteSpy = vi.spyOn(storage, "delete");
+    const logger = makeLogger();
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger,
+      scope: "tenant-1",
+      derivationSecret: holder(SECRET_A),
+    });
+    await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
+      const raw = (await realGet(key)) as Record<string, unknown>;
+      return { ...raw, wrappingVersion: WRAPPING_SCHEME_V1.version + 1 };
+    });
+
+    const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(KeyWrappingError);
+    expect(error).toMatchObject({ message: expect.stringContaining('scope "tenant-1"') });
+    expect(error).toMatchObject({
+      message: expect.stringContaining("permits.revokeTransportKeyPair()"),
+    });
+    expect(logger.error).toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  test("an entry with a missing wrappingVersion is preserved as an unreadable scheme, not discarded as junk", async () => {
+    const storage = new MemoryStorage();
+    const deleteSpy = vi.spyOn(storage, "delete");
+    const vault = new TransportKeyPairVault({
+      generator: makeGenerator(),
+      storage,
+      ttl: TTL_SECONDS,
+      logger: makeLogger(),
+      scope: "tenant-1",
+      derivationSecret: holder(SECRET_A),
+    });
+    await vault.getOrCreate(USER);
+    const realGet = storage.get.bind(storage);
+    vi.spyOn(storage, "get").mockImplementation(async (key: string) => {
       const { wrappingVersion: _dropped, ...raw } = (await realGet(key)) as Record<string, unknown>;
       return raw;
     });
@@ -1047,9 +1153,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(KeyWrappingError);
     expect(error).toMatchObject({
-      message: expect.stringContaining(
-        "corrupted, or instances sharing this scope are running mismatched wrapping-scheme versions",
-      ),
+      message: expect.stringContaining("no wrappingVersion this build recognizes"),
     });
     expect(deleteSpy).not.toHaveBeenCalled();
   });

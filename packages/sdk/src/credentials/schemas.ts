@@ -6,7 +6,6 @@ import {
   positiveSeconds,
   unixSeconds,
 } from "../schemas/primitives";
-import { WRAPPING_VERSION } from "./keypair-wrapping";
 import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
 
 const transportKeyPairTTLError = "transportKeyPairTTL must be a positive integer number of seconds";
@@ -18,19 +17,6 @@ const transportKeyPairScopeError = "transportKeyPairScope must be a non-empty st
  * CSPRNG or secrets manager, never a human-memorable passphrase (HKDF does no key-stretching). */
 export const MIN_DERIVATION_SECRET_LENGTH_BYTES = 32;
 const derivationSecretError = `transportKeyPairDerivationSecret must be a string or Uint8Array of at least ${MIN_DERIVATION_SECRET_LENGTH_BYTES} bytes (256 bits) of real entropy — source it from a CSPRNG or secrets manager, not a human-memorable passphrase`;
-
-const wrappingVersionError = `wrappingVersion must be ${WRAPPING_VERSION}, the only wrapping scheme this SDK can read`;
-
-/** AES-GCM nonce size this SDK always generates — see `keypair-wrapping.ts`. */
-const GCM_IV_LENGTH_BYTES = 12;
-/** AES-GCM authentication tag size; any valid ciphertext is at least this long. */
-const GCM_TAG_LENGTH_BYTES = 16;
-const ivLengthError = `iv must be a ${GCM_IV_LENGTH_BYTES}-byte hex string`;
-const wrappedPrivateKeyLengthError = `wrappedPrivateKey must be a whole number of bytes and at least ${GCM_TAG_LENGTH_BYTES} bytes (the AES-GCM authentication tag)`;
-
-function hexByteLength(v: string): number {
-  return (v.length - 2) / 2;
-}
 
 /** Maximum transportKeyPairTTL accepted by the fhevm ACL contract (365 days, in seconds). */
 export const MAX_TRANSPORT_KEY_PAIR_TTL_SECONDS = 365 * SECONDS_PER_DAY;
@@ -79,42 +65,6 @@ export const StoredTransportKeyPairSchema = z.object({
   expiresAt: positiveSeconds,
   tkmsVersion: z.optional(z.string()),
 });
-
-/**
- * On-disk shape when `transportKeyPairDerivationSecret` is configured — distinct from
- * {@link StoredTransportKeyPairSchema}, which is the in-memory/plaintext shape every
- * caller outside {@link TransportKeyPairVault} still sees. `publicKey` is never
- * sensitive and stays unwrapped; only the private key half is encrypted.
- */
-export const WrappedPrivateKeyEntrySchema = z.object({
-  // An entry from an unknown (or version-less) scheme fails here rather than reaching
-  // crypto.subtle.decrypt, so it takes the unrecognized-entry path instead of surfacing as
-  // an authentication failure indistinguishable from corruption.
-  wrappingVersion: z.literal(WRAPPING_VERSION, { error: wrappingVersionError }),
-  publicKey: hex,
-  // Length-checked, not just shape-checked: a truncated or bit-flipped ciphertext/IV
-  // (e.g. from a buggy custom GenericStorage adapter) would otherwise reach
-  // crypto.subtle.decrypt and fail with the same generic OperationError a genuine wrong-secret
-  // case does — catching it here, pre-decrypt, avoids that ambiguity for the cases that
-  // structurally can't be a real ciphertext at all.
-  // Even hex length checked first: an odd digit count is a fractional byte count that
-  // would clear the minimum (33 digits reads as 16.5 bytes), and viem's toBytes then
-  // left-pads it into a plausible-looking ciphertext that only fails at decrypt time.
-  wrappedPrivateKey: hex.check(
-    z.refine((v) => v.length % 2 === 0 && hexByteLength(v) >= GCM_TAG_LENGTH_BYTES, {
-      error: wrappedPrivateKeyLengthError,
-    }),
-  ),
-  iv: hex.check(
-    z.refine((v) => hexByteLength(v) === GCM_IV_LENGTH_BYTES, { error: ivLengthError }),
-  ),
-  createdAt: unixSeconds,
-  expiresAt: positiveSeconds,
-  tkmsVersion: z.optional(z.string()),
-});
-
-/** @internal */
-export type WrappedPrivateKeyEntry = z.infer<typeof WrappedPrivateKeyEntrySchema>;
 
 export const Eip712Schema = z.object({
   domain: z.record(z.string(), z.unknown()),
