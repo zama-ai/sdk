@@ -40,6 +40,53 @@ function scopeIdentity(scope: string): string {
   return `scope:${scope}`;
 }
 
+/** Why a stored entry can't be served to this instance. */
+type RecoveryReason =
+  | "wrapped-without-secret"
+  | "unwrapped-under-secret"
+  | "unwrap-failed"
+  | "corrupt-wrapped";
+
+/** Operator-facing diagnostic for a scope whose shared entry is left in place. */
+function scopedFailureMessage(reason: RecoveryReason, scope: string): string {
+  const messages: Record<RecoveryReason, string> = {
+    "wrapped-without-secret":
+      `Transport key pair for scope "${scope}" is wrapped, but this instance has no ` +
+      "transportKeyPairDerivationSecret configured. Every instance sharing this scope must use " +
+      "the same transportKeyPairDerivationSecret; once they do, call " +
+      "permits.revokeTransportKeyPair() to rotate the entry.",
+    "unwrapped-under-secret":
+      `Transport key pair for scope "${scope}" is stored unwrapped, but this instance is ` +
+      "configured with a transportKeyPairDerivationSecret. A peer instance sharing this scope " +
+      "is running without the secret: configure the same transportKeyPairDerivationSecret " +
+      "everywhere, then call permits.revokeTransportKeyPair() to migrate the scope to a " +
+      "wrapped entry.",
+    "unwrap-failed":
+      `Transport key pair for scope "${scope}" failed to unwrap. This usually means another ` +
+      "instance created it with a different transportKeyPairDerivationSecret: every instance " +
+      "sharing this scope must use the same secret. It can also mean the stored entry is " +
+      "corrupted.",
+    "corrupt-wrapped":
+      `Transport key pair for scope "${scope}" is wrapped but structurally invalid: the stored ` +
+      "iv or ciphertext is not a shape this wrapping scheme can produce. This usually means " +
+      "the stored entry is corrupted, or instances sharing this scope are running mismatched " +
+      "wrapping-scheme versions.",
+  };
+  return messages[reason];
+}
+
+/** Discard reason for a per-signer entry, which self-heals instead of failing loudly. */
+const UNSCOPED_FAILURE_REASONS: Record<RecoveryReason, string> = {
+  "wrapped-without-secret":
+    "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
+    "configured; discarding the entry, at-rest wrapping is no longer active",
+  "unwrapped-under-secret":
+    "unwrapped transport key pair entry found while a transportKeyPairDerivationSecret is configured",
+  "unwrap-failed":
+    "transport key pair entry failed to unwrap (wrong transportKeyPairDerivationSecret?)",
+  "corrupt-wrapped": "structurally invalid wrapped transport key pair entry",
+};
+
 function unsupportedVersionMessage(version: unknown, scope: string | undefined): string {
   const label =
     typeof version === "number"
@@ -127,9 +174,7 @@ export class TransportKeyPairVault {
     if (entry.kind === "unsupported-version") {
       // Preserved for every configuration, scoped or not: only a build that knows the
       // scheme can read this ciphertext, and regenerating would destroy it for good.
-      const message = unsupportedVersionMessage(entry.version, this.#scope);
-      this.#logger.error(message, { key });
-      throw new KeyWrappingError(message);
+      throw this.#failLoudly(key, unsupportedVersionMessage(entry.version, this.#scope));
     }
 
     if (entry.kind === "unrecognized") {
@@ -139,108 +184,72 @@ export class TransportKeyPairVault {
       return null;
     }
 
-    if (this.#derivationSecret === undefined) {
+    const derivationSecret = this.#derivationSecret;
+    if (derivationSecret === undefined) {
       if (entry.kind === "plaintext") {
-        if (nowSeconds() >= entry.keyPair.expiresAt) {
-          await this.#discard(key, "expired transport key pair entry");
-          return null;
-        }
-        return entry.keyPair;
+        return (await this.#discardIfExpired(key, entry.keyPair.expiresAt)) ? null : entry.keyPair;
       }
-      if (this.#scope !== undefined) {
-        // Discarding a scope's shared entry because this instance can't read it would
-        // clobber a peer's valid, wrapped one and re-prompt the whole cohort. A corrupt
-        // entry is treated the same: without the secret it is indistinguishable from one
-        // a peer can still read.
-        const message =
-          `Transport key pair for scope "${this.#scope}" is wrapped, but this instance has no ` +
-          "transportKeyPairDerivationSecret configured. Every instance sharing this scope must " +
-          "use the same transportKeyPairDerivationSecret; once they do, call " +
-          "permits.revokeTransportKeyPair() to rotate the entry.";
-        this.#logger.error(message, { key });
-        throw new KeyWrappingError(message);
-      }
-      // Unscoped: only this signer is affected, so self-heal like any other unreadable
-      // entry. Warned unconditionally because the regenerated entry is plaintext, which
-      // silently drops the at-rest protection the discarded one had.
-      const reason =
-        "wrapped transport key pair entry found but no transportKeyPairDerivationSecret is " +
-        "configured; discarding the entry, at-rest wrapping is no longer active";
-      this.#logger.warn(reason, { key });
-      await this.#discard(key, reason);
-      return null;
+      // Corrupt or intact, a wrapped entry is unreadable here for the same single reason.
+      return this.#recover(key, "wrapped-without-secret");
     }
 
-    if (entry.kind !== "wrapped") {
-      if (this.#scope !== undefined) {
-        // A scope's shared entry is never discarded to self-heal: regenerating would
-        // clobber a peer's entry and re-prompt every signer in the cohort.
-        const message =
-          entry.kind === "plaintext"
-            ? `Transport key pair for scope "${this.#scope}" is stored unwrapped, but this ` +
-              "instance is configured with a transportKeyPairDerivationSecret. A peer instance " +
-              "sharing this scope is running without the secret: configure the same " +
-              "transportKeyPairDerivationSecret everywhere, then call " +
-              "permits.revokeTransportKeyPair() to migrate the scope to a wrapped entry."
-            : `Transport key pair for scope "${this.#scope}" is wrapped but structurally ` +
-              "invalid: the stored iv or ciphertext is not a shape this wrapping scheme can " +
-              "produce. This usually means the stored entry is corrupted, or instances sharing " +
-              "this scope are running mismatched wrapping-scheme versions.";
-        this.#logger.error(message, { key });
-        throw new KeyWrappingError(message);
-      }
-      const reason =
-        entry.kind === "plaintext"
-          ? "unwrapped transport key pair entry found while a transportKeyPairDerivationSecret is configured"
-          : "structurally invalid wrapped transport key pair entry";
-      this.#logger.warn(reason, { key });
-      await this.#discard(key, reason);
-      return null;
+    if (entry.kind === "plaintext") {
+      return this.#recover(key, "unwrapped-under-secret");
     }
-
-    if (nowSeconds() >= entry.expiresAt) {
-      await this.#discard(key, "expired transport key pair entry");
+    if (entry.kind === "corrupt-wrapped") {
+      return this.#recover(key, "corrupt-wrapped");
+    }
+    if (await this.#discardIfExpired(key, entry.expiresAt)) {
       return null;
     }
 
     try {
-      return await entry.decode(this.#derivationSecret, identity);
+      return await entry.decode(derivationSecret, identity);
     } catch (error) {
       if (!isUnwrapAuthFailure(error)) {
-        // Not a routine wrong-secret/tampered-entry failure — e.g. crypto.subtle
-        // unavailable in this environment, or a malformed key import. Surface it
-        // distinctly instead of silently discarding a perfectly good entry and
-        // masking an environment problem as a routine cache miss.
+        // Not a wrong secret or a tampered entry but an environment problem (e.g.
+        // crypto.subtle unavailable), which must not read as a routine cache miss.
         this.#logger.error("transport key pair unwrap failed unexpectedly", { key, error });
         throw new KeyWrappingError("Transport key pair unwrap failed unexpectedly.", {
           cause: error,
         });
       }
-      if (this.#scope !== undefined) {
-        // A shared scope's entry failing to unwrap doesn't necessarily mean it's
-        // broken — the likeliest cause is another instance sharing this scope having
-        // wrapped it under a different derivationSecret (inconsistent secret
-        // propagation during a rollout), but AES-GCM's generic "OperationError" can't
-        // actually distinguish that from genuine storage corruption. Discarding and
-        // regenerating here would clobber that instance's possibly valid entry and force
-        // every signer in the scope to re-authenticate, repeatedly, for as long as both
-        // configurations stay live. Fail loudly instead of silently corrupting a
-        // resource the whole cohort shares.
-        const message =
-          `Transport key pair for scope "${this.#scope}" failed to unwrap. This usually means ` +
-          "another instance created it with a different transportKeyPairDerivationSecret: " +
-          "every instance sharing this scope must use the same secret. It can also mean the " +
-          "stored entry is corrupted.";
-        this.#logger.error(message, { key });
-        throw new KeyWrappingError(message, { cause: error });
-      }
-      // Unscoped: only this signer is affected, so self-heal exactly like a malformed entry.
-      const reason =
-        "transport key pair entry failed to unwrap (wrong transportKeyPairDerivationSecret?)";
-      this.#logger.warn(reason, { key });
-      await this.#discard(key, reason);
-      return null;
+      return this.#recover(key, "unwrap-failed", error);
     }
+  }
+
+  /**
+   * The one place that decides what happens to an entry this instance can't serve. A
+   * scope's entry is shared, and AES-GCM can't distinguish a peer's valid entry wrapped
+   * under a different secret from genuine corruption, so discarding it risks clobbering a
+   * key pair the whole cohort is using: scoped vaults fail loudly and leave it in place,
+   * unscoped ones self-heal since only this signer is affected.
+   */
+  async #recover(key: string, reason: RecoveryReason, cause?: unknown): Promise<null> {
+    if (this.#scope !== undefined) {
+      throw this.#failLoudly(key, scopedFailureMessage(reason, this.#scope), cause);
+    }
+    const discardReason = UNSCOPED_FAILURE_REASONS[reason];
+    // Warned, not just discarded: a regenerated entry can silently lose the at-rest
+    // wrapping the discarded one had.
+    this.#logger.warn(discardReason, { key });
+    await this.#discard(key, discardReason);
+    return null;
+  }
+
+  /** Logged where the storage key is still in hand, then thrown for the caller to act on. */
+  #failLoudly(key: string, message: string, cause?: unknown): KeyWrappingError {
+    this.#logger.error(message, { key });
+    return new KeyWrappingError(message, { cause });
+  }
+
+  /** An entry past its TTL is a cache miss: dropped so the next call regenerates it. */
+  async #discardIfExpired(key: string, expiresAt: number): Promise<boolean> {
+    if (nowSeconds() < expiresAt) {
+      return false;
+    }
+    await this.#discard(key, "expired transport key pair entry");
+    return true;
   }
 
   async #discard(key: string, reason: string): Promise<void> {
