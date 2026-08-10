@@ -1,6 +1,9 @@
 import type { Address } from "viem";
 import { test as baseTest, describe, expect, vi } from "../test-fixtures";
 import { createConfig } from "../config/create";
+import { KeyWrappingError } from "../errors";
+import type { ZamaSDKEvent, ZamaSDKEventListener } from "../events/sdk-events";
+import type { EncryptedValue } from "../relayer/types";
 import { MemoryStorage } from "../storage/memory-storage";
 import { ZamaSDK } from "../zama-sdk";
 
@@ -232,6 +235,52 @@ describe("ZamaSDK credentials lifecycle", () => {
       const keypair = keypairWrite![1] as Record<string, unknown>;
       expect(keypair.wrappedPrivateKey).toBeDefined();
       expect(keypair.privateKey).toBeUndefined();
+    });
+
+    test("a KeyWrappingError from credential resolution never reaches a ZamaSDKEvent payload", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      // Credential resolution happens before the emit-wrapped section of every operation
+      // that calls it, so a failure here must never surface as, or be folded into, an
+      // event payload — not the secret, and not the resolved config it was read from.
+      const storage = new MemoryStorage();
+      const scope = "tenant-events";
+      const writerConfig = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+        transportKeyPairScope: scope,
+        transportKeyPairDerivationSecret: "sentinel-writer-secret-must-never-leak-into-an-event",
+      });
+      await new ZamaSDK(writerConfig).permits.grantPermit([CONTRACT_A]);
+
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const mismatchedConfig = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+        transportKeyPairScope: scope,
+        transportKeyPairDerivationSecret: "sentinel-reader-secret-must-never-leak-into-an-event",
+        onEvent,
+      });
+      const sdk = new ZamaSDK(mismatchedConfig);
+
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toThrow(KeyWrappingError);
+      await expect(
+        sdk.decryption.decryptValues([
+          { encryptedValue: `0x${"aa".repeat(32)}` as EncryptedValue, contractAddress: CONTRACT_A },
+        ]),
+      ).rejects.toThrow(KeyWrappingError);
+
+      expect(events).toEqual([]);
     });
   });
 });
