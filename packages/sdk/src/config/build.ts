@@ -51,6 +51,22 @@ function assertDerivationSecretNotUnset(params: ZamaConfigBase): void {
 }
 
 /**
+ * Wrapping only helps where no platform keystore protects the store, which is the headless
+ * case. In a browser, at-rest security stays delegated to the storage backend.
+ */
+function assertDerivationSecretHeadless(params: ZamaConfigBase): void {
+  if (params.transportKeyPairDerivationSecret === undefined) {
+    return;
+  }
+  if (typeof window === "undefined" && typeof document === "undefined") {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret is supported in headless environments only (CLI tools, servers, agents), and a browser context was detected. Remove the option: in a browser, at-rest security of the transport key pair is delegated to the storage backend.",
+  );
+}
+
+/**
  * @internal Shared config builder — not part of the public API.
  *
  * Applies defaults, validates TTLs, and resolves storage so the
@@ -62,6 +78,7 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   assertDerivationSecretNotUnset(params);
+  assertDerivationSecretHeadless(params);
 
   const logger = new LoggerService(params.logger);
 

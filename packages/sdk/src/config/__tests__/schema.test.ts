@@ -247,6 +247,47 @@ describe("createConfig validation", () => {
     ).not.toThrow();
   });
 
+  test("rejects a transportKeyPairDerivationSecret in a browser context", ({
+    relayer,
+    provider,
+  }) => {
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("document", {});
+
+    const build = () =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
+      });
+
+    try {
+      expect(build).toThrow(ConfigurationError);
+      expect(build).toThrow(/headless environments only \(CLI tools, servers, agents\)/);
+      expect(build).toThrow(/delegated to the storage backend/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("accepts a transportKeyPairDerivationSecret with no browser globals present", ({
+    relayer,
+    provider,
+  }) => {
+    expect(typeof window).toBe("undefined");
+    expect(typeof document).toBe("undefined");
+
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
+    });
+
+    expect(resolvedDerivationSecretHolder(config)).toBeDefined();
+  });
+
   test("never exposes the transportKeyPairDerivationSecret on the resolved config", ({
     relayer,
     provider,
