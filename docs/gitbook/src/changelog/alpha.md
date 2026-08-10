@@ -28,7 +28,7 @@ All eleven write operations are covered, including the shield legs and the two-p
 
 ## Transport key pair wrapped at rest
 
-A new `transportKeyPairDerivationSecret` config option encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to — CLI tools, bare-metal agents, local dev — and must never be shipped in a browser bundle. Omit it and nothing changes: storage stays plaintext, as before.
+A new `transportKeyPairDerivationSecret` config option encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to — CLI tools, bare-metal agents, local dev. `createConfig` rejects it in a browser context, and rejects it when passed as `undefined` (an unset env var reaching the option), both with `ConfigurationError` instead of a silent plaintext downgrade. Omit it entirely and nothing changes: storage stays plaintext, as before.
 
 ```ts
 const config = createConfig({

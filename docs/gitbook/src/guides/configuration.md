@@ -395,7 +395,7 @@ Permits stay per-signer regardless of scope. See [Security Model](../concepts/se
 
 ### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
-By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `transportKeyPairDerivationSecret` from your own environment instead:
+By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to (a CLI tool, an agent on bare metal, local dev), pass `transportKeyPairDerivationSecret` from your own environment instead. The value must arrive out of band: sourced from your process environment, a secrets manager, or a KMS-unwrapped blob, never persisted alongside the storage it protects.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -403,26 +403,21 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const derivationSecret = process.env.ZAMA_DERIVATION_SECRET;
-if (!derivationSecret) {
-  throw new Error("ZAMA_DERIVATION_SECRET is not set — refusing to store the key pair unwrapped");
-}
-
 const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: node() },
-  transportKeyPairDerivationSecret: derivationSecret, // string | Uint8Array
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-Validate the value explicitly rather than asserting it with `!`: an unset env var reaches `createConfig` as `undefined`, which silently disables wrapping and persists the private key in plaintext.
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through rather than asserting it with `!` first: `createConfig` throws `ConfigurationError` when the key is present but its value is `undefined` (the unset-env-var case), so there's nothing to guard against and no risk of a silent plaintext downgrade.
 
 {% hint style="danger" %}
-**Headless environments only.** Never put `transportKeyPairDerivationSecret` in a browser bundle. Bundlers inline `process.env` values at build time, so the secret ships to every visitor — and a secret every client already holds protects nothing. Browser apps should rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
+**Headless only, enforced.** `createConfig` rejects `transportKeyPairDerivationSecret` in a browser context with `ConfigurationError`. Bundlers inline `process.env` values at build time, so a secret shipped this way reaches every visitor's bundle and protects nothing. Browser apps rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
 {% endhint %}
 
 {% hint style="warning" %}

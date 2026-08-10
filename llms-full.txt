@@ -2157,7 +2157,7 @@ All eleven write operations are covered, including the shield legs and the two-p
 
 ## Transport key pair wrapped at rest
 
-A new `transportKeyPairDerivationSecret` config option encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to — CLI tools, bare-metal agents, local dev — and must never be shipped in a browser bundle. Omit it and nothing changes: storage stays plaintext, as before.
+A new `transportKeyPairDerivationSecret` config option encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to — CLI tools, bare-metal agents, local dev. `createConfig` rejects it in a browser context, and rejects it when passed as `undefined` (an unset env var reaching the option), both with `ConfigurationError` instead of a silent plaintext downgrade. Omit it entirely and nothing changes: storage stays plaintext, as before.
 
 ```ts
 const config = createConfig({
@@ -3317,7 +3317,7 @@ Permits stay per-signer regardless of scope. See [Security Model](https://raw.gi
 
 ### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
-By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to — a CLI tool, an agent on bare metal, local dev — pass `transportKeyPairDerivationSecret` from your own environment instead:
+By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to (a CLI tool, an agent on bare metal, local dev), pass `transportKeyPairDerivationSecret` from your own environment instead. The value must arrive out of band: sourced from your process environment, a secrets manager, or a KMS-unwrapped blob, never persisted alongside the storage it protects.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -3325,27 +3325,22 @@ import { ZamaSDK } from "@zama-fhe/sdk";
 import { node } from "@zama-fhe/sdk/node";
 import { sepolia } from "@zama-fhe/sdk/chains";
 
-const derivationSecret = process.env.ZAMA_DERIVATION_SECRET;
-if (!derivationSecret) {
-  throw new Error("ZAMA_DERIVATION_SECRET is not set — refusing to store the key pair unwrapped");
-}
-
 const config = createConfig({
   chains: [sepolia],
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: node() },
-  transportKeyPairDerivationSecret: derivationSecret, // string | Uint8Array
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
 });
 
 const sdk = new ZamaSDK(config);
 ```
 
-Validate the value explicitly rather than asserting it with `!`: an unset env var reaches `createConfig` as `undefined`, which silently disables wrapping and persists the private key in plaintext.
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through rather than asserting it with `!` first: `createConfig` throws `ConfigurationError` when the key is present but its value is `undefined` (the unset-env-var case), so there's nothing to guard against and no risk of a silent plaintext downgrade.
 
 
 > [!DANGER]
-> **Headless environments only.** Never put `transportKeyPairDerivationSecret` in a browser bundle. Bundlers inline `process.env` values at build time, so the secret ships to every visitor — and a secret every client already holds protects nothing. Browser apps should rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
+> **Headless only, enforced.** `createConfig` rejects `transportKeyPairDerivationSecret` in a browser context with `ConfigurationError`. Bundlers inline `process.env` values at build time, so a secret shipped this way reaches every visitor's bundle and protects nothing. Browser apps rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
 
 
 
@@ -9342,6 +9337,8 @@ try {
 **Code:** `KEY_WRAPPING_FAILED`
 
 Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (`crypto.subtle` unavailable — a non-secure context such as plain `http://` on a LAN IP, or React Native without a polyfill).
+
+It also propagates from any operation that resolves credentials, including `decryptValues` and `token.balanceOf`, since those paths grant a permit under the hood.
 
 ```ts
 matchZamaError(error, {
@@ -18579,9 +18576,18 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 ### Wrapped at rest (`transportKeyPairDerivationSecret`)
 
-The gap in the default model above is **headless contexts** — CLI tools, agentic operators on bare metal, local dev environments — where no platform keystore exists and no operator KMS sits in front of storage. There's nothing to delegate security to.
+The threat this protects against is **offline storage theft**: an attacker who obtains a copy of your storage backend (a stolen disk, a leaked database dump, a misconfigured backup) with no access to your running process. By default the transport private key sits in that storage as plaintext, so this attacker reads it directly. `transportKeyPairDerivationSecret` closes that gap, but only if the secret genuinely lives outside the compromise: **it must be supplied out of band, and it must never be persisted or bundled with the storage it protects.** A secret an offline-storage attacker can also reach buys nothing.
 
-`transportKeyPairDerivationSecret` (`string | Uint8Array`) closes that gap by wrapping the private key half before every write and unwrapping it after every read, transparently, inside the credential store. The SDK never persists this value, and never exposes it on the config object it hands back — it comes from your environment (an env var from a secrets manager, a mounted file, a KMS-unwrapped blob) and exists only for the lifetime of your process. On first use the SDK imports it into a single non-extractable WebCrypto key and drops its own copy of the raw bytes, which shortens the raw secret's in-memory lifetime and keeps it out of accidental readback paths. It does not stop code already running in your process from using that key, and WebCrypto makes no promise about where the key material itself lives. It must carry real entropy. The SDK enforces a minimum length — 32 bytes for a `Uint8Array`, 32 characters for a string — but length is not entropy: an encoded string (hex, base64) carries fewer bits than it has characters, so a 32-character hex secret is only 128 bits. Supply either 32 random bytes as a `Uint8Array`, or a string holding at least 256 bits of actual entropy (`openssl rand -hex 32`). Source it from a CSPRNG or secrets manager, never a human-memorable passphrase — HKDF does no key-stretching, so the secret's raw entropy is the only thing standing between a storage-reading attacker and the private key.
+Disqualifying sources, all of which put the secret back inside the same compromise:
+
+- A bundled build-time env var. Bundlers inline `process.env` values at build time, so the secret ships in the artifact itself, not just at runtime, and reaches every consumer of that artifact including whoever steals the storage.
+- A secret written to the same store the wrapped key pair lives in. If the attacker's storage copy also holds the secret, wrapping adds a decode step, not a defense.
+- A human-memorable passphrase. HKDF performs no key-stretching, so the secret's own entropy is the only thing standing between a storage-reading attacker and the private key. A passphrase an operator can memorize does not carry that entropy.
+- The same secret shared identically across an entire fleet, with no per-instance or per-tenant separation. One captured instance then wraps every other instance's storage too.
+
+`transportKeyPairDerivationSecret` (`string | Uint8Array`) wraps the private key half before every write and unwraps it after every read, transparently, inside the credential store. The SDK never persists this value, never exposes it on the config object it hands back, and rejects it outright in a browser context (`ConfigurationError`, since bundling is the only way a browser could supply it) and when the option key is present but its value is `undefined` (the unset-env-var footgun, also `ConfigurationError`). On first use the SDK imports it into a single non-extractable WebCrypto key and drops its own copy of the raw bytes for a `Uint8Array` input, which shortens the raw secret's in-memory lifetime. A `string` input can't be scrubbed this way: JS strings are immutable and interned, so a passed-in string may already have copies elsewhere in the heap that dropping this reference does not reach. `Uint8Array` is the strong form; prefer it when you control how the secret is decoded from its source. Either way, this does not stop code already running in your process from using the resulting key, and WebCrypto makes no promise about where the key material itself lives.
+
+The secret must carry real entropy. The SDK enforces a minimum length — 32 bytes for a `Uint8Array`, 32 characters for a string — but length is not entropy: an encoded string (hex, base64) carries fewer bits than it has characters, so a 32-character hex secret is only 128 bits. Supply either 32 random bytes as a `Uint8Array`, or a string holding at least 256 bits of actual entropy (`openssl rand -hex 32`). Source it from a CSPRNG or secrets manager.
 
 ```
 wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
