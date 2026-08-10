@@ -190,20 +190,15 @@ export class CredentialService {
   /**
    * Pure store lookup: are stored permits sufficient to cover `contracts`? No wallet prompt.
    *
-   * Never throws on a `KeyWrappingError`, including when `derivationSecret` is configured
-   * and the stored keypair fails to unwrap (wrong secret, or an environment problem — see
-   * {@link TransportKeyPairVault.getOrCreate}, which surfaces that same failure loudly
-   * because it's a mutating operation). This is a read-only status check; reporting "no
-   * permit" is the right degradation for a caller that can't confirm coverage, not a
-   * crash. The next `grantPermit()` call still surfaces the underlying failure normally.
-   * Any other error (e.g. the backing storage itself failing) is not this method's to
-   * swallow and propagates as-is.
+   * Never throws on a `KeyWrappingError`: a stored keypair that fails to unwrap reports
+   * no permit instead, since this is a read-only status check. `grantPermit()` still
+   * surfaces that same failure normally.
    *
    * @returns `true` if cached permits cover all requested contracts (vacuously
    *   true for an empty list); `false` if no keypair exists, it fails to unwrap, or
    *   coverage is incomplete.
    * @throws if the backing storage read fails for a reason unrelated to `derivationSecret`
-   *   wrapping — this is not swallowed, unlike a `KeyWrappingError`.
+   *   wrapping: this is not swallowed, unlike a `KeyWrappingError`.
    */
   async hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
@@ -221,8 +216,8 @@ export class CredentialService {
       if (!(error instanceof KeyWrappingError)) {
         throw error;
       }
-      // Already logged inside the vault (see `#readByKey`) — this is a read-only
-      // status check, not the place to surface it a second time as a rejection.
+      // The vault already logged this failure; this read-only status check must not
+      // surface it a second time as a rejection.
       return false;
     }
     if (keypair === null) {

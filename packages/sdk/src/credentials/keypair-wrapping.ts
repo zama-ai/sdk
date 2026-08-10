@@ -162,10 +162,9 @@ export async function wrapPrivateKey(
  * tampered ciphertext) fails the same way, closed.
  *
  * @throws a `DOMException` named `"OperationError"` on any AES-GCM authentication
- *   failure — wrong `derivationSecret`, tampered ciphertext, or tampered `metadata`.
- *   Callers must treat that specific failure as a cache miss, never a crash; see
- *   {@link TransportKeyPairVault}. Any other thrown error (e.g. `crypto.subtle`
- *   unavailable) is not a routine rotation and should not be treated as one.
+ *   failure: wrong `derivationSecret`, tampered ciphertext, or tampered `metadata`.
+ *   Any other thrown error (e.g. `crypto.subtle` unavailable) is a distinct failure
+ *   mode and must not be conflated with an authentication mismatch.
  */
 export async function unwrapPrivateKey(
   wrapped: WrappedPrivateKey,

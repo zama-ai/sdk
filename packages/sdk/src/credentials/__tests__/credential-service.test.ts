@@ -645,10 +645,10 @@ describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
     createMockSigner,
     storage,
   }) => {
-    // hasPermit() is documented as a safe, no-throw status check — grantPermit()'s
-    // "fail loudly on scoped mismatch" behavior (see keypair-vault.ts) is right for a
-    // mutating operation, but must not leak into this read-only lookup, which every
-    // caller (including the React useHasPermit() hook) relies on never rejecting.
+    // hasPermit() is documented as a safe, no-throw status check: grantPermit()'s
+    // fail-loudly-on-scoped-mismatch behavior is right for a mutating operation, but
+    // must not leak into this read-only lookup, which every caller (including the
+    // React useHasPermit() hook) relies on never rejecting.
     const correctlyConfigured = createCredentialService({
       scope: "tenant-1",
       derivationSecret: holder("correct-horse-battery-staple-and-then-some"),

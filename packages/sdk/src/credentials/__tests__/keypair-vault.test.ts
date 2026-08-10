@@ -677,7 +677,6 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
 
     const forOther = await vault.getOrCreate(OTHER);
     expect(forOther.publicKey).not.toBe(forUser.publicKey);
-    // USER's own entry is untouched by the transplant and still reads back.
     expect(await vault.readStored(USER)).toEqual(forUser);
   });
 
@@ -960,11 +959,10 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("a scoped entry that is structurally corrupted (fails schema validation) is never clobbered either — fails loudly like the OperationError case", async () => {
-    // A truncated iv fails WrappedPrivateKeyEntrySchema before decrypt is ever attempted
-    // (see the previous test). For a *scoped* vault, that structural-failure path must be
-    // just as strict as the OperationError path above — silently discarding and
-    // regenerating here would clobber the scope's shared entry via a different code path
-    // than the one the OperationError fix already closed.
+    // A truncated iv fails schema validation before decrypt is ever attempted. For a
+    // *scoped* vault, that structural-failure path must be just as strict as the
+    // OperationError path: silently discarding and regenerating here would clobber the
+    // scope's shared entry via a different code path.
     const storage = new MemoryStorage();
     const deleteSpy = vi.spyOn(storage, "delete");
     const logger = makeLogger();
@@ -1000,11 +998,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
       expect.stringContaining("wrapped but structurally invalid"),
       expect.objectContaining({ key: expect.any(String) }),
     );
-    // The corrupted entry must never be deleted — a failed read must not clobber it.
     expect(deleteSpy).not.toHaveBeenCalled();
-
-    // A second read hits the same corrupted entry again — proving it survived, not that
-    // it was silently discarded-and-regenerated behind the scenes.
     await expect(vault.readStored(USER)).rejects.toThrow(/scope "tenant-1"/);
   });
 
@@ -1292,12 +1286,8 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
   });
 
   test("never leaks the derivationSecret value into any log line, on any path (leak regression)", async () => {
-    // The secret lives only as a private field inside this vault — the one component that
-    // both holds it and writes log lines. It's absent from every log payload today (each
-    // logs at most `{ key, error }`), but a future change that logs the whole config, or
-    // folds the secret into a diagnostic payload, would leak it to whatever sink a consumer
-    // wired up. This drives every derivationSecret-aware path that logs and asserts the
-    // secret never surfaces in any of their arguments — including inside Error causes.
+    // Exercises every derivationSecret-aware logging path and asserts the secret never
+    // surfaces in any logged argument, including inside Error causes.
     const SENTINEL_A = "SENTINEL-derivationSecret-A-must-never-appear-in-a-log-0123456789";
     const SENTINEL_B = "SENTINEL-derivationSecret-B-must-never-appear-in-a-log-abcdefabcd";
 

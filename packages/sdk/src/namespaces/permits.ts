@@ -95,8 +95,8 @@ export class Permits {
    * Pure store lookup: is there a permit covering `contracts`?
    * No wallet prompt, no transport key pair generation. Returns `false` when no signer
    * is configured, or when `transportKeyPairDerivationSecret` is configured and the stored keypair
-   * fails to unwrap — see {@link CredentialService.hasPermit}. Does not swallow other
-   * errors (e.g. a failing storage backend), which propagate normally.
+   * fails to unwrap. Does not swallow other errors (e.g. a failing storage backend), which
+   * propagate normally.
    */
   async hasPermit(contracts: Address[]): Promise<boolean> {
     if (!this.#credentialService) {
@@ -106,8 +106,8 @@ export class Permits {
   }
 
   /**
-   * Pure store lookup for a delegation permit. See {@link hasPermit} — same
-   * contract, including which failures are swallowed and which propagate.
+   * Pure store lookup for a delegation permit. Never throws when the stored keypair
+   * fails to unwrap, reporting no permit instead; other errors still propagate.
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to check.

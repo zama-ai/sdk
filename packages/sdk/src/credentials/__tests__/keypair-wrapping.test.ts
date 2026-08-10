@@ -150,9 +150,8 @@ describe("keypair-wrapping", () => {
   });
 
   test("same secret, same identity, two different signers' calls derive the same wrapping key", async () => {
-    // This is exactly the SDK-142 composition requirement: two signers sharing a
-    // transportKeyPairScope (same `identity`) and the same derivationSecret must be
-    // able to wrap/unwrap each other's persisted entry.
+    // Two signers sharing a transportKeyPairScope (same `identity`) and the same
+    // derivationSecret must be able to wrap/unwrap each other's persisted entry.
     const wrappedBySignerA = await wrapPrivateKey(
       PRIVATE_KEY,
       holder(SECRET_A),
