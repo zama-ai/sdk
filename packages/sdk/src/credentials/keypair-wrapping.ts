@@ -26,6 +26,7 @@ export interface WrappedPrivateKeyMetadata {
   publicKey: Hex;
   createdAt: number;
   expiresAt: number;
+  tkmsVersion?: string;
 }
 
 // `new Uint8Array(bytes)` copies into a fresh, plain ArrayBuffer-backed view — needed
@@ -36,11 +37,17 @@ function toBufferSource(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return new Uint8Array(bytes);
 }
 
-/** Deterministic byte encoding of {@link WrappedPrivateKeyMetadata} for use as AES-GCM AAD. */
+/** Deterministic byte encoding of {@link WrappedPrivateKeyMetadata} for use as AES-GCM AAD.
+ * An absent `tkmsVersion` encodes as `null`, distinct from any string value. */
 function metadataAad(metadata: WrappedPrivateKeyMetadata): Uint8Array<ArrayBuffer> {
   return toBufferSource(
     new TextEncoder().encode(
-      JSON.stringify([metadata.publicKey, metadata.createdAt, metadata.expiresAt]),
+      JSON.stringify([
+        metadata.publicKey,
+        metadata.createdAt,
+        metadata.expiresAt,
+        metadata.tkmsVersion ?? null,
+      ]),
     ),
   );
 }

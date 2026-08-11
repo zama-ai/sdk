@@ -95,7 +95,11 @@ export const WrappedPrivateKeyEntrySchema = z.object({
   ),
   createdAt: unixSeconds,
   expiresAt: positiveSeconds,
+  tkmsVersion: z.optional(z.string()),
 });
+
+/** @internal */
+export type WrappedPrivateKeyEntry = z.infer<typeof WrappedPrivateKeyEntrySchema>;
 
 export const Eip712Schema = z.object({
   domain: z.record(z.string(), z.unknown()),
