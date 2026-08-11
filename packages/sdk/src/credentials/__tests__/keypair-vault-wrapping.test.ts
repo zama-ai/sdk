@@ -167,7 +167,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     await expect(unwrapped.readStored(USER)).rejects.toThrow(KeyWrappingError);
     // Regenerating would drop at-rest wrapping for this signer with no signal, so the
     // diagnostic hands the operator the deliberate-downgrade route instead.
-    await expect(unwrapped.getOrCreate(USER)).rejects.toThrow(/permits\.clearCredentials\(\)/);
+    await expect(unwrapped.getOrCreate(USER)).rejects.toThrow(/permits\.clear\(\)/);
     expect(unwrappedLogger.error).toHaveBeenCalledWith(
       expect.stringContaining("no transportKeyPairDerivationSecret configured"),
       expect.objectContaining({ key: expect.any(String) }),

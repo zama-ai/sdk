@@ -85,7 +85,7 @@ const UNSCOPED_WRAPPED_WITHOUT_SECRET_MESSAGE =
   "transportKeyPairDerivationSecret configured. Configure the same " +
   "transportKeyPairDerivationSecret the entry was written with. To downgrade to plaintext " +
   "at rest on purpose, discard the stored entry first by calling " +
-  "permits.clearCredentials(), then run without the secret.";
+  "permits.clear(), then run without the secret.";
 
 /** Discard reason for a per-signer entry, which self-heals instead of failing loudly. */
 const UNSCOPED_FAILURE_REASONS: Record<
@@ -108,7 +108,7 @@ function unsupportedVersionMessage(version: unknown, scope: string | undefined):
   const remedy =
     scope !== undefined
       ? "run a build that supports it everywhere, or call permits.revokeTransportKeyPair() to rotate the scope"
-      : "run a build that supports it, or call permits.clearCredentials() to discard the entry deliberately";
+      : "run a build that supports it, or call permits.clear() to discard the entry deliberately";
   return (
     `Transport key pair ${target} was written under a wrapping scheme this SDK build cannot ` +
     `read (${label}). The entry is preserved instead of regenerated, since an instance that ` +
