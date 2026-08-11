@@ -19542,7 +19542,6 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
     relayers: { [K in TChains[number]["id"]]: RelayerConfig; };
     runtime?: FhevmRuntimeConfig;
     storage?: GenericStorage;
-    transportKeyPairDerivationSecret?: string | Uint8Array;
     transportKeyPairScope?: string;
     transportKeyPairTTL?: number;
 }
@@ -19626,7 +19625,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig, options?: ZamaSDKOptions);
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -19676,6 +19675,11 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
+
+// @public
+export interface ZamaSDKOptions {
+    transportKeyPairDerivationSecret?: string | Uint8Array;
+}
 
 // @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";

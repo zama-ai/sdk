@@ -3,7 +3,6 @@ import { hardhat } from "../../chains";
 import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
-import { resolvedDerivationSecretHolder } from "../private-state";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
 import { ZamaSDK } from "../../zama-sdk";
@@ -101,242 +100,6 @@ describe("createConfig validation", () => {
     expect(config.transportKeyPairScope).toBeUndefined();
   });
 
-  test("rejects a transportKeyPairDerivationSecret below the 256-bit entropy floor", ({
-    relayer,
-    provider,
-  }) => {
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: "short",
-      }),
-    ).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-    );
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: new Uint8Array(16),
-      }),
-    ).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-    );
-  });
-
-  test("rejects a transportKeyPairDerivationSecret one byte below the floor (31 bytes)", ({
-    relayer,
-    provider,
-  }) => {
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: new Uint8Array(31),
-      }),
-    ).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-    );
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: "a".repeat(31),
-      }),
-    ).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-    );
-  });
-
-  test("rejects a wrong-typed transportKeyPairDerivationSecret with the option-naming guidance, not a generic union error", ({
-    relayer,
-    provider,
-  }) => {
-    const rejected = [123, null, { secret: "a".repeat(32) }];
-
-    for (const value of rejected) {
-      const build = () =>
-        createConfig({
-          chains: [hardhat],
-          relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-          provider,
-          transportKeyPairDerivationSecret: value as unknown as string,
-        });
-
-      expect(build).toThrow(ConfigurationError);
-      // The union's own default message ("invalid input") names nothing actionable, so the
-      // crafted per-member error must survive to the top-level failure.
-      expect(build).toThrow(
-        /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-      );
-      expect(build).toThrow(/source it from a CSPRNG or secrets manager/);
-    }
-  });
-
-  test("rejects a transportKeyPairDerivationSecret passed as undefined, naming the unset env var", ({
-    relayer,
-    provider,
-  }) => {
-    const build = () =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: process.env.MISSING_SECRET_ENV_VAR,
-      });
-
-    expect(build).toThrow(ConfigurationError);
-    expect(build).toThrow(/transportKeyPairDerivationSecret was passed as undefined/);
-    expect(build).toThrow(/environment variable/);
-  });
-
-  test("keeps an omitted transportKeyPairDerivationSecret meaning cleartext by default", ({
-    relayer,
-    provider,
-  }) => {
-    const config = createConfig({
-      chains: [hardhat],
-      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-      provider,
-    });
-
-    expect(resolvedDerivationSecretHolder(config)).toBeUndefined();
-  });
-
-  test("writes nothing to storage when the undefined-secret rejection fires", ({
-    relayer,
-    provider,
-  }) => {
-    const storage = {
-      get: vi.fn(async () => null),
-      set: vi.fn(async () => {}),
-      delete: vi.fn(async () => {}),
-    };
-
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        storage,
-        transportKeyPairDerivationSecret: undefined,
-      }),
-    ).toThrow(ConfigurationError);
-
-    expect(storage.set).not.toHaveBeenCalled();
-    expect(storage.get).not.toHaveBeenCalled();
-    expect(storage.delete).not.toHaveBeenCalled();
-  });
-
-  test("accepts a transportKeyPairDerivationSecret exactly at the 256-bit floor (32 bytes)", ({
-    relayer,
-    provider,
-  }) => {
-    expect(() =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: new Uint8Array(32),
-      }),
-    ).not.toThrow();
-  });
-
-  test("rejects a transportKeyPairDerivationSecret in a browser context", ({
-    relayer,
-    provider,
-  }) => {
-    vi.stubGlobal("window", {});
-    vi.stubGlobal("document", {});
-
-    const build = () =>
-      createConfig({
-        chains: [hardhat],
-        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-        provider,
-        transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
-      });
-
-    try {
-      expect(build).toThrow(ConfigurationError);
-      expect(build).toThrow(/headless environments only \(CLI tools, servers, agents\)/);
-      expect(build).toThrow(/delegated to the storage backend/);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  test("accepts a transportKeyPairDerivationSecret with no browser globals present", ({
-    relayer,
-    provider,
-  }) => {
-    expect(typeof window).toBe("undefined");
-    expect(typeof document).toBe("undefined");
-
-    const config = createConfig({
-      chains: [hardhat],
-      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-      provider,
-      transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
-    });
-
-    expect(resolvedDerivationSecretHolder(config)).toBeDefined();
-  });
-
-  test("never exposes the transportKeyPairDerivationSecret on the resolved config", ({
-    relayer,
-    provider,
-  }) => {
-    const secret = new Uint8Array(32).fill(7);
-    const config = createConfig({
-      chains: [hardhat],
-      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-      provider,
-      transportKeyPairDerivationSecret: secret,
-    });
-
-    // No property at all: not enumerable, not hidden behind a non-enumerable descriptor, not
-    // a redacted placeholder. Anything else would travel into provider props and devtools.
-    expect(Object.keys(config)).not.toContain("transportKeyPairDerivationSecret");
-    expect(Object.getOwnPropertyNames(config)).not.toContain("transportKeyPairDerivationSecret");
-    expect("transportKeyPairDerivationSecret" in config).toBe(false);
-    expect(Object.values(config)).not.toContain(secret);
-    expect(
-      JSON.stringify(config, (_key, value: unknown) =>
-        value instanceof Uint8Array ? Array.from(value) : value,
-      ),
-    ).not.toContain("transportKeyPairDerivationSecret");
-  });
-
-  test("never mutates the caller's own secret buffer, and imports the HKDF base key once per config", async ({
-    relayer,
-    provider,
-  }) => {
-    const callerSecret = new Uint8Array(32).fill(7);
-    const config = createConfig({
-      chains: [hardhat],
-      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
-      provider,
-      transportKeyPairDerivationSecret: callerSecret,
-    });
-
-    const secretHolder = resolvedDerivationSecretHolder(config);
-    expect(secretHolder).toBeDefined();
-
-    const importSpy = vi.spyOn(crypto.subtle, "importKey");
-    const first = await secretHolder!.baseKey();
-    expect(await secretHolder!.baseKey()).toBe(first);
-    expect(importSpy).toHaveBeenCalledOnce();
-    importSpy.mockRestore();
-
-    expect(Array.from(callerSecret).every((byte) => byte === 7)).toBe(true);
-  });
-
   test("wraps a supplied logger into a LoggerService on the resolved config", ({
     relayer,
     provider,
@@ -391,7 +154,7 @@ describe("createConfig validation", () => {
   });
 });
 
-describe("config identity guard", () => {
+describe("ZamaSDK config plumbing", () => {
   test("accepts the exact object returned by createConfig", ({ relayer, provider }) => {
     const config = createConfig({
       chains: [hardhat],
@@ -402,7 +165,7 @@ describe("config identity guard", () => {
     expect(() => new ZamaSDK(config)).not.toThrow();
   });
 
-  test("rejects a copied config with the remedy, so the wrapping secret cannot be silently dropped", ({
+  test("accepts a spread copy of a resolved config, since config is plain data with no hidden state", ({
     relayer,
     provider,
     signer,
@@ -411,13 +174,8 @@ describe("config identity guard", () => {
       chains: [hardhat],
       relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
       provider,
-      transportKeyPairDerivationSecret: new Uint8Array(32).fill(7),
     });
 
-    const build = () => new ZamaSDK({ ...config, signer });
-
-    expect(build).toThrow(ConfigurationError);
-    expect(build).toThrow(/exact object returned by createConfig/);
-    expect(build).toThrow(/Call createConfig again for each SDK instance/);
+    expect(() => new ZamaSDK({ ...config, signer })).not.toThrow();
   });
 });

@@ -1,70 +1,21 @@
 import { hasFhevmRuntimeConfig, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { ChainRouter } from "../chains/router";
+import { ConfigurationError } from "../errors";
 import {
   DEFAULT_PERMIT_DURATION_DAYS,
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
 } from "../credentials/credential-service";
-import { DerivationSecretHolder } from "../credentials/keypair-wrapping";
 import {
-  DerivationSecretSchema,
   PermitTTLSchema,
   TransportKeyPairScopeSchema,
   TransportKeyPairTTLSchema,
 } from "../credentials/schemas";
-import { ConfigurationError } from "../errors";
 import { LoggerService } from "../services/logger-service";
 import type { GenericProvider, GenericSigner } from "../types";
 import { parseSchema } from "../validation";
 import { DEFAULT_REGISTRY_TTL_SECONDS, RegistryTTLSchema } from "../wrappers-registry";
-import { registerResolvedConfig, setResolvedDerivationSecretHolder } from "./private-state";
 import { resolveStorage } from "./resolve";
 import type { ZamaConfig, ZamaConfigBase } from "./types";
-
-/**
- * Copies a `Uint8Array` secret so the holder only ever zeroizes the SDK's own buffer, and
- * a caller zeroizing theirs cannot corrupt later wraps. Strings are immutable, so no copy.
- */
-function derivationSecretHolder(
-  secret: string | Uint8Array | undefined,
-): DerivationSecretHolder | undefined {
-  if (secret === undefined) {
-    return undefined;
-  }
-  const parsed = parseSchema(DerivationSecretSchema, secret);
-  return new DerivationSecretHolder(typeof parsed === "string" ? parsed : new Uint8Array(parsed));
-}
-
-/**
- * Omitting the option means cleartext-at-rest by choice; passing it as `undefined` means the
- * caller asked for wrapping and the value went missing, so it must fail instead of downgrading.
- */
-function assertDerivationSecretNotUnset(params: ZamaConfigBase): void {
-  if (
-    !Object.hasOwn(params, "transportKeyPairDerivationSecret") ||
-    params.transportKeyPairDerivationSecret !== undefined
-  ) {
-    return;
-  }
-  throw new ConfigurationError(
-    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_TRANSPORT_KEY_PAIR_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
-  );
-}
-
-/**
- * Wrapping only helps where no platform keystore protects the store, which is the headless
- * case. In a browser, at-rest security stays delegated to the storage backend.
- */
-function assertDerivationSecretHeadless(params: ZamaConfigBase): void {
-  if (params.transportKeyPairDerivationSecret === undefined) {
-    return;
-  }
-  if (typeof window === "undefined" && typeof document === "undefined") {
-    return;
-  }
-  throw new ConfigurationError(
-    "transportKeyPairDerivationSecret is supported in headless environments only (CLI tools, servers, agents), and a browser context was detected. Remove the option: in a browser, at-rest security of the transport key pair is delegated to the storage backend.",
-  );
-}
 
 /**
  * @internal Shared config builder — not part of the public API.
@@ -77,10 +28,15 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
-  assertDerivationSecretNotUnset(params);
-  assertDerivationSecretHeadless(params);
-
+  // Silently dropping the key here would downgrade at-rest wrapping to plaintext with no signal.
+  if (Object.hasOwn(params, "transportKeyPairDerivationSecret")) {
+    throw new ConfigurationError(
+      "transportKeyPairDerivationSecret is no longer a config option. Pass it to the " +
+        "constructor instead: new ZamaSDK(config, { transportKeyPairDerivationSecret }).",
+    );
+  }
   const logger = new LoggerService(params.logger);
+  const consumerLogger = params.logger;
 
   if (hasFhevmRuntimeConfig()) {
     // One config per signer is a supported pattern, so a second call is only worth warning about
@@ -96,9 +52,9 @@ export function buildZamaConfig(
       wasmAssetLoadMode: "auto",
       moduleVersions: "auto",
       logger: {
-        error: (message, cause) => params.logger?.error(message, { cause }),
-        warn: (message) => params.logger?.warn(message),
-        debug: (message) => params.logger?.debug(message),
+        error: (message, cause) => consumerLogger?.error(message, { cause }),
+        warn: (message) => consumerLogger?.warn(message),
+        debug: (message) => consumerLogger?.debug(message),
       },
       ...params.runtime,
     });
@@ -108,9 +64,7 @@ export function buildZamaConfig(
 
   const router = new ChainRouter(params.chains, params.relayers);
 
-  const secretHolder = derivationSecretHolder(params.transportKeyPairDerivationSecret);
-
-  const config = {
+  return {
     chains: params.chains,
     router,
     provider,
@@ -130,12 +84,4 @@ export function buildZamaConfig(
     logger,
     onEvent: params.onEvent,
   } as unknown as ZamaConfig;
-
-  registerResolvedConfig(config);
-
-  if (secretHolder !== undefined) {
-    setResolvedDerivationSecretHolder(config, secretHolder);
-  }
-
-  return config;
 }

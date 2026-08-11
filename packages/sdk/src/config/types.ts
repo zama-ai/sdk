@@ -57,15 +57,6 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * signer-level revocation.
    */
   transportKeyPairScope?: string;
-  /**
-   * Opt-in at-rest wrapping of the transport key pair's private half — for headless
-   * contexts only (CLI tools, bare-metal agents, local dev), never a browser bundle,
-   * and requires a secure context for WebCrypto. Must be at least 32 bytes of real
-   * entropy from a CSPRNG or secrets manager, not a passphrase. Omit for the default:
-   * plaintext, security delegated to the storage backend. Held internally by the SDK and
-   * never readable back off the resolved config.
-   */
-  transportKeyPairDerivationSecret?: string | Uint8Array;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */

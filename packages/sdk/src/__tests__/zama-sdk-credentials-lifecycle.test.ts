@@ -205,15 +205,13 @@ describe("ZamaSDK credentials lifecycle", () => {
   });
 
   describe("transportKeyPairDerivationSecret plumbing", () => {
-    test("a transportKeyPairDerivationSecret set on createConfig reaches the vault: the persisted key pair is wrapped", async ({
+    test("a transportKeyPairDerivationSecret set on the ZamaSDK constructor options reaches the vault: the persisted key pair is wrapped", async ({
       chain,
       relayer,
       provider,
       signer,
     }) => {
-      // Goes through createConfig (the public entrypoint, where the 32-byte floor is
-      // enforced) rather than the createSDK fixture, which hand-assembles a config and
-      // would not catch the option being dropped between the two.
+      // Real createConfig plus the real constructor option, so plumbing breaks are caught.
       const storage = new MemoryStorage();
       const setSpy = vi.spyOn(storage, "set");
       const config = createConfig({
@@ -222,9 +220,10 @@ describe("ZamaSDK credentials lifecycle", () => {
         provider,
         signer,
         storage,
+      });
+      const sdk = new ZamaSDK(config, {
         transportKeyPairDerivationSecret: "correct-horse-battery-staple-and-then-some",
       });
-      const sdk = new ZamaSDK(config);
 
       await sdk.permits.grantPermit([CONTRACT_A]);
 
@@ -235,6 +234,52 @@ describe("ZamaSDK credentials lifecycle", () => {
       const keypair = keypairWrite![1] as Record<string, unknown>;
       expect(keypair.wrappedPrivateKey).toBeDefined();
       expect(keypair.privateKey).toBeUndefined();
+    });
+
+    test("never mutates the caller's secret buffer: a second SDK built from the same bytes reads the same key pair back", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      const storage = new MemoryStorage();
+      const callerSecret = new Uint8Array(32).fill(7);
+      const makeConfig = () =>
+        createConfig({
+          chains: [chain],
+          relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+          provider,
+          signer,
+          storage,
+        });
+
+      await new ZamaSDK(makeConfig(), {
+        transportKeyPairDerivationSecret: callerSecret,
+      }).permits.grantPermit([CONTRACT_A]);
+
+      expect(callerSecret).toEqual(new Uint8Array(32).fill(7));
+
+      // An unwrap under a zeroized buffer would self-heal into a fresh key pair,
+      // so a surviving permit proves the stored entry stayed readable.
+      const sdkB = new ZamaSDK(makeConfig(), { transportKeyPairDerivationSecret: callerSecret });
+      await expect(sdkB.permits.hasPermit([CONTRACT_A])).resolves.toBe(true);
+    });
+
+    test("createConfig rejects the moved option instead of silently dropping at-rest wrapping", ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      expect(() =>
+        createConfig({
+          chains: [chain],
+          relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+          provider,
+          signer,
+          transportKeyPairDerivationSecret: "a".repeat(32),
+        } as never),
+      ).toThrow(/no longer a config option/);
     });
 
     test("a KeyWrappingError from credential resolution never reaches a ZamaSDKEvent payload", async ({
@@ -255,9 +300,10 @@ describe("ZamaSDK credentials lifecycle", () => {
         signer,
         storage,
         transportKeyPairScope: scope,
-        transportKeyPairDerivationSecret: "sentinel-writer-secret-must-never-leak-into-an-event",
       });
-      await new ZamaSDK(writerConfig).permits.grantPermit([CONTRACT_A]);
+      await new ZamaSDK(writerConfig, {
+        transportKeyPairDerivationSecret: "sentinel-writer-secret-must-never-leak-into-an-event",
+      }).permits.grantPermit([CONTRACT_A]);
 
       const events: ZamaSDKEvent[] = [];
       const onEvent: ZamaSDKEventListener = (event) => events.push(event);
@@ -268,10 +314,11 @@ describe("ZamaSDK credentials lifecycle", () => {
         signer,
         storage,
         transportKeyPairScope: scope,
-        transportKeyPairDerivationSecret: "sentinel-reader-secret-must-never-leak-into-an-event",
         onEvent,
       });
-      const sdk = new ZamaSDK(mismatchedConfig);
+      const sdk = new ZamaSDK(mismatchedConfig, {
+        transportKeyPairDerivationSecret: "sentinel-reader-secret-must-never-leak-into-an-event",
+      });
 
       await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toThrow(KeyWrappingError);
       await expect(
