@@ -1,6 +1,5 @@
 import { hasFhevmRuntimeConfig, setFhevmRuntimeConfig } from "@fhevm/sdk/viem";
 import { ChainRouter } from "../chains/router";
-import { ConfigurationError } from "../errors";
 import {
   DEFAULT_PERMIT_DURATION_DAYS,
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
@@ -28,13 +27,6 @@ export function buildZamaConfig(
   provider: GenericProvider,
   params: ZamaConfigBase,
 ): ZamaConfig {
-  // Silently dropping the key here would downgrade at-rest wrapping to plaintext with no signal.
-  if (Object.hasOwn(params, "transportKeyPairDerivationSecret")) {
-    throw new ConfigurationError(
-      "transportKeyPairDerivationSecret is no longer a config option. Pass it to the " +
-        "constructor instead: new ZamaSDK(config, { transportKeyPairDerivationSecret }).",
-    );
-  }
   const logger = new LoggerService(params.logger);
   const consumerLogger = params.logger;
 

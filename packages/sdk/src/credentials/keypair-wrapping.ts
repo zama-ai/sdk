@@ -80,25 +80,12 @@ export class DerivationSecretHolder {
   }
 
   async baseKey(): Promise<CryptoKey> {
-    if (this.#baseKey === undefined) {
-      const pending = this.#importBaseKey();
-      // Memoized before the catch so concurrent callers share one import; a failed import
-      // is evicted so the still-retained secret can serve a retry.
-      this.#baseKey = pending;
-      pending.catch(() => {
-        if (this.#baseKey === pending) {
-          this.#baseKey = undefined;
-        }
-      });
-    }
+    // Memoized so concurrent callers share one import, which consumes #secret exactly once.
+    this.#baseKey ??= this.#importBaseKey(this.#secret as string | Uint8Array);
     return this.#baseKey;
   }
 
-  async #importBaseKey(): Promise<CryptoKey> {
-    const secret = this.#secret;
-    if (secret === undefined) {
-      throw new TypeError("Derivation secret was consumed without a base key being memoized.");
-    }
+  async #importBaseKey(secret: string | Uint8Array): Promise<CryptoKey> {
     const ikm = ikmBytes(secret);
     const key = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveKey"]);
     ikm.fill(0);

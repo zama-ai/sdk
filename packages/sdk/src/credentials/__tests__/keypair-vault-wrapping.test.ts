@@ -24,6 +24,9 @@ const SECRET_B = "a-different-secret";
 /** A 2-byte iv, well short of the 12 bytes AES-GCM requires. */
 const TRUNCATED_IV = "0xaabb";
 
+// A version no real scheme will ever claim, so adding codecs never breaks these tests.
+const UNKNOWN_WRAPPING_VERSION = 9999;
+
 type StoredEntry = Record<string, unknown>;
 
 /**
@@ -499,13 +502,13 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     const rawBefore = await storage.get(transportKeyPairStorageKey(USER));
     const patched = patchStoredReads(storage, (raw) => ({
       ...raw,
-      wrappingVersion: WRAPPING_SCHEME_V1.version + 1,
+      wrappingVersion: UNKNOWN_WRAPPING_VERSION,
     }));
 
     const error: unknown = await vault.getOrCreate(USER).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(KeyWrappingError);
     expect(error).toMatchObject({
-      message: expect.stringContaining(`wrappingVersion ${WRAPPING_SCHEME_V1.version + 1}`),
+      message: expect.stringContaining(`wrappingVersion ${UNKNOWN_WRAPPING_VERSION}`),
     });
     expect(generator).toHaveBeenCalledOnce();
     expect(deleteSpy).not.toHaveBeenCalled();
@@ -520,10 +523,7 @@ describe("TransportKeyPairVault derivationSecret (opt-in at-rest wrapping)", () 
     const logger = makeLogger();
     const vault = makeVault({ storage, logger, scope: "tenant-1", secret: SECRET_A });
     await vault.getOrCreate(USER);
-    patchStoredReads(storage, (raw) => ({
-      ...raw,
-      wrappingVersion: WRAPPING_SCHEME_V1.version + 1,
-    }));
+    patchStoredReads(storage, (raw) => ({ ...raw, wrappingVersion: UNKNOWN_WRAPPING_VERSION }));
 
     const error: unknown = await vault.readStored(USER).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(KeyWrappingError);

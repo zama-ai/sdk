@@ -229,22 +229,4 @@ describe("DerivationSecretHolder", () => {
     );
     expect(JSON.stringify(secretHolder)).not.toContain(SECRET_A);
   });
-
-  test("a failed import is retried on the next operation instead of poisoning the holder", async () => {
-    const secretHolder = holder(SECRET_A);
-    const importSpy = vi
-      .spyOn(crypto.subtle, "importKey")
-      .mockRejectedValueOnce(new TypeError("crypto.subtle is unavailable in this environment"));
-
-    await expect(wrapPrivateKey(PRIVATE_KEY, secretHolder, IDENTITY_A, METADATA)).rejects.toThrow(
-      /crypto.subtle is unavailable/,
-    );
-
-    importSpy.mockRestore();
-
-    const wrapped = await wrapPrivateKey(PRIVATE_KEY, secretHolder, IDENTITY_A, METADATA);
-    await expect(unwrapPrivateKey(wrapped, secretHolder, IDENTITY_A, METADATA)).resolves.toBe(
-      PRIVATE_KEY,
-    );
-  });
 });

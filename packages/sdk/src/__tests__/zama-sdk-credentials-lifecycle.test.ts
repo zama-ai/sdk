@@ -265,23 +265,6 @@ describe("ZamaSDK credentials lifecycle", () => {
       await expect(sdkB.permits.hasPermit([CONTRACT_A])).resolves.toBe(true);
     });
 
-    test("createConfig rejects the moved option instead of silently dropping at-rest wrapping", ({
-      chain,
-      relayer,
-      provider,
-      signer,
-    }) => {
-      expect(() =>
-        createConfig({
-          chains: [chain],
-          relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
-          provider,
-          signer,
-          transportKeyPairDerivationSecret: "a".repeat(32),
-        } as never),
-      ).toThrow(/no longer a config option/);
-    });
-
     test("a KeyWrappingError from credential resolution never reaches a ZamaSDKEvent payload", async ({
       chain,
       relayer,

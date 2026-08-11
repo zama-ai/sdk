@@ -3,6 +3,9 @@ import { classifyPersistedEntry, encodeWrappedEntry } from "../keypair-entry-cod
 import { DerivationSecretHolder, WRAPPING_SCHEME_V1 } from "../keypair-wrapping";
 import type { StoredTransportKeyPair } from "../types";
 
+// A version no real scheme will ever claim, so adding codecs never breaks these tests.
+const UNKNOWN_WRAPPING_VERSION = 9999;
+
 const IDENTITY = "signer:0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
 const SECRET = "correct-horse-battery-staple";
 const holder = (secret: string) => new DerivationSecretHolder(secret);
@@ -41,11 +44,11 @@ describe("classifyPersistedEntry", () => {
     // The probe is version-agnostic on purpose: an entry a future scheme wrote is still
     // someone's ciphertext, and callers must be able to tell it apart from junk.
     const unknownVersion = classifyPersistedEntry(
-      wrappedEntry({ wrappingVersion: WRAPPING_SCHEME_V1.version + 1 }),
+      wrappedEntry({ wrappingVersion: UNKNOWN_WRAPPING_VERSION }),
     );
     expect(unknownVersion).toMatchObject({
       kind: "unsupported-version",
-      version: WRAPPING_SCHEME_V1.version + 1,
+      version: UNKNOWN_WRAPPING_VERSION,
     });
 
     const { wrappingVersion: _dropped, ...versionless } = wrappedEntry();
