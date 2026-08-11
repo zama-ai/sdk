@@ -281,18 +281,20 @@ try {
 
 **Code:** `KEY_WRAPPING_FAILED`
 
-Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead — see [Permit Model](../../concepts/permit-model.md)) when `transportKeyPairDerivationSecret` is configured and wrapping or unwrapping the transport private key fails: a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (`crypto.subtle` unavailable — a non-secure context such as plain `http://` on a LAN IP, or React Native without a polyfill).
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope` (never by `hasPermit`/`hasDelegationPermit`, which report `false` instead, see [Permit Model](../../concepts/permit-model.md)) when wrapping or unwrapping the transport private key fails: a wrapped entry read with no `transportKeyPairDerivationSecret` configured at all, an entry written by a wrapping scheme version this build doesn't recognize, a scoped key pair that fails to unwrap under a mismatched `transportKeyPairDerivationSecret` across instances sharing a `transportKeyPairScope`, or the underlying WebCrypto operation itself failing (`crypto.subtle` unavailable, a non-secure context such as plain `http://` on a LAN IP).
 
 It also propagates from any operation that resolves credentials, including `decryptValues` and `token.balanceOf`, since those paths grant a permit under the hood.
+
+React Native defines `window`, so `transportKeyPairDerivationSecret` is rejected at `ZamaSDK` construction there, before any wrapping is attempted. Use a platform keychain (iOS Keychain, Android Keystore) as the storage backend and delegate at-rest security to it instead; wrapping on top of an already-secure store is double-wrapping, not extra protection.
 
 ```ts
 matchZamaError(error, {
   KEY_WRAPPING_FAILED: () =>
-    showError("Credential storage misconfigured — check transportKeyPairDerivationSecret"),
+    showError("Credential storage misconfigured, check transportKeyPairDerivationSecret"),
 });
 ```
 
-**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws: it's treated as a cache miss and regenerates silently. A `KeyWrappingError` without a scope means a wrapped entry was read with no `transportKeyPairDerivationSecret` configured at all (restore the secret, or call `sdk.permits.clearCredentials()` to downgrade to plaintext deliberately), the entry was written by a wrapping scheme version this build doesn't recognize, or `crypto.subtle` is unavailable in the environment. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, including that none is missing it.
+**How to handle:** Without a `transportKeyPairScope`, a mismatched secret never throws: it's treated as a cache miss and regenerates silently. A `KeyWrappingError` without a scope means a wrapped entry was read with no `transportKeyPairDerivationSecret` configured at all (restore the secret, or call `sdk.permits.clear()` to downgrade to plaintext deliberately), the entry was written by a wrapping scheme version this build doesn't recognize, or `crypto.subtle` is unavailable in the environment. With a `transportKeyPairScope` configured, it doesn't self-heal (silently regenerating would clobber the entry every other signer in the scope reads); verify every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, including that none is missing it.
 
 ### RelayerRequestFailedError
 

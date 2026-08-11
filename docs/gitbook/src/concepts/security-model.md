@@ -59,14 +59,14 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 ### Transport key pair storage
 
-By default, the transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers) — no encryption-at-rest layer. This is correct for most contexts: browser dApps have IndexedDB behind OS-level disk encryption, mobile apps have platform keychains, server operators typically have a KMS/Vault/HSM in front of their storage. See [Wrapped at rest](#wrapped-at-rest-transportkeypairderivationsecret) below for the opt-in alternative when none of that exists.
+By default, the transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers), with no encryption-at-rest layer. This is correct for most contexts: browser dApps have IndexedDB behind OS-level disk encryption, mobile apps have platform keychains, server operators typically have a KMS/Vault/HSM in front of their storage. See [Wrapped at rest](#wrapped-at-rest-transportkeypairderivationsecret) below for the opt-in alternative when none of that exists.
 
 ![Transport key pair storage](../images/credential-storage.svg)
 
 | Parameter  | Value                                                                    |
 | ---------- | ------------------------------------------------------------------------ |
 | Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
-| Key format | Plaintext ML-KEM key pair by default — see below for wrapped             |
+| Key format | Plaintext ML-KEM key pair by default, see below for wrapped              |
 | Scope      | One transport key pair per signer address by default (chain-independent) |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
@@ -82,7 +82,7 @@ Disqualifying sources, all of which put the secret back inside the same compromi
 - A human-memorable passphrase. HKDF performs no key-stretching, so the secret's own entropy is the only thing standing between a storage-reading attacker and the private key. A passphrase an operator can memorize does not carry that entropy.
 - The same secret shared identically across an entire fleet, with no per-instance or per-tenant separation. One captured instance then wraps every other instance's storage too.
 
-`transportKeyPairDerivationSecret` (`string | Uint8Array`) wraps the private key half before every write and unwraps it after every read, transparently, inside the credential store. The SDK never persists this value, never exposes it on the config object it hands back, and rejects it outright in a browser context (`ConfigurationError`, since bundling is the only way a browser could supply it) and when the option key is present but its value is `undefined` (the unset-env-var footgun, also `ConfigurationError`). On first use the SDK imports it into a single non-extractable WebCrypto key and drops its own copy of the raw bytes for a `Uint8Array` input, which shortens the raw secret's in-memory lifetime. A `string` input can't be scrubbed this way: JS strings are immutable and interned, so a passed-in string may already have copies elsewhere in the heap that dropping this reference does not reach. `Uint8Array` is the strong form; prefer it when you control how the secret is decoded from its source. Either way, this does not stop code already running in your process from using the resulting key, and WebCrypto makes no promise about where the key material itself lives.
+`transportKeyPairDerivationSecret` (`string | Uint8Array`) is a `ZamaSDK` constructor option, not a `createConfig` option: pass it as `new ZamaSDK(config, { transportKeyPairDerivationSecret })`. It wraps the private key half before every write and unwraps it after every read, transparently, inside the credential store. The SDK never persists this value, never exposes it on the config object, and rejects it, on a best-effort basis, whenever `window` or `document` is defined (a main-thread browser) or `importScripts` is a function (a Web Worker or Service Worker), both `ConfigurationError`, and when the option key is present but its value is `undefined` (the unset-env-var footgun, also `ConfigurationError`). Keeping the secret out of a shipped bundle in the first place is the consumer's responsibility: it must come from the deployment environment, never a shipped bundle, and this guard only catches what it can detect. On first use the SDK imports it into a single non-extractable WebCrypto key and drops its own copy of the raw bytes for a `Uint8Array` input, which shortens the raw secret's in-memory lifetime. A `string` input can't be scrubbed this way: JS strings are immutable and interned, so a passed-in string may already have copies elsewhere in the heap that dropping this reference does not reach. `Uint8Array` is the strong form; prefer it when you control how the secret is decoded from its source. Either way, this does not stop code already running in your process from using the resulting key, and WebCrypto makes no promise about where the key material itself lives.
 
 The secret must carry real entropy. The SDK enforces a minimum length (32 bytes for a `Uint8Array`, 32 characters for a string), but length is not entropy: an encoded string (hex, base64) carries fewer bits than it has characters, so a 32-character hex secret is only 128 bits. Supply either 32 random bytes as a `Uint8Array`, or a string holding at least 256 bits of actual entropy (`openssl rand -hex 32`). Source it from a CSPRNG or secrets manager.
 
@@ -91,29 +91,29 @@ wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<t
 ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
 ```
 
-The salt is the same identity used for storage keying (see [Shared-tenant scope](#shared-tenant-scope-b2b2c-waas-operators) below) — the configured `transportKeyPairScope` if set, else the signer address — so a scope's signers derive one shared wrapping key, not one each. It is prefixed by kind (`scope:` / `signer:`) so a scope named after an address never collides with that signer's own key. Only the private key half is wrapped; the public key, timestamps, and TKMS version stay in plaintext alongside the ciphertext, but bound to it as AES-GCM additional authenticated data (`tkmsVersion` encoded as `null` when absent), so a storage-level attacker can't tamper with them (e.g. mismatching the public key, or extending `expiresAt`) without also failing decryption. Every permit stays in plaintext, unauthenticated by this scheme — permits are already public data (an EIP-712 signature and a list of contract addresses). Each wrapped entry also records the scheme version (`wrappingVersion: 1`), so an entry written by a future scheme is recognizable as such rather than as corruption.
+The salt is the same identity used for storage keying (see [Shared-tenant scope](#shared-tenant-scope-b2b2c-waas-operators) below), the configured `transportKeyPairScope` if set, else the signer address, so a scope's signers derive one shared wrapping key, not one each. It is prefixed by kind (`scope:` / `signer:`) so a scope named after an address never collides with that signer's own key. Only the private key half is wrapped; the public key, timestamps, and TKMS version stay in plaintext alongside the ciphertext, but bound to it as AES-GCM additional authenticated data (`tkmsVersion` encoded as `null` when absent), so a storage-level attacker can't tamper with them (e.g. mismatching the public key, or extending `expiresAt`) without also failing decryption. Every permit stays in plaintext, unauthenticated by this scheme: permits are already public data (an EIP-712 signature and a list of contract addresses). Each wrapped entry also records the scheme version (`wrappingVersion: 1`), so an entry written by a future scheme is recognizable as such rather than as corruption.
 
-| Storage mode                            | Config                             | Storage needed? | Secure storage needed?    |
+| Storage mode                            | Option                             | Storage needed? | Secure storage needed?    |
 | --------------------------------------- | ---------------------------------- | --------------- | ------------------------- |
-| Plaintext, delegated security (default) | —                                  | Yes             | Yes (your responsibility) |
-| Wrapped at rest                         | `transportKeyPairDerivationSecret` | Yes             | No — any key-value store  |
+| Plaintext, delegated security (default) | n/a                                | Yes             | Yes (your responsibility) |
+| Wrapped at rest                         | `transportKeyPairDerivationSecret` | Yes             | No, any key-value store   |
 
 {% hint style="info" %}
-This doesn't eliminate storage — the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_.
+This doesn't eliminate storage: the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_.
 {% endhint %}
 
 {% hint style="danger" %}
-**Two ways to defeat this — don't.** `transportKeyPairDerivationSecret` only helps if it's genuinely out-of-band from the storage it protects.
+**Two ways to defeat this, don't.** `transportKeyPairDerivationSecret` only helps if it's genuinely out-of-band from the storage it protects.
 
-- **Don't source `transportKeyPairDerivationSecret` from the same store it wraps.** Reading the secret from the same (untrusted) storage that holds the wrapped key pair puts the lock and key in the same drawer — an attacker who can read one can read both, and the wrapping buys you nothing. The secret has to come from somewhere that storage-level attacker can't reach: a secrets manager, a KMS-unwrapped blob, an injected env var.
-- **Don't wrap storage that's already secure.** If you're already on a platform keychain, a KMS-backed store, or any at-rest-encrypted backend, `transportKeyPairDerivationSecret` is redundant — you'd be double-wrapping, adding a key-management burden (rotation, distribution, loss) without adding security. It exists for the [headless-context gap](#wrapped-at-rest-transportkeypairderivationsecret) above, not as a default to layer on everything.
+- **Don't source `transportKeyPairDerivationSecret` from the same store it wraps.** Reading the secret from the same (untrusted) storage that holds the wrapped key pair puts the lock and key in the same drawer: an attacker who can read one can read both, and the wrapping buys you nothing. The secret has to come from somewhere that storage-level attacker can't reach: a secrets manager, a KMS-unwrapped blob, an injected env var.
+- **Don't wrap storage that's already secure.** If you're already on a platform keychain, a KMS-backed store, or any at-rest-encrypted backend, `transportKeyPairDerivationSecret` is redundant: you'd be double-wrapping, adding a key-management burden (rotation, distribution, loss) without adding security. It exists for the [headless-context gap](#wrapped-at-rest-transportkeypairderivationsecret) above, not as a default to layer on everything.
 
 {% endhint %}
 
-**Rotation is just changing the value — for a per-signer key pair.** `transportKeyPairDerivationSecret` is set once at `ZamaSDK` construction, like every other credentials option — there's no live "update config" call. Changing it (or losing it) doesn't corrupt anything: the next read fails to authenticate against the stored ciphertext, is treated exactly like a cache miss (deleted, not surfaced as an error), and the next `grantPermit()` regenerates a fresh key pair and re-persists it wrapped with the new secret. One extra wallet re-prompt, never a crash.
+**Rotation is just changing the value, for a per-signer key pair.** `transportKeyPairDerivationSecret` is set once at `ZamaSDK` construction, like every other credentials option: there's no live "update config" call. Changing it (or losing it) doesn't corrupt anything: the next read fails to authenticate against the stored ciphertext, is treated exactly like a cache miss (deleted, not surfaced as an error), and the next `grantPermit()` regenerates a fresh key pair and re-persists it wrapped with the new secret. One extra wallet re-prompt, never a crash.
 
 {% hint style="warning" %}
-Self-healing has one exception even without a scope: a wrapped entry read by an instance with no `transportKeyPairDerivationSecret` configured throws `KeyWrappingError` instead of quietly regenerating in plaintext. The entry is preserved, so restoring the secret restores access; call `sdk.permits.clearCredentials()` to downgrade to plaintext deliberately. Combined with a shared scope, every instance sharing that scope must use the _same_ `transportKeyPairDerivationSecret` at all times. A misconfigured instance never gets to overwrite (and thereby invalidate, for every signer in the scope) a peer's entry: reading a scope's shared entry throws instead of silently regenerating in all three mismatch shapes — the wrong secret, a wrapped entry read by an instance with no secret configured, and a plaintext entry read by an instance that has one. Roll `transportKeyPairDerivationSecret` out to every instance sharing a scope before the first wrapped write, or expect this error during the transition window. To migrate a scope that is already live, configure the same secret everywhere first, then call `sdk.permits.revokeTransportKeyPair(scopeId)` once to drop the old entry so the next access regenerates it under the new configuration.
+Self-healing has one exception even without a scope: a wrapped entry read by an instance with no `transportKeyPairDerivationSecret` configured throws `KeyWrappingError` instead of quietly regenerating in plaintext. The entry is preserved, so restoring the secret restores access; call `sdk.permits.clear()` to downgrade to plaintext deliberately. Combined with a shared scope, every instance sharing that scope must use the _same_ `transportKeyPairDerivationSecret` at all times. A misconfigured instance never gets to overwrite (and thereby invalidate, for every signer in the scope) a peer's entry: reading a scope's shared entry throws instead of silently regenerating in all three mismatch shapes: the wrong secret, a wrapped entry read by an instance with no secret configured, and a plaintext entry read by an instance that has one. Roll `transportKeyPairDerivationSecret` out to every instance sharing a scope before the first wrapped write, or expect this error during the transition window. To migrate a scope that is already live, configure the same secret everywhere first, then call `sdk.permits.revokeTransportKeyPair(scopeId)` once to drop the old entry so the next access regenerates it under the new configuration.
 {% endhint %}
 
 ### Shared-tenant scope (B2B2C / WaaS operators)
@@ -243,13 +243,14 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation                       | Algorithm       | Key size    | Source                |
-| ------------------------------- | --------------- | ----------- | --------------------- |
-| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API        |
-| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)   |
-| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)   |
-| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet           |
-| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()` |
+| Operation                       | Algorithm                     | Key size    | Source                |
+| ------------------------------- | ----------------------------- | ----------- | --------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384                       | --          | Web Crypto API        |
+| Transport key wrapping (opt.)   | HKDF-SHA256, then AES-256-GCM | 256-bit     | Web Crypto API        |
+| FHE encryption                  | TFHE                          | Network key | WASM (`@fhevm/sdk`)   |
+| ZK proofs                       | WASM prover                   | --          | WASM (`@fhevm/sdk`)   |
+| Wallet signing                  | ECDSA secp256k1               | 256-bit     | User wallet           |
+| Request tracking                | UUID v4                       | 128-bit     | `crypto.randomUUID()` |
 
 ## Reporting vulnerabilities
 

@@ -395,7 +395,7 @@ Permits stay per-signer regardless of scope. See [Security Model](../concepts/se
 
 ### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
-By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to (a CLI tool, an agent on bare metal, local dev), pass `transportKeyPairDerivationSecret` from your own environment instead. The value must arrive out of band: sourced from your process environment, a secrets manager, or a KMS-unwrapped blob, never persisted alongside the storage it protects.
+By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to (a CLI tool, an agent on bare metal, local dev), pass `transportKeyPairDerivationSecret` as a `ZamaSDK` constructor option instead. The value must arrive out of band: sourced from your process environment, a secrets manager, or a KMS-unwrapped blob, never persisted alongside the storage it protects.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -408,23 +408,26 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: node() },
-  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
 });
 
-const sdk = new ZamaSDK(config);
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
+});
 ```
 
-Pass `process.env.ZAMA_DERIVATION_SECRET` straight through rather than asserting it with `!` first: `createConfig` throws `ConfigurationError` when the key is present but its value is `undefined` (the unset-env-var case), so there's nothing to guard against and no risk of a silent plaintext downgrade.
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through rather than asserting it with `!` first: the `ZamaSDK` constructor throws `ConfigurationError` when the key is present but its value is `undefined` (the unset-env-var case), so there's nothing to guard against and no risk of a silent plaintext downgrade.
 
 {% hint style="danger" %}
-**Headless only, enforced.** `createConfig` rejects `transportKeyPairDerivationSecret` in a browser context with `ConfigurationError`. Bundlers inline `process.env` values at build time, so a secret shipped this way reaches every visitor's bundle and protects nothing. Browser apps rely on the default (IndexedDB behind same-origin isolation and OS disk encryption).
+**Headless only, enforced on a best-effort basis.** The `ZamaSDK` constructor rejects `transportKeyPairDerivationSecret` with `ConfigurationError` whenever `window` or `document` is defined (a main-thread browser context) or `importScripts` is a function (a Web Worker or Service Worker). Bundlers inline values at build time, so a secret shipped this way reaches every visitor's bundle and protects nothing; keeping the secret out of a shipped bundle in the first place is the consumer's responsibility, this guard only catches what it can detect. Environments with a platform keystore, or that ship a bundle, must delegate at-rest security of the transport key pair to the storage backend instead (the default, no option needed).
 {% endhint %}
 
 {% hint style="warning" %}
-Wrapping uses WebCrypto `crypto.subtle`, which is unavailable in non-secure contexts (plain `http://` on a LAN IP) and in React Native without a polyfill. Where it is missing, wrapping fails with [`KeyWrappingError`](../reference/sdk/errors.md#keywrappingerror).
+Wrapping uses WebCrypto `crypto.subtle`, which is unavailable in non-secure contexts (plain `http://` on a LAN IP). Where it is missing, wrapping fails with [`KeyWrappingError`](../reference/sdk/errors.md#keywrappingerror).
 {% endhint %}
 
-The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 → AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
+React Native defines `window`, so the constructor rejects the option there too. Use a platform keychain (iOS Keychain, Android Keystore) as the storage backend instead, and delegate at-rest security to it: wrapping on top of an already-secure store is double-wrapping, not extra protection.
+
+The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 then AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
 
 ## Shared relayer options
 
