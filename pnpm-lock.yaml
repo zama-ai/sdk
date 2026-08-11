@@ -10,6 +10,12 @@ overrides:
   '@walletconnect/ethereum-provider': ^2.23.7
   lodash: '>=4.18.0'
   lodash-es: '>=4.18.0'
+  undici@^6.0.0: '>=6.28.0 <7'
+  undici@^7.0.0: '>=7.29.0 <8'
+  js-yaml@^4.0.0: '>=4.3.0 <5'
+  fast-uri@^3.0.0: '>=3.1.5 <4'
+  brace-expansion@^5.0.0: '>=5.0.7 <6'
+  postcss: '>=8.5.23'
   undici-types: 6.19.2
 
 importers:
@@ -1948,9 +1954,9 @@ packages:
   bottleneck@2.19.5:
     resolution: {integrity: sha512-VHiNCbI1lKdl44tGrhNfU3lup0Tj/ZBMJB5/2ZbNXRCPuRCO7ed2mgcK4r17y+KB2EfuYuRaVlwNbAeaWGSpbw==}
 
-  brace-expansion@5.0.6:
-    resolution: {integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==}
-    engines: {node: 18 || 20 || >=22}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
+    engines: {node: 20 || >=22}
 
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
@@ -2257,8 +2263,8 @@ packages:
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
-  fast-uri@3.1.2:
-    resolution: {integrity: sha512-rVjf7ArG3LTk+FS6Yw81V1DLuZl1bRbNrev6Tmd/9RaroeeRRJhAt7jg/6YFxbvAQXUCavSoZhPPj6oOx+5KjQ==}
+  fast-uri@3.1.5:
+    resolution: {integrity: sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw==}
 
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
@@ -2531,8 +2537,8 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.2.0:
-    resolution: {integrity: sha512-ePWsvanv0DWuDRsW8dnt+R4jQ31SCRCQ7hhNcPXZPsoBZiemuZNYGf7adZdqX2D86j6rvKp3RpCxVTSb8WQlOw==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   json-parse-better-errors@1.0.2:
@@ -2834,11 +2840,6 @@ packages:
 
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
-
-  nanoid@3.3.13:
-    resolution: {integrity: sha512-sPdqC6ByMVVGvF1ynvvMo0/o+oD1VX7DaHhijt1bFgjvBkHBib4t49GoNDhf2NDta4oeUNlaGbSt5K7qjZ955Q==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
 
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
@@ -3165,10 +3166,6 @@ packages:
     resolution: {integrity: sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw==}
     engines: {node: '>=20'}
     hasBin: true
-
-  postcss@8.5.15:
-    resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
-    engines: {node: ^10 || ^12 || >=14}
 
   postcss@8.5.23:
     resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
@@ -3634,12 +3631,12 @@ packages:
   undici-types@6.19.2:
     resolution: {integrity: sha512-jvI+p8VJnrOIQ8AU4PyB1ytW68EyrLnI2xvCO3e5umm3nmhNjpugMD1wo+X994PyvUT9dWS/k3vO1wwRIh730Q==}
 
-  undici@6.27.0:
-    resolution: {integrity: sha512-YmfV3YnEDzXRC5lZ2jWtWWHKGUm1zIt8AhesR1tens+HTNv+YZlN/dp6G727LOvMJ8xjP9Be7Y2Sdr96LDm+pg==}
+  undici@6.28.0:
+    resolution: {integrity: sha512-LIY910g9TI13YS95lrMFrs8Rm/u/irgHeTWoKCoteeJ04CUJ92eEfj0rVn+7VKMPBpUPiUoBKfhNyLI23EE/KA==}
     engines: {node: '>=18.17'}
 
-  undici@7.28.0:
-    resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
 
   unicode-emoji-modifier-base@1.0.0:
@@ -3932,7 +3929,7 @@ snapshots:
   '@actions/http-client@4.0.1':
     dependencies:
       tunnel: 0.0.6
-      undici: 6.27.0
+      undici: 6.28.0
 
   '@actions/io@3.0.2': {}
 
@@ -4664,7 +4661,7 @@ snapshots:
       p-filter: 4.1.0
       semantic-release: 25.0.5(typescript@6.0.3)
       tinyglobby: 0.2.17
-      undici: 7.28.0
+      undici: 7.29.0
       url-join: 5.0.0
     transitivePeerDependencies:
       - kerberos
@@ -4785,7 +4782,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.3.1
       '@tailwindcss/oxide': 4.3.1
-      postcss: 8.5.15
+      postcss: 8.5.25
       tailwindcss: 4.3.1
 
   '@tailwindcss/vite@4.3.1(vite@8.2.0(@types/node@22.19.21)(jiti@2.7.0)(yaml@2.9.0))':
@@ -5117,7 +5114,7 @@ snapshots:
   ajv@8.18.0:
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.2
+      fast-uri: 3.1.5
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
@@ -5183,7 +5180,7 @@ snapshots:
 
   bottleneck@2.19.5: {}
 
-  brace-expansion@5.0.6:
+  brace-expansion@5.0.9:
     dependencies:
       balanced-match: 4.0.4
 
@@ -5329,7 +5326,7 @@ snapshots:
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.1
-      js-yaml: 4.2.0
+      js-yaml: 4.3.1
       parse-json: 5.2.0
     optionalDependencies:
       typescript: 6.0.3
@@ -5492,7 +5489,7 @@ snapshots:
 
   fast-deep-equal@3.1.3: {}
 
-  fast-uri@3.1.2: {}
+  fast-uri@3.1.5: {}
 
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
@@ -5728,7 +5725,7 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.2.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
@@ -5957,7 +5954,7 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.6
+      brace-expansion: 5.0.9
 
   minimist@1.2.8: {}
 
@@ -5974,8 +5971,6 @@ snapshots:
       any-promise: 1.3.0
       object-assign: 4.1.1
       thenify-all: 1.6.0
-
-  nanoid@3.3.13: {}
 
   nanoid@3.3.16: {}
 
@@ -6231,12 +6226,6 @@ snapshots:
       playwright-core: 1.62.0
     optionalDependencies:
       fsevents: 2.3.2
-
-  postcss@8.5.15:
-    dependencies:
-      nanoid: 3.3.13
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
 
   postcss@8.5.23:
     dependencies:
@@ -6719,9 +6708,9 @@ snapshots:
 
   undici-types@6.19.2: {}
 
-  undici@6.27.0: {}
+  undici@6.28.0: {}
 
-  undici@7.28.0: {}
+  undici@7.29.0: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
 
