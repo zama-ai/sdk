@@ -5,6 +5,7 @@ import {
   DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS,
 } from "../credentials/credential-service";
 import {
+  DerivationSecretSchema,
   PermitTTLSchema,
   TransportKeyPairScopeSchema,
   TransportKeyPairTTLSchema,
@@ -64,6 +65,10 @@ export function buildZamaConfig(
       params.transportKeyPairScope === undefined
         ? undefined
         : parseSchema(TransportKeyPairScopeSchema, params.transportKeyPairScope),
+    derivationSecret:
+      params.derivationSecret === undefined
+        ? undefined
+        : parseSchema(DerivationSecretSchema, params.derivationSecret),
     registryTTL: parseSchema(RegistryTTLSchema, params.registryTTL ?? DEFAULT_REGISTRY_TTL_SECONDS),
     logger,
     onEvent: params.onEvent,

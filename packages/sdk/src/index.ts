@@ -90,6 +90,7 @@ export {
   InsufficientERC20BalanceError,
   InvalidTransportKeyPairError,
   isRetryable,
+  KeyWrappingError,
   matchZamaError,
   NoCiphertextError,
   NotEntitledError,

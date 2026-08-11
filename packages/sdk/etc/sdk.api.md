@@ -5846,6 +5846,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
     [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
@@ -11226,6 +11227,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 export function isRetryable(error: unknown): error is ZamaError & {
     retryable: true;
 };
+
+// @public
+export class KeyWrappingError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 // @public
 export interface ListPairsOptions {
@@ -19518,6 +19524,7 @@ export type ZamaConfig = {
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly transportKeyPairScope: string | undefined;
+    readonly derivationSecret: string | Uint8Array | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;
@@ -19528,6 +19535,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    derivationSecret?: string | Uint8Array;
     logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;
@@ -19610,6 +19618,7 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
 };
 
 // @public

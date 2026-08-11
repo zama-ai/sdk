@@ -564,3 +564,120 @@ describe("CredentialService scope (opt-in shared-tenant)", () => {
     await expect(service.warmTransportKeyPairScope("tenant-2")).rejects.toThrow(ConfigurationError);
   });
 });
+
+describe("CredentialService derivationSecret (opt-in at-rest wrapping)", () => {
+  const SECRET = "correct-horse-battery-staple";
+
+  test("grantPermit and hasPermit work transparently end-to-end when configured", async ({
+    createCredentialService,
+  }) => {
+    const service = createCredentialService({ derivationSecret: SECRET });
+    await service.grantPermit([A]);
+    expect(await service.hasPermit([A])).toBe(true);
+  });
+
+  test("permits are never wrapped — only the private key is", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    const setSpy = vi.spyOn(storage, "set");
+    const service = createCredentialService({ derivationSecret: SECRET, storage });
+
+    await service.grantPermit([A]);
+
+    // The permit-list write (PermissionStore) is a plain array of Permission objects,
+    // completely untouched by the wrapping logic in TransportKeyPairVault.
+    const permitWrite = setSpy.mock.calls.find(([, value]) => Array.isArray(value));
+    expect(permitWrite).toBeDefined();
+    const permits = permitWrite![1] as Array<Record<string, unknown>>;
+    expect(
+      (permits[0]?.serializedPermit as Record<string, unknown> | undefined)?.signature,
+    ).toBeDefined();
+    expect(permits[0]?.contractAddresses).toBeDefined();
+    expect(permits[0]?.wrappedPrivateKey).toBeUndefined();
+
+    // The keypair write, in contrast, is wrapped.
+    const keypairWrite = setSpy.mock.calls.find(([, value]) => !Array.isArray(value));
+    expect(keypairWrite).toBeDefined();
+    const keypair = keypairWrite![1] as Record<string, unknown>;
+    expect(keypair.wrappedPrivateKey).toBeDefined();
+    expect(keypair.privateKey).toBeUndefined();
+  });
+
+  test("composes with scope end-to-end: two signers share the wrapped key pair, keep independent permits", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+    relayer,
+  }) => {
+    const signerB = createMockSigner(DELEGATOR);
+    const serviceA = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: SECRET,
+      storage,
+    });
+    const serviceB = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: SECRET,
+      storage,
+      signer: signerB,
+    });
+
+    const resultA = await serviceA.grantPermit([A]);
+    const resultB = await serviceB.grantPermit([A]);
+
+    // The mock relayer returns the same constant key pair on every call, so asserting
+    // publicKey equality alone would pass even if serviceB silently regenerated its own
+    // key instead of genuinely reading serviceA's wrapped entry. Assert the generator
+    // was only invoked once to prove the second call is a real, successfully-decrypted
+    // shared read — the same pattern the unwrapped scope-sharing tests above use.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+    expect(resultB.keypair.publicKey).toBe(resultA.keypair.publicKey);
+    expect(await serviceA.hasPermit([A])).toBe(true);
+    expect(await serviceB.hasPermit([A])).toBe(true);
+  });
+
+  test("hasPermit() never throws, even when the scoped keypair fails to unwrap under a mismatched secret", async ({
+    createCredentialService,
+    createMockSigner,
+    storage,
+  }) => {
+    // hasPermit() is documented as a safe, no-throw status check — grantPermit()'s
+    // "fail loudly on scoped mismatch" behavior (see keypair-vault.ts) is right for a
+    // mutating operation, but must not leak into this read-only lookup, which every
+    // caller (including the React useHasPermit() hook) relies on never rejecting.
+    const correctlyConfigured = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: "correct-horse-battery-staple",
+      storage,
+    });
+    await correctlyConfigured.grantPermit([A]);
+
+    const signerB = createMockSigner(DELEGATOR);
+    const misconfigured = createCredentialService({
+      scope: "tenant-1",
+      derivationSecret: "a-different-secret",
+      storage,
+      signer: signerB,
+    });
+
+    await expect(misconfigured.hasPermit([A])).resolves.toBe(false);
+  });
+
+  test("hasPermit() propagates a storage-layer failure unrelated to derivationSecret, instead of swallowing it as 'no permit'", async ({
+    createCredentialService,
+    storage,
+  }) => {
+    // hasPermit()'s no-throw contract only covers KeyWrappingError (a documented,
+    // expected failure mode of this feature) — a genuine backing-storage exception
+    // (a broken GenericStorage adapter, IndexedDB quota, etc.) is unrelated to
+    // derivationSecret entirely and must not be silently downgraded to "no permit".
+    const service = createCredentialService({ derivationSecret: "correct-horse-battery-staple" });
+    await service.grantPermit([A]);
+
+    const storageError = new Error("storage backend is unavailable");
+    vi.spyOn(storage, "get").mockRejectedValueOnce(storageError);
+
+    await expect(service.hasPermit([A])).rejects.toThrow(storageError);
+  });
+});

@@ -78,6 +78,7 @@ export const serviceFixtures: FixturesOf<ServiceFixtures, ServiceDeps> = {
         storage: config.storage ?? storage,
         permitStorage: config.permitStorage,
         scope: config.scope,
+        derivationSecret: config.derivationSecret,
         logger: new LoggerService(),
       });
     await use(factory);

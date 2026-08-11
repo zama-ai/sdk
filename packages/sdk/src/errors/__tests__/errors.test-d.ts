@@ -8,6 +8,7 @@ import type {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  KeyWrappingError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -78,6 +79,7 @@ describe("error subclasses extend ZamaError", () => {
     expectTypeOf<TransportKeyPairExpiredError>().toExtend<ZamaError>();
     expectTypeOf<InvalidTransportKeyPairError>().toExtend<ZamaError>();
     expectTypeOf<NoCiphertextError>().toExtend<ZamaError>();
+    expectTypeOf<KeyWrappingError>().toExtend<ZamaError>();
   });
 
   test("relayer errors", () => {

@@ -1253,6 +1253,7 @@ export type ZamaConfig = {
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly transportKeyPairScope: string | undefined;
+    readonly derivationSecret: string | Uint8Array | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;
@@ -1302,6 +1303,7 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
 };
 
 // @public

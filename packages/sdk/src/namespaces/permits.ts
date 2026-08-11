@@ -61,6 +61,8 @@ export class Permits {
    * next prompt).
    *
    * @param contracts - Contract addresses to authorize.
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async grantPermit(contracts: Address[]): Promise<void> {
     if (contracts.length === 0) {
@@ -77,6 +79,8 @@ export class Permits {
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to authorize.
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async grantDelegationPermit(delegator: Address, contracts: Address[]): Promise<void> {
     if (contracts.length === 0) {
@@ -90,7 +94,9 @@ export class Permits {
   /**
    * Pure store lookup: is there a permit covering `contracts`?
    * No wallet prompt, no transport key pair generation. Returns `false` when no signer
-   * is configured.
+   * is configured, or when `derivationSecret` is configured and the stored keypair
+   * fails to unwrap — see {@link CredentialService.hasPermit}. Does not swallow other
+   * errors (e.g. a failing storage backend), which propagate normally.
    */
   async hasPermit(contracts: Address[]): Promise<boolean> {
     if (!this.#credentialService) {
@@ -100,7 +106,8 @@ export class Permits {
   }
 
   /**
-   * Pure store lookup for a delegation permit. See {@link hasPermit}.
+   * Pure store lookup for a delegation permit. See {@link hasPermit} — same
+   * contract, including which failures are swallowed and which propagate.
    *
    * @param delegator - The address that delegated decryption rights to the connected signer.
    * @param contracts - Contract addresses to check.
@@ -130,6 +137,9 @@ export class Permits {
    * precondition doesn't conceptually apply to a scope-wide key, and would silently
    * no-op precisely when an operator is most likely to be calling it (no end-user
    * connected yet). Use {@link warmTransportKeyPairScope} instead.
+   *
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPair(): Promise<void> {
     const service = this.#credentialService;
@@ -234,6 +244,8 @@ export class Permits {
    * @param scopeId - Must match the configured `transportKeyPairScope`, as a guard
    *   against warming the wrong scope by mistake.
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap. {@link KeyWrappingError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
     const service = this.#requireCredentialService("warmTransportKeyPairScope");

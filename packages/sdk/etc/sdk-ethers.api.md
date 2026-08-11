@@ -486,6 +486,7 @@ export type ZamaConfig = {
     readonly transportKeyPairTTL: number;
     readonly permitTTL: number;
     readonly transportKeyPairScope: string | undefined;
+    readonly derivationSecret: string | Uint8Array | undefined;
     readonly registryTTL: number;
     readonly onEvent: ZamaSDKEventListener | undefined;
     readonly logger: GenericLogger;
@@ -496,6 +497,7 @@ export type ZamaConfig = {
 // @public
 export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChain> {
     chains: TChains;
+    derivationSecret?: string | Uint8Array;
     logger?: GenericLogger;
     onEvent?: ZamaSDKEventListener;
     permitStorage?: GenericStorage;

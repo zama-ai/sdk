@@ -57,6 +57,22 @@ export interface ZamaConfigBase<TChains extends AtLeastOneChain = AtLeastOneChai
    * signer-level revocation.
    */
   transportKeyPairScope?: string;
+  /**
+   * Opt-in at-rest wrapping of the transport key pair's private half — for headless
+   * contexts with no secure storage backend to delegate to (CLI tools, bare-metal
+   * agents, local dev). Wraps with HKDF-SHA256(this secret, identity) → AES-256-GCM
+   * before every write, unwraps after every read; the SDK never manages or stores
+   * this value itself. Must be at least 256 bits of real entropy (a CSPRNG or secrets
+   * manager, not a passphrase — this scheme does no key-stretching). Omit for the
+   * default: plaintext, security delegated to the storage backend. Composes with
+   * `transportKeyPairScope`: when both are set, the derivation binds to the scope, so
+   * every signer in the scope produces the same wrapping key — but every instance
+   * sharing that scope must then use the *same* secret, since a mismatch throws
+   * instead of silently regenerating (regenerating would clobber the scope's shared
+   * entry). Without a scope, changing this value is self-healing: the next
+   * `grantPermit()` regenerates the per-signer key pair transparently, not a crash.
+   */
+  derivationSecret?: string | Uint8Array;
   /** Registry cache TTL in seconds. Default: 86400 (24h). */
   registryTTL?: number;
   /** SDK lifecycle event listener. */
@@ -108,6 +124,7 @@ export type ZamaConfig = {
   readonly transportKeyPairTTL: number;
   readonly permitTTL: number;
   readonly transportKeyPairScope: string | undefined;
+  readonly derivationSecret: string | Uint8Array | undefined;
   readonly registryTTL: number;
   readonly onEvent: ZamaSDKEventListener | undefined;
   /**

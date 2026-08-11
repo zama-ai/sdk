@@ -1,8 +1,15 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
+import type { Hex } from "viem";
+import { KeyWrappingError } from "../errors/credential";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
-import { StoredTransportKeyPairSchema } from "./schemas";
+import { isUnwrapAuthFailure, unwrapPrivateKey, wrapPrivateKey } from "./keypair-wrapping";
+import {
+  StoredTransportKeyPairSchema,
+  WrappedPrivateKeyEntrySchema,
+  type WrappedPrivateKeyEntry,
+} from "./schemas";
 import { transportKeyPairScopeStorageKey, transportKeyPairStorageKey } from "./storage-keys";
 import type { StoredTransportKeyPair } from "./types";
 import { nowSeconds } from "./utils";
@@ -20,6 +27,14 @@ interface TransportKeyPairVaultConfig {
    * Undefined preserves the default per-signer behavior.
    */
   scope?: string;
+  /**
+   * Opt-in at-rest wrapping for headless contexts with no secure storage backend to
+   * delegate to (CLI tools, bare-metal agents, local dev). When set, the private key
+   * half is encrypted before every `storage.set()` and decrypted after every
+   * `storage.get()` — transparently, at this vault's storage boundary only. Undefined
+   * preserves the default: plaintext, security delegated to the storage backend.
+   */
+  derivationSecret?: string | Uint8Array;
 }
 
 /**
@@ -30,6 +45,11 @@ interface TransportKeyPairVaultConfig {
  * off the shared scope identity instead of the signer address. {@link clear} always
  * targets the per-signer key regardless of scope — an individual signer's teardown must
  * never delete a scope's shared key pair. Only {@link clearScope} can do that.
+ *
+ * When `derivationSecret` is configured, the private key half is wrapped at rest — see
+ * {@link keypair-wrapping}. This is invisible to every method here and to every caller
+ * outside this class: `getOrCreate`/`readStored` always return the plaintext
+ * {@link StoredTransportKeyPair} shape regardless of how it's actually stored on disk.
  */
 export class TransportKeyPairVault {
   readonly #generator: () => Promise<SerializeTransportKeyPairReturnType>;
@@ -37,6 +57,7 @@ export class TransportKeyPairVault {
   readonly #ttl: number;
   readonly #logger: GenericLogger;
   readonly #scope: string | undefined;
+  readonly #derivationSecret: string | Uint8Array | undefined;
   readonly #pending = new Map<string, Promise<StoredTransportKeyPair>>();
   /**
    * Per-key generation counter, bumped by {@link clearScope}. Lets a generation that
@@ -52,9 +73,22 @@ export class TransportKeyPairVault {
     this.#ttl = config.ttl;
     this.#logger = config.logger;
     this.#scope = config.scope;
+    this.#derivationSecret = config.derivationSecret;
   }
 
-  /** Storage identity for reads/creates: the shared scope key when configured, else the per-signer key. */
+  /**
+   * Raw identity used to bind a wrapped key to its owner (the HKDF salt) — the scope
+   * when configured, else the signer address. Deliberately *not* the storage key string
+   * (see {@link identityKeyFor}): the storage key's prefix is an implementation detail
+   * of `storage-keys.ts` that could change in a future refactor, and a wrapping salt
+   * must never depend on that or every already-wrapped key would silently stop
+   * decrypting the day someone renames a prefix.
+   */
+  #identity(signerAddress: ChecksummedAddress): string {
+    return this.#scope ?? signerAddress;
+  }
+
+  /** Storage key for reads/creates: the shared scope key when configured, else the per-signer key. */
   #identityKey(signerAddress: ChecksummedAddress): string {
     return this.#scope !== undefined
       ? transportKeyPairScopeStorageKey(this.#scope)
@@ -62,33 +96,110 @@ export class TransportKeyPairVault {
   }
 
   async readStored(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair | null> {
-    return this.#readByKey(this.#identityKey(signerAddress));
+    return this.#readByKey(this.#identityKey(signerAddress), this.#identity(signerAddress));
   }
 
-  async #readByKey(key: string): Promise<StoredTransportKeyPair | null> {
+  async #readByKey(key: string, identity: string): Promise<StoredTransportKeyPair | null> {
     const raw = await this.#storage.get(key);
     if (raw === null || raw === undefined) {
       return null;
     }
-    const parsed = StoredTransportKeyPairSchema.safeParse(raw);
+
+    if (this.#derivationSecret === undefined) {
+      const parsed = StoredTransportKeyPairSchema.safeParse(raw);
+      if (!parsed.success) {
+        await this.#discard(key, "malformed transport key pair entry");
+        return null;
+      }
+      if (nowSeconds() >= parsed.data.expiresAt) {
+        await this.#discard(key, "expired transport key pair entry");
+        return null;
+      }
+      return parsed.data;
+    }
+
+    const parsed = WrappedPrivateKeyEntrySchema.safeParse(raw);
     if (!parsed.success) {
-      await swallow(
-        "delete transport key pair entry",
-        () => this.#storage.delete(key),
-        this.#logger,
-      );
+      if (this.#scope !== undefined && !StoredTransportKeyPairSchema.safeParse(raw).success) {
+        // Matches neither the wrapped shape nor the legitimate plaintext-mode-transition
+        // shape (the case handled below) — most likely a truncated/bit-flipped entry, or
+        // a future wrapping-scheme version mismatch across the scope's instances, not a
+        // routine transition. Discarding and regenerating here would silently clobber the
+        // scope's shared entry via a different path than the OperationError branch below,
+        // which this exists to be equally strict about — fail loudly instead.
+        const message =
+          `Transport key pair for scope "${this.#scope}" is not a recognized wrapped or ` +
+          "plaintext entry shape. This usually means the stored entry is corrupted, or " +
+          "instances sharing this scope are running mismatched wrapping-scheme versions.";
+        this.#logger.error(message, { key, error: parsed.error });
+        throw new KeyWrappingError(message, { cause: parsed.error });
+      }
+      // Also catches the legitimate case of a plaintext entry left over from before
+      // derivationSecret was configured — the shapes don't match, so it's discarded
+      // and regenerated wrapped, same as any other cache miss.
+      const reason = "malformed or unwrapped transport key pair entry";
+      this.#logger.warn(reason, { key });
+      await this.#discard(key, reason);
       return null;
     }
-    const stored = parsed.data;
-    if (nowSeconds() >= stored.expiresAt) {
-      await swallow(
-        "delete transport key pair entry",
-        () => this.#storage.delete(key),
-        this.#logger,
-      );
+    const { publicKey, wrappedPrivateKey, iv, createdAt, expiresAt, tkmsVersion } = parsed.data;
+    if (nowSeconds() >= expiresAt) {
+      await this.#discard(key, "expired transport key pair entry");
       return null;
     }
-    return stored;
+    try {
+      const privateKey = await unwrapPrivateKey(
+        { wrappedPrivateKey, iv },
+        this.#derivationSecret,
+        identity,
+        { publicKey, createdAt, expiresAt, tkmsVersion },
+      );
+      const entry: StoredTransportKeyPair = { publicKey, privateKey, createdAt, expiresAt };
+      if (tkmsVersion) {
+        entry.tkmsVersion = tkmsVersion;
+      }
+      return entry;
+    } catch (error) {
+      if (!isUnwrapAuthFailure(error)) {
+        // Not a routine wrong-secret/tampered-entry failure — e.g. crypto.subtle
+        // unavailable in this environment, or a malformed key import. Surface it
+        // distinctly instead of silently discarding a perfectly good entry and
+        // masking an environment problem as a routine cache miss.
+        this.#logger.error("transport key pair unwrap failed unexpectedly", { key, error });
+        throw new KeyWrappingError("Transport key pair unwrap failed unexpectedly.", {
+          cause: error,
+        });
+      }
+      if (this.#scope !== undefined) {
+        // A shared scope's entry failing to unwrap doesn't necessarily mean it's
+        // broken — the likeliest cause is another instance sharing this scope having
+        // wrapped it under a different derivationSecret (inconsistent secret
+        // propagation during a rollout), but AES-GCM's generic "OperationError" can't
+        // actually distinguish that from genuine storage corruption (a truncated or
+        // bit-flipped iv/ciphertext — see WrappedPrivateKeyEntrySchema's length checks
+        // for the cases that *are* catchable pre-decrypt). Discarding and regenerating
+        // here would clobber that instance's possibly valid entry and force every
+        // signer in the scope to re-authenticate, repeatedly, for as long as both
+        // configurations stay live. Fail loudly instead of silently corrupting a
+        // resource the whole cohort shares.
+        const message =
+          `Transport key pair for scope "${this.#scope}" failed to unwrap. ` +
+          "This usually means another instance created it with a different derivationSecret " +
+          "— every instance sharing this scope must use the same secret. It can also mean " +
+          "the stored entry is corrupted.";
+        this.#logger.error(message, { key });
+        throw new KeyWrappingError(message, { cause: error });
+      }
+      // Unscoped: only this signer is affected, so self-heal exactly like a malformed entry.
+      const reason = "transport key pair entry failed to unwrap (wrong derivationSecret?)";
+      this.#logger.warn(reason, { key });
+      await this.#discard(key, reason);
+      return null;
+    }
+  }
+
+  async #discard(key: string, reason: string): Promise<void> {
+    await swallow(reason, () => this.#storage.delete(key), this.#logger);
   }
 
   /**
@@ -100,9 +211,17 @@ export class TransportKeyPairVault {
    * be a *different* end-user, whose existing permit then gets silently pruned as stale.
    * Pre-warm a scope once via {@link warmScope} before opening concurrent traffic to
    * avoid hitting this with a whole cohort at once.
+   *
+   * @throws if `derivationSecret` is configured together with `scope` and the stored
+   *   entry fails to unwrap — deliberately not self-healed, since silently regenerating
+   *   would overwrite a scope's shared entry that may simply be wrapped under a
+   *   different (but valid) `derivationSecret` by another instance. See `#readByKey`
+   *   for the equivalent unscoped, self-healing case. {@link KeyWrappingError}
+   * @throws if wrapping the freshly generated private key fails (e.g. `crypto.subtle`
+   *   unavailable in this environment). {@link KeyWrappingError}
    */
   async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair> {
-    return this.#getOrCreateByKey(this.#identityKey(signerAddress));
+    return this.#getOrCreateByKey(this.#identityKey(signerAddress), this.#identity(signerAddress));
   }
 
   /**
@@ -111,56 +230,98 @@ export class TransportKeyPairVault {
    *   {@link clearScope} — must not resolve successfully while its write silently failed.
    */
   async #getOrCreateByKey(
-    identityKey: string,
+    key: string,
+    identity: string,
     options?: { strict?: boolean },
   ): Promise<StoredTransportKeyPair> {
     const strict = options?.strict ?? false;
-    // Keyed on (identityKey, strict), not identityKey alone: a strict caller
-    // (warmScope) and a non-strict caller (getOrCreate) can target the same shared
-    // scope identity, and must never adopt each other's persistence guarantee —
-    // whichever registers first would otherwise silently impose its strictness on
-    // the other. See the strict param doc above.
-    const pendingKey = `${identityKey}::${strict}`;
+    // Keyed on (key, strict), not key alone: a strict caller (warmScope) and a
+    // non-strict caller (getOrCreate) can target the same shared scope identity, and
+    // must never adopt each other's persistence guarantee — whichever registers first
+    // would otherwise silently impose its strictness on the other. See the strict
+    // param doc above.
+    const pendingKey = `${key}::${strict}`;
     const existing = this.#pending.get(pendingKey);
     if (existing) {
       return existing;
     }
 
-    const epochAtStart = this.#epoch.get(identityKey) ?? 0;
+    const epochAtStart = this.#epoch.get(key) ?? 0;
 
     const promise = (async () => {
-      const cached = await this.#readByKey(identityKey);
+      const cached = await this.#readByKey(key, identity);
       if (cached !== null) {
         return cached;
       }
       const fresh = await this.#generator();
       const createdAt = nowSeconds();
+      const expiresAt = createdAt + this.#ttl;
       const stored: StoredTransportKeyPair = {
         publicKey: fresh.publicKey,
         privateKey: fresh.privateKey,
         createdAt,
-        expiresAt: createdAt + this.#ttl,
+        expiresAt,
       };
       // Persist the TKMS version so a later parse deserializes the private key
       // under the version it was generated with, surviving a KMS/TKMS rotation.
       if (fresh.tkmsVersion) {
         stored.tkmsVersion = fresh.tkmsVersion;
       }
-      // If a rotation bumped this key's epoch while `#generator()` was in flight, this
+
+      // If a rotation bumped this key's epoch while `#generator()` (and, when
+      // derivationSecret is configured, the wrap below) were in flight, this
       // generation started before the rotation and must not persist — doing so would
       // silently resurrect the key the rotation just deleted (see `clearScope`). The
       // freshly generated key pair is still returned to whichever caller triggered this
       // round trip so their in-flight request succeeds; the next access regenerates and
       // persists properly against the new epoch.
-      if ((this.#epoch.get(identityKey) ?? 0) === epochAtStart) {
-        if (options?.strict) {
-          await this.#storage.set(identityKey, stored);
-        } else {
-          await swallow(
-            "persist transport key pair",
-            () => this.#storage.set(identityKey, stored),
-            this.#logger,
-          );
+      if (this.#derivationSecret === undefined) {
+        if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
+          if (options?.strict) {
+            await this.#storage.set(key, stored);
+          } else {
+            await swallow(
+              "persist transport key pair",
+              () => this.#storage.set(key, stored),
+              this.#logger,
+            );
+          }
+        }
+      } else {
+        let wrappedPrivateKey: Hex;
+        let iv: Hex;
+        try {
+          ({ wrappedPrivateKey, iv } = await wrapPrivateKey(
+            fresh.privateKey,
+            this.#derivationSecret,
+            identity,
+            { publicKey: fresh.publicKey, createdAt, expiresAt, tkmsVersion: stored.tkmsVersion },
+          ));
+        } catch (error) {
+          const message = "Failed to wrap the transport private key for at-rest storage.";
+          this.#logger.error(message, { key, error });
+          throw new KeyWrappingError(message, { cause: error });
+        }
+        if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
+          const wrapped: WrappedPrivateKeyEntry = {
+            publicKey: fresh.publicKey,
+            wrappedPrivateKey,
+            iv,
+            createdAt,
+            expiresAt,
+          };
+          if (stored.tkmsVersion) {
+            wrapped.tkmsVersion = stored.tkmsVersion;
+          }
+          if (options?.strict) {
+            await this.#storage.set(key, wrapped);
+          } else {
+            await swallow(
+              "persist transport key pair",
+              () => this.#storage.set(key, wrapped),
+              this.#logger,
+            );
+          }
         }
       }
       return stored;
@@ -255,6 +416,8 @@ export class TransportKeyPairVault {
     if (this.#scope === undefined) {
       return;
     }
-    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#scope), { strict: true });
+    await this.#getOrCreateByKey(transportKeyPairScopeStorageKey(this.#scope), this.#scope, {
+      strict: true,
+    });
   }
 }
