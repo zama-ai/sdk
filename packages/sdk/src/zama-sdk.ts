@@ -36,8 +36,8 @@ export interface ZamaSDKOptions {
    * contexts only (CLI tools, bare-metal agents, local dev), never a browser bundle,
    * and requires a secure context for WebCrypto. Must be at least 32 bytes of real
    * entropy from a CSPRNG or secrets manager, not a passphrase. Omit for the default:
-   * plaintext, security delegated to the storage backend. Consumed at construction and
-   * never retained on the SDK instance.
+   * plaintext, security delegated to the storage backend. Never exposed on any field:
+   * consumed internally, at the first wrap or unwrap.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
 }

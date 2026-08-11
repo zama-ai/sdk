@@ -172,9 +172,9 @@ describe("keypair-wrapping", () => {
     expect(isUnwrapAuthFailure("not an error")).toBe(false);
   });
 
-  test("unwraps an entry wrapped before the shared-base-key refactor: key derivation is unchanged", async () => {
-    // Ciphertext frozen from a shipped build, wrapped under SECRET_A / IDENTITY_A /
-    // METADATA: it must stay decryptable or entries already in storage become unreadable.
+  test("unwraps a frozen known-answer ciphertext: key derivation stays byte-stable", async () => {
+    // Fixed vector wrapped under SECRET_A / IDENTITY_A / METADATA: it pins the persisted
+    // format and derivation across refactors, or entries already in storage become unreadable.
     const legacyEntry = {
       wrappedPrivateKey:
         "0xea6b82c6d4dc931a0f995528aa29a7321478642b3ff6cfc82e68b3da01b2111a48d6729b0b3e9099d89f8e750bc3c411",

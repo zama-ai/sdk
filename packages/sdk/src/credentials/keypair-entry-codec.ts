@@ -32,9 +32,9 @@ function hexByteLength(v: string): number {
 const WrappedEntryV1Schema = z.object({
   wrappingVersion: z.literal(WRAPPING_SCHEME_V1.version, { error: wrappingVersionError }),
   publicKey: hex,
-  // Length-checked, not just shape-checked: a truncated or bit-flipped ciphertext/IV (e.g.
-  // from a buggy custom GenericStorage adapter) would otherwise reach crypto.subtle.decrypt
-  // and fail with the same generic OperationError a genuine wrong-secret case does.
+  // Length-checked, not just shape-checked: a truncated ciphertext/IV (e.g. from a buggy
+  // custom GenericStorage adapter) would otherwise reach crypto.subtle.decrypt and fail
+  // with the same generic OperationError a genuine wrong-secret case does.
   // Even hex length checked first: an odd digit count is a fractional byte count that would
   // clear the minimum (33 digits reads as 16.5 bytes), and viem's toBytes then left-pads it
   // into a plausible-looking ciphertext that only fails at decrypt time.
@@ -59,13 +59,9 @@ export type WrappedPrivateKeyEntry = z.infer<typeof WrappedEntryV1Schema>;
 /** Everything this vault ever hands to `storage.set`. @internal */
 export type PersistedTransportKeyPair = StoredTransportKeyPair | WrappedPrivateKeyEntry;
 
-/** One wrapping scheme, complete: its identity on disk, its parameters, and its codec. */
+/** One wrapping scheme: its identity on disk, its entry schema, and its codec. */
 interface WrappedEntryCodec {
   readonly version: number;
-  /** HKDF `info` tag the wrapping key is derived under. */
-  readonly info: string;
-  readonly ivLengthBytes: number;
-  readonly tagLengthBytes: number;
   readonly schema: z.ZodMiniType<WrappedPrivateKeyEntry>;
   encode(
     keyPair: StoredTransportKeyPair,
@@ -98,7 +94,7 @@ function metadataOf(entry: {
 }
 
 const CODEC_V1: WrappedEntryCodec = {
-  ...WRAPPING_SCHEME_V1,
+  version: WRAPPING_SCHEME_V1.version,
   schema: WrappedEntryV1Schema,
   async encode(keyPair, derivationSecret, identity) {
     const { wrappedPrivateKey, iv } = await wrapPrivateKey(

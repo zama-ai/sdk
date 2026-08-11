@@ -21,7 +21,7 @@ import {
 const SECRET_A = "correct-horse-battery-staple";
 const SECRET_B = "a-different-secret";
 
-/** A 2-byte iv, well short of the 12 bytes AES-GCM requires. */
+/** A 2-byte iv, well short of the 12 bytes this scheme fixes for AES-GCM. */
 const TRUNCATED_IV = "0xaabb";
 
 // A version no real scheme will ever claim, so adding codecs never breaks these tests.
