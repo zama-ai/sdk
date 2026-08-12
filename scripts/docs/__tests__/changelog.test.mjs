@@ -289,6 +289,14 @@ describe("alphaHasSubstance", () => {
     const staged = `${emptyAlphaTemplate()}\n## New feature\n\nSome real notes.\n`;
     expect(alphaHasSubstance(staged)).toBe(true);
   });
+
+  test("comment noise that survives a single strip pass is not substance", () => {
+    // A single `<!--...-->` removal on this leaves `<!-- R -->` behind (the
+    // outer `<!-` joins the trailing `-->`); only stripping until stable empties
+    // it. Regression for the incomplete-multi-character-sanitization fix.
+    const noise = `${emptyAlphaTemplate()}\n<!-<!--x-->- R -->\n`;
+    expect(alphaHasSubstance(noise)).toBe(false);
+  });
 });
 
 // ──────────────────────────────────────────────── promoteChangelog (unit) ──

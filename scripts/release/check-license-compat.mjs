@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { RE2JS } from "re2js";
 
 const [licensesPath, policyPath, reportPath] = process.argv.slice(2);
 
@@ -64,8 +65,12 @@ const visit = (node) => {
 visit(licensesData);
 
 const allowSet = new Set(policy.allow.map((item) => item.toUpperCase()));
-const denyPatterns = policy.denyPatterns.map((item) => new RegExp(item, "i"));
-const reviewPatterns = policy.reviewPatterns.map((item) => new RegExp(item, "i"));
+// Patterns come from the trusted license policy (config-supplied), so build them
+// with RE2JS — a linear-time engine that can't catastrophically backtrack (ReDoS).
+const denyPatterns = policy.denyPatterns.map((item) => RE2JS.compile(item, RE2JS.CASE_INSENSITIVE));
+const reviewPatterns = policy.reviewPatterns.map((item) =>
+  RE2JS.compile(item, RE2JS.CASE_INSENSITIVE),
+);
 
 const denied = [];
 const review = [];
@@ -80,12 +85,12 @@ for (const [pkg, licenseExpr] of packageLicenses.entries()) {
     continue;
   }
 
-  if (denyPatterns.some((re) => re.test(licenseExpr))) {
+  if (denyPatterns.some((re) => re.matcher(licenseExpr).find())) {
     denied.push({ pkg, license: licenseExpr });
     continue;
   }
 
-  if (reviewPatterns.some((re) => re.test(licenseExpr))) {
+  if (reviewPatterns.some((re) => re.matcher(licenseExpr).find())) {
     review.push({ pkg, license: licenseExpr });
     continue;
   }
