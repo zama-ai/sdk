@@ -19,6 +19,8 @@ env:
   # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
   SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+  # Pinned safe-chain release used by the verified installer below; bump as newer versions are vetted.
+  SAFE_CHAIN_VERSION: "1.5.15"
 
 jobs:
   validate-branch:
@@ -64,7 +66,17 @@ jobs:
           [[ "$(npm --version | cut -d. -f1)" -ge 11 ]]
 
       - name: Install Aikido Safe Chain
-        run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+        run: |
+          # Resolve the installer asset URL + its GitHub-published SHA-256, download it,
+          # verify the hash, then execute — no piping a remote script into a shell.
+          SAFECHAIN_URL="https://api.github.com/repos/AikidoSec/safe-chain/releases/tags/${SAFE_CHAIN_VERSION}"
+          SC_INSTALL_URL=$(curl -fsSL "$SAFECHAIN_URL" | jq -r '.assets[] | select(.name=="install-safe-chain.sh") | .browser_download_url')
+          SC_INSTALL_HASH=$(curl -fsSL "$SAFECHAIN_URL" | jq -r '.assets[] | select(.name=="install-safe-chain.sh") | .digest[7:]')
+          curl -fsSL "$SC_INSTALL_URL" -o install-safe-chain.sh
+          [ "$(sha256sum install-safe-chain.sh | awk '{print $1}')" = "$SC_INSTALL_HASH" ] \
+            && echo "=> SHA256 install script matched" \
+            || { echo "=> SHA256 mismatch — aborting"; rm -f install-safe-chain.sh; exit 1; }
+          bash ./install-safe-chain.sh --ci
 
       - name: Install dependencies
         run: pnpm ci --ignore-scripts
