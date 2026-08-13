@@ -17,8 +17,6 @@ description: Minimum browser and Node.js versions for the SDK.
 | Samsung Internet   | 20              |
 | Node.js            | 22              |
 
-Browser floors apply wherever the SDK runs in a web engine, including embedded WebViews and extension pages.
-
 ## Next steps
 
 - [Browser security headers](../concepts/security-model.md#browser-security-headers) -- secure context, CSP, and COOP/COEP requirements

@@ -176,7 +176,7 @@ The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethe
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
-The SDK runs on all evergreen browsers and Node.js 22+; see [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) for the exact floors.
+The SDK runs on all major browsers and Node.js 22+; see [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) for the exact floors.
 
 ## Authentication
 
@@ -1376,8 +1376,6 @@ Every page in these docs has a **Copy ▾** menu (top-right) with built-in agent
 | Firefox            | 115             |
 | Samsung Internet   | 20              |
 | Node.js            | 22              |
-
-Browser floors apply wherever the SDK runs in a web engine, including embedded WebViews and extension pages.
 
 ## Next steps
 
