@@ -178,7 +178,7 @@ describe("DecryptionService", () => {
     const callSizes = vi
       .mocked(relayer.decryptValues)
       .mock.calls.map(([arg]) => arg.encryptedValues.length)
-      .toSorted((a, b) => a - b);
+      .sort((a, b) => a - b);
     expect(callSizes).toEqual([8, 32]);
   });
 
