@@ -73,6 +73,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:tutorials/supported-environments",
+      "title": "Supported environments",
+      "source_path": "docs/gitbook/src/tutorials/supported-environments.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md",
+      "source_type": "official-doc",
+      "category": "tutorials",
+      "logical_path": "tutorials/supported-environments",
+      "description": "Minimum browser and Node.js versions for the SDK.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:guides/migrate-v2-to-v3",
       "title": "Migrate from v2 to v3",
       "source_path": "docs/gitbook/src/guides/migrate-v2-to-v3.md",

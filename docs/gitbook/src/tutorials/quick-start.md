@@ -17,6 +17,8 @@ The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethe
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
+The SDK runs on all evergreen browsers and Node.js 22+; see [Supported environments](./supported-environments.md) for the exact floors.
+
 ## Authentication
 
 The `sepolia` testnet relayer needs **no API key** — the preset works as-is, so leave `auth` unset and move on. You only need a key for the Zama-hosted **mainnet** relayer; when you deploy there, see [Authentication](../guides/authentication.md) for the backend-proxy (browser) and direct-key (server) patterns.
