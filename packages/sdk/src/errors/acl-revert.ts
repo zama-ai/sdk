@@ -64,7 +64,7 @@ const ACL_ERROR_MAP = {
 } satisfies Record<string, (cause: unknown) => ZamaError>;
 
 function isAclRevertName(name: string): name is keyof typeof ACL_ERROR_MAP {
-  return name in ACL_ERROR_MAP;
+  return Object.hasOwn(ACL_ERROR_MAP, name);
 }
 
 /**
