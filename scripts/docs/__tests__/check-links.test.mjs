@@ -4,7 +4,7 @@ import { slug, extractLinks, extractHeadingSlugs, findOrphans } from "../check-l
 const hrefs = (markdown) =>
   extractLinks(markdown)
     .map((l) => l.href)
-    .sort((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b));
 
 describe("slug (GitBook heading → anchor)", () => {
   test("lowercases and hyphenates words", () => {
