@@ -176,6 +176,8 @@ The first three tabs are for **browser apps** (React dApp, vanilla viem, or ethe
 
 In browser apps, prefix client-side variables with `NEXT_PUBLIC_` (Next.js) or `VITE_` (Vite) so the bundler exposes them.
 
+The SDK runs on all major browsers and Node.js 22+; see [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) for the exact floors.
+
 ## Authentication
 
 The `sepolia` testnet relayer needs **no API key** — the preset works as-is, so leave `auth` unset and move on. You only need a key for the Zama-hosted **mainnet** relayer; when you deploy there, see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/authentication.md) for the backend-proxy (browser) and direct-key (server) patterns.
@@ -1353,6 +1355,31 @@ Every page in these docs has a **Copy ▾** menu (top-right) with built-in agent
 - **Connect with MCP** — add the docs as an MCP server in Claude Code, Cursor, VS Code, or Codex for live, searchable access to the current API. Stronger than `llms.txt` for MCP-capable agents, since it always reflects the published docs.
 - **Open in ChatGPT** / **Open in Claude** — start a chat already grounded on the page you're viewing.
 - **Copy page as Markdown** / **View as Markdown** — grab a single page as plain markdown for your agent, or append `.md` to any docs URL (e.g. `https://docs.zama.org/protocol/sdk/alpha/overview.md`).
+
+## Supported environments
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/tutorials/supported-environments.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md
+- logical_path: tutorials/supported-environments
+
+# Supported environments
+
+| Environment        | Minimum version |
+| ------------------ | --------------- |
+| Chrome             | 105             |
+| Edge               | 105             |
+| Android WebView    | 105             |
+| Chrome for Android | 105             |
+| Safari on iOS      | 15.6            |
+| Safari             | 15.6            |
+| Firefox            | 115             |
+| Samsung Internet   | 20              |
+| Node.js            | 22              |
+
+## Next steps
+
+- [Browser security headers](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#browser-security-headers) -- secure context, CSP, and COOP/COEP requirements
 
 ## Migrate from v2 to v3
 
@@ -4966,7 +4993,7 @@ Never retry when `isRetryable(error)` is `false` -- a `NotEntitledError`, for ex
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
+The SDK works in Node.js 22+ with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
 
 
 > [!INFO]
@@ -5136,6 +5163,7 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 - [node() transport](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/RelayerNode.md) -- the `node()` transport factory reference
 - [asyncLocalStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md) -- chains, relayers, authentication, and permit management
+- [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) -- minimum Node.js and browser versions
 - [GenericSigner](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations
 
 ## Offline signing
@@ -5399,6 +5427,7 @@ Unlike a normal web page (which defaults to persistent IndexedDB), a service wor
 
 - [GenericStorage](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) -- how the transport key pair vault, signed permits, and storage interact
+- [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) -- browser floors for the extension pages that run the SDK
 
 ## Local development
 
@@ -5532,7 +5561,7 @@ The SDK's browser stack relies on APIs -- IndexedDB, wallet connections, and the
 
 ### 1. Understand the constraint
 
-The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR.
+The FHE relayer runs encryption and decryption through a WASM runtime in the browser. IndexedDB stores transport key pairs, and the signer needs a connected wallet. None of this exists during SSR. [Supported environments](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/tutorials/supported-environments.md) lists the browser floors the SDK supports.
 
 This means:
 

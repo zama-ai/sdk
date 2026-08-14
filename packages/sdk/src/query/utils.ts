@@ -119,7 +119,7 @@ export function hashFn(queryKey: readonly unknown[]): string {
   return JSON.stringify(queryKey, (_, value) => {
     if (isPlainObject(value)) {
       return Object.keys(value)
-        .toSorted()
+        .sort()
         .reduce(
           (result, key) => {
             result[key] = value[key];
