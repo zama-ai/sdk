@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
-    "@turnkey/react-wallet-kit": "^2.2.0",
+    "@turnkey/react-wallet-kit": "^2.3.1",
     "@turnkey/viem": "^0.14.31",
     "@zama-fhe/react-sdk": "3.4.0-alpha.10",
     "@zama-fhe/sdk": "3.4.0-alpha.10",
@@ -26,7 +26,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.8.0",
-    "eslint-config-next": "^16.2.9",
+    "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4.3.1",
     "typescript": "6.0.3"
   },
