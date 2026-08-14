@@ -14,5 +14,5 @@ export function nowSeconds(): number {
 
 /** Deduplicate and sort a list of addresses by their checksummed form. */
 export function normalizeAddresses(addresses: readonly Address[]): ChecksummedAddress[] {
-  return [...new Set(addresses.map(checksum))].toSorted();
+  return [...new Set(addresses.map(checksum))].sort();
 }

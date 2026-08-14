@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.4...v3.5.0-alpha.5) (2026-08-14)
+
+### Bug Fixes
+
+- add browser compatibility lint ([#625](https://github.com/zama-ai/sdk/issues/625)) ([cb27545]())
+
 ## [3.5.0-alpha.4](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.3...v3.5.0-alpha.4) (2026-08-05)
 
 ### Bug Fixes

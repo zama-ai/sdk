@@ -45,7 +45,7 @@ export function withoutPermitsTouching(
 
 /** Deduplicate and sort the union of two pre-checksummed address lists. */
 export function sortedUnion<T extends string>(a: readonly T[], b: readonly T[]): T[] {
-  return [...new Set([...a, ...b])].toSorted();
+  return [...new Set([...a, ...b])].sort();
 }
 
 /**

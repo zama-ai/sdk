@@ -136,8 +136,8 @@ describe("PermissionStore", () => {
     );
 
     const list = await store.list(directScope);
-    const signatures = list.map((p) => p.serializedPermit.signature).toSorted();
-    expect(signatures).toEqual([SIG_OTHER, SIG_NEW].toSorted());
+    const signatures = list.map((p) => p.serializedPermit.signature).sort();
+    expect(signatures).toEqual([SIG_OTHER, SIG_NEW].sort());
     expect(list.find((p) => p.serializedPermit.signature === SIG_NEW)?.contractAddresses).toEqual([
       TOKEN_A,
       TOKEN_B,
@@ -162,8 +162,8 @@ describe("PermissionStore", () => {
 
     const list = await store.list(directScope);
     expect(list).toHaveLength(2);
-    expect(list.map((p) => p.serializedPermit.signature).toSorted()).toEqual(
-      [SIG_EXISTING, SIG_NEW].toSorted(),
+    expect(list.map((p) => p.serializedPermit.signature).sort()).toEqual(
+      [SIG_EXISTING, SIG_NEW].sort(),
     );
   });
 });
