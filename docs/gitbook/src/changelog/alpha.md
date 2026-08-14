@@ -26,23 +26,14 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](../guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
-## Transport key pair wrapped at rest
+## Transport key pair encrypted at rest
 
-A new `transportKeyPairDerivationSecret` constructor option on `ZamaSDK` encrypts the transport key pair's private half before it is written to storage, and decrypts it on read. It is for headless environments with no secure storage to delegate to: CLI tools, bare-metal agents, local dev. The constructor rejects it, on a best-effort basis, whenever `window` or `document` is defined or `importScripts` is a function (a browser main thread, Web Worker, or Service Worker), and rejects it when passed as `undefined` (an unset env var reaching the option), both with `ConfigurationError` instead of a silent plaintext downgrade. Omit it entirely and nothing changes: storage stays plaintext, as before.
+A new `transportKeyPairDerivationSecret` option on the `ZamaSDK` constructor encrypts the transport private key before it is written to storage. (This is key encryption, unrelated to token wrapping via `shield`/`unshield`.) It is for headless environments with no secure storage to delegate to: CLI tools, agents, bare-metal boxes. Omit it and nothing changes: storage stays plaintext, as before.
 
 ```ts
-const config = createConfig({
-  chains: [sepolia],
-  publicClient,
-  walletClient,
-  relayers: { [sepolia.id]: node() },
-});
-
 const sdk = new ZamaSDK(config, {
-  transportKeyPairDerivationSecret: derivationSecret, // 32+ bytes of real entropy
+  transportKeyPairDerivationSecret: derivationSecret, // 32+ random bytes
 });
 ```
 
-Wrapping failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`). `hasPermit` and `hasDelegationPermit` never throw it: they return `false`, so a permit check stays a safe read.
-
-See [Configuration](../guides/configuration.md) for the setup and [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, entropy requirement, and rotation behavior.
+Failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`); `hasPermit` and `hasDelegationPermit` return `false` instead of throwing it. See [Configuration](../guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for which environments should use this and the setup, and [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, entropy requirement, and rotation.

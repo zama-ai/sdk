@@ -395,7 +395,19 @@ Permits stay per-signer regardless of scope. See [Security Model](../concepts/se
 
 ### 10. (Optional) Wrap the transport key pair at rest (headless environments)
 
-By default, security for the persisted private key is delegated to your storage backend. In a headless context with no secure storage to delegate to (a CLI tool, an agent on bare metal, local dev), pass `transportKeyPairDerivationSecret` as a `ZamaSDK` constructor option instead. The value must arrive out of band: sourced from your process environment, a secrets manager, or a KMS-unwrapped blob, never persisted alongside the storage it protects.
+By default the SDK stores the transport private key in plaintext and delegates at-rest security to your storage backend. `transportKeyPairDerivationSecret` encrypts the key before every write instead. It exists for headless environments that have no secure backend to delegate to. Find your environment:
+
+| Your environment                                              | What to do                                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser dApp                                                  | Nothing. IndexedDB behind same-origin isolation and OS disk encryption is the intended default. The constructor rejects this option.                          |
+| React Native / mobile                                         | Use a platform keychain (iOS Keychain, Android Keystore) as the `storage` backend. React Native defines `window`, so the constructor rejects this option too. |
+| Backend with a KMS, Vault, or encrypted storage               | Nothing. Your storage is already secure; wrapping on top adds key management without adding security.                                                         |
+| Headless with plain storage (CLI tool, agent, bare-metal box) | Pass `transportKeyPairDerivationSecret`, plus a persistent `storage`.                                                                                         |
+
+For the last row, two things must hold:
+
+1. **The secret arrives out of band**: from the process environment, a secrets manager, or a KMS-unwrapped blob. Never store it next to the data it protects.
+2. **Storage is persistent.** The headless default is in-memory, and a wrapped key that never reaches disk protects nothing.
 
 ```ts
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -408,6 +420,7 @@ const config = createConfig({
   publicClient,
   walletClient,
   relayers: { [sepolia.id]: node() },
+  storage: myPersistentStorage, // required: the headless default is in-memory
 });
 
 const sdk = new ZamaSDK(config, {
@@ -415,19 +428,13 @@ const sdk = new ZamaSDK(config, {
 });
 ```
 
-Pass `process.env.ZAMA_DERIVATION_SECRET` straight through rather than asserting it with `!` first: the `ZamaSDK` constructor throws `ConfigurationError` when the key is present but its value is `undefined` (the unset-env-var case), so there's nothing to guard against and no risk of a silent plaintext downgrade.
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it with `!` first. If the value is `undefined` (an unset env var), the constructor throws `ConfigurationError` instead of silently downgrading to plaintext.
 
 {% hint style="danger" %}
-**Headless only, enforced on a best-effort basis.** The `ZamaSDK` constructor rejects `transportKeyPairDerivationSecret` with `ConfigurationError` whenever `window` or `document` is defined (a main-thread browser context) or `importScripts` is a function (a Web Worker or Service Worker). Bundlers inline values at build time, so a secret shipped this way reaches every visitor's bundle and protects nothing; keeping the secret out of a shipped bundle in the first place is the consumer's responsibility, this guard only catches what it can detect. Environments with a platform keystore, or that ship a bundle, must delegate at-rest security of the transport key pair to the storage backend instead (the default, no option needed).
+**Never ship the secret in a bundle.** Bundlers inline env values at build time, so a bundled secret reaches every copy of the artifact and protects nothing. The constructor rejects the option when it detects a browser context, but it cannot detect every bundle: keeping the secret out of shipped code is your responsibility.
 {% endhint %}
 
-{% hint style="warning" %}
-Wrapping uses WebCrypto `crypto.subtle`, which is unavailable in non-secure contexts (plain `http://` on a LAN IP). Where it is missing, wrapping fails with [`KeyWrappingError`](../reference/sdk/errors.md#keywrappingerror).
-{% endhint %}
-
-React Native defines `window`, so the constructor rejects the option there too. Use a platform keychain (iOS Keychain, Android Keystore) as the storage backend instead, and delegate at-rest security to it: wrapping on top of an already-secure store is double-wrapping, not extra protection.
-
-The SDK never manages or stores this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the exact mechanism (HKDF-SHA256 then AES-256-GCM), how changing the secret is handled (treated as a cache miss, not an error), and how it composes with `transportKeyPairScope`.
+The SDK never persists or exposes this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, the entropy requirement (32 random bytes, or a 64+ character string), the anti-patterns to avoid, and rotation.
 
 ## Shared relayer options
 

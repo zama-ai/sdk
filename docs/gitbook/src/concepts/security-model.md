@@ -63,35 +63,34 @@ By default, the transport private key is stored in plaintext in the configured s
 
 ![Transport key pair storage](../images/credential-storage.svg)
 
-| Parameter  | Value                                                                    |
-| ---------- | ------------------------------------------------------------------------ |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
-| Key format | Plaintext ML-KEM key pair by default, see below for wrapped              |
-| Scope      | One transport key pair per signer address by default (chain-independent) |
+| Parameter  | Value                                                                             |
+| ---------- | --------------------------------------------------------------------------------- |
+| Storage    | IndexedDB (browser), in-memory otherwise (pass a persistent `storage` on servers) |
+| Key format | Plaintext ML-KEM key pair by default, see below for wrapped                       |
+| Scope      | One transport key pair per signer address by default (chain-independent)          |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](./permit-model.md) for the full lifecycle.
 
 ### Wrapped at rest (`transportKeyPairDerivationSecret`)
 
-The threat this protects against is **offline storage theft**: an attacker who obtains a copy of your storage backend (a stolen disk, a leaked database dump, a misconfigured backup) with no access to your running process. By default the transport private key sits in that storage as plaintext, so this attacker reads it directly. `transportKeyPairDerivationSecret` closes that gap, but only if the secret genuinely lives outside the compromise: **it must be supplied out of band, and it must never be persisted or bundled with the storage it protects.** A secret an offline-storage attacker can also reach buys nothing.
+"Wrapping" here means encrypting the transport private key before it is written to storage. It is unrelated to wrapping ERC-20 tokens into confidential tokens (`shield`/`unshield`).
 
-Disqualifying sources, all of which put the secret back inside the same compromise:
+**The threat.** An attacker obtains a copy of your storage backend: a stolen disk, a leaked database dump, an exposed backup. The attacker does not control your running process. By default the transport private key sits in that copy as plaintext, so the attacker reads it directly. With `transportKeyPairDerivationSecret`, the attacker gets ciphertext instead. This holds only if the secret lives outside the stolen storage.
 
-- A bundled build-time env var. Bundlers inline `process.env` values at build time, so the secret ships in the artifact itself, not just at runtime, and reaches every consumer of that artifact including whoever steals the storage.
-- A secret written to the same store the wrapped key pair lives in. If the attacker's storage copy also holds the secret, wrapping adds a decode step, not a defense.
-- A human-memorable passphrase. HKDF performs no key-stretching, so the secret's own entropy is the only thing standing between a storage-reading attacker and the private key. A passphrase an operator can memorize does not carry that entropy.
-- The same secret shared identically across an entire fleet, with no per-instance or per-tenant separation. One captured instance then wraps every other instance's storage too.
-
-`transportKeyPairDerivationSecret` (`string | Uint8Array`) is a `ZamaSDK` constructor option, not a `createConfig` option: pass it as `new ZamaSDK(config, { transportKeyPairDerivationSecret })`. It wraps the private key half before every write and unwraps it after every read, transparently, inside the credential store. The SDK never persists this value, never exposes it on the config object, and rejects it, on a best-effort basis, whenever `window` or `document` is defined (a main-thread browser) or `importScripts` is a function (a Web Worker or Service Worker), both `ConfigurationError`, and when the option key is present but its value is `undefined` (the unset-env-var footgun, also `ConfigurationError`). Keeping the secret out of a shipped bundle in the first place is the consumer's responsibility: it must come from the deployment environment, never a shipped bundle, and this guard only catches what it can detect. On first use the SDK imports it into a single non-extractable WebCrypto key and drops its own copy of the raw bytes for a `Uint8Array` input, which shortens the raw secret's in-memory lifetime. A `string` input can't be scrubbed this way: JS strings are immutable and interned, so a passed-in string may already have copies elsewhere in the heap that dropping this reference does not reach. `Uint8Array` is the strong form; prefer it when you control how the secret is decoded from its source. Either way, this does not stop code already running in your process from using the resulting key, and WebCrypto makes no promise about where the key material itself lives.
-
-The secret must carry real entropy. The SDK enforces a minimum length (32 bytes for a `Uint8Array`, 32 characters for a string), but length is not entropy: an encoded string (hex, base64) carries fewer bits than it has characters, so a 32-character hex secret is only 128 bits. Supply either 32 random bytes as a `Uint8Array`, or a string holding at least 256 bits of actual entropy (`openssl rand -hex 32`). Source it from a CSPRNG or secrets manager.
+**How it works.** Pass the secret at construction: `new ZamaSDK(config, { transportKeyPairDerivationSecret })`. It is a constructor option, not part of the shareable config object, so the secret can never travel with the config. The SDK encrypts the private key before every write and decrypts it after every read. No other API changes. The SDK never persists the secret and never exposes it on any object. The constructor rejects the option in browser contexts, and rejects an `undefined` value (the unset-env-var case); see [Configuration](../guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for the guards and setup.
 
 ```
 wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
 ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
 ```
 
-The salt is the same identity used for storage keying (see [Shared-tenant scope](#shared-tenant-scope-b2b2c-waas-operators) below), the configured `transportKeyPairScope` if set, else the signer address, so a scope's signers derive one shared wrapping key, not one each. It is prefixed by kind (`scope:` / `signer:`) so a scope named after an address never collides with that signer's own key. Only the private key half is wrapped; the public key, timestamps, and TKMS version stay in plaintext alongside the ciphertext, but bound to it as AES-GCM additional authenticated data (`tkmsVersion` encoded as `null` when absent), so a storage-level attacker can't tamper with them (e.g. mismatching the public key, or extending `expiresAt`) without also failing decryption. Every permit stays in plaintext, unauthenticated by this scheme: permits are already public data (an EIP-712 signature and a list of contract addresses). Each wrapped entry also records the scheme version (`wrappingVersion: 1`), so an entry written by a future scheme is recognizable as such rather than as corruption.
+The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption.
+
+Prefer a `Uint8Array` secret. The SDK takes ownership of it: on first use it imports the bytes into a non-extractable WebCrypto key and zeroizes the array, so do not reuse the buffer. A `string` cannot be scrubbed this way: JavaScript strings are immutable, so copies may remain in the heap.
+
+{% hint style="warning" %}
+**The secret must be random.** The SDK enforces a minimum length (32 bytes for a `Uint8Array`, 64 characters for a string), but length is not entropy. Generate it with a CSPRNG or issue it from a secrets manager: `crypto.randomBytes(32)` in Node.js, or `openssl rand -hex 32` for an env var. Never use a passphrase: HKDF does no key-stretching, so a human-memorable secret can be brute-forced offline.
+{% endhint %}
 
 | Storage mode                            | Option                             | Storage needed? | Secure storage needed?    |
 | --------------------------------------- | ---------------------------------- | --------------- | ------------------------- |
@@ -102,18 +101,29 @@ The salt is the same identity used for storage keying (see [Shared-tenant scope]
 This doesn't eliminate storage: the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_.
 {% endhint %}
 
-{% hint style="danger" %}
-**Two ways to defeat this, don't.** `transportKeyPairDerivationSecret` only helps if it's genuinely out-of-band from the storage it protects.
+#### What not to do
 
-- **Don't source `transportKeyPairDerivationSecret` from the same store it wraps.** Reading the secret from the same (untrusted) storage that holds the wrapped key pair puts the lock and key in the same drawer: an attacker who can read one can read both, and the wrapping buys you nothing. The secret has to come from somewhere that storage-level attacker can't reach: a secrets manager, a KMS-unwrapped blob, an injected env var.
-- **Don't wrap storage that's already secure.** If you're already on a platform keychain, a KMS-backed store, or any at-rest-encrypted backend, `transportKeyPairDerivationSecret` is redundant: you'd be double-wrapping, adding a key-management burden (rotation, distribution, loss) without adding security. It exists for the [headless-context gap](#wrapped-at-rest-transportkeypairderivationsecret) above, not as a default to layer on everything.
+The protection fails if a storage-level attacker can also reach the secret. Source it out of band: a secrets manager, a KMS-unwrapped blob, an env var injected at deploy time.
+
+{% hint style="danger" %}
+
+- **Do not store the secret next to the key pair it wraps.** That puts the lock and key in the same drawer: an attacker who reads one reads both.
+- **Do not ship it in a build artifact.** Bundlers inline `process.env` at build time, so the secret travels with every copy of the artifact.
+- **Do not share one secret across a fleet without per-instance or per-tenant separation.** One captured instance then unlocks every other instance's storage.
+- **Do not wrap storage that is already secure.** On a platform keychain, a KMS-backed store, or an at-rest-encrypted backend, wrapping adds rotation and distribution burden without adding security.
 
 {% endhint %}
 
-**Rotation is just changing the value, for a per-signer key pair.** `transportKeyPairDerivationSecret` is set once at `ZamaSDK` construction, like every other credentials option: there's no live "update config" call. Changing it (or losing it) doesn't corrupt anything: the next read fails to authenticate against the stored ciphertext, is treated exactly like a cache miss (deleted, not surfaced as an error), and the next `grantPermit()` regenerates a fresh key pair and re-persists it wrapped with the new secret. One extra wallet re-prompt, never a crash.
+#### Rotation
+
+The secret is set once, at construction. To rotate it, restart with the new value. Without a scope, the old wrapped entry fails to decrypt, the SDK treats that as a cache miss and deletes it, and the next `grantPermit()` generates a fresh key pair wrapped with the new secret. With a scope, rotation does not self-heal: follow the migration steps in the warning below. Replacing a lost secret with a new one has the same cost as rotating it.
+
+A fresh key pair invalidates every permit granted for the old one, so the signer must re-sign. The number of wallet prompts depends on how your app grants permits: one prompt if you re-grant the full contract set in one call, several spread over time if you grant lazily per contract. To avoid extra prompts, rotate the secret when the key pair expires anyway; `transportKeyPairTTL` sets that cadence.
 
 {% hint style="warning" %}
-Self-healing has one exception even without a scope: a wrapped entry read by an instance with no `transportKeyPairDerivationSecret` configured throws `KeyWrappingError` instead of quietly regenerating in plaintext. The entry is preserved, so restoring the secret restores access; call `sdk.permits.clear()` to downgrade to plaintext deliberately. Combined with a shared scope, every instance sharing that scope must use the _same_ `transportKeyPairDerivationSecret` at all times. A misconfigured instance never gets to overwrite (and thereby invalidate, for every signer in the scope) a peer's entry: reading a scope's shared entry throws instead of silently regenerating in all three mismatch shapes: the wrong secret, a wrapped entry read by an instance with no secret configured, and a plaintext entry read by an instance that has one. Roll `transportKeyPairDerivationSecret` out to every instance sharing a scope before the first wrapped write, or expect this error during the transition window. To migrate a scope that is already live, configure the same secret everywhere first, then call `sdk.permits.revokeTransportKeyPair(scopeId)` once to drop the old entry so the next access regenerates it under the new configuration.
+One case does not self-heal: an instance with no `transportKeyPairDerivationSecret` configured that reads a wrapped entry throws [`KeyWrappingError`](../reference/sdk/errors.md#keywrappingerror) instead of silently downgrading to plaintext. The entry is preserved: restore the secret to restore access, or call `sdk.permits.clear()` to downgrade deliberately.
+
+With a shared scope, no mismatch self-heals: the wrong secret, a missing secret, and a plaintext entry read by a wrapped instance all throw instead of overwriting the entry other signers depend on. Configure the same secret on every instance in the scope before the first wrapped write. To migrate a live scope, configure the secret everywhere, then call `sdk.permits.revokeTransportKeyPair(scopeId)` once; the next access regenerates the entry wrapped.
 {% endhint %}
 
 ### Shared-tenant scope (B2B2C / WaaS operators)
