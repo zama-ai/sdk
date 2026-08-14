@@ -8,6 +8,7 @@
 - [First confidential dApp](tutorials/first-confidential-dapp.md)
 - [Wallet & exchange integration](tutorials/wallet-exchange-integration.md)
 - [Build with an LLM](tutorials/build-with-an-llm.md)
+- [Supported environments](tutorials/supported-environments.md)
 
 ## Migration
 

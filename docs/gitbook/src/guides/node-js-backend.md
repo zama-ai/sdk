@@ -5,7 +5,7 @@ description: How to use the SDK in a Node.js server environment with per-request
 
 # Node.js backend
 
-The SDK works in Node.js with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
+The SDK works in Node.js 22+ with the same API as in the browser. The main difference is storage isolation for concurrent requests, which you handle with `asyncLocalStorage`.
 
 {% hint style="info" %}
 The `auth` / `RELAYER_API_KEY` shown below is for the Zama-hosted **mainnet** relayer. The **Sepolia testnet** relayer needs no key — omit `auth` on testnet.
@@ -174,4 +174,5 @@ The signer handles `signTypedData` and `writeContract`; the provider handles `re
 - [node() transport](../reference/sdk/RelayerNode.md) -- the `node()` transport factory reference
 - [asyncLocalStorage](../reference/sdk/GenericStorage.md) -- the `GenericStorage` interface it implements
 - [Configuration](./configuration.md) -- chains, relayers, authentication, and permit management
+- [Supported environments](../tutorials/supported-environments.md) -- minimum Node.js and browser versions
 - [GenericSigner](../reference/sdk/GenericSigner.md) -- custom signer interface for non-standard wallet integrations

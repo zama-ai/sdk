@@ -88,3 +88,4 @@ Unlike a normal web page (which defaults to persistent IndexedDB), a service wor
 
 - [GenericStorage](../reference/sdk/GenericStorage.md) -- implement a custom storage adapter for other extension APIs
 - [Permit Model](../concepts/permit-model.md) -- how the transport key pair vault, signed permits, and storage interact
+- [Supported environments](../tutorials/supported-environments.md) -- browser floors for the extension pages that run the SDK
