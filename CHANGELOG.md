@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.6](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.5...v3.5.0-alpha.6) (2026-08-14)
+
+### Bug Fixes
+
+- **sdk:** guard ACL revert lookup against prototype-chain error names ([#624](https://github.com/zama-ai/sdk/issues/624)) ([f871a2c]()), closes [#130]() [#130]()
+
 ## [3.5.0-alpha.5](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.4...v3.5.0-alpha.5) (2026-08-14)
 
 ### Bug Fixes
