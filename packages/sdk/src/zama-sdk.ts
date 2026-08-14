@@ -32,12 +32,13 @@ import { WrappersRegistry } from "./wrappers-registry";
 /** Instance-level options that are deliberately not part of the shareable config object. */
 export interface ZamaSDKOptions {
   /**
-   * Opt-in at-rest wrapping of the transport key pair's private half, for headless
-   * contexts only (CLI tools, bare-metal agents, local dev), never a browser bundle,
-   * and requires a secure context for WebCrypto. Must be at least 32 bytes of real
-   * entropy from a CSPRNG or secrets manager, not a passphrase. Omit for the default:
-   * plaintext, security delegated to the storage backend. Never exposed on any field:
-   * consumed internally, at the first wrap or unwrap.
+   * Encrypts the transport key pair's private half at rest. Headless environments only
+   * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
+   * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
+   * secrets manager. The SDK takes ownership of a Uint8Array secret and zeroizes it on
+   * first use, so do not reuse the buffer. The SDK never persists or exposes this value.
+   * Omit for the default:
+   * plaintext at rest, security delegated to the storage backend.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
 }
@@ -54,7 +55,7 @@ function assertDerivationSecretNotUnset(options: ZamaSDKOptions): void {
     return;
   }
   throw new ConfigurationError(
-    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_TRANSPORT_KEY_PAIR_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
+    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_DERIVATION_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
   );
 }
 

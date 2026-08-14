@@ -222,7 +222,8 @@ describe("ZamaSDK credentials lifecycle", () => {
         storage,
       });
       const sdk = new ZamaSDK(config, {
-        transportKeyPairDerivationSecret: "correct-horse-battery-staple-and-then-some",
+        transportKeyPairDerivationSecret:
+          "correct-horse-battery-staple-and-then-some-padding-to-the-floor-",
       });
 
       await sdk.permits.grantPermit([CONTRACT_A]);
@@ -285,7 +286,8 @@ describe("ZamaSDK credentials lifecycle", () => {
         transportKeyPairScope: scope,
       });
       await new ZamaSDK(writerConfig, {
-        transportKeyPairDerivationSecret: "sentinel-writer-secret-must-never-leak-into-an-event",
+        transportKeyPairDerivationSecret:
+          "sentinel-writer-secret-must-never-leak-into-an-event-ever-at-all",
       }).permits.grantPermit([CONTRACT_A]);
 
       const events: ZamaSDKEvent[] = [];
@@ -300,7 +302,8 @@ describe("ZamaSDK credentials lifecycle", () => {
         onEvent,
       });
       const sdk = new ZamaSDK(mismatchedConfig, {
-        transportKeyPairDerivationSecret: "sentinel-reader-secret-must-never-leak-into-an-event",
+        transportKeyPairDerivationSecret:
+          "sentinel-reader-secret-must-never-leak-into-an-event-ever-at-all",
       });
 
       await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toThrow(KeyWrappingError);

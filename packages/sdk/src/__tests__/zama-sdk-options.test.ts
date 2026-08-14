@@ -1,43 +1,49 @@
 import { describe, expect, test, vi } from "../test-fixtures";
 import { ConfigurationError } from "../errors";
 
+const floorError =
+  /transportKeyPairDerivationSecret must be a Uint8Array of at least 32 bytes or a string of at least 64 characters/;
+
 describe("ZamaSDK options: transportKeyPairDerivationSecret", () => {
   test("rejects a secret below the 256-bit entropy floor", ({ createSDK }) => {
-    expect(() => createSDK({ transportKeyPairDerivationSecret: "short" })).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-    );
+    expect(() => createSDK({ transportKeyPairDerivationSecret: "short" })).toThrow(floorError);
     expect(() => createSDK({ transportKeyPairDerivationSecret: new Uint8Array(16) })).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+      floorError,
     );
   });
 
-  test("rejects a secret one byte below the floor (31 bytes)", ({ createSDK }) => {
-    expect(() => createSDK({ transportKeyPairDerivationSecret: "a".repeat(31) })).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+  test("rejects a secret one unit below the floor (31 bytes, 63 characters)", ({ createSDK }) => {
+    expect(() => createSDK({ transportKeyPairDerivationSecret: "a".repeat(63) })).toThrow(
+      floorError,
     );
     expect(() => createSDK({ transportKeyPairDerivationSecret: new Uint8Array(31) })).toThrow(
-      /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
+      floorError,
     );
   });
 
-  test("accepts a secret exactly at the 256-bit floor (32 bytes)", ({ createSDK }) => {
-    expect(() => createSDK({ transportKeyPairDerivationSecret: "a".repeat(32) })).not.toThrow();
+  test("accepts a secret exactly at the floor (32 bytes, 64 characters)", ({ createSDK }) => {
+    expect(() => createSDK({ transportKeyPairDerivationSecret: "a".repeat(64) })).not.toThrow();
     expect(() => createSDK({ transportKeyPairDerivationSecret: new Uint8Array(32) })).not.toThrow();
+  });
+
+  test("rejects a 32-character string: character count is not entropy", ({ createSDK }) => {
+    // 32 hex characters carry only 128 bits; the string floor is 64 to cover hex's worst case.
+    expect(() =>
+      createSDK({ transportKeyPairDerivationSecret: "d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f" }),
+    ).toThrow(floorError);
   });
 
   test("rejects a wrong-typed secret with the option-naming guidance, not a generic union error", ({
     createSDK,
   }) => {
-    const rejected = [123, null, { secret: "a".repeat(32) }];
+    const rejected = [123, null, { secret: "a".repeat(64) }];
 
     for (const value of rejected) {
       const build = () =>
         createSDK({ transportKeyPairDerivationSecret: value as unknown as string });
 
       expect(build).toThrow(ConfigurationError);
-      expect(build).toThrow(
-        /transportKeyPairDerivationSecret must be a string or Uint8Array of at least 32 bytes/,
-      );
+      expect(build).toThrow(floorError);
       expect(build).toThrow(/source it from a CSPRNG or secrets manager/);
     }
   });
