@@ -1,5 +1,6 @@
 {
   "$schema": "node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["eslint-plugin-compat", "eslint-plugin-es-x"],
   "plugins": [
     "typescript",
     "unicorn",
@@ -54,6 +55,7 @@
     "tools/**"
   ],
   "rules": {
+    "unicorn/no-array-sort": "off",
     "no-unused-vars": [
       "error",
       {
@@ -98,6 +100,10 @@
     "no-magic-numbers": "off"
   },
   "overrides": [
+    {
+      "files": ["packages/*/src/**"],
+      "rules": { "compat/compat": "error", "es-x/no-class-static-block": "error" }
+    },
     {
       "files": [
         "**/*.test.ts",
