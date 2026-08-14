@@ -394,7 +394,11 @@ export function renderTabs(content) {
 }
 
 function normalizeMarkdownLinkTarget(target, currentSourcePath) {
-  if (!target || target.startsWith("#") || /^(?:https?:|mailto:|tel:)/u.test(target)) {
+  if (
+    !target ||
+    target.startsWith("#") ||
+    ["http:", "https:", "mailto:", "tel:"].some((scheme) => target.startsWith(scheme))
+  ) {
     return target;
   }
 

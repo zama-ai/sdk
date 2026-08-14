@@ -8,9 +8,18 @@ const pkgEntry = require.resolve("conventional-changelog-conventionalcommits");
 const templatesPath = resolve(dirname(pkgEntry), "templates.js");
 const src = readFileSync(templatesPath, "utf8");
 
+// Extract the backtick-delimited body of `export const <name> = `...``. `name`
+// is a fixed literal from the two call sites below, so a string scan (opening
+// marker → next backtick) is enough — no need to build a RegExp from a variable.
 const extract = (name) => {
-  const re = new RegExp(`export const ${name} = \`([\\s\\S]*?)\``, "m");
-  return re.exec(src)?.[1] ?? "";
+  const marker = `export const ${name} = \``;
+  const start = src.indexOf(marker);
+  if (start === -1) {
+    return "";
+  }
+  const contentStart = start + marker.length;
+  const end = src.indexOf("`", contentStart);
+  return end === -1 ? "" : src.slice(contentStart, end);
 };
 
 const mainTemplate = extract("mainTemplate").replace(/^\* /gm, "- ");
