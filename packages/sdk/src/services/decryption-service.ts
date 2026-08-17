@@ -55,13 +55,15 @@ export interface DelegatedDecryptOptions {
 
 interface DecryptionStrategy {
   requesterAddress: Address;
-  /** The ACL actor whose entitlement is checked (signer, or delegator when delegated). */
-  aclActorAddress: Address;
-  /** Delegator whose permit scope this decrypt reads; undefined on the direct path. */
+  /**
+   * Delegator whose permit scope this decrypt reads; undefined on the direct
+   * path. The single delegation discriminator: it also selects the delegated
+   * error classification and the ACL actor (delegator, or the requester when
+   * direct).
+   */
   delegator?: Address;
   validate?: (contractAddresses: readonly Address[]) => Promise<void>;
   errorMessage: string;
-  delegated?: boolean;
 }
 
 /** One decrypt-relayer request: a contract's handles chunked to the bit budget. */
@@ -129,11 +131,7 @@ export class DecryptionService {
     const normalizedSigner = getAddress(signerAddress);
     return this.#decrypt(
       handles,
-      {
-        requesterAddress: normalizedSigner,
-        aclActorAddress: normalizedSigner,
-        errorMessage: "Failed to decrypt encrypted values",
-      },
+      { requesterAddress: normalizedSigner, errorMessage: "Failed to decrypt encrypted values" },
       opts,
     );
   }
@@ -157,7 +155,6 @@ export class DecryptionService {
         encryptedInputs,
         {
           requesterAddress: getAddress(accountAddress),
-          aclActorAddress: normalizedDelegator,
           delegator: normalizedDelegator,
           validate: (contractAddresses) =>
             this.#assertAllDelegationsActive(contractAddresses, {
@@ -165,7 +162,6 @@ export class DecryptionService {
               delegateAddress: normalizedDelegate,
             }),
           errorMessage: "Failed to decrypt delegated encrypted values",
-          delegated: true,
         },
         undefined,
         recovery,
@@ -493,7 +489,9 @@ export class DecryptionService {
       });
       // The per-contract wrap above already classified these; this is a passthrough
       // for them plus a fallback for any non-contract failure (e.g. caching).
-      throw wrapDecryptError(error, strategy.errorMessage, { isDelegated: strategy.delegated });
+      throw wrapDecryptError(error, strategy.errorMessage, {
+        isDelegated: strategy.delegator !== undefined,
+      });
     }
   }
 
@@ -554,9 +552,9 @@ export class DecryptionService {
       decrypted = await this.#decryptValues(credentials, contractAddress, encryptedValues, options);
     } catch (error) {
       throw wrapDecryptError(error, strategy.errorMessage, {
-        isDelegated: strategy.delegated,
+        isDelegated: strategy.delegator !== undefined,
         contractAddress,
-        account: strategy.aclActorAddress,
+        account: strategy.delegator ?? strategy.requesterAddress,
       });
     }
 
