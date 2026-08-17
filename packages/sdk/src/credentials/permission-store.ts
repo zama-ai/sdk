@@ -128,6 +128,12 @@ export class PermissionStore {
     }
   }
 
+  /** Delete every permit in the scope and untrack it from the per-signer index. */
+  async clearScope(scope: PermissionScope): Promise<void> {
+    await this.#deleteScope(permissionScopeKey(scope));
+    await this.#untrackScope(scope);
+  }
+
   /**
    * Delete every permission for the given signer across all chains and delegators.
    * Uses the per-signer scope index to cascade without enumerating all storage keys.

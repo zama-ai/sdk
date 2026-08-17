@@ -30,6 +30,8 @@ export const ZamaErrorCode = {
   TransportKeyPairExpired: "KEYPAIR_EXPIRED",
   /** Relayer rejected transport key pair (stale, expired, or malformed). */
   InvalidTransportKeyPair: "INVALID_KEYPAIR",
+  /** The permit's KMS context was revoked on-chain; the SDK's evict-and-regrant retry also failed. */
+  RevokedKmsContext: "REVOKED_KMS_CONTEXT",
   /** No FHE ciphertext exists for this account (never shielded). */
   NoCiphertext: "NO_CIPHERTEXT",
   /** Relayer HTTP request failed. */
@@ -113,6 +115,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransactionReverted]: false,
   [ZamaErrorCode.TransportKeyPairExpired]: false,
   [ZamaErrorCode.InvalidTransportKeyPair]: false,
+  [ZamaErrorCode.RevokedKmsContext]: false, // the retry already re-granted; a blind retry re-hits the stale validity cache
   [ZamaErrorCode.NoCiphertext]: false,
   [ZamaErrorCode.RelayerRequestFailed]: false, // conditional — see doc above
   [ZamaErrorCode.NotEntitled]: false,

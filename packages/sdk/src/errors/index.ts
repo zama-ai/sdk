@@ -6,6 +6,7 @@ export { TransactionRevertedError } from "./transaction";
 export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
+  RevokedKmsContextError,
   NoCiphertextError,
   KeyWrappingError,
   TransportKeyPairChangedError,

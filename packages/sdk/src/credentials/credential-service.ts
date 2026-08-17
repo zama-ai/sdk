@@ -27,7 +27,7 @@ import {
   PreparedPermitSchema,
   SerializedPermitSchema,
 } from "./schemas";
-import type { PermissionScope } from "./storage-keys";
+import { permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type {
   Permission,
   PreparedPermit,
@@ -108,6 +108,8 @@ export class CredentialService {
   readonly #permitTTL: number;
   readonly #logger: GenericLogger;
   readonly #scope: string | undefined;
+  /** In-flight revoked-context recoveries, one per permission scope. */
+  readonly #permitRecoveries = new Map<string, Promise<void>>();
 
   constructor(config: CredentialServiceConfig) {
     this.#vault = new TransportKeyPairVault({
@@ -164,15 +166,7 @@ export class CredentialService {
       return { keypair, permissions: [] };
     }
 
-    // Key permits by the router's active chain — the same source the permit's
-    // EIP-712 domain is signed against (#signPermit uses this.#router.relayer) —
-    // so the storage key and the signature can never disagree on the chain.
-    const chainId = this.#router.chain.id;
-    const scope: PermissionScope = {
-      signerAddress,
-      chainId,
-      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
-    };
+    const scope = this.#permissionScope(signerAddress, delegator);
     const permissions = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
 
     const uncovered = uncoveredContracts(permissions, requested);
@@ -421,9 +415,7 @@ export class CredentialService {
     if (keypair === null) {
       return false;
     }
-    const chainId = this.#router.chain.id;
-    const delegatorAddress = delegator ? checksum(delegator) : signerAddress;
-    const scope: PermissionScope = { signerAddress, chainId, delegatorAddress };
+    const scope = this.#permissionScope(signerAddress, delegator);
     const permits = await this.#store.listUsableAndPrune(scope, keypair.publicKey);
     return uncoveredContracts(permits, normalizeAddresses(contracts)).length === 0;
   }
@@ -452,11 +444,21 @@ export class CredentialService {
     if (normalized.length === 0) {
       return;
     }
-    const chainId = this.#router.chain.id;
-    await this.#store.deletePermitsTouching(
-      { signerAddress, chainId, delegatorAddress: signerAddress },
-      normalized,
-    );
+    await this.#store.deletePermitsTouching(this.#permissionScope(signerAddress), normalized);
+  }
+
+  /**
+   * Permits are keyed by the router's active chain — the same source the
+   * permit's EIP-712 domain is signed against (#signPermit uses
+   * this.#router.relayer) — so the storage key and the signature can never
+   * disagree on the chain.
+   */
+  #permissionScope(signerAddress: ChecksummedAddress, delegator?: Address): PermissionScope {
+    return {
+      signerAddress,
+      chainId: this.#router.chain.id,
+      delegatorAddress: delegator ? checksum(delegator) : signerAddress,
+    };
   }
 
   /**
@@ -645,5 +647,63 @@ export class CredentialService {
       return;
     }
     await this.#vault.evict(checksum(account.address));
+  }
+
+  /**
+   * Recover the scope from a revoked KMS context: every permit in it was
+   * signed under the dead context, so drop them all and re-sign the scope's
+   * prior coverage plus `contracts` in one prompt, then resolve credentials as
+   * {@link grantPermit} would. The self-heal hook the decrypt path calls on
+   * {@link RevokedKmsContextError}; the key pair is untouched, only the
+   * permits embed the dead context.
+   *
+   * Concurrent recoveries for the same scope share one evict-and-regrant, so
+   * parallel decrypt calls (e.g. a batched balance read fanning out per token)
+   * cost one wallet prompt total, not one each. Eviction is best-effort: if
+   * storage fails, the retry decrypts with the dead permit and the typed error
+   * surfaces to the caller.
+   *
+   * @throws if the user rejects the re-grant prompt. {@link SigningRejectedError}
+   * @throws if re-signing fails for any other reason. {@link SigningFailedError}
+   */
+  async recoverPermits(
+    contracts: readonly Address[],
+    delegator?: Address,
+  ): Promise<SerializedTransportKeyPairWithPermissions> {
+    const signer = this.#requireSigner("recoverPermits");
+    const account = signer.requireWalletAccount("recoverPermits");
+    const scope = this.#permissionScope(checksum(account.address), delegator);
+    const key = permissionScopeKey(scope);
+    let recovery = this.#permitRecoveries.get(key);
+    if (!recovery) {
+      recovery = this.#evictAndRegrantScope(scope, contracts, delegator).finally(() => {
+        this.#permitRecoveries.delete(key);
+      });
+      this.#permitRecoveries.set(key, recovery);
+    }
+    await recovery;
+    // The shared re-grant restored the scope's coverage, so this resolves
+    // without another prompt unless `contracts` were never covered before.
+    return this.grantPermit(contracts, delegator);
+  }
+
+  async #evictAndRegrantScope(
+    scope: PermissionScope,
+    contracts: readonly Address[],
+    delegator?: Address,
+  ): Promise<void> {
+    // Re-sign the union of what the scope covered, not just this call's
+    // contracts: one signature restores every widened permit, so sibling
+    // decrypt calls joining the recovery find their contracts already covered.
+    let prior: ChecksummedAddress[] = [];
+    await swallow(
+      "read permits for recovery",
+      async () => {
+        prior = (await this.#store.list(scope)).flatMap((p) => p.contractAddresses);
+      },
+      this.#logger,
+    );
+    await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
+    await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
   }
 }

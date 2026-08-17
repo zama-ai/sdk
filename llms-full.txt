@@ -4782,6 +4782,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                            |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                                 |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; automatic re-grant retry also failed (retry in ~15 min)      |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                        |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
@@ -4896,6 +4897,7 @@ Here is a quick reference for the most common errors and how to respond:
 | `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
 | `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
 | `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
+| `RevokedKmsContextError`               | The SDK already evicted the dead permit and retried. Ask the user to retry after ~15 minutes (the on-chain validity check is cached).      |
 | `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
 | `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
 | `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
@@ -9220,6 +9222,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the SDK's automatic re-grant retry also failed                                             |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
@@ -9379,6 +9382,21 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Clear credentials and prompt the user to re-sign. The SDK generates a fresh transport key pair on the next operation.
+
+### RevokedKmsContextError
+
+**Code:** `REVOKED_KMS_CONTEXT`
+
+The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces only when that retry failed the same way, typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window.
+
+```ts
+matchZamaError(error, {
+  REVOKED_KMS_CONTEXT: () =>
+    showError("Decryption key context was rotated. Retry in a few minutes."),
+});
+```
+
+**How to handle:** Wait out the cache window and trigger the decrypt again; the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
 
 ### TransportKeyPairExpiredError
 

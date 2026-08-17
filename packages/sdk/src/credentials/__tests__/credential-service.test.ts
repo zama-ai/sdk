@@ -131,6 +131,84 @@ describe("CredentialService transport-key-pair self-heal", () => {
   });
 });
 
+describe("CredentialService.recoverPermits", () => {
+  test("drops every permit in the scope and restores the prior coverage in one prompt", async ({
+    credentialService,
+    relayer,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    const recovered = await credentialService.recoverPermits([A]);
+
+    // One signature re-signed the scope's full prior coverage, not just A,
+    // and the returned credentials cover the requested contract.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(recovered.permissions.flatMap((p) => p.contractAddresses)).toContain(A);
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+    // The key pair is untouched: only the permits embed the dead context.
+    expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
+  });
+
+  test("concurrent recoveries in the same scope share one evict-and-regrant", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await Promise.all([
+      credentialService.recoverPermits([A]),
+      credentialService.recoverPermits([B]),
+    ]);
+
+    // The joiner awaited the leader's re-grant and found its contract already
+    // covered: one wallet prompt total, not one per decrypt call.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("scopes recovery to the delegator: direct permits survive a delegated recover", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A]);
+    await credentialService.grantPermit([A], DELEGATOR);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.recoverPermits([A], DELEGATOR);
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+
+    // The direct-scope permit was untouched, so no re-prompt.
+    vi.mocked(signer.signTypedData).mockClear();
+    await credentialService.grantPermit([A]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
+
+  test("a transient storage failure during eviction does not mask the re-grant", async ({
+    createCredentialService,
+    createMockStorage,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A]);
+
+    const realGet = permitStorage.get;
+    let failNext = true;
+    permitStorage.get = async (key) => {
+      if (failNext) {
+        failNext = false;
+        throw new Error("storage unavailable");
+      }
+      return realGet(key);
+    };
+
+    await expect(service.recoverPermits([A])).resolves.toMatchObject({
+      keypair: expect.objectContaining({ publicKey: expect.any(String) }),
+    });
+  });
+});
+
 describe("CredentialService chain switching", () => {
   test("signs permits against the active chain's relayer after switchChain", async ({
     createCredentialService,

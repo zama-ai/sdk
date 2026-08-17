@@ -16,6 +16,21 @@ export class InvalidTransportKeyPairError extends ZamaError {
   }
 }
 
+/**
+ * The permit's KMS context has been revoked on-chain, so the permit (and every
+ * other permit signed under that context) is permanently unusable. The SDK
+ * already tried to self-heal (evict, re-grant, retry once) before surfacing
+ * this; seeing it means the retry hit the same revoked context, typically
+ * because the upstream validity check caches a stale "valid" verdict for up to
+ * 15 minutes. Wait out that window before triggering a new decrypt.
+ */
+export class RevokedKmsContextError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.RevokedKmsContext, message, options);
+    this.name = "RevokedKmsContextError";
+  }
+}
+
 /** No FHE ciphertext exists for this account (never shielded). */
 export class NoCiphertextError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {

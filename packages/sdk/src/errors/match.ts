@@ -9,6 +9,7 @@ import type {
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
+  RevokedKmsContextError,
 } from "./credential";
 import type {
   AclPausedError,
@@ -61,6 +62,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
   /** Thrown for {@link ZamaErrorCode.InvalidTransportKeyPair}. */
   [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+  /** Thrown for {@link ZamaErrorCode.RevokedKmsContext}. */
+  [ZamaErrorCode.RevokedKmsContext]: RevokedKmsContextError;
   /** Thrown for {@link ZamaErrorCode.NoCiphertext}. */
   [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
   /** Thrown for {@link ZamaErrorCode.RelayerRequestFailed}. */

@@ -4,6 +4,7 @@ import {
   DelegationNotPropagatedError,
   InvalidTransportKeyPairError,
   NotEntitledError,
+  RevokedKmsContextError,
   RpcRateLimitError,
 } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
@@ -352,6 +353,250 @@ describe("DecryptionService", () => {
     await expect(
       service.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
     ).resolves.toEqual({ [HANDLE_A]: 10n });
+  });
+
+  describe("revoked KMS context recovery (SDK-294)", () => {
+    // The KMS signers read reverting with InvalidKmsContext, as it reaches us
+    // through viem without the error in the read's ABI: raw data only.
+    const revokedContextRevert = (): Error =>
+      Object.assign(new Error("execution reverted"), {
+        cause: {
+          name: "ContractFunctionRevertedError",
+          raw: `0x77ddbe81${"22".repeat(32)}`,
+          signature: "0x77ddbe81",
+        },
+      });
+
+    test("evicts the dead permit, re-grants, and retries once with the fresh permit", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      await credentialService.grantPermit([CONTRACT_A]);
+      const grantsBefore = vi.mocked(relayer.signDecryptionPermit).mock.calls.length;
+      // A distinguishable signature for the recovery re-grant, so the retry
+      // provably decrypts with the re-signed permit and not the dead one.
+      const freshSignature = `0x${"44".repeat(65)}` as `0x${string}`;
+      vi.mocked(signer.signTypedData).mockResolvedValueOnce(freshSignature);
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(revokedContextRevert())
+        .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue]);
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).resolves.toEqual({ [HANDLE_A]: 10n });
+
+      // The pre-granted permit was evicted, so the retry re-signed exactly one.
+      expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length).toBe(grantsBefore + 1);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+      const retryPermit = vi.mocked(relayer.decryptValues).mock.calls[1]![0]
+        .signedPermit as unknown as { signature: string };
+      expect(retryPermit.signature).toBe(freshSignature);
+    });
+
+    test("retries only the still-unresolved chunks after a partial first pass", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      let contractBFailed = false;
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ contractAddress }: DecryptValuesParameters) => {
+          if (contractAddress === CONTRACT_B && !contractBFailed) {
+            contractBFailed = true;
+            throw revokedContextRevert();
+          }
+          return [
+            { type: "uint64", value: contractAddress === CONTRACT_A ? 10n : 20n } as TypedValue,
+          ];
+        },
+      );
+
+      await expect(
+        decryptionService.decryptValues(
+          handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          userAddress,
+        ),
+      ).resolves.toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
+
+      // The satisfied chunk (A) is not re-decrypted by the retry.
+      const calls = vi.mocked(relayer.decryptValues).mock.calls;
+      expect(calls.filter(([p]) => p.contractAddress === CONTRACT_A)).toHaveLength(1);
+      expect(calls.filter(([p]) => p.contractAddress === CONTRACT_B)).toHaveLength(2);
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+    });
+
+    test("a sibling failure settling first does not hide the revoked context", async ({
+      decryptionService,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      // Contract A denies entitlement immediately; contract B's revoked-context
+      // revert settles later. The recovery must still fire (the first-settled
+      // rejection must not decide alone), then B succeeds under the fresh
+      // permit while A's denial surfaces.
+      let contractBFailed = false;
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ contractAddress }: DecryptValuesParameters) => {
+          if (contractAddress === CONTRACT_A) {
+            throw new Error(`User ${userAddress} is not authorized to decrypt handle ${HANDLE_A}!`);
+          }
+          if (!contractBFailed) {
+            contractBFailed = true;
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            throw revokedContextRevert();
+          }
+          return [{ type: "uint64", value: 20n } as TypedValue];
+        },
+      );
+
+      await expect(
+        decryptionService.decryptValues(
+          handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          userAddress,
+        ),
+      ).rejects.toBeInstanceOf(NotEntitledError);
+
+      // The recovery fired exactly once despite the earlier-settling denial.
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+      expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+    });
+
+    test("surfaces the typed error after the single retry fails identically", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      // The @fhevm/sdk validity cache can serve a stale "valid" verdict for up
+      // to 15 minutes, so the retry may re-hit the same revert. One recovery
+      // only: evict, re-grant, retry, then surface.
+      vi.mocked(relayer.decryptValues).mockRejectedValue(revokedContextRevert());
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).rejects.toBeInstanceOf(RevokedKmsContextError);
+
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+      // Initial grant + one recovery re-grant, no further loops.
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+    });
+
+    test("recovers once for the whole call when several contracts share the dead context", async ({
+      decryptionService,
+      relayer,
+      userAddress,
+    }) => {
+      const clear: Record<string, bigint> = { [HANDLE_A]: 10n, [HANDLE_B]: 20n };
+      let failuresLeft = 2;
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: DecryptValuesParameters) => {
+          if (failuresLeft > 0) {
+            failuresLeft--;
+            throw revokedContextRevert();
+          }
+          return encryptedValues.map(
+            (ev) => ({ type: "uint64", value: clear[ev as EncryptedValue] }) as TypedValue,
+          );
+        },
+      );
+
+      await expect(
+        decryptionService.decryptValues(
+          handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          userAddress,
+        ),
+      ).resolves.toEqual({ [HANDLE_A]: 10n, [HANDLE_B]: 20n });
+
+      // Both contracts failed on the first pass, yet the permit set was
+      // re-granted once (one wallet prompt), not once per contract.
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(4);
+    });
+
+    test("the delegated propagation retry loop does not re-arm the one-shot recovery", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+        // Attempt 1: revoked context, recovery fires, the retry then hits a
+        // propagation-lag denial, so the outer loop schedules attempt 2, which
+        // hits the revoked context again (the upstream validity cache). The
+        // spent budget must surface the typed error instead of prompting again.
+        vi.mocked(relayer.decryptValues)
+          .mockRejectedValueOnce(revokedContextRevert())
+          .mockRejectedValueOnce(
+            new Error(`User ${delegatorAddress} is not authorized to decrypt handle ${HANDLE_A}!`),
+          )
+          .mockRejectedValue(revokedContextRevert());
+
+        const settled = decryptionService
+          .delegatedDecryptValues(
+            handles([[HANDLE_A, CONTRACT_A]]),
+            delegatorAddress,
+            delegateAddress,
+            userAddress,
+          )
+          .catch((e: unknown) => e);
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(await settled).toBeInstanceOf(RevokedKmsContextError);
+        // Initial grant + one recovery re-grant across the whole loop, not one
+        // per propagation attempt.
+        expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+        expect(relayer.decryptValues).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("delegated batch aborts instead of recovering per item", async ({
+      decryptionService,
+      provider,
+      relayer,
+      delegatorAddress,
+      delegateAddress,
+      userAddress,
+    }) => {
+      vi.mocked(provider.readContract).mockResolvedValue(MAX_UINT64);
+      vi.mocked(relayer.decryptValues).mockRejectedValue(revokedContextRevert());
+
+      await expect(
+        decryptionService.delegatedBatchDecryptHandlesAs({
+          encryptedInputs: handles([
+            [HANDLE_A, CONTRACT_A],
+            [HANDLE_B, CONTRACT_B],
+          ]),
+          delegatorAddress,
+          delegateAddress,
+          accountAddress: userAddress,
+          maxConcurrency: 1,
+        }),
+      ).rejects.toBeInstanceOf(RevokedKmsContextError);
+
+      // The batch attempt spent the one allowed recovery (initial grant +
+      // re-grant); the per-item fallback would have added one prompt per item.
+      expect(relayer.signDecryptionPermit).toHaveBeenCalledTimes(2);
+      // 2 contracts x 2 passes in the batch attempt, no per-item calls.
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(4);
+    });
   });
 
   describe("RPC rate-limit classification (SDK-239)", () => {
