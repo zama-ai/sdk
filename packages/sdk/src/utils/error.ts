@@ -257,11 +257,8 @@ function nodeHasInvalidKmsContextRevert(node: Record<string, unknown>): boolean 
       return true;
     }
   }
-  // Fallback for providers that render the revert as text only: matches the
-  // raw selector or the error name (case-insensitive) in the message. Real
-  // on-chain reverts arrive as raw data — the read's ABI fragment carries no
-  // error entries to decode a name from — so this only fires for middleboxes
-  // or wrappers that stringify the revert themselves.
+  // Text-only fallback for wrappers that stringify the revert instead of
+  // carrying the data fields above.
   if (typeof node.message === "string") {
     const msg = node.message.toLowerCase();
     return msg.includes(INVALID_KMS_CONTEXT_SELECTOR) || msg.includes("invalidkmscontext");

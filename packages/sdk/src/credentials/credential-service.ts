@@ -448,10 +448,9 @@ export class CredentialService {
   }
 
   /**
-   * Permits are keyed by the router's active chain — the same source the
-   * permit's EIP-712 domain is signed against (#signPermit uses
-   * this.#router.relayer) — so the storage key and the signature can never
-   * disagree on the chain.
+   * Permits are keyed by the router's active chain, the same chain their
+   * EIP-712 domain is signed against, so the storage key and the signature
+   * can never disagree.
    */
   #permissionScope(signerAddress: ChecksummedAddress, delegator?: Address): PermissionScope {
     return {

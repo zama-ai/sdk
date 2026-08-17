@@ -437,14 +437,10 @@ export class DecryptionService {
         if (!(error instanceof RevokedKmsContextError) || recovery.spent) {
           throw error;
         }
-        // The permit's KMS context was revoked: every permit signed under it
-        // is permanently dead, so re-grant under the current context (one
-        // wallet prompt, shared across concurrent decrypt calls) and retry the
-        // still-unresolved chunks once. The budget is marked spent before
-        // awaiting so a failure in the re-grant cannot re-arm it, and it is
-        // shared across the delegated propagation-retry loop: a second revoked
-        // failure surfaces, because the upstream validity check caches a stale
-        // "valid" verdict for up to 15 minutes and looping would only re-hit it.
+        // Re-grant under the current context and retry the still-unresolved
+        // chunks once; a second revoked failure surfaces instead of looping
+        // into the upstream 15-minute validity cache. Spent is set before
+        // awaiting so a failing re-grant cannot re-arm the budget.
         recovery.spent = true;
         credentials = await this.#credentialService.recoverPermits(
           allContracts,

@@ -90,9 +90,8 @@ export function wrapDecryptError(
     return new InvalidTransportKeyPairError(error.message, { cause: error });
   }
 
-  // The KMS signers read reverted with InvalidKmsContext: the permit's context
-  // was revoked, so the permit is permanently dead. Typed so the decrypt path
-  // can evict it, re-grant under the current context, and retry once.
+  // The permit's KMS context was revoked on-chain (InvalidKmsContext revert).
+  // Typed so the decrypt path can evict the dead permit, re-grant, and retry once.
   if (isRevokedKmsContextError(error)) {
     return new RevokedKmsContextError(
       "The permit's KMS context has been revoked on-chain, so the permit is no longer usable. " +
