@@ -35,9 +35,9 @@ export interface ZamaSDKOptions {
    * Encrypts the transport key pair's private half at rest. Headless environments only
    * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
    * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
-   * secrets manager. The SDK takes ownership of a Uint8Array secret and zeroizes it on
-   * first use, so do not reuse the buffer. The SDK never persists or exposes this value.
-   * Omit for the default:
+   * secrets manager. The SDK copies a Uint8Array secret and zeroizes its own copy after
+   * key import; it never touches your buffer, so zeroize yours after construction.
+   * The SDK never persists or exposes this value. Omit for the default:
    * plaintext at rest, security delegated to the storage backend.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;

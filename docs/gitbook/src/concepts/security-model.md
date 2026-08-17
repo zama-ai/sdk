@@ -86,7 +86,7 @@ ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: public
 
 The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption.
 
-Prefer a `Uint8Array` secret. The SDK takes ownership of it: on first use it imports the bytes into a non-extractable WebCrypto key and zeroizes the array, so do not reuse the buffer. A `string` cannot be scrubbed this way: JavaScript strings are immutable, so copies may remain in the heap.
+Prefer a `Uint8Array` secret. The SDK copies it, imports the copy into a non-extractable WebCrypto key on first use, and zeroizes that copy. The SDK never touches your original buffer: zeroize it after construction. A `string` cannot be scrubbed: JavaScript strings are immutable, so copies may remain in the heap.
 
 {% hint style="warning" %}
 **The secret must be random.** The SDK enforces a minimum length (32 bytes for a `Uint8Array`, 64 characters for a string), but length is not entropy. Generate it with a CSPRNG or issue it from a secrets manager: `crypto.randomBytes(32)` in Node.js, or `openssl rand -hex 32` for an env var. Never use a passphrase: HKDF does no key-stretching, so a human-memorable secret can be brute-forced offline.
