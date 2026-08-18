@@ -90,6 +90,7 @@ export {
   InsufficientERC20BalanceError,
   InvalidTransportKeyPairError,
   isRetryable,
+  KeyWrappingError,
   matchZamaError,
   NoCiphertextError,
   NotEntitledError,
@@ -206,6 +207,7 @@ export { isEncryptedValueZero, ZERO_ENCRYPTED_VALUE } from "./utils/handles";
 export { DefaultRegistryAddresses, WrappersRegistry } from "./wrappers-registry";
 export type { ListPairsOptions, WrappersRegistryConfig } from "./wrappers-registry";
 export { ZamaSDK } from "./zama-sdk";
+export type { ZamaSDKOptions } from "./zama-sdk";
 
 // Event decoders and types
 export {

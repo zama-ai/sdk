@@ -7,6 +7,7 @@ import {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   NotEntitledError,
+  KeyWrappingError,
   RelayerRequestFailedError,
   RpcRateLimitError,
   SigningRejectedError,
@@ -59,6 +60,26 @@ describe("NoCiphertextError", () => {
     const err = new NoCiphertextError("no ciphertext");
     expect(err.code).toBe(ZamaErrorCode.NoCiphertext);
     expect(err.name).toBe("NoCiphertextError");
+  });
+});
+
+describe("KeyWrappingError", () => {
+  test("is instanceof ZamaError", () => {
+    const err = new KeyWrappingError("wrap failed");
+    expect(err).toBeInstanceOf(ZamaError);
+    expect(err).toBeInstanceOf(KeyWrappingError);
+  });
+
+  test("has correct code and name", () => {
+    const err = new KeyWrappingError("wrap failed");
+    expect(err.code).toBe(ZamaErrorCode.KeyWrappingFailed);
+    expect(err.name).toBe("KeyWrappingError");
+  });
+
+  test("supports ErrorOptions cause", () => {
+    const cause = new Error("upstream");
+    const err = new KeyWrappingError("wrap failed", { cause });
+    expect(err.cause).toBe(cause);
   });
 });
 

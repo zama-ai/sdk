@@ -5,6 +5,7 @@ import type { RelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
+import { ZamaSDK } from "../../zama-sdk";
 
 function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
   return { type: "test", createRelayer: vi.fn(() => relayer) };
@@ -127,5 +128,54 @@ describe("createConfig validation", () => {
     });
     expect(config.logger).toBeInstanceOf(LoggerService);
     expect(() => config.logger.debug("noop")).not.toThrow();
+  });
+
+  test("stays quiet when a second createConfig call carries no runtime options", ({
+    relayer,
+    provider,
+  }) => {
+    const sink = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      logger: sink,
+    });
+    createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+      logger: sink,
+      signer: undefined,
+    });
+
+    expect(sink.warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("ZamaSDK config plumbing", () => {
+  test("accepts the exact object returned by createConfig", ({ relayer, provider }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    });
+
+    expect(() => new ZamaSDK(config)).not.toThrow();
+  });
+
+  test("accepts a spread copy of a resolved config, since config is plain data with no hidden state", ({
+    relayer,
+    provider,
+    signer,
+  }) => {
+    const config = createConfig({
+      chains: [hardhat],
+      relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+      provider,
+    });
+
+    expect(() => new ZamaSDK({ ...config, signer })).not.toThrow();
   });
 });

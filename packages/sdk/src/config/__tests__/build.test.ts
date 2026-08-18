@@ -64,12 +64,12 @@ describe("buildZamaConfig FHEVM runtime configuration", () => {
     expect(logger.debug).toHaveBeenCalledWith("debug");
   });
 
-  // Once the runtime is set, every later config warns and never re-applies —
-  // whether or not it passes its own `runtime` options.
+  // Once the runtime is set, no later config re-applies it: only one carrying its own
+  // `runtime` options loses something, so only that one warns.
   test.each([
-    { label: "that passes runtime options", secondRuntime: { singleThread: false } },
-    { label: "that omits runtime options", secondRuntime: undefined },
-  ])("warns without throwing on a later config $label", ({ secondRuntime }) => {
+    { label: "warns", secondRuntime: { singleThread: false }, level: "warn" as const },
+    { label: "logs at debug", secondRuntime: undefined, level: "debug" as const },
+  ])("$label on a later config, without throwing", ({ secondRuntime, level }) => {
     const provider = {} as never;
     const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
     buildZamaConfig(undefined, provider, params({ singleThread: true }));
@@ -79,9 +79,10 @@ describe("buildZamaConfig FHEVM runtime configuration", () => {
     ).not.toThrow();
     // LoggerService forwards `(prefixedMessage, data?)`, so assert the message
     // arg rather than an exact call shape.
-    expect(logger.warn.mock.calls[0]?.[0]).toBe(
+    expect(logger[level].mock.calls[0]?.[0]).toBe(
       "[zama-sdk] runtime configuration is already set and cannot be changed.",
     );
+    expect(logger[level === "warn" ? "debug" : "warn"]).not.toHaveBeenCalled();
     expect(fhevmRuntime.setFhevmRuntimeConfig).toHaveBeenCalledOnce();
   });
 });
