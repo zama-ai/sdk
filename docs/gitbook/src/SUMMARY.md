@@ -88,6 +88,8 @@
   - [useUnwrapAll](reference/react/useUnwrapAll.md)
   - [useFinalizeUnwrap](reference/react/useFinalizeUnwrap.md)
   - [useGrantPermit](reference/react/useGrantPermit.md)
+  - [usePreparePermit](reference/react/usePreparePermit.md)
+  - [useRegisterPermit](reference/react/useRegisterPermit.md)
   - [useHasPermit](reference/react/useHasPermit.md)
   - [useRevokePermits](reference/react/useRevokePermits.md)
   - [useClearCredentials](reference/react/useClearCredentials.md)

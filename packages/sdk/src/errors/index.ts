@@ -8,6 +8,10 @@ export {
   InvalidTransportKeyPairError,
   NoCiphertextError,
   KeyWrappingError,
+  TransportKeyPairChangedError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  PreparedPermitMismatchError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

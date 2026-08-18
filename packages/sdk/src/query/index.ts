@@ -105,6 +105,14 @@ export {
 } from "./delegated-decrypt";
 export { decryptPublicValuesMutationOptions } from "./public-decrypt";
 export { grantPermitMutationOptions } from "./grant-permit";
+export { preparePermitMutationOptions } from "./prepare-permit";
+export { registerPermitMutationOptions, type RegisterPermitParams } from "./register-permit";
+export type {
+  PreparedPermit,
+  PreparePermitRequest,
+  SerializedPermitEip712,
+} from "../credentials/types";
+export type { ChecksummedAddress } from "../schemas/primitives";
 export { hasPermitQueryOptions, type HasPermitQueryConfig } from "./has-permit";
 export { revokePermitsMutationOptions } from "./revoke-permits";
 export { clearCredentialsMutationOptions } from "./clear-credentials";

@@ -22,6 +22,10 @@ import {
   TransportKeyPairExpiredError,
   NoCiphertextError,
   KeyWrappingError,
+  TransportKeyPairChangedError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  PreparedPermitMismatchError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -89,6 +93,10 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
+| `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
+| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | `prepared.chainId` doesn't match the chain `registerPermit` is running against                                                    |
+| `PreparedPermitExpiredError`            | `PREPARED_PERMIT_EXPIRED`             | A prepared permit's validity window elapsed before its signature was registered                                                   |
+| `PreparedPermitMismatchError`           | `PREPARED_PERMIT_MISMATCH`            | A prepared permit's unsigned metadata does not match what its signature actually covers                                           |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -299,6 +307,63 @@ matchZamaError(error, {
 - `crypto.subtle` is unavailable in the environment.
 
 With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobber the entry every other signer in the scope reads. Verify that every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, and that none is missing it. See [Security Model](../../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and migration steps.
+
+### TransportKeyPairChangedError
+
+**Code:** `TRANSPORT_KEY_PAIR_CHANGED`
+
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the transport key pair changed between `preparePermit` and `registerPermit` — a TTL expiry or eviction happened in between. The prepared EIP-712 payload is signed against the old key pair's public key; registering it under a different one would bind the permit to the wrong key.
+
+```ts
+matchZamaError(error, {
+  TRANSPORT_KEY_PAIR_CHANGED: () => showError("Offline permit expired — restart the request"),
+});
+```
+
+**How to handle:** Call `preparePermit` again to rebind the request to the current key pair, then repeat the external signing step.
+
+### PreparedPermitChainMismatchError
+
+**Code:** `PREPARED_PERMIT_CHAIN_MISMATCH`
+
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when `prepared.chainId` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_CHAIN_MISMATCH: (e) =>
+    showError(`Switch to chain ${e.preparedChainId} to register this permit`),
+});
+```
+
+**How to handle:** Register the permit while the SDK is configured for the chain it was prepared for, or call `preparePermit` again against the currently active chain.
+
+### PreparedPermitExpiredError
+
+**Code:** `PREPARED_PERMIT_EXPIRED`
+
+A prepared permit's validity window (`startTimestamp` + `durationDays`) elapsed before its signature was registered — the out-of-process signing ceremony took longer than the permit's lifetime.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_EXPIRED: () => showError("Offline permit expired before it was registered"),
+});
+```
+
+**How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
+
+### PreparedPermitMismatchError
+
+**Code:** `PREPARED_PERMIT_MISMATCH`
+
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when a prepared permit's unsigned top-level metadata (`contracts`, `startTimestamp`, `durationDays`, `delegatorAddress`) does not match what is actually embedded in its signed EIP-712 payload. These fields travel alongside the signature but are not themselves covered by it, so this indicates the payload was tampered with or corrupted after signing.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_MISMATCH: () => showError("Offline permit payload is inconsistent — discard it"),
+});
+```
+
+**How to handle:** Discard the payload and call `preparePermit` again. Do not attempt to "fix" the mismatched field — that field is exactly what's untrustworthy.
 
 ### RelayerRequestFailedError
 

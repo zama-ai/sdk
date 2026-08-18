@@ -67,7 +67,12 @@ export {
 // Token abstraction layer
 export type { Address, Hex } from "viem";
 export type { ChecksummedAddress, Permission, SerializedTransportKeyPair } from "./credentials";
-export type { SerializedPermit, SerializedPermitEip712 } from "./credentials/types";
+export type {
+  PreparedPermit,
+  PreparePermitRequest,
+  SerializedPermit,
+  SerializedPermitEip712,
+} from "./credentials/types";
 export {
   AclPausedError,
   BalanceCheckUnavailableError,
@@ -94,6 +99,9 @@ export {
   matchZamaError,
   NoCiphertextError,
   NotEntitledError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  PreparedPermitMismatchError,
   RelayerRequestFailedError,
   retryAfterSeconds,
   RpcRateLimitError,
@@ -102,6 +110,7 @@ export {
   SigningFailedError,
   SigningRejectedError,
   TransactionRevertedError,
+  TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   WalletAccountNotReadyError,
   WalletNotConnectedError,

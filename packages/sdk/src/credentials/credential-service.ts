@@ -1,7 +1,14 @@
-import type { Address } from "viem";
+import type { ParseSignedDecryptionPermitReturnType as SignedDecryptionPermit } from "@fhevm/sdk/actions/chain";
+import type { Address, Hex } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
-import { KeyWrappingError } from "../errors/credential";
+import {
+  KeyWrappingError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  PreparedPermitMismatchError,
+  TransportKeyPairChangedError,
+} from "../errors/credential";
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
@@ -10,18 +17,33 @@ import { checksum } from "../schemas/primitives";
 import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
+import { parseSchema } from "../validation";
 import { TransportKeyPairVault } from "./keypair-vault";
 import type { DerivationSecretHolder } from "./keypair-wrapping";
 import { PermissionStore } from "./permission-store";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
-import { SerializedPermitSchema } from "./schemas";
+import {
+  Eip712Schema,
+  PermitTTLSchema,
+  PreparedPermitSchema,
+  SerializedPermitSchema,
+} from "./schemas";
 import type { PermissionScope } from "./storage-keys";
 import type {
   Permission,
+  PreparedPermit,
+  PreparePermitRequest,
   SerializedTransportKeyPairWithPermissions,
   StoredTransportKeyPair,
 } from "./types";
-import { normalizeAddresses, nowSeconds, SECONDS_PER_DAY } from "./utils";
+import {
+  MAX_CONTRACTS_PER_PERMIT,
+  MAX_V1_PERMIT_DURATION_DAYS,
+  normalizeAddresses,
+  nowSeconds,
+  SECONDS_PER_DAY,
+  toJsonSafeEip712,
+} from "./utils";
 
 export const DEFAULT_TRANSPORT_KEY_PAIR_TTL_SECONDS = 30 * SECONDS_PER_DAY;
 export const DEFAULT_PERMIT_DURATION_DAYS = 30;
@@ -185,6 +207,237 @@ export class CredentialService {
       keypair,
       permissions: permissions.filter((p) => p.contractAddresses.some((a) => requestedSet.has(a))),
     };
+  }
+
+  /**
+   * Offline permit flow, phase 1: build the unsigned EIP-712 typed data for a
+   * decryption permit without signing it. The caller (an HSM, custody API, or
+   * any out-of-process signer) signs the returned `eip712` with
+   * `eth_signTypedData_v4` and hands the signature to {@link registerPermit}.
+   *
+   * Signer-less: the transport key pair is resolved from `request.signer`
+   * directly — no wallet account or configured signer needed. Signer-offline,
+   * not network-offline: building the typed data still reads the chain's KMS
+   * signers context on-chain.
+   *
+   * One permit per call — no widening or chunking against existing permits,
+   * unlike {@link grantPermit}. Prefer `grantPermit` unless signing must
+   * happen out-of-process.
+   *
+   * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT},
+   *   `request.delegator` equals `request.signer`, or `request.durationDays` exceeds
+   *   {@link MAX_V1_PERMIT_DURATION_DAYS}. {@link ConfigurationError}
+   */
+  async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+    const signerAddress = checksum(request.signer);
+    const contracts = normalizeAddresses(request.contracts);
+    if (contracts.length === 0) {
+      throw new ConfigurationError("preparePermit: request.contracts must not be empty.");
+    }
+    if (contracts.length > MAX_CONTRACTS_PER_PERMIT) {
+      throw new ConfigurationError(
+        `preparePermit: request.contracts must not exceed ${MAX_CONTRACTS_PER_PERMIT} addresses per call ` +
+          `(got ${contracts.length}) — grantPermit chunks automatically, preparePermit does not.`,
+      );
+    }
+    const delegatorAddress = request.delegator ? checksum(request.delegator) : undefined;
+    if (delegatorAddress !== undefined && delegatorAddress === signerAddress) {
+      throw new ConfigurationError(
+        "preparePermit: request.delegator must differ from request.signer — self-delegation is not allowed.",
+      );
+    }
+    const durationDays =
+      request.durationDays !== undefined
+        ? parseSchema(PermitTTLSchema, request.durationDays)
+        : this.#permitTTL;
+    if (durationDays > MAX_V1_PERMIT_DURATION_DAYS) {
+      throw new ConfigurationError(
+        `preparePermit: durationDays (${durationDays}) exceeds the V1 permit maximum of ` +
+          `${MAX_V1_PERMIT_DURATION_DAYS} days.`,
+      );
+    }
+
+    // Snapshot the relayer and chain together, before the first await: a chain
+    // switch mid-flight must not let the EIP-712 domain (built against whichever
+    // chain is active when the relayer call actually runs) disagree with the
+    // top-level `chainId` metadata read afterward.
+    const relayer = this.#router.relayer;
+    const chainId = this.#router.chain.id;
+
+    // Strict persistence: an out-of-process signing ceremony can take hours or
+    // days, so a key pair that fails to persist here must fail immediately
+    // instead of silently binding `eip712` to a key `registerPermit` will later
+    // fail to find (surfacing only as a confusing `TransportKeyPairChangedError`
+    // after the ceremony completes).
+    const keypair = await this.#vault.getOrCreate(signerAddress, { strict: true });
+    const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+    const startTimestamp = nowSeconds();
+    const eip712 = toJsonSafeEip712(
+      Eip712Schema.parse(
+        await relayer.createUnsignedLegacyDecryptionPermitEip712({
+          transportKeyPair,
+          contractAddresses: contracts,
+          startTimestamp,
+          durationSeconds: durationDays * SECONDS_PER_DAY,
+          ...(delegatorAddress && { delegatorAddress }),
+        }),
+      ),
+    );
+
+    return {
+      version: 1,
+      eip712,
+      signerAddress,
+      ...(delegatorAddress && { delegatorAddress }),
+      contracts,
+      chainId,
+      startTimestamp,
+      durationDays,
+      transportPublicKey: keypair.publicKey,
+    };
+  }
+
+  /**
+   * Offline permit flow, phase 2: verify the signature an out-of-process
+   * signer produced for a {@link preparePermit} payload, then persist it as a
+   * usable permit.
+   *
+   * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
+   *   crossed a process boundary and was corrupted). {@link ConfigurationError}
+   * @throws if `prepared.chainId` doesn't match the currently active chain. {@link PreparedPermitChainMismatchError}
+   * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
+   * @throws if the transport key pair changed since `preparePermit` ran (e.g. a
+   *   TTL expiry or eviction in between). {@link TransportKeyPairChangedError}
+   * @throws if the signature is invalid or malformed. {@link SigningFailedError}
+   * @throws if `prepared`'s unsigned metadata (chain, contracts, timing, delegator) does
+   *   not match what the signature actually covers. {@link PreparedPermitMismatchError}
+   */
+  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    const parsed = parseSchema(PreparedPermitSchema, prepared);
+
+    // Snapshot the relayer and chain together, before the first await — see the
+    // identical guard in preparePermit.
+    const relayer = this.#router.relayer;
+    const activeChainId = this.#router.chain.id;
+
+    if (parsed.chainId !== activeChainId) {
+      throw new PreparedPermitChainMismatchError({
+        preparedChainId: parsed.chainId,
+        activeChainId,
+      });
+    }
+    if (nowSeconds() >= parsed.startTimestamp + parsed.durationDays * SECONDS_PER_DAY) {
+      throw new PreparedPermitExpiredError(
+        `registerPermit: the prepared permit's validity window (starting ${parsed.startTimestamp}, ` +
+          `${parsed.durationDays}d) has already elapsed — call preparePermit again.`,
+      );
+    }
+
+    const signerAddress = parsed.signerAddress;
+    const keypair = await this.#vault.getOrCreate(signerAddress);
+    if (keypair.publicKey !== parsed.transportPublicKey) {
+      throw new TransportKeyPairChangedError(
+        "registerPermit: the transport key pair changed since preparePermit ran — call " +
+          "preparePermit again to rebind the signature request to the current key pair.",
+      );
+    }
+
+    const transportKeyPair = await relayer.parseTransportKeyPair(keypair);
+    let signedPermit: SignedDecryptionPermit;
+    try {
+      signedPermit = await relayer.parseSignedDecryptionPermit({
+        serializedPermit: {
+          version: parsed.version,
+          eip712: parsed.eip712,
+          signature,
+          signerAddress,
+        },
+        transportKeyPair,
+      });
+    } catch (error) {
+      if (error instanceof ZamaError) {
+        throw error;
+      }
+      throw wrapSigningError(error, "registerPermit: signature verification failed");
+    }
+
+    // `parsed.contracts`/`startTimestamp`/`durationDays`/`delegatorAddress` travel
+    // alongside `eip712`/`signature` but are not themselves covered by the
+    // signature — only what's embedded in `signedPermit.eip712.message` is
+    // cryptographically verified. Refuse to persist a permit whose storage
+    // metadata disagrees with what the signer actually signed.
+    this.#assertPreparedPermitMatchesSignedPayload(parsed, signedPermit);
+
+    const serializedPermit = SerializedPermitSchema.parse(
+      await relayer.serializeSignedDecryptionPermit({ signedPermit }),
+    );
+
+    const permission: Permission = {
+      keypairPublicKey: keypair.publicKey,
+      contractAddresses: parsed.contracts,
+      serializedPermit,
+      startTimestamp: parsed.startTimestamp,
+      durationDays: parsed.durationDays,
+    };
+    const scope: PermissionScope = {
+      signerAddress,
+      chainId: activeChainId,
+      delegatorAddress: parsed.delegatorAddress ?? signerAddress,
+    };
+    await this.#store.append(scope, [permission]);
+  }
+
+  /**
+   * Verifies that `parsed`'s unsigned top-level metadata agrees with what's
+   * actually embedded in the signature-verified `signedPermit.eip712` (its
+   * `domain.chainId` and `message` fields).
+   */
+  #assertPreparedPermitMatchesSignedPayload(
+    parsed: PreparedPermit,
+    signedPermit: SignedDecryptionPermit,
+  ): void {
+    if (signedPermit.version !== 1) {
+      throw new PreparedPermitMismatchError(
+        `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
+      );
+    }
+    const { domain, message } = signedPermit.eip712;
+
+    if (Number(domain.chainId) !== parsed.chainId) {
+      throw new PreparedPermitMismatchError(
+        "registerPermit: prepared.chainId does not match the chainId embedded in the signed permit's EIP-712 domain.",
+      );
+    }
+
+    const embeddedContracts = normalizeAddresses(message.contractAddresses);
+    const preparedContracts = normalizeAddresses(parsed.contracts);
+    const contractsMatch =
+      embeddedContracts.length === preparedContracts.length &&
+      embeddedContracts.every((address, i) => address === preparedContracts[i]);
+    if (!contractsMatch) {
+      throw new PreparedPermitMismatchError(
+        "registerPermit: prepared.contracts does not match the contracts embedded in the signed permit.",
+      );
+    }
+
+    if (Number(message.startTimestamp) !== parsed.startTimestamp) {
+      throw new PreparedPermitMismatchError(
+        "registerPermit: prepared.startTimestamp does not match the signed permit's startTimestamp.",
+      );
+    }
+    if (Number(message.durationDays) !== parsed.durationDays) {
+      throw new PreparedPermitMismatchError(
+        "registerPermit: prepared.durationDays does not match the signed permit's durationDays.",
+      );
+    }
+
+    const embeddedDelegator =
+      "delegatorAddress" in message ? checksum(message.delegatorAddress) : undefined;
+    if (embeddedDelegator !== parsed.delegatorAddress) {
+      throw new PreparedPermitMismatchError(
+        "registerPermit: prepared.delegatorAddress does not match the signed permit's delegation.",
+      );
+    }
   }
 
   /**

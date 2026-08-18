@@ -1,3 +1,7 @@
+import type {
+  CreateUnsignedLegacyDecryptionPermitEip712Parameters,
+  CreateUnsignedLegacyDecryptionPermitEip712ReturnType,
+} from "@fhevm/sdk/actions/base";
 import type { Eip712Like, TypedValue } from "@fhevm/sdk/types";
 import type {
   createFhevmBaseClient,
@@ -232,4 +236,18 @@ export interface RelayerSDK extends Pick<
 > {
   /** The single FHE-enabled chain this backend instance is bound to. */
   chain: FheChain;
+  /**
+   * Builds the unsigned EIP-712 typed data for a V1 (legacy) decryption
+   * permit — the signer-less counterpart to {@link FhevmClient.signDecryptionPermit}.
+   * Not exposed on `@fhevm/sdk`'s client decorator, so it's called directly
+   * against the base client rather than through a decorated method.
+   *
+   * Backs the offline permit flow (`Offline.preparePermit`): the SDK builds
+   * the typed data here and hands it to an out-of-process signer for
+   * `eth_signTypedData_v4`. Reads the chain's KMS signers context on-chain to
+   * resolve the active protocol version — signer-offline, not network-offline.
+   */
+  createUnsignedLegacyDecryptionPermitEip712(
+    parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters,
+  ): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }

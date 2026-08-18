@@ -179,6 +179,28 @@ describe("Permits", () => {
       await sdk.decryption.decryptValues(handles);
       expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
     });
+
+    test("registerPermit clears the decrypt cache for the requester", async ({
+      sdk,
+      signer,
+      relayer,
+      handle,
+    }) => {
+      const handles = [{ encryptedValue: handle, contractAddress: CONTRACT_A }];
+      await sdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledOnce();
+
+      const signerAddress = signer.walletAccount.getSnapshot()!.address;
+      const prepared = await sdk.offline.preparePermit({
+        signer: signerAddress,
+        contracts: [CONTRACT_A],
+      });
+      const signature = await signer.signTypedData(prepared.eip712);
+      await sdk.permits.registerPermit(prepared, signature);
+
+      await sdk.decryption.decryptValues(handles);
+      expect(relayer.decryptValues).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("scope (opt-in shared-tenant)", () => {

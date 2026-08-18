@@ -1,3 +1,4 @@
+import { createUnsignedLegacyDecryptionPermitEip712 as createUnsignedLegacyDecryptionPermitEip712Action } from "@fhevm/sdk/actions/base";
 import {
   createFhevmBaseClient,
   createFhevmDecryptClient,
@@ -343,6 +344,29 @@ export class FhevmRelayer implements RelayerSDK {
     await this.#base.init();
     return this.#base.signDecryptionPermit(parameters);
   };
+
+  /**
+   * Builds the unsigned EIP-712 typed data for a V1 decryption permit, without
+   * signing it — the signer-less counterpart to {@link signDecryptionPermit}.
+   * Hand the result to an out-of-process signer for `eth_signTypedData_v4`,
+   * then verify the returned signature via {@link parseSignedDecryptionPermit}.
+   *
+   * Not on `@fhevm/sdk`'s client decorator, so it's called directly against
+   * the base client rather than through a decorated method.
+   *
+   * @example
+   * ```ts
+   * const eip712 = await relayer.createUnsignedLegacyDecryptionPermitEip712({
+   *   transportKeyPair,
+   *   contractAddresses: ["0xToken…"],
+   *   startTimestamp: Math.floor(Date.now() / 1000),
+   *   durationSeconds: 60 * 60 * 24,
+   *   // delegatorAddress: "0xOwner…", // omit for a self permit
+   * });
+   * ```
+   */
+  createUnsignedLegacyDecryptionPermitEip712: RelayerSDK["createUnsignedLegacyDecryptionPermitEip712"] =
+    (parameters) => createUnsignedLegacyDecryptionPermitEip712Action(this.#base, parameters);
 
   // Permit/key-pair helpers carry no request options. Parsing explicitly
   // initializes the capability that validates the restored value; serialization

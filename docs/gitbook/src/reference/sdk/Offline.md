@@ -59,6 +59,55 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
 
+### preparePermit
+
+```ts
+preparePermit(request: PreparePermitRequest): Promise<PreparedPermit>
+```
+
+Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](./ZamaSDK.md#permits-grantpermit). Hand `prepared.eip712` to an out-of-process signer for `eth_signTypedData_v4`, then pass the returned signature to [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit).
+
+A permit is not a transaction: nothing is broadcast, and registering the signature is a local operation, not a relayer round-trip — so this is its own method rather than a `prepare()` request kind.
+
+```ts
+const prepared = await sdk.offline.preparePermit({
+  signer: "0xCustodyWallet",
+  contracts: ["0xConfidentialToken"],
+});
+```
+
+`request` fields:
+
+| Field          | Type        | Default                                       | Meaning                                             |
+| -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
+| `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
+| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
+| `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
+| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
+
+Signer-optional, like `prepare`: `request.signer` is an explicit address, not a connected wallet account — resolving the transport key pair needs no configured signer. It is signer-offline, not network-offline: building the typed data still reads the chain's KMS signers context on-chain, so the provider must be reachable.
+
+Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a process boundary as-is:
+
+| Field                | Type                     | Meaning                                                                    |
+| -------------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `version`            | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive   |
+| `eip712`             | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`                 |
+| `signerAddress`      | `Address`                | checksummed `request.signer`                                               |
+| `delegatorAddress`   | `Address \| undefined`   | present only for a delegated permit                                        |
+| `contracts`          | `Address[]`              | checksummed, deduplicated, sorted `request.contracts`                      |
+| `chainId`            | `number`                 | chain the permit is bound to; must match the active chain at register time |
+| `startTimestamp`     | `number`                 | Unix timestamp (seconds) the permit becomes valid                          |
+| `durationDays`       | `number`                 | validity window length in days from `startTimestamp`                       |
+| `transportPublicKey` | `Hex`                    | transport key pair public key embedded in `eip712`                         |
+
+**Throws:**
+
+- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+
+See [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
 ## Request kinds
 
 Each request is a discriminated union member on `kind`. `from` is always the transaction sender.
@@ -108,7 +157,8 @@ Omitted fields fall back to live chain state:
 
 ## Related
 
-- [Offline signing guide](../../guides/offline.md) - the full workflow
+- [Offline signing guide](../../guides/offline.md) - the full workflow, including [offline permits](../../guides/offline.md#offline-permits)
 - [GenericProvider](./GenericProvider.md) - `prepareTransaction`, the provider hook behind `prepare`
 - [Event decoders](./event-decoders.md) - `findUnwrapRequested` and friends
 - [WrappedToken](./WrappedToken.md) - the atomic shield/unshield counterparts
+- [ZamaSDK](./ZamaSDK.md#permits-registerpermit) - `permits.registerPermit`, the second phase of the offline permit flow
