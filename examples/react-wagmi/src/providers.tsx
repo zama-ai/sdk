@@ -23,7 +23,7 @@ const wagmiConfig = createConfig({
 // Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
 const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: "http://localhost:3000/api/relayer",
+  relayerUrl: "/api/relayer",
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 

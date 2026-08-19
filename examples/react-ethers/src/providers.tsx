@@ -118,7 +118,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
     const zamaSepolia = {
       ...fheSepolia,
-      relayerUrl: "http://localhost:3000/api/relayer",
+      relayerUrl: "/api/relayer",
       network: SEPOLIA_RPC_URL,
     } as const;
 
