@@ -185,13 +185,15 @@ describe("CredentialService.recoverPermits", () => {
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
-  test("a transient storage failure during eviction does not mask the re-grant", async ({
+  test("a failed permit read skips eviction and keeps the prior coverage", async ({
     createCredentialService,
     createMockStorage,
+    signer,
   }) => {
     const permitStorage = createMockStorage();
     const service = createCredentialService({ permitStorage });
-    await service.grantPermit([A]);
+    await service.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
 
     const realGet = permitStorage.get;
     let failNext = true;
@@ -206,6 +208,82 @@ describe("CredentialService.recoverPermits", () => {
     await expect(service.recoverPermits([A])).resolves.toMatchObject({
       keypair: expect.objectContaining({ publicKey: expect.any(String) }),
     });
+
+    // Nothing was cleared and nothing was re-signed: the retry decrypts with
+    // the dead permit and the coverage survives for the next attempt.
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(await service.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers normally on the next call once the permit read succeeds again", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A, B]);
+
+    const realGet = permitStorage.get;
+    let failNext = true;
+    permitStorage.get = async (key) => {
+      if (failNext) {
+        failNext = false;
+        throw new Error("storage unavailable");
+      }
+      return realGet(key);
+    };
+    await service.recoverPermits([A]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await service.recoverPermits([A]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await service.hasPermit([A, B])).toBe(true);
+  });
+
+  test("re-signs the requested contracts when the stored permit list is unparseable", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A]);
+    const scopeKey = vi
+      .mocked(permitStorage.set)
+      .mock.calls.map(([key]) => key)
+      .find((key) => key.startsWith("permits:"))!;
+    await permitStorage.set(scopeKey, { not: "a permit list" });
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await service.recoverPermits([A]);
+
+    // `list` self-clears the corrupt scope and reports it empty, so the prior
+    // coverage is unrecoverable by definition and only `contracts` is re-signed.
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await service.hasPermit([A])).toBe(true);
+  });
+
+  test("a failed eviction does not mask the re-grant", async ({
+    createCredentialService,
+    createMockStorage,
+    signer,
+  }) => {
+    const permitStorage = createMockStorage();
+    const service = createCredentialService({ permitStorage });
+    await service.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+    permitStorage.delete = async () => {
+      throw new Error("storage unavailable");
+    };
+
+    // C is outside the prior coverage, so the re-grant is observable even
+    // though the failed eviction left the dead permits in place.
+    await expect(service.recoverPermits([C])).resolves.toMatchObject({
+      keypair: expect.objectContaining({ publicKey: expect.any(String) }),
+    });
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
 });
 

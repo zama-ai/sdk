@@ -658,9 +658,10 @@ export class CredentialService {
    *
    * Concurrent recoveries for the same scope share one evict-and-regrant, so
    * parallel decrypt calls (e.g. a batched balance read fanning out per token)
-   * cost one wallet prompt total, not one each. Eviction is best-effort: if
-   * storage fails, the retry decrypts with the dead permit and the typed error
-   * surfaces to the caller.
+   * cost one wallet prompt total, not one each. A scope whose permits cannot be
+   * read is never evicted: the retry then decrypts with the dead permit and the
+   * typed error surfaces, leaving the prior coverage intact for the next call.
+   * Eviction itself stays best-effort once the read succeeded.
    *
    * @throws if the user rejects the re-grant prompt. {@link SigningRejectedError}
    * @throws if re-signing fails for any other reason. {@link SigningFailedError}
@@ -673,9 +674,26 @@ export class CredentialService {
     const account = signer.requireWalletAccount("recoverPermits");
     const scope = this.#permissionScope(checksum(account.address), delegator);
     const key = permissionScopeKey(scope);
+
+    // Joining a running recovery is correct whatever this call's permits are.
+    const inFlight = this.#permitRecoveries.get(key);
+    if (inFlight) {
+      await inFlight;
+      return this.grantPermit(contracts, delegator);
+    }
+
+    // An unreadable scope must not be cleared: dropping permits we cannot read
+    // back would destroy coverage we can never restore.
+    const stored = await this.#readScopePermits(scope);
+    if (stored === null) {
+      return this.grantPermit(contracts, delegator);
+    }
+
+    // The read above awaited, so a leader may have registered since.
     let recovery = this.#permitRecoveries.get(key);
     if (!recovery) {
-      recovery = this.#evictAndRegrantScope(scope, contracts, delegator).finally(() => {
+      const prior = stored.flatMap((p) => p.contractAddresses);
+      recovery = this.#clearAndRegrantScope(scope, prior, contracts, delegator).finally(() => {
         this.#permitRecoveries.delete(key);
       });
       this.#permitRecoveries.set(key, recovery);
@@ -686,23 +704,26 @@ export class CredentialService {
     return this.grantPermit(contracts, delegator);
   }
 
-  async #evictAndRegrantScope(
+  /** `null` marks a storage failure, distinct from an empty scope. */
+  async #readScopePermits(scope: PermissionScope): Promise<Permission[] | null> {
+    try {
+      return await this.#store.list(scope);
+    } catch (error) {
+      this.#logger.warn("read permits for recovery failed", { error });
+      return null;
+    }
+  }
+
+  async #clearAndRegrantScope(
     scope: PermissionScope,
+    prior: readonly ChecksummedAddress[],
     contracts: readonly Address[],
     delegator?: Address,
   ): Promise<void> {
+    await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
     // Re-sign the union of what the scope covered, not just this call's
     // contracts: one signature restores every widened permit, so sibling
     // decrypt calls joining the recovery find their contracts already covered.
-    let prior: ChecksummedAddress[] = [];
-    await swallow(
-      "read permits for recovery",
-      async () => {
-        prior = (await this.#store.list(scope)).flatMap((p) => p.contractAddresses);
-      },
-      this.#logger,
-    );
-    await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
     await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
   }
 }
