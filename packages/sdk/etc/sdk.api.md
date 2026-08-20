@@ -5846,6 +5846,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.InsufficientConfidentialBalance]: InsufficientConfidentialBalanceError;
     [ZamaErrorCode.InsufficientERC20Balance]: InsufficientERC20BalanceError;
     [ZamaErrorCode.InvalidTransportKeyPair]: InvalidTransportKeyPairError;
+    [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
     [ZamaErrorCode.TransportKeyPairExpired]: TransportKeyPairExpiredError;
     [ZamaErrorCode.NoCiphertext]: NoCiphertextError;
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
@@ -11226,6 +11227,11 @@ export function isOperatorContract(tokenAddress: Address, holder: Address, spend
 export function isRetryable(error: unknown): error is ZamaError & {
     retryable: true;
 };
+
+// @public
+export class KeyWrappingError extends ZamaError {
+    constructor(message: string, options?: ErrorOptions);
+}
 
 // @public
 export interface ListPairsOptions {
@@ -19610,6 +19616,7 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
 };
 
 // @public
@@ -19618,7 +19625,7 @@ export type ZamaErrorCode = (typeof ZamaErrorCode)[keyof typeof ZamaErrorCode];
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig, options?: ZamaSDKOptions);
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -19668,6 +19675,11 @@ export const ZamaSDKEvents: {
 
 // @public
 export type ZamaSDKEventType = (typeof ZamaSDKEvents)[keyof typeof ZamaSDKEvents];
+
+// @public
+export interface ZamaSDKOptions {
+    transportKeyPairDerivationSecret?: string | Uint8Array;
+}
 
 // @public
 export const ZERO_ENCRYPTED_VALUE: "0x0000000000000000000000000000000000000000000000000000000000000000";

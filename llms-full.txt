@@ -2155,6 +2155,18 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
+## Transport key pair encrypted at rest
+
+A new `transportKeyPairDerivationSecret` option on the `ZamaSDK` constructor encrypts the transport private key before it is written to storage. (This is key encryption, unrelated to token wrapping via `shield`/`unshield`.) It is for headless environments with no secure storage to delegate to: CLI tools, agents, bare-metal boxes. Omit it and nothing changes: storage stays plaintext, as before.
+
+```ts
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: derivationSecret, // 32+ random bytes
+});
+```
+
+Failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`); `hasPermit` and `hasDelegationPermit` return `false` instead of throwing it. See [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for which environments should use this and the setup, and [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, entropy requirement, and rotation.
+
 ## 3.x
 
 - source_type: official-doc
@@ -3296,6 +3308,50 @@ const config = createConfig({
 ```
 
 Permits stay per-signer regardless of scope. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
+
+### 10. (Optional) Wrap the transport key pair at rest (headless environments)
+
+By default the SDK stores the transport private key in plaintext and delegates at-rest security to your storage backend. `transportKeyPairDerivationSecret` encrypts the key before every write instead. It exists for headless environments that have no secure backend to delegate to. Find your environment:
+
+| Your environment                                              | What to do                                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser dApp                                                  | Nothing. IndexedDB behind same-origin isolation and OS disk encryption is the intended default. The constructor rejects this option.                          |
+| React Native / mobile                                         | Use a platform keychain (iOS Keychain, Android Keystore) as the `storage` backend. React Native defines `window`, so the constructor rejects this option too. |
+| Backend with a KMS, Vault, or encrypted storage               | Nothing. Your storage is already secure; wrapping on top adds key management without adding security.                                                         |
+| Headless with plain storage (CLI tool, agent, bare-metal box) | Pass `transportKeyPairDerivationSecret`, plus a persistent `storage`.                                                                                         |
+
+For the last row, two things must hold:
+
+1. **The secret arrives out of band**: from the process environment, a secrets manager, or a KMS-unwrapped blob. Never store it next to the data it protects.
+2. **Storage is persistent.** The headless default is in-memory, and a wrapped key that never reaches disk protects nothing.
+
+```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
+  storage: myPersistentStorage, // required: the headless default is in-memory
+});
+
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
+});
+```
+
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it with `!` first. If the value is `undefined` (an unset env var), the constructor throws `ConfigurationError` instead of silently downgrading to plaintext.
+
+
+> [!DANGER]
+> **Never ship the secret in a bundle.** Bundlers inline env values at build time, so a bundled secret reaches every copy of the artifact and protects nothing. The constructor rejects the option when it detects a browser context, but it cannot detect every bundle: keeping the secret out of shipped code is your responsibility.
+
+
+The SDK never persists or exposes this value. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, the entropy requirement (32 random bytes, or a 64+ character string), the anti-patterns to avoid, and rotation.
 
 ## Shared relayer options
 
@@ -9023,6 +9079,7 @@ import {
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   NoCiphertextError,
+  KeyWrappingError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -9089,6 +9146,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
+| `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -9276,6 +9334,29 @@ try {
 ```
 
 **How to handle:** Show an empty state in your UI prompting the user to shield tokens. Do not display "0" — there is no balance to show.
+
+### KeyWrappingError
+
+**Code:** `KEY_WRAPPING_FAILED`
+
+At-rest encryption or decryption of the transport private key failed. This is the key-protection feature behind `transportKeyPairDerivationSecret`, unrelated to token wrapping (`shield`/`unshield`).
+
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope`, and by any operation that resolves credentials under the hood (`decryptValues`, `token.balanceOf`). `hasPermit` and `hasDelegationPermit` never throw it: they return `false`, so a permit check stays a safe read (see [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md)).
+
+```ts
+matchZamaError(error, {
+  KEY_WRAPPING_FAILED: () =>
+    showError("Credential storage misconfigured, check transportKeyPairDerivationSecret"),
+});
+```
+
+**How to handle:** A wrong secret without a scope never throws: the SDK treats it as a cache miss and regenerates. So without a `transportKeyPairScope`, the cause is one of:
+
+- An encrypted entry was read with no `transportKeyPairDerivationSecret` configured. Restore the secret, or call `sdk.permits.clear()` to downgrade to plaintext deliberately.
+- The entry was written by a newer wrapping scheme version. Upgrade the SDK, or call `sdk.permits.clear()` to discard the entry deliberately.
+- `crypto.subtle` is unavailable in the environment.
+
+With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobber the entry every other signer in the scope reads. Verify that every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, and that none is missing it. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and migration steps.
 
 ### RelayerRequestFailedError
 
@@ -18490,17 +18571,74 @@ The wallet signs EIP-712 typed data to authorize FHE operations. The SDK trusts 
 
 ### Transport key pair storage
 
-The transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers). There is no encryption-at-rest layer.
+By default, the transport private key is stored in plaintext in the configured storage backend (typically IndexedDB in browsers), with no encryption-at-rest layer. This is correct for most contexts: browser dApps have IndexedDB behind OS-level disk encryption, mobile apps have platform keychains, server operators typically have a KMS/Vault/HSM in front of their storage. See [Wrapped at rest](#wrapped-at-rest-transportkeypairderivationsecret) below for the opt-in alternative when none of that exists.
 
 ![Transport key pair storage](../images/credential-storage.svg)
 
-| Parameter  | Value                                                                    |
-| ---------- | ------------------------------------------------------------------------ |
-| Storage    | IndexedDB (browser), memory (tests), AsyncLocalStorage (Node.js)         |
-| Key format | Plaintext ML-KEM key pair                                                |
-| Scope      | One transport key pair per signer address by default (chain-independent) |
+| Parameter  | Value                                                                             |
+| ---------- | --------------------------------------------------------------------------------- |
+| Storage    | IndexedDB (browser), in-memory otherwise (pass a persistent `storage` on servers) |
+| Key format | Plaintext ML-KEM key pair by default, see below for wrapped                       |
+| Scope      | One transport key pair per signer address by default (chain-independent)          |
 
 The security model relies on same-origin isolation: only JavaScript running on the same origin can read IndexedDB. See [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) for the full lifecycle.
+
+### Wrapped at rest (`transportKeyPairDerivationSecret`)
+
+"Wrapping" here means encrypting the transport private key before it is written to storage. It is unrelated to wrapping ERC-20 tokens into confidential tokens (`shield`/`unshield`).
+
+**The threat.** An attacker obtains a copy of your storage backend: a stolen disk, a leaked database dump, an exposed backup. The attacker does not control your running process. By default the transport private key sits in that copy as plaintext, so the attacker reads it directly. With `transportKeyPairDerivationSecret`, the attacker gets ciphertext instead. This holds only if the secret lives outside the stolen storage.
+
+**How it works.** Pass the secret at construction: `new ZamaSDK(config, { transportKeyPairDerivationSecret })`. It is a constructor option, not part of the shareable config object, so the secret can never travel with the config. The SDK encrypts the private key before every write and decrypts it after every read. No other API changes. The SDK never persists the secret and never exposes it on any object. The constructor rejects the option in browser contexts, and rejects an `undefined` value (the unset-env-var case); see [Configuration](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for the guards and setup.
+
+```
+wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
+ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
+```
+
+The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption.
+
+Prefer a `Uint8Array` secret. The SDK copies it, imports the copy into a non-extractable WebCrypto key on first use, and zeroizes that copy. The SDK never touches your original buffer: zeroize it after construction. A `string` cannot be scrubbed: JavaScript strings are immutable, so copies may remain in the heap.
+
+
+> [!WARNING]
+> **The secret must be random.** The SDK enforces a minimum length (32 bytes for a `Uint8Array`, 64 characters for a string), but length is not entropy. Generate it with a CSPRNG or issue it from a secrets manager: `crypto.randomBytes(32)` in Node.js, or `openssl rand -hex 32` for an env var. Never use a passphrase: HKDF does no key-stretching, so a human-memorable secret can be brute-forced offline.
+
+
+| Storage mode                            | Option                             | Storage needed? | Secure storage needed?    |
+| --------------------------------------- | ---------------------------------- | --------------- | ------------------------- |
+| Plaintext, delegated security (default) | n/a                                | Yes             | Yes (your responsibility) |
+| Wrapped at rest                         | `transportKeyPairDerivationSecret` | Yes             | No, any key-value store   |
+
+
+> [!INFO]
+> This doesn't eliminate storage: the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_.
+
+
+#### What not to do
+
+The protection fails if a storage-level attacker can also reach the secret. Source it out of band: a secrets manager, a KMS-unwrapped blob, an env var injected at deploy time.
+
+
+> [!DANGER]
+> - **Do not store the secret next to the key pair it wraps.** That puts the lock and key in the same drawer: an attacker who reads one reads both.
+> - **Do not ship it in a build artifact.** Bundlers inline `process.env` at build time, so the secret travels with every copy of the artifact.
+> - **Do not share one secret across a fleet without per-instance or per-tenant separation.** One captured instance then unlocks every other instance's storage.
+> - **Do not wrap storage that is already secure.** On a platform keychain, a KMS-backed store, or an at-rest-encrypted backend, wrapping adds rotation and distribution burden without adding security.
+
+
+#### Rotation
+
+The secret is set once, at construction. To rotate it, restart with the new value. Without a scope, the old wrapped entry fails to decrypt, the SDK treats that as a cache miss and deletes it, and the next `grantPermit()` generates a fresh key pair wrapped with the new secret. With a scope, rotation does not self-heal: follow the migration steps in the warning below. Replacing a lost secret with a new one has the same cost as rotating it.
+
+A fresh key pair invalidates every permit granted for the old one, so the signer must re-sign. The number of wallet prompts depends on how your app grants permits: one prompt if you re-grant the full contract set in one call, several spread over time if you grant lazily per contract. To avoid extra prompts, rotate the secret when the key pair expires anyway; `transportKeyPairTTL` sets that cadence.
+
+
+> [!WARNING]
+> One case does not self-heal: an instance with no `transportKeyPairDerivationSecret` configured that reads a wrapped entry throws [`KeyWrappingError`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#keywrappingerror) instead of silently downgrading to plaintext. The entry is preserved: restore the secret to restore access, or call `sdk.permits.clear()` to downgrade deliberately.
+>
+> With a shared scope, no mismatch self-heals: the wrong secret, a missing secret, and a plaintext entry read by a wrapped instance all throw instead of overwriting the entry other signers depend on. Configure the same secret on every instance in the scope before the first wrapped write. To migrate a live scope, configure the secret everywhere, then call `sdk.permits.revokeTransportKeyPair(scopeId)` once; the next access regenerates the entry wrapped.
+
 
 ### Shared-tenant scope (B2B2C / WaaS operators)
 
@@ -18632,13 +18770,14 @@ The token is refreshed before each encrypt/decrypt call. Only POST, PUT, DELETE,
 
 ## Summary of cryptographic algorithms
 
-| Operation                       | Algorithm       | Key size    | Source                |
-| ------------------------------- | --------------- | ----------- | --------------------- |
-| WASM integrity (URL mode, opt.) | SHA-384         | --          | Web Crypto API        |
-| FHE encryption                  | TFHE            | Network key | WASM (`@fhevm/sdk`)   |
-| ZK proofs                       | WASM prover     | --          | WASM (`@fhevm/sdk`)   |
-| Wallet signing                  | ECDSA secp256k1 | 256-bit     | User wallet           |
-| Request tracking                | UUID v4         | 128-bit     | `crypto.randomUUID()` |
+| Operation                       | Algorithm                     | Key size    | Source                |
+| ------------------------------- | ----------------------------- | ----------- | --------------------- |
+| WASM integrity (URL mode, opt.) | SHA-384                       | --          | Web Crypto API        |
+| Transport key wrapping (opt.)   | HKDF-SHA256, then AES-256-GCM | 256-bit     | Web Crypto API        |
+| FHE encryption                  | TFHE                          | Network key | WASM (`@fhevm/sdk`)   |
+| ZK proofs                       | WASM prover                   | --          | WASM (`@fhevm/sdk`)   |
+| Wallet signing                  | ECDSA secp256k1               | 256-bit     | User wallet           |
+| Request tracking                | UUID v4                       | 128-bit     | `crypto.randomUUID()` |
 
 ## Reporting vulnerabilities
 
@@ -20372,9 +20511,16 @@ page.tsx                         — wallet connect, token selector, layout
 The app builds one SDK config and passes it to `ZamaProvider`:
 
 ```ts
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: "http://localhost:3000/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const;
 
@@ -20399,10 +20545,10 @@ const config = createConfig({
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-`web()` creates the browser relayer backed by a Web Worker loaded from CDN. This example keeps the proxy URL fixed to the local Next.js app:
+`relayerUrl` must be an **absolute** URL. The SDK validates it with `new URL(relayerUrl)` — no base argument — so a bare path like `/api/relayer` is rejected before any request is made. Deriving it from `window.location.origin` at runtime keeps the app working on whatever port or host it happens to be served from.
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
+Browser → http://localhost:3002/api/relayer/v2/keyurl
                    ↓
 Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
@@ -20752,9 +20898,16 @@ factory.
 ```ts
 const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
 const provider = new ViemProvider({ publicClient });
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const zamaSepolia = {
   ...fheSepolia,
-  relayerUrl: new URL("/api/relayer", window.location.origin).toString(),
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const;
 
@@ -20783,10 +20936,10 @@ one instance is safe — the SDK namespaces the keys internally.
 
 ### Relayer proxy (`/api/relayer/[...path]/route.ts`)
 
-The `web()` relayer factory creates a browser worker loaded from CDN. Workers require absolute URLs, so the proxy URL is constructed with `new URL("/api/relayer", window.location.origin).toString()`:
+`relayerUrl` must be an **absolute** URL. The SDK validates it with `new URL(relayerUrl)` — no base argument — so a bare path like `/api/relayer` is rejected before any request is made. Deriving it from `window.location.origin` at runtime keeps the app working on whatever port or host it happens to be served from.
 
 ```
-Browser Worker → http://localhost:3000/api/relayer/v2/keyurl
+Browser → http://localhost:3003/api/relayer/v2/keyurl
                    ↓
 Next.js API route → RELAYER_URL/v2/keyurl  (+ x-api-key header if set)
                    ↓
@@ -21231,9 +21384,16 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const mySepolia = {
   ...fheSepolia,
-  relayerUrl: "http://localhost:3000/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 

@@ -43,6 +43,13 @@ import { getEthereumProvider } from "@/lib/ethereum";
 // Separate DB from indexedDBStorage — see block comment above for the reason.
 const permitDBStorage = new IndexedDBStorage("PermitStore");
 
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -118,7 +125,7 @@ export function Providers({ children }: { children: ReactNode }) {
     const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
     const zamaSepolia = {
       ...fheSepolia,
-      relayerUrl: "http://localhost:3000/api/relayer",
+      relayerUrl: relayerProxyUrl,
       network: SEPOLIA_RPC_URL,
     } as const;
 

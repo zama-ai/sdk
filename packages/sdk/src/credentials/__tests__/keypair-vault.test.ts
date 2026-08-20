@@ -1,44 +1,23 @@
+import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
-import { TransportKeyPairVault } from "../keypair-vault";
-import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import { checksum } from "../utils";
-
-const USER = checksum("0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B");
-const OTHER = checksum("0x3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C3c3C");
-const PUBLIC_KEY = `0x${"11".repeat(32)}` as const;
-const PRIVATE_KEY = `0x${"22".repeat(32)}` as const;
-const TTL_SECONDS = 86400;
-
-const makeLogger = () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() });
-
-function makeGenerator(): () => Promise<SerializeTransportKeyPairReturnType> {
-  // Each call generates a unique keypair so cache hits/misses are observable
-  // via equality without poking the generator's call count.
-  let counter = 0;
-  return vi.fn().mockImplementation(async () => {
-    counter += 1;
-    return {
-      publicKey: (PUBLIC_KEY.slice(0, -2) +
-        counter
-          .toString(16)
-          .padStart(2, "0")) as unknown as SerializeTransportKeyPairReturnType["publicKey"],
-      privateKey: PRIVATE_KEY as unknown as SerializeTransportKeyPairReturnType["privateKey"],
-    };
-  });
-}
+import type { TransportKeyPairVault } from "../keypair-vault";
+import {
+  makeGatedGenerator,
+  makeGenerator,
+  makeLogger,
+  makeVault,
+  OTHER,
+  PRIVATE_KEY,
+  PUBLIC_KEY,
+  TTL_SECONDS,
+  USER,
+} from "./keypair-vault-fixtures";
 
 const test = baseTest.extend<{ vault: TransportKeyPairVault }>({
   // eslint-disable-next-line no-empty-pattern
   vault: async ({}, use) => {
-    await use(
-      new TransportKeyPairVault({
-        generator: makeGenerator(),
-        storage: new MemoryStorage(),
-        ttl: TTL_SECONDS,
-        logger: makeLogger(),
-      }),
-    );
+    await use(makeVault());
   },
 });
 
@@ -67,13 +46,8 @@ describe("TransportKeyPairVault", () => {
   test("clear() routes a storage-delete failure to the logger", async () => {
     const storage = new MemoryStorage();
     vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
-    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger,
-    });
+    const logger = makeLogger();
+    const vault = makeVault({ storage, logger });
 
     // clear() is best-effort: it must not reject, but the swallowed delete
     // failure should leave a breadcrumb when a logger is configured.
@@ -85,15 +59,12 @@ describe("TransportKeyPairVault", () => {
   });
 
   test("persists and round-trips the generator's tkmsVersion", async () => {
-    const vault = new TransportKeyPairVault({
+    const vault = makeVault({
       generator: async () => ({
         publicKey: PUBLIC_KEY as unknown as SerializeTransportKeyPairReturnType["publicKey"],
         privateKey: PRIVATE_KEY as unknown as SerializeTransportKeyPairReturnType["privateKey"],
         tkmsVersion: "v1",
       }),
-      storage: new MemoryStorage(),
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
     });
 
     const created = await vault.getOrCreate(USER);
@@ -118,13 +89,7 @@ describe("TransportKeyPairVault", () => {
   });
 
   test("evict() is scope-aware and drops the shared key regardless of address", async () => {
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage: new MemoryStorage(),
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-a",
-    });
+    const vault = makeVault({ scope: "tenant-a" });
     const before = await vault.getOrCreate(USER);
 
     // Unlike clear() (per-signer), evict() targets the scope identity — so a
@@ -138,12 +103,7 @@ describe("TransportKeyPairVault", () => {
 
   test("treats malformed stored data as a cache miss and regenerates", async () => {
     const storage = new MemoryStorage();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-    });
+    const vault = makeVault({ storage });
 
     // Seed storage with a real keypair, then corrupt the value out-of-band.
     // We use a wrapper-driven approach (stub `get` to return junk for the next
@@ -185,14 +145,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // deterministic first call) regardless of whether the implementation under test
     // actually shares anything.
     const generator = makeGenerator();
-    const scoped = () =>
-      new TransportKeyPairVault({
-        generator,
-        storage,
-        ttl: TTL_SECONDS,
-        logger: makeLogger(),
-        scope: "tenant-1",
-      });
+    const scoped = () => makeVault({ storage, generator, scope: "tenant-1" });
 
     const vaultA = scoped();
     const vaultB = scoped();
@@ -208,26 +161,9 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // One shared generator (not one per vault) so each first-time call is guaranteed
     // a distinct key — three independent counters would each start at 1 and collide.
     const generator = makeGenerator();
-    const vaultTenant1 = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
-    const vaultTenant2 = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-2",
-    });
-    const vaultUnscoped = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-    });
+    const vaultTenant1 = makeVault({ storage, generator, scope: "tenant-1" });
+    const vaultTenant2 = makeVault({ storage, generator, scope: "tenant-2" });
+    const vaultUnscoped = makeVault({ storage, generator });
 
     const tenant1Key = await vaultTenant1.getOrCreate(USER);
     const tenant2Key = await vaultTenant2.getOrCreate(USER);
@@ -240,20 +176,8 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
 
   test("clear() never deletes a scope's shared key pair — only clearScope() does", async () => {
     const storage = new MemoryStorage();
-    const vaultA = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
-    const vaultB = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
+    const vaultA = makeVault({ storage, scope: "tenant-1" });
+    const vaultB = makeVault({ storage, scope: "tenant-1" });
 
     const shared = await vaultA.getOrCreate(USER);
 
@@ -268,13 +192,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   });
 
   test("clearScope() is a no-op when no scope is configured", async () => {
-    const storage = new MemoryStorage();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-    });
+    const vault = makeVault();
     const before = await vault.getOrCreate(USER);
     await vault.clearScope();
     expect(await vault.readStored(USER)).toEqual(before);
@@ -288,13 +206,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     const storage = new MemoryStorage();
     vi.spyOn(storage, "delete").mockRejectedValueOnce(new Error("delete boom"));
     const logger = makeLogger();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger,
-      scope: "tenant-1",
-    });
+    const vault = makeVault({ storage, logger, scope: "tenant-1" });
     await vault.getOrCreate(USER);
 
     await expect(vault.clearScope()).rejects.toThrow("delete boom");
@@ -304,20 +216,8 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   test("warmScope() generates and persists the shared key pair, needing no signer address", async () => {
     const storage = new MemoryStorage();
     const generator = makeGenerator();
-    const vaultA = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
-    const vaultB = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
+    const vaultA = makeVault({ storage, generator, scope: "tenant-1" });
+    const vaultB = makeVault({ storage, generator, scope: "tenant-1" });
 
     await vaultA.warmScope();
     // A signer that never calls warmScope itself still finds the pre-warmed key.
@@ -331,13 +231,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
   });
 
   test("warmScope() is a no-op when no scope is configured", async () => {
-    const storage = new MemoryStorage();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-    });
+    const vault = makeVault();
     await vault.warmScope();
     expect(await vault.readStored(USER)).toBeNull();
   });
@@ -350,13 +244,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     const storage = new MemoryStorage();
     vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("set boom"));
     const logger = makeLogger();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger,
-      scope: "tenant-1",
-    });
+    const vault = makeVault({ storage, logger, scope: "tenant-1" });
 
     await expect(vault.warmScope()).rejects.toThrow("set boom");
     expect(logger.warn).not.toHaveBeenCalled();
@@ -370,13 +258,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     const storage = new MemoryStorage();
     vi.spyOn(storage, "set").mockRejectedValue(new Error("set boom"));
     const logger = makeLogger();
-    const vault = new TransportKeyPairVault({
-      generator: makeGenerator(),
-      storage,
-      ttl: TTL_SECONDS,
-      logger,
-      scope: "tenant-1",
-    });
+    const vault = makeVault({ storage, logger, scope: "tenant-1" });
 
     // Fire both back-to-back, before either resolves, so a naive identity-only
     // dedup key would have the non-strict call's promise win for both.
@@ -396,25 +278,8 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     // Reproduces the TOCTOU window: a generation already in flight when clearScope()
     // is called must not persist behind the delete once its round trip completes —
     // otherwise the operator's resolved revokeTransportKeyPair() promise would be a lie.
-    const storage = new MemoryStorage();
-    let releaseGenerator!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      releaseGenerator = resolve;
-    });
-    const generator = vi.fn().mockImplementation(async () => {
-      await gate; // held open until the test lets it through, after clearScope() resolves
-      return {
-        publicKey: PUBLIC_KEY,
-        privateKey: PRIVATE_KEY,
-      } as unknown as SerializeTransportKeyPairReturnType;
-    });
-    const vault = new TransportKeyPairVault({
-      generator,
-      storage,
-      ttl: TTL_SECONDS,
-      logger: makeLogger(),
-      scope: "tenant-1",
-    });
+    const { generator, release } = makeGatedGenerator();
+    const vault = makeVault({ generator, scope: "tenant-1" });
 
     // Kick off a generation and let it block inside the generator (simulating a slow
     // relayer round trip) before clearScope() runs.
@@ -423,7 +288,7 @@ describe("TransportKeyPairVault scope (opt-in shared-tenant)", () => {
     await vault.clearScope();
 
     // Only now does the stale generation's round trip complete and attempt to persist.
-    releaseGenerator();
+    release();
     await inFlight;
 
     // The rotation must win: no key pair resurrected in storage after clearScope()

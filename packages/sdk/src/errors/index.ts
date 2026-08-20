@@ -7,6 +7,7 @@ export {
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
   NoCiphertextError,
+  KeyWrappingError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

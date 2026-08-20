@@ -1302,6 +1302,7 @@ export const ZamaErrorCode: {
     readonly SignerNotConfigured: "SIGNER_NOT_CONFIGURED";
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
+    readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
 };
 
 // @public
@@ -1503,7 +1504,7 @@ export const zamaQueryKeys: {
 // @public
 export class ZamaSDK {
     [Symbol.dispose](): void;
-    constructor(config: ZamaConfig);
+    constructor(config: ZamaConfig, options?: ZamaSDKOptions);
     createToken(address: Address): Token;
     createWrappedToken(address: Address): WrappedToken;
     createWrappersRegistry(registryAddresses?: Record<number, Address>): WrappersRegistry;
@@ -1550,6 +1551,11 @@ export const ZamaSDKEvents: {
     readonly UnshieldPhase2Started: "unshield:phase2_started";
     readonly UnshieldPhase2Submitted: "unshield:phase2_submitted";
 };
+
+// @public
+export interface ZamaSDKOptions {
+    transportKeyPairDerivationSecret?: string | Uint8Array;
+}
 
 // (No @packageDocumentation comment for this package)
 

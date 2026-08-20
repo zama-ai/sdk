@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import type { ChainRouter } from "../chains/router";
 import { ZamaError } from "../errors/base";
+import { KeyWrappingError } from "../errors/credential";
 import { ConfigurationError } from "../errors/relayer";
 import { SignerNotConfiguredError } from "../errors/signer";
 import { wrapSigningError } from "../errors/signing";
@@ -10,6 +11,7 @@ import type { GenericLogger, GenericSigner, GenericStorage } from "../types";
 import { isInvalidTransportKeyPairMessage } from "../utils/error";
 import { swallow } from "../utils/swallow";
 import { TransportKeyPairVault } from "./keypair-vault";
+import type { DerivationSecretHolder } from "./keypair-wrapping";
 import { PermissionStore } from "./permission-store";
 import { chunkContracts, findPermitToWiden, sortedUnion, uncoveredContracts } from "./permissions";
 import { SerializedPermitSchema } from "./schemas";
@@ -55,6 +57,12 @@ export interface CredentialServiceConfig {
    * signer-level revocation.
    */
   scope?: string;
+  /**
+   * Opt-in at-rest wrapping of the transport key pair's private half, for headless
+   * contexts with no secure storage backend to delegate to. See
+   * {@link TransportKeyPairVault}.
+   */
+  derivationSecret?: DerivationSecretHolder;
 }
 
 /**
@@ -92,6 +100,7 @@ export class CredentialService {
       ttl: config.transportKeyPairTTL,
       logger: config.logger,
       scope: config.scope,
+      derivationSecret: config.derivationSecret,
     });
     this.#store = new PermissionStore({
       storage: config.permitStorage ?? config.storage,
@@ -119,6 +128,8 @@ export class CredentialService {
    * @returns The resolved keypair and permits covering the requested contracts.
    * @throws if the user rejects a wallet signature prompt. {@link SigningRejectedError}
    * @throws if signing fails for any other reason. {@link SigningFailedError}
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap — see {@link TransportKeyPairVault.getOrCreate}. {@link KeyWrappingError}
    */
   async grantPermit(
     contracts: readonly Address[],
@@ -179,9 +190,15 @@ export class CredentialService {
   /**
    * Pure store lookup: are stored permits sufficient to cover `contracts`? No wallet prompt.
    *
+   * Never throws on a `KeyWrappingError`: a stored keypair that fails to unwrap reports
+   * no permit instead, since this is a read-only status check. `grantPermit()` still
+   * surfaces that same failure normally.
+   *
    * @returns `true` if cached permits cover all requested contracts (vacuously
-   *   true for an empty list); `false` if no keypair exists or coverage is
-   *   incomplete.
+   *   true for an empty list); `false` if no keypair exists, it fails to unwrap, or
+   *   coverage is incomplete.
+   * @throws if the backing storage read fails for a reason unrelated to `derivationSecret`
+   *   wrapping: this is not swallowed, unlike a `KeyWrappingError`.
    */
   async hasPermit(contracts: readonly Address[], delegator?: Address): Promise<boolean> {
     if (contracts.length === 0) {
@@ -192,7 +209,17 @@ export class CredentialService {
       return false;
     }
     const signerAddress = checksum(account.address);
-    const keypair = await this.#vault.readStored(signerAddress);
+    let keypair: StoredTransportKeyPair | null;
+    try {
+      keypair = await this.#vault.readStored(signerAddress);
+    } catch (error) {
+      if (!(error instanceof KeyWrappingError)) {
+        throw error;
+      }
+      // The vault already logged this failure; this read-only status check must not
+      // surface it a second time as a rejection.
+      return false;
+    }
     if (keypair === null) {
       return false;
     }
@@ -302,6 +329,9 @@ export class CredentialService {
    * a scope is configured (see {@link TransportKeyPairVault}), so this call's actual
    * effect wouldn't match its apparent per-signer intent. Use
    * {@link warmTransportKeyPairScope} instead.
+   *
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap — see {@link TransportKeyPairVault.getOrCreate}. {@link KeyWrappingError}
    */
   async warmTransportKeyPair(address: Address): Promise<void> {
     await this.#vault.getOrCreate(checksum(address));
@@ -314,6 +344,8 @@ export class CredentialService {
    * @param scopeId - Must match the scope this service was configured with. Requiring
    *   the caller to name it guards against warming the wrong scope by mistake.
    * @throws if no scope is configured, or `scopeId` doesn't match it. {@link ConfigurationError}
+   * @throws if `derivationSecret` is configured and the keypair fails to wrap or
+   *   unwrap — see {@link TransportKeyPairVault.getOrCreate}. {@link KeyWrappingError}
    */
   async warmTransportKeyPairScope(scopeId: string): Promise<void> {
     if (this.#scope === undefined) {

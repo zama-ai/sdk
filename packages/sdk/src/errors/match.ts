@@ -2,6 +2,7 @@ import { ZamaError } from "./base";
 import type { ZamaErrorCode } from "./base";
 import type { ChainMismatchError } from "./chain";
 import type {
+  KeyWrappingError,
   NoCiphertextError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
@@ -105,6 +106,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
   /** Thrown for {@link ZamaErrorCode.WalletAccountNotReady}. */
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
+  /** Thrown for {@link ZamaErrorCode.KeyWrappingFailed}. */
+  [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
 }
 
 /**

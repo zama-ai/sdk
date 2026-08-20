@@ -5,7 +5,7 @@ import { ZamaSDKEvents } from "../events/sdk-events";
 import type { RelayerSDK } from "../relayer/types";
 import type { GenericProvider, GenericSigner, GenericStorage } from "../types";
 import { LoggerService } from "../services/logger-service";
-import { ZamaSDK } from "../zama-sdk";
+import { ZamaSDK, type ZamaSDKOptions } from "../zama-sdk";
 import type { ChainFixtures } from "./chain";
 import type { ProviderFixtures } from "./provider";
 import type { RelayerFixtures } from "./relayer";
@@ -15,11 +15,12 @@ import type { StorageFixtures } from "./storage";
 import type { FixturesOf } from "./types";
 
 /**
- * Overrides accepted by createSDK — a partial {@link ZamaConfig}. To swap the
- * relayer backend, pass a `router` built with {@link createMockRouter}
+ * Overrides accepted by createSDK: a partial {@link ZamaConfig} plus the instance
+ * options, which are forwarded to the constructor rather than merged into the config.
+ * To swap the relayer backend, pass a `router` built with {@link createMockRouter}
  * (e.g. `createSDK({ router: createMockRouter({ relayer }) })`).
  */
-export type CreateSDKOverrides = Partial<ZamaConfig>;
+export type CreateSDKOverrides = Partial<ZamaConfig> & ZamaSDKOptions;
 export type CreateSDKFn = (overrides?: CreateSDKOverrides) => ZamaSDK;
 
 export interface SdkFixtures {
@@ -38,9 +39,13 @@ function buildSDK(
 ): ZamaSDK {
   // A real ChainRouter (via createMockRouter) so the fixture matches the
   // ZamaConfig shape; tests override the backend by passing their own `router`.
-  const { router: routerOverride, ...restOverrides } = overrides ?? {};
+  const {
+    router: routerOverride,
+    transportKeyPairDerivationSecret,
+    ...restOverrides
+  } = overrides ?? {};
   const router = routerOverride ?? createMockRouter({ relayer, chains: [chain] });
-  return new ZamaSDK({
+  const config = {
     chains: [chain],
     router,
     provider,
@@ -55,7 +60,12 @@ function buildSDK(
     // it); the silent default mirrors a consumer who configured no logger.
     logger: new LoggerService(),
     ...restOverrides,
-  } as unknown as ZamaConfig);
+  } as unknown as ZamaConfig;
+  // Forwarded only when the caller set the key, so present-but-undefined stays testable.
+  const options: ZamaSDKOptions = Object.hasOwn(overrides ?? {}, "transportKeyPairDerivationSecret")
+    ? { transportKeyPairDerivationSecret }
+    : {};
+  return new ZamaSDK(config, options);
 }
 
 type SdkDeps = ChainFixtures &

@@ -28,17 +28,25 @@ export function buildZamaConfig(
   params: ZamaConfigBase,
 ): ZamaConfig {
   const logger = new LoggerService(params.logger);
+  const consumerLogger = params.logger;
 
   if (hasFhevmRuntimeConfig()) {
-    logger.warn("runtime configuration is already set and cannot be changed.");
+    // One config per signer is a supported pattern, so a second call is only worth warning about
+    // when it carries runtime options that the already-locked runtime config will ignore.
+    const message = "runtime configuration is already set and cannot be changed.";
+    if (params.runtime === undefined) {
+      logger.debug(message);
+    } else {
+      logger.warn(message);
+    }
   } else {
     setFhevmRuntimeConfig({
       wasmAssetLoadMode: "auto",
       moduleVersions: "auto",
       logger: {
-        error: (message, cause) => params.logger?.error(message, { cause }),
-        warn: (message) => params.logger?.warn(message),
-        debug: (message) => params.logger?.debug(message),
+        error: (message, cause) => consumerLogger?.error(message, { cause }),
+        warn: (message) => consumerLogger?.warn(message),
+        debug: (message) => consumerLogger?.debug(message),
       },
       ...params.runtime,
     });

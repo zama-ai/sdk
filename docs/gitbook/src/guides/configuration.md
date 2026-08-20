@@ -393,6 +393,49 @@ const config = createConfig({
 
 Permits stay per-signer regardless of scope. See [Security Model](../concepts/security-model.md#shared-tenant-scope-b2b2c-waas-operators) for the tradeoff this makes, and [Permit Model](../concepts/permit-model.md#two-revocation-tiers-with-a-shared-scope) for how revocation splits into a signer-level tier (`revokePermits`/`clear`) and an operator-level one (`sdk.permits.revokeTransportKeyPair()`).
 
+### 10. (Optional) Wrap the transport key pair at rest (headless environments)
+
+By default the SDK stores the transport private key in plaintext and delegates at-rest security to your storage backend. `transportKeyPairDerivationSecret` encrypts the key before every write instead. It exists for headless environments that have no secure backend to delegate to. Find your environment:
+
+| Your environment                                              | What to do                                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser dApp                                                  | Nothing. IndexedDB behind same-origin isolation and OS disk encryption is the intended default. The constructor rejects this option.                          |
+| React Native / mobile                                         | Use a platform keychain (iOS Keychain, Android Keystore) as the `storage` backend. React Native defines `window`, so the constructor rejects this option too. |
+| Backend with a KMS, Vault, or encrypted storage               | Nothing. Your storage is already secure; wrapping on top adds key management without adding security.                                                         |
+| Headless with plain storage (CLI tool, agent, bare-metal box) | Pass `transportKeyPairDerivationSecret`, plus a persistent `storage`.                                                                                         |
+
+For the last row, two things must hold:
+
+1. **The secret arrives out of band**: from the process environment, a secrets manager, or a KMS-unwrapped blob. Never store it next to the data it protects.
+2. **Storage is persistent.** The headless default is in-memory, and a wrapped key that never reaches disk protects nothing.
+
+```ts
+import { createConfig } from "@zama-fhe/sdk/viem";
+import { ZamaSDK } from "@zama-fhe/sdk";
+import { node } from "@zama-fhe/sdk/node";
+import { sepolia } from "@zama-fhe/sdk/chains";
+
+const config = createConfig({
+  chains: [sepolia],
+  publicClient,
+  walletClient,
+  relayers: { [sepolia.id]: node() },
+  storage: myPersistentStorage, // required: the headless default is in-memory
+});
+
+const sdk = new ZamaSDK(config, {
+  transportKeyPairDerivationSecret: process.env.ZAMA_DERIVATION_SECRET, // string | Uint8Array
+});
+```
+
+Pass `process.env.ZAMA_DERIVATION_SECRET` straight through, without asserting it with `!` first. If the value is `undefined` (an unset env var), the constructor throws `ConfigurationError` instead of silently downgrading to plaintext.
+
+{% hint style="danger" %}
+**Never ship the secret in a bundle.** Bundlers inline env values at build time, so a bundled secret reaches every copy of the artifact and protects nothing. The constructor rejects the option when it detects a browser context, but it cannot detect every bundle: keeping the secret out of shipped code is your responsibility.
+{% endhint %}
+
+The SDK never persists or exposes this value. See [Security Model](../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism, the entropy requirement (32 random bytes, or a 64+ character string), the anti-patterns to avoid, and rotation.
+
 ## Shared relayer options
 
 When multiple chains use the same relayer, create it once and reference that single instance from each chain:
