@@ -83,7 +83,7 @@ across sections are what matter:
 
 Each on-chain operation prints its transaction hash **before** waiting for
 confirmation — paste any hash into
-[Sepolia Etherscan](https://sepolia.etherscan.io) to track it in real time.
+[Sepolia Blockscout](https://eth-sepolia.blockscout.com) to track it in real time.
 
 ---
 

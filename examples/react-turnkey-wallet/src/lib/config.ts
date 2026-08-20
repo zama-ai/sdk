@@ -6,7 +6,9 @@ const isMainnet = process.env.NEXT_PUBLIC_CHAIN === "mainnet";
 
 export const zamaConfig = isMainnet ? mainnetConfig : sepoliaConfig;
 export const viemChain: Chain = isMainnet ? mainnet : sepolia;
-export const explorerUrl = isMainnet ? "https://etherscan.io" : "https://sepolia.etherscan.io";
+export const explorerUrl = isMainnet
+  ? "https://eth.blockscout.com"
+  : "https://eth-sepolia.blockscout.com";
 
 // True for every network that is not Ethereum mainnet.
 // Used to gate testnet-only UI (e.g. permissionless token minting).
