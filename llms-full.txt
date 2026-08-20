@@ -18897,7 +18897,7 @@ Playwright e2e tests covering the connect flow, wrong-network screen, main UI, a
 
 Registry: `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
-All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+All contracts verified on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com).
 
 ## Getting test tokens
 
@@ -18905,7 +18905,7 @@ Both tokens have a permissionless `mint(address to, uint256 amount)` function.
 
 **Via the app:** click the **Mint** button next to the ERC-20 balance — mints 10 tokens directly to your wallet.
 
-**Via Etherscan:** navigate to the contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
+**Via Blockscout:** navigate to the contract on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
 
 **Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
 
@@ -19067,7 +19067,7 @@ If you prefer to add Hoodi manually:
 | RPC URL         | `https://rpc.hoodi.ethpandaops.io` |
 | Chain ID        | 560048                             |
 | Currency symbol | ETH                                |
-| Block explorer  | `https://hoodi.etherscan.io`       |
+| Block explorer  | `https://eth-hoodi.blockscout.com` |
 
 ### 2. Hoodi ETH (gas)
 
@@ -19093,7 +19093,7 @@ Both `USDC Mock` and `USDT Mock` have a permissionless `mint(address to, uint256
 
 Registry (DeploymentCoordinator): `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
-All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+All contracts verified on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com).
 
 > Token pairs are loaded dynamically from the on-chain WrappersRegistry (`0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`) at runtime — `src/app/page.tsx` no longer contains a hardcoded `TOKENS` constant. If contracts are redeployed, the registry should be updated; the app will pick up the new addresses automatically.
 
@@ -19105,9 +19105,9 @@ All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
 
 Click the **Mint** button next to the ERC-20 balance. This mints 10 whole tokens directly to your connected wallet using the token's `mint(address, uint256)` function.
 
-### Via Etherscan
+### Via Blockscout
 
-1. Go to the ERC-20 contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) (e.g., `0x51a63b...` for USDC Mock).
+1. Go to the ERC-20 contract on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com) (e.g., `0x51a63b...` for USDC Mock).
 2. Click the **Contract** tab → **Write Contract**.
 3. Click **Connect to Web3** and connect your wallet.
 4. Find the `mint` function, enter your wallet address and the desired amount in raw units (e.g., `10000000` for 10 USDC Mock, which has 6 decimals).
@@ -19598,7 +19598,7 @@ across sections are what matter:
 
 Each on-chain operation prints its transaction hash **before** waiting for
 confirmation — paste any hash into
-[Sepolia Etherscan](https://sepolia.etherscan.io) to track it in real time.
+[Sepolia Blockscout](https://eth-sepolia.blockscout.com) to track it in real time.
 
 ---
 
@@ -20048,7 +20048,7 @@ matter:
 | After unshield | −50             | +50            |
 
 Each on-chain operation prints its transaction hash before waiting for confirmation, so
-you can inspect it on [Sepolia Etherscan](https://sepolia.etherscan.io).
+you can inspect it on [Sepolia Blockscout](https://eth-sepolia.blockscout.com).
 
 ---
 

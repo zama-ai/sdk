@@ -85,7 +85,7 @@ matter:
 | After unshield | −50             | +50            |
 
 Each on-chain operation prints its transaction hash before waiting for confirmation, so
-you can inspect it on [Sepolia Etherscan](https://sepolia.etherscan.io).
+you can inspect it on [Sepolia Blockscout](https://eth-sepolia.blockscout.com).
 
 ---
 
