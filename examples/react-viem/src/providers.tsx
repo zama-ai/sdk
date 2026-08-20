@@ -15,7 +15,7 @@ import {
   getAddress,
   type Address,
 } from "viem";
-import { SEPOLIA_RPC_URL, sepoliaChain } from "@/lib/config";
+import { SEPOLIA_RPC_URL, sepolia } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────
@@ -131,10 +131,7 @@ export function Providers({ children }: { children: ReactNode }) {
   // SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
   const zamaConfig = useMemo(() => {
     const ethereum = getEthereumProvider();
-    const publicClient = createPublicClient({
-      chain: sepoliaChain,
-      transport: http(SEPOLIA_RPC_URL),
-    });
+    const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
     const provider = new ViemProvider({ publicClient });
     const zamaSepolia = {
       ...fheSepolia,
@@ -158,7 +155,7 @@ export function Providers({ children }: { children: ReactNode }) {
       const account = rawAddress ? (getAddress(rawAddress) as Address) : undefined;
       const walletClient = createWalletClient({
         ...(account ? { account } : {}),
-        chain: sepoliaChain,
+        chain: sepolia,
         transport: custom(ethereum),
       });
       signer = new ViemSigner({ walletClient, ethereum });

@@ -8,12 +8,12 @@ import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
 import { hoodi as fheHoodi } from "@zama-fhe/sdk/chains";
-import { HOODI_RPC_URL, hoodiChain } from "@/lib/config";
+import { HOODI_RPC_URL, hoodi } from "@/lib/config";
 
 const wagmiConfig = createConfig({
-  chains: [hoodiChain],
+  chains: [hoodi],
   connectors: [injected()],
-  transports: { [hoodiChain.id]: http(HOODI_RPC_URL) },
+  transports: { [hoodi.id]: http(HOODI_RPC_URL) },
 });
 
 const zamaHoodi = { ...fheHoodi, network: HOODI_RPC_URL } as const;

@@ -11,13 +11,13 @@ import {
   SEPOLIA_CHAIN_ID_HEX,
   SEPOLIA_EXPLORER_URL,
   SEPOLIA_RPC_URL,
-  sepoliaChain,
+  sepolia,
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // Routes ETH balance reads through the direct Sepolia RPC so polling is fast
 // and independent of the injected wallet's own RPC endpoint.
-const rpcClient = createPublicClient({ chain: sepoliaChain, transport: http(SEPOLIA_RPC_URL) });
+const rpcClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC_URL) });
 
 // Attempt to switch to Sepolia. If the network is unknown to the wallet (error 4902),
 // prompt to add it. Errors from wallet_switchEthereumChain (including 4001 user rejection)

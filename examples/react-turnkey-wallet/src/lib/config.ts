@@ -1,14 +1,13 @@
 import { sepolia as sepoliaConfig, mainnet as mainnetConfig } from "@zama-fhe/sdk";
-import { sepolia, mainnet } from "viem/chains";
+import { sepolia as viemSepolia, mainnet as viemMainnet } from "viem/chains";
 import { defineChain, type Chain } from "viem";
 
 const isMainnet = process.env.NEXT_PUBLIC_CHAIN === "mainnet";
 
-// Extend viem's stock definitions instead of redefining them, so multicall3, the ENS
-// resolver, and the testnet flag stay inherited. Only the block explorer is overridden —
-// Blockscout renders confidential tokens and transfers better than Etherscan.
-const mainnetChain = defineChain({
-  ...mainnet,
+// Extend viem's stock definitions instead of redefining them, overriding only the
+// block explorer.
+const mainnet = defineChain({
+  ...viemMainnet,
   blockExplorers: {
     default: {
       name: "Blockscout",
@@ -17,8 +16,8 @@ const mainnetChain = defineChain({
     },
   },
 });
-const sepoliaChain = defineChain({
-  ...sepolia,
+const sepolia = defineChain({
+  ...viemSepolia,
   blockExplorers: {
     default: {
       name: "Blockscout",
@@ -28,7 +27,7 @@ const sepoliaChain = defineChain({
   },
 });
 
-const activeChain = isMainnet ? mainnetChain : sepoliaChain;
+const activeChain = isMainnet ? mainnet : sepolia;
 
 export const zamaConfig = isMainnet ? mainnetConfig : sepoliaConfig;
 export const viemChain: Chain = activeChain;
