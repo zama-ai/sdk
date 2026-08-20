@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "codemod": "1.13.17",
+    "codemod": "1.14.1",
     "typescript": "6.0.3"
   }
 }
