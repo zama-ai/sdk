@@ -656,19 +656,11 @@ export class CredentialService {
    * {@link RevokedKmsContextError}; the key pair is untouched, only the
    * permits embed the dead context.
    *
-   * Concurrent recoveries for the same scope share one evict-and-regrant, so
-   * parallel decrypt calls (e.g. a batched balance read fanning out per token)
-   * cost one wallet prompt total, not one each. Sequential calls are deduped by
-   * permit identity instead: when `staleSignatures` names permits that are no
-   * longer stored, the scope was already recovered and this call re-signs
-   * nothing. That check also spans instances: a tab reading another tab's
-   * fresh permit from shared storage re-signs nothing, though it is not a
-   * lock, so two tabs racing still cost one prompt each.
-   *
-   * A scope whose permits cannot be read is never evicted: the retry then
-   * decrypts with the dead permit and the typed error surfaces, leaving the
-   * prior coverage intact for the next call. Eviction itself stays best-effort
-   * once the read succeeded.
+   * Concurrent and repeated recoveries for the same scope cost at most one
+   * wallet prompt: a running recovery is shared, and a call whose
+   * `staleSignatures` are no longer stored re-signs nothing because the scope
+   * was already recovered. If the stored permits cannot be read, nothing is
+   * evicted and the stored (dead) permits are returned unchanged.
    *
    * @param staleSignatures Signatures of the permits the failed decrypt used.
    *   Omitted or empty makes recovery unconditional.
@@ -685,7 +677,8 @@ export class CredentialService {
     const scope = this.#permissionScope(checksum(account.address), delegator);
     const key = permissionScopeKey(scope);
 
-    // Joining a running recovery is correct whatever this call's permits are.
+    // A recovery for this scope is already running: wait for it instead of
+    // starting another, no matter which permits this call failed with.
     const inFlight = this.#permitRecoveries.get(key);
     if (inFlight) {
       await inFlight;
@@ -694,24 +687,23 @@ export class CredentialService {
 
     const stored = await this.#readScopePermits(scope);
 
-    // The read awaited, so a sibling may have registered since. It registers
-    // before clearing and deletes only after its re-grant persisted, so joining
-    // here cannot observe a half-recovered scope.
+    // A sibling recovery may have started while the read above was awaiting.
+    // Check again: a sibling registers itself in the map before it clears the
+    // store, so if the read saw a cleared store, the sibling is found here.
     const registered = this.#permitRecoveries.get(key);
     if (registered) {
       await registered;
       return this.grantPermit(contracts, delegator);
     }
 
-    // An unreadable scope must not be cleared: dropping permits we cannot read
-    // back would destroy coverage we can never restore.
+    // The read failed: never clear a scope we could not read, or coverage we
+    // cannot re-sign would be lost.
     if (stored === null) {
       return this.grantPermit(contracts, delegator);
     }
 
-    // The failing permits are gone from the store, so a recovery already
-    // replaced them: ours was stale, not revoked. Re-signing would cost a
-    // second prompt for nothing.
+    // None of the failing permits is stored anymore: another recovery already
+    // replaced them. Retry with the fresh permit instead of re-signing.
     if (staleSignatures !== undefined && staleSignatures.length > 0) {
       const stale = new Set(staleSignatures);
       if (!stored.some((p) => stale.has(p.serializedPermit.signature))) {
@@ -719,15 +711,15 @@ export class CredentialService {
       }
     }
 
-    // Nothing above awaits after the map re-check, so at most one caller creates.
     const prior = stored.flatMap((p) => p.contractAddresses);
     const recovery = this.#clearAndRegrantScope(scope, prior, contracts, delegator).finally(() => {
       this.#permitRecoveries.delete(key);
     });
+    // No `await` between the map re-check above and this `set`, so two callers
+    // cannot both start a recovery for the same scope.
     this.#permitRecoveries.set(key, recovery);
     await recovery;
-    // The shared re-grant restored the scope's coverage, so this resolves
-    // without another prompt unless `contracts` were never covered before.
+    // The union re-grant already covered `contracts`, so no extra prompt here.
     return this.grantPermit(contracts, delegator);
   }
 
