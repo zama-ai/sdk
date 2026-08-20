@@ -26,8 +26,8 @@ importers:
         specifier: ^0.45.0
         version: 0.45.0
       '@faker-js/faker':
-        specifier: ^10.5.0
-        version: 10.5.0
+        specifier: ^10.6.0
+        version: 10.6.0
       '@fhevm/mock-utils':
         specifier: 0.4.2
         version: 0.4.2(@zama-fhe/relayer-sdk@0.4.1)(ethers@6.17.0)(typescript@6.0.3)
@@ -89,8 +89,8 @@ importers:
         specifier: ^4.1.9
         version: 4.1.9(vitest@4.1.9)
       codemod:
-        specifier: 1.13.17
-        version: 1.13.17
+        specifier: 1.14.1
+        version: 1.14.1
       conventional-changelog-conventionalcommits:
         specifier: ^9.3.1
         version: 9.3.1
@@ -170,8 +170,8 @@ importers:
         specifier: ^20.0.0
         version: 20.19.43
       codemod:
-        specifier: 1.13.17
-        version: 1.13.17
+        specifier: 1.14.1
+        version: 1.14.1
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -463,34 +463,34 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@codemod.com/cli-darwin-arm64@1.13.17':
-    resolution: {integrity: sha512-97chK+qe2qccK6NoAQ1mw6rGq6eu8lEB9/HQUDzruHnF1I0kqT3XzOUJfwgVakRBz0Spa+FZiJf3P1GrBCuT6w==}
+  '@codemod.com/cli-darwin-arm64@1.14.1':
+    resolution: {integrity: sha512-InFMmseEKUQRHDkaBZTvestnNd1OrgZBqYPnP7fZVeXoFGDgUpJHBBvuLfYkgTtDNAtDYtA/mMZTwrT7B+59Nw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@codemod.com/cli-darwin-x64@1.13.17':
-    resolution: {integrity: sha512-blO+iOdN9+r3QV3xCVagToqulmJ0Y+x3vxoYPv5bNizj8FV9oIL/7Re2/HXi7qs01iDLgABKrGMh3O19tz9iyA==}
+  '@codemod.com/cli-darwin-x64@1.14.1':
+    resolution: {integrity: sha512-YNZpGRUO+V20p6K176HRSJhxyaX/M8sj6YiKGYWfiLUVilqx8uMeZDoDdROtoMLY6PR/fI4r0sNAhUoKwmIl7A==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@codemod.com/cli-linux-arm64-gnu@1.13.17':
-    resolution: {integrity: sha512-lwDJQnwYq6uB8Y2dwE0xuDkyyeExmz9TlNiyx1w4SNat/2y6yZQSyV1Efyc8igEA7UQVhUkszJX9hQ2K/m/44g==}
+  '@codemod.com/cli-linux-arm64-gnu@1.14.1':
+    resolution: {integrity: sha512-8IeaJt4HBxqyv5kGFPhIUvEMrcN4J3S7V8GMeRm3yej5ktC4hFJqpACTNHE3XwU0PU0XUe0EBLr+8Yzjc5R1tw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@codemod.com/cli-linux-x64-gnu@1.13.17':
-    resolution: {integrity: sha512-mtaPrCcZLKKOnNlC3RRXDH9XvedgfuRZsUD5tDHIGIVlf5KUUmCqvtNniIuV6pAJnfs2onK49ueEcnjwLCf3RQ==}
+  '@codemod.com/cli-linux-x64-gnu@1.14.1':
+    resolution: {integrity: sha512-bLS++BynMQplQjcpaCbH+sLw89jNXi/MqY24zOeat5BVTdoTH1GSLEqwqXembG+yKpSgYx3Rxb7AgixLG7vwwQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@codemod.com/cli-win32-x64-msvc@1.13.17':
-    resolution: {integrity: sha512-OwA3jXYjwOpxABMxRnWfXGIBVOKHadMkuuwg9DB8nq4IMReb+QgKsxCAuWLixMApJy7zjdFat1gQRXHXRg658A==}
+  '@codemod.com/cli-win32-x64-msvc@1.14.1':
+    resolution: {integrity: sha512-8pmQKyqxt+HqG/328dTf4HnRex0pCDoFdsPQiHhq25wRF4WPQZiHkGOpY9XDx/ohZSszUbJIHuD4BtNtMllnTw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -546,8 +546,8 @@ packages:
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@faker-js/faker@10.5.0':
-    resolution: {integrity: sha512-bsxD8WLS5lIj7aaoCx1YJkktqYj5vlBUE6HWzu2Q51ksrGJ0H737ECCKlFU7Yf8Br45z9t99frBp/J7kzbMPAg==}
+  '@faker-js/faker@10.6.0':
+    resolution: {integrity: sha512-3RQHgEtvL1Frl/d1cSreo7qhJ3Gk1OdNUai/CtZ8G+wYeRQnJih3s9xJ9/kgYekPQRdwgh0HXRPqMlzWGwivIQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
   '@fhevm/mock-utils@0.4.2':
@@ -2127,8 +2127,8 @@ packages:
     resolution: {integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==}
     engines: {node: '>=20'}
 
-  codemod@1.13.17:
-    resolution: {integrity: sha512-1iK/HC2K6fn68VeUrqN+U+0zbyRTT30qCBHOle5T6WkwDN6vp9ohMJUxpSFwAOHE2tzpO2deiPmPLsPgpYj49Q==}
+  codemod@1.14.1:
+    resolution: {integrity: sha512-S9UKqLEpGWcWK8jmt87vt0S079cyH5kZZDAjBBMmN4Y2VoPpuMRVY2OUqYZbKaLgWs4lbyBfqCwj2Z1g+xFc/Q==}
     engines: {node: '>= 16.0.0'}
     hasBin: true
 
@@ -4292,19 +4292,19 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@codemod.com/cli-darwin-arm64@1.13.17':
+  '@codemod.com/cli-darwin-arm64@1.14.1':
     optional: true
 
-  '@codemod.com/cli-darwin-x64@1.13.17':
+  '@codemod.com/cli-darwin-x64@1.14.1':
     optional: true
 
-  '@codemod.com/cli-linux-arm64-gnu@1.13.17':
+  '@codemod.com/cli-linux-arm64-gnu@1.14.1':
     optional: true
 
-  '@codemod.com/cli-linux-x64-gnu@1.13.17':
+  '@codemod.com/cli-linux-x64-gnu@1.14.1':
     optional: true
 
-  '@codemod.com/cli-win32-x64-msvc@1.13.17':
+  '@codemod.com/cli-win32-x64-msvc@1.14.1':
     optional: true
 
   '@colors/colors@1.5.0':
@@ -4371,7 +4371,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@faker-js/faker@10.5.0': {}
+  '@faker-js/faker@10.6.0': {}
 
   '@fhevm/mock-utils@0.4.2(@zama-fhe/relayer-sdk@0.4.1)(ethers@6.17.0)(typescript@6.0.3)':
     dependencies:
@@ -5635,15 +5635,15 @@ snapshots:
       strip-ansi: 7.2.0
       wrap-ansi: 9.0.2
 
-  codemod@1.13.17:
+  codemod@1.14.1:
     dependencies:
       detect-libc: 2.1.2
     optionalDependencies:
-      '@codemod.com/cli-darwin-arm64': 1.13.17
-      '@codemod.com/cli-darwin-x64': 1.13.17
-      '@codemod.com/cli-linux-arm64-gnu': 1.13.17
-      '@codemod.com/cli-linux-x64-gnu': 1.13.17
-      '@codemod.com/cli-win32-x64-msvc': 1.13.17
+      '@codemod.com/cli-darwin-arm64': 1.14.1
+      '@codemod.com/cli-darwin-x64': 1.14.1
+      '@codemod.com/cli-linux-arm64-gnu': 1.14.1
+      '@codemod.com/cli-linux-x64-gnu': 1.14.1
+      '@codemod.com/cli-win32-x64-msvc': 1.14.1
 
   color-convert@1.9.3:
     dependencies:
