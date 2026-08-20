@@ -1,5 +1,5 @@
 import { createMockRouter, describe, expect, test, vi } from "../../test-fixtures";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
 import { createMockChain } from "../../test-fixtures/chain";
 import { createMockRelayer } from "../../test-fixtures/relayer";
@@ -8,6 +8,7 @@ import { SigningRejectedError, SigningFailedError } from "../../errors/signing";
 import { InvalidTransportKeyPairError } from "../../errors/credential";
 import { ConfigurationError } from "../../errors/relayer";
 import { DerivationSecretHolder } from "../keypair-wrapping";
+import type { SerializedTransportKeyPairWithPermissions } from "../types";
 
 const USER = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B" as Address;
 const DELEGATOR = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC" as Address;
@@ -20,6 +21,11 @@ const ADDRS = Array.from({ length: 23 }, (_, i) => {
 const A = ADDRS[0]!;
 const B = ADDRS[1]!;
 const C = ADDRS[2]!;
+
+/** The permit identity `recoverPermits` compares against the store. */
+function signatures(credentials: SerializedTransportKeyPairWithPermissions): Hex[] {
+  return credentials.permissions.map((p) => p.serializedPermit.signature);
+}
 
 describe("CredentialService.allow", () => {
   test("creates a permit and stores it on the first call", async ({
@@ -137,10 +143,10 @@ describe("CredentialService.recoverPermits", () => {
     relayer,
     signer,
   }) => {
-    await credentialService.grantPermit([A, B]);
+    const granted = await credentialService.grantPermit([A, B]);
     vi.mocked(signer.signTypedData).mockClear();
 
-    const recovered = await credentialService.recoverPermits([A]);
+    const recovered = await credentialService.recoverPermits([A], undefined, signatures(granted));
 
     // One signature re-signed the scope's full prior coverage, not just A,
     // and the returned credentials cover the requested contract.
@@ -151,16 +157,78 @@ describe("CredentialService.recoverPermits", () => {
     expect(relayer.generateTransportKeyPair).toHaveBeenCalledOnce();
   });
 
-  test("concurrent recoveries in the same scope share one evict-and-regrant", async ({
+  test("a second recovery for the already-replaced permits re-signs nothing", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const stale = signatures(granted);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    // Two sequential decrypt failures carrying the same dead permits: the first
+    // recovery settles and clears the map entry, so only permit identity can
+    // tell the second one that the scope is already healed.
+    await credentialService.recoverPermits([A], undefined, stale);
+    await credentialService.recoverPermits([A], undefined, stale);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers when only one of the failing permits is still stored", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const replaced = signatures(granted);
+    const recovered = await credentialService.recoverPermits([A], undefined, replaced);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    // One of the two named permits is still stored, so the failure is a genuine
+    // revocation and eviction proceeds.
+    await credentialService.recoverPermits([A], undefined, [...replaced, ...signatures(recovered)]);
+
+    expect(signer.signTypedData).toHaveBeenCalledOnce();
+  });
+
+  test("skips eviction when none of the failing permits is still stored", async ({
     credentialService,
     signer,
   }) => {
     await credentialService.grantPermit([A, B]);
     vi.mocked(signer.signTypedData).mockClear();
 
+    await credentialService.recoverPermits([A], undefined, [`0x${"de".repeat(65)}`]);
+
+    // No prompt and the scope was never cleared.
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+  });
+
+  test("recovers unconditionally when the failing signatures are not given", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockClear();
+
+    await credentialService.recoverPermits([A]);
+    await credentialService.recoverPermits([A]);
+
+    expect(signer.signTypedData).toHaveBeenCalledTimes(2);
+  });
+
+  test("concurrent recoveries in the same scope share one evict-and-regrant", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit([A, B]);
+    const stale = signatures(granted);
+    vi.mocked(signer.signTypedData).mockClear();
+
     await Promise.all([
-      credentialService.recoverPermits([A]),
-      credentialService.recoverPermits([B]),
+      credentialService.recoverPermits([A], undefined, stale),
+      credentialService.recoverPermits([B], undefined, stale),
     ]);
 
     // The joiner awaited the leader's re-grant and found its contract already
@@ -249,7 +317,7 @@ describe("CredentialService.recoverPermits", () => {
   }) => {
     const permitStorage = createMockStorage();
     const service = createCredentialService({ permitStorage });
-    await service.grantPermit([A]);
+    const granted = await service.grantPermit([A]);
     const scopeKey = vi
       .mocked(permitStorage.set)
       .mock.calls.map(([key]) => key)
@@ -257,7 +325,7 @@ describe("CredentialService.recoverPermits", () => {
     await permitStorage.set(scopeKey, { not: "a permit list" });
     vi.mocked(signer.signTypedData).mockClear();
 
-    await service.recoverPermits([A]);
+    await service.recoverPermits([A], undefined, signatures(granted));
 
     // `list` self-clears the corrupt scope and reports it empty, so the prior
     // coverage is unrecoverable by definition and only `contracts` is re-signed.

@@ -437,6 +437,10 @@ export class DecryptionService {
         if (!(error instanceof RevokedKmsContextError) || recovery.spent) {
           throw error;
         }
+        // Identify the permits this attempt used: if they are already gone from
+        // the store, a sibling decrypt recovered the scope and re-signing would
+        // cost a second prompt for nothing.
+        const staleSignatures = credentials.permissions.map((p) => p.serializedPermit.signature);
         // Re-grant under the current context and retry the still-unresolved
         // chunks once; a second revoked failure surfaces instead of looping
         // into the upstream 15-minute validity cache. Spent is set before
@@ -445,6 +449,7 @@ export class DecryptionService {
         credentials = await this.#credentialService.recoverPermits(
           allContracts,
           strategy.delegator,
+          staleSignatures,
         );
         await this.#runDecryptRequests(
           strategy,

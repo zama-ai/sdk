@@ -658,17 +658,28 @@ export class CredentialService {
    *
    * Concurrent recoveries for the same scope share one evict-and-regrant, so
    * parallel decrypt calls (e.g. a batched balance read fanning out per token)
-   * cost one wallet prompt total, not one each. A scope whose permits cannot be
-   * read is never evicted: the retry then decrypts with the dead permit and the
-   * typed error surfaces, leaving the prior coverage intact for the next call.
-   * Eviction itself stays best-effort once the read succeeded.
+   * cost one wallet prompt total, not one each. Sequential calls are deduped by
+   * permit identity instead: when `staleSignatures` names permits that are no
+   * longer stored, the scope was already recovered and this call re-signs
+   * nothing. That check also spans instances, so a tab reading another tab's
+   * fresh permit from shared storage short-circuits (it is not a lock, so two
+   * tabs racing still cost one prompt each; cross-instance serialization is a
+   * follow-up).
    *
+   * A scope whose permits cannot be read is never evicted: the retry then
+   * decrypts with the dead permit and the typed error surfaces, leaving the
+   * prior coverage intact for the next call. Eviction itself stays best-effort
+   * once the read succeeded.
+   *
+   * @param staleSignatures Signatures of the permits the failed decrypt used.
+   *   Omitted or empty makes recovery unconditional.
    * @throws if the user rejects the re-grant prompt. {@link SigningRejectedError}
    * @throws if re-signing fails for any other reason. {@link SigningFailedError}
    */
   async recoverPermits(
     contracts: readonly Address[],
     delegator?: Address,
+    staleSignatures?: readonly Hex[],
   ): Promise<SerializedTransportKeyPairWithPermissions> {
     const signer = this.#requireSigner("recoverPermits");
     const account = signer.requireWalletAccount("recoverPermits");
@@ -682,22 +693,39 @@ export class CredentialService {
       return this.grantPermit(contracts, delegator);
     }
 
+    const stored = await this.#readScopePermits(scope);
+
+    // The read awaited, so a sibling may have registered since. It registers
+    // before clearing and deletes only after its re-grant persisted, so joining
+    // here cannot observe a half-recovered scope.
+    const registered = this.#permitRecoveries.get(key);
+    if (registered) {
+      await registered;
+      return this.grantPermit(contracts, delegator);
+    }
+
     // An unreadable scope must not be cleared: dropping permits we cannot read
     // back would destroy coverage we can never restore.
-    const stored = await this.#readScopePermits(scope);
     if (stored === null) {
       return this.grantPermit(contracts, delegator);
     }
 
-    // The read above awaited, so a leader may have registered since.
-    let recovery = this.#permitRecoveries.get(key);
-    if (!recovery) {
-      const prior = stored.flatMap((p) => p.contractAddresses);
-      recovery = this.#clearAndRegrantScope(scope, prior, contracts, delegator).finally(() => {
-        this.#permitRecoveries.delete(key);
-      });
-      this.#permitRecoveries.set(key, recovery);
+    // The failing permits are gone from the store, so a recovery already
+    // replaced them: ours was stale, not revoked. Re-signing would cost a
+    // second prompt for nothing.
+    if (staleSignatures !== undefined && staleSignatures.length > 0) {
+      const stale = new Set(staleSignatures);
+      if (!stored.some((p) => stale.has(p.serializedPermit.signature))) {
+        return this.grantPermit(contracts, delegator);
+      }
     }
+
+    // Nothing above awaits after the map re-check, so at most one caller creates.
+    const prior = stored.flatMap((p) => p.contractAddresses);
+    const recovery = this.#clearAndRegrantScope(scope, prior, contracts, delegator).finally(() => {
+      this.#permitRecoveries.delete(key);
+    });
+    this.#permitRecoveries.set(key, recovery);
     await recovery;
     // The shared re-grant restored the scope's coverage, so this resolves
     // without another prompt unless `contracts` were never covered before.

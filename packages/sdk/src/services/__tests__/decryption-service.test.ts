@@ -597,6 +597,85 @@ describe("DecryptionService", () => {
       // 2 contracts x 2 passes in the batch attempt, no per-item calls.
       expect(relayer.decryptValues).toHaveBeenCalledTimes(4);
     });
+
+    test("identifies the recovery by the signatures the failed attempt decrypted with", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      userAddress,
+    }) => {
+      const granted = await credentialService.grantPermit([CONTRACT_A]);
+      const recoverPermits = vi.spyOn(credentialService, "recoverPermits");
+      vi.mocked(relayer.decryptValues)
+        .mockRejectedValueOnce(revokedContextRevert())
+        .mockResolvedValueOnce([{ type: "uint64", value: 10n } as TypedValue]);
+
+      await decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress);
+
+      expect(recoverPermits).toHaveBeenCalledWith(
+        [CONTRACT_A],
+        undefined,
+        granted.permissions.map((p) => p.serializedPermit.signature),
+      );
+    });
+
+    test("a later call holding the already-replaced permit does not re-prompt", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      await credentialService.grantPermit([CONTRACT_A]);
+      vi.mocked(signer.signTypedData).mockClear();
+      const grantsBefore = vi.mocked(relayer.signDecryptionPermit).mock.calls.length;
+
+      // The second call grabs the same stale permit before the first call's
+      // recovery runs, then fails only once that recovery has fully settled:
+      // separate `RecoveryBudget`s, so nothing in-flight is left to join.
+      let gate: () => void = () => {};
+      const gated = new Promise<void>((resolve) => {
+        gate = resolve;
+      });
+      let secondReachedRelayer: () => void = () => {};
+      const secondStarted = new Promise<void>((resolve) => {
+        secondReachedRelayer = resolve;
+      });
+      let firstFailed = false;
+      let secondFailed = false;
+      vi.mocked(relayer.decryptValues).mockImplementation(
+        async ({ encryptedValues }: DecryptValuesParameters) => {
+          const isSecond = encryptedValues.includes(HANDLE_B);
+          if (isSecond && !secondFailed) {
+            secondFailed = true;
+            secondReachedRelayer();
+            await gated;
+            throw revokedContextRevert();
+          }
+          if (!isSecond && !firstFailed) {
+            firstFailed = true;
+            throw revokedContextRevert();
+          }
+          return [{ type: "uint64", value: isSecond ? 20n : 10n } as TypedValue];
+        },
+      );
+
+      const second = decryptionService.decryptValues(
+        handles([[HANDLE_B, CONTRACT_A]]),
+        userAddress,
+      );
+      await secondStarted;
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).resolves.toEqual({ [HANDLE_A]: 10n });
+      gate();
+
+      await expect(second).resolves.toEqual({ [HANDLE_B]: 20n });
+      // One re-grant for the two revoked failures: the second call recognised
+      // its permit as already replaced and retried with the fresh one.
+      expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length).toBe(grantsBefore + 1);
+      expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
   });
 
   describe("RPC rate-limit classification (SDK-239)", () => {
