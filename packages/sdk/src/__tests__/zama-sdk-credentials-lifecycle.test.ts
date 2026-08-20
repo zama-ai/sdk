@@ -1,6 +1,11 @@
 import type { Address } from "viem";
 import { test as baseTest, describe, expect, vi } from "../test-fixtures";
+import { createConfig } from "../config/create";
+import { KeyWrappingError } from "../errors";
+import type { ZamaSDKEvent, ZamaSDKEventListener } from "../events/sdk-events";
+import type { EncryptedValue } from "../relayer/types";
 import { MemoryStorage } from "../storage/memory-storage";
+import { ZamaSDK } from "../zama-sdk";
 
 const CONTRACT_A = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const CONTRACT_B = "0x3C3c3C3c3C3C3c3c3c3C3c3C3C3c3c3C3c3c3C3C" as Address;
@@ -196,6 +201,119 @@ describe("ZamaSDK credentials lifecycle", () => {
       // Likewise the keypair must not have been regenerated; SDK B's relayer
       // mock is independent so a regeneration would appear here.
       expect(relayerB.generateTransportKeyPair).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("transportKeyPairDerivationSecret plumbing", () => {
+    test("a transportKeyPairDerivationSecret set on the ZamaSDK constructor options reaches the vault: the persisted key pair is wrapped", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      // Real createConfig plus the real constructor option, so plumbing breaks are caught.
+      const storage = new MemoryStorage();
+      const setSpy = vi.spyOn(storage, "set");
+      const config = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+      });
+      const sdk = new ZamaSDK(config, {
+        transportKeyPairDerivationSecret:
+          "correct-horse-battery-staple-and-then-some-padding-to-the-floor-",
+      });
+
+      await sdk.permits.grantPermit([CONTRACT_A]);
+
+      const keypairWrite = setSpy.mock.calls.find(
+        ([, value]) => !Array.isArray(value) && typeof value === "object" && value !== null,
+      );
+      expect(keypairWrite).toBeDefined();
+      const keypair = keypairWrite![1] as Record<string, unknown>;
+      expect(keypair.wrappedPrivateKey).toBeDefined();
+      expect(keypair.privateKey).toBeUndefined();
+    });
+
+    test("never mutates the caller's secret buffer: a second SDK built from the same bytes reads the same key pair back", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      const storage = new MemoryStorage();
+      const callerSecret = new Uint8Array(32).fill(7);
+      const makeConfig = () =>
+        createConfig({
+          chains: [chain],
+          relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+          provider,
+          signer,
+          storage,
+        });
+
+      await new ZamaSDK(makeConfig(), {
+        transportKeyPairDerivationSecret: callerSecret,
+      }).permits.grantPermit([CONTRACT_A]);
+
+      expect(callerSecret).toEqual(new Uint8Array(32).fill(7));
+
+      // An unwrap under a zeroized buffer would self-heal into a fresh key pair,
+      // so a surviving permit proves the stored entry stayed readable.
+      const sdkB = new ZamaSDK(makeConfig(), { transportKeyPairDerivationSecret: callerSecret });
+      await expect(sdkB.permits.hasPermit([CONTRACT_A])).resolves.toBe(true);
+    });
+
+    test("a KeyWrappingError from credential resolution never reaches a ZamaSDKEvent payload", async ({
+      chain,
+      relayer,
+      provider,
+      signer,
+    }) => {
+      // Credential resolution happens before the emit-wrapped section of every operation
+      // that calls it, so a failure here must never surface as, or be folded into, an
+      // event payload: not the secret, and not the resolved config it was read from.
+      const storage = new MemoryStorage();
+      const scope = "tenant-events";
+      const writerConfig = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+        transportKeyPairScope: scope,
+      });
+      await new ZamaSDK(writerConfig, {
+        transportKeyPairDerivationSecret:
+          "sentinel-writer-secret-must-never-leak-into-an-event-ever-at-all",
+      }).permits.grantPermit([CONTRACT_A]);
+
+      const events: ZamaSDKEvent[] = [];
+      const onEvent: ZamaSDKEventListener = (event) => events.push(event);
+      const mismatchedConfig = createConfig({
+        chains: [chain],
+        relayers: { [chain.id]: { type: "test", createRelayer: () => relayer } },
+        provider,
+        signer,
+        storage,
+        transportKeyPairScope: scope,
+        onEvent,
+      });
+      const sdk = new ZamaSDK(mismatchedConfig, {
+        transportKeyPairDerivationSecret:
+          "sentinel-reader-secret-must-never-leak-into-an-event-ever-at-all",
+      });
+
+      await expect(sdk.permits.grantPermit([CONTRACT_A])).rejects.toThrow(KeyWrappingError);
+      await expect(
+        sdk.decryption.decryptValues([
+          { encryptedValue: `0x${"aa".repeat(32)}` as EncryptedValue, contractAddress: CONTRACT_A },
+        ]),
+      ).rejects.toThrow(KeyWrappingError);
+
+      expect(events).toEqual([]);
     });
   });
 });

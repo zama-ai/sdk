@@ -78,6 +78,8 @@ export const ZamaErrorCode = {
   WalletNotConnected: "WALLET_NOT_CONNECTED",
   /** Wallet account discovery is still resolving. */
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
+  /** Wrapping or unwrapping the transport private key with `transportKeyPairDerivationSecret` failed. */
+  KeyWrappingFailed: "KEY_WRAPPING_FAILED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -129,6 +131,7 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.SignerNotConfigured]: false,
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
+  [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
 };
 
 /**
