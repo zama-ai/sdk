@@ -34,10 +34,7 @@ function makeTokens(sdk: ZamaSDK, count = TOKEN_COUNT): Token[] {
   return Array.from({ length: count }, (_, i) => new Token(sdk, tokenAddressAt(i)));
 }
 
-/**
- * Replace each token's `balanceOf` with a counting stub so the tests observe
- * exactly how many tokens were dispatched before the batch gave up.
- */
+/** Stubs every token's `balanceOf`, recording which tokens were called before the batch stopped. */
 function stubBalances(
   tokens: Token[],
   outcome: (index: number) => Promise<bigint>,
@@ -82,7 +79,7 @@ describe("Token.batchBalancesOf", () => {
 
     await expect(Token.batchBalancesOf(tokens, OWNER)).rejects.toBe(fatal);
 
-    // Only the first wave could have been in flight; tokens 5..11 never ran.
+    // At most the 5 concurrent calls already started; tokens 5..11 never ran.
     expect(attempts.length).toBeLessThanOrEqual(CONCURRENCY);
   });
 
@@ -118,7 +115,7 @@ describe("Token.batchBalancesOf", () => {
       if (index === 3) {
         throw fatal;
       }
-      // Settle after the fatal token so the abort flag is already set.
+      // Delay the successes so they finish after the fatal token set the abort flag.
       await new Promise((resolve) => setTimeout(resolve, 5));
       return BigInt(index);
     });
@@ -177,26 +174,27 @@ describe("Token.batchBalancesOf", () => {
     relayer,
     signer,
   }) => {
-    // Below MAX_CONTRACTS_PER_PERMIT so each grant is one signature, making the
-    // prompt count readable.
+    // 8 tokens fit in one permit, so each grant costs exactly one signature
+    // and the prompt count below is easy to assert.
     const tokens = makeTokens(sdk, 8);
     vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
       const { address } = call as { address: Address };
       return handleAt(tokens.findIndex((t) => t.address === getAddress(address)));
     });
-    // Permanent revocation: the retry under the fresh permit reverts identically.
+    // The relayer always reverts, so the retry after recovery fails too.
     vi.mocked(relayer.decryptValues).mockRejectedValue(revokedContextRevert());
 
     await expect(Token.batchBalancesOf(tokens, OWNER)).rejects.toBeInstanceOf(
       RevokedKmsContextError,
     );
 
-    // The pre-authorization prompt plus exactly one shared re-grant, not one
-    // per token and not one per concurrency wave.
+    // Two signatures total: the initial grant plus one shared re-grant, not
+    // one re-grant per token.
     expect(signer.signTypedData).toHaveBeenCalledTimes(2);
-    // At most the first wave, each attempted twice (initial + post-recovery).
+    // Only the first 5 tokens reached the relayer, each at most twice (before
+    // and after recovery).
     expect(vi.mocked(relayer.decryptValues).mock.calls.length).toBeLessThanOrEqual(CONCURRENCY * 2);
-    // The tokens beyond the first wave never even read their handle.
+    // Tokens 5..7 were never dispatched, so their handles were never read.
     expect(vi.mocked(provider.readContract).mock.calls.length).toBeLessThanOrEqual(CONCURRENCY);
   });
 
@@ -210,8 +208,8 @@ describe("Token.batchBalancesOf", () => {
       const { address } = call as { address: Address };
       return handleAt(tokens.findIndex((t) => t.address === getAddress(address)));
     });
-    // Transient revocation: the first wave fails, the post-recovery retries and
-    // every later token succeed.
+    // The first 3 relayer calls fail with a revoked context; every call after
+    // recovery succeeds.
     let decrypts = 0;
     vi.mocked(relayer.decryptValues).mockImplementation(async () => {
       decrypts += 1;

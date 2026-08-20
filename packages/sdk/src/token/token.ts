@@ -276,9 +276,9 @@ export class Token {
     // per-token decryptValues calls reuse the cached credentials.
     await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
-    // `pLimit` has no cancellation: in-flight reads run to completion, but a
-    // shared flag stops the still-queued tokens from each spending their own
-    // evict-and-regrant wallet prompt on a session-level failure.
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued tokens from starting once a fatal error is seen, so they do
+    // not each trigger their own recovery wallet prompt.
     let aborted = false;
     let fatal: unknown;
 
@@ -290,8 +290,8 @@ export class Token {
         try {
           return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
         } catch (reason) {
-          // Session-level failures (user rejected signature, SDK
-          // misconfigured, dead KMS context) apply to every token.
+          // A fatal error (rejected signature, revoked KMS context, rate
+          // limit) would fail every token: stop the batch.
           if (isFatalBatchError(reason)) {
             aborted = true;
             fatal ??= reason;
@@ -303,8 +303,8 @@ export class Token {
       5,
     );
 
-    // A fatal error leaves an unknown suffix of tokens unattempted, so the
-    // partition would be misleading: reject the whole call.
+    // Some tokens were never attempted after the abort, so a partial result
+    // would be wrong: reject the whole call.
     if (fatal !== undefined) {
       throw fatal;
     }
@@ -473,9 +473,9 @@ export class Token {
     errors: Map<Address, ZamaError>,
     maxConcurrency: number,
   ): Promise<Array<EncryptedValue | undefined>> {
-    // `pLimit` has no cancellation: in-flight reads run to completion, but a
-    // shared flag stops the still-queued tokens from re-hitting an endpoint
-    // that already failed for the whole session.
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued tokens from re-hitting an endpoint that already failed for
+    // the whole batch.
     let aborted = false;
     let fatal: unknown;
 

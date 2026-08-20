@@ -200,7 +200,6 @@ describe("CredentialService.recoverPermits", () => {
 
     await credentialService.recoverPermits([A], undefined, [`0x${"de".repeat(65)}`]);
 
-    // No prompt and the scope was never cleared.
     expect(signer.signTypedData).not.toHaveBeenCalled();
     expect(await credentialService.hasPermit([A, B])).toBe(true);
   });

@@ -661,10 +661,9 @@ export class CredentialService {
    * cost one wallet prompt total, not one each. Sequential calls are deduped by
    * permit identity instead: when `staleSignatures` names permits that are no
    * longer stored, the scope was already recovered and this call re-signs
-   * nothing. That check also spans instances, so a tab reading another tab's
-   * fresh permit from shared storage short-circuits (it is not a lock, so two
-   * tabs racing still cost one prompt each; cross-instance serialization is a
-   * follow-up).
+   * nothing. That check also spans instances: a tab reading another tab's
+   * fresh permit from shared storage re-signs nothing, though it is not a
+   * lock, so two tabs racing still cost one prompt each.
    *
    * A scope whose permits cannot be read is never evicted: the retry then
    * decrypts with the dead permit and the typed error surfaces, leaving the

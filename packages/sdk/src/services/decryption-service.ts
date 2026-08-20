@@ -257,10 +257,9 @@ export class DecryptionService {
       }
     }
 
-    // `pLimit` has no cancellation: once one worker records a fatal error
-    // (e.g. an RPC rate-limit), the sibling workers would otherwise keep
-    // draining the queue and re-hitting the already-throttled endpoint. A
-    // shared flag lets the still-queued items short-circuit instead.
+    // `pLimit` cannot cancel calls that already started. The shared flag stops
+    // the queued items from starting once a fatal error (e.g. an RPC rate
+    // limit) is seen, instead of re-hitting the failing endpoint.
     let aborted = false;
     let fatal: unknown;
     await pLimit(
