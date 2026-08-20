@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/react-sdk",
-  "version": "3.5.0-alpha.6",
+  "version": "3.5.0-alpha.8",
   "description": "React hooks for Zama SDK",
   "keywords": [
     "confidential",
@@ -65,7 +65,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5",
-    "@zama-fhe/sdk": "^3.5.0-alpha.6",
+    "@zama-fhe/sdk": "^3.5.0-alpha.8",
     "react": ">=18",
     "viem": ">=2",
     "wagmi": ">=2"

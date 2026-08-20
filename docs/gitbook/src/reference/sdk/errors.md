@@ -21,6 +21,7 @@ import {
   InvalidTransportKeyPairError,
   TransportKeyPairExpiredError,
   NoCiphertextError,
+  KeyWrappingError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -87,6 +88,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
+| `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -274,6 +276,29 @@ try {
 ```
 
 **How to handle:** Show an empty state in your UI prompting the user to shield tokens. Do not display "0" — there is no balance to show.
+
+### KeyWrappingError
+
+**Code:** `KEY_WRAPPING_FAILED`
+
+At-rest encryption or decryption of the transport private key failed. This is the key-protection feature behind `transportKeyPairDerivationSecret`, unrelated to token wrapping (`shield`/`unshield`).
+
+Thrown by `grantPermit`, `grantDelegationPermit`, `warmTransportKeyPair`, and `warmTransportKeyPairScope`, and by any operation that resolves credentials under the hood (`decryptValues`, `token.balanceOf`). `hasPermit` and `hasDelegationPermit` never throw it: they return `false`, so a permit check stays a safe read (see [Permit Model](../../concepts/permit-model.md)).
+
+```ts
+matchZamaError(error, {
+  KEY_WRAPPING_FAILED: () =>
+    showError("Credential storage misconfigured, check transportKeyPairDerivationSecret"),
+});
+```
+
+**How to handle:** A wrong secret without a scope never throws: the SDK treats it as a cache miss and regenerates. So without a `transportKeyPairScope`, the cause is one of:
+
+- An encrypted entry was read with no `transportKeyPairDerivationSecret` configured. Restore the secret, or call `sdk.permits.clear()` to downgrade to plaintext deliberately.
+- The entry was written by a newer wrapping scheme version. Upgrade the SDK, or call `sdk.permits.clear()` to discard the entry deliberately.
+- `crypto.subtle` is unavailable in the environment.
+
+With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobber the entry every other signer in the scope reads. Verify that every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, and that none is missing it. See [Security Model](../../concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and migration steps.
 
 ### RelayerRequestFailedError
 

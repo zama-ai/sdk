@@ -143,7 +143,7 @@ export type { DecryptPublicValuesResult } from "../relayer/types";
 export type { BatchBalancesResult, BatchDecryptAsOptions } from "../token/token";
 export type { Token } from "../token/token";
 export type { WrappedToken } from "../token/wrapped-token";
-export type { ZamaSDK } from "../zama-sdk";
+export type { ZamaSDK, ZamaSDKOptions } from "../zama-sdk";
 export type { ZamaConfig } from "../config";
 export type { SerializedTransportKeyPair } from "../credentials";
 export type {

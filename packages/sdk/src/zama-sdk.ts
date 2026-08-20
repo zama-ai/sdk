@@ -2,6 +2,9 @@ import type { Address } from "viem";
 import type { ChainRouter } from "./chains/router";
 import type { ZamaConfig } from "./config/types";
 import { CredentialService } from "./credentials/credential-service";
+import { DerivationSecretHolder } from "./credentials/keypair-wrapping";
+import { DerivationSecretSchema } from "./credentials/schemas";
+import { ConfigurationError } from "./errors";
 import type { ZamaSDKEvent, ZamaSDKEventInput, ZamaSDKEventListener } from "./events/sdk-events";
 import { Decryption } from "./namespaces/decryption";
 import { Delegations } from "./namespaces/delegations";
@@ -23,7 +26,73 @@ import type {
   GenericStorage,
   WalletAccountListener,
 } from "./types";
+import { parseSchema } from "./validation";
 import { WrappersRegistry } from "./wrappers-registry";
+
+/** Instance-level options that are deliberately not part of the shareable config object. */
+export interface ZamaSDKOptions {
+  /**
+   * Encrypts the transport key pair's private half at rest. Headless environments only
+   * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
+   * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
+   * secrets manager. The SDK copies a Uint8Array secret and zeroizes its own copy after
+   * key import; it never touches your buffer, so zeroize yours after construction.
+   * The SDK never persists or exposes this value. Omit for the default:
+   * plaintext at rest, security delegated to the storage backend.
+   */
+  transportKeyPairDerivationSecret?: string | Uint8Array;
+}
+
+/**
+ * Omitting the option means cleartext-at-rest by choice; passing it as `undefined` means the
+ * caller asked for wrapping and the value went missing, so it must fail instead of downgrading.
+ */
+function assertDerivationSecretNotUnset(options: ZamaSDKOptions): void {
+  if (
+    !Object.hasOwn(options, "transportKeyPairDerivationSecret") ||
+    options.transportKeyPairDerivationSecret !== undefined
+  ) {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret was passed as undefined, which usually means the environment variable it reads is unset (e.g. process.env.ZAMA_DERIVATION_SECRET). Supply the secret, or omit the option entirely to persist transport key pairs in cleartext on purpose.",
+  );
+}
+
+/**
+ * Wrapping only helps where no platform keystore protects the store, which is the headless
+ * case. `importScripts` catches a browser worker, where `window` and `document` are absent.
+ */
+function assertDerivationSecretHeadless(secret: string | Uint8Array | undefined): void {
+  if (secret === undefined) {
+    return;
+  }
+  const { importScripts } = globalThis as { importScripts?: unknown };
+  const headless =
+    typeof window === "undefined" &&
+    typeof document === "undefined" &&
+    typeof importScripts !== "function";
+  if (headless) {
+    return;
+  }
+  throw new ConfigurationError(
+    "transportKeyPairDerivationSecret is supported in headless environments only (CLI tools, servers, agents). Remove the option: an environment with a platform keystore, or one that ships a bundle, must delegate at-rest security of the transport key pair to the storage backend.",
+  );
+}
+
+/**
+ * Copies a `Uint8Array` secret so the holder only ever zeroizes the SDK's own buffer, and
+ * a caller zeroizing theirs cannot corrupt later wraps. Strings are immutable, so no copy.
+ */
+function derivationSecretHolder(
+  secret: string | Uint8Array | undefined,
+): DerivationSecretHolder | undefined {
+  if (secret === undefined) {
+    return undefined;
+  }
+  const parsed = parseSchema(DerivationSecretSchema, secret);
+  return new DerivationSecretHolder(typeof parsed === "string" ? parsed : new Uint8Array(parsed));
+}
 
 /**
  * ZamaSDK — composes a RelayerSDK with contract abstraction.
@@ -67,7 +136,12 @@ export class ZamaSDK {
   readonly #delegationService: DelegationService;
   readonly #offlineService: OfflineService;
 
-  constructor(config: ZamaConfig) {
+  constructor(config: ZamaConfig, options: ZamaSDKOptions = {}) {
+    assertDerivationSecretNotUnset(options);
+    assertDerivationSecretHeadless(options.transportKeyPairDerivationSecret);
+    // Constructor-local on purpose: neither the raw secret nor the holder may become a field.
+    const derivationSecret = derivationSecretHolder(options.transportKeyPairDerivationSecret);
+
     this.#router = config.router;
     this.provider = config.provider;
     this.signer = config.signer;
@@ -105,6 +179,7 @@ export class ZamaSDK {
       transportKeyPairTTL: config.transportKeyPairTTL,
       permitTTL: config.permitTTL,
       scope: config.transportKeyPairScope,
+      derivationSecret,
       storage: this.storage,
       permitStorage: config.permitStorage,
       logger: this.#logger,
