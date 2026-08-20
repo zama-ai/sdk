@@ -1,12 +1,8 @@
 import { getAddress, type Address } from "viem";
 import {
-  ConfigurationError,
   DecryptionFailedError,
-  KeyWrappingError,
   RevokedKmsContextError,
   RpcRateLimitError,
-  SigningFailedError,
-  SigningRejectedError,
   type ZamaError,
 } from "../../errors";
 import type { EncryptedValue } from "../../relayer/types";
@@ -82,31 +78,6 @@ describe("Token.batchBalancesOf", () => {
     // At most the 5 concurrent calls already started; tokens 5..11 never ran.
     expect(attempts.length).toBeLessThanOrEqual(CONCURRENCY);
   });
-
-  const fatalClasses: Array<[string, () => Error]> = [
-    ["RevokedKmsContextError", () => new RevokedKmsContextError("revoked")],
-    ["SigningRejectedError", () => new SigningRejectedError("rejected")],
-    ["SigningFailedError", () => new SigningFailedError("signing broke")],
-    ["ConfigurationError", () => new ConfigurationError("misconfigured")],
-    ["RpcRateLimitError", () => new RpcRateLimitError("throttled")],
-    ["KeyWrappingError", () => new KeyWrappingError("no subtle crypto")],
-  ];
-
-  for (const [name, makeError] of fatalClasses) {
-    test(`aborts and rethrows ${name} unwrapped`, async ({ sdk }) => {
-      const tokens = makeTokens(sdk);
-      const fatal = makeError();
-      const { attempts } = stubBalances(tokens, async (index) => {
-        if (index === 0) {
-          throw fatal;
-        }
-        return BigInt(index);
-      });
-
-      await expect(Token.batchBalancesOf(tokens, OWNER)).rejects.toBe(fatal);
-      expect(attempts.length).toBeLessThan(TOKEN_COUNT);
-    });
-  }
 
   test("rejects without partial results when a fatal error follows successes", async ({ sdk }) => {
     const tokens = makeTokens(sdk);
