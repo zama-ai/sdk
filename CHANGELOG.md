@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.7...v3.5.0-alpha.8) (2026-08-20)
+
+### Bug Fixes
+
+- **examples:** derive relayer proxy URL from window origin ([#635](https://github.com/zama-ai/sdk/issues/635)) ([e676154]())
+
 ## [3.5.0-alpha.7](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.6...v3.5.0-alpha.7) (2026-08-18)
 
 ### Features
