@@ -21,9 +21,16 @@ const wagmiConfig = createConfig({
 });
 
 // Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const zamaPolygonAmoy = {
   ...fhePolygonAmoy,
-  relayerUrl: "http://localhost:3006/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: AMOY_RPC_URL,
 } as const satisfies FheChain;
 

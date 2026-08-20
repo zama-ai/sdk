@@ -63,7 +63,7 @@ Specifically:
 The app never calls the relayer directly. `relayerUrl` in `src/providers.tsx` points at a Next.js route handler, `src/app/api/relayer/[...path]/route.ts`, which forwards requests upstream:
 
 ```
-Browser (web() worker)
+Browser
   │  POST http://localhost:3006/api/relayer/v2/<path>
   ▼
 Next.js route handler (server-side)
@@ -355,9 +355,16 @@ const wagmiConfig = createConfig({
 });
 
 // relayerUrl points at the local proxy so RELAYER_API_KEY stays server-side.
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const zamaPolygonAmoy = {
   ...fhePolygonAmoy,
-  relayerUrl: "http://localhost:3006/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: AMOY_RPC_URL,
 } as const satisfies FheChain;
 
@@ -549,8 +556,8 @@ Copy `.env.example` to `.env.local` and fill in the values you need. Leaving the
 | Confidential balance shows `—` immediately after connect  | No shielded balance yet: no encrypted handle to read                                                                                                    | Shield some tokens first; the balance displays once there is something to decrypt                                                                                                                                                                                                                                                                                |
 | "Decrypting…" stays indefinitely                          | Wallet EIP-712 signature request was missed, or the relayer is unreachable                                                                              | Approve the pending signature in your wallet. If there is none, check the terminal for `[relayer-proxy]` errors and confirm `RELAYER_URL` has no `/v2` suffix                                                                                                                                                                                                    |
 | Relayer errors with HTTP 503 "Relayer unreachable"        | The proxy could not reach the upstream relayer (DNS, network, or 30 s timeout)                                                                          | Retry. If it persists, check network access to `relayer.testnet.zama.org` and any corporate proxy settings                                                                                                                                                                                                                                                       |
-| Relayer errors with HTTP 400 "Invalid path"               | A request path segment failed the proxy's character allowlist                                                                                           | Confirm `relayerUrl` in `src/providers.tsx` points at `/api/relayer` with no extra query or path decoration                                                                                                                                                                                                                                                      |
-| Encrypt or decrypt fails only in production               | `relayerUrl` still points at `http://localhost:3006/api/relayer`                                                                                        | Use an origin-relative or deployment-specific URL for the proxy route when deploying                                                                                                                                                                                                                                                                             |
+| Relayer errors with HTTP 400 "Invalid path"               | A request path segment failed the proxy's character allowlist                                                                                           | Confirm `relayerUrl` in `src/providers.tsx` resolves to `<origin>/api/relayer` with no extra query or path decoration                                                                                                                                                                                                                                            |
+| Encrypt or decrypt fails only in production               | `relayerUrl` is hardcoded to a fixed origin such as `http://localhost:3006/api/relayer`                                                                 | Derive the proxy URL from `window.location.origin` at runtime so it follows the deployed origin. It must stay **absolute** — the SDK validates `relayerUrl` with `new URL(relayerUrl)` and rejects a bare path like `/api/relayer`                                                                                                                               |
 | Asked to sign an EIP-712 message after each action        | Permit not yet cached (first use: expected)                                                                                                             | Approve once: subsequent decryptions reuse the IndexedDB-persisted permit (30-day TTL). Sharing one `indexedDBStorage` for `storage` and `permitStorage` is safe (the SDK namespaces the keys internally); if the prompt still recurs, check that storage actually persists across page loads                                                                    |
 | Shield fails right after the approval transaction         | The approval reverted or was rejected before the wrap step                                                                                              | Retry: `useShield` re-reads the allowance and re-approves only if needed                                                                                                                                                                                                                                                                                         |
 | Shield fails after a recent transfer or other operation   | Pending transaction in the mempool caused a nonce conflict                                                                                              | Wait for all pending transactions to confirm, then retry                                                                                                                                                                                                                                                                                                         |
