@@ -1,24 +1,33 @@
 // ─── Sepolia network configuration ────────────────────────────────────────────
 // Edit these values to target a different network.
 import { defineChain } from "viem";
+import { sepolia } from "viem/chains";
 
 export const SEPOLIA_CHAIN_ID = 11155111;
-export const SEPOLIA_EXPLORER_URL = "https://eth-sepolia.blockscout.com";
 const SEPOLIA_RPC_DEFAULT = "https://ethereum-sepolia-rpc.publicnode.com";
 // Use || not ?? — Next.js replaces unset NEXT_PUBLIC_* variables with an empty string
 // at build time, not undefined. The nullish coalescing operator (??) treats "" as a
 // valid value and would use it as the RPC URL, causing a runtime error.
 export const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || SEPOLIA_RPC_DEFAULT;
 
-// Custom chain definition (rather than importing wagmi's stock `sepolia`) so the
-// wallet's "add network" prompt points at Blockscout instead of the baked-in Etherscan entry.
-export const sepolia = defineChain({
-  id: SEPOLIA_CHAIN_ID,
-  name: "Sepolia",
-  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+// Extends viem's stock Sepolia definition instead of redefining it, so multicall3, the
+// ENS resolver, and the testnet flag stay inherited (and keep up with viem). Only two
+// fields are overridden: the block explorer (Blockscout renders confidential tokens and
+// transfers better than Etherscan) and the RPC, so both the app and the wallet's
+// "add network" prompt use the endpoint configured via NEXT_PUBLIC_SEPOLIA_RPC_URL.
+export const sepoliaChain = defineChain({
+  ...sepolia,
   rpcUrls: { default: { http: [SEPOLIA_RPC_URL] } },
-  blockExplorers: { default: { name: "Blockscout", url: SEPOLIA_EXPLORER_URL } },
+  blockExplorers: {
+    default: {
+      name: "Blockscout",
+      url: "https://eth-sepolia.blockscout.com",
+      apiUrl: "https://eth-sepolia.blockscout.com/api",
+    },
+  },
 });
+
+export const SEPOLIA_EXPLORER_URL = sepoliaChain.blockExplorers.default.url;
 
 // ─── ConfidentialVault example (confidentialTransferAndCall demo) ───────────────
 // A minimal confidential escrow deployed on Sepolia. A deposit moves confidential

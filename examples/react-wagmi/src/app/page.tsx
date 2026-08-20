@@ -7,7 +7,7 @@ import { injected } from "wagmi/connectors/injected";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { TokenWorkspace, NoTokenWorkspace } from "@/components/TokenWorkspace";
-import { sepolia, SEPOLIA_CHAIN_ID } from "@/lib/config";
+import { sepoliaChain, SEPOLIA_CHAIN_ID } from "@/lib/config";
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
@@ -108,7 +108,7 @@ export default function Home() {
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}). Switch your
           wallet to continue.
         </p>
-        <form action={() => switchChain({ chainId: sepolia.id })}>
+        <form action={() => switchChain({ chainId: sepoliaChain.id })}>
           <button type="submit" className="btn btn-primary" disabled={isSwitching}>
             {isSwitching ? "Switching…" : "Switch to Sepolia"}
           </button>

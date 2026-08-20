@@ -9,14 +9,14 @@ import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { indexedDBStorage } from "@zama-fhe/sdk";
 import { sepolia as fheSepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { web } from "@zama-fhe/sdk/web";
-import { sepolia, SEPOLIA_RPC_URL } from "@/lib/config";
+import { sepoliaChain, SEPOLIA_RPC_URL } from "@/lib/config";
 
 // Stable module-level references — recreating on re-render would reset wagmi's state.
 const wagmiConfig = createConfig({
-  chains: [sepolia],
+  chains: [sepoliaChain],
   connectors: [injected()],
   // SEPOLIA_RPC_URL overrides the default RPC if NEXT_PUBLIC_SEPOLIA_RPC_URL is set.
-  transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
+  transports: { [sepoliaChain.id]: http(SEPOLIA_RPC_URL) },
 });
 
 // Route relayer traffic through the local Next.js proxy so RELAYER_API_KEY stays server-side.

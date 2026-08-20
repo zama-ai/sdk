@@ -2,7 +2,7 @@
 
 import { ActionScreen, AppHeader, TokenSelector } from "@/components/PageChrome";
 import { NoTokenWorkspace, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
-import { hoodi, HOODI_CHAIN_ID } from "@/lib/config";
+import { hoodiChain, HOODI_CHAIN_ID } from "@/lib/config";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { useEffect, useMemo, useState } from "react";
@@ -83,7 +83,7 @@ export default function Home() {
         actionLabel="Switch to Hoodi"
         pendingLabel="Switching…"
         pending={isSwitching}
-        onAction={() => switchChain({ chainId: hoodi.id })}
+        onAction={() => switchChain({ chainId: hoodiChain.id })}
         error={switchError && "Could not switch to Hoodi. Please switch manually in your wallet."}
       />
     );

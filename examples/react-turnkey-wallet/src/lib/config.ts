@@ -1,14 +1,38 @@
 import { sepolia as sepoliaConfig, mainnet as mainnetConfig } from "@zama-fhe/sdk";
 import { sepolia, mainnet } from "viem/chains";
-import type { Chain } from "viem";
+import { defineChain, type Chain } from "viem";
 
 const isMainnet = process.env.NEXT_PUBLIC_CHAIN === "mainnet";
 
+// Extend viem's stock definitions instead of redefining them, so multicall3, the ENS
+// resolver, and the testnet flag stay inherited. Only the block explorer is overridden —
+// Blockscout renders confidential tokens and transfers better than Etherscan.
+const mainnetChain = defineChain({
+  ...mainnet,
+  blockExplorers: {
+    default: {
+      name: "Blockscout",
+      url: "https://eth.blockscout.com",
+      apiUrl: "https://eth.blockscout.com/api",
+    },
+  },
+});
+const sepoliaChain = defineChain({
+  ...sepolia,
+  blockExplorers: {
+    default: {
+      name: "Blockscout",
+      url: "https://eth-sepolia.blockscout.com",
+      apiUrl: "https://eth-sepolia.blockscout.com/api",
+    },
+  },
+});
+
+const activeChain = isMainnet ? mainnetChain : sepoliaChain;
+
 export const zamaConfig = isMainnet ? mainnetConfig : sepoliaConfig;
-export const viemChain: Chain = isMainnet ? mainnet : sepolia;
-export const explorerUrl = isMainnet
-  ? "https://eth.blockscout.com"
-  : "https://eth-sepolia.blockscout.com";
+export const viemChain: Chain = activeChain;
+export const explorerUrl = activeChain.blockExplorers.default.url;
 
 // True for every network that is not Ethereum mainnet.
 // Used to gate testnet-only UI (e.g. permissionless token minting).
