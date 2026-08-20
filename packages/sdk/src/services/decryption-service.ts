@@ -257,11 +257,12 @@ export class DecryptionService {
       }
     }
 
-    // `pLimit` has no cancellation: once one worker rethrows a fatal error
+    // `pLimit` has no cancellation: once one worker records a fatal error
     // (e.g. an RPC rate-limit), the sibling workers would otherwise keep
     // draining the queue and re-hitting the already-throttled endpoint. A
     // shared flag lets the still-queued items short-circuit instead.
     let aborted = false;
+    let fatal: unknown;
     await pLimit(
       items.map((item) => async () => {
         if (aborted) {
@@ -282,7 +283,8 @@ export class DecryptionService {
         } catch (error) {
           if (isFatalBatchError(error)) {
             aborted = true;
-            throw error;
+            fatal ??= error;
+            return;
           }
           item.error = this.#toZamaError(error, "Failed to decrypt delegated encrypted values", {
             isDelegated: true,
@@ -293,6 +295,10 @@ export class DecryptionService {
       }),
       maxConcurrency,
     );
+
+    if (fatal !== undefined) {
+      throw fatal;
+    }
 
     return { items };
   }

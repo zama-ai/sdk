@@ -276,29 +276,49 @@ export class Token {
     // per-token decryptValues calls reuse the cached credentials.
     await sdk.permits.grantPermit(tokens.map((t) => t.address));
 
+    // `pLimit` has no cancellation: in-flight reads run to completion, but a
+    // shared flag stops the still-queued tokens from each spending their own
+    // evict-and-regrant wallet prompt on a session-level failure.
+    let aborted = false;
+    let fatal: unknown;
+
     const outcomes = await pLimit(
       tokens.map((t) => async () => {
+        if (aborted) {
+          return { status: "aborted" as const };
+        }
         try {
           return { status: "fulfilled" as const, value: await t.balanceOf(owner) };
         } catch (reason) {
+          // Session-level failures (user rejected signature, SDK
+          // misconfigured, dead KMS context) apply to every token.
+          if (isFatalBatchError(reason)) {
+            aborted = true;
+            fatal ??= reason;
+            return { status: "aborted" as const };
+          }
           return { status: "rejected" as const, reason };
         }
       }),
       5,
     );
 
+    // A fatal error leaves an unknown suffix of tokens unattempted, so the
+    // partition would be misleading: reject the whole call.
+    if (fatal !== undefined) {
+      throw fatal;
+    }
+
     for (let i = 0; i < tokens.length; i++) {
       const tokenAddress = tokens[i]!.address;
       const outcome = outcomes[i]!;
+      if (outcome.status === "aborted") {
+        continue;
+      }
       if (outcome.status === "fulfilled") {
         results.set(tokenAddress, outcome.value);
       } else {
         const reason = outcome.reason;
-        // Session-level failures (user rejected signature, SDK misconfigured)
-        // apply to every token — surface them instead of collecting per-token.
-        if (isFatalBatchError(reason)) {
-          throw reason;
-        }
         const error =
           reason instanceof ZamaError
             ? reason
@@ -453,32 +473,47 @@ export class Token {
     errors: Map<Address, ZamaError>,
     maxConcurrency: number,
   ): Promise<Array<EncryptedValue | undefined>> {
+    // `pLimit` has no cancellation: in-flight reads run to completion, but a
+    // shared flag stops the still-queued tokens from re-hitting an endpoint
+    // that already failed for the whole session.
+    let aborted = false;
+    let fatal: unknown;
+
     const outcomes = await pLimit(
       tokens.map((token) => async () => {
+        if (aborted) {
+          return { status: "aborted" as const };
+        }
         try {
           return {
             status: "fulfilled" as const,
             value: await token.readConfidentialBalanceOf(accountAddress),
           };
         } catch (reason) {
+          if (isFatalBatchError(reason)) {
+            aborted = true;
+            fatal ??= reason;
+            return { status: "aborted" as const };
+          }
           return { status: "rejected" as const, reason };
         }
       }),
       maxConcurrency,
     );
 
+    if (fatal !== undefined) {
+      throw fatal;
+    }
+
     const encryptedValues: Array<EncryptedValue | undefined> = [];
     for (const [index, token] of tokens.entries()) {
       const outcome = outcomes[index];
-      if (!outcome) {
+      if (!outcome || outcome.status === "aborted") {
         continue;
       }
       if (outcome.status === "fulfilled") {
         encryptedValues[index] = outcome.value;
         continue;
-      }
-      if (isFatalBatchError(outcome.reason)) {
-        throw outcome.reason;
       }
       errors.set(
         token.address,
