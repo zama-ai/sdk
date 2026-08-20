@@ -250,12 +250,14 @@ export class Token {
    * addresses in a single wallet signature, then delegates each decrypt to
    * `sdk.decryption.decryptValues`.
    *
-   * Tokens that fail to decrypt land in `errors` rather than aborting the
-   * whole batch — caller decides how to surface them.
+   * Tokens that fail to decrypt land in `errors`; the batch keeps going.
    *
    * @param tokens - Array of {@link Token} instances bound to the same SDK.
    * @param owner - Balance owner address.
    * @returns `{ results, errors }` partitioning the per-token outcomes.
+   * @throws A failure that affects the whole session (rejected signature,
+   * misconfiguration, RPC rate limit, key unwrapping failure, revoked KMS
+   * context) rejects the call instead of landing in `errors`.
    *
    * @example
    * ```ts
@@ -352,6 +354,9 @@ export class Token {
    * @throws if no active delegation exists. {@link DelegationNotFoundError}
    * @throws if the delegation has expired. {@link DelegationExpiredError}
    * @throws if any decryption fails and no `onError` is provided. {@link DecryptionFailedError}
+   * @throws A failure that affects the whole session (rejected signature, RPC
+   * rate limit, revoked KMS context) rejects the call even when `onError` is
+   * provided.
    *
    * @example
    * ```ts

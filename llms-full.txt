@@ -4494,8 +4494,9 @@ const tokens = addresses.map((a) => sdk.createToken(a));
 const { results, errors } = await Token.batchBalancesOf(tokens, userAddress);
 
 // `results` is Map<Address, bigint> for tokens that decrypted successfully,
-// `errors` is Map<Address, ZamaError> for tokens that failed — partial failure
-// never rejects the whole batch.
+// `errors` is Map<Address, ZamaError> for tokens that failed. A failure that
+// affects the whole session (rejected signature, RPC rate limit, revoked KMS
+// context) rejects the call instead of filling `errors`.
 for (const [address, balance] of results) {
   console.log(address, balance);
 }
@@ -7652,7 +7653,7 @@ const isWrapper = await token.isWrapper();
 
 `(tokens: Token[], owner: Address) => Promise<BatchBalancesResult>`
 
-Decrypts multiple balances in one batch.
+Decrypts multiple balances in one batch. Balances that decrypt successfully land in `results`, per-token failures in `errors`. A failure that affects the whole session (rejected signature, RPC rate limit, revoked KMS context) rejects the call instead.
 
 ### Token.batchDecryptBalancesAs _(static)_
 

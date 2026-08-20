@@ -140,7 +140,7 @@ const isWrapper = await token.isWrapper();
 
 `(tokens: Token[], owner: Address) => Promise<BatchBalancesResult>`
 
-Decrypts multiple balances in one batch.
+Decrypts multiple balances in one batch. Balances that decrypt successfully land in `results`, per-token failures in `errors`. A failure that affects the whole session (rejected signature, RPC rate limit, revoked KMS context) rejects the call instead.
 
 ### Token.batchDecryptBalancesAs _(static)_
 
