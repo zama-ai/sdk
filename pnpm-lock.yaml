@@ -101,8 +101,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2(eslint@10.8.1(jiti@2.7.0))
       eslint-plugin-es-x:
-        specifier: ^9.7.0
-        version: 9.7.0(eslint@10.8.1(jiti@2.7.0))
+        specifier: ^10.0.0
+        version: 10.0.0(eslint@10.8.1(jiti@2.7.0))
       ethers:
         specifier: ^6.17.0
         version: 6.17.0
@@ -2346,11 +2346,11 @@ packages:
     peerDependencies:
       eslint: ^9.0.0 || ^10.0.0
 
-  eslint-plugin-es-x@9.7.0:
-    resolution: {integrity: sha512-BT0pUw0toxtrHulYycGiUTL++qC11opyPYMuGUR7AgmuQ/N1YN1xLupF8rGxlaGqEqkqeedJuacCxxAcYgGkvg==}
-    engines: {node: ^20.19.0 || >=22.12.0}
+  eslint-plugin-es-x@10.0.0:
+    resolution: {integrity: sha512-EWhp0mIEFOxDMndU7OBihmhvBmk49Tn7tYF8yT7tKpDm0Q2QJY2WoVPEVdzk1wyOgeJaBjbbQslD/nzdsiP7sg==}
+    engines: {node: ^22.23.0 || ^24.18.0 || >=26.4.0}
     peerDependencies:
-      eslint: '>=9.29.0'
+      eslint: '>=10.6.0'
 
   eslint-scope@9.1.2:
     resolution: {integrity: sha512-xS90H51cKw0jltxmvmHy2Iai1LIqrfbw57b79w/J7MfvDfkIkFZ+kj6zC3BjtUwh150HsSSdxXZcsuv72miDFQ==}
@@ -2495,6 +2495,9 @@ packages:
 
   flatted@3.4.2:
     resolution: {integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==}
+
+  flatted@3.4.4:
+    resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==}
 
   fs-extra@11.3.5:
     resolution: {integrity: sha512-eKpRKAovdpZtR1WopLHxlBWvAgPny3c4gX1G5Jhwmmw4XJj0ifSD5qB5TOo8hmA0wlRKDAOAhEE1yVPgs6Fgcg==}
@@ -3053,6 +3056,10 @@ packages:
 
   minimatch@10.2.5:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
+    engines: {node: 18 || 20 || >=22}
+
+  minimatch@10.2.6:
+    resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
 
   minimist@1.2.8:
@@ -4080,6 +4087,9 @@ packages:
   wasm-feature-detect@1.8.0:
     resolution: {integrity: sha512-zksaLKM2fVlnB5jQQDqKXXwYHLQUVH9es+5TOOHwGOVJOCeRBCiPjwSg+3tN2AdTCzjgli4jijCH290kXb/zWQ==}
 
+  wasm-feature-detect@1.9.0:
+    resolution: {integrity: sha512-zonE+xlIIYtxPy++L24ow0hAD8CICb4+FgPyROd3buyXIqsJvUEDkBgfCCoXOd1Hu3DUr0GOfnPIdcGV+YpNaA==}
+
   web-worker@1.5.0:
     resolution: {integrity: sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw==}
 
@@ -4342,7 +4352,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 3.0.5
       debug: 4.4.3
-      minimatch: 10.2.5
+      minimatch: 10.2.6
     transitivePeerDependencies:
       - supports-color
 
@@ -5420,7 +5430,7 @@ snapshots:
       node-tkms: 0.12.8
       tfhe: 1.4.0-alpha.3
       tkms: 0.12.8
-      wasm-feature-detect: 1.8.0
+      wasm-feature-detect: 1.9.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -5808,7 +5818,7 @@ snapshots:
       lodash.memoize: 4.1.2
       semver: 7.8.4
 
-  eslint-plugin-es-x@9.7.0(eslint@10.8.1(jiti@2.7.0)):
+  eslint-plugin-es-x@10.0.0(eslint@10.8.1(jiti@2.7.0)):
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.8.1(jiti@2.7.0))
       '@eslint-community/regexpp': 4.12.2
@@ -5860,7 +5870,7 @@ snapshots:
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
-      minimatch: 10.2.5
+      minimatch: 10.2.6
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -6002,10 +6012,12 @@ snapshots:
 
   flat-cache@4.0.1:
     dependencies:
-      flatted: 3.4.2
+      flatted: 3.4.4
       keyv: 4.5.4
 
   flatted@3.4.2: {}
+
+  flatted@3.4.4: {}
 
   fs-extra@11.3.5:
     dependencies:
@@ -6473,6 +6485,10 @@ snapshots:
   min-indent@1.0.1: {}
 
   minimatch@10.2.5:
+    dependencies:
+      brace-expansion: 5.0.9
+
+  minimatch@10.2.6:
     dependencies:
       brace-expansion: 5.0.9
 
@@ -7393,6 +7409,8 @@ snapshots:
       - porto
 
   wasm-feature-detect@1.8.0: {}
+
+  wasm-feature-detect@1.9.0: {}
 
   web-worker@1.5.0: {}
 
