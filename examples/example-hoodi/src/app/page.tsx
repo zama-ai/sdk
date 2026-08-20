@@ -7,7 +7,6 @@ import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
-import { hoodi } from "viem/chains";
 import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 
@@ -84,7 +83,7 @@ export default function Home() {
         actionLabel="Switch to Hoodi"
         pendingLabel="Switching…"
         pending={isSwitching}
-        onAction={() => switchChain({ chainId: hoodi.id })}
+        onAction={() => switchChain({ chainId: HOODI_CHAIN_ID })}
         error={switchError && "Could not switch to Hoodi. Please switch manually in your wallet."}
       />
     );

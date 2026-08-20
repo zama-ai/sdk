@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
 import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
-import { sepolia } from "wagmi/chains";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { TokenWorkspace, NoTokenWorkspace } from "@/components/TokenWorkspace";
@@ -109,7 +108,7 @@ export default function Home() {
           This app only works on the Sepolia testnet (chain ID {SEPOLIA_CHAIN_ID}). Switch your
           wallet to continue.
         </p>
-        <form action={() => switchChain({ chainId: sepolia.id })}>
+        <form action={() => switchChain({ chainId: SEPOLIA_CHAIN_ID })}>
           <button type="submit" className="btn btn-primary" disabled={isSwitching}>
             {isSwitching ? "Switching…" : "Switch to Sepolia"}
           </button>

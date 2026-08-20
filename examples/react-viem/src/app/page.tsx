@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEther, createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { SelectedTokenPanel } from "@/components/SelectedTokenPanel";
@@ -12,6 +11,7 @@ import {
   SEPOLIA_CHAIN_ID_HEX,
   SEPOLIA_EXPLORER_URL,
   SEPOLIA_RPC_URL,
+  sepolia,
 } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 

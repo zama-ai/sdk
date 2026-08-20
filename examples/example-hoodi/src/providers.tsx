@@ -3,13 +3,12 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider } from "wagmi";
-import { hoodi } from "wagmi/chains";
 import { injected } from "wagmi/connectors/injected";
 import { ZamaProvider } from "@zama-fhe/react-sdk";
 import { createConfig as createZamaConfig } from "@zama-fhe/react-sdk/wagmi";
 import { cleartext, indexedDBStorage } from "@zama-fhe/sdk";
 import { hoodi as fheHoodi } from "@zama-fhe/sdk/chains";
-import { HOODI_RPC_URL } from "@/lib/config";
+import { HOODI_RPC_URL, hoodi } from "@/lib/config";
 
 const wagmiConfig = createConfig({
   chains: [hoodi],
