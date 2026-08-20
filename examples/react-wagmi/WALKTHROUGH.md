@@ -35,9 +35,16 @@ const wagmiConfig = createConfig({
   transports: { [sepolia.id]: http(SEPOLIA_RPC_URL) },
 });
 
+// The relayer requires an absolute URL, so resolve the same-origin proxy at runtime.
+// The SSR placeholder never issues requests.
+const relayerProxyUrl =
+  typeof window === "undefined"
+    ? "http://localhost/api/relayer"
+    : `${window.location.origin}/api/relayer`;
+
 const mySepolia = {
   ...fheSepolia,
-  relayerUrl: "http://localhost:3000/api/relayer",
+  relayerUrl: relayerProxyUrl,
   network: SEPOLIA_RPC_URL,
 } as const satisfies FheChain;
 
