@@ -37,7 +37,6 @@ import type {
 } from "./types";
 import {
   MAX_CONTRACTS_PER_PERMIT,
-  MAX_V1_PERMIT_DURATION_DAYS,
   normalizeAddresses,
   nowSeconds,
   SECONDS_PER_DAY,
@@ -225,7 +224,7 @@ export class CredentialService {
    *
    * @throws if `request.contracts` is empty or exceeds {@link MAX_CONTRACTS_PER_PERMIT},
    *   `request.delegator` equals `request.signer`, or `request.durationDays` exceeds
-   *   {@link MAX_V1_PERMIT_DURATION_DAYS}. {@link ConfigurationError}
+   *   the V1 permit maximum of 365 days (enforced by `PermitTTLSchema`). {@link ConfigurationError}
    */
   async preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
     const signerAddress = checksum(request.signer);
@@ -245,16 +244,13 @@ export class CredentialService {
         "preparePermit: request.delegator must differ from request.signer — self-delegation is not allowed.",
       );
     }
+    // PermitTTLSchema caps at MAX_V1_PERMIT_DURATION_DAYS, so an explicit
+    // request.durationDays is bounded here, and the this.#permitTTL fallback
+    // is bounded the same way at config-build time — no separate check needed.
     const durationDays =
       request.durationDays !== undefined
         ? parseSchema(PermitTTLSchema, request.durationDays)
         : this.#permitTTL;
-    if (durationDays > MAX_V1_PERMIT_DURATION_DAYS) {
-      throw new ConfigurationError(
-        `preparePermit: durationDays (${durationDays}) exceeds the V1 permit maximum of ` +
-          `${MAX_V1_PERMIT_DURATION_DAYS} days.`,
-      );
-    }
 
     // Snapshot the relayer before the first await: a chain switch mid-flight
     // must not let the EIP-712 domain get built against a relayer bound to a
