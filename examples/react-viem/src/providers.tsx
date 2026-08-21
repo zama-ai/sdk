@@ -15,8 +15,7 @@ import {
   getAddress,
   type Address,
 } from "viem";
-import { sepolia } from "viem/chains";
-import { SEPOLIA_RPC_URL } from "@/lib/config";
+import { SEPOLIA_RPC_URL, sepolia } from "@/lib/config";
 import { getEthereumProvider } from "@/lib/ethereum";
 
 // ── What this file does ────────────────────────────────────────────────────────

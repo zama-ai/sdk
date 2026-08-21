@@ -4,11 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
 import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
-import { sepolia } from "wagmi/chains";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { TokenWorkspace, NoTokenWorkspace } from "@/components/TokenWorkspace";
-import { SEPOLIA_CHAIN_ID } from "@/lib/config";
+import { sepolia, SEPOLIA_CHAIN_ID } from "@/lib/config";
 
 export default function Home() {
   // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────

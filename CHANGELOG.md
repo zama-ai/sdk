@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.8...v3.5.0-alpha.9) (2026-08-20)
+
+### Bug Fixes
+
+- **examples:** switch Sepolia/Hoodi explorer links to BlockScout [SDK-297] ([#636](https://github.com/zama-ai/sdk/issues/636)) ([6540368]())
+
 ## [3.5.0-alpha.8](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.7...v3.5.0-alpha.8) (2026-08-20)
 
 ### Bug Fixes

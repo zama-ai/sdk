@@ -103,7 +103,7 @@ Playwright e2e tests covering the connect flow, wrong-network screen, main UI, a
 
 Registry: `0x1807aE2f693F8530DFB126D0eF98F2F2518F292f`
 
-All contracts verified on [hoodi.etherscan.io](https://hoodi.etherscan.io).
+All contracts verified on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com).
 
 ## Getting test tokens
 
@@ -111,7 +111,7 @@ Both tokens have a permissionless `mint(address to, uint256 amount)` function.
 
 **Via the app:** click the **Mint** button next to the ERC-20 balance — mints 10 tokens directly to your wallet.
 
-**Via Etherscan:** navigate to the contract on [hoodi.etherscan.io](https://hoodi.etherscan.io) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
+**Via Blockscout:** navigate to the contract on [eth-hoodi.blockscout.com](https://eth-hoodi.blockscout.com) → Write Contract → Connect Wallet → call `mint(yourAddress, amount)`.
 
 **Via code** (amounts are raw integers — use `parseUnits` to convert from human-readable values):
 

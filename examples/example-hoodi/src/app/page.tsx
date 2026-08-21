@@ -2,12 +2,11 @@
 
 import { ActionScreen, AppHeader, TokenSelector } from "@/components/PageChrome";
 import { NoTokenWorkspace, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
-import { HOODI_CHAIN_ID } from "@/lib/config";
+import { hoodi, HOODI_CHAIN_ID } from "@/lib/config";
 import { useListPairs } from "@zama-fhe/react-sdk";
 import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
 import { useEffect, useMemo, useState } from "react";
 import { formatEther } from "viem";
-import { hoodi } from "viem/chains";
 import { useBalance, useConnect, useConnection, useSwitchChain } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 
