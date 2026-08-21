@@ -6,6 +6,8 @@ import {
   NotEntitledError,
   RevokedKmsContextError,
   RpcRateLimitError,
+  SigningFailedError,
+  SigningRejectedError,
 } from "../../errors";
 import type { EncryptedInput } from "../../query/user-decrypt";
 import type { EncryptedValue } from "../../relayer/types";
@@ -675,6 +677,47 @@ describe("DecryptionService", () => {
       // its permit as already replaced and retried with the fresh one.
       expect(vi.mocked(relayer.signDecryptionPermit).mock.calls.length).toBe(grantsBefore + 1);
       expect(signer.signTypedData).toHaveBeenCalledOnce();
+    });
+
+    test("a failed recovery re-grant surfaces the revocation, not the signing failure", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      await credentialService.grantPermit([CONTRACT_A]);
+      vi.mocked(relayer.decryptValues).mockRejectedValue(revokedContextRevert());
+      // The recovery re-grant fails mechanically, e.g. a custody signer that
+      // cannot produce wallet signatures.
+      vi.mocked(signer.signTypedData).mockRejectedValueOnce(
+        new Error("custody signer unavailable"),
+      );
+
+      const error = await decryptionService
+        .decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RevokedKmsContextError);
+      expect((error as Error).cause).toBeInstanceOf(SigningFailedError);
+    });
+
+    test("a rejected recovery re-grant prompt stays a rejection", async ({
+      decryptionService,
+      credentialService,
+      relayer,
+      signer,
+      userAddress,
+    }) => {
+      await credentialService.grantPermit([CONTRACT_A]);
+      vi.mocked(relayer.decryptValues).mockRejectedValue(revokedContextRevert());
+      vi.mocked(signer.signTypedData).mockRejectedValueOnce(
+        Object.assign(new Error("User rejected the request."), { code: 4001 }),
+      );
+
+      await expect(
+        decryptionService.decryptValues(handles([[HANDLE_A, CONTRACT_A]]), userAddress),
+      ).rejects.toBeInstanceOf(SigningRejectedError);
     });
   });
 

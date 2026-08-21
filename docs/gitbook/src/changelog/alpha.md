@@ -53,4 +53,4 @@ Failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`); `hasPermit
 
 ## Automatic recovery from KMS context rotation
 
-When a permit's KMS context is revoked on-chain, the SDK now re-grants the permit (one wallet prompt) and retries the decrypt instead of failing. No API change; existing decrypt and balance calls pick this up automatically. A new `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) surfaces only when that retry also fails; see the [error reference](../reference/sdk/errors.md#revokedkmscontexterror) for the recovery mechanics.
+When a permit's KMS context is revoked on-chain, the SDK now re-grants the permit (one wallet prompt) and retries the decrypt instead of failing. No API change; existing decrypt and balance calls pick this up automatically. A new `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) surfaces when the retry also fails, or when the re-grant itself fails (a signing failure attached as `cause`); on a failed re-grant the other permits of the scope are kept. See the [error reference](../reference/sdk/errors.md#revokedkmscontexterror) for the recovery mechanics.

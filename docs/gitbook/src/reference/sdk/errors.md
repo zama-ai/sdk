@@ -90,7 +90,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
-| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the SDK's automatic re-grant retry also failed                                             |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
@@ -255,7 +255,7 @@ matchZamaError(error, {
 
 **Code:** `REVOKED_KMS_CONTEXT`
 
-The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces only when that retry failed the same way, typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window.
+The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces in two cases: the retry failed the same way (typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window), or the re-grant itself failed because the configured signer cannot sign (the signing failure is attached as `cause`).
 
 ```ts
 matchZamaError(error, {
@@ -264,7 +264,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Wait out the cache window and trigger the decrypt again; the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
+**How to handle:** `cause` is always present, check its type to tell the two cases apart. If `cause` is a `SigningFailedError`, the re-grant failed: establish a new permit before retrying; the other permits of the scope were kept. Otherwise the retry failed against the cached validity window: wait ~15 minutes and trigger the decrypt again, the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
 
 ### TransportKeyPairExpiredError
 

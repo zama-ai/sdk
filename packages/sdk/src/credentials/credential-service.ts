@@ -660,7 +660,9 @@ export class CredentialService {
    * wallet prompt: a running recovery is shared, and a call whose
    * `staleSignatures` are no longer stored re-signs nothing because the scope
    * was already recovered. If the stored permits cannot be read, nothing is
-   * evicted and the stored (dead) permits are returned unchanged.
+   * evicted and the stored (dead) permits are returned unchanged. If the
+   * re-grant fails, the stored permits minus `staleSignatures` are put back
+   * before the error propagates.
    *
    * @param staleSignatures Signatures of the permits the failed decrypt used.
    *   Omitted or empty makes recovery unconditional.
@@ -702,17 +704,23 @@ export class CredentialService {
       return this.grantPermit(contracts, delegator);
     }
 
+    const stale = new Set(staleSignatures ?? []);
+
     // None of the failing permits is stored anymore: another recovery already
     // replaced them. Retry with the fresh permit instead of re-signing.
-    if (staleSignatures !== undefined && staleSignatures.length > 0) {
-      const stale = new Set(staleSignatures);
-      if (!stored.some((p) => stale.has(p.serializedPermit.signature))) {
-        return this.grantPermit(contracts, delegator);
-      }
+    if (stale.size > 0 && !stored.some((p) => stale.has(p.serializedPermit.signature))) {
+      return this.grantPermit(contracts, delegator);
     }
 
+    const survivors = stored.filter((p) => !stale.has(p.serializedPermit.signature));
     const prior = stored.flatMap((p) => p.contractAddresses);
-    const recovery = this.#clearAndRegrantScope(scope, prior, contracts, delegator).finally(() => {
+    const recovery = this.#clearAndRegrantScope(
+      scope,
+      prior,
+      contracts,
+      survivors,
+      delegator,
+    ).finally(() => {
       this.#permitRecoveries.delete(key);
     });
     // No `await` between the map re-check above and this `set`, so two callers
@@ -737,12 +745,33 @@ export class CredentialService {
     scope: PermissionScope,
     prior: readonly ChecksummedAddress[],
     contracts: readonly Address[],
+    survivors: readonly Permission[],
     delegator?: Address,
   ): Promise<void> {
     await swallow("evict revoked permits", () => this.#store.clearScope(scope), this.#logger);
-    // Re-sign the union of what the scope covered, not just this call's
-    // contracts: one signature restores every widened permit, so sibling
-    // decrypt calls joining the recovery find their contracts already covered.
-    await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
+    try {
+      // Re-sign the union of what the scope covered, not just this call's
+      // contracts: one signature restores every widened permit, so sibling
+      // decrypt calls joining the recovery find their contracts already covered.
+      await this.grantPermit(sortedUnion(prior, normalizeAddresses(contracts)), delegator);
+    } catch (error) {
+      // Coverage the session cannot re-sign must survive a failed re-grant.
+      if (survivors.length > 0) {
+        await swallow(
+          "restore surviving permits",
+          async () => {
+            // A failed eviction leaves survivors stored: append only the missing ones.
+            const current = await this.#store.list(scope);
+            const present = new Set(current.map((p) => p.serializedPermit.signature));
+            const missing = survivors.filter((p) => !present.has(p.serializedPermit.signature));
+            if (missing.length > 0) {
+              await this.#store.append(scope, missing);
+            }
+          },
+          this.#logger,
+        );
+      }
+      throw error;
+    }
   }
 }

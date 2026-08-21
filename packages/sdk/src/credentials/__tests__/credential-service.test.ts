@@ -352,6 +352,56 @@ describe("CredentialService.recoverPermits", () => {
     });
     expect(signer.signTypedData).toHaveBeenCalledOnce();
   });
+
+  test("a failed re-grant restores the non-stale permits and evicts the stale ones", async ({
+    credentialService,
+    signer,
+  }) => {
+    // 12 contracts chunk into two permits: mark one stale, the other survives.
+    const granted = await credentialService.grantPermit(ADDRS.slice(0, 12));
+    const [stalePermit, survivor] = granted.permissions;
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("signer offline"));
+
+    await expect(
+      credentialService.recoverPermits(stalePermit!.contractAddresses, undefined, [
+        stalePermit!.serializedPermit.signature,
+      ]),
+    ).rejects.toBeInstanceOf(SigningFailedError);
+
+    expect(await credentialService.hasPermit(survivor!.contractAddresses)).toBe(true);
+    expect(await credentialService.hasPermit(stalePermit!.contractAddresses)).toBe(false);
+  });
+
+  test("a rejected re-grant prompt also restores the non-stale permits", async ({
+    credentialService,
+    signer,
+  }) => {
+    const granted = await credentialService.grantPermit(ADDRS.slice(0, 12));
+    const [stalePermit, survivor] = granted.permissions;
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("User rejected the request."));
+
+    await expect(
+      credentialService.recoverPermits([A], undefined, [stalePermit!.serializedPermit.signature]),
+    ).rejects.toBeInstanceOf(SigningRejectedError);
+
+    expect(await credentialService.hasPermit(survivor!.contractAddresses)).toBe(true);
+  });
+
+  test("a failed re-grant with no stale signatures restores everything", async ({
+    credentialService,
+    signer,
+  }) => {
+    await credentialService.grantPermit([A, B]);
+    vi.mocked(signer.signTypedData).mockRejectedValueOnce(new Error("signer offline"));
+
+    await expect(credentialService.recoverPermits([A])).rejects.toBeInstanceOf(SigningFailedError);
+
+    expect(await credentialService.hasPermit([A, B])).toBe(true);
+    // The restored coverage serves the next grant without a new prompt.
+    vi.mocked(signer.signTypedData).mockClear();
+    await credentialService.grantPermit([A, B]);
+    expect(signer.signTypedData).not.toHaveBeenCalled();
+  });
 });
 
 describe("CredentialService chain switching", () => {

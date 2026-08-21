@@ -2182,7 +2182,7 @@ Failures surface as a new `KeyWrappingError` (`KEY_WRAPPING_FAILED`); `hasPermit
 
 ## Automatic recovery from KMS context rotation
 
-When a permit's KMS context is revoked on-chain, the SDK now re-grants the permit (one wallet prompt) and retries the decrypt instead of failing. No API change; existing decrypt and balance calls pick this up automatically. A new `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) surfaces only when that retry also fails; see the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#revokedkmscontexterror) for the recovery mechanics.
+When a permit's KMS context is revoked on-chain, the SDK now re-grants the permit (one wallet prompt) and retries the decrypt instead of failing. No API change; existing decrypt and balance calls pick this up automatically. A new `RevokedKmsContextError` (`REVOKED_KMS_CONTEXT`) surfaces when the retry also fails, or when the re-grant itself fails (a signing failure attached as `cause`); on a failed re-grant the other permits of the scope are kept. See the [error reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/errors.md#revokedkmscontexterror) for the recovery mechanics.
 
 ## 3.x
 
@@ -4787,7 +4787,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                      |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                            |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired -- user needs to re-sign                                                 |
-| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; automatic re-grant retry also failed (retry in ~15 min)      |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit     |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance exists for this account                                                        |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                 |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                    |
@@ -4893,36 +4893,36 @@ Each handler receives the error class for its code, so subclass fields are avail
 
 Here is a quick reference for the most common errors and how to respond:
 
-| Error                                  | Recommended action                                                                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                       |
-| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                    |
-| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                         |
-| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                 |
-| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                          |
-| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                       |
-| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                   |
-| `RevokedKmsContextError`               | The SDK already evicted the dead permit and retried. Ask the user to retry after ~15 minutes (the on-chain validity check is cached).      |
-| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                       |
-| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.        |
-| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                         |
-| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                      |
-| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                        |
-| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                |
-| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                               |
-| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                          |
-| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically. |
-| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).    |
-| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                   |
-| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                  |
-| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                             |
-| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                 |
-| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                       |
-| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                       |
-| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                       |
-| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                            |
-| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                          |
-| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                         |
+| Error                                  | Recommended action                                                                                                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SigningRejectedError`                 | Show a retry prompt. The user needs to approve the wallet signature.                                                                                                                                                                             |
+| `SigningFailedError`                   | Check wallet connectivity. Hardware wallets may need a firmware update.                                                                                                                                                                          |
+| `EncryptionFailedError`                | Check your CSP headers -- WASM execution needs `wasm-unsafe-eval`.                                                                                                                                                                               |
+| `DecryptionFailedError`                | May indicate an interrupted unshield. Check for pending state with `getPendingUnshield()`.                                                                                                                                                       |
+| `TransactionRevertedError`             | Inspect the revert reason. Common causes: insufficient balance, expired approval.                                                                                                                                                                |
+| `InvalidTransportKeyPairError`         | The transport key pair is stale. Clear credentials and prompt for a fresh signature.                                                                                                                                                             |
+| `TransportKeyPairExpiredError`         | Same as above -- the transport key pair TTL has elapsed.                                                                                                                                                                                         |
+| `RevokedKmsContextError`               | The SDK already evicted the dead permit. With a `SigningFailedError` as `cause`, the re-grant failed and the scope's other permits were kept: establish a new permit. Otherwise retry after ~15 minutes (the on-chain validity check is cached). |
+| `NoCiphertextError`                    | Not an error per se. The account has never shielded. Show an empty state in your UI.                                                                                                                                                             |
+| `RelayerRequestFailedError`            | Verify `relayerUrl` in your config. If using API key auth, check the `auth` option. On a 429, see "Retry transient failures" below.                                                                                                              |
+| `RpcRateLimitError`                    | See "Retry transient failures" below -- consider a higher-throughput RPC endpoint.                                                                                                                                                               |
+| `DelegationNotPropagatedError`         | See "Retry transient failures" below.                                                                                                                                                                                                            |
+| `NotEntitledError`                     | Terminal -- don't retry. Wait for an on-chain ACL grant (`FHE.allow`), or a backfill once it lands.                                                                                                                                              |
+| `ConfigurationError`                   | Invalid SDK configuration or FHE runtime failed to initialize. Check your transport config and CSP headers.                                                                                                                                      |
+| `InsufficientConfidentialBalanceError` | Show the user their balance and the shortfall. The operation needs more confidential tokens.                                                                                                                                                     |
+| `InsufficientERC20BalanceError`        | Show the user their public token balance. They need more tokens before shielding.                                                                                                                                                                |
+| `InsufficientAllowanceError`           | Only from a manual `wrap()`. Call `approveUnderlying()` for the amount first, then retry. Prefer `shield()`, which approves automatically.                                                                                                       |
+| `BalanceCheckUnavailableError`         | Call `sdk.permits.grantPermit([token.address])` to sign permits, or pass `skipBalanceCheck: true` to bypass (useful for smart wallets).                                                                                                          |
+| `ERC20ReadFailedError`                 | Check network connectivity and RPC endpoint. Retry the shield operation.                                                                                                                                                                         |
+| `SignerRequiredError`                  | Connect a wallet. The operation requires a signer but the SDK was configured without one.                                                                                                                                                        |
+| `DelegationSelfNotAllowedError`        | Cannot delegate to yourself. Use a different delegate address.                                                                                                                                                                                   |
+| `DelegationCooldownError`              | Wait for the next block before retrying delegate/revoke on the same tuple.                                                                                                                                                                       |
+| `DelegationNotFoundError`              | No active delegation exists. Verify the delegator, delegate, and contract addresses.                                                                                                                                                             |
+| `DelegationExpiredError`               | The delegation has expired. Create a new delegation.                                                                                                                                                                                             |
+| `SignerNotConfiguredError`             | The SDK was built without a signer. Pass one to `createConfig`, or connect a wallet.                                                                                                                                                             |
+| `WalletNotConnectedError`              | A signer exists but no wallet account is connected. Prompt the user to connect.                                                                                                                                                                  |
+| `WalletAccountNotReadyError`           | The wallet adapter is still resolving its account. Wait for the connection to settle, then retry.                                                                                                                                                |
+| `ChainMismatchError`                   | The wallet is on a different chain than the operation targets. Prompt the user to switch networks.                                                                                                                                               |
 
 ### 5. Distinguish "no balance" from "zero balance"
 
@@ -9227,7 +9227,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransactionRevertedError`              | `TRANSACTION_REVERTED`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `InvalidTransportKeyPairError`          | `INVALID_KEYPAIR`                     | Relayer rejected transport key pair (stale or malformed)                                                                          |
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
-| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the SDK's automatic re-grant retry also failed                                             |
+| `RevokedKmsContextError`                | `REVOKED_KMS_CONTEXT`                 | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
@@ -9392,7 +9392,7 @@ matchZamaError(error, {
 
 **Code:** `REVOKED_KMS_CONTEXT`
 
-The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces only when that retry failed the same way, typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window.
+The KMS context the permit was signed under has been revoked on-chain, so the permit is permanently unusable. The SDK recovers automatically: it evicts the dead permit, re-grants under the current context (one wallet prompt), and retries the decrypt once. This error surfaces in two cases: the retry failed the same way (typically because the on-chain validity check is cached for up to 15 minutes, so a just-revoked context can keep failing across that window), or the re-grant itself failed because the configured signer cannot sign (the signing failure is attached as `cause`).
 
 ```ts
 matchZamaError(error, {
@@ -9401,7 +9401,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Wait out the cache window and trigger the decrypt again; the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
+**How to handle:** `cause` is always present, check its type to tell the two cases apart. If `cause` is a `SigningFailedError`, the re-grant failed: establish a new permit before retrying; the other permits of the scope were kept. Otherwise the retry failed against the cached validity window: wait ~15 minutes and trigger the decrypt again, the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
 
 ### TransportKeyPairExpiredError
 

@@ -12,6 +12,7 @@ import {
   isFatalBatchError,
   RevokedKmsContextError,
   RpcRateLimitError,
+  SigningFailedError,
   wrapDecryptError,
   ZamaError,
 } from "../errors";
@@ -451,11 +452,26 @@ export class DecryptionService {
         // into the upstream 15-minute validity cache. Spent is set before
         // awaiting so a failing re-grant cannot re-arm the budget.
         recovery.spent = true;
-        credentials = await this.#credentialService.recoverPermits(
-          allContracts,
-          strategy.delegator,
-          staleSignatures,
-        );
+        try {
+          credentials = await this.#credentialService.recoverPermits(
+            allContracts,
+            strategy.delegator,
+            staleSignatures,
+          );
+        } catch (recoveryError) {
+          // A re-grant the signer cannot complete must not mask the revocation:
+          // the caller's remedy is a new permit, not a signing fix. A user
+          // rejecting the prompt stays a rejection.
+          if (recoveryError instanceof SigningFailedError) {
+            throw new RevokedKmsContextError(
+              "The permit's KMS context has been revoked on-chain and the automatic re-grant " +
+                "failed, so the decrypt cannot proceed. Establish a new permit for this scope " +
+                "and retry.",
+              { cause: recoveryError },
+            );
+          }
+          throw recoveryError;
+        }
         await this.#runDecryptRequests(
           strategy,
           credentials,
