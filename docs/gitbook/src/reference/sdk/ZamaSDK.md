@@ -250,7 +250,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 
 `(prepared: PreparedPermit, signature: Hex) => Promise<void>`
 
-Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` (and `prepared.delegatorAddress`, if present), not a connected signer.
+Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
 
 ```ts
 const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
@@ -261,11 +261,10 @@ await sdk.permits.registerPermit(prepared, signature);
 **Throws:**
 
 - `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - `prepared.chainId` doesn't match the currently active chain
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
 - `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - the transport key pair changed since `preparePermit` ran (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
 - `SigningFailedError` - the signature is invalid or malformed
-- `PreparedPermitMismatchError` - `prepared`'s unsigned metadata (chain, contracts, timing, delegator) does not match what the signature actually covers — a tampered or corrupted payload
 
 See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
 

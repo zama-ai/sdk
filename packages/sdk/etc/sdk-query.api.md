@@ -676,14 +676,8 @@ export interface PreparedFor<K extends TransactionKind> extends PreparedTransact
 
 // @public
 export interface PreparedPermit {
-    chainId: number;
-    contracts: ChecksummedAddress[];
-    delegatorAddress?: ChecksummedAddress;
-    durationDays: number;
     eip712: SerializedPermitEip712;
     signerAddress: ChecksummedAddress;
-    startTimestamp: number;
-    transportPublicKey: Hex;
     version: 1;
 }
 
@@ -1360,7 +1354,6 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
-    readonly PreparedPermitMismatch: "PREPARED_PERMIT_MISMATCH";
 };
 
 // @public

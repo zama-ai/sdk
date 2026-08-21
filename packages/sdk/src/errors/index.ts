@@ -11,7 +11,6 @@ export {
   TransportKeyPairChangedError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
 } from "./credential";
 export { RelayerRequestFailedError, ConfigurationError } from "./relayer";
 export { NotEntitledError } from "./entitlement";

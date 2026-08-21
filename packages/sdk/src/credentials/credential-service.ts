@@ -6,7 +6,6 @@ import {
   KeyWrappingError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
   TransportKeyPairChangedError,
 } from "../errors/credential";
 import { ConfigurationError } from "../errors/relayer";
@@ -257,12 +256,10 @@ export class CredentialService {
       );
     }
 
-    // Snapshot the relayer and chain together, before the first await: a chain
-    // switch mid-flight must not let the EIP-712 domain (built against whichever
-    // chain is active when the relayer call actually runs) disagree with the
-    // top-level `chainId` metadata read afterward.
+    // Snapshot the relayer before the first await: a chain switch mid-flight
+    // must not let the EIP-712 domain get built against a relayer bound to a
+    // different chain than the one active when this call started.
     const relayer = this.#router.relayer;
-    const chainId = this.#router.chain.id;
 
     // Strict persistence: an out-of-process signing ceremony can take hours or
     // days, so a key pair that fails to persist here must fail immediately
@@ -284,17 +281,7 @@ export class CredentialService {
       ),
     );
 
-    return {
-      version: 1,
-      eip712,
-      signerAddress,
-      ...(delegatorAddress && { delegatorAddress }),
-      contracts,
-      chainId,
-      startTimestamp,
-      durationDays,
-      transportPublicKey: keypair.publicKey,
-    };
+    return { version: 1, eip712, signerAddress };
   }
 
   /**
@@ -302,15 +289,26 @@ export class CredentialService {
    * signer produced for a {@link preparePermit} payload, then persist it as a
    * usable permit.
    *
+   * Idempotent: safe to call more than once for the same `(prepared, signature)`
+   * pair (e.g. a webhook re-delivery, or a retried registration call) — the
+   * second call replaces the first call's stored entry instead of duplicating it.
+   *
+   * Every field used below (chain, timing, transport key, contracts, delegation)
+   * is read from `prepared.eip712` — the unsigned typed data — or, once verified,
+   * from the signature-checked `signedPermit` the relayer returns. `preparePermit`
+   * never hands back a separate "claimed" copy of any of these for this method to
+   * cross-check against: there is exactly one source of truth for each field, so
+   * there is nothing to tamper with independently of the signature itself.
+   *
    * @throws if `prepared` doesn't match the {@link PreparedPermit} shape (e.g. it
    *   crossed a process boundary and was corrupted). {@link ConfigurationError}
-   * @throws if `prepared.chainId` doesn't match the currently active chain. {@link PreparedPermitChainMismatchError}
+   * @throws if the chain embedded in `prepared.eip712` doesn't match the currently
+   *   active chain. {@link PreparedPermitChainMismatchError}
    * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
-   * @throws if the transport key pair changed since `preparePermit` ran (e.g. a
-   *   TTL expiry or eviction in between). {@link TransportKeyPairChangedError}
+   * @throws if no transport key pair is stored for `prepared.signerAddress`, or it no
+   *   longer matches the public key `prepared.eip712` was built against (e.g. a TTL
+   *   expiry or eviction in between). {@link TransportKeyPairChangedError}
    * @throws if the signature is invalid or malformed. {@link SigningFailedError}
-   * @throws if `prepared`'s unsigned metadata (chain, contracts, timing, delegator) does
-   *   not match what the signature actually covers. {@link PreparedPermitMismatchError}
    */
   async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
     const parsed = parseSchema(PreparedPermitSchema, prepared);
@@ -320,22 +318,28 @@ export class CredentialService {
     const relayer = this.#router.relayer;
     const activeChainId = this.#router.chain.id;
 
-    if (parsed.chainId !== activeChainId) {
-      throw new PreparedPermitChainMismatchError({
-        preparedChainId: parsed.chainId,
-        activeChainId,
-      });
+    const { domain, message } = parsed.eip712;
+    const preparedChainId = Number(domain.chainId);
+    if (preparedChainId !== activeChainId) {
+      throw new PreparedPermitChainMismatchError({ preparedChainId, activeChainId });
     }
-    if (nowSeconds() >= parsed.startTimestamp + parsed.durationDays * SECONDS_PER_DAY) {
+    const startTimestamp = Number(message.startTimestamp);
+    const durationDays = Number(message.durationDays);
+    if (nowSeconds() >= startTimestamp + durationDays * SECONDS_PER_DAY) {
       throw new PreparedPermitExpiredError(
-        `registerPermit: the prepared permit's validity window (starting ${parsed.startTimestamp}, ` +
-          `${parsed.durationDays}d) has already elapsed — call preparePermit again.`,
+        `registerPermit: the prepared permit's validity window (starting ${startTimestamp}, ` +
+          `${durationDays}d) has already elapsed — call preparePermit again.`,
       );
     }
 
+    // No key pair to fall back on generating here: `prepared.eip712` was built
+    // against a specific transport public key, so a missing (or mismatched)
+    // stored key pair can only mean it changed since preparePermit ran —
+    // generating a fresh one via getOrCreate would just be discarded by the
+    // comparison below, having wastefully persisted a key nothing will use.
     const signerAddress = parsed.signerAddress;
-    const keypair = await this.#vault.getOrCreate(signerAddress);
-    if (keypair.publicKey !== parsed.transportPublicKey) {
+    const keypair = await this.#vault.readStored(signerAddress);
+    if (keypair === null || keypair.publicKey !== message.publicKey) {
       throw new TransportKeyPairChangedError(
         "registerPermit: the transport key pair changed since preparePermit ran — call " +
           "preparePermit again to rebind the signature request to the current key pair.",
@@ -360,13 +364,11 @@ export class CredentialService {
       }
       throw wrapSigningError(error, "registerPermit: signature verification failed");
     }
-
-    // `parsed.contracts`/`startTimestamp`/`durationDays`/`delegatorAddress` travel
-    // alongside `eip712`/`signature` but are not themselves covered by the
-    // signature — only what's embedded in `signedPermit.eip712.message` is
-    // cryptographically verified. Refuse to persist a permit whose storage
-    // metadata disagrees with what the signer actually signed.
-    this.#assertPreparedPermitMatchesSignedPayload(parsed, signedPermit);
+    if (signedPermit.version !== 1) {
+      throw new ConfigurationError(
+        `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
+      );
+    }
 
     const serializedPermit = SerializedPermitSchema.parse(
       await relayer.serializeSignedDecryptionPermit({ signedPermit }),
@@ -374,70 +376,17 @@ export class CredentialService {
 
     const permission: Permission = {
       keypairPublicKey: keypair.publicKey,
-      contractAddresses: parsed.contracts,
+      contractAddresses: normalizeAddresses(signedPermit.eip712.message.contractAddresses),
       serializedPermit,
-      startTimestamp: parsed.startTimestamp,
-      durationDays: parsed.durationDays,
+      startTimestamp: Number(signedPermit.eip712.message.startTimestamp),
+      durationDays: Number(signedPermit.eip712.message.durationDays),
     };
     const scope: PermissionScope = {
       signerAddress,
       chainId: activeChainId,
-      delegatorAddress: parsed.delegatorAddress ?? signerAddress,
+      delegatorAddress: checksum(signedPermit.encryptedDataOwnerAddress),
     };
-    await this.#store.append(scope, [permission]);
-  }
-
-  /**
-   * Verifies that `parsed`'s unsigned top-level metadata agrees with what's
-   * actually embedded in the signature-verified `signedPermit.eip712` (its
-   * `domain.chainId` and `message` fields).
-   */
-  #assertPreparedPermitMatchesSignedPayload(
-    parsed: PreparedPermit,
-    signedPermit: SignedDecryptionPermit,
-  ): void {
-    if (signedPermit.version !== 1) {
-      throw new PreparedPermitMismatchError(
-        `registerPermit: expected a V1 signed permit, got version ${signedPermit.version}.`,
-      );
-    }
-    const { domain, message } = signedPermit.eip712;
-
-    if (Number(domain.chainId) !== parsed.chainId) {
-      throw new PreparedPermitMismatchError(
-        "registerPermit: prepared.chainId does not match the chainId embedded in the signed permit's EIP-712 domain.",
-      );
-    }
-
-    const embeddedContracts = normalizeAddresses(message.contractAddresses);
-    const preparedContracts = normalizeAddresses(parsed.contracts);
-    const contractsMatch =
-      embeddedContracts.length === preparedContracts.length &&
-      embeddedContracts.every((address, i) => address === preparedContracts[i]);
-    if (!contractsMatch) {
-      throw new PreparedPermitMismatchError(
-        "registerPermit: prepared.contracts does not match the contracts embedded in the signed permit.",
-      );
-    }
-
-    if (Number(message.startTimestamp) !== parsed.startTimestamp) {
-      throw new PreparedPermitMismatchError(
-        "registerPermit: prepared.startTimestamp does not match the signed permit's startTimestamp.",
-      );
-    }
-    if (Number(message.durationDays) !== parsed.durationDays) {
-      throw new PreparedPermitMismatchError(
-        "registerPermit: prepared.durationDays does not match the signed permit's durationDays.",
-      );
-    }
-
-    const embeddedDelegator =
-      "delegatorAddress" in message ? checksum(message.delegatorAddress) : undefined;
-    if (embeddedDelegator !== parsed.delegatorAddress) {
-      throw new PreparedPermitMismatchError(
-        "registerPermit: prepared.delegatorAddress does not match the signed permit's delegation.",
-      );
-    }
+    await this.#store.replace(scope, serializedPermit.signature, permission);
   }
 
   /**

@@ -101,7 +101,6 @@ export {
   NotEntitledError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
   RelayerRequestFailedError,
   retryAfterSeconds,
   RpcRateLimitError,

@@ -117,9 +117,16 @@ export interface PreparePermitRequest {
 }
 
 /**
- * Offline permit flow, phase 1 output — the unsigned EIP-712 typed data plus
- * every field {@link registerPermit} needs to verify and persist the
- * signature an out-of-process signer returns for it.
+ * Offline permit flow, phase 1 output — the unsigned EIP-712 typed data
+ * {@link registerPermit} needs to verify and persist the signature an
+ * out-of-process signer returns for it.
+ *
+ * Deliberately minimal: `chainId`, `contracts`, `startTimestamp`,
+ * `durationDays`, and the transport public key are all readable off
+ * {@link eip712}'s `domain`/`message` directly (and, once registered, off the
+ * signature-verified payload) — carrying separate top-level copies would only
+ * create two sources of truth that could disagree. Read them from `eip712`
+ * for display/logging use.
  *
  * `version` pins the permit shape (`1` while the SDK targets protocol ≤0.13)
  * so a future V2 flow is additive, not breaking. JSON-safe — ships across a
@@ -132,16 +139,4 @@ export interface PreparedPermit {
   eip712: SerializedPermitEip712;
   /** Address expected to sign {@link eip712}. */
   signerAddress: ChecksummedAddress;
-  /** Delegator address, present only for a delegated permit. */
-  delegatorAddress?: ChecksummedAddress;
-  /** Contract addresses this permit will authorize once registered. */
-  contracts: ChecksummedAddress[];
-  /** Chain ID the permit is bound to. Must match the active chain at register time. */
-  chainId: number;
-  /** Unix timestamp (seconds) the permit becomes valid. */
-  startTimestamp: number;
-  /** Validity window length in days from {@link startTimestamp}. */
-  durationDays: number;
-  /** Transport key pair public key embedded in {@link eip712}, hex-encoded. */
-  transportPublicKey: Hex;
 }

@@ -6,7 +6,6 @@ import type {
   NoCiphertextError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
@@ -118,8 +117,6 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
   /** Thrown for {@link ZamaErrorCode.PreparedPermitExpired}. */
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
-  /** Thrown for {@link ZamaErrorCode.PreparedPermitMismatch}. */
-  [ZamaErrorCode.PreparedPermitMismatch]: PreparedPermitMismatchError;
 }
 
 /**

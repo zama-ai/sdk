@@ -24,7 +24,7 @@ describe("usePreparePermit", () => {
 
     expect(signer!.signTypedData).not.toHaveBeenCalled();
     expect(prepared.version).toBe(1);
-    expect(prepared.contracts).toEqual([tokenAddress]);
+    expect(prepared.eip712.message.contractAddresses).toEqual([tokenAddress]);
     expect(prepared.eip712).toBeDefined();
   });
 });

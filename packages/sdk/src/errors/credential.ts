@@ -86,18 +86,3 @@ export class PreparedPermitExpiredError extends ZamaError {
     this.name = "PreparedPermitExpiredError";
   }
 }
-
-/**
- * A prepared permit's unsigned top-level metadata (`contracts`, `startTimestamp`,
- * `durationDays`, `delegatorAddress`) does not match what is actually embedded in its
- * signed `eip712` payload. These fields travel alongside the signature but are not
- * themselves covered by it — a caller or process-boundary corruption could otherwise
- * change them after signing without invalidating the signature, causing a stored permit
- * to grant coverage or validity the signer never actually authorized.
- */
-export class PreparedPermitMismatchError extends ZamaError {
-  constructor(message: string, options?: ErrorOptions) {
-    super(ZamaErrorCode.PreparedPermitMismatch, message, options);
-    this.name = "PreparedPermitMismatchError";
-  }
-}

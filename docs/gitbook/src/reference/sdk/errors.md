@@ -25,7 +25,6 @@ import {
   TransportKeyPairChangedError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -94,9 +93,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
-| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | `prepared.chainId` doesn't match the chain `registerPermit` is running against                                                    |
+| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
 | `PreparedPermitExpiredError`            | `PREPARED_PERMIT_EXPIRED`             | A prepared permit's validity window elapsed before its signature was registered                                                   |
-| `PreparedPermitMismatchError`           | `PREPARED_PERMIT_MISMATCH`            | A prepared permit's unsigned metadata does not match what its signature actually covers                                           |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -326,7 +324,7 @@ matchZamaError(error, {
 
 **Code:** `PREPARED_PERMIT_CHAIN_MISMATCH`
 
-Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when `prepared.chainId` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the chain embedded in `prepared.eip712` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
 
 ```ts
 matchZamaError(error, {
@@ -350,20 +348,6 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
-
-### PreparedPermitMismatchError
-
-**Code:** `PREPARED_PERMIT_MISMATCH`
-
-Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when a prepared permit's unsigned top-level metadata (`contracts`, `startTimestamp`, `durationDays`, `delegatorAddress`) does not match what is actually embedded in its signed EIP-712 payload. These fields travel alongside the signature but are not themselves covered by it, so this indicates the payload was tampered with or corrupted after signing.
-
-```ts
-matchZamaError(error, {
-  PREPARED_PERMIT_MISMATCH: () => showError("Offline permit payload is inconsistent — discard it"),
-});
-```
-
-**How to handle:** Discard the payload and call `preparePermit` again. Do not attempt to "fix" the mismatched field — that field is exactly what's untrustworthy.
 
 ### RelayerRequestFailedError
 

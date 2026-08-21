@@ -5425,7 +5425,7 @@ One permit per call: unlike `grantPermit`, `preparePermit` never widens an exist
 
 
 > [!WARNING]
-> **Register promptly.** `prepared` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that `prepared.chainId` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
+> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
 
 
 ## Next steps
@@ -7250,7 +7250,7 @@ const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 
 `(prepared: PreparedPermit, signature: Hex) => Promise<void>`
 
-Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` (and `prepared.delegatorAddress`, if present), not a connected signer.
+Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
 
 ```ts
 const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
@@ -7261,11 +7261,10 @@ await sdk.permits.registerPermit(prepared, signature);
 **Throws:**
 
 - `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - `prepared.chainId` doesn't match the currently active chain
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
 - `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - the transport key pair changed since `preparePermit` ran (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
 - `SigningFailedError` - the signature is invalid or malformed
-- `PreparedPermitMismatchError` - `prepared`'s unsigned metadata (chain, contracts, timing, delegator) does not match what the signature actually covers — a tampered or corrupted payload
 
 See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
 
@@ -9156,7 +9155,6 @@ import {
   TransportKeyPairChangedError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
-  PreparedPermitMismatchError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -9225,9 +9223,8 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
 | `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
-| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | `prepared.chainId` doesn't match the chain `registerPermit` is running against                                                    |
+| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
 | `PreparedPermitExpiredError`            | `PREPARED_PERMIT_EXPIRED`             | A prepared permit's validity window elapsed before its signature was registered                                                   |
-| `PreparedPermitMismatchError`           | `PREPARED_PERMIT_MISMATCH`            | A prepared permit's unsigned metadata does not match what its signature actually covers                                           |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -9457,7 +9454,7 @@ matchZamaError(error, {
 
 **Code:** `PREPARED_PERMIT_CHAIN_MISMATCH`
 
-Thrown by [`registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) when `prepared.chainId` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
+Thrown by [`registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) when the chain embedded in `prepared.eip712` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
 
 ```ts
 matchZamaError(error, {
@@ -9481,20 +9478,6 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
-
-### PreparedPermitMismatchError
-
-**Code:** `PREPARED_PERMIT_MISMATCH`
-
-Thrown by [`registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) when a prepared permit's unsigned top-level metadata (`contracts`, `startTimestamp`, `durationDays`, `delegatorAddress`) does not match what is actually embedded in its signed EIP-712 payload. These fields travel alongside the signature but are not themselves covered by it, so this indicates the payload was tampered with or corrupted after signing.
-
-```ts
-matchZamaError(error, {
-  PREPARED_PERMIT_MISMATCH: () => showError("Offline permit payload is inconsistent — discard it"),
-});
-```
-
-**How to handle:** Discard the payload and call `preparePermit` again. Do not attempt to "fix" the mismatched field — that field is exactly what's untrustworthy.
 
 ### RelayerRequestFailedError
 
@@ -10655,17 +10638,11 @@ Signer-optional, like `prepare`: `request.signer` is an explicit address, not a 
 
 Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a process boundary as-is:
 
-| Field                | Type                     | Meaning                                                                    |
-| -------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| `version`            | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive   |
-| `eip712`             | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`                 |
-| `signerAddress`      | `Address`                | checksummed `request.signer`                                               |
-| `delegatorAddress`   | `Address \| undefined`   | present only for a delegated permit                                        |
-| `contracts`          | `Address[]`              | checksummed, deduplicated, sorted `request.contracts`                      |
-| `chainId`            | `number`                 | chain the permit is bound to; must match the active chain at register time |
-| `startTimestamp`     | `number`                 | Unix timestamp (seconds) the permit becomes valid                          |
-| `durationDays`       | `number`                 | validity window length in days from `startTimestamp`                       |
-| `transportPublicKey` | `Hex`                    | transport key pair public key embedded in `eip712`                         |
+| Field           | Type                     | Meaning                                                                  |
+| --------------- | ------------------------ | ------------------------------------------------------------------------ |
+| `version`       | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive |
+| `eip712`        | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`               |
+| `signerAddress` | `Address`                | checksummed `request.signer`                                             |
 
 **Throws:**
 
@@ -14295,7 +14272,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useRegisterPermit
 
-Mutation hook that verifies and persists the signature an out-of-process signer produced for a [`usePreparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` (and `prepared.delegatorAddress`, if present), not a connected signer. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
+Mutation hook that verifies and persists the signature an out-of-process signer produced for a [`usePreparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
 
 ## Import
 
@@ -14407,11 +14384,10 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 **Throws:**
 
 - `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - `prepared.chainId` doesn't match the currently active chain
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
 - `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - the transport key pair changed since `preparePermit` ran; call `preparePermit` again
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
 - `SigningFailedError` - the signature is invalid or malformed
-- `PreparedPermitMismatchError` - `prepared`'s unsigned metadata (chain, contracts, timing, delegator) does not match what the signature actually covers
 
 ## Related
 

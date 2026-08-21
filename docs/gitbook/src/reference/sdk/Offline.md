@@ -89,17 +89,11 @@ Signer-optional, like `prepare`: `request.signer` is an explicit address, not a 
 
 Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a process boundary as-is:
 
-| Field                | Type                     | Meaning                                                                    |
-| -------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| `version`            | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive   |
-| `eip712`             | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`                 |
-| `signerAddress`      | `Address`                | checksummed `request.signer`                                               |
-| `delegatorAddress`   | `Address \| undefined`   | present only for a delegated permit                                        |
-| `contracts`          | `Address[]`              | checksummed, deduplicated, sorted `request.contracts`                      |
-| `chainId`            | `number`                 | chain the permit is bound to; must match the active chain at register time |
-| `startTimestamp`     | `number`                 | Unix timestamp (seconds) the permit becomes valid                          |
-| `durationDays`       | `number`                 | validity window length in days from `startTimestamp`                       |
-| `transportPublicKey` | `Hex`                    | transport key pair public key embedded in `eip712`                         |
+| Field           | Type                     | Meaning                                                                  |
+| --------------- | ------------------------ | ------------------------------------------------------------------------ |
+| `version`       | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive |
+| `eip712`        | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`               |
+| `signerAddress` | `Address`                | checksummed `request.signer`                                             |
 
 **Throws:**
 

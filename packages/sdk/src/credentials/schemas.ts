@@ -1,7 +1,6 @@
 import { z } from "zod/mini";
 import {
   checksummedAddress,
-  chainId as chainIdSchema,
   hex,
   positiveDays,
   positiveSeconds,
@@ -106,12 +105,4 @@ export const PreparedPermitSchema = z.object({
   version: z.literal(1),
   eip712: Eip712Schema,
   signerAddress: checksummedAddress,
-  delegatorAddress: z.optional(checksummedAddress),
-  contracts: z
-    .array(checksummedAddress)
-    .check(z.minLength(1), z.maxLength(MAX_CONTRACTS_PER_PERMIT)),
-  chainId: chainIdSchema,
-  startTimestamp: unixSeconds,
-  durationDays: positiveDays,
-  transportPublicKey: hex,
 }) satisfies z.ZodMiniType<PreparedPermit>;

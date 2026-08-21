@@ -86,8 +86,6 @@ export const ZamaErrorCode = {
   PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
   /** A prepared permit's validity window elapsed before its signature was registered. */
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
-  /** A prepared permit's unsigned metadata (contracts, timing, delegator) does not match its signed EIP-712 payload. */
-  PreparedPermitMismatch: "PREPARED_PERMIT_MISMATCH",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -143,7 +141,6 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
-  [ZamaErrorCode.PreparedPermitMismatch]: false, // tampered or corrupted payload — re-run preparePermit, do not retry as-is
 };
 
 /**

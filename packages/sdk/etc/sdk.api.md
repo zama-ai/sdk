@@ -5854,7 +5854,6 @@ export interface ErrorForCode {
     [ZamaErrorCode.NotEntitled]: NotEntitledError;
     [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
     [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
-    [ZamaErrorCode.PreparedPermitMismatch]: PreparedPermitMismatchError;
     [ZamaErrorCode.RelayerRequestFailed]: RelayerRequestFailedError;
     [ZamaErrorCode.RpcRateLimited]: RpcRateLimitError;
     [ZamaErrorCode.SignerNotConfigured]: SignerNotConfiguredError;
@@ -11506,14 +11505,8 @@ export interface PreparedFor<K extends TransactionKind> extends PreparedTransact
 
 // @public
 export interface PreparedPermit {
-    chainId: number;
-    contracts: ChecksummedAddress[];
-    delegatorAddress?: ChecksummedAddress;
-    durationDays: number;
     eip712: SerializedPermitEip712;
     signerAddress: ChecksummedAddress;
-    startTimestamp: number;
-    transportPublicKey: Hex;
     version: 1;
 }
 
@@ -11529,11 +11522,6 @@ export class PreparedPermitChainMismatchError extends ZamaError {
 
 // @public
 export class PreparedPermitExpiredError extends ZamaError {
-    constructor(message: string, options?: ErrorOptions);
-}
-
-// @public
-export class PreparedPermitMismatchError extends ZamaError {
     constructor(message: string, options?: ErrorOptions);
 }
 
@@ -19675,7 +19663,6 @@ export const ZamaErrorCode: {
     readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
-    readonly PreparedPermitMismatch: "PREPARED_PERMIT_MISMATCH";
 };
 
 // @public
