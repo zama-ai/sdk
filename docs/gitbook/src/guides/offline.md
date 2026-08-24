@@ -179,7 +179,7 @@ Then register the signature. This verifies it against `prepared.eip712` and pers
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
-One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature. `prepared` is a V1 permit (`version: 1`): it stays valid after the chain upgrades to a newer protocol version, and the relayer accepts V1 and V2 permits side by side, so there's no forced migration when a V2 flow ships.
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
 {% hint style="warning" %}
 **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.

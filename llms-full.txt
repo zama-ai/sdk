@@ -2155,9 +2155,9 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
-## Offline decryption permits
+### Decryption permits
 
-Decryption permits now have an offline flow, closing the gap the guide above used to call out: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data for a permit — no signer required — and `sdk.permits.registerPermit` verifies and persists the signature a custody partner returns for it.
+The same offline model now covers decryption permits: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data for a permit — no signer required — and `sdk.permits.registerPermit` verifies and persists the signature a custody partner returns for it.
 
 ```ts
 const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
@@ -2166,7 +2166,7 @@ const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contr
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
-One permit per call — unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks over 10 contracts. It's a V1 permit: it stays valid after the chain upgrades to a newer protocol version, and V1/V2 permits coexist. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow and [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for the method signatures and typed errors.
+One permit per call — unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks over 10 contracts. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow and [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for the method signatures and typed errors.
 
 ## Transport key pair encrypted at rest
 
@@ -5421,7 +5421,7 @@ Then register the signature. This verifies it against `prepared.eip712` and pers
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
-One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature. `prepared` is a V1 permit (`version: 1`): it stays valid after the chain upgrades to a newer protocol version, and the relayer accepts V1 and V2 permits side by side, so there's no forced migration when a V2 flow ships.
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
 
 
 > [!WARNING]
@@ -18942,7 +18942,7 @@ See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sd
 
 ## Offline permits
 
-The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that, so `sdk.offline.preparePermit` / `sdk.permits.registerPermit` split the same signature out of the SDK: prepare the unsigned typed data, sign it externally, then register the signature. See the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the workflow.
+The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that: `sdk.offline.preparePermit` builds the same EIP-712 typed data without signing it, and `sdk.permits.registerPermit` verifies and persists the signature once the custodian returns it. See the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the workflow.
 
 ## Related
 

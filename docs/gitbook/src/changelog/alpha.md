@@ -26,9 +26,9 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](../guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
-## Offline decryption permits
+### Decryption permits
 
-Decryption permits now have an offline flow, closing the gap the guide above used to call out: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data for a permit — no signer required — and `sdk.permits.registerPermit` verifies and persists the signature a custody partner returns for it.
+The same offline model now covers decryption permits: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data for a permit — no signer required — and `sdk.permits.registerPermit` verifies and persists the signature a custody partner returns for it.
 
 ```ts
 const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
@@ -37,7 +37,7 @@ const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contr
 await sdk.permits.registerPermit(prepared, signature);
 ```
 
-One permit per call — unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks over 10 contracts. It's a V1 permit: it stays valid after the chain upgrades to a newer protocol version, and V1/V2 permits coexist. See [Offline signing](../guides/offline.md#offline-permits) for the full workflow and [Offline reference](../reference/sdk/Offline.md#preparepermit) for the method signatures and typed errors.
+One permit per call — unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks over 10 contracts. See [Offline signing](../guides/offline.md#offline-permits) for the full workflow and [Offline reference](../reference/sdk/Offline.md#preparepermit) for the method signatures and typed errors.
 
 ## Transport key pair encrypted at rest
 

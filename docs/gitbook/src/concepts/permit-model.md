@@ -108,7 +108,7 @@ See [ZamaSDK.onWalletAccountChange](../reference/sdk/ZamaSDK.md#onwalletaccountc
 
 ## Offline permits
 
-The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that, so `sdk.offline.preparePermit` / `sdk.permits.registerPermit` split the same signature out of the SDK: prepare the unsigned typed data, sign it externally, then register the signature. See the [Offline signing guide](../guides/offline.md#offline-permits) for the workflow.
+The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that: `sdk.offline.preparePermit` builds the same EIP-712 typed data without signing it, and `sdk.permits.registerPermit` verifies and persists the signature once the custodian returns it. See the [Offline signing guide](../guides/offline.md#offline-permits) for the workflow.
 
 ## Related
 
