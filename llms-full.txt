@@ -2155,6 +2155,19 @@ const prepared = await sdk.offline.prepare({
 
 All eleven write operations are covered, including the shield legs and the two-phase unshield. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) for the full guide: the handoff contract, request kinds, multi-transaction batches, and approval-delay behavior.
 
+### Decryption permits
+
+The same offline model now covers decryption permits: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data for a permit — no signer required — and `sdk.permits.registerPermit` verifies and persists the signature a custody partner returns for it.
+
+```ts
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
+// hand prepared.eip712 to your custody platform for eth_signTypedData_v4
+
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+One permit per call — unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks over 10 contracts. See [Offline signing](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow and [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for the method signatures and typed errors.
+
 ## Transport key pair encrypted at rest
 
 A new `transportKeyPairDerivationSecret` option on the `ZamaSDK` constructor encrypts the transport private key before it is written to storage. (This is key encryption, unrelated to token wrapping via `shield`/`unshield`.) It is for headless environments with no secure storage to delegate to: CLI tools, agents, bare-metal boxes. Omit it and nothing changes: storage stays plaintext, as before.
@@ -5381,14 +5394,43 @@ Policy approval can take hours or days. The cryptographic proofs tolerate that, 
 - Contract state can change while approval is pending, and explicit timestamps such as `SetOperator.until` or a delegation expiry keep advancing. Re-prepare when the transaction's assumptions no longer hold.
 - The fee cap can fall below the base fee. Add suitable headroom to `maxFeePerGas`; only the base fee plus priority tip is charged, so unused cap headroom costs nothing. Keep `maxPriorityFeePerGas` at an appropriate tip because raising it can increase the amount paid.
 
+## Offline permits
 
-> [!INFO]
-> **Transactions only, for now.** Producing a decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) offline is not yet available. In the meantime, route permits through a `BaseSigner` whose `signTypedData` awaits your custody API, then call `sdk.permits.grantPermit(contracts)`.
+A decryption [permit](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) is not a transaction — nothing is broadcast, and registering the signature is a local operation — so it gets its own two-step flow instead of a `prepare` kind: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data, and `sdk.permits.registerPermit` verifies and persists the signature the custodian returns.
+
+```ts
+const prepared = await sdk.offline.preparePermit({
+  signer: "0xCustodyWallet",
+  contracts: ["0xConfidentialToken"],
+  // delegator: "0xOwner",      // omit for a self permit
+  // durationDays: 30,          // defaults to the SDK's configured permitTTL
+});
+```
+
+`preparePermit` is signer-offline, not network-offline: resolving the transport key pair and building the typed data still reads the chain's KMS signers context on-chain, so the provider must be reachable. It never touches a configured signer or connected wallet — `request.signer` is an explicit address, matching the offline `prepare` contract above.
+
+Hand `prepared.eip712` to the custodian for `eth_signTypedData_v4`, exactly as you would for the atomic `sdk.permits.grantPermit` path — nothing about the payload changes for the offline flow:
+
+```ts
+const signature = await custody.signTypedData(prepared.eip712);
+```
+
+Then register the signature. This verifies it against `prepared.eip712` and persists the permit — no further wallet interaction:
+
+```ts
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
+
+
+> [!WARNING]
+> **Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for details.
 
 
 ## Next steps
 
-- [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md) -- full `prepare` signature, request kinds, and options
+- [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md) -- full `prepare`/`preparePermit` signatures, request kinds, and options
 - [Shield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/shield-tokens.md) -- the atomic shield flow and routing table
 - [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/unshield-tokens.md) -- the atomic two-phase unshield
 - [Node.js backend](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/node-js-backend.md) -- server-side setup and custom signers
@@ -7204,6 +7246,28 @@ Checks whether the current signer has stored delegated-decryption permits for `d
 const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 ```
 
+### permits.registerPermit
+
+`(prepared: PreparedPermit, signature: Hex) => Promise<void>`
+
+Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
+
+```ts
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
+const signature = await custody.signTypedData(prepared.eip712);
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+**Throws:**
+
+- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- `SigningFailedError` - the signature is invalid or malformed
+
+See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
+
 ### decryption.decryptValues
 
 `(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
@@ -7406,6 +7470,14 @@ See the [Delegations reference](https://raw.githubusercontent.com/zama-ai/sdk/pr
 Builds an unsigned transaction that the caller signs and broadcasts out-of-process (institutional custody, HSMs). Works without a configured signer.
 
 See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md) for the request kinds and options, and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) for the workflow.
+
+### offline.preparePermit
+
+`sdk.offline.preparePermit(request)`
+
+Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](#permits-grantpermit). Hand the result to an out-of-process signer, then pass the returned signature to [`permits.registerPermit`](#permits-registerpermit). Works without a configured signer.
+
+See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for the request/response shape and typed errors, and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the workflow.
 
 ### dispose
 
@@ -9080,6 +9152,9 @@ import {
   TransportKeyPairExpiredError,
   NoCiphertextError,
   KeyWrappingError,
+  TransportKeyPairChangedError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -9147,6 +9222,9 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 | `TransportKeyPairExpiredError`          | `KEYPAIR_EXPIRED`                     | Transport key pair expired — user must re-sign                                                                                    |
 | `NoCiphertextError`                     | `NO_CIPHERTEXT`                       | No encrypted balance for this account                                                                                             |
 | `KeyWrappingError`                      | `KEY_WRAPPING_FAILED`                 | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
+| `TransportKeyPairChangedError`          | `TRANSPORT_KEY_PAIR_CHANGED`          | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
+| `PreparedPermitChainMismatchError`      | `PREPARED_PERMIT_CHAIN_MISMATCH`      | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
+| `PreparedPermitExpiredError`            | `PREPARED_PERMIT_EXPIRED`             | A prepared permit's validity window elapsed before its signature was registered                                                   |
 | `RelayerRequestFailedError`             | `RELAYER_REQUEST_FAILED`              | Relayer HTTP request failed                                                                                                       |
 | `NotEntitledError`                      | `NOT_ENTITLED`                        | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
 | `RpcRateLimitError`                     | `RPC_RATE_LIMITED`                    | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
@@ -9357,6 +9435,49 @@ matchZamaError(error, {
 - `crypto.subtle` is unavailable in the environment.
 
 With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobber the entry every other signer in the scope reads. Verify that every instance sharing the scope is configured with the same `transportKeyPairDerivationSecret`, and that none is missing it. See [Security Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/security-model.md#wrapped-at-rest-transportkeypairderivationsecret) for the mechanism and migration steps.
+
+### TransportKeyPairChangedError
+
+**Code:** `TRANSPORT_KEY_PAIR_CHANGED`
+
+Thrown by [`registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) when the transport key pair changed between `preparePermit` and `registerPermit` — a TTL expiry or eviction happened in between. The prepared EIP-712 payload is signed against the old key pair's public key; registering it under a different one would bind the permit to the wrong key.
+
+```ts
+matchZamaError(error, {
+  TRANSPORT_KEY_PAIR_CHANGED: () => showError("Offline permit expired — restart the request"),
+});
+```
+
+**How to handle:** Call `preparePermit` again to rebind the request to the current key pair, then repeat the external signing step.
+
+### PreparedPermitChainMismatchError
+
+**Code:** `PREPARED_PERMIT_CHAIN_MISMATCH`
+
+Thrown by [`registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) when the chain embedded in `prepared.eip712` doesn't match the chain the SDK is currently configured for. The error carries `preparedChainId` and `activeChainId`.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_CHAIN_MISMATCH: (e) =>
+    showError(`Switch to chain ${e.preparedChainId} to register this permit`),
+});
+```
+
+**How to handle:** Register the permit while the SDK is configured for the chain it was prepared for, or call `preparePermit` again against the currently active chain.
+
+### PreparedPermitExpiredError
+
+**Code:** `PREPARED_PERMIT_EXPIRED`
+
+A prepared permit's validity window (`startTimestamp` + `durationDays`) elapsed before its signature was registered — the out-of-process signing ceremony took longer than the permit's lifetime.
+
+```ts
+matchZamaError(error, {
+  PREPARED_PERMIT_EXPIRED: () => showError("Offline permit expired before it was registered"),
+});
+```
+
+**How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
 
 ### RelayerRequestFailedError
 
@@ -10487,6 +10608,49 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
 
+### preparePermit
+
+```ts
+preparePermit(request: PreparePermitRequest): Promise<PreparedPermit>
+```
+
+Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-grantpermit). Hand `prepared.eip712` to an out-of-process signer for `eth_signTypedData_v4`, then pass the returned signature to [`permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit).
+
+A permit is not a transaction: nothing is broadcast, and registering the signature is a local operation, not a relayer round-trip — so this is its own method rather than a `prepare()` request kind.
+
+```ts
+const prepared = await sdk.offline.preparePermit({
+  signer: "0xCustodyWallet",
+  contracts: ["0xConfidentialToken"],
+});
+```
+
+`request` fields:
+
+| Field          | Type        | Default                                       | Meaning                                             |
+| -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
+| `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
+| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
+| `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
+| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
+
+Signer-optional, like `prepare`: `request.signer` is an explicit address, not a connected wallet account — resolving the transport key pair needs no configured signer. It is signer-offline, not network-offline: building the typed data still reads the chain's KMS signers context on-chain, so the provider must be reachable.
+
+Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a process boundary as-is:
+
+| Field           | Type                     | Meaning                                                                  |
+| --------------- | ------------------------ | ------------------------------------------------------------------------ |
+| `version`       | `1`                      | permit format version; pins the V1 shape so a future V2 flow is additive |
+| `eip712`        | `SerializedPermitEip712` | the EIP-712 typed data to sign with `eth_signTypedData_v4`               |
+| `signerAddress` | `Address`                | checksummed `request.signer`                                             |
+
+**Throws:**
+
+- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+
+See [`permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
+
 ## Request kinds
 
 Each request is a discriminated union member on `kind`. `from` is always the transaction sender.
@@ -10536,10 +10700,11 @@ Omitted fields fall back to live chain state:
 
 ## Related
 
-- [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) - the full workflow
+- [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md) - the full workflow, including [offline permits](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits)
 - [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/GenericProvider.md) - `prepareTransaction`, the provider hook behind `prepare`
 - [Event decoders](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/event-decoders.md) - `findUnwrapRequested` and friends
 - [WrappedToken](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/WrappedToken.md) - the atomic shield/unshield counterparts
+- [ZamaSDK](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) - `permits.registerPermit`, the second phase of the offline permit flow
 
 ## Network presets
 
@@ -13954,7 +14119,282 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 - [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useHasPermit.md) -- check whether stored permits cover contracts
 - [`useRevokePermits`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useRevokePermits.md) -- revoke permits for specific contracts
 - [`useClearCredentials`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useClearCredentials.md) -- wipe the transport key pair and all permits
+- [`usePreparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md) -- the offline, signer-less counterpart for custody partners
 - [Permit Model](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/concepts/permit-model.md) -- permit lifecycle and TTL configuration
+
+## usePreparePermit
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/usePreparePermit.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md
+- logical_path: reference/react/usePreparePermit
+
+# usePreparePermit
+
+Mutation hook that builds the unsigned EIP-712 typed data for a decryption permit, without signing it — for custody partners (HSM, policy engines, out-of-process signers) that cannot sign in-process. Hand `data.eip712` to the external signer for `eth_signTypedData_v4`, then pass the returned signature to [`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useRegisterPermit.md).
+
+Prefer [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useGrantPermit.md) unless signing must happen out-of-process: this is the offline, low-level counterpart — one permit per call, no widening or chunking against existing permits.
+
+## Import
+
+```ts
+import { usePreparePermit } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+```tsx
+import { usePreparePermit } from "@zama-fhe/react-sdk";
+
+function PrepareCustodyPermit({
+  custodyAddress,
+  tokenAddress,
+}: {
+  custodyAddress: `0x${string}`;
+  tokenAddress: `0x${string}`;
+}) {
+  const { mutateAsync: preparePermit, isPending } = usePreparePermit();
+
+  const handlePrepare = async () => {
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
+    // Hand prepared.eip712 to the custody API for eth_signTypedData_v4,
+    // then pass the returned signature to useRegisterPermit.
+    return prepared;
+  };
+
+  return (
+    <button onClick={handlePrepare} disabled={isPending}>
+      {isPending ? "Preparing..." : "Prepare offline permit"}
+    </button>
+  );
+}
+```
+
+## Parameters
+
+`usePreparePermit` takes no configuration parameters.
+
+## Mutation variables
+
+### request
+
+`PreparePermitRequest`
+
+| Field          | Type        | Default                                       | Meaning                                             |
+| -------------- | ----------- | --------------------------------------------- | --------------------------------------------------- |
+| `signer`       | `Address`   | required                                      | address expected to sign the returned `eip712`      |
+| `contracts`    | `Address[]` | required, max 10, no chunking                 | contract addresses to authorize                     |
+| `delegator`    | `Address`   | none — self permit; must differ from `signer` | delegator address, for a delegated permit           |
+| `durationDays` | `number`    | the SDK's configured `permitTTL`, max 365     | permit validity window in days, a V1 protocol limit |
+
+Signer-optional: `request.signer` is an explicit address, not a connected wallet account — building the typed data needs no configured signer, only a reachable provider (it reads the chain's KMS signers context on-chain).
+
+```tsx
+const prepared = await preparePermit({
+  signer: custodyAddress,
+  contracts: [tokenAddress],
+  // delegator: ownerAddress,   // omit for a self permit
+  // durationDays: 30,          // defaults to the SDK's configured permitTTL
+});
+```
+
+## Return Type
+
+Returns a standard TanStack Query `UseMutationResult<PreparedPermit, Error, PreparePermitRequest>`. `data` is a `PreparedPermit` — every field is JSON-safe, so it crosses a process boundary as-is.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+**Throws:**
+
+- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+
+## Related
+
+- [`useRegisterPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useRegisterPermit.md) -- verify and persist the signature returned for a prepared permit
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useGrantPermit.md) -- the atomic, wallet-connected counterpart
+- [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) -- the full offline permit workflow
+- [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) -- `sdk.offline.preparePermit`'s full signature and typed errors
+
+## useRegisterPermit
+
+- source_type: official-doc
+- source_path: docs/gitbook/src/reference/react/useRegisterPermit.md
+- source_url: https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useRegisterPermit.md
+- logical_path: reference/react/useRegisterPermit
+
+# useRegisterPermit
+
+Mutation hook that verifies and persists the signature an out-of-process signer produced for a [`usePreparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it. Automatically invalidates [`useHasPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useHasPermit.md) queries on success.
+
+## Import
+
+```ts
+import { useRegisterPermit } from "@zama-fhe/react-sdk";
+```
+
+## Usage
+
+```tsx
+import { usePreparePermit, useRegisterPermit } from "@zama-fhe/react-sdk";
+
+function CustodyPermitFlow({
+  custodyAddress,
+  tokenAddress,
+}: {
+  custodyAddress: `0x${string}`;
+  tokenAddress: `0x${string}`;
+}) {
+  const { mutateAsync: preparePermit } = usePreparePermit();
+  const { mutateAsync: registerPermit, isPending } = useRegisterPermit();
+
+  const handleAuthorize = async () => {
+    const prepared = await preparePermit({ signer: custodyAddress, contracts: [tokenAddress] });
+    const signature = await custodyApi.signTypedData(prepared.eip712);
+    await registerPermit({ prepared, signature });
+  };
+
+  return (
+    <button onClick={handleAuthorize} disabled={isPending}>
+      {isPending ? "Registering..." : "Complete offline authorization"}
+    </button>
+  );
+}
+```
+
+## Parameters
+
+`useRegisterPermit` takes no configuration parameters.
+
+## Mutation variables
+
+### params
+
+`RegisterPermitParams`
+
+| Field       | Type             | Meaning                                                     |
+| ----------- | ---------------- | ----------------------------------------------------------- |
+| `prepared`  | `PreparedPermit` | the payload `usePreparePermit` returned                     |
+| `signature` | `Hex`            | the `eth_signTypedData_v4` signature over `prepared.eip712` |
+
+```tsx
+await registerPermit({ prepared, signature });
+```
+
+## Return Type
+
+Returns a standard TanStack Query `UseMutationResult<void, Error, RegisterPermitParams>`.
+
+### `mutate`
+
+**Type:** `(variables: TVariables) => void`
+
+Trigger the mutation. Does not return a promise. Use `onSuccess` / `onError` callbacks to react to the result.
+
+### `mutateAsync`
+
+**Type:** `(variables: TVariables) => Promise<TData>`
+
+Trigger the mutation and return a promise. Useful when you need to `await` the result in an event handler.
+
+### `isPending`
+
+**Type:** `boolean`
+
+`true` while the mutation is in progress. Use this to show loading indicators.
+
+### `isSuccess`
+
+**Type:** `boolean`
+
+`true` after the mutation completes without error.
+
+### `isError`
+
+**Type:** `boolean`
+
+`true` after the mutation throws an error.
+
+### `error`
+
+**Type:** `Error | null`
+
+The error object if the mutation failed, otherwise `null`.
+
+### `data`
+
+**Type:** `TData | undefined`
+
+The return value from the mutation function after a successful call.
+
+### `reset`
+
+**Type:** `() => void`
+
+Reset the mutation state back to its initial values. Clears `data`, `error`, and status flags.
+
+
+**Throws:**
+
+- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
+- `SigningFailedError` - the signature is invalid or malformed
+
+## Related
+
+- [`usePreparePermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/usePreparePermit.md) -- build the unsigned typed data this hook registers a signature for
+- [`useGrantPermit`](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/react/useGrantPermit.md) -- the atomic, wallet-connected counterpart
+- [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) -- the full offline permit workflow
+- [ZamaSDK reference](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) -- `sdk.permits.registerPermit`'s full signature and typed errors
 
 ## useHasPermit
 
@@ -18499,6 +18939,10 @@ The SDK automatically manages permits when the wallet state changes:
 | **Chain switch**      | Permits are chain-scoped, so existing permits on the previous chain remain intact |
 
 See [ZamaSDK.onWalletAccountChange](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/reference/sdk/ZamaSDK.md#onwalletaccountchange) for programmatic access to these transitions.
+
+## Offline permits
+
+The lifecycle above assumes a connected wallet signs `grantPermit`'s EIP-712 message in-process. Custody partners — HSMs, policy engines, out-of-process signers — cannot do that: `sdk.offline.preparePermit` builds the same EIP-712 typed data without signing it, and `sdk.permits.registerPermit` verifies and persists the signature once the custodian returns it. See the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/prerelease/docs/gitbook/src/guides/offline.md#offline-permits) for the workflow.
 
 ## Related
 

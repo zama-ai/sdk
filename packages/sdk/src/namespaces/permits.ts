@@ -1,5 +1,6 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
 import type { CredentialService } from "../credentials/credential-service";
+import type { PreparedPermit } from "../credentials/types";
 import { requireConfigured } from "../errors";
 import type { CachingService } from "../services/caching-service";
 import type { GenericLogger, GenericProvider, GenericSigner } from "../types";
@@ -151,6 +152,28 @@ export class Permits {
       return;
     }
     await service.warmTransportKeyPair(account.address);
+  }
+
+  /**
+   * Offline permit flow, phase 2: verify and persist the signature an
+   * out-of-process signer produced for a `sdk.offline.preparePermit` payload.
+   *
+   * No wallet account required: the permit is scoped by `prepared.signerAddress`
+   * (and `prepared.delegatorAddress`, if present), not a connected signer.
+   *
+   * @param prepared - The payload `sdk.offline.preparePermit` returned.
+   * @param signature - The 65-byte `eth_signTypedData_v4` signature over `prepared.eip712`.
+   * @throws if `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a
+   *   process boundary and was corrupted). {@link ConfigurationError}
+   * @throws if the chain embedded in `prepared.eip712` doesn't match the active chain. {@link PreparedPermitChainMismatchError}
+   * @throws if the permit's validity window has already elapsed. {@link PreparedPermitExpiredError}
+   * @throws if the transport key pair changed since prepare. {@link TransportKeyPairChangedError}
+   * @throws if the signature is invalid or malformed. {@link SigningFailedError}
+   */
+  async registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void> {
+    const service = this.#requireCredentialService("registerPermit");
+    await service.registerPermit(prepared, signature);
+    await this.#clearDecryptCacheForRequester(prepared.signerAddress);
   }
 
   /**

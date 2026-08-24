@@ -4,6 +4,9 @@ import type { ChainMismatchError } from "./chain";
 import type {
   KeyWrappingError,
   NoCiphertextError,
+  PreparedPermitChainMismatchError,
+  PreparedPermitExpiredError,
+  TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   InvalidTransportKeyPairError,
 } from "./credential";
@@ -108,6 +111,12 @@ export interface ErrorForCode {
   [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
   /** Thrown for {@link ZamaErrorCode.KeyWrappingFailed}. */
   [ZamaErrorCode.KeyWrappingFailed]: KeyWrappingError;
+  /** Thrown for {@link ZamaErrorCode.TransportKeyPairChanged}. */
+  [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
+  /** Thrown for {@link ZamaErrorCode.PreparedPermitChainMismatch}. */
+  [ZamaErrorCode.PreparedPermitChainMismatch]: PreparedPermitChainMismatchError;
+  /** Thrown for {@link ZamaErrorCode.PreparedPermitExpired}. */
+  [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
 }
 
 /**

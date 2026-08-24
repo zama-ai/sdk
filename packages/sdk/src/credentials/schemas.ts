@@ -6,7 +6,8 @@ import {
   positiveSeconds,
   unixSeconds,
 } from "../schemas/primitives";
-import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
+import type { PreparedPermit } from "./types";
+import { MAX_CONTRACTS_PER_PERMIT, MAX_V1_PERMIT_DURATION_DAYS, SECONDS_PER_DAY } from "./utils";
 
 const transportKeyPairTTLError = "transportKeyPairTTL must be a positive integer number of seconds";
 const permitTTLError = "permitTTL must be a positive integer number of days";
@@ -37,7 +38,13 @@ export const TransportKeyPairTTLSchema = z
 
 export const PermitTTLSchema = z
   .int({ error: permitTTLError })
-  .check(z.positive({ error: permitTTLError }));
+  .check(
+    z.positive({ error: permitTTLError }),
+    z.maximum(
+      MAX_V1_PERMIT_DURATION_DAYS,
+      `permitTTL must not exceed the V1 permit maximum of ${MAX_V1_PERMIT_DURATION_DAYS} days`,
+    ),
+  );
 
 export const TransportKeyPairScopeSchema = z
   .string({ error: transportKeyPairScopeError })
@@ -94,3 +101,14 @@ export const PermissionSchema = z.object({
 export const PermissionListSchema = z.array(PermissionSchema);
 
 export const ScopeIndexSchema = z.array(z.string());
+
+/**
+ * Defensive shape validation for the `prepared` argument `registerPermit`
+ * receives — a payload that may have crossed a process boundary (custody
+ * API, HSM ceremony) and been `JSON.parse`'d back. Mirrors {@link PreparedPermit}.
+ */
+export const PreparedPermitSchema = z.object({
+  version: z.literal(1),
+  eip712: Eip712Schema,
+  signerAddress: checksummedAddress,
+}) satisfies z.ZodMiniType<PreparedPermit>;

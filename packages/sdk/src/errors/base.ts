@@ -80,6 +80,12 @@ export const ZamaErrorCode = {
   WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY",
   /** Wrapping or unwrapping the transport private key with `transportKeyPairDerivationSecret` failed. */
   KeyWrappingFailed: "KEY_WRAPPING_FAILED",
+  /** The transport key pair changed between `preparePermit` and `registerPermit`. */
+  TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED",
+  /** A prepared permit's `chainId` does not match the chain `registerPermit` is running against. */
+  PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
+  /** A prepared permit's validity window elapsed before its signature was registered. */
+  PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
 } as const;
 
 /** Union of all {@link ZamaErrorCode} string values. */
@@ -132,6 +138,9 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.WalletNotConnected]: false,
   [ZamaErrorCode.WalletAccountNotReady]: true, // async wallet-account discovery still resolving
   [ZamaErrorCode.KeyWrappingFailed]: false, // a transportKeyPairDerivationSecret mismatch or environment capability issue, not transient
+  [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must re-run preparePermit against the current key pair
+  [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
+  [ZamaErrorCode.PreparedPermitExpired]: false, // caller must re-run preparePermit for a fresh validity window
 };
 
 /**

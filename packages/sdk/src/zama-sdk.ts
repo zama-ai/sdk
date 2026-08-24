@@ -229,7 +229,7 @@ export class ZamaSDK {
       router: config.router,
       decryptionService: this.#decryptionService,
     });
-    this.offline = new Offline(this.#offlineService);
+    this.offline = new Offline(this.#offlineService, this.#credentialService);
   }
 
   /**

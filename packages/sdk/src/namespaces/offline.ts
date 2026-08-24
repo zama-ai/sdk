@@ -1,3 +1,5 @@
+import type { CredentialService } from "../credentials/credential-service";
+import type { PreparedPermit, PreparePermitRequest } from "../credentials/types";
 import type { OfflineService } from "../services/offline-service";
 import type {
   PreparedFor,
@@ -14,10 +16,12 @@ import type {
  */
 export class Offline {
   readonly #offlineService: OfflineService;
+  readonly #credentialService: CredentialService;
 
   /** @internal */
-  constructor(offlineService: OfflineService) {
+  constructor(offlineService: OfflineService, credentialService: CredentialService) {
     this.#offlineService = offlineService;
+    this.#credentialService = credentialService;
   }
 
   /**
@@ -45,5 +49,33 @@ export class Offline {
     options?: PrepareOptions,
   ): Promise<PreparedFor<K>> {
     return this.#offlineService.prepare(request, options);
+  }
+
+  /**
+   * Build the offline-signing payload for a decryption permit: the unsigned
+   * EIP-712 typed data plus everything `sdk.permits.registerPermit` needs to
+   * verify and persist the signature an out-of-process signer returns for it.
+   *
+   * Not a `prepare()` transaction kind: a permit is not a transaction —
+   * nothing is broadcast, and registering the signature is a local operation,
+   * not a relayer round-trip.
+   *
+   * Signer-optional, like {@link prepare}: `request.signer` is an explicit
+   * address, not a connected wallet account. Building the typed data still
+   * reads the chain's KMS signers context on-chain — signer-offline, not
+   * network-offline.
+   *
+   * One permit per call: unlike `sdk.permits.grantPermit`, this never widens
+   * an existing permit or chunks over 10 contracts — `request.contracts` maps
+   * to exactly one signature.
+   *
+   * @throws if `request.contracts` is empty or exceeds 10 addresses, `request.delegator`
+   *   equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
+   *   of 365 days. {@link ConfigurationError}
+   * @throws if a concurrent `permits.revokeTransportKeyPair()` rotates the transport key
+   *   pair while this call is generating one. {@link TransportKeyPairChangedError}
+   */
+  preparePermit(request: PreparePermitRequest): Promise<PreparedPermit> {
+    return this.#credentialService.preparePermit(request);
   }
 }

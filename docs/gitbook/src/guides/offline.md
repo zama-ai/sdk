@@ -152,13 +152,42 @@ Policy approval can take hours or days. The cryptographic proofs tolerate that, 
 - Contract state can change while approval is pending, and explicit timestamps such as `SetOperator.until` or a delegation expiry keep advancing. Re-prepare when the transaction's assumptions no longer hold.
 - The fee cap can fall below the base fee. Add suitable headroom to `maxFeePerGas`; only the base fee plus priority tip is charged, so unused cap headroom costs nothing. Keep `maxPriorityFeePerGas` at an appropriate tip because raising it can increase the amount paid.
 
-{% hint style="info" %}
-**Transactions only, for now.** Producing a decryption [permit](../concepts/permit-model.md) offline is not yet available. In the meantime, route permits through a `BaseSigner` whose `signTypedData` awaits your custody API, then call `sdk.permits.grantPermit(contracts)`.
+## Offline permits
+
+A decryption [permit](../concepts/permit-model.md) is not a transaction — nothing is broadcast, and registering the signature is a local operation — so it gets its own two-step flow instead of a `prepare` kind: `sdk.offline.preparePermit` builds the unsigned EIP-712 typed data, and `sdk.permits.registerPermit` verifies and persists the signature the custodian returns.
+
+```ts
+const prepared = await sdk.offline.preparePermit({
+  signer: "0xCustodyWallet",
+  contracts: ["0xConfidentialToken"],
+  // delegator: "0xOwner",      // omit for a self permit
+  // durationDays: 30,          // defaults to the SDK's configured permitTTL
+});
+```
+
+`preparePermit` is signer-offline, not network-offline: resolving the transport key pair and building the typed data still reads the chain's KMS signers context on-chain, so the provider must be reachable. It never touches a configured signer or connected wallet — `request.signer` is an explicit address, matching the offline `prepare` contract above.
+
+Hand `prepared.eip712` to the custodian for `eth_signTypedData_v4`, exactly as you would for the atomic `sdk.permits.grantPermit` path — nothing about the payload changes for the offline flow:
+
+```ts
+const signature = await custody.signTypedData(prepared.eip712);
+```
+
+Then register the signature. This verifies it against `prepared.eip712` and persists the permit — no further wallet interaction:
+
+```ts
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+One permit per call: unlike `grantPermit`, `preparePermit` never widens an existing permit or chunks a request over 10 contracts — `contracts` maps to exactly one signature.
+
+{% hint style="warning" %}
+**Register promptly.** `prepared.eip712.message` carries the permit's validity window (`startTimestamp` + `durationDays`); if approval takes long enough that the window elapses before you call `registerPermit`, it throws `PreparedPermitExpiredError` — call `preparePermit` again for a fresh window. Registering also checks that the chain embedded in `prepared.eip712.domain` matches the SDK's active chain (`PreparedPermitChainMismatchError`) and that the transport key pair hasn't changed since prepare (`TransportKeyPairChangedError`, e.g. after a TTL expiry) — see the [Offline reference](../reference/sdk/Offline.md#preparepermit) for details.
 {% endhint %}
 
 ## Next steps
 
-- [Offline reference](../reference/sdk/Offline.md) -- full `prepare` signature, request kinds, and options
+- [Offline reference](../reference/sdk/Offline.md) -- full `prepare`/`preparePermit` signatures, request kinds, and options
 - [Shield tokens](./shield-tokens.md) -- the atomic shield flow and routing table
 - [Unshield tokens](./unshield-tokens.md) -- the atomic two-phase unshield
 - [Node.js backend](./node-js-backend.md) -- server-side setup and custom signers

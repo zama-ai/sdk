@@ -10,6 +10,8 @@ import { ContractFunctionArgs } from 'viem';
 import { ContractFunctionName } from 'viem';
 import { ContractFunctionReturnType } from 'viem';
 import { createFhevmClient } from '@fhevm/sdk/viem';
+import { CreateUnsignedLegacyDecryptionPermitEip712Parameters } from '@fhevm/sdk/actions/base';
+import { CreateUnsignedLegacyDecryptionPermitEip712ReturnType } from '@fhevm/sdk/actions/base';
 import { EIP1193Provider } from 'viem';
 import { Eip712Like } from '@fhevm/sdk/types';
 import { Hex } from 'viem';
@@ -87,6 +89,11 @@ export interface BatchDecryptItem {
 export interface BatchDecryptResult {
     items: BatchDecryptItem[];
 }
+
+// @public
+export type ChecksummedAddress = Address & {
+    readonly [checksummedTag]: true;
+};
 
 // @public
 export function clearCredentialsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.clearCredentials"], void, void>;
@@ -626,6 +633,7 @@ export class Offline {
     prepare<K extends TransactionKind>(request: Extract<PrepareTransactionRequest, {
         kind: K;
     }>, options?: PrepareOptions): Promise<PreparedFor<K>>;
+    preparePermit(request: PreparePermitRequest): Promise<PreparedPermit>;
 }
 
 // @public
@@ -654,6 +662,7 @@ export class Permits {
     grantPermit(contracts: Address[]): Promise<void>;
     hasDelegationPermit(delegator: Address, contracts: Address[]): Promise<boolean>;
     hasPermit(contracts: Address[]): Promise<boolean>;
+    registerPermit(prepared: PreparedPermit, signature: Hex): Promise<void>;
     revokePermits(contracts?: Address[]): Promise<void>;
     revokeTransportKeyPair(scopeId: string): Promise<void>;
     warmTransportKeyPair(): Promise<void>;
@@ -663,6 +672,13 @@ export class Permits {
 // @public
 export interface PreparedFor<K extends TransactionKind> extends PreparedTransaction {
     readonly kind: K;
+}
+
+// @public
+export interface PreparedPermit {
+    eip712: SerializedPermitEip712;
+    signerAddress: ChecksummedAddress;
+    version: 1;
 }
 
 // @public
@@ -683,6 +699,17 @@ export interface PrepareOptions {
     fees?: PrepareFees;
     gasLimit?: bigint;
     nonce?: number;
+}
+
+// @public
+export function preparePermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.preparePermit"], PreparePermitRequest, PreparedPermit>;
+
+// @public
+export interface PreparePermitRequest {
+    contracts: readonly Address[];
+    delegator?: Address;
+    durationDays?: number;
+    signer: Address;
 }
 
 // @public
@@ -734,8 +761,18 @@ export type ReadContractReturnType<TAbi extends ContractAbi = ContractAbi, TFunc
 export type ReadFunctionName<TAbi extends ContractAbi = ContractAbi> = ContractFunctionName<TAbi, "pure" | "view">;
 
 // @public
+export function registerPermitMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.registerPermit"], RegisterPermitParams, void>;
+
+// @public
+export interface RegisterPermitParams {
+    prepared: PreparedPermit;
+    signature: Hex;
+}
+
+// @public
 export interface RelayerSDK extends Pick<FhevmClient, "encryptValue" | "encryptValues" | "decryptPublicValue" | "decryptPublicValues" | "decryptPublicValuesWithSignatures" | "decryptValue" | "decryptValues" | "decryptValuesFromPairs" | "fetchFheEncryptionKeyBytes" | "generateTransportKeyPair" | "serializeTransportKeyPair" | "serializeSignedDecryptionPermit" | "signDecryptionPermit" | "parseTransportKeyPair" | "parseSignedDecryptionPermit"> {
     chain: FheChain;
+    createUnsignedLegacyDecryptionPermitEip712(parameters: CreateUnsignedLegacyDecryptionPermitEip712Parameters): Promise<CreateUnsignedLegacyDecryptionPermitEip712ReturnType>;
 }
 
 // @public
@@ -770,6 +807,17 @@ export interface RevokeDelegationSubmittedEvent extends BaseEvent {
 
 // @public
 export function revokePermitsMutationOptions(sdk: ZamaSDK): MutationFactoryOptions<readonly ["zama.revokePermits"], Address[] | void, void>;
+
+// @public
+export interface SerializedPermitEip712 {
+    domain: Record<string, unknown>;
+    message: Record<string, unknown>;
+    primaryType?: string;
+    types: Record<string, {
+        name: string;
+        type: string;
+    }[]>;
+}
 
 // @public
 export interface SerializedTransportKeyPair {
@@ -1303,6 +1351,9 @@ export const ZamaErrorCode: {
     readonly WalletNotConnected: "WALLET_NOT_CONNECTED";
     readonly WalletAccountNotReady: "WALLET_ACCOUNT_NOT_READY";
     readonly KeyWrappingFailed: "KEY_WRAPPING_FAILED";
+    readonly TransportKeyPairChanged: "TRANSPORT_KEY_PAIR_CHANGED";
+    readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
+    readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
 };
 
 // @public

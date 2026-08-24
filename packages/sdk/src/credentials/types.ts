@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
 import type { ChecksummedAddress } from "../schemas/primitives";
 
 /**
@@ -97,4 +97,46 @@ export interface Permission {
 export interface SerializedTransportKeyPairWithPermissions {
   readonly keypair: SerializedTransportKeyPair;
   readonly permissions: readonly Permission[];
+}
+
+/**
+ * Offline `preparePermit` request — `grantPermit`'s parameters split around
+ * the wallet signature. `signer` and `delegator` are explicit addresses, not
+ * read from a connected wallet: preparing works without a configured signer,
+ * which is the point of the offline flow.
+ */
+export interface PreparePermitRequest {
+  /** Address that will sign the returned EIP-712 typed data. */
+  signer: Address;
+  /** Contract addresses to authorize. Maximum {@link MAX_CONTRACTS_PER_PERMIT} — no chunking. */
+  contracts: readonly Address[];
+  /** Delegator address, for a delegated permit. Omit for a self permit. */
+  delegator?: Address;
+  /** Permit validity window in days. Defaults to the SDK's configured `permitTTL`. */
+  durationDays?: number;
+}
+
+/**
+ * Offline permit flow, phase 1 output — the unsigned EIP-712 typed data
+ * {@link registerPermit} needs to verify and persist the signature an
+ * out-of-process signer returns for it.
+ *
+ * Deliberately minimal: `chainId`, `contracts`, `startTimestamp`,
+ * `durationDays`, and the transport public key are all readable off
+ * {@link eip712}'s `domain`/`message` directly (and, once registered, off the
+ * signature-verified payload) — carrying separate top-level copies would only
+ * create two sources of truth that could disagree. Read them from `eip712`
+ * for display/logging use.
+ *
+ * `version` pins the permit shape (`1` while the SDK targets protocol ≤0.13)
+ * so a future V2 flow is additive, not breaking. JSON-safe — ships across a
+ * process boundary as-is.
+ */
+export interface PreparedPermit {
+  /** Permit format version. Always `1` while the SDK targets protocol ≤0.13. */
+  version: 1;
+  /** The EIP-712 typed data to sign with `eth_signTypedData_v4`. */
+  eip712: SerializedPermitEip712;
+  /** Address expected to sign {@link eip712}. */
+  signerAddress: ChecksummedAddress;
 }

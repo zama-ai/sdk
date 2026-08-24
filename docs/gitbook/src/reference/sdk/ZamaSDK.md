@@ -246,6 +246,28 @@ Checks whether the current signer has stored delegated-decryption permits for `d
 const ready = await sdk.permits.hasDelegationPermit(delegator, [cUSDT]);
 ```
 
+### permits.registerPermit
+
+`(prepared: PreparedPermit, signature: Hex) => Promise<void>`
+
+Verify and persist the signature an out-of-process signer produced for an [`offline.preparePermit`](#offline-preparepermit) payload — the second phase of the offline permit flow. No wallet account required: the permit is scoped by `prepared.signerAddress` and, for a delegated permit, the delegator address embedded in the signature-verified `eip712` — not a connected signer. Idempotent: registering the same `(prepared, signature)` pair more than once (e.g. a retried webhook delivery) replaces the stored entry instead of duplicating it.
+
+```ts
+const prepared = await sdk.offline.preparePermit({ signer: custodyAddress, contracts: [cUSDT] });
+const signature = await custody.signTypedData(prepared.eip712);
+await sdk.permits.registerPermit(prepared, signature);
+```
+
+**Throws:**
+
+- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
+- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- `SigningFailedError` - the signature is invalid or malformed
+
+See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
+
 ### decryption.decryptValues
 
 `(inputs: DecryptInput[]) => Promise<Record<EncryptedValue, ClearValue>>`
@@ -450,6 +472,14 @@ See the [Delegations reference](./delegation.md) for the full API and propagatio
 Builds an unsigned transaction that the caller signs and broadcasts out-of-process (institutional custody, HSMs). Works without a configured signer.
 
 See the [Offline reference](./Offline.md) for the request kinds and options, and the [Offline signing guide](../../guides/offline.md) for the workflow.
+
+### offline.preparePermit
+
+`sdk.offline.preparePermit(request)`
+
+Builds the unsigned EIP-712 typed data for a decryption permit, without signing it — the offline counterpart to [`permits.grantPermit`](#permits-grantpermit). Hand the result to an out-of-process signer, then pass the returned signature to [`permits.registerPermit`](#permits-registerpermit). Works without a configured signer.
+
+See the [Offline reference](./Offline.md#preparepermit) for the request/response shape and typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the workflow.
 
 ### dispose
 

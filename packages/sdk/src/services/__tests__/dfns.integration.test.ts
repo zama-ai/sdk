@@ -4,17 +4,36 @@ import { AsymmetricKeySigner } from "@dfns/sdk-keysigner";
 import type { Provider } from "ethers";
 import { JsonRpcProvider } from "ethers";
 import { getAddress, isHash, type Hex } from "viem";
+import type { EIP712TypedData } from "../../relayer/types";
 import * as z from "zod/mini";
 import { sepolia } from "../../chains";
 import { createConfig } from "../../config/create";
 import { EthersProvider } from "../../ethers/ethers-provider";
 import { node } from "../../node";
 import { evmAddress } from "../../schemas/primitives";
+import { BaseSigner } from "../../signer/base-signer";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { describe, expect, test } from "../../test-fixtures";
 import type { WalletAccount } from "../../types";
 import { assertNonNullable } from "../../utils";
 import { ZamaSDK } from "../../zama-sdk";
+
+/**
+ * A signer that can only report the connected DFNS wallet's address —
+ * `preparePermit`/`registerPermit` never call into it (they take `signer` as
+ * an explicit address), so it only exists to let `sdk.permits.hasPermit()`
+ * resolve "the connected wallet" when verifying the registered permit.
+ */
+class VerificationOnlySigner extends BaseSigner {
+  signTypedData(): Promise<Hex> {
+    throw new Error("VerificationOnlySigner cannot sign — DFNS is the out-of-process signer here.");
+  }
+  writeContract(): Promise<Hex> {
+    throw new Error(
+      "VerificationOnlySigner cannot write — DFNS is the out-of-process signer here.",
+    );
+  }
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -75,6 +94,7 @@ interface DfnsFixtures {
   dfnsClient: DfnsApiClient;
   dfnsAccount: WalletAccount;
   signAndBroadcast: (unsignedTx: Hex) => Promise<BroadcastResult>;
+  signTypedData: (typedData: EIP712TypedData) => Promise<Hex>;
 }
 
 const dfns = test.extend<DfnsFixtures>({
@@ -109,11 +129,12 @@ const dfns = test.extend<DfnsFixtures>({
     const network = await ethProvider.getNetwork();
     await use({ address: getAddress(wallet.address), chainId: Number(network.chainId) });
   },
-  sdk: async ({ ethProvider }, use) => {
+  sdk: async ({ ethProvider, dfnsAccount }, use) => {
     const config = createConfig({
       chains: [sepolia] as const,
       relayers: { [sepolia.id]: node() },
       provider: new EthersProvider({ provider: ethProvider as unknown as Provider }),
+      signer: new VerificationOnlySigner(dfnsAccount),
       storage: new MemoryStorage(),
     });
     const sdk = new ZamaSDK(config);
@@ -168,6 +189,61 @@ const dfns = test.extend<DfnsFixtures>({
       return { txHash: snap.txHash };
     });
   },
+  signTypedData: async ({ env, dfnsClient }, use) => {
+    const walletId = env.DFNS_WALLET_ID;
+    const dashboardBase = (env.DFNS_DASHBOARD_URL ?? "https://app.dfns.io").replace(/\/$/, "");
+
+    await use(async (typedData) => {
+      const deadline = Date.now() + POLL_TIMEOUT_MS;
+      // DFNS's raw eth_signTypedData_v4 endpoint — a genuine out-of-process signer
+      // call, not the SDK's GenericSigner abstraction. This is the exact contract
+      // preparePermit hands a custody partner: sign `prepared.eip712` and return
+      // the 65-byte signature, nothing else.
+      let snap: { id: string; status: string; reason?: string; signature?: { encoded?: string } } =
+        await dfnsClient.wallets.generateSignature({
+          walletId,
+          body: {
+            kind: "Eip712",
+            // DFNS's typed-data body wants mutable arrays; `EIP712TypedData`
+            // (`@fhevm/sdk`'s `Eip712Like`) declares them readonly. The runtime
+            // value is a plain object either way — only the type differs.
+            types: typedData.types as Record<string, { name: string; type: string }[]>,
+            domain: typedData.domain,
+            message: typedData.message,
+          },
+        });
+
+      const isSigned = (s: typeof snap) => s.status === "Signed" || s.status === "Confirmed";
+
+      if (!isSigned(snap)) {
+        console.log(
+          `\n[DFNS] Signature ${snap.id} is "${snap.status}". Approve in dashboard:\n` +
+            `  ${dashboardBase}/wallets/${walletId}/signatures/${snap.id}\n`,
+        );
+      }
+
+      while (!isSigned(snap)) {
+        if (snap.status === "Failed" || snap.status === "Rejected") {
+          throw new Error(
+            `DFNS signature ${snap.id} ended as ${snap.status}: ${snap.reason ?? "no reason"}`,
+          );
+        }
+        if (Date.now() > deadline) {
+          throw new Error(
+            `DFNS signature ${snap.id} did not complete within ${POLL_TIMEOUT_MS}ms (status=${snap.status})`,
+          );
+        }
+        await sleep(POLL_INTERVAL_MS);
+        snap = await dfnsClient.wallets.getSignature({ walletId, signatureId: snap.id });
+      }
+
+      const encoded = snap.signature?.encoded;
+      if (!encoded) {
+        throw new Error(`DFNS signature ${snap.id} is ${snap.status} but returned no signature`);
+      }
+      return encoded as Hex;
+    });
+  },
 });
 
 describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", () => {
@@ -199,9 +275,26 @@ describe.skipIf(env === null)("Integration: DFNS offline signing on Sepolia", ()
     POLL_TIMEOUT_MS + 60_000,
   );
 
-  // NOTE: The DFNS decryption-permit flow moved to `sdk.permits.grantPermit`
-  // with a DFNS-backed signer whose async `signTypedData` polls for policy
-  // approval (the signer-boundary model). That coverage is tracked as a
-  // follow-up; the permit-specific offline `prepare`/`registerPermit` API it
-  // used to exercise no longer exists.
+  dfns(
+    "preparePermit → DFNS signs (policy approval) → registerPermit yields a usable permit",
+    async ({ sdk, dfnsAccount, signTypedData, env }) => {
+      const prepared = await sdk.offline.preparePermit({
+        signer: dfnsAccount.address,
+        contracts: [env.TOKEN_ADDRESS],
+      });
+      expect(prepared.version).toBe(1);
+      expect(prepared.signerAddress).toBe(getAddress(dfnsAccount.address));
+
+      // The custodian's only job is to sign `prepared.eip712` — nothing else
+      // changes about the payload. This is the exact contract the DFNS
+      // integration was waiting on.
+      const signature = await signTypedData(prepared.eip712);
+      expect(signature).toMatch(/^0x[0-9a-f]+$/i);
+
+      expect(await sdk.permits.hasPermit([env.TOKEN_ADDRESS])).toBe(false);
+      await sdk.permits.registerPermit(prepared, signature);
+      expect(await sdk.permits.hasPermit([env.TOKEN_ADDRESS])).toBe(true);
+    },
+    POLL_TIMEOUT_MS + 60_000,
+  );
 });

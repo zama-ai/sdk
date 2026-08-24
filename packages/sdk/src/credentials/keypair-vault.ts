@@ -1,5 +1,5 @@
 import type { SerializeTransportKeyPairReturnType } from "@fhevm/sdk/actions/chain";
-import { KeyWrappingError } from "../errors/credential";
+import { KeyWrappingError, TransportKeyPairChangedError } from "../errors/credential";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
@@ -297,9 +297,23 @@ export class TransportKeyPairVault {
    *   The unscoped equivalent self-heals. {@link KeyWrappingError}
    * @throws if wrapping the freshly generated private key fails (e.g. `crypto.subtle`
    *   unavailable in this environment). {@link KeyWrappingError}
+   * @throws with `options.strict`, if a concurrent {@link clearScope} rotated this key
+   *   while a fresh one was being generated: persistence is skipped either way (see the
+   *   epoch check in the implementation), but a strict caller cannot silently return the
+   *   unpersisted result. {@link TransportKeyPairChangedError}
+   * @param options.strict - When `true`, a `storage.set` failure during persistence
+   *   rejects instead of being logged and swallowed. Use for callers that hand a
+   *   freshly generated key pair to an out-of-process ceremony (offline permits):
+   *   an unpersisted key pair would silently strand that ceremony's result once the
+   *   external signer returns, so preparation must fail immediately instead.
    */
-  async getOrCreate(signerAddress: ChecksummedAddress): Promise<StoredTransportKeyPair> {
-    return this.#getOrCreateByKey(this.#identityKey(signerAddress), this.#identity(signerAddress));
+  async getOrCreate(
+    signerAddress: ChecksummedAddress,
+    options?: { strict?: boolean },
+  ): Promise<StoredTransportKeyPair> {
+    return this.#getOrCreateByKey(this.#identityKey(signerAddress), this.#identity(signerAddress), {
+      strict: options?.strict,
+    });
   }
 
   /**
@@ -360,10 +374,7 @@ export class TransportKeyPairVault {
       // If a rotation bumped this key's epoch while `#generator()` (and, when
       // derivationSecret is configured, the wrap above) were in flight, this
       // generation started before the rotation and must not persist — doing so would
-      // silently resurrect the key the rotation just deleted (see `clearScope`). The
-      // freshly generated key pair is still returned to whichever caller triggered this
-      // round trip so their in-flight request succeeds; the next access regenerates and
-      // persists properly against the new epoch.
+      // silently resurrect the key the rotation just deleted (see `clearScope`).
       if ((this.#epoch.get(key) ?? 0) === epochAtStart) {
         if (strict) {
           await this.#storage.set(key, entry);
@@ -374,6 +385,19 @@ export class TransportKeyPairVault {
             this.#logger,
           );
         }
+      } else if (strict) {
+        // Non-strict callers still return the unpersisted key pair here (the
+        // next access regenerates and persists against the new epoch), which is
+        // fine for a best-effort prefetch. A strict caller cannot: it promises
+        // its result is durably stored, and a caller like `preparePermit` hands
+        // this key's public key to an out-of-process signing ceremony that can
+        // take hours — returning an unpersisted key would silently strand that
+        // ceremony's result once the signer comes back and `registerPermit`
+        // can't find a matching key pair.
+        throw new TransportKeyPairChangedError(
+          "The transport key pair was rotated while it was being generated, so the freshly " +
+            "generated key pair could not be persisted. Retry.",
+        );
       }
       return stored;
     })().finally(() => {
@@ -462,6 +486,10 @@ export class TransportKeyPairVault {
    * key pair is actually warmed in shared storage — an operator pre-warming ahead of
    * traffic to avoid the thundering-herd race must be able to trust that, not silently
    * still be exposed to it because a transient write failure was logged and dropped.
+   *
+   * @throws if a concurrent {@link clearScope} rotates the key while this call is
+   *   generating one: for the same reason, this must reject rather than resolve with an
+   *   unpersisted key pair. {@link TransportKeyPairChangedError}
    */
   async warmScope(): Promise<void> {
     if (this.#scope === undefined) {

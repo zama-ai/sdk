@@ -28,7 +28,10 @@ import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
 import { Hex } from '@zama-fhe/sdk';
 import { JSX } from 'react';
 import { PaginatedResult } from '@zama-fhe/sdk';
+import { PreparedPermit } from '@zama-fhe/sdk';
+import { PreparePermitRequest } from '@zama-fhe/sdk';
 import { PropsWithChildren } from 'react';
+import { RegisterPermitParams } from '@zama-fhe/sdk/query';
 import { ResumeUnshieldParams } from '@zama-fhe/sdk/query';
 import { RevokeDelegationParams } from '@zama-fhe/sdk/query';
 import { ShieldParams } from '@zama-fhe/sdk/query';
@@ -220,6 +223,12 @@ export function usePendingUnshield(tokenAddress: Address, options?: Omit<UseQuer
 
 // @public
 export function usePendingUnshieldSuspense(tokenAddress: Address): UseSuspenseQueryResult<`0x${string}` | null, Error>;
+
+// @public
+export function usePreparePermit(options?: UseMutationOptions<PreparedPermit, Error, PreparePermitRequest>): UseMutationResult<PreparedPermit, Error, PreparePermitRequest, unknown>;
+
+// @public
+export function useRegisterPermit(options?: UseMutationOptions<void, Error, RegisterPermitParams>): UseMutationResult<void, Error, RegisterPermitParams, unknown>;
 
 // @public
 export function useResumeUnshield(address: Address, options?: UseMutationOptions<TransactionResult, Error, ResumeUnshieldParams, Address>): UseMutationResult<TransactionResult, Error, ResumeUnshieldParams, `0x${string}`>;

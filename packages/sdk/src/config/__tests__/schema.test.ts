@@ -49,6 +49,28 @@ describe("createConfig validation", () => {
     ).toThrow("transportKeyPairTTL must be a positive integer number of seconds");
   });
 
+  test("rejects a permitTTL above the V1 permit maximum of 365 days at createConfig", ({
+    relayer,
+    provider,
+  }) => {
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        permitTTL: 366,
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      createConfig({
+        chains: [hardhat],
+        relayers: { [hardhat.id]: mockRelayerConfig(relayer) },
+        provider,
+        permitTTL: 366,
+      }),
+    ).toThrow("permitTTL must not exceed the V1 permit maximum of 365 days");
+  });
+
   test("rejects invalid transportKeyPairTTL even without a signer", ({ relayer, provider }) => {
     expect(() =>
       createConfig({

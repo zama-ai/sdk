@@ -36,3 +36,53 @@ export class KeyWrappingError extends ZamaError {
     this.name = "KeyWrappingError";
   }
 }
+
+/**
+ * The transport key pair changed between `preparePermit` and `registerPermit`
+ * (expired, evicted, or rotated in between). The prepared EIP-712 payload was
+ * signed against the old key pair's public key — registering it under a
+ * different one would persist a permit bound to the wrong key. Call
+ * `preparePermit` again to rebind the signature request to the current key pair.
+ */
+export class TransportKeyPairChangedError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.TransportKeyPairChanged, message, options);
+    this.name = "TransportKeyPairChangedError";
+  }
+}
+
+/**
+ * A prepared permit's `chainId` doesn't match the chain `registerPermit` is
+ * running against. The EIP-712 payload's domain is bound to the chain it was
+ * prepared for; registering it under a different chain would persist a permit
+ * whose signed payload disagrees with its storage scope.
+ */
+export class PreparedPermitChainMismatchError extends ZamaError {
+  /** Chain ID the permit was prepared for. */
+  readonly preparedChainId: number;
+  /** Chain ID `registerPermit` is currently running against. */
+  readonly activeChainId: number;
+
+  constructor(
+    { preparedChainId, activeChainId }: { preparedChainId: number; activeChainId: number },
+    options?: ErrorOptions,
+  ) {
+    super(
+      ZamaErrorCode.PreparedPermitChainMismatch,
+      `registerPermit: prepared.chainId (${preparedChainId}) does not match the active chain ` +
+        `(${activeChainId}). Register the permit while the SDK is configured for the chain it was prepared for.`,
+      options,
+    );
+    this.name = "PreparedPermitChainMismatchError";
+    this.preparedChainId = preparedChainId;
+    this.activeChainId = activeChainId;
+  }
+}
+
+/** A prepared permit's validity window elapsed before its signature was registered. */
+export class PreparedPermitExpiredError extends ZamaError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(ZamaErrorCode.PreparedPermitExpired, message, options);
+    this.name = "PreparedPermitExpiredError";
+  }
+}
