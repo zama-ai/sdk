@@ -20,6 +20,7 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 | Chain          | Chain ID   | Description             |
 | -------------- | ---------- | ----------------------- |
 | `mainnet`      | `1`        | Ethereum Mainnet        |
+| `polygon`      | `137`      | Polygon Mainnet         |
 | `sepolia`      | `11155111` | Sepolia Testnet         |
 | `polygonAmoy`  | `80002`    | Polygon Amoy Testnet    |
 | `hoodi`        | `560048`   | Hoodi Testnet           |
@@ -30,7 +31,7 @@ import { sepolia, mainnet, hoodi } from "@zama-fhe/sdk/chains";
 `anvil` is also exported as an alias for `hardhat` (both target chain ID `31337`), for Foundry users.
 
 {% hint style="info" %}
-The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer requires a key; see [Authentication](authentication.md).
+The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](authentication.md).
 {% endhint %}
 
 ### 2. Pick a relayer

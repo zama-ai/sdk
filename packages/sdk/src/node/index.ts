@@ -39,6 +39,7 @@ export { asyncLocalStorage, AsyncLocalMapStorage } from "../storage/async-local-
 // Chain presets
 export {
   mainnet,
+  polygon,
   sepolia,
   polygonAmoy,
   hoodi,

@@ -17,6 +17,22 @@ export const mainnet = {
 } as const satisfies FheChain;
 
 /**
+ * Polygon mainnet network configuration (chainId 137).
+ */
+export const polygon = {
+  id: 137,
+  gatewayChainId: 261131,
+  relayerUrl: "https://relayer.mainnet.zama.org",
+  network: "https://polygon-bor-rpc.publicnode.com",
+  aclContractAddress: "0x6737F17e31cf26a1b62fb0362acC5a16CB156F49",
+  kmsContractAddress: "0x14e609595474874Dd6b6128376E336EfADfdBE37",
+  inputVerifierContractAddress: "0xf40BD204B035522EaAc8E5afAdc55113Acac96ca",
+  verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
+  verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
+  registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
+} as const satisfies FheChain;
+
+/**
  * Sepolia testnet network configuration (chainId 11155111).
  */
 export const sepolia = {
@@ -135,6 +151,7 @@ export const anvil = hardhat;
  */
 export const chains: Record<number, FheChain> = {
   [mainnet.id]: mainnet,
+  [polygon.id]: polygon,
   [sepolia.id]: sepolia,
   [polygonAmoy.id]: polygonAmoy,
   [hoodi.id]: hoodi,

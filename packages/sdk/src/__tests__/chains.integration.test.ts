@@ -5,7 +5,7 @@
  * a public RPC per chain plus, where one exists, the chain's hosted Zama relayer
  * (`relayer.testnet.zama.org` on Sepolia and Polygon Amoy,
  * `relayer.mainnet.zama.org` on
- * mainnet). It runs the same read-only flow against every relayer-backed and
+ * Ethereum mainnet and Polygon). It runs the same read-only flow against every relayer-backed and
  * cleartext chain the SDK ships in `chains/configs.ts`:
  *
  *   1. the target confidential token is registered and valid in the on-chain
@@ -22,17 +22,17 @@
  * Each entry runs its own single-chain `ZamaSDK` rather than one shared
  * multi-chain instance: reads are bound to a single RPC (`ViemProvider` wraps
  * one `PublicClient`) and the relayer transport differs per chain. Mainnet,
- * Sepolia and Polygon Amoy have full FHE infrastructure and use the `node()`
+ * Polygon, Sepolia and Polygon Amoy have full FHE infrastructure and use the `node()`
  * relayer; the cleartext testnets (hoodi / bsc / ingen) have no hosted relayer
  * and drive the
  * FHE backend through `cleartext()`. `hardhat` needs a local node and is out of
  * scope.
  *
- * Mainnet's hosted relayer requires a Zama API key (`x-api-key` header), so the
- * mainnet entry only wires relayer `auth` when `ZAMA_RELAYER_API_KEY` is set;
- * its encryption test is skipped when the key is absent. The other three
- * mainnet checks are RPC-only and always run. Every other chain's relayer is
- * open, so the whole suite runs there without any key.
+ * The hosted mainnet relayer requires a Zama API key (`x-api-key` header), so
+ * the Ethereum mainnet and Polygon entries only wire relayer `auth` when
+ * `ZAMA_RELAYER_API_KEY` is set; their encryption test is skipped when the key
+ * is absent. Their other three checks are RPC-only and always run. Every other
+ * chain's relayer is open, so the whole suite runs there without any key.
  *
  * Runs only via `pnpm test:integration` (the default unit run excludes
  * `*integration.test.ts`). Being network-dependent, a failure most often means
@@ -51,6 +51,7 @@ import {
   hoodi,
   ingenTestnet,
   mainnet,
+  polygon,
   polygonAmoy,
   sepolia,
 } from "@zama-fhe/sdk/chains";
@@ -87,6 +88,13 @@ const entries: readonly ChainEntry[] = [
     relayer: node({ moduleVersions: { tfhe: "1.5.3" } }),
     confidentialTokenAddress: "0xe978F22157048E5DB8E5d07971376e86671672B2",
     underlyingTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  },
+  {
+    chain: { ...polygon, auth: { __type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
+    // Same hosted mainnet relayer as Ethereum, so the same tfhe pin applies.
+    relayer: node({ moduleVersions: { tfhe: "1.5.3" } }),
+    confidentialTokenAddress: "0xbC8d2F447d16A3a28B554C684659177245CEd8E3",
+    underlyingTokenAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
   },
   {
     chain: sepolia,
