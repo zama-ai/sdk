@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0-alpha.10](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.9...v3.5.0-alpha.10) (2026-08-24)
+
+### Features
+
+- offline permit flow ([#634](https://github.com/zama-ai/sdk/issues/634)) ([bbfae74]())
+
 ## [3.5.0-alpha.9](https://github.com/zama-ai/sdk/compare/v3.5.0-alpha.8...v3.5.0-alpha.9) (2026-08-20)
 
 ### Bug Fixes
