@@ -264,7 +264,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** `cause` is always present, check its type to tell the two cases apart. If `cause` is a `SigningFailedError`, the re-grant failed: establish a new permit before retrying; the other permits of the scope were kept. Otherwise the retry failed against the cached validity window: wait ~15 minutes and trigger the decrypt again, the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
+**How to handle:** `cause` is always present, check its type to tell the two cases apart. If `cause` is a `SigningFailedError`, the re-grant failed: establish a new permit before retrying; the other permits of the scope were kept. In a session whose signer cannot sign, that means re-running the [offline permit flow](../../guides/offline.md#offline-permits): `preparePermit`, sign out-of-process, `registerPermit`. Otherwise the retry failed against the cached validity window: wait ~15 minutes and trigger the decrypt again, the SDK re-runs the recovery on the next call. No manual credential cleanup is needed, the dead permit was already evicted.
 
 ### TransportKeyPairExpiredError
 
