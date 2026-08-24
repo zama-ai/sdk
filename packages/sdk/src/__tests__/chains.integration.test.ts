@@ -83,16 +83,13 @@ const ZAMA_RELAYER_API_KEY = process.env.ZAMA_RELAYER_API_KEY;
 const entries: readonly ChainEntry[] = [
   {
     chain: { ...mainnet, auth: { __type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
-    // Mainnet coprocessors still require tfhe 1.5.3 mid-protocol-upgrade;
-    // drop the pin once they accept the auto-resolved version.
-    relayer: node({ moduleVersions: { tfhe: "1.5.3" } }),
+    relayer: node(),
     confidentialTokenAddress: "0xe978F22157048E5DB8E5d07971376e86671672B2",
     underlyingTokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   },
   {
     chain: { ...polygon, auth: { __type: "ApiKeyHeader", value: String(ZAMA_RELAYER_API_KEY) } },
-    // Same hosted mainnet relayer as Ethereum, so the same tfhe pin applies.
-    relayer: node({ moduleVersions: { tfhe: "1.5.3" } }),
+    relayer: node(),
     confidentialTokenAddress: "0xbC8d2F447d16A3a28B554C684659177245CEd8E3",
     underlyingTokenAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
   },
