@@ -198,8 +198,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 0.13.2
-        version: 0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
+        specifier: 0.14.1-0
+        version: 0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -560,8 +560,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@0.13.2':
-    resolution: {integrity: sha512-M1ZUKdRJedxRa57bVeQ7jrzVP6hKAXjS8WabvMNJKBui7C2ZXDsvoyb7qpLqYib85obA+OQTwcPZV/oxWfciWA==}
+  '@fhevm/sdk@0.14.1-0':
+    resolution: {integrity: sha512-LLttIufmrBWNu4lss8zAyGFyadO3kd4eHzC9gN/jrQJpDPVs1E6n/NFRNzVvoMu5mYYE6As66H5kGalbNPtqfA==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -4380,7 +4380,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@fhevm/sdk@0.13.2(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
+  '@fhevm/sdk@0.14.1-0(ethers@6.17.0)(typescript@6.0.3)(viem@2.55.0(typescript@6.0.3)(zod@4.4.3))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
